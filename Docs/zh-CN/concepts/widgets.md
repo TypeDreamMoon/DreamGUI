@@ -204,8 +204,9 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | `SetContentTint` | 给**后代**的视觉染色（不含自己），像 UMG 的 content colour |
 
 `Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是
-`Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius` 和
-`ClippingMargin`。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
+`Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius`、
+`ClippingMargin` 和遮罩 `ClipMask`；`bClipToBelow` 让控件只在下方图层画出的地方显示（见
+[裁剪遮罩与剪贴到下方图层](clip-masks.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
 
 <a id="making-widgets-in-code"></a>
 

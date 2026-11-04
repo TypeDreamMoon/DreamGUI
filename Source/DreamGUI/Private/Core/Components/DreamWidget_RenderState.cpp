@@ -20,6 +20,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamVisualBatchMesh.h"
 #if WITH_ACCESSIBILITY
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Accessibility/SlateAccessibleMessageHandler.h"
@@ -247,35 +248,63 @@ void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSh
 	if (!bClipDirty)return;
 	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateClip);
 	bClipDirty = false;
-	
+
 	if (bNeedRecreateClip && ClipData.IsValid())
 	{
-		if (ClipData.Pin()->GetWidget() == this)//remove old clip-data
+		TSharedPtr<FDreamUIClipData> Current = ClipData.Pin();
+		if (Current->GetWidget() == this)//remove old clip-data: its own level, and the level for the layer below it sits in
 		{
-			ClipDataList.Remove(ClipData.Pin());
+			for (TSharedPtr<FDreamUIClipData> Level = Current; Level.IsValid() && Level->GetWidget() == this; )
+			{
+				TSharedPtr<FDreamUIClipData> Outer = Level->GetParent();
+				ClipDataList.Remove(Level);
+				Level = Outer;
+			}
 		}
-		else
-		{
-			ClipData = nullptr;//will create new
-		}
+		ClipData = nullptr;//will create new
 	}
 	bNeedRecreateClip = false;
-	
+
 	TSharedPtr<FDreamUIClipData> ParentClip = nullptr;
 	if (Parent.IsValid())
 	{
 		ParentClip = Parent->ClipData.Pin();
 	}
-	switch (GetClipping())
+	const EDreamWidgetClipping EffectiveClipping = GetClipping();
+	TSharedPtr<FDreamUIClipData> Current = ClipData.Pin();
+	const bool bOwnsClip = Current.IsValid() && Current->GetWidget() == this;
+	/**
+	 * Clipping to the layer below is a level of its own, in the frame of the element below, inside the clip that element
+	 * is drawn with: whatever hides the element hides what is clipped to it. This widget's own clip, if it has one, goes
+	 * inside that. Without intersecting -- or with clipping disabled -- the clips around are left out, the layer below is not.
+	 */
+	TSharedPtr<FDreamUIClipData> BelowClip = nullptr;
+	if (bOwnsClip)
+	{
+		for (TSharedPtr<FDreamUIClipData> Level = Current; Level.IsValid() && Level->GetWidget() == this; Level = Level->GetParent())
+		{
+			if (Level->GetKind() == FDreamUIClipData::EKind::Below)
+			{
+				BelowClip = Level;
+			}
+		}
+	}
+	else if (UDreamWidget* Underlay = FindClipToBelowUnderlay())
+	{
+		const bool bInside = EffectiveClipping != EDreamWidgetClipping::ClipToBoundsWithoutIntersecting && EffectiveClipping != EDreamWidgetClipping::Disabled;
+		BelowClip = MakeShared<FDreamUIClipData>(bInside ? Underlay->ClipData.Pin() : nullptr, ClipDataTexture, this, FDreamUIClipData::EKind::Below, Underlay);
+		ClipDataList.Add(BelowClip);
+	}
+	switch (EffectiveClipping)
 	{
 	case EDreamWidgetClipping::Inherit:
-		this->ClipData = ParentClip;
+		this->ClipData = BelowClip.IsValid() ? BelowClip : ParentClip;
 		break;
 	case EDreamWidgetClipping::ClipToBounds:
 		{
-			if (!this->ClipData.IsValid())
+			if (!bOwnsClip)
 			{
-				auto NewClip = MakeShared<FDreamUIClipData>(ParentClip, ClipDataTexture, this);
+				auto NewClip = MakeShared<FDreamUIClipData>(BelowClip.IsValid() ? BelowClip : ParentClip, ClipDataTexture, this);
 				ClipDataList.Add(NewClip);
 				this->ClipData = NewClip;
 			}
@@ -283,16 +312,16 @@ void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSh
 		break;
 	case EDreamWidgetClipping::ClipToBoundsWithoutIntersecting:
 		{
-			if (!this->ClipData.IsValid())
+			if (!bOwnsClip)
 			{
-				auto NewClip = MakeShared<FDreamUIClipData>(nullptr, ClipDataTexture, this);
+				auto NewClip = MakeShared<FDreamUIClipData>(BelowClip, ClipDataTexture, this);
 				ClipDataList.Add(NewClip);
 				this->ClipData = NewClip;
 			}
 		}
 		break;
 	case EDreamWidgetClipping::Disabled:
-		this->ClipData = nullptr;
+		this->ClipData = BelowClip;
 		break;
 	}
 	if (Visual)
@@ -920,6 +949,92 @@ void UDreamWidget::SetClippingMargin(FMargin Value)
 	{
 		ClippingMargin = Value;
 		MarkClipDirty(false);
+	}
+}
+
+void UDreamWidget::SetClipMask(const FDreamClipMask& Value)
+{
+	if (ClipMask != Value)
+	{
+		const bool bTextureChanged = ClipMask.IsActive() != Value.IsActive() || ClipMask.GetActiveTexture() != Value.GetActiveTexture();
+		ClipMask = Value;
+		// The mask is read again on the next update, as the rect is. A texture is bound by the draw calls, which are made
+		// again now rather than when the update finds it changed.
+		MarkClipDirty(false);
+		if (bTextureChanged)
+		{
+			MarkClipMaskTexturesChanged();
+		}
+	}
+}
+
+void UDreamWidget::SetClipToBelow(bool Value)
+{
+	if (bClipToBelow != Value)
+	{
+		bClipToBelow = Value;
+		MarkClipDirty(true);
+		// Which sibling a later one clips to may be this one now, or no longer.
+		if (Parent.IsValid())
+		{
+			Parent->MarkChildrenClipToBelowDirty();
+		}
+		MarkClipMaskTexturesChanged();
+	}
+}
+
+UDreamWidget* UDreamWidget::FindClipToBelowUnderlay() const
+{
+	if (!bClipToBelow || !Parent.IsValid())
+	{
+		return nullptr;
+	}
+	const TArray<UDreamWidget*>& Siblings = Parent->GetChildren();
+	const int32 Index = Siblings.IndexOfByKey(this);
+	for (int32 Below = Index - 1; Below >= 0; --Below)
+	{
+		UDreamWidget* Sibling = Siblings[Below];
+		// One that clips to the layer below itself shares that layer: the first that does not is the one.
+		if (IsValid(Sibling) && !Sibling->bClipToBelow)
+		{
+			return Sibling;
+		}
+	}
+	return nullptr;
+}
+
+void UDreamWidget::MarkChildrenClipToBelowDirty() const
+{
+	for (const UDreamWidget* Child : Children)
+	{
+		if (IsValid(Child) && Child->bClipToBelow)
+		{
+			Child->MarkClipDirty(true);
+		}
+	}
+}
+
+void UDreamWidget::MarkClipMaskTexturesChanged() const
+{
+	FDreamVisitedWidgetSet Visited;
+	TArray<const UDreamWidget*, TInlineAllocator<16>> Pending;
+	Pending.Add(this);
+	while (Pending.Num() > 0)
+	{
+		const UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+		if (!IsValid(Widget) || Visited.Contains(Widget))
+		{
+			continue;
+		}
+		Visited.Add(Widget);
+		if (UDreamVisualBatchMesh* BatchMesh = Cast<UDreamVisualBatchMesh>(Widget->GetVisual()))
+		{
+			BatchMesh->MarkMaterialDirty();
+		}
+		for (const UDreamWidget* Child : Widget->GetChildren())
+		{
+			Pending.Add(Child);
+		}
 	}
 }
 

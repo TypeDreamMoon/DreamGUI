@@ -22,6 +22,16 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
+- **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
+  ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
+  a procedural pattern (linear, radial, angular, diamond, blinds, checker, noise), through a threshold and softness that
+  make wipes and dissolves, inverted if asked — a spotlight. It clips the whole subtree on every path that draws it, and
+  can be hit-tested by the mask. A chain of clips with no mask costs and uploads exactly what it did. See
+  [Clip masks and clipping to the layer below](../concepts/clip-masks.md).
+- **Clip to the layer below.** `bClipToBelow` shows a widget, and everything under it, only where the sibling drawn before
+  it is drawn and through that sibling's opacity: a clipping mask. The layer below can be a simple or nine-sliced image,
+  texture or sprite, or a rect block; anything else is not clipped to, with a warning.
+
 - **View models.** A `.dui` file declares the view models its class holds in a `viewmodels { … }` block — by class,
   with where each comes from: the host (a creation pin, `SetViewModel`, a host's `.dui` line), `= new`, `= global` /
   `= global "Name"` from the new `UDreamViewModelSubsystem`, or `= parent` from the nearest enclosing widget. Bindings,
@@ -94,6 +104,11 @@ What is on `main` after 1.0.0, and ships with the next version.
   See [The details panel](../tools/designer.md#the-details-panel).
 
 ### Fixed
+
+- **A clip whose pivot is off its centre stays on its widget under a scaled or turned parent.** Its centre was moved by
+  the pivot's offset in world units rather than through the clipper's own scale and rotation, so under a canvas scale or
+  a rotated parent the drawn clip rect slid off the rect the hit test used. Both now place it through the clipper's
+  transform.
 
 - **Creating a widget of an abstract class logs an error** instead of stopping on NewObject's assert. A class picked
   from a list cannot be abstract, but a class pin or a Create Dream Widget Of Class call fed from a variable can be.

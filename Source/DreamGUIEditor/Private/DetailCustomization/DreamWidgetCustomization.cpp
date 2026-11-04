@@ -599,6 +599,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, ClippingMargin));
 	ClippingGroup.AddPropertyRow(ClippingMargin_PH);
+	// The mask on the clip, and clipping to the layer below: both say where this widget's subtree shows.
+	ClippingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, ClipMask)));
+	ClippingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bClipToBelow)));
 
 	//anchor, width, height
 	{

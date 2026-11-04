@@ -956,6 +956,11 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	PSParameters.DreamUI_RectBlockDataTex = TextureOrFallback(Params.RectBlockDataRHI.GetReference(), GBlackTexture);
 	// Black where the world has no paint rows: it reads gradient type 0, None, so a painted quad drawn without them is solid.
 	PSParameters.DreamUI_PaintDataTex = TextureOrFallback(Params.PaintDataRHI.GetReference(), GBlackTexture);
+	// White where no element of the draw reads a mask texture there: nothing samples it then.
+	PSParameters.DreamUI_MaskTex0 = TextureOrFallback(Params.MaskTexture0RHI.GetReference(), GWhiteTexture);
+	PSParameters.DreamUI_MaskTexSampler0 = SamplerOrBilinear(Params.MaskSampler0RHI.GetReference());
+	PSParameters.DreamUI_MaskTex1 = TextureOrFallback(Params.MaskTexture1RHI.GetReference(), GWhiteTexture);
+	PSParameters.DreamUI_MaskTexSampler1 = SamplerOrBilinear(Params.MaskSampler1RHI.GetReference());
 	PSParameters.DreamUI_SceneDepthTex = SceneDepthTexture ? SceneDepthTexture : GBlackTexture->TextureRHI.GetReference();
 	PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	PSParameters.DreamUI_SceneDepthTextureScaleOffset = SceneDepthTexST;
@@ -2605,6 +2610,10 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				PSParameters.DreamUI_ClipDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_RectBlockDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_PaintDataTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_MaskTex0 = GWhiteTexture->TextureRHI;
+				PSParameters.DreamUI_MaskTexSampler0 = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				PSParameters.DreamUI_MaskTex1 = GWhiteTexture->TextureRHI;
+				PSParameters.DreamUI_MaskTexSampler1 = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 				PSParameters.DreamUI_SceneDepthTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 				PSParameters.DreamUI_SceneDepthTextureScaleOffset = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);

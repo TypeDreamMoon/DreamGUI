@@ -149,6 +149,11 @@ public:
 	UDreamMeshModifierBase* AddMeshModifier(TSubclassOf<UDreamMeshModifierBase> ModifierClass);
 
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	/**
+	 * A simple or nine-sliced quad, read off the vertices it drew (FDreamUIGeometry::DrawnQuad): what an image, a texture
+	 * or a sprite draws when it is neither tiled nor filled. Not while a mesh modifier reshapes it.
+	 */
+	virtual bool GetClipUnderlay(struct FDreamClipUnderlay& OutUnderlay)const override;
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
 	/**

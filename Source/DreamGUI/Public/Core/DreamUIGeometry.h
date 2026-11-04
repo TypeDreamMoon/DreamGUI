@@ -5,6 +5,7 @@
 #include "Components/DreamText.h"
 #include "Components/DreamSprite.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
+#include "Core/DreamUIClipMask.h"
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "DreamUIRender/DreamUIMeshVertex.h"
 #include "UObject/ObjectKey.h"
@@ -59,6 +60,7 @@ public:
 		  bIsFont(Other.bIsFont),
 		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
 		  BlendMode(Other.BlendMode),
+		  MaskTextures(Other.MaskTextures),
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
@@ -82,6 +84,7 @@ public:
 			bIsFont = Other.bIsFont;
 			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
 			BlendMode = Other.BlendMode;
+			MaskTextures = Other.MaskTextures;
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
@@ -105,6 +108,7 @@ public:
 		  bIsFont(Other.bIsFont),
 		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
 		  BlendMode(Other.BlendMode),
+		  MaskTextures(Other.MaskTextures),
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
@@ -126,6 +130,7 @@ public:
 			bIsFont = Other.bIsFont;
 			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
 			BlendMode = Other.BlendMode;
+			MaskTextures = Other.MaskTextures;
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
@@ -155,6 +160,11 @@ public:
 	 * differently cannot share one draw-call, because the blend state is set once per draw-call.
 	 */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/**
+	 * The mask textures this element's clips read (FDreamUIClipData::GetMaskTextures). Part of a draw call's identity, as
+	 * the blend mode is, but only for the slots it reads: see FDreamUIMaskTextures::CanDraw.
+	 */
+	FDreamUIMaskTextures MaskTextures;
 
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;
@@ -169,6 +179,20 @@ public:
 	/** That layer's row of its world's render layer table (UDreamWidget::GetRenderLayerRow), 0 for none: what boxes it on the canvas. */
 	int32 RenderLayerRow = 0;
 	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
+	/**
+	 * What the element's own vertices are, as a widget clipping to it as the layer below reads them
+	 * (UDreamVisualBatchMesh::GetClipUnderlay): set by the rect writers that make a simple or a nine-sliced quad, and
+	 * reset by Clear, so that anything else an element draws reads as neither. Not a batching key, and not copied.
+	 */
+	enum class EDrawnQuad : uint8
+	{
+		None,
+		Simple,
+		Sliced,
+		/** Nine-sliced without its centre. */
+		SlicedFrame,
+	};
+	EDrawnQuad DrawnQuad = EDrawnQuad::None;
 
 	void CopyDataForPrepare(const FDreamUIGeometry& Other)
 	{
@@ -184,6 +208,7 @@ public:
 		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
 		//a batching key, so it has to survive the copy for the same reason the transform below does
 		BlendMode = Other.BlendMode;
+		MaskTextures = Other.MaskTextures;
 		/**
 		 * The batching thread asks this transform whether the item is a flat 2D element or a rotated /
 		 * depth-offset 3D one, and only 2D items are free to batch anywhere. A destination geometry starts
@@ -227,6 +252,7 @@ public:
 		Vertices.Reset();
 		Triangles.Reset();
 		OriginVertices.Reset();
+		DrawnQuad = EDrawnQuad::None;
 	}
 
 	/**

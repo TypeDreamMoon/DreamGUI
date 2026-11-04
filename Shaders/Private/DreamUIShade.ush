@@ -35,22 +35,17 @@
 #endif
 
 /**
- * The whole pixel, with the switches the hosts set; the DreamUI_ShadePixel overloads below set them for a host that does
- * not know them.
- *
- * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), negated when the project runs the
- * field face through the coverage correction (UDreamGUISettings::bFieldTextCorrection), w texels per em at the atlas's
- * sample size, negated when the font has the small-text correction off (see DreamUIText_ShadeField). Only glyphs read it.
- * PaintDataTex is the world's paint rows, read only with bPaints: without, a painted quad draws as if it had no slot.
- * bLinearTarget says whether the target blends in linear light, which the field face's correction asks.
+ * The whole pixel but its clip, with the switches the hosts set: DreamUI_ShadePixelWith and the DreamUI_ShadePixel overloads
+ * below run it and clip it. OutClipDataCoordinate is the widget record's clip row. The parameters are
+ * DreamUI_ShadePixelWith's.
  */
-float4 DreamUI_ShadePixelWith(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
+float4 DreamUIShade_ShadeUnclipped(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
-	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex, bool bPaints, bool bLinearTarget
+	Texture2D WidgetDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex, bool bPaints, bool bLinearTarget,
 #if DREAMUI_SHADE_RECT_BLOCK
-	, Texture2D RectBlockDataTex
+	Texture2D RectBlockDataTex,
 #endif
-	)
+	out float OutClipDataCoordinate)
 {
 	half FontMark;
 	float ClipDataCoordinate;
@@ -170,14 +165,89 @@ float4 DreamUI_ShadePixelWith(float2 UV0, float2 UV1, float2 UV2, float2 UV3, fl
 		}
 	}
 
-	Color.a *= DreamUI_CalculateClipData(ClipDataTex, ClipDataCoordinate, LocalPosition);
+	OutClipDataCoordinate = ClipDataCoordinate;
 	return Color;
 }
 
 /**
- * The pixel, painted text included: what MF_DreamUI_Shade calls, and what a material that shades through DreamGUI calls
- * with UV4 = TexCoord(4) and the world's paint rows (DreamUI_PaintDataTexture). A host that cannot tell how its target
- * blends is taken to blend in linear light, as UE's renderer does: only the field face's correction asks.
+ * The whole pixel, with the switches the hosts set, clipped without mask textures: a clip mask that reads one takes every
+ * texel to be white (DreamUI_CalculateClipData). What a custom material that calls this keeps; the built-in shader calls
+ * the overload below with the textures.
+ *
+ * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), negated when the project runs the
+ * field face through the coverage correction (UDreamGUISettings::bFieldTextCorrection), w texels per em at the atlas's
+ * sample size, negated when the font has the small-text correction off (see DreamUIText_ShadeField). Only glyphs read it.
+ * PaintDataTex is the world's paint rows, read only with bPaints: without, a painted quad draws as if it had no slot.
+ * bLinearTarget says whether the target blends in linear light, which the field face's correction asks.
+ */
+float4 DreamUI_ShadePixelWith(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex, bool bPaints, bool bLinearTarget
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
+{
+	float ClipDataCoordinate;
+	float4 Color = DreamUIShade_ShadeUnclipped(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
+		MainTex, MainSampler, FontTex, FontSampler, WidgetDataTex, FontAtlasInfo, PaintDataTex, bPaints, bLinearTarget,
+#if DREAMUI_SHADE_RECT_BLOCK
+		RectBlockDataTex,
+#endif
+		ClipDataCoordinate);
+	Color.a *= DreamUI_CalculateClipData(ClipDataTex, ClipDataCoordinate, LocalPosition);
+	return Color;
+}
+
+/** The same, clipped with the clip masks' textures, by slot, each with its own sampler (DreamUI_CalculateClipDataMasked). */
+float4 DreamUI_ShadePixelWith(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex, bool bPaints, bool bLinearTarget,
+	Texture2D MaskTex0, SamplerState MaskSampler0, Texture2D MaskTex1, SamplerState MaskSampler1
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
+{
+	float ClipDataCoordinate;
+	float4 Color = DreamUIShade_ShadeUnclipped(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
+		MainTex, MainSampler, FontTex, FontSampler, WidgetDataTex, FontAtlasInfo, PaintDataTex, bPaints, bLinearTarget,
+#if DREAMUI_SHADE_RECT_BLOCK
+		RectBlockDataTex,
+#endif
+		ClipDataCoordinate);
+	Color.a *= DreamUI_CalculateClipDataMasked(ClipDataTex, MaskTex0, MaskSampler0, MaskTex1, MaskSampler1, ClipDataCoordinate, LocalPosition);
+	return Color;
+}
+
+/**
+ * The pixel with paints and the clip masks' textures: what MF_DreamUI_Shade calls, with the textures the canvas sets on
+ * every UI material instance (DreamUI_ClipMaskTexture0 and 1). A host that cannot tell how its target blends is taken to
+ * blend in linear light, as UE's renderer does.
+ */
+float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex,
+	Texture2D MaskTex0, SamplerState MaskSampler0, Texture2D MaskTex1, SamplerState MaskSampler1
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
+{
+	return DreamUI_ShadePixelWith(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
+		MainTex, MainSampler, FontTex, FontSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, PaintDataTex, true, true,
+		MaskTex0, MaskSampler0, MaskTex1, MaskSampler1
+#if DREAMUI_SHADE_RECT_BLOCK
+		, RectBlockDataTex
+#endif
+		);
+}
+
+/**
+ * The pixel, painted text included: what MF_DreamUI_Shade called before clip masks had textures, and what a material that
+ * shades through DreamGUI calls with UV4 = TexCoord(4) and the world's paint rows (DreamUI_PaintDataTexture). Its clip masks
+ * take their textures to be white. A host that cannot tell how its target blends is taken to blend in linear light, as
+ * UE's renderer does: only the field face's correction asks.
  */
 float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,

@@ -28,6 +28,8 @@ struct FDreamUIBuiltInTextures
 	const UTexture* RenderLayerTable = nullptr;
 	const UTexture* RectBlockData = nullptr;
 	const UTexture* PaintData = nullptr;
+	const UTexture* MaskTexture0 = nullptr;
+	const UTexture* MaskTexture1 = nullptr;
 };
 
 /**
@@ -67,6 +69,12 @@ struct FDreamUIBuiltInDrawParams
 	 * are; null where the world has none.
 	 */
 	TWeakObjectPtr<const UTexture> PaintData;
+	/**
+	 * The textures the clip masks of the draw's elements read, by slot (FDreamUIDrawCall::MaskTextures): null where none of
+	 * them reads one, and a white texture is bound there, which nothing samples.
+	 */
+	TWeakObjectPtr<const UTexture> MaskTexture0;
+	TWeakObjectPtr<const UTexture> MaskTexture1;
 	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
 	FTextureReferenceRHIRef MainTextureRHI;
 	FSamplerStateRHIRef MainSamplerRHI;
@@ -77,6 +85,10 @@ struct FDreamUIBuiltInDrawParams
 	FTextureReferenceRHIRef RenderLayerTableRHI;
 	FTextureReferenceRHIRef RectBlockDataRHI;
 	FTextureReferenceRHIRef PaintDataRHI;
+	FTextureReferenceRHIRef MaskTexture0RHI;
+	FSamplerStateRHIRef MaskSampler0RHI;
+	FTextureReferenceRHIRef MaskTexture1RHI;
+	FSamplerStateRHIRef MaskSampler1RHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/**
@@ -144,6 +156,11 @@ public:
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RectBlockDataTex)
 		/** The world's paint rows (FDreamUIBuiltInDrawParams::PaintData), read by Load: no sampler. */
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_PaintDataTex)
+		/** The clip masks' textures, by slot (FDreamUIBuiltInDrawParams::MaskTexture0/1), each with its own sampler. */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex0)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler0)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex1)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler1)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_SceneDepthTex)
 		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_SceneDepthTexSampler)
 		SHADER_PARAMETER(FVector4f, DreamUI_SceneDepthTextureScaleOffset)
