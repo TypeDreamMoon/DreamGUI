@@ -516,7 +516,9 @@ bool FDreamClipMaskPixelAgainstHitTest::RunTest(const FString& Parameters)
 		const float Top = Root->GetLocalSpaceTop();
 		const float UnitsPerPixelX = Root->GetWidth() / Size.X;
 		const float UnitsPerPixelY = Root->GetHeight() / Size.Y;
-		const FColor Ground = Stage->GetBackdrop();
+		// The target is sRGB and blends in linear light: a pixel half covered is half way there in linear values, which
+		// its stored, encoded value is not.
+		const float Ground = FLinearColor(Stage->GetBackdrop()).G;
 		int32 Shown = 0, Hidden = 0, Disagree = 0;
 		FString FirstDisagreement;
 		for (int32 Y = 0; Y < Size.Y; Y += 2)
@@ -541,7 +543,7 @@ bool FDreamClipMaskPixelAgainstHitTest::RunTest(const FString& Parameters)
 					continue;
 				}
 				const FColor& Pixel = Pixels[Y * Size.X + X];
-				const float Coverage = (static_cast<float>(Pixel.G) - Ground.G) / (255.0f - Ground.G);
+				const float Coverage = (FLinearColor(Pixel).G - Ground) / (1.0f - Ground);
 				if (Coverage > 0.3f && Coverage < 0.7f)
 				{
 					continue;
