@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetDesignerViewportClient.h"
+#include "Core/DreamUIClipData.h"
+#include "Core/DreamUIClipMask.h"
 #include "DreamWidgetDesignerEdMode.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Designer/DreamWidgetPreviewHost.h"
@@ -925,6 +927,81 @@ void FDreamWidgetDesignerViewportClient::DrawWidgetScreenOutline(UDreamWidget* I
 	}
 }
 
+void FDreamWidgetDesignerViewportClient::DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const
+{
+	if (!IsValid(InWidget))return;
+	TSharedPtr<FDreamUIClipData> Clip = InWidget->GetClipData().Pin();
+	if (!Clip.IsValid() || Clip->GetWidget() != InWidget)return;
+	TArray<FDreamUIClipData::FLevel, TInlineAllocator<16>> Levels;
+	Clip->CollectLevels(Levels);
+	for (const FDreamUIClipData::FLevel& Level : Levels)
+	{
+		// The widget's own levels only, its mask and the layer below it: the clips around are their widgets' to show.
+		if (Level.Node->GetWidget() != InWidget || !Level.IsMasked())continue;
+		const bool bBelow = Level.Node->GetKind() == FDreamUIClipData::EKind::Below;
+		const int32 Shape = (Level.Mask != nullptr && !bBelow) ? static_cast<int32>(Level.Mask->Shape) : static_cast<int32>(EDreamClipMaskShape::Rect);
+		float ParamA = 0.0f, ParamB = 0.0f;
+		if (Level.Mask != nullptr && !bBelow)
+		{
+			FVector4f Packed[DreamUIClipLayout::MaskTexels];
+			if (FDreamUIClipMaskMath::PackMask(*Level.Mask, Level.HalfSize, INDEX_NONE, Packed))
+			{
+				ParamA = Packed[0].Y;
+				ParamB = Packed[0].Z;
+			}
+		}
+		const FVector4f Radius(Level.CornerRadius.Y, Level.CornerRadius.X, Level.CornerRadius.W, Level.CornerRadius.Z);
+		auto Distance = [&](FVector2f P)
+		{
+			return Shape == static_cast<int32>(EDreamClipMaskShape::Rect)
+				? FDreamUIClipMaskMath::SdRoundRect(P, Level.HalfSize, Radius)
+				: FDreamUIClipMaskMath::ShapeDistance(Shape, P, Level.HalfSize, ParamA, ParamB);
+		};
+		// The outline where the distance crosses zero, found along rays from the centre; a ring's hole is the second
+		// crossing, drawn as an outline of its own.
+		const float Reach = Level.HalfSize.Size() * 1.5f + 1.0f;
+		auto DrawCrossing = [&](bool bInner)
+		{
+			constexpr int32 Steps = 96;
+			TArray<FVector2D, TInlineAllocator<Steps>> Points;
+			for (int32 Step = 0; Step < Steps; ++Step)
+			{
+				const float Angle = UE_TWO_PI * Step / Steps;
+				const FVector2f Direction(FMath::Sin(Angle), FMath::Cos(Angle));
+				float Low = 0.0f, High = Reach;
+				if (bInner)
+				{
+					// Inside the hole the distance is positive: the hole's edge is the first crossing to negative.
+					if (Distance(FVector2f::ZeroVector) <= 0.0f)return;
+				}
+				for (int32 Iteration = 0; Iteration < 24; ++Iteration)
+				{
+					const float Mid = (Low + High) * 0.5f;
+					const float D = Distance(Direction * Mid);
+					const bool bPast = bInner ? D <= 0.0f : D > 0.0f;
+					(bPast ? High : Low) = Mid;
+				}
+				const FVector Local(0.0, Direction.X * High, Direction.Y * High);
+				FVector2D Pixel;
+				if (!DreamWorldToPixelInFront(View, Level.CentreToWorld.TransformPosition(Local), Pixel))return;
+				Points.Add(Pixel / Canvas.GetDPIScale());
+			}
+			for (int32 Index = 0; Index < Points.Num(); ++Index)
+			{
+				FCanvasLineItem Line(Points[Index], Points[(Index + 1) % Points.Num()]);
+				Line.SetColor(bBelow ? FLinearColor(0.35f, 1.0f, 0.55f, 0.9f) : FLinearColor(1.0f, 0.85f, 0.2f, 0.9f));
+				Line.LineThickness = 1.0f;
+				Canvas.DrawItem(Line);
+			}
+		};
+		DrawCrossing(false);
+		if (Shape == static_cast<int32>(EDreamClipMaskShape::Ring))
+		{
+			DrawCrossing(true);
+		}
+	}
+}
+
 void FDreamWidgetDesignerViewportClient::DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
@@ -1365,6 +1442,13 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			{
 				DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
 			}
+		}
+	}
+	if (DesignerPtr.IsValid() && DesignerPtr.Pin()->GetShowClipMasks())
+	{
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : DesignerPtr.Pin()->GetSelectedWidgets())
+		{
+			DrawClipMaskOutline(WeakWidget.Get(), View, Canvas);
 		}
 	}
 	// The selection outline and its handles follow the widget wherever the camera is.

@@ -462,6 +462,8 @@ private:
 	 * that ships where it was laid out, which is most things.
 	 */
 	void DrawShippedImageOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
+	/** InWidget's own clip mask and the layer below it, outlined where they cut (UDreamUIDesignerSettings::bShowClipMasks). */
+	void DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	/** The title-safe rect of the design canvas. Silent on platforms that declare no safe area. */
