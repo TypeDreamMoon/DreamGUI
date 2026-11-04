@@ -18,6 +18,7 @@
 
 class UDreamWidgetSubObjectBehaviour;
 class UDreamUIBehaviour;
+class UDreamLayerGroup;
 class UDreamUserWidget;
 class APlayerController;
 class ULocalPlayer;
@@ -1764,6 +1765,13 @@ public:
 	 * it, is batched again, since a draw call binds them.
 	 */
 	void MarkClipMaskTexturesChanged()const;
+	/** The layer group on this widget, while one is registered with it (UDreamLayerGroup). */
+	UDreamLayerGroup* GetLayerGroup()const;
+	/** Set by the layer group as it registers with this widget, and cleared as it unregisters. */
+	void SetLayerGroup(UDreamLayerGroup* InGroup);
+private:
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }

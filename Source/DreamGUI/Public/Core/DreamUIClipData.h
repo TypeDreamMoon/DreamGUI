@@ -13,10 +13,11 @@ class UTexture;
  * One level of a chain of clips, and the row of the clip data texture that holds the chain from it outwards
  * (DreamUIClip.ush says what a row holds).
  *
- * A level is one of two kinds. Bounds is a clipping widget's own rect, with its mask if it has one (FDreamClipMask). Below
+ * A level is one of three kinds. Bounds is a clipping widget's own rect, with its mask if it has one (FDreamClipMask). Below
  * is the level a widget that clips to the layer below it gets (UDreamWidget::bClipToBelow): the shape of the element
  * below, in that element's frame. A widget that clips to the layer below and clips to its bounds as well owns two levels,
- * its Bounds level inside its Below level.
+ * its Bounds level inside its Below level. GroupMask is a layer group's mask (UDreamLayerGroup::GroupMask) on the group's
+ * rect, a chain of its own that no element is clipped by: the group's composite reads it.
  */
 class DREAMGUI_API FDreamUIClipData
 {
@@ -25,6 +26,7 @@ public:
 	{
 		Bounds,
 		Below,
+		GroupMask,
 	};
 
 	static int InheritClipDepth;//max intersection clip bounds count, DreamUIClipLayout::Depth, which DREAMUI_CLIP_DEPTH in DreamUIClip.ush is held to

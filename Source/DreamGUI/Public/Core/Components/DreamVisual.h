@@ -17,6 +17,7 @@ class UTexture;
 class UDreamCanvas;
 class UDreamVisualCustomRaycast;
 class UDreamVisual;
+struct FDreamUICompositeDesc;
 
 /**
  * This component is only used when DreamVisual's RaycastType = Custom
@@ -185,6 +186,18 @@ public:
 	/** get final alpha, calculated with CanvasGroup's alpha */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		float GetFinalAlpha01()const;
+	/**
+	 * Whether the canvas draws this element as a group drawn already rather than as its geometry -- a texture put over the
+	 * element's rect through a group's composite (FDreamUICompositeDesc::bExternal) -- and what goes into that composite.
+	 * Asked as the canvas makes its draw calls and every frame after, while DrawsThroughComposite says so, and only on a
+	 * canvas that draws groups apart. False draws the element as it is.
+	 */
+	virtual bool GetCompositeSource(FDreamUICompositeDesc& OutDesc)const { return false; }
+	bool DrawsThroughComposite()const { return bDrawsThroughComposite; }
+protected:
+	/** See GetCompositeSource: a subclass sets it while it has a composite to give. */
+	bool bDrawsThroughComposite = false;
+public:
 	/**
 	 * The colour this visual is drawn with: Color, times the content tint of every widget above it
 	 * (UDreamWidget::GetInheritedContentTint) and ColorMultiplier, in linear space, with the alpha then scaled by the

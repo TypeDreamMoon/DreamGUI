@@ -7,6 +7,7 @@
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamLayerGroup.h"
 #include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
@@ -328,6 +329,16 @@ void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSh
 	{
 		Visual->CheckClipDataStartPosition();
 	}
+}
+
+UDreamLayerGroup* UDreamWidget::GetLayerGroup() const
+{
+	return LayerGroup.Get();
+}
+
+void UDreamWidget::SetLayerGroup(UDreamLayerGroup* InGroup)
+{
+	LayerGroup = InGroup;
 }
 
 void UDreamWidget::UpdateVisual() const

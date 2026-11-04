@@ -8,8 +8,10 @@
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "Core/DreamUIQuadTree.h"
 #include "UObject/ObjectKey.h"
+#include "DreamUIRender/DreamUICompositor.h"
 
 class UDreamVisualPostProcess;
+class UDreamVisual;
 class UDreamUIFontData_BaseObject;
 struct FDreamUIMeshVertex;
 class UMaterialInterface;
@@ -18,6 +20,7 @@ class UDreamWidget;
 class UDreamVisualBatchMesh;
 class UDreamVisualDirectMesh;
 class UDreamUIMeshComponent;
+class UDreamLayerGroup;
 struct FDreamUIRenderSection;
 
 enum class EDreamUIDrawCallType :uint8
@@ -26,6 +29,12 @@ enum class EDreamUIDrawCallType :uint8
 	PostProcess,
 	DirectMesh,
 	ChildCanvas,
+	/**
+	 * A group opened, and closed: what is drawn between the two goes into a texture of its own, put over what is behind it
+	 * as the group's composite says (FDreamUICompositeDesc). Nothing batches across either.
+	 */
+	GroupBegin,
+	GroupEnd,
 };
 
 class FDreamUIRenderData
@@ -58,6 +67,16 @@ public:
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
 
 	TWeakObjectPtr<UDreamCanvas> ChildCanvas;
+
+	/**
+	 * A group marker's composite: the whole of it on the opening marker, its id alone on the closing one. Made on the game
+	 * thread as the markers are put among the entries (UDreamCanvas::InsertCompositeMarkers), never written after.
+	 */
+	TSharedPtr<const FDreamUICompositeDesc> Composite;
+	/** The layer group a marker is for, when it is one's: what its opacity and mode are read from every frame. */
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	/** The element a group drawn already is for (UDreamVisual::GetCompositeSource): what its composite is read from every frame. */
+	TWeakObjectPtr<UDreamVisual> CompositeVisual;
 
 	/**
 	 * The widget the entry was prepared from, as a key: the canvas finds the entry's place in its widget list with it on
@@ -164,6 +183,13 @@ public:
 	void PlaceBounds(const class UDreamUIRenderLayerTable* InTable);
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
+
+	/** A group marker's composite and layer group, as FDreamUIRenderData has them; bCompositeBegin for the opening one. */
+	TSharedPtr<const FDreamUICompositeDesc> Composite;
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	TWeakObjectPtr<UDreamVisual> CompositeVisual;
+	bool bCompositeBegin = false;
+	bool IsGroupMarker() const { return Type == EDreamUIDrawCallType::GroupBegin || Type == EDreamUIDrawCallType::GroupEnd; }
 public:
 	/**
 	 * The cheap refresh, for a draw call whose layout still holds: each visual's copy of its geometry taken again

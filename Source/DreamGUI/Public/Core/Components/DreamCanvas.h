@@ -689,6 +689,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	int GetDrawCallCount()const;
+	/** The draw calls the canvas draws now, in order: for tests and tools that look at how a canvas was batched. */
+	const TArray<FDreamUIDrawCall>& GetCurrentDrawCalls()const;
 
 	/** Override DreamUI's screen space UI render's camera location. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -885,6 +887,24 @@ public:
 	/** On the game thread, after the refresh: what it left -- sections to rebuild, the mesh's bounds -- and the mesh's render commands. */
 	void FinishDrawCallBatchData();
 	/**
+	 * Group markers put among InOutData, the prepared entries in widget order, around what each group holds: a layer
+	 * group's subtree, a widget's element drawn through a material by a blend mode its material cannot do, and the layer
+	 * below and what clips to it where that layer is something no clip level follows. Nothing when there is none; the
+	 * prepared cache is never given them.
+	 */
+	void InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData);
+	/**
+	 * Every frame, for the draw calls in hand: each group's composite -- what it covers, a layer group's opacity, mode and
+	 * mask -- and the box of each draw of a mode that reads what is behind it, sent where they changed.
+	 */
+	void UpdateCompositeBounds();
+	/** The draw calls in hand hold a group marker or a draw of a mode that reads what is behind it. */
+	bool bHasCompositeDrawCalls = false;
+	/** A world-space canvas was told once that its groups are drawn passed through. */
+	bool bWarnedGroupsNotApart = false;
+	/** ...and that its elements of a mode that reads what is behind are drawn Normal. */
+	bool bWarnedBackdropNotRead = false;
+	/**
 	 * FinishDrawCallBatchData's render layers, for a caller finishing many canvases at once. First, on the game thread: the
 	 * layers that held still long enough taken back, and whether the rest are to be placed, which FinishDrawCallBatchData
 	 * then does not ask again. True when they are: PlaceRenderLayers, before FinishDrawCallBatchData.
@@ -967,6 +987,17 @@ public:
 	/** Called by DreamWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FDreamUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
+	/**
+	 * A layer group's mask as a chain of its own in this canvas's root's clip data (FDreamUIClipData::EKind::GroupMask), kept
+	 * up to date with the rest until RemoveClipData takes it out.
+	 */
+	TSharedPtr<FDreamUIClipData> MakeGroupMaskClipData(UDreamWidget* InWidget);
+	/**
+	 * Whether the canvas draws a group apart (UDreamLayerGroup, and the groups clipping to a layer below and drawing an
+	 * element through a material by a blend mode make): only on a screen-space canvas in a game world and on a render-target
+	 * canvas, which DreamGUI's renderer draws through a stack of targets. A world-space canvas draws them passed through.
+	 */
+	bool CanDrawGroupsApart()const;
 	UDreamUIDataAsTexture* GetWidgetPropertyDataAsTexture()const{return WidgetPropertyDataAsTexture;}
 	
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetChildrenCanvasArray()const{return ChildrenCanvasArray;}

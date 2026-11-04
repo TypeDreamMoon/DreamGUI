@@ -8,6 +8,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamLayerGroup.h"
 #include "Engine/Texture2D.h"
 #include "Utils/DreamUIUtils.h"
 
@@ -130,6 +131,21 @@ bool FDreamUIClipData::DescribeLevel(FLevel& OutLevel) const
 	OutLevel = FLevel();
 	OutLevel.Node = this;
 	const UDreamWidget* Owner = Widget.Get();
+	if (Kind == EKind::GroupMask)
+	{
+		// The group's rect and its mask, measured as a clipping widget's own are, without its clipping margin or corners.
+		const UDreamLayerGroup* Group = Owner->GetLayerGroup();
+		if (Group == nullptr || !Group->GetGroupMask().IsActive())
+		{
+			return false;
+		}
+		OutLevel.Frame = Owner;
+		OutLevel.CentreToWorld = DreamUIClipDataLocal::CentreToWorld(GetClipperToWorldMatrix(Owner), Owner->GetLocalSpaceCenter());
+		OutLevel.HalfSize = FVector2f(Owner->GetWidth(), Owner->GetHeight()) * 0.5f;
+		OutLevel.Mask = &Group->GetGroupMask();
+		OutLevel.Texture = OutLevel.Mask->GetActiveTexture();
+		return true;
+	}
 	if (Kind == EKind::Bounds)
 	{
 		OutLevel.Frame = Owner;
@@ -300,7 +316,8 @@ void FDreamUIClipData::UpdateData()
 	if (Kind == EKind::Below && Underlay.IsValid())
 	{
 		FDreamClipUnderlay Below;
-		if (!DescribeUnderlay(Underlay.Get(), Below) && !Below.bPending)
+		// What no level can follow is clipped to by a group (UDreamCanvas::InsertCompositeMarkers) wherever groups are drawn apart.
+		if (!DescribeUnderlay(Underlay.Get(), Below) && !Below.bPending && !Owner->GetRenderCanvas()->CanDrawGroupsApart())
 		{
 			Warnings |= UnsupportedUnderlay;
 			UnsupportedReason = Below.Unsupported;
@@ -398,6 +415,32 @@ void FDreamUIClipData::UpdateData()
 
 bool FDreamUIClipData::IsPointVisible(const FVector& WorldPoint) const
 {
+	/**
+	 * A layer below that no level follows is clipped to through a group, where groups are drawn apart: what clips to it is
+	 * hit where the layer's widget rect is, the shape the group follows on screen being the layer's picture, which the CPU
+	 * does not have.
+	 */
+	{
+		const FDreamUIClipData* Node = this;
+		TSharedPtr<FDreamUIClipData> Held;
+		while (Node != nullptr && Node->Widget.IsValid())
+		{
+			const UDreamWidget* Below = Node->Kind == EKind::Below ? Node->Underlay.Get() : nullptr;
+			const UDreamCanvas* Canvas = Below != nullptr ? Below->GetRenderCanvas() : nullptr;
+			FDreamClipUnderlay BelowShape;
+			if (Canvas != nullptr && Canvas->CanDrawGroupsApart() && !DescribeUnderlay(Below, BelowShape) && !BelowShape.bPending)
+			{
+				const FVector Local = WorldPointToClipperLocal(Below, WorldPoint);
+				if (Local.Y < Below->GetLocalSpaceLeft() || Local.Y > Below->GetLocalSpaceRight()
+					|| Local.Z < Below->GetLocalSpaceBottom() || Local.Z > Below->GetLocalSpaceTop())
+				{
+					return false;
+				}
+			}
+			Held = Node->Parent.Pin();
+			Node = Held.Get();
+		}
+	}
 	TArray<FLevel, TInlineAllocator<16>> Levels;
 	CollectLevels(Levels);
 	for (const FLevel& Level : Levels)

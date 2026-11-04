@@ -34,7 +34,7 @@
 
 enum class EDreamUIRenderSectionProxyType :uint8
 {
-	Mesh, PostProcess, ChildCanvas,
+	Mesh, PostProcess, ChildCanvas, Group,
 };
 struct FDreamUIRenderSectionProxy
 {
@@ -81,6 +81,8 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 
 	uint32 ValidVerticesCount = 0;
 	uint32 NumPrimitives = 0;
+	/** See FDreamUIRenderSection_Mesh::BackdropBounds. */
+	FBox BackdropBounds = FBox(ForceInit);
 
 	/**
 	 * What a draw of this section binds (FDreamUISectionDrawState), made when it is first asked for after any of it
@@ -214,6 +216,23 @@ struct FDreamUIRenderSectionProxy_PostProcess : public FDreamUIRenderSectionProx
 	virtual void Disable() override
 	{
 		PostProcessRenderProxy.Reset();
+		bCanRender = false;
+	}
+};
+/** A group's marker (FDreamUIRenderSection_Group): the renderer opens or closes the group there. */
+struct FDreamUIRenderSectionProxy_Group : public FDreamUIRenderSectionProxy
+{
+	FDreamUIRenderSectionProxy_Group()
+	{
+		Type = EDreamUIRenderSectionProxyType::Group;
+	}
+
+	bool bBegin = true;
+	/** Its textures' references taken on the render thread, by the command that sent it. */
+	FDreamUICompositeDesc Desc;
+
+	virtual void Disable() override
+	{
 		bCanRender = false;
 	}
 };
@@ -659,6 +678,30 @@ public:
 		MeshSection->BuiltIn = Params;
 		MeshSection->bDrawStateStale = true;
 	}
+	void SetMeshSectionBackdropBounds_RenderThread(FDreamUIRenderSectionProxy* Section, const FBox& InBounds)
+	{
+		if (Section != nullptr && Section->Type == EDreamUIRenderSectionProxyType::Mesh)
+		{
+			static_cast<FDreamUISectionProxy_Mesh*>(Section)->BackdropBounds = InBounds;
+		}
+	}
+	/**
+	 * Game thread: a group marker taken back from the pool, or one whose composite changed, given InDesc and drawn again.
+	 * Its textures are taken just before the command that reads them is enqueued (FDreamUIBuiltInTextures).
+	 */
+	void UpdateGroupSection(FDreamUIRenderSectionProxy* InSectionProxy, bool bInBegin, const FDreamUICompositeDesc& InDesc)
+	{
+		check(InSectionProxy != nullptr && InSectionProxy->Type == EDreamUIRenderSectionProxyType::Group);
+		ENQUEUE_RENDER_COMMAND(FDreamUIRenderRoot_UpdateGroupSection)(
+			[Self = AsShared(), SectionProxy = static_cast<FDreamUIRenderSectionProxy_Group*>(InSectionProxy), bInBegin, Desc = InDesc
+				, Textures = InDesc.Textures.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList) mutable
+			{
+				Desc.Textures.ResolveTextures_RenderThread(Textures);
+				SectionProxy->bBegin = bInBegin;
+				SectionProxy->Desc = MoveTemp(Desc);
+				SectionProxy->bCanRender = true;
+			});
+	}
 
 	void SetRenderSectionRenderPriority_RenderThread(FDreamUIRenderSectionProxy* Section, int32 NewPriority)
 	{
@@ -997,6 +1040,7 @@ public:
 			MeshBatchContainer.bBuiltIn = Section->BuiltIn.bEnabled && !bWireframe;
 			// The primitive uniform buffer above stays the root's: a render layer's row of the table is applied ahead of it.
 			MeshBatchContainer.LocalToWorld = LocalToWorld;
+			MeshBatchContainer.BackdropBounds = Section->BackdropBounds;
 		}
 	}
 
@@ -1004,6 +1048,16 @@ public:
 	{
 		check(SectionPtr->Type == EDreamUIRenderSectionProxyType::PostProcess);
 		return (static_cast<FDreamUIRenderSectionProxy_PostProcess*>(SectionPtr))->PostProcessRenderProxy;
+	}
+	virtual const FDreamUICompositeDesc* DreamUI_GetCompositeElement(FDreamUIRenderSectionProxy* SectionPtr, bool& bOutBegin) const override
+	{
+		if (SectionPtr == nullptr || SectionPtr->Type != EDreamUIRenderSectionProxyType::Group)
+		{
+			return nullptr;
+		}
+		const FDreamUIRenderSectionProxy_Group* Group = static_cast<FDreamUIRenderSectionProxy_Group*>(SectionPtr);
+		bOutBegin = Group->bBegin;
+		return &Group->Desc;
 	}
 	virtual int DreamUI_GetRenderPriority()const override
 	{
@@ -1025,8 +1079,15 @@ public:
 		SortIfAsked_RenderThread();
 
 		if (SectionArray[0] == nullptr)return;
+		// A post process and a group marker are run by the renderer as they are; every other section is a mesh to draw.
+		auto PrimitiveTypeOf = [](EDreamUIRenderSectionProxyType InType)
+		{
+			return InType == EDreamUIRenderSectionProxyType::PostProcess ? EDreamUIRendererPrimitiveType::PostProcess
+				: InType == EDreamUIRenderSectionProxyType::Group ? EDreamUIRendererPrimitiveType::Group
+				: EDreamUIRendererPrimitiveType::Mesh;
+		};
 		auto PrevRenderSectionType = SectionArray[0]->Type;
-		auto PrevPrimitiveType = PrevRenderSectionType == EDreamUIRenderSectionProxyType::PostProcess ? EDreamUIRendererPrimitiveType::PostProcess : EDreamUIRendererPrimitiveType::Mesh;
+		auto PrevPrimitiveType = PrimitiveTypeOf(PrevRenderSectionType);
 		FDreamUIPrimitiveDataContainer CurrentRenderData;
 		CurrentRenderData.Primitive = this;
 		CurrentRenderData.Type = PrevPrimitiveType;
@@ -1044,7 +1105,7 @@ public:
 				PrevRenderSectionType = RenderSection->Type;
 				CurrentRenderData = FDreamUIPrimitiveDataContainer();
 				CurrentRenderData.Primitive = this;
-				auto ItemPrimitiveType = RenderSection->Type == EDreamUIRenderSectionProxyType::PostProcess ? EDreamUIRendererPrimitiveType::PostProcess : EDreamUIRendererPrimitiveType::Mesh;
+				auto ItemPrimitiveType = PrimitiveTypeOf(RenderSection->Type);
 				CurrentRenderData.Type = ItemPrimitiveType;
 			}
 
@@ -1066,6 +1127,13 @@ public:
 						SectionData.SectionPointer = RenderSection;
 						CurrentRenderData.Sections.Add(SectionData);
 					}
+				}
+				break;
+			case EDreamUIRenderSectionProxyType::Group:
+				{
+					FDreamUIPrimitiveSectionDataContainer SectionData;
+					SectionData.SectionPointer = RenderSection;
+					CurrentRenderData.Sections.Add(SectionData);
 				}
 				break;
 			case EDreamUIRenderSectionProxyType::ChildCanvas:
@@ -1301,6 +1369,7 @@ public:
 			}
 			break;
 			case EDreamUIRenderSectionProxyType::PostProcess:
+			case EDreamUIRenderSectionProxyType::Group:
 				break;
 			case EDreamUIRenderSectionProxyType::ChildCanvas:
 			{
@@ -1413,6 +1482,7 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 
 			NewSectionProxy->ValidVerticesCount = SrcSection->ValidVerticesNum;
 			NewSectionProxy->NumPrimitives = SrcSection->ValidTriangleIndicesNum / 3;
+			NewSectionProxy->BackdropBounds = SrcSection->BackdropBounds;
 			if (bIsSupportDreamUIRenderer)
 			{
 				// Kept after the buffer is made, as what it holds: see PatchSection_RenderThread.
@@ -1505,6 +1575,23 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 			NewSectionProxy->SectionRenderPriority = SrcSection->RenderPriority;
 			SrcSection->RenderProxy = NewSectionProxy;
 
+			return NewSectionProxy;
+		}
+	case EDreamUIRenderSectionType::Group:
+		{
+			auto SrcSection = static_cast<FDreamUIRenderSection_Group*>(InSrcSection);
+			auto NewSectionProxy = new FDreamUIRenderSectionProxy_Group();
+			NewSectionProxy->bBegin = SrcSection->bBegin;
+			NewSectionProxy->Desc = SrcSection->Desc;
+			// The references its mask is drawn with are taken on the render thread, as a built-in section's are, before
+			// anything draws it.
+			ENQUEUE_RENDER_COMMAND(FDreamUIRenderSectionProxy_ResolveGroup)(
+				[NewSectionProxy, Textures = NewSectionProxy->Desc.Textures.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList)
+				{
+					NewSectionProxy->Desc.Textures.ResolveTextures_RenderThread(Textures);
+				});
+			NewSectionProxy->SectionRenderPriority = SrcSection->RenderPriority;
+			SrcSection->RenderProxy = NewSectionProxy;
 			return NewSectionProxy;
 		}
 	}
@@ -1729,6 +1816,7 @@ void UDreamUIMeshComponent::ReleaseRenderRoot()
 	PendingUpdateRenderSectionPriorityArray.Reset();
 	PendingUpdateMeshSectionMaterialDataArray.Reset();
 	PendingUpdateMeshSectionBuiltInDataArray.Reset();
+	PendingUpdateSectionBackdropBoundsArray.Reset();
 }
 
 bool UDreamUIMeshComponent::CanDrawRenderLayers() const
@@ -1824,6 +1912,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 		break;
 	case EDreamUIRenderSectionType::PostProcess:
 	case EDreamUIRenderSectionType::ChildCanvas:
+	case EDreamUIRenderSectionType::Group:
 		RenderSection = GetRenderSectionFromPool();
 		break;
 	}
@@ -1842,6 +1931,9 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			break;
 		case EDreamUIRenderSectionType::DirectMesh:
 			RenderSection = MakeShared<FDreamUIRenderSection_DirectMesh>();
+			break;
+		case EDreamUIRenderSectionType::Group:
+			RenderSection = MakeShared<FDreamUIRenderSection_Group>();
 			break;
 		}
 	}
@@ -2019,10 +2111,73 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			}
 		}
 		break;
+	case EDreamUIRenderSectionType::Group:
+		{
+			auto GroupSectionPtr = static_cast<FDreamUIRenderSection_Group*>(RenderSection.Get());
+			GroupSectionPtr->bBegin = InDrawCallData->bCompositeBegin;
+			GroupSectionPtr->Desc = InDrawCallData->Composite.IsValid() ? *InDrawCallData->Composite : FDreamUICompositeDesc();
+			if (RenderRoot.IsValid())
+			{
+				FDreamUIRenderRootRef Root = RenderRoot;
+				if (GroupSectionPtr->RenderProxy != nullptr)
+				{
+					// Taken back from the pool, which switched it off: switched on again with what it is now.
+					Root->UpdateGroupSection(GroupSectionPtr->RenderProxy, GroupSectionPtr->bBegin, GroupSectionPtr->Desc);
+				}
+				else
+				{
+					Root->AddSectionData(GroupSectionPtr);
+				}
+			}
+		}
+		break;
 	}
 
 	RenderSectionArray.Add(RenderSection);
 	return RenderSection;
+}
+
+void UDreamUIMeshComponent::SetGroupSectionComposite(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUICompositeDesc& InDesc)
+{
+	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Group)
+	{
+		return;
+	}
+	auto GroupSectionPtr = static_cast<FDreamUIRenderSection_Group*>(InRenderSection.Get());
+	const FDreamUICompositeDesc& Sent = GroupSectionPtr->Desc;
+	const bool bSame = Sent.Role == InDesc.Role && Sent.Id == InDesc.Id && Sent.BlendMode == InDesc.BlendMode && Sent.Opacity == InDesc.Opacity
+		&& Sent.WorldBounds == InDesc.WorldBounds && Sent.CanvasToWorld.Equals(InDesc.CanvasToWorld, 0.0) && Sent.MaskClipCoordinate == InDesc.MaskClipCoordinate
+		&& Sent.Textures.ClipDataTexture == InDesc.Textures.ClipDataTexture && Sent.Textures.MaskTexture0 == InDesc.Textures.MaskTexture0
+		&& Sent.Textures.MaskTexture1 == InDesc.Textures.MaskTexture1 && Sent.Textures.MainTexture == InDesc.Textures.MainTexture
+		&& Sent.bExternal == InDesc.bExternal && Sent.CanvasToUV.Equals(InDesc.CanvasToUV, 0.0f);
+	if (bSame)
+	{
+		return;
+	}
+	GroupSectionPtr->Desc = InDesc;
+	if (RenderRoot.IsValid() && GroupSectionPtr->RenderProxy != nullptr)
+	{
+		FDreamUIRenderRootRef Root = RenderRoot;
+		Root->UpdateGroupSection(GroupSectionPtr->RenderProxy, GroupSectionPtr->bBegin, GroupSectionPtr->Desc);
+	}
+}
+
+void UDreamUIMeshComponent::SetMeshSectionBackdropBounds(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FBox& InWorldBounds)
+{
+	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Mesh)
+	{
+		return;
+	}
+	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
+	if (MeshSectionPtr->BackdropBounds == InWorldBounds)
+	{
+		return;
+	}
+	MeshSectionPtr->BackdropBounds = InWorldBounds;
+	if (RenderRoot.IsValid() && MeshSectionPtr->RenderProxy != nullptr)
+	{
+		PendingUpdateSectionBackdropBoundsArray.Add(UpdateSectionBackdropBoundsStruct{ MeshSectionPtr->RenderProxy, InWorldBounds });
+	}
 }
 
 bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
@@ -2271,7 +2426,15 @@ void UDreamUIMeshComponent::RetargetPendingRenderCommands(FDreamUIRenderSectionP
 		PendingUpdateRenderSectionPriorityArray.RemoveAll([InOldSectionProxy](const UpdateRenderSectionPriority& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		PendingUpdateMeshSectionMaterialDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionMaterialDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		PendingUpdateMeshSectionBuiltInDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionBuiltInDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
+		PendingUpdateSectionBackdropBoundsArray.RemoveAll([InOldSectionProxy](const UpdateSectionBackdropBoundsStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		return;
+	}
+	for (auto& Item : PendingUpdateSectionBackdropBoundsArray)
+	{
+		if (Item.SectionProxy == InOldSectionProxy)
+		{
+			Item.SectionProxy = InNewSectionProxy;
+		}
 	}
 	for (auto& Item : PendingUpdateMeshSectionDataArray)
 	{
@@ -2903,7 +3066,19 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 		PendingUpdateRenderSectionPriorityArray.Reset();
 		PendingUpdateMeshSectionMaterialDataArray.Reset();
 		PendingUpdateMeshSectionBuiltInDataArray.Reset();
+		PendingUpdateSectionBackdropBoundsArray.Reset();
 		return;
+	}
+	if (PendingUpdateSectionBackdropBoundsArray.Num() > 0)
+	{
+		FDreamUIRenderRootRef Root = RenderRoot;
+		ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetBackdropBounds)(
+			[Root, Updates = MoveTemp(PendingUpdateSectionBackdropBoundsArray)](FRHICommandListImmediate& RHICmdList) {
+				for (const auto& Update : Updates)
+				{
+					Root->SetMeshSectionBackdropBounds_RenderThread(Update.SectionProxy, Update.Bounds);
+				}
+			});
 	}
 	if (PendingUpdateMeshSectionDataArray.Num() > 0)
 	{
