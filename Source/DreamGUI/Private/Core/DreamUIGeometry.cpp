@@ -25,6 +25,7 @@ bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared)
 		&& bIsFont == InPrepared.bIsFont
 		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
 		&& BlendMode == InPrepared.BlendMode
+		&& MaskTextures.IsSameAs(InPrepared.MaskTextures)
 		&& RenderLayer == InPrepared.RenderLayer
 		&& RenderLayerRow == InPrepared.RenderLayerRow
 		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace

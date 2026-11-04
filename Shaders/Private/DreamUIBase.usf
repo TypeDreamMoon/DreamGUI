@@ -31,6 +31,11 @@ Texture2D DreamUI_ClipDataTex;
 Texture2D DreamUI_RectBlockDataTex;
 /** The world's paint rows: the gradients painted text is filled with, and each painted text's table (DreamUIPaint.ush). */
 Texture2D DreamUI_PaintDataTex;
+/** The clip masks' textures, by slot: what the elements' clips read (DreamUI_CalculateClipDataMasked). */
+Texture2D DreamUI_MaskTex0;
+SamplerState DreamUI_MaskTexSampler0;
+Texture2D DreamUI_MaskTex1;
+SamplerState DreamUI_MaskTexSampler1;
 
 #if LEXUI_BLEND_DEPTH
 Texture2D DreamUI_SceneDepthTex;
@@ -115,6 +120,7 @@ void MainPS(
 	float4 Color = DreamUI_ShadePixelWith(In.UV0, In.UV1, In.UV2, In.UV3, In.UV4, In.Color, In.LocalPosition,
 		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
 		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo, DreamUI_PaintDataTex, true, bLinearTarget,
+		DreamUI_MaskTex0, DreamUI_MaskTexSampler0, DreamUI_MaskTex1, DreamUI_MaskTexSampler1,
 		DreamUI_RectBlockDataTex);
 #endif
 

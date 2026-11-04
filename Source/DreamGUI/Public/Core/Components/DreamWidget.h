@@ -13,6 +13,7 @@
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamLayoutPassContext.h"
 #include "Core/DreamWidgetLifecycle.h"
+#include "Core/DreamUIClipMask.h"
 #include "DreamWidget.generated.h"
 
 class UDreamWidgetSubObjectBehaviour;
@@ -1573,6 +1574,12 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=EDreamWidgetClipping::Disabled&&Clipping!=EDreamWidgetClipping::Inherit"))
 	FMargin ClippingMargin = FMargin(0);
+	/**
+	 * A mask on this widget's clip, when it clips to its bounds: a shape, a feathered edge, a texture or a procedural
+	 * pattern, inverted if asked. It clips the whole subtree, as the clip rect does. At its defaults it is no mask.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping==EDreamWidgetClipping::ClipToBounds||Clipping==EDreamWidgetClipping::ClipToBoundsWithoutIntersecting"))
+	FDreamClipMask ClipMask;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	bool bUniformSetClippingCornerRadius = true;
@@ -1730,6 +1737,15 @@ public:
 	void SetClippingCornerRadius(FVector4f Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetClippingMargin(FMargin Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	const FDreamClipMask& GetClipMask()const { return ClipMask; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetClipMask(const FDreamClipMask& Value);
+	/**
+	 * The textures the clips around this widget read changed: everything drawn through them, this widget and what is under
+	 * it, is batched again, since a draw call binds them.
+	 */
+	void MarkClipMaskTexturesChanged()const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }

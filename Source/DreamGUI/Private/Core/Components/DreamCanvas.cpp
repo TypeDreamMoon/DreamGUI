@@ -2757,6 +2757,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
 				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
+				DrawCallItem.MaskTextures = InItemGeo.MaskTextures;
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
@@ -2873,6 +2874,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 							DrawCallItem.Texture = ItemGeo.Texture;
 						}
 					}
+					//what it reads from the mask slots, the draw-call binds
+					DrawCallItem.MaskTextures.Take(ItemGeo.MaskTextures);
 					//add to this draw-call
 					DrawCallItem.BatchMeshVisualArray.Add(RenderData.BatchMeshVisualObject);
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
@@ -3643,6 +3646,8 @@ FName UDreamCanvas::DreamUI_MainTextureMaterialParameterName = FName(TEXT("Dream
 FName UDreamCanvas::DreamUI_FontTextureMaterialParameterName = FName(TEXT("DreamUI_FontTexture"));
 FName UDreamCanvas::DreamUI_FontAtlasInfoMaterialParameterName = FName(TEXT("DreamUI_FontAtlasInfo"));
 FName UDreamCanvas::DreamUI_ClipDataTexture_MaterialParameterName = FName(TEXT("DreamUI_ClipDataTexture"));
+FName UDreamCanvas::DreamUI_ClipMaskTexture0_MaterialParameterName = FName(TEXT("DreamUI_ClipMaskTexture0"));
+FName UDreamCanvas::DreamUI_ClipMaskTexture1_MaterialParameterName = FName(TEXT("DreamUI_ClipMaskTexture1"));
 FName UDreamCanvas::DreamUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("DreamUI_WidgetPropertyDataTexture"));
 FName UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName = FName(TEXT("DreamUI_IsRenderByDreamUIRenderer"));
 
@@ -3691,6 +3696,8 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 				|| Item.Name == DreamUI_ClipDataTexture_MaterialParameterName
 				|| Item.Name == DreamUI_WidgetPropertyDataTexture_MaterialParameterName
 				|| Item.Name == DreamUIShadeMaterial::PaintDataTextureParameter
+				|| Item.Name == DreamUI_ClipMaskTexture0_MaterialParameterName
+				|| Item.Name == DreamUI_ClipMaskTexture1_MaterialParameterName
 				;
 		});
 	if (bHasTexture)
@@ -3830,6 +3837,9 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				Parameters.SetTexture(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
 				// A world with no paint rows leaves the material its own default, which MF_DreamUI_Shade makes black: no paint.
 				Parameters.SetTexture(DreamUIShadeMaterial::PaintDataTextureParameter, PaintRowsTexture);
+				// The clip masks' textures, which MF_DreamUI_Shade and MF_DreamUI_Clip read; none leaves the material its white default.
+				Parameters.SetTexture(DreamUI_ClipMaskTexture0_MaterialParameterName, DrawCallItem.MaskTextures.Slots[0].Get());
+				Parameters.SetTexture(DreamUI_ClipMaskTexture1_MaterialParameterName, DrawCallItem.MaskTextures.Slots[1].Get());
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				Parameters.SetVector(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
 				for (const TWeakObjectPtr<UDreamVisualBatchMesh>& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
@@ -3862,6 +3872,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				BuiltIn.RenderLayerTable = LayerTableTexture;
 				BuiltIn.RectBlockData = RectBlockRowsTexture;
 				BuiltIn.PaintData = PaintRowsTexture;
+				BuiltIn.MaskTexture0 = DrawCallItem.MaskTextures.Slots[0].Get();
+				BuiltIn.MaskTexture1 = DrawCallItem.MaskTextures.Slots[1].Get();
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;

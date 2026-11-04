@@ -20,6 +20,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamVisualBatchMesh.h"
 #if WITH_ACCESSIBILITY
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Accessibility/SlateAccessibleMessageHandler.h"
@@ -920,6 +921,46 @@ void UDreamWidget::SetClippingMargin(FMargin Value)
 	{
 		ClippingMargin = Value;
 		MarkClipDirty(false);
+	}
+}
+
+void UDreamWidget::SetClipMask(const FDreamClipMask& Value)
+{
+	if (ClipMask != Value)
+	{
+		const bool bTextureChanged = ClipMask.IsActive() != Value.IsActive() || ClipMask.GetActiveTexture() != Value.GetActiveTexture();
+		ClipMask = Value;
+		// The mask is read again on the next update, as the rect is. A texture is bound by the draw calls, which are made
+		// again now rather than when the update finds it changed.
+		MarkClipDirty(false);
+		if (bTextureChanged)
+		{
+			MarkClipMaskTexturesChanged();
+		}
+	}
+}
+
+void UDreamWidget::MarkClipMaskTexturesChanged() const
+{
+	FDreamVisitedWidgetSet Visited;
+	TArray<const UDreamWidget*, TInlineAllocator<16>> Pending;
+	Pending.Add(this);
+	while (Pending.Num() > 0)
+	{
+		const UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+		if (!IsValid(Widget) || Visited.Contains(Widget))
+		{
+			continue;
+		}
+		Visited.Add(Widget);
+		if (UDreamVisualBatchMesh* BatchMesh = Cast<UDreamVisualBatchMesh>(Widget->GetVisual()))
+		{
+			BatchMesh->MarkMaterialDirty();
+		}
+		for (const UDreamWidget* Child : Widget->GetChildren())
+		{
+			Pending.Add(Child);
+		}
 	}
 }
 

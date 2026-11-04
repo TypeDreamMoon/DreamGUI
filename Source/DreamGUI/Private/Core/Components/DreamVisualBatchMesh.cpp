@@ -11,6 +11,7 @@
 #include "Core/DreamUIDrawCall.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIClipData.h"
 #include "Event/DreamPointerEventData.h"
 #include "HAL/IConsoleManager.h"
 
@@ -231,6 +232,15 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		//cheap, and unconditional so that it cannot go stale: the geometry is what the batcher sees,
 		//and the blend mode is part of a draw-call's identity there
 		UIGeometry->BlendMode = BlendMode;
+		//the same for the mask textures the clips around read, which a draw-call binds
+		if (TSharedPtr<FDreamUIClipData> Clip = Widget->GetClipData().Pin())
+		{
+			Clip->GetMaskTextures(UIGeometry->MaskTextures);
+		}
+		else
+		{
+			UIGeometry->MaskTextures = FDreamUIMaskTextures();
+		}
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged

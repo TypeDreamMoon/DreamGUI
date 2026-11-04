@@ -852,6 +852,9 @@ public:
 	 */
 	static FVector4f MakeFontAtlasInfo(const class FDreamUIDrawCall& DrawCallItem);
 	static FName DreamUI_ClipDataTexture_MaterialParameterName;
+	/** The clip masks' textures by slot, which a draw call binds (FDreamUIDrawCall::MaskTextures). */
+	static FName DreamUI_ClipMaskTexture0_MaterialParameterName;
+	static FName DreamUI_ClipMaskTexture1_MaterialParameterName;
 	static FName DreamUI_WidgetPropertyDataTexture_MaterialParameterName;
 	static FName DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName;
 	static bool IsMaterialContainsDreamUIParameter(const UMaterialInterface* InMaterial);

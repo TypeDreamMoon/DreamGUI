@@ -149,6 +149,8 @@ public:
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
 	/** The blend mode every element in this draw-call shares; the blend state is set once per draw-call. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/** The mask textures the draw binds: each slot the one its elements read there, if any reads it (FDreamUIMaskTextures). */
+	FDreamUIMaskTextures MaskTextures;
 	/**
 	 * Whether it holds elements of render layers, whose vertices are relative to their layers and are placed on the canvas
 	 * by the layers' rows of the render layer table (DreamUIRenderLayer.ush), on the GPU. Any number of layers, and elements
