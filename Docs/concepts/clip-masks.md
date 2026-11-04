@@ -54,8 +54,11 @@ Colour channels are read as the texture is sampled: turn off sRGB on a mask that
   `ClipToBoundsWithoutIntersecting` or `Disabled` the clips around are left out, the layer below is not.
 
 The layer below can be a simple or nine-sliced image, texture or sprite (a nine-slice without its centre leaves its centre
-empty), or a rect block (its body's rounded rect). Anything else — text, a tiled or filled image, a custom mesh, an element
-whose mesh modifiers reshape it — is not clipped to, with a warning naming the widget.
+empty), or a rect block (its body's rounded rect): the clip follows its shape. Anything else — text, a tiled or filled
+image, a custom mesh, an element whose mesh modifiers reshape it, a container or a layer group — is clipped to through a
+group on a screen-space canvas in a game and on a render-target canvas (see
+[Blend modes and layer groups](blend-modes-and-groups.md)); on a world-space canvas it is not clipped to, with a warning
+naming the widget.
 
 Hit testing follows the drawn shape of the layer below: its quad (its texture's alpha is not read) or the rect block's
 rounded body.

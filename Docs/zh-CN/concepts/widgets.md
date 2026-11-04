@@ -206,7 +206,8 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 `Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是
 `Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius`、
 `ClippingMargin` 和遮罩 `ClipMask`；`bClipToBelow` 让控件只在下方图层画出的地方显示（见
-[裁剪遮罩与剪贴到下方图层](clip-masks.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
+[裁剪遮罩与剪贴到下方图层](clip-masks.md)）。视觉元素的 `BlendMode` 和容器上的 `UDreamLayerGroup` 决定画出的内容如何合成
+（见[混合模式与图层组](blend-modes-and-groups.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
 
 <a id="making-widgets-in-code"></a>
 

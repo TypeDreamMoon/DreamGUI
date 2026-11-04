@@ -31,6 +31,20 @@ What is on `main` after 1.0.0, and ships with the next version.
 - **Clip to the layer below.** `bClipToBelow` shows a widget, and everything under it, only where the sibling drawn before
   it is drawn and through that sibling's opacity: a clipping mask. The layer below can be a simple or nine-sliced image,
   texture or sprite, or a rect block; anything else is not clipped to, with a warning.
+- **Blend modes.** `EDreamUIBlendMode` grows from three modes to 27: dissolve, darken, colour burn, linear burn, darker
+  colour, lighten, screen, colour dodge, lighter colour, overlay, soft light, hard light, vivid light, linear light, pin
+  light, hard mix, difference, exclusion, subtract, divide, hue, saturation, colour and luminosity, by the W3C compositing
+  formulas in encoded values. Screen, exclusion and dissolve are done by the blend hardware and batch as before; the rest
+  blend over a copy of what is behind, made per draw, and elements of one such mode share a draw while they do not
+  overlap. An element drawn through a material with one of the new modes is put down through a group of one. See
+  [Blend modes and layer groups](../concepts/blend-modes-and-groups.md).
+- **Layer groups.** `UDreamLayerGroup` on a container draws its subtree into a texture of its own and puts it down as one:
+  `GroupOpacity` fades it without its children showing through each other, `GroupBlendMode` blends it as a whole,
+  `GroupMask` masks the composite. Inside an isolated group the children's modes blend with the group alone. Groups nest;
+  their textures come from the frame's pool. Clipping to a layer below that no clip level follows — a text, a tiled image,
+  a container, a group — is done through such a group, and `UDreamRetainerBox` puts its retained texture down through
+  the same composite (with a new `GroupBlendMode`). On screen-space canvases in a game and on render-target canvases;
+  a world-space canvas draws them passed through, with a warning.
 
 - **View models.** A `.dui` file declares the view models its class holds in a `viewmodels { … }` block — by class,
   with where each comes from: the host (a creation pin, `SetViewModel`, a host's `.dui` line), `= new`, `= global` /
@@ -105,6 +119,8 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Fixed
 
+- **A built-in element in Multiply is exact when it is partly transparent.** Its transparent pixels darkened what was behind
+  them to black; it now darkens by its colour as far as its alpha says, as the composite does.
 - **A clip whose pivot is off its centre stays on its widget under a scaled or turned parent.** Its centre was moved by
   the pivot's offset in world units rather than through the clipper's own scale and rotation, so under a canvas scale or
   a rotated parent the drawn clip rect slid off the rect the hit test used. Both now place it through the clipper's
