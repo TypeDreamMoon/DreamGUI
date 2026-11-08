@@ -9,6 +9,7 @@
 #include "DreamUIRender/DreamUIBackdropEffects.h"
 #include "DreamUIRender/DreamUIBaseShaders.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
+#include "DreamUIRender/DreamUILayerStyleComposite.h"
 
 /**
  * A group's composite, as the marker that opens it carries it to the render thread (EDreamUIRendererPrimitiveType::Group).
@@ -61,6 +62,14 @@ struct FDreamUICompositeDesc
 	 * the subtree of the widget it is on (UDreamVisual::GetChildrenEffect). Resolved by the render command that delivers it.
 	 */
 	FDreamUIImageEffectRef Effect;
+	/**
+	 * A layer style the group's picture is styled by as it is put down (UDreamLayerStyle on a widget drawn apart): its outer
+	 * effects' slots first, each by its own mode, then the picture with its effects by the group's mode. Resolved by the render
+	 * command that delivers it.
+	 */
+	FDreamUILayerStyleRef Style;
+	/** The styled layer's rect on the canvas, what its gradients and patterns are laid across: xy its centre, zw its half size. */
+	FVector4f StyleRect = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
 
 	bool HasMask() const { return MaskClipCoordinate > 0.5f; }
 	/** Whether the closing marker reads what is behind, rather than leaving the blend to the hardware. */

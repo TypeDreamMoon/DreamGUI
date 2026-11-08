@@ -1,0 +1,92 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A group's layer style (FDreamUILayerStyleComposite): the group's picture, with its effects, into the layers it is put down
+// as -- SV_Target0 the picture with every effect on it, SV_Target1.. its outer effects' slots, each later put down by its own
+// mode. The shape is measured by the jump flood's seeds (DreamUIJumpFlood.usf): the distance from a point to the nearest texel
+// on the other side of the edge than it is, less half a texel.
+
+#include "/Engine/Public/Platform.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+/** What the group drew, premultiplied, in the target's space. */
+Texture2D DreamUI_StyleGroup;
+/** The jump flood's seeds: the nearest texel inside in xy, outside in zw, -1 for none. */
+Texture2D DreamUI_StyleField;
+/** The style's record (DreamUILayerStyleRecord.h), one row. */
+Texture2D DreamUI_StyleRecord;
+Texture2D DreamUI_StylePattern0;
+SamplerState DreamUI_StylePatternSampler0;
+Texture2D DreamUI_StylePattern1;
+SamplerState DreamUI_StylePatternSampler1;
+/** xy the layer's centre, zw its half size, in the texture's texels. */
+float4 DreamUI_StyleFrame;
+/** x texels to a unit of the canvas, y 1 for a linear texture, zw the texture's size. */
+float4 DreamUI_StyleParams;
+
+/** The shape's signed distance at Q, in texels: negative inside. */
+float DreamUIStyleComposite_FieldDistance(float2 Q)
+{
+	const int2 Size = int2(round(DreamUI_StyleParams.zw));
+	const int2 Texel = clamp(int2(floor(Q)), int2(0, 0), Size - 1);
+	const float4 Seeds = DreamUI_StyleField.Load(int3(Texel, 0));
+	const float ToInside = Seeds.x >= 0.0 ? length(Q - (Seeds.xy + 0.5)) : 1e6;
+	const float ToOutside = Seeds.z >= 0.0 ? length(Q - (Seeds.zw + 0.5)) : 1e6;
+	return ToInside <= ToOutside ? -(ToOutside - 0.5) : ToInside - 0.5;
+}
+
+float4 DreamUIStyleComposite_Pattern(int Slot, float2 UV)
+{
+	const float4 Texel = Slot == 0 ? DreamUI_StylePattern0.SampleLevel(DreamUI_StylePatternSampler0, UV, 0)
+		: DreamUI_StylePattern1.SampleLevel(DreamUI_StylePatternSampler1, UV, 0);
+	return float4(DreamUIBlend_ToSrgb(saturate(Texel.rgb)), Texel.a);
+}
+
+// ShapeA: x texels to a unit, yz the layer's centre in texels.
+#define DREAMUI_STYLE_DISTANCE(P) (DreamUIStyleComposite_FieldDistance((P) * ShapeA.x + ShapeA.yz) / ShapeA.x)
+#define DREAMUI_STYLE_PATTERN(Slot, UV) DreamUIStyleComposite_Pattern(Slot, UV)
+#include "/Plugin/DreamGUI/Private/DreamUILayerStyle.ush"
+
+/** A premultiplied, encoded colour in the texture's space. */
+float4 DreamUIStyleComposite_ToTarget(float4 Premultiplied, bool bLinear)
+{
+	if (!bLinear)
+	{
+		return Premultiplied;
+	}
+	const float A = saturate(Premultiplied.a);
+	const float3 Straight = A > 1e-5 ? Premultiplied.rgb / A : float3(0.0, 0.0, 0.0);
+	return float4(DreamUIBlend_ToLinear(saturate(Straight)) * A, A);
+}
+
+void MainPS(float4 SvPosition : SV_POSITION, out float4 OutLayer : SV_Target0
+#if DREAMUI_STYLE_SLOTS > 0
+	, out float4 OutSlot0 : SV_Target1
+#endif
+#if DREAMUI_STYLE_SLOTS > 1
+	, out float4 OutSlot1 : SV_Target2
+#endif
+#if DREAMUI_STYLE_SLOTS > 2
+	, out float4 OutSlot2 : SV_Target3
+#endif
+	)
+{
+	const float TexelsPerUnit = max(DreamUI_StyleParams.x, 1e-4);
+	const bool bLinear = DreamUI_StyleParams.y > 0.5;
+	const float2 P = (SvPosition.xy - DreamUI_StyleFrame.xy) / TexelsPerUnit;
+	const float4 Group = DreamUI_StyleGroup.Load(int3(int2(SvPosition.xy), 0));
+	const float Coverage = saturate(Group.a);
+	float3 Straight = Coverage > 1e-5 ? Group.rgb / Coverage : float3(0.0, 0.0, 0.0);
+	Straight = bLinear ? DreamUIBlend_ToSrgb(saturate(Straight)) : saturate(Straight);
+	FDreamUIStyleShaded Shaded = DreamUIStyle_Shade(DreamUI_StyleRecord, int2(0, 0), P, DreamUI_StyleFrame.zw / TexelsPerUnit, 1.0 / TexelsPerUnit,
+		Straight, 1.0, Coverage, int2(SvPosition.xy), float4(TexelsPerUnit, DreamUI_StyleFrame.xy, 0.0), float4(0.0, 0.0, 0.0, 0.0));
+	OutLayer = DreamUIStyleComposite_ToTarget(Shaded.Layer, bLinear);
+#if DREAMUI_STYLE_SLOTS > 0
+	OutSlot0 = DreamUIStyleComposite_ToTarget(Shaded.Outer0, bLinear);
+#endif
+#if DREAMUI_STYLE_SLOTS > 1
+	OutSlot1 = DreamUIStyleComposite_ToTarget(Shaded.Outer1, bLinear);
+#endif
+#if DREAMUI_STYLE_SLOTS > 2
+	OutSlot2 = DreamUIStyleComposite_ToTarget(Shaded.Outer2, bLinear);
+#endif
+}

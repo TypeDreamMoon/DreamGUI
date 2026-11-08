@@ -1,0 +1,67 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A jump flood of a group's alpha (FDreamUILayerStyleComposite::JumpFlood): for every texel, the nearest texel inside the
+// group's shape (alpha 0.5 and over) and the nearest outside it, in xy and zw, -1 where there is none. InitPS seeds every texel
+// with itself on its own side; StepPS, at steps halving from half the texture's size down to one and one more at one, keeps the
+// nearest of the seeds nine texels a step apart hold. What DreamUILayerStyleComposite.usf measures the shape's distance by.
+
+#include "/Engine/Public/Platform.ush"
+
+/** InitPS: the group's texture, premultiplied. StepPS: the seeds so far. */
+Texture2D DreamUI_FloodSource;
+/** x the step, in texels; yz the texture's size. */
+float4 DreamUI_FloodParams;
+
+void InitPS(float4 SvPosition : SV_POSITION, out float4 OutSeeds : SV_Target0)
+{
+	const int2 Texel = int2(SvPosition.xy);
+	const float Alpha = DreamUI_FloodSource.Load(int3(Texel, 0)).a;
+	const float2 Self = float2(Texel);
+	OutSeeds = Alpha >= 0.5 ? float4(Self, -1.0, -1.0) : float4(-1.0, -1.0, Self);
+}
+
+void StepPS(float4 SvPosition : SV_POSITION, out float4 OutSeeds : SV_Target0)
+{
+	const int2 Texel = int2(SvPosition.xy);
+	const int Step = (int)round(DreamUI_FloodParams.x);
+	const int2 Size = int2(round(DreamUI_FloodParams.yz));
+	const float2 Here = float2(Texel);
+	float4 Best = float4(-1.0, -1.0, -1.0, -1.0);
+	float BestIn = 1e30;
+	float BestOut = 1e30;
+	UNROLL
+	for (int Y = -1; Y <= 1; ++Y)
+	{
+		UNROLL
+		for (int X = -1; X <= 1; ++X)
+		{
+			const int2 At = Texel + int2(X, Y) * Step;
+			if (any(At < 0) || any(At >= Size))
+			{
+				continue;
+			}
+			const float4 Seeds = DreamUI_FloodSource.Load(int3(At, 0));
+			if (Seeds.x >= 0.0)
+			{
+				const float2 D = Seeds.xy - Here;
+				const float Distance = dot(D, D);
+				if (Distance < BestIn)
+				{
+					BestIn = Distance;
+					Best.xy = Seeds.xy;
+				}
+			}
+			if (Seeds.z >= 0.0)
+			{
+				const float2 D = Seeds.zw - Here;
+				const float Distance = dot(D, D);
+				if (Distance < BestOut)
+				{
+					BestOut = Distance;
+					Best.zw = Seeds.zw;
+				}
+			}
+		}
+	}
+	OutSeeds = Best;
+}

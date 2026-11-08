@@ -335,27 +335,11 @@ void FDreamUICompositeStack::PopAndComposite()
 	// parent's origin, and so is the view's.
 	const FIntRect DestRect = Top.Rect - Parent.Origin;
 	const FIntRect ParentViewport = ViewRect - Parent.Origin;
-	FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
-	FRDGTextureRef Backdrop = Desc.ReadsBackdrop() ? CopyFrom(Parent, Top.Rect, BackdropOrigin, TEXT("DreamUI_GroupBackdrop")) : nullptr;
-	const bool bReadBackdrop = Backdrop != nullptr;
-	// A group of a mode that reads what is behind is put down Normal where there is nothing to read.
-	const EDreamUIBlendMode Mode = Desc.ReadsBackdrop() && !bReadBackdrop ? EDreamUIBlendMode::Alpha : Desc.BlendMode;
 	const bool bOpaque = bOpaqueBackdrop && Frames.Num() == 1;
-
-	FDreamUICompositePassParameters* PassParameters = GraphBuilder.AllocParameters<FDreamUICompositePassParameters>();
-	PassParameters->GroupTexture = bExternal ? nullptr : Top.Texture;
-	PassParameters->UnderlayTexture = Underlay;
-	PassParameters->BackdropTexture = Backdrop;
-	PassParameters->RenderTargets[0] = FRenderTargetBinding(Parent.Texture, ERenderTargetLoadAction::ELoad);
-
 	const FMatrix44f ClipToCanvas = FMatrix44f((Desc.CanvasToWorld * WorldToClip).Inverse());
-	const FVector4f Origins(Top.Origin.X - Parent.Origin.X, Top.Origin.Y - Parent.Origin.Y
-		, Underlay != nullptr ? UnderlayOrigin.X - Parent.Origin.X : 0.0f, Underlay != nullptr ? UnderlayOrigin.Y - Parent.Origin.Y : 0.0f);
-	const FVector4f Params(static_cast<float>(Mode), FMath::Clamp(Desc.Opacity, 0.0f, 1.0f), bLinearTarget ? 1.0f : 0.0f, bOpaque ? 1.0f : 0.0f);
-	const FVector4f Flags(Underlay != nullptr ? 1.0f : 0.0f, static_cast<float>(BackdropOrigin.X), static_cast<float>(BackdropOrigin.Y), 0.0f);
 	const FVector4f ViewportRect(ParentViewport.Min.X, ParentViewport.Min.Y, FMath::Max(ParentViewport.Width(), 1), FMath::Max(ParentViewport.Height(), 1));
 	const bool bMask = Desc.HasMask() && Desc.Textures.ClipDataTextureRHI.IsValid();
-	FRDGTextureRef GroupTexture = Top.Texture;
+	FRDGTextureRef GroupPicture = Top.Texture;
 	if (Desc.Effect.IsValid() && !bExternal)
 	{
 		// The group's picture through its effect first: the effect's own opacity and mode mix it with what it was, and the
@@ -367,66 +351,106 @@ void FDreamUICompositeStack::PopAndComposite()
 		EffectContext.Origin = Top.Origin;
 		EffectContext.Frame = FVector4f(0.0f, 0.0f, static_cast<float>(Top.Rect.Width()), static_cast<float>(Top.Rect.Height()));
 		EffectContext.PixelScale = DreamUICompositorLocal::PixelsPerCanvasUnit(Desc, WorldToClip, ViewRect);
-		GroupTexture = Desc.Effect->Apply_RenderThread(GraphBuilder, GetGlobalShaderMap(FeatureLevel), GroupTexture, EffectContext);
-		PassParameters->GroupTexture = GroupTexture;
+		GroupPicture = Desc.Effect->Apply_RenderThread(GraphBuilder, GetGlobalShaderMap(FeatureLevel), GroupPicture, EffectContext);
 	}
 	const uint8 NumSamples = Parent.NumSamples;
-	GraphBuilder.AddPass(
-		RDG_EVENT_NAME("DreamUIComposite"),
-		PassParameters,
-		ERDGPassFlags::Raster,
-		[GroupTexture, Underlay, Backdrop, DestRect, Origins, Params, Flags, ViewportRect, ClipToCanvas, bMask, Mode, NumSamples, bReadBackdrop
-			, Textures = Desc.Textures, MaskClipCoordinate = Desc.MaskClipCoordinate, FeatureLevel = FeatureLevel, bExternal, CanvasToUV = Desc.CanvasToUV](FRHICommandList& RHICmdList)
-		{
-			if (!bExternal)
+
+	// One layer of the group put down: its picture, or one of the layers its style makes of it, by InBlendMode.
+	auto PutDown = [&](FRDGTextureRef InTexture, EDreamUIBlendMode InBlendMode)
+	{
+		const bool bReads = DreamUIBlend::ReadsBackdrop(InBlendMode);
+		FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
+		FRDGTextureRef Backdrop = bReads ? CopyFrom(Parent, Top.Rect, BackdropOrigin, TEXT("DreamUI_GroupBackdrop")) : nullptr;
+		const bool bReadBackdrop = Backdrop != nullptr;
+		// A group of a mode that reads what is behind is put down Normal where there is nothing to read.
+		const EDreamUIBlendMode Mode = bReads && !bReadBackdrop ? EDreamUIBlendMode::Alpha : InBlendMode;
+
+		FDreamUICompositePassParameters* PassParameters = GraphBuilder.AllocParameters<FDreamUICompositePassParameters>();
+		PassParameters->GroupTexture = bExternal ? nullptr : InTexture;
+		PassParameters->UnderlayTexture = Underlay;
+		PassParameters->BackdropTexture = Backdrop;
+		PassParameters->RenderTargets[0] = FRenderTargetBinding(Parent.Texture, ERenderTargetLoadAction::ELoad);
+
+		const FVector4f Origins(Top.Origin.X - Parent.Origin.X, Top.Origin.Y - Parent.Origin.Y
+			, Underlay != nullptr ? UnderlayOrigin.X - Parent.Origin.X : 0.0f, Underlay != nullptr ? UnderlayOrigin.Y - Parent.Origin.Y : 0.0f);
+		const FVector4f Params(static_cast<float>(Mode), FMath::Clamp(Desc.Opacity, 0.0f, 1.0f), bLinearTarget ? 1.0f : 0.0f, bOpaque ? 1.0f : 0.0f);
+		const FVector4f Flags(Underlay != nullptr ? 1.0f : 0.0f, static_cast<float>(BackdropOrigin.X), static_cast<float>(BackdropOrigin.Y), 0.0f);
+		FRDGTextureRef GroupTexture = InTexture;
+		GraphBuilder.AddPass(
+			RDG_EVENT_NAME("DreamUIComposite"),
+			PassParameters,
+			ERDGPassFlags::Raster,
+			[GroupTexture, Underlay, Backdrop, DestRect, Origins, Params, Flags, ViewportRect, ClipToCanvas, bMask, Mode, NumSamples, bReadBackdrop
+				, Textures = Desc.Textures, MaskClipCoordinate = Desc.MaskClipCoordinate, FeatureLevel = FeatureLevel, bExternal, CanvasToUV = Desc.CanvasToUV](FRHICommandList& RHICmdList)
 			{
-				GroupTexture->MarkResourceAsUsed();
-			}
-			RHICmdList.SetViewport(DestRect.Min.X, DestRect.Min.Y, 0.0f, DestRect.Max.X, DestRect.Max.Y, 1.0f);
-			FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(FeatureLevel);
-			TShaderMapRef<FDreamUICompositeVS> VertexShader(GlobalShaderMap);
-			FDreamUICompositePS::FPermutationDomain Permutation;
-			Permutation.Set<FDreamUICompositePS::FBackdrop>(bReadBackdrop);
-			Permutation.Set<FDreamUICompositePS::FMask>(bMask);
-			Permutation.Set<FDreamUICompositePS::FExternal>(bExternal);
-			TShaderMapRef<FDreamUICompositePS> PixelShader(GlobalShaderMap, Permutation);
+				if (!bExternal)
+				{
+					GroupTexture->MarkResourceAsUsed();
+				}
+				RHICmdList.SetViewport(DestRect.Min.X, DestRect.Min.Y, 0.0f, DestRect.Max.X, DestRect.Max.Y, 1.0f);
+				FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(FeatureLevel);
+				TShaderMapRef<FDreamUICompositeVS> VertexShader(GlobalShaderMap);
+				FDreamUICompositePS::FPermutationDomain Permutation;
+				Permutation.Set<FDreamUICompositePS::FBackdrop>(bReadBackdrop);
+				Permutation.Set<FDreamUICompositePS::FMask>(bMask);
+				Permutation.Set<FDreamUICompositePS::FExternal>(bExternal);
+				TShaderMapRef<FDreamUICompositePS> PixelShader(GlobalShaderMap, Permutation);
 
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = FDreamUIRenderer::GetBuiltInBlendState(Mode);
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GEmptyVertexDeclaration.VertexDeclarationRHI;
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-			GraphicsPSOInit.NumSamples = NumSamples;
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
+				FGraphicsPipelineStateInitializer GraphicsPSOInit;
+				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+				GraphicsPSOInit.BlendState = FDreamUIRenderer::GetBuiltInBlendState(Mode);
+				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GEmptyVertexDeclaration.VertexDeclarationRHI;
+				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+				GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+				GraphicsPSOInit.NumSamples = NumSamples;
+				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
-			auto TextureOr = [](FRHITextureReference* InReference, FTexture* InFallback) -> FRHITexture*
-			{
-				return InReference != nullptr ? static_cast<FRHITexture*>(InReference) : InFallback->TextureRHI.GetReference();
-			};
-			FRHISamplerState* Bilinear = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-			FDreamUICompositePS::FParameters Parameters;
-			Parameters.DreamUI_GroupTex = bExternal ? TextureOr(Textures.MainTextureRHI.GetReference(), GBlackTexture) : GroupTexture->GetRHI();
-			Parameters.DreamUI_GroupTexSampler = Textures.MainSamplerRHI.IsValid() ? Textures.MainSamplerRHI.GetReference() : Bilinear;
-			Parameters.DreamUI_CanvasToUV = CanvasToUV;
-			Parameters.DreamUI_UnderlayTex = Underlay != nullptr ? Underlay->GetRHI() : GBlackTexture->TextureRHI.GetReference();
-			Parameters.DreamUI_CompositeOrigins = Origins;
-			Parameters.DreamUI_CompositeParams = Params;
-			Parameters.DreamUI_CompositeFlags = Flags;
-			Parameters.DreamUI_BackdropTex = Backdrop != nullptr ? Backdrop->GetRHI() : GBlackTexture->TextureRHI.GetReference();
-			Parameters.DreamUI_ClipDataTex = TextureOr(Textures.ClipDataTextureRHI.GetReference(), GBlackTexture);
-			Parameters.DreamUI_MaskTex0 = TextureOr(Textures.MaskTexture0RHI.GetReference(), GWhiteTexture);
-			Parameters.DreamUI_MaskTexSampler0 = Textures.MaskSampler0RHI.IsValid() ? Textures.MaskSampler0RHI.GetReference() : Bilinear;
-			Parameters.DreamUI_MaskTex1 = TextureOr(Textures.MaskTexture1RHI.GetReference(), GWhiteTexture);
-			Parameters.DreamUI_MaskTexSampler1 = Textures.MaskSampler1RHI.IsValid() ? Textures.MaskSampler1RHI.GetReference() : Bilinear;
-			Parameters.DreamUI_MaskClipCoordinate = MaskClipCoordinate;
-			Parameters.DreamUI_ClipToCanvas = ClipToCanvas;
-			Parameters.DreamUI_ViewportRect = ViewportRect;
-			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
+				auto TextureOr = [](FRHITextureReference* InReference, FTexture* InFallback) -> FRHITexture*
+				{
+					return InReference != nullptr ? static_cast<FRHITexture*>(InReference) : InFallback->TextureRHI.GetReference();
+				};
+				FRHISamplerState* Bilinear = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				FDreamUICompositePS::FParameters Parameters;
+				Parameters.DreamUI_GroupTex = bExternal ? TextureOr(Textures.MainTextureRHI.GetReference(), GBlackTexture) : GroupTexture->GetRHI();
+				Parameters.DreamUI_GroupTexSampler = Textures.MainSamplerRHI.IsValid() ? Textures.MainSamplerRHI.GetReference() : Bilinear;
+				Parameters.DreamUI_CanvasToUV = CanvasToUV;
+				Parameters.DreamUI_UnderlayTex = Underlay != nullptr ? Underlay->GetRHI() : GBlackTexture->TextureRHI.GetReference();
+				Parameters.DreamUI_CompositeOrigins = Origins;
+				Parameters.DreamUI_CompositeParams = Params;
+				Parameters.DreamUI_CompositeFlags = Flags;
+				Parameters.DreamUI_BackdropTex = Backdrop != nullptr ? Backdrop->GetRHI() : GBlackTexture->TextureRHI.GetReference();
+				Parameters.DreamUI_ClipDataTex = TextureOr(Textures.ClipDataTextureRHI.GetReference(), GBlackTexture);
+				Parameters.DreamUI_MaskTex0 = TextureOr(Textures.MaskTexture0RHI.GetReference(), GWhiteTexture);
+				Parameters.DreamUI_MaskTexSampler0 = Textures.MaskSampler0RHI.IsValid() ? Textures.MaskSampler0RHI.GetReference() : Bilinear;
+				Parameters.DreamUI_MaskTex1 = TextureOr(Textures.MaskTexture1RHI.GetReference(), GWhiteTexture);
+				Parameters.DreamUI_MaskTexSampler1 = Textures.MaskSampler1RHI.IsValid() ? Textures.MaskSampler1RHI.GetReference() : Bilinear;
+				Parameters.DreamUI_MaskClipCoordinate = MaskClipCoordinate;
+				Parameters.DreamUI_ClipToCanvas = ClipToCanvas;
+				Parameters.DreamUI_ViewportRect = ViewportRect;
+				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 
-			RHICmdList.DrawPrimitive(0, 1, 1);
-		});
+				RHICmdList.DrawPrimitive(0, 1, 1);
+			});
+	};
+
+	// A layer style makes layers of the group's picture, as its effect left it: its outer effects' slots, each by its own mode,
+	// then the picture with its effects, by the group's. Every one is put down by the same pass, at the group's opacity, through
+	// its mask.
+	TArray<FDreamUILayerStyleLayer, TInlineAllocator<4>> StyleLayers;
+	if (Desc.Style.IsValid() && !bExternal)
+	{
+		const FDreamUILayerStyleContext Context = FDreamUILayerStyleComposite::MakeContext(Desc.StyleRect, Desc.CanvasToWorld, WorldToClip, ViewRect, Top.Origin, bLinearTarget, Top.Rect.Size());
+		Desc.Style->Apply_RenderThread(GraphBuilder, GetGlobalShaderMap(FeatureLevel), GroupPicture, Context, StyleLayers);
+	}
+	if (StyleLayers.Num() == 0)
+	{
+		PutDown(GroupPicture, Desc.BlendMode);
+	}
+	for (const FDreamUILayerStyleLayer& Layer : StyleLayers)
+	{
+		PutDown(Layer.Texture, Layer.bContent ? Desc.BlendMode : Layer.BlendMode);
+	}
 }

@@ -701,6 +701,10 @@ public:
 				{
 					Desc.Effect->ResolveTextures_RenderThread();
 				}
+				if (Desc.Style.IsValid())
+				{
+					Desc.Style->ResolveTextures_RenderThread();
+				}
 				SectionProxy->bBegin = bInBegin;
 				SectionProxy->Desc = MoveTemp(Desc);
 				SectionProxy->bCanRender = true;
@@ -1593,6 +1597,10 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 				[NewSectionProxy, Textures = NewSectionProxy->Desc.Textures.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList)
 				{
 					NewSectionProxy->Desc.Textures.ResolveTextures_RenderThread(Textures);
+					if (NewSectionProxy->Desc.Style.IsValid())
+					{
+						NewSectionProxy->Desc.Style->ResolveTextures_RenderThread();
+					}
 				});
 			NewSectionProxy->SectionRenderPriority = SrcSection->RenderPriority;
 			SrcSection->RenderProxy = NewSectionProxy;
@@ -2153,7 +2161,8 @@ void UDreamUIMeshComponent::SetGroupSectionComposite(const TSharedPtr<FDreamUIRe
 		&& Sent.WorldBounds == InDesc.WorldBounds && Sent.CanvasToWorld.Equals(InDesc.CanvasToWorld, 0.0) && Sent.MaskClipCoordinate == InDesc.MaskClipCoordinate
 		&& Sent.Textures.ClipDataTexture == InDesc.Textures.ClipDataTexture && Sent.Textures.MaskTexture0 == InDesc.Textures.MaskTexture0
 		&& Sent.Textures.MaskTexture1 == InDesc.Textures.MaskTexture1 && Sent.Textures.MainTexture == InDesc.Textures.MainTexture
-		&& Sent.bExternal == InDesc.bExternal && Sent.CanvasToUV.Equals(InDesc.CanvasToUV, 0.0f) && Sent.Effect == InDesc.Effect;
+		&& Sent.bExternal == InDesc.bExternal && Sent.CanvasToUV.Equals(InDesc.CanvasToUV, 0.0f) && Sent.Effect == InDesc.Effect
+		&& Sent.Style == InDesc.Style && Sent.StyleRect == InDesc.StyleRect;
 	if (bSame)
 	{
 		return;
