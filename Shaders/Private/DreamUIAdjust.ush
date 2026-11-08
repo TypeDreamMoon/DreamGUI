@@ -1,0 +1,255 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// The operations of an adjustment (EDreamAdjustmentType), on a straight colour in the blend's encoded space: what an
+// adjustment layer does to what is behind it, or to a group's own picture. Each operation is one row of four float4s
+// (DREAMUI_ADJUST_ROWS_PER_OP); the first float of the first is the operation's number, the rest its parameters as
+// FDreamUIAdjustMath::Pack lays them out.
+//
+// The CPU says the same in FDreamUIAdjustMath (Core/DreamUIAdjustment.h), operation for operation, and a test holds the
+// two to each other on a chart of colours. A table an operation reads (a curve, a gradient) is a row of 256 texels of the
+// adjustment's table texture, read with linear filtering; the CPU reads the same values the same way.
+
+#ifndef DREAMUI_ADJUST_USH
+#define DREAMUI_ADJUST_USH
+
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+#define DREAMUI_ADJUST_MAX_OPS 8
+#define DREAMUI_ADJUST_ROWS_PER_OP 4
+#define DREAMUI_ADJUST_TABLE_WIDTH 256
+
+#define DREAMUI_ADJUST_NONE 0
+#define DREAMUI_ADJUST_BRIGHTNESS_CONTRAST 1
+#define DREAMUI_ADJUST_LEVELS 2
+#define DREAMUI_ADJUST_CURVES 3
+#define DREAMUI_ADJUST_EXPOSURE 4
+#define DREAMUI_ADJUST_HUE_SATURATION 5
+#define DREAMUI_ADJUST_VIBRANCE 6
+#define DREAMUI_ADJUST_COLOR_BALANCE 7
+#define DREAMUI_ADJUST_BLACK_AND_WHITE 8
+#define DREAMUI_ADJUST_PHOTO_FILTER 9
+#define DREAMUI_ADJUST_CHANNEL_MIXER 10
+#define DREAMUI_ADJUST_INVERT 11
+#define DREAMUI_ADJUST_POSTERIZE 12
+#define DREAMUI_ADJUST_THRESHOLD 13
+#define DREAMUI_ADJUST_GRADIENT_MAP 14
+#define DREAMUI_ADJUST_LOOKUP_TABLE 15
+
+/** Rec. 601 weights, which the vibrance's saturation is measured with. */
+float DreamUIAdjust_Luma(float3 C)
+{
+	return dot(C, float3(0.299, 0.587, 0.114));
+}
+
+float DreamUIAdjust_HueToChannel(float P, float Q, float T)
+{
+	T = T - floor(T);
+	if (T < 1.0 / 6.0)
+	{
+		return P + (Q - P) * 6.0 * T;
+	}
+	if (T < 0.5)
+	{
+		return Q;
+	}
+	if (T < 2.0 / 3.0)
+	{
+		return P + (Q - P) * (2.0 / 3.0 - T) * 6.0;
+	}
+	return P;
+}
+
+/** Hue (0 to 1, from red), saturation and lightness, the way HSL defines them. */
+float3 DreamUIAdjust_RgbToHsl(float3 C)
+{
+	const float Max = max(C.r, max(C.g, C.b));
+	const float Min = min(C.r, min(C.g, C.b));
+	const float L = (Max + Min) * 0.5;
+	const float D = Max - Min;
+	if (D <= 1e-6)
+	{
+		return float3(0.0, 0.0, L);
+	}
+	const float S = L > 0.5 ? D / (2.0 - Max - Min) : D / (Max + Min);
+	float H;
+	if (Max == C.r)
+	{
+		H = (C.g - C.b) / D + (C.g < C.b ? 6.0 : 0.0);
+	}
+	else if (Max == C.g)
+	{
+		H = (C.b - C.r) / D + 2.0;
+	}
+	else
+	{
+		H = (C.r - C.g) / D + 4.0;
+	}
+	return float3(H / 6.0, S, L);
+}
+
+float3 DreamUIAdjust_HslToRgb(float3 Hsl)
+{
+	if (Hsl.y <= 1e-6)
+	{
+		return Hsl.zzz;
+	}
+	const float Q = Hsl.z < 0.5 ? Hsl.z * (1.0 + Hsl.y) : Hsl.z + Hsl.y - Hsl.z * Hsl.y;
+	const float P = 2.0 * Hsl.z - Q;
+	return float3(DreamUIAdjust_HueToChannel(P, Q, Hsl.x + 1.0 / 3.0), DreamUIAdjust_HueToChannel(P, Q, Hsl.x), DreamUIAdjust_HueToChannel(P, Q, Hsl.x - 1.0 / 3.0));
+}
+
+/** A row of the table, at X from 0 to 1: the texel centres hold the samples taken at 0, 1/255, ..., 1. */
+float4 DreamUIAdjust_Table(Texture2D Table, SamplerState Sampler, float Row, float X)
+{
+	const float U = (saturate(X) * (DREAMUI_ADJUST_TABLE_WIDTH - 1) + 0.5) / DREAMUI_ADJUST_TABLE_WIDTH;
+	return Table.SampleLevel(Sampler, float2(U, (Row + 0.5) / DREAMUI_ADJUST_MAX_OPS), 0);
+}
+
+/** A lookup table in the engine's colour grading layout: 16 slices of 16 by 16 side by side, blue choosing the slice. */
+float3 DreamUIAdjust_LookUp(Texture2D Lut, SamplerState Sampler, float3 C)
+{
+	C = saturate(C);
+	const float Slice = C.b * 15.0;
+	const float S0 = floor(Slice);
+	const float S1 = min(S0 + 1.0, 15.0);
+	const float F = Slice - S0;
+	const float U = (C.r * 15.0 + 0.5) / 256.0;
+	const float V = (C.g * 15.0 + 0.5) / 16.0;
+	const float3 A = Lut.SampleLevel(Sampler, float2(U + S0 / 16.0, V), 0).rgb;
+	const float3 B = Lut.SampleLevel(Sampler, float2(U + S1 / 16.0, V), 0).rgb;
+	return lerp(A, B, F);
+}
+
+/** Black and white: the weight of the pair of primaries the largest two channels make. */
+float DreamUIAdjust_PairWeight(int A, int B, float4 P0, float4 P1)
+{
+	const int Pair = A + B;
+	// Red and green: yellow; green and blue: cyan; red and blue: magenta.
+	return Pair == 1 ? P0.z : (Pair == 3 ? P1.x : P1.z);
+}
+
+/**
+ * One operation on C, a straight colour in the encoded space, each channel 0 to 1. Rows P0 to P3 as FDreamUIAdjustMath::Pack
+ * writes them; Table the adjustment's table texture, Lut its lookup table.
+ */
+float3 DreamUIAdjust_Apply(float4 P0, float4 P1, float4 P2, float4 P3, float3 C, Texture2D Table, SamplerState TableSampler, Texture2D Lut, SamplerState LutSampler)
+{
+	const int Type = (int)round(P0.x);
+	switch (Type)
+	{
+	case DREAMUI_ADJUST_BRIGHTNESS_CONTRAST:
+	{
+		// Brightness shifts, contrast turns the line about middle grey: 0 leaves it, 1 makes it a step, -1 flat grey.
+		const float K = tan((clamp(P0.z, -1.0, 0.99) + 1.0) * 0.78539816);
+		return saturate((C + P0.y - 0.5) * K + 0.5);
+	}
+	case DREAMUI_ADJUST_LEVELS:
+	{
+		const float3 T = pow(saturate((C - P0.y) / max(P0.z - P0.y, 1e-4)), 1.0 / max(P0.w, 1e-4));
+		return lerp(P1.xxx, P1.yyy, T);
+	}
+	case DREAMUI_ADJUST_CURVES:
+		return float3(DreamUIAdjust_Table(Table, TableSampler, P0.y, C.r).r, DreamUIAdjust_Table(Table, TableSampler, P0.y, C.g).g,
+			DreamUIAdjust_Table(Table, TableSampler, P0.y, C.b).b);
+	case DREAMUI_ADJUST_EXPOSURE:
+	{
+		// In linear light, as exposure is light: times two to the stops, plus the offset, then the gamma.
+		const float3 L = max(DreamUIBlend_ToLinear(C) * exp2(P0.y) + P0.z, 0.0);
+		return DreamUIBlend_ToSrgb(pow(L, 1.0 / max(P0.w, 1e-4)));
+	}
+	case DREAMUI_ADJUST_HUE_SATURATION:
+	{
+		float3 Hsl = DreamUIAdjust_RgbToHsl(C);
+		if (P1.x > 0.5)
+		{
+			// Colourize: the hue and saturation given, the colour's own lightness.
+			Hsl.x = frac(P0.y / 360.0);
+			Hsl.y = saturate(P0.z);
+		}
+		else
+		{
+			Hsl.x = frac(Hsl.x + P0.y / 360.0);
+			Hsl.y = saturate(Hsl.y * (1.0 + P0.z));
+		}
+		float3 Out = DreamUIAdjust_HslToRgb(Hsl);
+		Out = P0.w >= 0.0 ? Out + (1.0 - Out) * P0.w : Out * (1.0 + P0.w);
+		return saturate(Out);
+	}
+	case DREAMUI_ADJUST_VIBRANCE:
+	{
+		// Vibrance raises the saturation of the colours that have least of it; saturation raises every colour's alike.
+		const float Saturation = max(C.r, max(C.g, C.b)) - min(C.r, min(C.g, C.b));
+		const float L0 = DreamUIAdjust_Luma(C);
+		float3 Out = L0 + (C - L0) * (1.0 + P0.y * (1.0 - Saturation));
+		const float L1 = DreamUIAdjust_Luma(Out);
+		Out = L1 + (Out - L1) * (1.0 + P0.z);
+		return saturate(Out);
+	}
+	case DREAMUI_ADJUST_COLOR_BALANCE:
+	{
+		const float L = DreamUIBlend_Lum(C);
+		const float Shadows = 1.0 - smoothstep(0.0, 0.5, L);
+		const float Highlights = smoothstep(0.5, 1.0, L);
+		const float Midtones = 1.0 - Shadows - Highlights;
+		float3 Out = C + (P0.yzw * Shadows + P1.xyz * Midtones + P2.xyz * Highlights) * 0.5;
+		if (P1.w > 0.5)
+		{
+			Out = DreamUIBlend_SetLum(Out, L);
+		}
+		return saturate(Out);
+	}
+	case DREAMUI_ADJUST_BLACK_AND_WHITE:
+	{
+		// The smallest channel, plus what the largest two add, each weighted by the primary or the pair of primaries it is.
+		const int Max = C.r >= C.g && C.r >= C.b ? 0 : (C.g >= C.b ? 1 : 2);
+		const int Other0 = Max == 0 ? 1 : 0;
+		const int Other1 = Max == 2 ? 1 : 2;
+		const int Mid = C[Other0] > C[Other1] ? Other0 : Other1;
+		const int Min = Mid == Other0 ? Other1 : Other0;
+		const float Primary = Max == 0 ? P0.y : (Max == 1 ? P0.w : P1.y);
+		const float Gray = C[Min] + (C[Mid] - C[Min]) * DreamUIAdjust_PairWeight(Max, Mid, P0, P1) + (C[Max] - C[Mid]) * Primary;
+		const float3 Out = saturate(Gray).xxx;
+		// A tint: the tint's colour at the grey's luminosity.
+		return saturate(lerp(Out, DreamUIBlend_SetLum(P2.xyz, saturate(Gray)), P2.w));
+	}
+	case DREAMUI_ADJUST_PHOTO_FILTER:
+	{
+		const float L = DreamUIBlend_Lum(C);
+		float3 Out = lerp(C, C * P0.yzw, P1.x);
+		if (P1.y > 0.5)
+		{
+			Out = DreamUIBlend_SetLum(Out, L);
+		}
+		return saturate(Out);
+	}
+	case DREAMUI_ADJUST_CHANNEL_MIXER:
+	{
+		const float Red = dot(P0.yzw, C) + P3.x;
+		if (P3.w > 0.5)
+		{
+			return saturate(Red).xxx;
+		}
+		return saturate(float3(Red, dot(P1.xyz, C) + P3.y, dot(P2.xyz, C) + P3.z));
+	}
+	case DREAMUI_ADJUST_INVERT:
+		return 1.0 - C;
+	case DREAMUI_ADJUST_POSTERIZE:
+	{
+		const float Levels = max(2.0, round(P0.y));
+		return min(floor(C * Levels), Levels - 1.0) / (Levels - 1.0);
+	}
+	case DREAMUI_ADJUST_THRESHOLD:
+		return (DreamUIBlend_Lum(C) >= P0.y ? 1.0 : 0.0).xxx;
+	case DREAMUI_ADJUST_GRADIENT_MAP:
+	{
+		const float T = DreamUIBlend_Lum(C);
+		return DreamUIAdjust_Table(Table, TableSampler, P0.y, P0.z > 0.5 ? 1.0 - T : T).rgb;
+	}
+	case DREAMUI_ADJUST_LOOKUP_TABLE:
+		return lerp(C, DreamUIAdjust_LookUp(Lut, LutSampler, C), saturate(P0.y));
+	default:
+		return C;
+	}
+}
+
+#endif // DREAMUI_ADJUST_USH

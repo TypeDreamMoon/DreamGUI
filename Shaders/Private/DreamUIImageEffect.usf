@@ -1,0 +1,304 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// The passes an image effect runs over a picture (FDreamUIImageEffect), each one triangle over the whole of its target
+// (FPixelShaderUtils::AddFullscreenPass, whose vertex shader they take):
+// an adjustment's operations, a stylize effect's layer, the mix of a stylize effect's result with what it was made from,
+// and the two filters of the blur pyramid (the dual filter's down and up).
+//
+// Pictures are premultiplied, as the target they were copied from holds them; an operation works on the straight colour,
+// encoded, and gives it back premultiplied by the alpha it had. A viewport's picture has an alpha that says nothing, and
+// counts as opaque (DreamUI_EffectFlags.y).
+
+#include "/Engine/Public/Platform.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIAdjust.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIStylize.ush"
+
+Texture2D DreamUI_SourceTex;
+SamplerState DreamUI_SourceSampler;
+/** x: 1 for linear light, y: 1 for an alpha that says nothing, z: the effect's opacity, w: its blend mode. */
+float4 DreamUI_EffectFlags;
+/** xy: the target pixel of the source's first texel, zw: the source's size. */
+float4 DreamUI_EffectOrigin;
+
+/** A premultiplied texel as the straight colour the operations take, encoded, and its alpha. */
+float3 DreamUIEffect_Straight(float4 Premultiplied, out float Alpha)
+{
+	Alpha = DreamUI_EffectFlags.y > 0.5 ? 1.0 : saturate(Premultiplied.a);
+	float3 C = DreamUI_EffectFlags.y > 0.5 ? Premultiplied.rgb : (Premultiplied.a > 1e-5 ? Premultiplied.rgb / Premultiplied.a : float3(0.0, 0.0, 0.0));
+	C = saturate(C);
+	return DreamUI_EffectFlags.x > 0.5 ? DreamUIBlend_ToSrgb(C) : C;
+}
+
+/** The straight encoded colour back, premultiplied by Alpha, in the picture's space. */
+float4 DreamUIEffect_Premultiplied(float3 C, float Alpha, float4 Original)
+{
+	C = DreamUI_EffectFlags.x > 0.5 ? DreamUIBlend_ToLinear(C) : saturate(C);
+	return DreamUI_EffectFlags.y > 0.5 ? float4(C, Original.a) : float4(C * Alpha, Alpha);
+}
+
+/** What the effect made of In, mixed with In by the effect's blend mode and opacity: both straight and encoded. */
+float3 DreamUIEffect_Mix(float3 In, float3 Effect, int2 Pixel)
+{
+	const int Mode = (int)round(DreamUI_EffectFlags.w);
+	float Opacity = saturate(DreamUI_EffectFlags.z);
+	if (Mode == DREAMUI_BLEND_DISSOLVE)
+	{
+		Opacity = DreamUIBlend_DissolveAlpha(Opacity, Pixel + int2(DreamUI_EffectOrigin.xy));
+	}
+	const float3 Blended = Mode == DREAMUI_BLEND_ALPHA || Mode == DREAMUI_BLEND_DISSOLVE ? Effect : DreamUIBlend_Function(Mode, In, Effect);
+	return lerp(In, Blended, Opacity);
+}
+
+// ---- the adjustment
+
+float4 DreamUI_AdjustRows[DREAMUI_ADJUST_MAX_OPS * DREAMUI_ADJUST_ROWS_PER_OP];
+int DreamUI_AdjustCount;
+Texture2D DreamUI_AdjustTable;
+SamplerState DreamUI_AdjustTableSampler;
+Texture2D DreamUI_AdjustLut;
+SamplerState DreamUI_AdjustLutSampler;
+
+void AdjustPS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	const int2 Pixel = int2(SvPosition.xy);
+	const float4 Original = DreamUI_SourceTex.Load(int3(Pixel, 0));
+	float Alpha;
+	const float3 In = DreamUIEffect_Straight(Original, Alpha);
+	float3 C = In;
+	for (int Op = 0; Op < DREAMUI_ADJUST_MAX_OPS; ++Op)
+	{
+		if (Op >= DreamUI_AdjustCount)
+		{
+			break;
+		}
+		const int Row = Op * DREAMUI_ADJUST_ROWS_PER_OP;
+		C = DreamUIAdjust_Apply(DreamUI_AdjustRows[Row], DreamUI_AdjustRows[Row + 1], DreamUI_AdjustRows[Row + 2], DreamUI_AdjustRows[Row + 3], C,
+			DreamUI_AdjustTable, DreamUI_AdjustTableSampler, DreamUI_AdjustLut, DreamUI_AdjustLutSampler);
+	}
+	OutColor = DreamUIEffect_Premultiplied(DreamUIEffect_Mix(In, C, Pixel), Alpha, Original);
+}
+
+// ---- a stylize layer
+
+float4 DreamUI_StylizeRows[DREAMUI_STYLIZE_ROWS_PER_LAYER];
+/** xy: the element's first texel in the source, zw: its size in texels. */
+float4 DreamUI_StylizeFrame;
+/** x: the target's pixels to a unit of the canvas, y: the world's time in seconds. */
+float4 DreamUI_StylizeParams;
+
+float4 DreamUIStylize_SampleAt(float2 Texel)
+{
+	const float2 Size = DreamUI_EffectOrigin.zw;
+	return DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, clamp(Texel, 0.5, Size - 0.5) / Size, 0);
+}
+
+void StylizePS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	const float4 P0 = DreamUI_StylizeRows[0];
+	const float4 P1 = DreamUI_StylizeRows[1];
+	const float4 P2 = DreamUI_StylizeRows[2];
+	const int Type = (int)round(P0.x);
+	const float2 Texel = SvPosition.xy;
+	const int2 Pixel = int2(Texel);
+	const float2 Target = Texel + DreamUI_EffectOrigin.xy;
+	const float Scale = max(DreamUI_StylizeParams.x, 1e-3);
+	const float Time = DreamUI_StylizeParams.y;
+	const float2 FrameCentre = DreamUI_StylizeFrame.xy + DreamUI_StylizeFrame.zw * 0.5;
+	const float2 FrameHalf = max(DreamUI_StylizeFrame.zw * 0.5, 1.0);
+	const float4 Original = DreamUI_SourceTex.Load(int3(Pixel, 0));
+	float4 Result = Original;
+	switch (Type)
+	{
+	case DREAMUI_STYLIZE_CRT:
+	{
+		// The screen's curve: each pixel shows what is further out the further it is from the middle, and black past the edge.
+		const float2 Q = (Texel - FrameCentre) / FrameHalf;
+		const float2 Curved = Q * (1.0 + P0.w * dot(Q, Q) * 0.25);
+		if (any(abs(Curved) > 1.0))
+		{
+			Result = float4(0.0, 0.0, 0.0, Original.a);
+			break;
+		}
+		Result = DreamUIStylize_SampleAt(FrameCentre + Curved * FrameHalf);
+		float Light = DreamUIStylize_Scanline(Target.y, Scale, P0.z, P0.y);
+		Light *= 1.0 - P1.z * (0.5 + 0.5 * sin(6.2831853 * P1.w * Time));
+		// The phosphor mask: columns of red, green and blue, each a cell wide, the other two dimmed.
+		const int Column = (int)floor(Target.x / max(Scale * P1.y, 1e-3)) % 3;
+		const float3 Mask = lerp(float3(1.0, 1.0, 1.0), float3(Column == 0 ? 1.0 : 0.0, Column == 1 ? 1.0 : 0.0, Column == 2 ? 1.0 : 0.0) * 1.5 + 0.25, P1.x);
+		Result.rgb *= Light * Mask;
+		break;
+	}
+	case DREAMUI_STYLIZE_GLITCH:
+	{
+		// Changes Rate times a second; a burst (TriggerBurst) adds to the intensity, fading out over its duration.
+		const float Burst = Time >= P2.x && Time < P2.x + P2.y ? P2.z * (1.0 - (Time - P2.x) / max(P2.y, 1e-3)) : 0.0;
+		const float Intensity = P2.w + Burst;
+		if (Intensity <= 0.0)
+		{
+			break;
+		}
+		const int Step = (int)floor(Time * P0.w);
+		const uint Seed = DREAMUI_STYLIZE_GLITCH_SEED ^ asuint((int)P1.w);
+		float2 Shift = 0.0;
+		const int2 Block = int2(floor(Target / max(Scale * P0.y, 1.0)));
+		if (DreamUIStylize_Hash01(int2(Block.y, Step), Seed) < saturate(0.25 * Intensity))
+		{
+			Shift.x += (DreamUIStylize_Hash01(int2(Block.x + Block.y * 37, Step), Seed + 1u) - 0.5) * 2.0 * P0.z * Scale * Intensity;
+		}
+		const int Row = (int)floor(Target.y);
+		if (DreamUIStylize_Hash01(int2(Row, Step), Seed + 2u) < P1.z * saturate(Intensity))
+		{
+			Shift.x += (DreamUIStylize_Hash01(int2(Row, Step), Seed + 3u) - 0.5) * 2.0 * P1.y * Scale * Intensity;
+		}
+		const float Split = P1.x * Scale * Intensity;
+		const float4 Centre = DreamUIStylize_SampleAt(Texel + Shift);
+		Result = float4(DreamUIStylize_SampleAt(Texel + Shift + float2(Split, 0.0)).r, Centre.g, DreamUIStylize_SampleAt(Texel + Shift - float2(Split, 0.0)).b, Centre.a);
+		break;
+	}
+	case DREAMUI_STYLIZE_CHROMATIC_ABERRATION:
+	{
+		float2 Offset;
+		if (P0.z > 0.5)
+		{
+			// Along a direction: 0 degrees up, clockwise.
+			Offset = float2(sin(P0.w * 0.0174532925), -cos(P0.w * 0.0174532925)) * P0.y * Scale;
+		}
+		else
+		{
+			Offset = (Texel - FrameCentre) / length(FrameHalf) * P0.y * Scale;
+		}
+		Result = float4(DreamUIStylize_SampleAt(Texel + Offset).r, Original.g, DreamUIStylize_SampleAt(Texel - Offset).b, Original.a);
+		break;
+	}
+	case DREAMUI_STYLIZE_HALFTONE:
+	{
+		const float CellPixels = max(P0.y * Scale, 2.0);
+		const float Aa = 1.0 / CellPixels;
+		const bool bLines = P1.x > 0.5;
+		float Alpha;
+		if (P0.w > 0.5)
+		{
+			// Four screens, cyan, magenta, yellow and black, at their usual angles about the screen's angle.
+			const float Angles[4] = { 15.0, 75.0, 0.0, 45.0 };
+			float Ink[4];
+			for (int Plate = 0; Plate < 4; ++Plate)
+			{
+				const float2 P = DreamUIStylize_Rotate(Target, -(P0.z + Angles[Plate])) / CellPixels;
+				const float2 CentreTarget = DreamUIStylize_Rotate((floor(P) + 0.5) * CellPixels, P0.z + Angles[Plate]);
+				const float3 C = DreamUIEffect_Straight(DreamUIStylize_SampleAt(CentreTarget - DreamUI_EffectOrigin.xy), Alpha);
+				const float K = 1.0 - max(C.r, max(C.g, C.b));
+				const float Coverage = Plate == 3 ? K : (K >= 1.0 ? 0.0 : (1.0 - C[Plate] - K) / (1.0 - K));
+				Ink[Plate] = DreamUIStylize_HalftoneInk(P, Coverage, bLines, Aa);
+			}
+			const float3 Paper = float3((1.0 - Ink[0]), (1.0 - Ink[1]), (1.0 - Ink[2])) * (1.0 - Ink[3]);
+			DreamUIEffect_Straight(Original, Alpha);
+			Result = DreamUIEffect_Premultiplied(Paper, Alpha, Original);
+		}
+		else
+		{
+			const float2 P = DreamUIStylize_Rotate(Target, -P0.z) / CellPixels;
+			const float2 CentreTarget = DreamUIStylize_Rotate((floor(P) + 0.5) * CellPixels, P0.z);
+			const float3 C = DreamUIEffect_Straight(DreamUIStylize_SampleAt(CentreTarget - DreamUI_EffectOrigin.xy), Alpha);
+			const float Ink = DreamUIStylize_HalftoneInk(P, 1.0 - DreamUIBlend_Lum(C), bLines, Aa);
+			DreamUIEffect_Straight(Original, Alpha);
+			// Black ink on the paper's colour.
+			Result = DreamUIEffect_Premultiplied(P1.yzw * (1.0 - Ink), Alpha, Original);
+		}
+		break;
+	}
+	case DREAMUI_STYLIZE_DITHER:
+	{
+		float Alpha;
+		const float3 C = DreamUIEffect_Straight(Original, Alpha);
+		const int2 Cell = int2(floor(Target / max(P0.w * Scale, 1.0)));
+		const float T = DreamUIStylize_Bayer(Cell, P0.y >= 8.0 ? 8 : 4);
+		Result = DreamUIEffect_Premultiplied(float3(DreamUIStylize_Dither(C.r, P0.z, T), DreamUIStylize_Dither(C.g, P0.z, T), DreamUIStylize_Dither(C.b, P0.z, T)), Alpha, Original);
+		break;
+	}
+	case DREAMUI_STYLIZE_FILM_GRAIN:
+	{
+		float Alpha;
+		const float3 C = DreamUIEffect_Straight(Original, Alpha);
+		const int Step = P0.w > 0.5 ? (int)floor(Time * 24.0) : 0;
+		const int2 Cell = int2(floor(Target / max(P0.z * Scale, 1.0)));
+		const float Noise = DreamUIStylize_Hash01(Cell + int2(Step * 7919, Step * 104729), DREAMUI_STYLIZE_GRAIN_SEED) - 0.5;
+		Result = DreamUIEffect_Premultiplied(C + Noise * P0.y, Alpha, Original);
+		break;
+	}
+	case DREAMUI_STYLIZE_VIGNETTE:
+	{
+		float Alpha;
+		const float3 C = DreamUIEffect_Straight(Original, Alpha);
+		const float2 Q = (Texel - FrameCentre) / FrameHalf;
+		const float Amount = DreamUIStylize_Vignette(Q, FrameHalf.x / FrameHalf.y, P1.x, P0.z, P0.w, P0.y);
+		Result = DreamUIEffect_Premultiplied(lerp(C, P1.yzw, saturate(Amount)), Alpha, Original);
+		break;
+	}
+	case DREAMUI_STYLIZE_POSTERIZE:
+	{
+		float Alpha;
+		const float3 C = DreamUIEffect_Straight(Original, Alpha);
+		const float Levels = max(2.0, round(P0.y));
+		Result = DreamUIEffect_Premultiplied(min(floor(C * Levels), Levels - 1.0) / (Levels - 1.0), Alpha, Original);
+		break;
+	}
+	default:
+		break;
+	}
+	OutColor = Result;
+}
+
+// ---- a stylize effect's result mixed with what it was made from
+
+Texture2D DreamUI_EffectTex;
+
+void MixPS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	const int2 Pixel = int2(SvPosition.xy);
+	const float4 Original = DreamUI_SourceTex.Load(int3(Pixel, 0));
+	const float4 Made = DreamUI_EffectTex.Load(int3(Pixel, 0));
+	float Alpha;
+	float MadeAlpha;
+	const float3 In = DreamUIEffect_Straight(Original, Alpha);
+	const float3 Effect = DreamUIEffect_Straight(Made, MadeAlpha);
+	const float3 Mixed = DreamUIEffect_Mix(In, Effect, Pixel);
+	// The effect's own alpha -- what a curve left outside the screen, what a glitch moved -- mixed as the colour is.
+	const float OutAlpha = lerp(Alpha, MadeAlpha, saturate(DreamUI_EffectFlags.z));
+	OutColor = DreamUIEffect_Premultiplied(Mixed, OutAlpha, Original);
+}
+
+// ---- the blur pyramid: the dual filter
+
+/** xy: the filter's step, in the source's UV. */
+float4 DreamUI_FilterTexel;
+/** xy: a texel of the target, in UV: the target and the source cover the same picture. */
+float4 DreamUI_TargetTexel;
+
+void DownPS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	// Half the size: the centre four times and the four diagonal neighbours, as the dual filter's downsample.
+	const float2 UV = SvPosition.xy * DreamUI_TargetTexel.xy;
+	const float2 H = DreamUI_FilterTexel.xy;
+	OutColor = DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV, 0) * 4.0;
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(-H.x, -H.y), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(H.x, -H.y), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(-H.x, H.y), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(H.x, H.y), 0);
+	OutColor /= 8.0;
+}
+
+void UpPS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	// Twice the size: the four edge neighbours and, twice as heavy, the four diagonal ones, as the dual filter's upsample.
+	const float2 UV = SvPosition.xy * DreamUI_TargetTexel.xy;
+	const float2 H = DreamUI_FilterTexel.xy;
+	OutColor = DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(-H.x * 2.0, 0.0), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(H.x * 2.0, 0.0), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(0.0, -H.y * 2.0), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(0.0, H.y * 2.0), 0);
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(-H.x, -H.y), 0) * 2.0;
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(H.x, -H.y), 0) * 2.0;
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(-H.x, H.y), 0) * 2.0;
+	OutColor += DreamUI_SourceTex.SampleLevel(DreamUI_SourceSampler, UV + float2(H.x, H.y), 0) * 2.0;
+	OutColor /= 12.0;
+}
