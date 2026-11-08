@@ -85,6 +85,7 @@ public class DreamGUITests : ModuleRules
 				"DreamGUIK2Nodes",
 				"DreamGUINiagara",
 				"DreamGUINiagaraEditor",
+				"DreamGUIPsd",
 				"DreamGUIRenderer",
 				"DreamGUISamples",
 				"DreamTween",
