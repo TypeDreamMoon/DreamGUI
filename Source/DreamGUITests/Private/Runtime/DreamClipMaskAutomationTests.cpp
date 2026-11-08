@@ -195,6 +195,7 @@ bool FDreamClipMaskLayoutTest::RunTest(const FString& Parameters)
 		{ TEXT("KIND_SHIFT"), KindShift }, { TEXT("SHAPE_SHIFT"), ShapeShift }, { TEXT("SOURCE_SHIFT"), SourceShift },
 		{ TEXT("CHANNEL_SHIFT"), ChannelShift }, { TEXT("SLOT_SHIFT"), SlotShift }, { TEXT("PATTERN_SHIFT"), PatternShift },
 		{ TEXT("INVERT_SHIFT"), InvertShift }, { TEXT("ADDRESS_SHIFT"), AddressShift }, { TEXT("NO_CENTRE_SHIFT"), NoCentreShift },
+		{ TEXT("REVERSE_SHIFT"), ReverseShift },
 		{ TEXT("KIND_MASK"), KindMask }, { TEXT("KIND_UNDERLAY_IMAGE"), KindUnderlayImage }, { TEXT("KIND_UNDERLAY_SHAPE"), KindUnderlayShape },
 		{ TEXT("ADDRESS_BOUNDED"), AddressBounded }, { TEXT("ADDRESS_REPEAT"), AddressRepeat }, { TEXT("ADDRESS_RAW"), AddressRaw },
 		{ TEXT("SHAPE_RECT"), (int32)EDreamClipMaskShape::Rect }, { TEXT("SHAPE_ELLIPSE"), (int32)EDreamClipMaskShape::Ellipse },
@@ -227,7 +228,7 @@ bool FDreamClipMaskLayoutTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A level without a mask is the matrix and the corner radius"), FDreamUIClipData::SingleBlockSizeInBytes, BaseTexels * BytesPerTexel);
 	TestEqual(TEXT("A chain without masks uploads the row it always did: sixteen levels of five texels"), UnmaskedRowBytes, 16 * 5 * 16);
 	// The flags are written as a float value: the largest must be an integer a float holds exactly.
-	TestTrue(TEXT("Every flag fits in a float's integers"), (1 << (NoCentreShift + 1)) < (1 << 24));
+	TestTrue(TEXT("Every flag fits in a float's integers"), (1 << (ReverseShift + 1)) < (1 << 24));
 	return true;
 }
 

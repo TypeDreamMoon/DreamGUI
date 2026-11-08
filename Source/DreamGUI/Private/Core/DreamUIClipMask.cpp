@@ -43,6 +43,10 @@ namespace DreamUIClipMaskLocal
 		case 4: Value = Texel.R * 0.2126f + Texel.G * 0.7152f + Texel.B * 0.0722f; break;
 		default: break;
 		}
+		if (Bits(Flags, DreamUIClipLayout::ReverseShift, 1u) != 0u)
+		{
+			Value = 1.0f - Value;
+		}
 		if (Bits(Flags, DreamUIClipLayout::AddressShift, 3u) == DreamUIClipLayout::AddressBounded
 			&& (UV.X < 0.0f || UV.Y < 0.0f || UV.X > 1.0f || UV.Y > 1.0f))
 		{
@@ -72,7 +76,7 @@ bool FDreamClipMask::operator==(const FDreamClipMask& Other) const
 		&& Feather == Other.Feather && Source == Other.Source && Texture == Other.Texture && Channel == Other.Channel
 		&& Fill == Other.Fill && Pattern == Other.Pattern && Frequency == Other.Frequency && Seed == Other.Seed
 		&& Rotation == Other.Rotation && Scale == Other.Scale && Offset == Other.Offset && Threshold == Other.Threshold
-		&& Softness == Other.Softness && bInvert == Other.bInvert && HitTest == Other.HitTest;
+		&& Softness == Other.Softness && bReverse == Other.bReverse && bInvert == Other.bInvert && HitTest == Other.HitTest;
 }
 
 float FDreamUIClipMaskMath::SdRoundRect(FVector2f P, FVector2f B, FVector4f R)
@@ -267,7 +271,12 @@ float FDreamUIClipMaskMath::EvaluateMaskedLevel(const FDreamUIClipLevel& Level, 
 		if (Source == static_cast<uint32>(EDreamClipMaskSource::Procedural))
 		{
 			const int32 PatternKind = static_cast<int32>(Bits(Flags, DreamUIClipLayout::PatternShift, 7u));
-			Alpha *= Remap(Pattern(PatternKind, UV, M2.Z, static_cast<uint32>(M0.X + 0.5f)), M2.X, M2.Y);
+			float Value = Pattern(PatternKind, UV, M2.Z, static_cast<uint32>(M0.X + 0.5f));
+			if (Bits(Flags, DreamUIClipLayout::ReverseShift, 1u) != 0u)
+			{
+				Value = 1.0f - Value;
+			}
+			Alpha *= Remap(Value, M2.X, M2.Y);
 		}
 		Threshold = M2.X;
 		Softness = M2.Y;
@@ -328,7 +337,8 @@ bool FDreamUIClipMaskMath::PackMask(const FDreamClipMask& Mask, FVector2f HalfSi
 		| (static_cast<uint32>(TextureSlot > 0 ? 1 : 0) << DreamUIClipLayout::SlotShift)
 		| (static_cast<uint32>(Mask.Pattern) << DreamUIClipLayout::PatternShift)
 		| (static_cast<uint32>(Mask.bInvert ? 1 : 0) << DreamUIClipLayout::InvertShift)
-		| (static_cast<uint32>(Address) << DreamUIClipLayout::AddressShift);
+		| (static_cast<uint32>(Address) << DreamUIClipLayout::AddressShift)
+		| (static_cast<uint32>(Mask.bReverse && Source != EDreamClipMaskSource::None ? 1 : 0) << DreamUIClipLayout::ReverseShift);
 
 	float ParamA = 0.0f;
 	float ParamB = 0.0f;

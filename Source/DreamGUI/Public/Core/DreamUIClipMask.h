@@ -162,6 +162,13 @@ struct DREAMGUI_API FDreamClipMask
 	float Threshold = 0.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Clip Mask", meta = (ClampMin = "0.0", UIMax = "0.5", EditCondition = "Source!=EDreamClipMaskSource::None", EditConditionHides))
 	float Softness = 0.5f;
+	/**
+	 * Runs the texture's or pattern's value the other way: v becomes 1 - v before the threshold. A linear gradient from right
+	 * to left, a radial one from the edge in, a clock wipe anticlockwise. Unlike Invert it leaves the shape and what is
+	 * outside the clip rect alone.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Clip Mask", meta = (EditCondition = "Source!=EDreamClipMaskSource::None", EditConditionHides))
+	bool bReverse = false;
 	/** Shows what the mask hides and hides what it shows -- outside the clip rect included: a cut-out, such as a spotlight. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Clip Mask")
 	bool bInvert = false;
@@ -206,6 +213,7 @@ namespace DreamUIClipLayout
 	inline constexpr int32 InvertShift = 14;
 	inline constexpr int32 AddressShift = 15;
 	inline constexpr int32 NoCentreShift = 17;
+	inline constexpr int32 ReverseShift = 18;
 
 	inline constexpr int32 KindMask = 0;
 	inline constexpr int32 KindUnderlayImage = 1;

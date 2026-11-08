@@ -31,6 +31,7 @@
 #define DREAMUI_CLIP_INVERT_SHIFT 14
 #define DREAMUI_CLIP_ADDRESS_SHIFT 15
 #define DREAMUI_CLIP_NO_CENTRE_SHIFT 17
+#define DREAMUI_CLIP_REVERSE_SHIFT 18
 
 // What a masked level is.
 #define DREAMUI_CLIP_KIND_MASK 0
@@ -285,6 +286,10 @@ float DreamUIClip_ResolveTextureLayer(FDreamUIClipTextureLayer Layer, float4 Tex
 	else if (Channel == DREAMUI_CLIP_CHANNEL_GREEN) Value = Texel.g;
 	else if (Channel == DREAMUI_CLIP_CHANNEL_BLUE) Value = Texel.b;
 	else if (Channel == DREAMUI_CLIP_CHANNEL_LUMINANCE) Value = dot(Texel.rgb, float3(0.2126, 0.7152, 0.0722));
+	if (((Layer.Flags >> DREAMUI_CLIP_REVERSE_SHIFT) & 1u) != 0u)
+	{
+		Value = 1.0 - Value;
+	}
 	uint Address = (Layer.Flags >> DREAMUI_CLIP_ADDRESS_SHIFT) & 3u;
 	if (Address == DREAMUI_CLIP_ADDRESS_BOUNDED && (any(Layer.UV < 0.0) || any(Layer.UV > 1.0)))
 	{
@@ -365,7 +370,12 @@ float DreamUIClip_MaskedLevel(float2 p, float2 b, float4 CornerRadius, float4 M0
 		if (Source == DREAMUI_CLIP_SOURCE_PROCEDURAL)
 		{
 			uint Pattern = (Flags >> DREAMUI_CLIP_PATTERN_SHIFT) & 7u;
-			Alpha *= DreamUIClip_Remap(DreamUIClip_Pattern(Pattern, UV, M2.z, (uint)(M0.x + 0.5)), M2.x, M2.y);
+			float Value = DreamUIClip_Pattern(Pattern, UV, M2.z, (uint)(M0.x + 0.5));
+			if (((Flags >> DREAMUI_CLIP_REVERSE_SHIFT) & 1u) != 0u)
+			{
+				Value = 1.0 - Value;
+			}
+			Alpha *= DreamUIClip_Remap(Value, M2.x, M2.y);
 		}
 		Texture.UV = UV;
 		Texture.Threshold = M2.x;
