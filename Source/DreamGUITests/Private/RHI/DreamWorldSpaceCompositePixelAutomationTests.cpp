@@ -27,6 +27,7 @@
 #include "Core/DreamUIBlendMath.h"
 #include "Core/DreamUISettings.h"
 #include "DreamUICaptureLibrary.h"
+#include "Extensions/Effects/DreamAdjustmentLayer.h"
 #include "Utils/DreamUIUtils.h"
 
 #include "Driver/DreamDriverPieRig.h"
@@ -299,6 +300,16 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		AddBlock(InRig, Faded, TEXT("Red"), FVector2D(40.0, 40.0), FVector2D(-12.0, 0.0), FColor(220, 40, 40, 255));
 		AddBlock(InRig, Faded, TEXT("Green"), FVector2D(40.0, 40.0), FVector2D(12.0, 0.0), FColor(40, 200, 60, 255));
 		Faded->AddComponent<UDreamLayerGroup>()->SetGroupOpacity(0.5f);
+		// An adjustment layer reads what is behind it on the world-space canvas too: a narrow inversion over the checker.
+		if (UDreamWidget* Inverting = InRig.MakeWidgetWithVisual(UDreamAdjustmentLayer::StaticClass(), TEXT("Inverting"), InPanel, FVector2D(16.0, 40.0), FVector2D(-116.0, -40.0)))
+		{
+			if (UDreamAdjustmentLayer* Layer = Cast<UDreamAdjustmentLayer>(Inverting->GetVisual()))
+			{
+				FDreamAdjustment Invert;
+				Invert.Type = EDreamAdjustmentType::Invert;
+				Layer->SetAdjustments({ Invert });
+			}
+		}
 
 		UTexture2D* Behind = MakeStripes(InState, BehindColours, true);
 		UTexture2D* Elements = MakeStripes(InState, ElementColours, false);
@@ -409,6 +420,13 @@ bool FDreamWorldSpaceGroupsAndModesPixelTest::RunTest(const FString& Parameters)
 		{
 			FDreamPixelProbe::ExpectColorAt(*this, Pixels, PanelSize, PixelOf(Unit), Lerp(CheckerAt(Unit), Green, 0.5f), 6
 				, *FString::Printf(TEXT("At %s the faded group is half its green over the backdrop, nothing of the red under it"), *Unit.ToString()));
+		}
+		// The inversion over the checker.
+		for (const FVector2D& Unit : { FVector2D(-116.0, -30.0), FVector2D(-116.0, -50.0) })
+		{
+			const FColor Under = CheckerAt(Unit);
+			FDreamPixelProbe::ExpectColorAt(*this, Pixels, PanelSize, PixelOf(Unit), FColor(255 - Under.R, 255 - Under.G, 255 - Under.B, 255), 4
+				, *FString::Printf(TEXT("At %s the adjustment layer inverts the checker behind it"), *Unit.ToString()));
 		}
 		// Every combination of every mode, to the formula.
 		int32 Wrong = 0;
