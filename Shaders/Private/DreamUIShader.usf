@@ -253,6 +253,11 @@ void MainPS(
 	Coverage = 1.0f;
 #elif SUBSTRATE_USE_PREMULTALPHA_OVERRIDE // AlphaComposite - Premultiplied alpha blending
 	Coverage = GetMaterialOpacity(PixelMaterialInputs);
+#elif MATERIALBLENDING_ADDITIVE
+	// An additive material converts to an unlit slab of emissive times opacity and full transmittance (SubstrateLegacyConversion.ush),
+	// which the coverage below makes none, and so no colour at all. Given what it gives without Substrate: the emissive, by its opacity.
+	Coverage = saturate(GetMaterialOpacity(PixelMaterialInputs));
+	Color = Coverage > 0.0f ? Color / Coverage : 0.0f;
 #else
 	Coverage = saturate(1.0f - UNLIT_TRANSMITTANCE(UnlitBSDF).x);
 	// Substrate's unlit emissive is premultiplied by coverage.
