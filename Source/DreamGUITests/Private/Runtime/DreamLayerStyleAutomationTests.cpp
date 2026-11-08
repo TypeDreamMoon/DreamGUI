@@ -17,8 +17,11 @@
 #include "Core/Components/DreamRectBlock.h"
 
 #include "Core/Components/DreamTexture.h"
+#include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamLayerStylePreset.h"
+#include "Core/DreamUIAdjustment.h"
+#include "Extensions/Effects/DreamAdjustmentLayer.h"
 #include "Core/DreamUIClipMask.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIGeometry.h"
@@ -653,6 +656,70 @@ bool FDreamLayerStyleGroupTest::RunTest(const FString& Parameters)
 	Stage.Frames();
 	TestEqual(TEXT("A style switched off draws nothing apart"), ImageStyle->GetPath(), EDreamLayerStylePath::None);
 	(void)Child;
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLayerStyleDrawsNothingTest,
+	"DreamGUI.LayerStyle.AWidgetThatDrawsNothingOfItsOwnIsStyledRoundItsSubtree",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLayerStyleDrawsNothingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLayerStyleTestLocal;
+	FStage Stage;
+	if (!TestTrue(TEXT("The stage is set up"), Stage.IsUsable()))
+	{
+		return false;
+	}
+	UWorld* World = Stage.World.World;
+	auto MakeBlock = [World](UDreamWidget* InParent, const TCHAR* InName, FVector2D InPosition)
+	{
+		UDreamWidget* Widget = MakeWidget(World, InParent, InName, FVector2D(40.0, 40.0), InPosition);
+		if (UDreamTexture* Visual = Widget->CreateNewVisual<UDreamTexture>())
+		{
+			Visual->SetTexture(FDreamUIUtils::GetDefaultWhiteTexture());
+		}
+		return Widget;
+	};
+	// A container whose visual only takes clicks.
+	UDreamWidget* HitArea = MakeWidget(World, Stage.Root, TEXT("HitArea"), FVector2D(200.0, 100.0), FVector2D(0.0, 100.0));
+	HitArea->CreateNewVisual<UDreamVisualEmpty>();
+	MakeBlock(HitArea, TEXT("A"), FVector2D(-20.0, 0.0));
+	MakeBlock(HitArea, TEXT("B"), FVector2D(20.0, 0.0));
+	UDreamLayerStyle* HitAreaStyle = HitArea->AddComponent<UDreamLayerStyle>();
+	HitAreaStyle->SetStyle(DropShadowStyle());
+	Stage.Frames();
+	TestTrue(TEXT("A widget whose visual only takes clicks is styled round its subtree"), HitAreaStyle->StylesSubtree());
+	TestEqual(TEXT("...both its children in the style's group"), Stage.Shape(), FString(TEXT("(B)")));
+	if (Stage.DrawCalls().Num() == 3)
+	{
+		TestEqual(TEXT("...one draw holding the two"), Stage.DrawCalls()[1].BatchMeshGeometryArray.Num(), 2);
+		TestTrue(TEXT("...between markers that carry the style"), Stage.DrawCalls()[0].LayerStyle.Get() == HitAreaStyle);
+	}
+
+	// An effect on its own children draws nothing of its own either: the style is round what the effect made of them, one group.
+	UDreamWidget* Adjusted = MakeWidget(World, Stage.Root, TEXT("Adjusted"), FVector2D(200.0, 100.0), FVector2D(0.0, -100.0));
+	MakeBlock(Adjusted, TEXT("C"), FVector2D(0.0, 0.0));
+	UDreamAdjustmentLayer* Layer = Adjusted->CreateNewVisual<UDreamAdjustmentLayer>();
+	if (!TestNotNull(TEXT("An adjustment layer"), Layer))
+	{
+		return false;
+	}
+	FDreamAdjustment Invert;
+	Invert.Type = EDreamAdjustmentType::Invert;
+	Layer->SetAdjustments({ Invert });
+	Layer->SetTarget(EDreamEffectTarget::Children);
+	UDreamLayerStyle* AdjustedStyle = Adjusted->AddComponent<UDreamLayerStyle>();
+	AdjustedStyle->SetStyle(DropShadowStyle());
+	Stage.Frames();
+	TestTrue(TEXT("A widget whose visual is an effect on its children is styled round its subtree"), AdjustedStyle->StylesSubtree());
+	TestEqual(TEXT("...in the effect's group, one group"), Stage.Shape(), FString(TEXT("(B)(B)")));
+	const FDreamUIDrawCall* Begin = Stage.DrawCalls().FindByPredicate([Layer](const FDreamUIDrawCall& InDrawCall)
+	{
+		return InDrawCall.Type == EDreamUIDrawCallType::GroupBegin && InDrawCall.EffectVisual.Get() == Layer;
+	});
+	TestTrue(TEXT("...whose markers carry both the effect and the style"), Begin != nullptr && Begin->LayerStyle.Get() == AdjustedStyle);
 	return true;
 }
 

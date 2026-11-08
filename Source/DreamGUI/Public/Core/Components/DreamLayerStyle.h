@@ -78,7 +78,10 @@ public:
 	/** The widget changed what the style is drawn round (a shape blend group came or went): the path asked again. */
 	void RefreshPath() { NoteChanged(); }
 
-	/** Whether the style is drawn round the widget's subtree rather than its own element. */
+	/**
+	 * Whether the style is drawn round the widget's subtree rather than its own element: the widget draws nothing of its own
+	 * (no visual, an empty one, an effect on its children) or is a layer group drawn apart.
+	 */
 	bool StylesSubtree() const;
 
 	/**

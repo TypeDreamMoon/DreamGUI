@@ -44,8 +44,9 @@ DreamGUI picks the way; there is nothing to set (`UDreamLayerStyle::GetPath` say
   is uploaded only when there is a style: a rect block without one costs what it did. The outer effects blend with each
   other by their modes and with what is behind as Normal -- a black shadow in Multiply looks the same either way. A
   style with a pattern is drawn apart instead, where the pattern can be bound.
-- **Apart** -- every other widget: a text, an image, a sprite, a widget without a visual of its own (its whole subtree),
-  a layer group drawn apart (its subtree). What it draws goes into a texture of its own, as a layer group's does; a jump
+- **Apart** -- every other widget: a text, an image, a sprite, a widget that draws nothing of its own -- no visual, an
+  empty one that only takes clicks, an effect on its own children -- (its whole subtree, after the effect), a layer group
+  drawn apart (its subtree). What it draws goes into a texture of its own, as a layer group's does; a jump
   flood of that texture's alpha gives every texel its distance to the edge; the style is drawn from the distances into
   the layers the widget is put down as -- each outer effect by its own mode over what is behind, then the widget with its
   effects by its layer group's mode, at its opacity, through its mask. This is exact against what is behind, and works for

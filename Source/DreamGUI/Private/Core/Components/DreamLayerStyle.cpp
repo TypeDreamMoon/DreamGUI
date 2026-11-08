@@ -5,6 +5,7 @@
 #include "Core/Components/DreamLayerGroup.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamShapeBlendGroup.h"
+#include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamLayerStylePreset.h"
 #include "Core/DreamUILayerStyleMath.h"
@@ -77,8 +78,12 @@ bool UDreamLayerStyle::StylesSubtree() const
 	{
 		return false;
 	}
+	// A widget that draws nothing of its own is the layer its subtree makes: one with no visual, one whose visual only takes
+	// clicks, one whose visual is an effect on its own children (the style is round what the effect made of them). So is a
+	// layer group drawn apart.
+	const UDreamVisual* Visual = Widget->GetVisual();
 	const UDreamLayerGroup* Group = Widget->GetLayerGroup();
-	return Widget->GetVisual() == nullptr || (Group != nullptr && Group->IsIsolated());
+	return Visual == nullptr || Visual->IsA<UDreamVisualEmpty>() || Visual->DrawsChildrenThroughEffect() || (Group != nullptr && Group->IsIsolated());
 }
 
 EDreamLayerStylePath UDreamLayerStyle::GetPath() const

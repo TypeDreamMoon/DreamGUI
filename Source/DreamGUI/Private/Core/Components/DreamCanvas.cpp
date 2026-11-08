@@ -5034,14 +5034,13 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 				continue;
 			}
 			// A layer group drawn apart, an effect on the widget's own subtree and a layer style round the subtree: one group, the
-			// effect run on its picture, which is then styled as it is put down. A widget that draws its children through an effect
-			// draws nothing of its own, so a style on it is round the subtree as the effect left it. A style round the widget's own
-			// element alone is a group of what the widget itself draws.
+			// effect run on its picture, which is then styled as it is put down (UDreamLayerStyle::StylesSubtree says when a style
+			// is round the subtree). A style round the widget's own element alone is a group of what the widget itself draws.
 			UDreamLayerGroup* Group = Widget->GetLayerGroup();
 			UDreamVisual* EffectVisual = ChildrenEffectVisualOf(Widget);
 			UDreamLayerStyle* Style = StyleApartOf(Widget);
 			const bool bIsolated = Group != nullptr && Group->IsIsolated();
-			const bool bSubtreeStyle = Style != nullptr && (Style->StylesSubtree() || EffectVisual != nullptr);
+			const bool bSubtreeStyle = Style != nullptr && Style->StylesSubtree();
 			if (bIsolated || EffectVisual != nullptr || bSubtreeStyle)
 			{
 				FComposite& Composite = AddComposite(Index, SubtreeEnd[Index] - 1, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
