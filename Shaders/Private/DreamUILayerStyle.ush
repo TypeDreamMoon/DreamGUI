@@ -1,0 +1,449 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A layer style on a pixel (FDreamLayerEffects): drop shadows and an outer glow behind the layer; overlays, a satin, an inner
+// glow, inner shadows, strokes and a bevel on it; each by its own blend mode and opacity. Read from a record of float4 texels
+// (DreamUILayerStyleRecord.h has the layout), through a Texture2D's Load: a rect block's row past its own texels, or a group's
+// record texture.
+//
+// What the style is drawn round is told by two macros the includer defines first:
+//   DREAMUI_STYLE_DISTANCE(P)        the shape's signed distance at P (units from the layer's centre, +Y down; negative
+//                                    inside). It may read the parameters ShapeA and ShapeB of DreamUIStyle_Shade.
+//   DREAMUI_STYLE_PATTERN(Slot, UV)  a pattern's texel (straight, sRGB-encoded) at a UV that repeats; white without it.
+//
+// FDreamUILayerStyleMath (DreamUILayerStyleMath.h) is this on the CPU, function for function, and a test holds the two to each
+// other. Everything here is in sRGB-encoded values, as an image editor blends.
+
+#ifndef DREAMUI_LAYER_STYLE_USH
+#define DREAMUI_LAYER_STYLE_USH
+
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+#ifndef PI
+#define PI 3.14159265359f
+#endif
+
+#ifndef DREAMUI_STYLE_DISTANCE
+#error DREAMUI_STYLE_DISTANCE(P) must be defined before DreamUILayerStyle.ush is included
+#endif
+#ifndef DREAMUI_STYLE_PATTERN
+#define DREAMUI_STYLE_PATTERN(Slot, UV) float4(1.0, 1.0, 1.0, 1.0)
+#endif
+
+#define DREAMUI_STYLE_HEADER_TEXELS 2
+#define DREAMUI_STYLE_ENTRY_TEXELS 7
+#define DREAMUI_STYLE_MAX_EFFECTS 10
+#define DREAMUI_STYLE_CONTOUR_SAMPLES 64
+#define DREAMUI_STYLE_CONTOUR_TEXELS 16
+#define DREAMUI_STYLE_MAX_CONTOURS 4
+#define DREAMUI_STYLE_GRADIENT_SAMPLES 32
+#define DREAMUI_STYLE_GRADIENT_TEXELS 8
+#define DREAMUI_STYLE_MAX_GRADIENTS 4
+#define DREAMUI_STYLE_MAX_TEXELS 168
+#define DREAMUI_STYLE_MAX_OUTER_SLOTS 3
+#define DREAMUI_STYLE_MAX_PATTERNS 2
+
+#define DREAMUI_STYLE_KIND_DROP_SHADOW 1
+#define DREAMUI_STYLE_KIND_OUTER_GLOW 2
+#define DREAMUI_STYLE_KIND_PATTERN_OVERLAY 3
+#define DREAMUI_STYLE_KIND_GRADIENT_OVERLAY 4
+#define DREAMUI_STYLE_KIND_COLOR_OVERLAY 5
+#define DREAMUI_STYLE_KIND_SATIN 6
+#define DREAMUI_STYLE_KIND_INNER_GLOW 7
+#define DREAMUI_STYLE_KIND_INNER_SHADOW 8
+#define DREAMUI_STYLE_KIND_STROKE 9
+#define DREAMUI_STYLE_KIND_BEVEL 10
+
+#define DREAMUI_STYLE_FLAG_ANTI_ALIASED 1
+#define DREAMUI_STYLE_FLAG_KNOCK_OUT 2
+#define DREAMUI_STYLE_FLAG_INVERT 4
+#define DREAMUI_STYLE_FLAG_PRECISE 8
+#define DREAMUI_STYLE_FLAG_FROM_CENTER 16
+#define DREAMUI_STYLE_FLAG_REVERSE 32
+#define DREAMUI_STYLE_FLAG_DITHER 64
+#define DREAMUI_STYLE_FLAG_GRADIENT_FILL 128
+#define DREAMUI_STYLE_FLAG_PATTERN_FILL 256
+#define DREAMUI_STYLE_FLAG_DOWN 512
+#define DREAMUI_STYLE_FLAG_GLOSS_ANTI_ALIASED 1024
+#define DREAMUI_STYLE_FLAG_POINT_LIGHT 2048
+
+#define DREAMUI_STYLE_RECORD_FLAG_PATTERNS 1
+
+#define DREAMUI_STYLE_NOISE_SEED 0x6C8E9CF5u
+
+#define DREAMUI_STYLE_TEXEL(Index) Rec.Load(int3(At.x + (Index), At.y, 0))
+
+float DreamUIStyle_Soft(float X, float W)
+{
+	return 1.0 - smoothstep(-W, W, X);
+}
+
+float DreamUIStyle_Hard(float X, float AA)
+{
+	return saturate(0.5 - X / AA);
+}
+
+float DreamUIStyle_Noise(int2 Cell)
+{
+	return (float)(DreamUIClip_Hash(asuint(Cell.x), asuint(Cell.y), DREAMUI_STYLE_NOISE_SEED) & 0xFFFFFFu) / 16777215.0;
+}
+
+float DreamUIStyle_Component(float4 V, int Index)
+{
+	return Index == 0 ? V.x : (Index == 1 ? V.y : (Index == 2 ? V.z : V.w));
+}
+
+float DreamUIStyle_Contour(Texture2D Rec, int2 At, float Index, float V)
+{
+	V = saturate(V);
+	if (Index < -0.5)
+	{
+		return V;
+	}
+	const int Base = (int)DREAMUI_STYLE_TEXEL(1).x + (int)round(Index) * DREAMUI_STYLE_CONTOUR_TEXELS;
+	const float Where = V * (DREAMUI_STYLE_CONTOUR_SAMPLES - 1);
+	const int I0 = min((int)floor(Where), DREAMUI_STYLE_CONTOUR_SAMPLES - 1);
+	const int I1 = min(I0 + 1, DREAMUI_STYLE_CONTOUR_SAMPLES - 1);
+	const float A = DreamUIStyle_Component(DREAMUI_STYLE_TEXEL(Base + I0 / 4), I0 % 4);
+	const float B = DreamUIStyle_Component(DREAMUI_STYLE_TEXEL(Base + I1 / 4), I1 % 4);
+	return lerp(A, B, Where - (float)I0);
+}
+
+/** A colour of a gradient table, ARGB bytes in a float's bits, alpha on top: straight, encoded. */
+float4 DreamUIStyle_UnpackColor(float Bits)
+{
+	const uint Packed = asuint(Bits);
+	return float4((Packed >> 16) & 0xff, (Packed >> 8) & 0xff, Packed & 0xff, (Packed >> 24) & 0xff) / 255.0;
+}
+
+float4 DreamUIStyle_Gradient(Texture2D Rec, int2 At, float Index, float T)
+{
+	if (Index < -0.5)
+	{
+		return float4(1.0, 1.0, 1.0, 1.0);
+	}
+	const int Base = (int)DREAMUI_STYLE_TEXEL(1).y + (int)round(Index) * DREAMUI_STYLE_GRADIENT_TEXELS;
+	const float Where = saturate(T) * (DREAMUI_STYLE_GRADIENT_SAMPLES - 1);
+	const int I0 = min((int)floor(Where), DREAMUI_STYLE_GRADIENT_SAMPLES - 1);
+	const int I1 = min(I0 + 1, DREAMUI_STYLE_GRADIENT_SAMPLES - 1);
+	const float4 A = DreamUIStyle_UnpackColor(DreamUIStyle_Component(DREAMUI_STYLE_TEXEL(Base + I0 / 4), I0 % 4));
+	const float4 B = DreamUIStyle_UnpackColor(DreamUIStyle_Component(DREAMUI_STYLE_TEXEL(Base + I1 / 4), I1 % 4));
+	return A + (B - A) * (Where - (float)I0);
+}
+
+float DreamUIStyle_GradientPosition(int Type, float Angle, float Scale, float2 Offset, float2 P, float2 HalfSize, bool bReverse)
+{
+	const float2 C = P - Offset * HalfSize * 2.0;
+	const float Cos = cos(Angle);
+	const float Sin = sin(Angle);
+	const float2 Dir = float2(Cos, -Sin);
+	const float2 Perp = float2(-Sin, -Cos);
+	const float Length = max(abs(HalfSize.x * Cos) + abs(HalfSize.y * Sin), 1e-4) * Scale;
+	const float U = dot(C, Dir);
+	const float W = dot(C, Perp);
+	float T;
+	if (Type == 1)
+	{
+		T = length(C) / Length;
+	}
+	else if (Type == 2)
+	{
+		T = atan2(W, U) / (2.0 * PI);
+		T = T < 0.0 ? T + 1.0 : T;
+	}
+	else if (Type == 3)
+	{
+		T = abs(U) / Length;
+	}
+	else if (Type == 4)
+	{
+		T = (abs(U) + abs(W)) / Length;
+	}
+	else
+	{
+		T = 0.5 + U / (2.0 * Length);
+	}
+	T = bReverse ? 1.0 - T : T;
+	return saturate(T);
+}
+
+/** Cs at alpha Sa by Mode over Backdrop (premultiplied), all encoded: premultiplied out. */
+float4 DreamUIStyle_Over(int Mode, float4 Backdrop, float3 Cs, float Sa)
+{
+	return DreamUIBlend_OverBackdrop(Mode, Cs, Sa, Backdrop, false, false) + Backdrop * (1.0 - Sa);
+}
+
+float DreamUIStyle_BevelHeight(Texture2D Rec, int2 At, float X, float Size, int Style, int BevelTechnique, float ContourIndex, float ContourRange, bool bDown)
+{
+	Size = max(Size, 1e-3);
+	float U;
+	if (Style == 1)
+	{
+		U = 1.0 - saturate(X / Size);
+	}
+	else if (Style == 2)
+	{
+		U = saturate(0.5 - X / Size);
+	}
+	else if (Style == 3)
+	{
+		U = saturate(abs(X) / (0.5 * Size));
+	}
+	else
+	{
+		U = saturate(-X / Size);
+	}
+	float H;
+	if (BevelTechnique == 1)
+	{
+		H = U;
+	}
+	else if (BevelTechnique == 2)
+	{
+		H = lerp(U, smoothstep(0.0, 1.0, U), 0.5);
+	}
+	else
+	{
+		H = sin(U * (0.5 * PI));
+	}
+	if (ContourIndex > -0.5)
+	{
+		H = DreamUIStyle_Contour(Rec, At, ContourIndex, saturate(H / ContourRange));
+	}
+	return bDown ? -H : H;
+}
+
+/** A pixel of a styled layer, premultiplied and encoded (FDreamUILayerStyleMath::FShaded). */
+struct FDreamUIStyleShaded
+{
+	float4 Outer0;
+	float4 Outer1;
+	float4 Outer2;
+	/** The layer with every effect on it, its strokes and its bevel outside its edge under it. */
+	float4 Layer;
+	/** Everything, the outer effects blended with each other by their modes. */
+	float4 Flat;
+};
+
+/**
+ * A pixel of a styled layer: Rec's record at At (its first texel, its row). P is where the pixel is, in units from the layer's
+ * centre, +Y down; HalfSize the layer's half size, units; AA units per pixel; Color and Opacity the layer here, straight and
+ * encoded, before its edge's coverage, Coverage; Cell where the noise is read. ShapeA and ShapeB are DREAMUI_STYLE_DISTANCE's.
+ */
+FDreamUIStyleShaded DreamUIStyle_Shade(Texture2D Rec, int2 At, float2 P, float2 HalfSize, float AA, float3 Color, float Opacity,
+	float Coverage, int2 Cell, float4 ShapeA, float4 ShapeB)
+{
+	FDreamUIStyleShaded Out;
+	Out.Outer0 = float4(0.0, 0.0, 0.0, 0.0);
+	Out.Outer1 = float4(0.0, 0.0, 0.0, 0.0);
+	Out.Outer2 = float4(0.0, 0.0, 0.0, 0.0);
+	const float4 Header = DREAMUI_STYLE_TEXEL(0);
+	const float FillOpacity = Header.z;
+	float4 Layer = float4(Color * Opacity * FillOpacity, Opacity * FillOpacity);
+	const int NumEffects = min((int)Header.x, DREAMUI_STYLE_MAX_EFFECTS);
+	AA = max(AA, 1e-4);
+	const float X0 = DREAMUI_STYLE_DISTANCE(P);
+	const float Knock = X0 < -0.5 * AA ? 0.0 : 1.0;
+	const float Grain = DreamUIStyle_Noise(Cell);
+	float4 Behind = float4(0.0, 0.0, 0.0, 0.0);
+	float4 Under = float4(0.0, 0.0, 0.0, 0.0);
+	LOOP
+	for (int Effect = 0; Effect < NumEffects; ++Effect)
+	{
+		const int First = DREAMUI_STYLE_HEADER_TEXELS + Effect * DREAMUI_STYLE_ENTRY_TEXELS;
+		const float4 E0 = DREAMUI_STYLE_TEXEL(First);
+		const float4 E1 = DREAMUI_STYLE_TEXEL(First + 1);
+		const float4 E2 = DREAMUI_STYLE_TEXEL(First + 2);
+		const float4 E3 = DREAMUI_STYLE_TEXEL(First + 3);
+		const float4 E4 = DREAMUI_STYLE_TEXEL(First + 4);
+		const float4 E5 = DREAMUI_STYLE_TEXEL(First + 5);
+		const float4 E6 = DREAMUI_STYLE_TEXEL(First + 6);
+		const int Kind = (int)round(E0.x);
+		const int Mode = (int)round(E0.y);
+		const float EffectOpacity = E0.z;
+		const int Flags = (int)round(E0.w);
+		const float3 EffectColor = E1.rgb;
+		BRANCH
+		if (Kind == DREAMUI_STYLE_KIND_DROP_SHADOW || Kind == DREAMUI_STYLE_KIND_OUTER_GLOW)
+		{
+			const float Size = E2.x;
+			const float Spread = E2.y;
+			const float W = max((1.0 - Spread) * Size, 0.5 * AA);
+			float3 Fill = EffectColor;
+			float A;
+			if (Kind == DREAMUI_STYLE_KIND_DROP_SHADOW)
+			{
+				const float X = DREAMUI_STYLE_DISTANCE(P - E2.zw);
+				A = DreamUIStyle_Contour(Rec, At, E3.w, DreamUIStyle_Soft(X - Spread * Size, W));
+				A *= (Flags & DREAMUI_STYLE_FLAG_KNOCK_OUT) != 0 ? Knock : 1.0;
+			}
+			else
+			{
+				float V = (Flags & DREAMUI_STYLE_FLAG_PRECISE) != 0 ? 1.0 - saturate(max(X0 - Spread * Size, 0.0) / W) : DreamUIStyle_Soft(X0 - Spread * Size, W);
+				V = saturate(V / E3.y);
+				A = DreamUIStyle_Contour(Rec, At, E3.w, V) * Knock;
+				if ((Flags & DREAMUI_STYLE_FLAG_GRADIENT_FILL) != 0)
+				{
+					const float4 G = DreamUIStyle_Gradient(Rec, At, E4.x, saturate(1.0 - V + E3.z * (Grain - 0.5)));
+					Fill = G.rgb;
+					A *= G.a;
+				}
+			}
+			A *= EffectOpacity * (1.0 - E3.x * Grain);
+			const int Slot = clamp((int)round(E1.a), 0, DREAMUI_STYLE_MAX_OUTER_SLOTS - 1);
+			if (Slot == 0)
+			{
+				Out.Outer0 = DreamUIStyle_Over(Mode, Out.Outer0, Fill, A);
+			}
+			else if (Slot == 1)
+			{
+				Out.Outer1 = DreamUIStyle_Over(Mode, Out.Outer1, Fill, A);
+			}
+			else
+			{
+				Out.Outer2 = DreamUIStyle_Over(Mode, Out.Outer2, Fill, A);
+			}
+			Behind = DreamUIStyle_Over(Mode, Behind, Fill, A);
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_PATTERN_OVERLAY)
+		{
+			const float2 UV = (P + HalfSize - E2.zw) / E2.xy;
+			const float4 Texel = DREAMUI_STYLE_PATTERN((int)round(E5.z), UV);
+			Layer = DreamUIStyle_Over(Mode, Layer, Texel.rgb, EffectOpacity * Texel.a);
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_GRADIENT_OVERLAY)
+		{
+			float T = DreamUIStyle_GradientPosition((int)round(E4.y), E4.z, E4.w, E5.xy, P, HalfSize, (Flags & DREAMUI_STYLE_FLAG_REVERSE) != 0);
+			T = (Flags & DREAMUI_STYLE_FLAG_DITHER) != 0 ? saturate(T + (Grain - 0.5) / 255.0) : T;
+			const float4 G = DreamUIStyle_Gradient(Rec, At, E4.x, T);
+			Layer = DreamUIStyle_Over(Mode, Layer, G.rgb, EffectOpacity * G.a);
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_COLOR_OVERLAY)
+		{
+			Layer = DreamUIStyle_Over(Mode, Layer, EffectColor, EffectOpacity);
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_SATIN)
+		{
+			const float W = max(0.5 * E2.x, 0.5 * AA);
+			const float A1 = DreamUIStyle_Soft(DREAMUI_STYLE_DISTANCE(P + E2.zw), W);
+			const float A2 = DreamUIStyle_Soft(DREAMUI_STYLE_DISTANCE(P - E2.zw), W);
+			float V = DreamUIStyle_Contour(Rec, At, E3.w, abs(A1 - A2));
+			V = (Flags & DREAMUI_STYLE_FLAG_INVERT) != 0 ? 1.0 - V : V;
+			Layer = DreamUIStyle_Over(Mode, Layer, EffectColor, EffectOpacity * V);
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_INNER_GLOW || Kind == DREAMUI_STYLE_KIND_INNER_SHADOW)
+		{
+			const float Size = E2.x;
+			const float Choke = E2.y;
+			const float W = max((1.0 - Choke) * Size, 0.5 * AA);
+			float3 Fill = EffectColor;
+			float A;
+			if (Kind == DREAMUI_STYLE_KIND_INNER_SHADOW)
+			{
+				const float X = DREAMUI_STYLE_DISTANCE(P - E2.zw);
+				A = DreamUIStyle_Contour(Rec, At, E3.w, DreamUIStyle_Soft(-X - Choke * Size, W));
+			}
+			else
+			{
+				const float Xi = -X0 - Choke * Size;
+				float V = (Flags & DREAMUI_STYLE_FLAG_PRECISE) != 0 ? 1.0 - saturate(max(Xi, 0.0) / W) : DreamUIStyle_Soft(Xi, W);
+				V = (Flags & DREAMUI_STYLE_FLAG_FROM_CENTER) != 0 ? 1.0 - V : V;
+				V = saturate(V / E3.y);
+				A = DreamUIStyle_Contour(Rec, At, E3.w, V);
+				if ((Flags & DREAMUI_STYLE_FLAG_GRADIENT_FILL) != 0)
+				{
+					const float4 G = DreamUIStyle_Gradient(Rec, At, E4.x, saturate(1.0 - V + E3.z * (Grain - 0.5)));
+					Fill = G.rgb;
+					A *= G.a;
+				}
+			}
+			Layer = DreamUIStyle_Over(Mode, Layer, Fill, A * EffectOpacity * (1.0 - E3.x * Grain));
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_STROKE)
+		{
+			const float Size = E2.x;
+			const int Position = (int)round(E2.y);
+			const float OutSize = Position == 0 ? Size : (Position == 2 ? 0.5 * Size : 0.0);
+			const float InSize = Size - OutSize;
+			float3 Fill = EffectColor;
+			float FillAlpha = 1.0;
+			if ((Flags & DREAMUI_STYLE_FLAG_GRADIENT_FILL) != 0)
+			{
+				float T = DreamUIStyle_GradientPosition((int)round(E4.y), E4.z, E4.w, E5.xy, P, HalfSize, (Flags & DREAMUI_STYLE_FLAG_REVERSE) != 0);
+				T = (Flags & DREAMUI_STYLE_FLAG_DITHER) != 0 ? saturate(T + (Grain - 0.5) / 255.0) : T;
+				const float4 G = DreamUIStyle_Gradient(Rec, At, E4.x, T);
+				Fill = G.rgb;
+				FillAlpha = G.a;
+			}
+			else if ((Flags & DREAMUI_STYLE_FLAG_PATTERN_FILL) != 0)
+			{
+				const float2 UV = (P + HalfSize - E3.zw) / E3.xy;
+				const float4 Texel = DREAMUI_STYLE_PATTERN((int)round(E5.z), UV);
+				Fill = Texel.rgb;
+				FillAlpha = Texel.a;
+			}
+			if (InSize > 0.0)
+			{
+				const float Band = saturate(0.5 + (X0 + InSize) / AA);
+				Layer = DreamUIStyle_Over(Mode, Layer, Fill, EffectOpacity * FillAlpha * Band);
+			}
+			if (OutSize > 0.0)
+			{
+				const float Band = DreamUIStyle_Hard(X0 - OutSize, AA) * Knock;
+				Under = DreamUIStyle_Over(Mode, Under, Fill, EffectOpacity * FillAlpha * Band);
+			}
+		}
+		else if (Kind == DREAMUI_STYLE_KIND_BEVEL)
+		{
+			const float Size = E2.x;
+			const float Step = max(E2.y, AA);
+			float3 Light = float3(E2.z, E2.w, E3.z);
+			float Falloff = 1.0;
+			if ((Flags & DREAMUI_STYLE_FLAG_POINT_LIGHT) != 0)
+			{
+				// A point light E6.z above the layer at E6.xy, reaching E6.w: its direction from here, and how much of it is left.
+				const float2 Toward = E6.xy - P;
+				Light = normalize(float3(Toward, E6.z));
+				Falloff = saturate(1.0 - length(Toward) / max(E6.w, 1e-3));
+				Falloff *= Falloff;
+			}
+			const int Style = (int)round(E5.z);
+			const int BevelTechnique = (int)round(E5.w);
+			const bool bDown = (Flags & DREAMUI_STYLE_FLAG_DOWN) != 0;
+			const float X = X0 - E1.a;
+			const float Rise = (DreamUIStyle_BevelHeight(Rec, At, X + Step, Size, Style, BevelTechnique, E3.w, E3.y, bDown)
+				- DreamUIStyle_BevelHeight(Rec, At, X - Step, Size, Style, BevelTechnique, E3.w, E3.y, bDown)) / (2.0 * Step);
+			const float D = max(0.5 * AA, 1e-3);
+			float2 Normal2 = float2(DREAMUI_STYLE_DISTANCE(P + float2(D, 0.0)) - DREAMUI_STYLE_DISTANCE(P - float2(D, 0.0)),
+				DREAMUI_STYLE_DISTANCE(P + float2(0.0, D)) - DREAMUI_STYLE_DISTANCE(P - float2(0.0, D)));
+			const float NormalLength = length(Normal2);
+			Normal2 = NormalLength > 1e-6 ? Normal2 / NormalLength : float2(0.0, 0.0);
+			const float Slope = E3.x * Size * Rise;
+			float3 N = float3(-Slope * Normal2.x, -Slope * Normal2.y, 1.0);
+			N = N / length(N);
+			const float Shade = dot(N, Light);
+			const float Flat = Light.z;
+			const float Lit = DreamUIStyle_Contour(Rec, At, E5.y, saturate((Shade - Flat) / max(1.0 - Flat, 1e-3))) * Falloff;
+			const float Dark = DreamUIStyle_Contour(Rec, At, E5.y, saturate((Flat - Shade) / max(Flat, 1e-3))) * Falloff;
+			const int ShadowMode = (int)round(E5.x);
+			if (X0 < 0.5 * AA)
+			{
+				Layer = DreamUIStyle_Over(Mode, Layer, EffectColor, EffectOpacity * Lit);
+				Layer = DreamUIStyle_Over(ShadowMode, Layer, E4.rgb, E4.a * Dark);
+			}
+			if (Knock > 0.5)
+			{
+				const float Outside = 1.0 - Coverage;
+				Under = DreamUIStyle_Over(Mode, Under, EffectColor, EffectOpacity * Lit * Outside);
+				Under = DreamUIStyle_Over(ShadowMode, Under, E4.rgb, E4.a * Dark * Outside);
+			}
+		}
+	}
+	const float4 Clipped = Layer * Coverage;
+	Out.Layer = Clipped + Under * (1.0 - Clipped.a);
+	Out.Flat = Out.Layer + Behind * (1.0 - Out.Layer.a);
+	return Out;
+}
+
+#undef DREAMUI_STYLE_TEXEL
+
+#endif // DREAMUI_LAYER_STYLE_USH
