@@ -183,11 +183,14 @@ void UDreamVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvC
 			// modifiers before it produced, and its copies lie outside every char vertex range a text
 			// animation addresses. Running those last makes the result independent of which component
 			// was added first, instead of an outline that silently stops following an animated
-			// character when the two components happen to be in the other order.
-			const bool bADuplicates = A->GetDuplicatesMesh();
-			if (bADuplicates != B->GetDuplicatesMesh())
+			// character when the two components happen to be in the other order. The same holds one
+			// stage earlier: a deform cuts the mesh finer, and what reads characters by their ranges
+			// has to have run before it.
+			const EDreamMeshModifierStage AStage = A->GetStage();
+			const EDreamMeshModifierStage BStage = B->GetStage();
+			if (AStage != BStage)
 			{
-				return !bADuplicates;
+				return AStage < BStage;
 			}
 			return A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
 		});

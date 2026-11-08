@@ -10,6 +10,26 @@
 class UDreamVisualBatchMesh;
 class UDreamText;
 
+/**
+ * When a modifier runs among the others on the same visual. Modifiers run stage by stage, and within a stage in the order
+ * their components sit on the widget.
+ */
+UENUM(BlueprintType)
+enum class EDreamMeshModifierStage : uint8
+{
+	/** Works on the vertices as the visual made them, a text's characters by their vertex ranges: animations, colours, UVs. */
+	Characters,
+	/** Places whole characters anew (text on a path). It still reads the characters' vertex ranges. */
+	Layout,
+	/**
+	 * Reshapes the mesh by where each vertex is, cutting it finer first (warp, jelly). New vertices go after the old ones,
+	 * which keep their indices, so a character's range still names its corners -- but no longer every vertex it draws.
+	 */
+	Deform,
+	/** Appends whole copies of the mesh as the stages before left it (shadow, outline, long shadow): see GetDuplicatesMesh. */
+	Copies,
+};
+
 UENUM(BlueprintType)
 enum class EDreamUIMeshModifierHelper_TextPositionType:uint8
 {
@@ -145,6 +165,11 @@ public:
 	 * component happened to be added first, with nothing on screen to say so.
 	 */
 	virtual bool GetDuplicatesMesh()const { return false; }
+	/**
+	 * The stage this modifier runs in (EDreamMeshModifierStage): Copies for one that duplicates the mesh, Characters for
+	 * every other unless it says otherwise.
+	 */
+	virtual EDreamMeshModifierStage GetStage()const { return GetDuplicatesMesh() ? EDreamMeshModifierStage::Copies : EDreamMeshModifierStage::Characters; }
 	/**
 	 * What a modifier that appends copies of a mesh (GetDuplicatesMesh) does to them once it has given them their colours
 	 * and positions: the vertices from InFirstCopy to the end of InGeometry. A copy paints nothing -- a shadow is never a
