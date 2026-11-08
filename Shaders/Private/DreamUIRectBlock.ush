@@ -63,6 +63,20 @@ float DreamUI_sdRoundRect(float2 p, float2 b, float4 r)
     float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
     return d;
 }
+/** Where a rect block's row of rect block data has its layer style's record (UDreamRectBlock::OwnDataTexels). */
+#define DREAMUI_RECT_BLOCK_STYLE_FIRST 12
+
+/**
+ * The shape a layer style drawn in a rect block's pixels is measured round: its rounded rect, ShapeA.xy its half size and
+ * ShapeB its corners' radii, P in units from its centre as sdFragCoord is.
+ */
+float DreamUIRectBlock_StyleDistance(float2 P, float4 ShapeA, float4 ShapeB, Texture2D Rec)
+{
+    return DreamUI_sdRoundRect(P, ShapeA.xy, ShapeB);
+}
+#define DREAMUI_STYLE_DISTANCE(P) DreamUIRectBlock_StyleDistance((P), ShapeA, ShapeB, Rec)
+#include "/Plugin/DreamGUI/Private/DreamUILayerStyle.ush"
+
 float DreamUI_sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
 {
     r.xyzw = min(r.xyzw, min(b.x, b.y));
@@ -174,6 +188,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     float2 _OuterShadowOffset;
 
     half _EnableRadialFill;
+    half _EnableStyle;
     float2 _RadialFillCenter;
     float _RadialFillAngle;
     float _RadialFillRotation;
@@ -201,6 +216,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         _EnableBorderGradient = (BoolValues >> 3) & 1;
         _EnableInnerShadow = (BoolValues >> 2) & 1;
         _EnableRadialFill = (BoolValues >> 1) & 1;
+        _EnableStyle = BoolValues & 1;
         
         _QuadSize = PixelData.ba;
 
@@ -264,7 +280,9 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     float2 sdQuadSize = _QuadSize * 0.5f;
     float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
     float dOuter = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
-    float dOuterSharp = dOuter / fwidth(dOuter);
+    // Taken here, in uniform flow, and kept for the layer style below, which runs inside a branch.
+    const float dOuterWidth = fwidth(dOuter);
+    float dOuterSharp = dOuter / dOuterWidth;
     // COVERAGE IS CENTRED ON THE BOUNDARY: half a pixel of ramp inside, half outside. dOuterSharp is
     // the signed distance in pixels, negative inside, so a pixel sitting exactly on the edge is HALF
     // covered -- which saturate(0.5 - s) gives and saturate(-s) does not. The latter ramps over
@@ -383,6 +401,23 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         color = color * (1 - borderColor.a) + borderColor;
         color.a *= dOuter01;
         color.rgb *= dOuter01;
+    }
+
+    // A layer style (UDreamLayerStyle) round the rect's shape, over what is drawn so far: in encoded values, as an image editor
+    // blends, and back. Its record follows this block's own texels in the row. The rect block's own outer shadow stays under it.
+    BRANCH
+    if (_EnableStyle > 0.5f)
+    {
+        const float AA = max(dOuterWidth, 1e-4f);
+        const float3 Straight = color.a > 0.0f ? color.rgb / color.a : float3(0.0f, 0.0f, 0.0f);
+        const float Opacity = dOuter01 > 0.0f ? saturate(color.a / dOuter01) : 0.0f;
+        const int2 StyleAt = int2(DREAMUI_RECT_BLOCK_STYLE_FIRST, (int)round(UV3.x));
+        FDreamUIStyleShaded Styled = DreamUIStyle_Shade(DataTex, StyleAt, sdFragCoord, sdQuadSize, AA,
+            DreamUIBlend_ToSrgb(saturate(Straight)), Opacity, dOuter01, int2(floor(sdFragCoord / AA)),
+            float4(sdQuadSize, 0.0f, 0.0f), _CornerRadius);
+        const float StyledAlpha = saturate(Styled.Flat.a);
+        const float3 StyledStraight = StyledAlpha > 0.0f ? Styled.Flat.rgb / StyledAlpha : float3(0.0f, 0.0f, 0.0f);
+        color = HALF4_TYPE(DreamUIBlend_ToLinear(saturate(StyledStraight)) * StyledAlpha, StyledAlpha);
     }
 
     //outer shadow

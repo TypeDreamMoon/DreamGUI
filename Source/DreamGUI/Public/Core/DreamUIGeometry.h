@@ -291,7 +291,9 @@ public:
 		float width, float height, const FVector2f& pivot, 
 		const FDreamUISpriteInfo& uniformSpriteInfo, const FDreamUISpriteInfo& spriteInfo,
 		UDreamCanvas* renderCanvas, UDreamVisual* uiComp, FColor color,
-		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
+		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged,
+		/** How far past the rect a layer style drawn in its pixels reaches (UDreamLayerStyle): the quad grows by it. */
+		float styleReach = 0.0f
 	);
 #pragma endregion
 #pragma region UISprite_UITexture_Border

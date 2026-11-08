@@ -21,6 +21,8 @@
 #include "Core/DreamUISpriteData_BaseObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamPointerEventData.h"
+#include "Core/Components/DreamLayerStyle.h"
+#include "Core/DreamUILayerStyleMath.h"
 
 
 #define LOCTEXT_NAMESPACE "DreamRectBlock"
@@ -39,11 +41,12 @@ UMaterialInterface* UDreamRectBlockData::GetMaterial()
 	return DefaultMaterial;
 }
 
-void UDreamRectBlock::FillData(uint8* Data, float width, float height)
+void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDreamUILayerStyleRecord* InStyle)
 {
 	int DataOffset = 0;
 
-	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, false);
+	// The last flag, spare until a layer style came: its record follows this block's own texels.
+	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, InStyle != nullptr);
 	Fill8BytesToData(Data
 		, BoolAsByte
 		, static_cast<uint8>(BodyTextureScaleMode)
@@ -106,6 +109,12 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height)
 		FMath::Max(BodyTextureMargin.Right, 0.0f) / TextureSize.X,
 		FMath::Max(BodyTextureMargin.Bottom, 0.0f) / TextureSize.Y), DataOffset);
 	FillVector4ToData(Data, MarginPixels, DataOffset);
+	// The block's own 188 bytes end part way through its twelfth texel; a style's record starts on the next texel.
+	check(DataOffset <= OwnDataTexels * 16);
+	if (InStyle != nullptr && InStyle->Texels.Num() > 0)
+	{
+		FMemory::Memcpy(Data + OwnDataTexels * 16, InStyle->Texels.GetData(), InStyle->Texels.Num() * sizeof(FVector4f));
+	}
 }
 
 float UDreamRectBlock::GetValueWithUnitMode(float SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
@@ -217,6 +226,10 @@ constexpr int UDreamRectBlock::DataCountInBytes()
 		//they occupy.
 		+ 16//margin as a fraction of the texture, LTRB
 		+ 16//the same margin in quad pixels, LTRB
+
+		//a layer style drawn in this block's pixels (UDreamLayerStyle), read only when the last flag says so and uploaded
+		//only then: a rect block with no style uploads its own texels alone, as it always did
+		+ DreamUILayerStyleLayout::MaxTexels * 16
 		;
 	return result;
 }
@@ -566,6 +579,182 @@ bool UDreamRectBlock::IsDrawnByBuiltInShader() const
 	return Canvas != nullptr && UDreamUISettings::GetUseBuiltInUIShader() && Canvas->IsRenderByDreamUIRendererOrUERenderer();
 }
 
+const FDreamUILayerStyleRecord* UDreamRectBlock::FindLayerStyleRecord() const
+{
+	const UDreamLayerStyle* Style = UDreamLayerStyle::Find(GetWidget());
+	return Style != nullptr && Style->GetPath() == EDreamLayerStylePath::Element ? &Style->GetRecord() : nullptr;
+}
+
+void UDreamRectBlock::OnLayerStyleChanged()
+{
+	// The quad only when the style reaches out further or less far: a light moving over a bevel changes its record alone.
+	const FDreamUILayerStyleRecord* Style = FindLayerStyleRecord();
+	const float Reach = Style != nullptr ? Style->OuterReach : 0.0f;
+	if (Reach != LastStyleReach)
+	{
+		LastStyleReach = Reach;
+		MarkAllDirty();
+	}
+	else
+	{
+		MarkNeedUpdateBlockData();
+	}
+}
+
+namespace DreamRectBlockStyleLocal
+{
+	FColor Opaque(FColor InColor)
+	{
+		InColor.A = 255;
+		return InColor;
+	}
+
+	uint8 Alpha(float InOpacity)
+	{
+		return static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(InOpacity, 0.0f, 1.0f) * 255.0f));
+	}
+
+	/** A rect block's radial gradient -- InCenter from its rect's bottom left, InRadius -- as a style's, its stops given. */
+	FDreamStyleGradientFill Radial(const FVector2f& InCenter, const FVector2f& InRadius, float InWidth, float InHeight)
+	{
+		FDreamStyleGradientFill Fill;
+		Fill.Type = EDreamStyleGradientType::Radial;
+		Fill.Angle = 0.0f;
+		// The style's offset is a fraction of the size from the middle, +Y down; the rect block's centre is from the bottom left.
+		Fill.Offset = FVector2f(InCenter.X / FMath::Max(InWidth, 1e-3f) - 0.5f, 0.5f - InCenter.Y / FMath::Max(InHeight, 1e-3f));
+		Fill.Scale = FMath::Clamp(InRadius.X / FMath::Max(InWidth * 0.5f, 1e-3f), 0.1f, 1.5f);
+		return Fill;
+	}
+}
+
+FDreamLayerEffects UDreamRectBlock::GetEffectsAsLayerStyle() const
+{
+	using namespace DreamRectBlockStyleLocal;
+	FDreamLayerEffects Out;
+	const UDreamWidget* Widget = GetWidget();
+	const float Width = Widget != nullptr ? Widget->GetWidth() : 100.0f;
+	const float Height = Widget != nullptr ? Widget->GetHeight() : 100.0f;
+	if (bEnableOuterShadow)
+	{
+		// Solid Size out from the edge, then fading over half Blur: a soft shadow Size + Blur / 2 long, solid for its first part.
+		const float Solid = GetValueWithUnitMode(OuterShadowSize, OuterShadowSizeUnitMode, Width, Height, 0.5f);
+		const float Fade = GetValueWithUnitMode(OuterShadowBlur, OuterShadowBlurUnitMode, Width, Height, 1.0f) * 0.5f;
+		FDreamStyleDropShadow& Shadow = Out.DropShadows.AddDefaulted_GetRef();
+		Shadow.BlendMode = EDreamUIBlendMode::Alpha;
+		Shadow.Color = Opaque(OuterShadowColor);
+		Shadow.Opacity = OuterShadowColor.A / 255.0f;
+		Shadow.bUseGlobalLight = false;
+		Shadow.Angle = OuterShadowAngle;
+		Shadow.Distance = GetValueWithUnitMode(OuterShadowDistance, OuterShadowDistanceUnitMode, Width, Height, 0.5f);
+		Shadow.Size = Solid + Fade;
+		Shadow.Spread = Shadow.Size > 0.0f ? FMath::Clamp((Solid / Shadow.Size + 1.0f) * 0.5f, 0.0f, 1.0f) : 1.0f;
+	}
+	if (bEnableInnerShadow)
+	{
+		const float Solid = GetValueWithUnitMode(InnerShadowSize, InnerShadowSizeUnitMode, Width, Height, 0.5f);
+		const float Fade = GetValueWithUnitMode(InnerShadowBlur, InnerShadowBlurUnitMode, Width, Height, 1.0f);
+		FDreamStyleInnerShadow& Shadow = Out.InnerShadows.AddDefaulted_GetRef();
+		Shadow.BlendMode = EDreamUIBlendMode::Alpha;
+		Shadow.Color = Opaque(InnerShadowColor);
+		Shadow.Opacity = InnerShadowColor.A / 255.0f;
+		Shadow.bUseGlobalLight = false;
+		Shadow.Angle = InnerShadowAngle;
+		Shadow.Distance = GetValueWithUnitMode(InnerShadowDistance, InnerShadowDistanceUnitMode, Width, Height, 0.5f);
+		Shadow.Size = Solid + Fade;
+		Shadow.Choke = Shadow.Size > 0.0f ? FMath::Clamp(Solid / Shadow.Size, 0.0f, 1.0f) : 0.0f;
+	}
+	if (bEnableBorder && BorderWidth != 0.0f)
+	{
+		FDreamStyleStroke& Stroke = Out.Strokes.AddDefaulted_GetRef();
+		Stroke.Position = EDreamStyleStrokePosition::Inside;
+		Stroke.Size = FMath::Abs(GetValueWithUnitMode(BorderWidth, BorderWidthUnitMode, Width, Height, 0.5f));
+		Stroke.Color = Opaque(BorderColor);
+		Stroke.Opacity = BorderColor.A / 255.0f;
+		if (bEnableBorderGradient)
+		{
+			Stroke.Fill = EDreamStyleStrokeFill::Gradient;
+			Stroke.Opacity = 1.0f;
+			Stroke.Gradient = Radial(GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, Width, Height),
+				GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, Width, Height), Width, Height);
+			FDreamStyleGradient& Gradient = Stroke.Gradient.Gradient;
+			Gradient.ColorStops = { FDreamStyleGradientColorStop(0.0f, Opaque(BorderGradientColor)), FDreamStyleGradientColorStop(1.0f, Opaque(BorderColor)) };
+			Gradient.OpacityStops = { FDreamStyleGradientOpacityStop(0.0f, BorderGradientColor.A / 255.0f), FDreamStyleGradientOpacityStop(1.0f, BorderColor.A / 255.0f) };
+		}
+	}
+	if (bEnableBody && bEnableBodyGradient)
+	{
+		FDreamStyleGradientOverlay& Overlay = Out.GradientOverlays.AddDefaulted_GetRef();
+		Overlay.Fill = Radial(GetValueWithUnitMode(BodyGradientCenter, BodyGradientCenterUnitMode, Width, Height),
+			GetValueWithUnitMode(BodyGradientRadius, BodyGradientRadiusUnitMode, Width, Height), Width, Height);
+		FDreamStyleGradient& Gradient = Overlay.Fill.Gradient;
+		Gradient.ColorStops = { FDreamStyleGradientColorStop(0.0f, Opaque(BodyGradientColor)), FDreamStyleGradientColorStop(1.0f, Opaque(BodyGradientColor)) };
+		Gradient.OpacityStops = { FDreamStyleGradientOpacityStop(0.0f, BodyGradientColor.A / 255.0f), FDreamStyleGradientOpacityStop(1.0f, 0.0f) };
+	}
+	return Out;
+}
+
+void UDreamRectBlock::SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle)
+{
+	using namespace DreamRectBlockStyleLocal;
+	auto LightAngle = [&InStyle](bool bGlobal, float InAngle) { return bGlobal ? InStyle.GlobalLightAngle : InAngle; };
+	const float Scale = FMath::Max(InStyle.Scale, 0.01f);
+	const FDreamStyleDropShadow* Drop = InStyle.DropShadows.FindByPredicate([](const FDreamStyleDropShadow& S) { return S.bEnabled; });
+	bEnableOuterShadow = InStyle.bEnabled && Drop != nullptr;
+	if (bEnableOuterShadow)
+	{
+		const float Size = Drop->Size * Scale;
+		const float Solid = FMath::Max((2.0f * Drop->Spread - 1.0f) * Size, 0.0f);
+		OuterShadowColor = Drop->Color;
+		OuterShadowColor.A = Alpha(Drop->Opacity);
+		OuterShadowAngle = FMath::Fmod(LightAngle(Drop->bUseGlobalLight, Drop->Angle) + 360.0f, 360.0f);
+		OuterShadowDistance = Drop->Distance * Scale;
+		OuterShadowSize = Solid;
+		OuterShadowBlur = 2.0f * (Size - Solid);
+		OuterShadowDistanceUnitMode = OuterShadowSizeUnitMode = OuterShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
+	}
+	const FDreamStyleInnerShadow* Inner = InStyle.InnerShadows.FindByPredicate([](const FDreamStyleInnerShadow& S) { return S.bEnabled; });
+	bEnableInnerShadow = InStyle.bEnabled && Inner != nullptr;
+	if (bEnableInnerShadow)
+	{
+		const float Size = Inner->Size * Scale;
+		InnerShadowColor = Inner->Color;
+		InnerShadowColor.A = Alpha(Inner->Opacity);
+		InnerShadowAngle = FMath::Fmod(LightAngle(Inner->bUseGlobalLight, Inner->Angle) + 360.0f, 360.0f);
+		InnerShadowDistance = Inner->Distance * Scale;
+		InnerShadowSize = Inner->Choke * Size;
+		InnerShadowBlur = (1.0f - Inner->Choke) * Size;
+		InnerShadowDistanceUnitMode = InnerShadowSizeUnitMode = InnerShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
+	}
+	const FDreamStyleStroke* Stroke = InStyle.Strokes.FindByPredicate([](const FDreamStyleStroke& S) { return S.bEnabled && S.Size > 0.0f; });
+	bEnableBorder = InStyle.bEnabled && Stroke != nullptr;
+	if (bEnableBorder)
+	{
+		BorderWidth = Stroke->Size * Scale;
+		BorderWidthUnitMode = EDreamRectBlockUnitMode::Value;
+		bEnableBorderGradient = Stroke->Fill == EDreamStyleStrokeFill::Gradient;
+		if (bEnableBorderGradient)
+		{
+			const FVector4f Start = Stroke->Gradient.Gradient.Evaluate(0.0f);
+			const FVector4f End = Stroke->Gradient.Gradient.Evaluate(1.0f);
+			BorderGradientColor = FLinearColor(Start.X, Start.Y, Start.Z, Start.W).ToFColor(false);
+			BorderColor = FLinearColor(End.X, End.Y, End.Z, End.W * Stroke->Opacity).ToFColor(false);
+		}
+		else
+		{
+			BorderColor = Stroke->Color;
+			BorderColor.A = Alpha(Stroke->Opacity);
+		}
+	}
+	const FDreamStyleGradientOverlay* Overlay = InStyle.GradientOverlays.FindByPredicate([](const FDreamStyleGradientOverlay& S) { return S.bEnabled; });
+	bEnableBodyGradient = InStyle.bEnabled && Overlay != nullptr;
+	if (bEnableBodyGradient)
+	{
+		const FVector4f Start = Overlay->Fill.Gradient.Evaluate(0.0f);
+		BodyGradientColor = FLinearColor(Start.X, Start.Y, Start.Z, Start.W * Overlay->Opacity).ToFColor(false);
+	}
+	MarkAllDirty();
+}
+
 UMaterialInterface* UDreamRectBlock::GetMaterialToCreateGeometry()
 {
 	if (auto Result = Super::GetMaterialToCreateGeometry())
@@ -750,6 +939,7 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 {
 	auto Widget = GetWidget();
 	static FDreamUISpriteInfo SimpleRectSpriteData;
+	const FDreamUILayerStyleRecord* Style = FindLayerStyleRecord();
 	FDreamUIGeometry::UpdateRectBlockVertex(&InGeo
 		, this->bEnableOuterShadow
 		, this->GetOuterShadowOffset(Widget->GetWidth(), Widget->GetHeight())
@@ -760,6 +950,7 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		, SimpleRectSpriteData, BodyTextureMode == EDreamRectBlockTextureMode::Sprite ? (IsValid(BodySpriteTexture) ? BodySpriteTexture->GetSpriteInfo() : SimpleRectSpriteData) : SimpleRectSpriteData
 		, Widget->GetRenderCanvas(), this, GetFinalColor(),
 		InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
+		, Style != nullptr ? Style->OuterReach : 0.0f
 	);
 
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
@@ -777,16 +968,14 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 	{
 		bNeedUpdateBlockData = false;
 
-		auto BlockSize = DataRows->GetBlockSizeInByte();
-		// The RHI upload copies whole pixels -- BlockPixelCount * 16 bytes for the R32G32B32A32
-		// format registered in OnRegister -- so an exactly BlockSize-d buffer (156 bytes = 9.75
-		// pixels) is overread by the tail of the last pixel. Pad to pixel granularity, zeroed.
-		auto BufferSize = Align(BlockSize, 16);
+		// Its own texels, and its style's record after them when it has one: no more of the row than it uses, so a rect block
+		// with no style uploads what it always did.
+		const int32 PixelCount = OwnDataTexels + (Style != nullptr ? Style->Texels.Num() : 0);
+		check(PixelCount * 16 <= Align(DataRows->GetBlockSizeInByte(), 16));
 		TArray<uint8> BlockBuffer;
-		BlockBuffer.SetNumUninitialized(BufferSize);
-		FMemory::Memzero(BlockBuffer.GetData(), BufferSize);
-		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight());
-		DataRows->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
+		BlockBuffer.SetNumZeroed(PixelCount * 16);
+		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight(), Style);
+		DataRows->UpdateBlock(0, DataStartPosition, MoveTemp(BlockBuffer), PixelCount);
 	}
 }
 

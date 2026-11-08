@@ -44,6 +44,7 @@
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/Components/DreamLayerGroup.h"
+#include "Core/Components/DreamLayerStyle.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIRenderLayerTable.h"
 #include "Async/ParallelFor.h"
@@ -2957,6 +2958,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				MarkerDrawCall.LayerGroup = RenderData.LayerGroup;
 				MarkerDrawCall.CompositeVisual = RenderData.CompositeVisual;
 				MarkerDrawCall.EffectVisual = RenderData.EffectVisual;
+				MarkerDrawCall.LayerStyle = RenderData.LayerStyle;
 				MarkerDrawCall.bCompositeBegin = RenderData.Type == EDreamUIDrawCallType::GroupBegin;
 				InOutUIDrawCallList.Add(MoveTemp(MarkerDrawCall));
 				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
@@ -4867,6 +4869,21 @@ namespace DreamCanvasCompositeLocal
 		return IsValid(InUnderlay) && !FDreamUIClipData::DescribeUnderlay(InUnderlay, Below) && !Below.bPending;
 	}
 
+	/** A widget's rect on the canvas, as a layer style's gradients and patterns are laid across it: xy its centre, zw its half size. */
+	FVector4f StyleRect(const FTransform& InCanvasTransform, const UDreamWidget* InWidget)
+	{
+		if (InWidget == nullptr)
+		{
+			return FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+		}
+		const FVector2D Pivot = InWidget->GetPivot();
+		const FVector LocalCentre(0.0, (0.5 - Pivot.X) * InWidget->GetWidth(), (0.5 - Pivot.Y) * InWidget->GetHeight());
+		const FVector OnCanvas = InCanvasTransform.InverseTransformPosition(InWidget->GetWorldMatrix().TransformPosition(LocalCentre));
+		const FVector Scale = InWidget->GetWorldTransform().GetScale3D() / InCanvasTransform.GetScale3D().ComponentMax(FVector(UE_KINDA_SMALL_NUMBER));
+		return FVector4f(static_cast<float>(OnCanvas.Y), static_cast<float>(OnCanvas.Z),
+			static_cast<float>(FMath::Abs(Scale.Y) * InWidget->GetWidth() * 0.5), static_cast<float>(FMath::Abs(Scale.Z) * InWidget->GetHeight() * 0.5));
+	}
+
 	/** Which of two composites over the same widgets is the outer: the layer below's, then a layer group's, then an element's. */
 	enum class EOrder : uint8
 	{
@@ -4898,11 +4915,18 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		UDreamVisual* Visual = InWidget->GetVisual();
 		return Visual != nullptr && Visual->DrawsChildrenThroughEffect() ? Visual : nullptr;
 	};
+	// A widget whose layer style is drawn round what it draws apart (EDreamLayerStylePath::Group).
+	auto StyleApartOf = [](const UDreamWidget* InWidget) -> UDreamLayerStyle*
+	{
+		UDreamLayerStyle* Style = UDreamLayerStyle::Find(InWidget);
+		return Style != nullptr && Style->GetPath() == EDreamLayerStylePath::Group ? Style : nullptr;
+	};
 	bool bAnyWidget = false;
 	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
 	{
 		if (IsValid(Widget) && Widget->GetRenderCanvas() == this
-			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow() || ChildrenEffectVisualOf(Widget) != nullptr))
+			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow()
+				|| ChildrenEffectVisualOf(Widget) != nullptr || StyleApartOf(Widget) != nullptr))
 		{
 			bAnyWidget = true;
 			break;
@@ -4981,6 +5005,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		TSharedPtr<FDreamUICompositeDesc> Desc;
 		TWeakObjectPtr<UDreamLayerGroup> Group;
 		TWeakObjectPtr<UDreamVisual> EffectVisual;
+		TWeakObjectPtr<UDreamLayerStyle> Style;
 		TObjectKey<UDreamWidget> Widget;
 	};
 	TArray<FComposite> Composites;
@@ -5008,13 +5033,19 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 			{
 				continue;
 			}
-			// A layer group drawn apart, and an effect on the widget's own subtree: one group, the effect run on its picture.
+			// A layer group drawn apart, an effect on the widget's own subtree and a layer style round the subtree: one group, the
+			// effect run on its picture, which is then styled as it is put down. A widget that draws its children through an effect
+			// draws nothing of its own, so a style on it is round the subtree as the effect left it. A style round the widget's own
+			// element alone is a group of what the widget itself draws.
 			UDreamLayerGroup* Group = Widget->GetLayerGroup();
 			UDreamVisual* EffectVisual = ChildrenEffectVisualOf(Widget);
-			if ((Group != nullptr && Group->IsIsolated()) || EffectVisual != nullptr)
+			UDreamLayerStyle* Style = StyleApartOf(Widget);
+			const bool bIsolated = Group != nullptr && Group->IsIsolated();
+			const bool bSubtreeStyle = Style != nullptr && (Style->StylesSubtree() || EffectVisual != nullptr);
+			if (bIsolated || EffectVisual != nullptr || bSubtreeStyle)
 			{
 				FComposite& Composite = AddComposite(Index, SubtreeEnd[Index] - 1, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
-				if (Group != nullptr && Group->IsIsolated())
+				if (bIsolated)
 				{
 					Composite.Group = Group;
 					Group->FillComposite(*Composite.Desc, this);
@@ -5024,6 +5055,17 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 					Composite.EffectVisual = EffectVisual;
 					Composite.Desc->Effect = EffectVisual->GetChildrenEffect();
 				}
+				if (bSubtreeStyle)
+				{
+					Composite.Style = Style;
+					Composite.Desc->Style = Style->GetComposite();
+				}
+			}
+			else if (Style != nullptr)
+			{
+				FComposite& Composite = AddComposite(Index, Index, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
+				Composite.Style = Style;
+				Composite.Desc->Style = Style->GetComposite();
 			}
 			// The first of the widgets that clip to one layer below that no clip level follows: the layer and they make a
 			// group, the layer put down as it is and they only where it has alpha.
@@ -5125,6 +5167,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		Marker.Composite = Composite.Desc;
 		Marker.LayerGroup = Composite.Group;
 		Marker.EffectVisual = Composite.EffectVisual;
+		Marker.LayerStyle = Composite.Style;
 		Marker.Widget = Composite.Widget;
 		Out.Add(MoveTemp(Marker));
 	};
@@ -5189,7 +5232,7 @@ void UDreamCanvas::UpdateCompositeBounds()
 		bool bWhole = false;
 	};
 	TArray<FOpen, TInlineAllocator<8>> Open;
-	auto Send = [this, &CanvasToWorld](const FOpen& InOpen)
+	auto Send = [this, &CanvasToWorld, &MeshTransform](const FOpen& InOpen)
 	{
 		FDreamUIDrawCall& Marker = CurrentDrawCallData.DrawCallArray[InOpen.DrawCall];
 		FDreamUICompositeDesc Desc = Marker.Composite.IsValid() ? *Marker.Composite : FDreamUICompositeDesc();
@@ -5222,6 +5265,16 @@ void UDreamCanvas::UpdateCompositeBounds()
 			{
 				Desc.WorldBounds = Desc.WorldBounds.ExpandBy(Desc.Effect->GetReach() * CanvasToWorld.GetMaximumAxisScale());
 			}
+		}
+		if (const UDreamLayerStyle* Style = Marker.LayerStyle.Get())
+		{
+			// The style it is put down by, the room its effects reach out into, and the rect they are laid across.
+			Desc.Style = Style->GetComposite();
+			if (Desc.Style.IsValid() && Desc.WorldBounds.IsValid && Desc.Style->GetReach() > 0.0f)
+			{
+				Desc.WorldBounds = Desc.WorldBounds.ExpandBy(Desc.Style->GetReach() * CanvasToWorld.GetMaximumAxisScale());
+			}
+			Desc.StyleRect = DreamCanvasCompositeLocal::StyleRect(MeshTransform, Style->GetWidget());
 		}
 		Desc.CanvasToWorld = CanvasToWorld;
 		UIMesh->SetGroupSectionComposite(Marker.RenderSection, Desc);

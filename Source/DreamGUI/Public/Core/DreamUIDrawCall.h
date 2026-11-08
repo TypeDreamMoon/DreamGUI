@@ -21,6 +21,7 @@ class UDreamVisualBatchMesh;
 class UDreamVisualDirectMesh;
 class UDreamUIMeshComponent;
 class UDreamLayerGroup;
+class UDreamLayerStyle;
 struct FDreamUIRenderSection;
 
 enum class EDreamUIDrawCallType :uint8
@@ -79,6 +80,8 @@ public:
 	TWeakObjectPtr<UDreamVisual> CompositeVisual;
 	/** The visual whose effect a group's picture goes through (UDreamVisual::GetChildrenEffect): read every frame. */
 	TWeakObjectPtr<UDreamVisual> EffectVisual;
+	/** The layer style a group's picture is styled by (UDreamLayerStyle on a widget drawn apart): read every frame. */
+	TWeakObjectPtr<UDreamLayerStyle> LayerStyle;
 
 	/**
 	 * The widget the entry was prepared from, as a key: the canvas finds the entry's place in its widget list with it on
@@ -191,6 +194,8 @@ public:
 	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
 	TWeakObjectPtr<UDreamVisual> CompositeVisual;
 	TWeakObjectPtr<UDreamVisual> EffectVisual;
+	/** See FDreamUIRenderData::LayerStyle. */
+	TWeakObjectPtr<UDreamLayerStyle> LayerStyle;
 	bool bCompositeBegin = false;
 	bool IsGroupMarker() const { return Type == EDreamUIDrawCallType::GroupBegin || Type == EDreamUIDrawCallType::GroupEnd; }
 public:

@@ -244,7 +244,8 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 	float width, float height, const FVector2f& pivot, 
 	const FDreamUISpriteInfo& uniformSpriteInfo, const FDreamUISpriteInfo& spriteInfo,
 	UDreamCanvas* renderCanvas, UDreamVisual* uiComp, FColor color,
-	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
+	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged,
+	float styleReach
 )
 {
 	auto& triangles = uiGeo->Triangles;
@@ -292,6 +293,13 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 				float PosMaxX = FMath::Max(maxX, shadowMaxX);
 				float PosMinY = FMath::Min(minY, shadowMinY);
 				float PosMaxY = FMath::Max(maxY, shadowMaxY);
+				if (styleReach > 0.0f)
+				{
+					PosMinX = FMath::Min(PosMinX, minX - styleReach);
+					PosMaxX = FMath::Max(PosMaxX, maxX + styleReach);
+					PosMinY = FMath::Min(PosMinY, minY - styleReach);
+					PosMaxY = FMath::Max(PosMaxY, maxY + styleReach);
+				}
 				if (bSoftEdge)//offset 1 pixel to make edge smooth
 				{
 					PosMinX -= 1;
@@ -310,6 +318,13 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 				float PosMaxX = maxX;
 				float PosMinY = minY;
 				float PosMaxY = maxY;
+				if (styleReach > 0.0f)
+				{
+					PosMinX -= styleReach;
+					PosMaxX += styleReach;
+					PosMinY -= styleReach;
+					PosMaxY += styleReach;
+				}
 				if (bSoftEdge)//offset 1 pixel to make edge smooth
 				{
 					PosMinX -= 1;

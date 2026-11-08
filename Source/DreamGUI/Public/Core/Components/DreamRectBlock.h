@@ -6,6 +6,7 @@
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Layout/Margin.h"
+#include "Core/DreamLayerStyleTypes.h"
 #include "DreamRectBlock.generated.h"
 
 
@@ -96,6 +97,29 @@ public:
 	 * its material drew it in a draw call of its own: a world of panels each with a button on it drew twice the panels.
 	 */
 	bool IsDrawnByBuiltInShader() const;
+
+	/** The texels of a rect block's row before its layer style's record (DreamUIRectBlock.ush's DREAMUI_RECT_BLOCK_STYLE_FIRST). */
+	static constexpr int32 OwnDataTexels = 12;
+	/**
+	 * Its widget's layer style (UDreamLayerStyle) changed, or came or went: the style drawn in its pixels is written into its row
+	 * again and its quad grown by what the style reaches.
+	 */
+	void OnLayerStyleChanged();
+
+	/**
+	 * Its own shadows, border and gradient written as a layer style: the outer shadow as a drop shadow, the inner shadow as an inner
+	 * shadow, the border as an inside stroke (its gradient as the stroke's), the body gradient as a radial gradient overlay. The
+	 * same four effects, a second way to write them; the rect block draws them itself, and a layer style on its widget adds to them.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	FDreamLayerEffects GetEffectsAsLayerStyle() const;
+	/**
+	 * The reverse: InStyle's first drop shadow, inner shadow, stroke and gradient overlay written into this rect block's own
+	 * shadows, border and gradient, each turned off where InStyle has none. What those cannot say -- a blend mode, a contour,
+	 * noise, a stroke outside the edge -- is dropped; the effects of other kinds are not read.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle);
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -234,7 +258,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		EDreamRectBlockUnitMode OuterShadowDistanceUnitMode = EDreamRectBlockUnitMode::Value;
 
-	void FillData(uint8* Data, float width, float height);
+	void FillData(uint8* Data, float width, float height, const struct FDreamUILayerStyleRecord* InStyle = nullptr);
+	/** The style drawn in this rect block's pixels: its widget's layer style's record, when that is drawn here; else null. */
+	const struct FDreamUILayerStyleRecord* FindLayerStyleRecord() const;
 	float GetValueWithUnitMode(float SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const;
 	FVector4f GetValueWithUnitMode(const FVector4f& SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const;
 	FVector2f GetValueWithUnitMode(const FVector2f& SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const;
@@ -367,6 +393,8 @@ private:
 
 	void MarkNeedUpdateBlockData();
 	uint8 bNeedUpdateBlockData : 1;
+	/** How far its layer style reached when its quad was last made. */
+	float LastStyleReach = 0.0f;
 	uint8 bHasAddToSprite : 1;
 public:
 	/** Its body's rounded rect: what a widget clipping to it as the layer below is clipped to. */
