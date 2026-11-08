@@ -7,6 +7,11 @@ SamplerState MainTexSampler;
 float4 TintColor;
 int TintMode;
 Texture2D ClipDataTex;
+// The textures the clips' masks read, by slot: white where they read none.
+Texture2D DreamUI_MaskTex0;
+SamplerState DreamUI_MaskTexSampler0;
+Texture2D DreamUI_MaskTex1;
+SamplerState DreamUI_MaskTexSampler1;
 
 #if LEXUI_BLEND_DEPTH
 Texture2D SceneDepthTex;
@@ -47,7 +52,8 @@ void RenderMeshPS(
 #if LEXUI_MASK
     OutColor.a *= MaskTex.Sample(MaskTexSampler, input.uv).r;
 #endif
-	OutColor.a *= DreamUI_CalculateClipData(ClipDataTex, input.uv1.x, input.localPosition);
+	OutColor.a *= DreamUI_CalculateClipDataMasked(ClipDataTex, DreamUI_MaskTex0, DreamUI_MaskTexSampler0, DreamUI_MaskTex1, DreamUI_MaskTexSampler1,
+		input.uv1.x, input.localPosition);
 #if LEXUI_BLEND_DEPTH
     float PixelDepth = input.screenPosition.z / input.screenPosition.w;
 	float2 ScreenUV = input.screenPosition.xy / input.screenPosition.w;

@@ -28,6 +28,11 @@ struct FDreamUIPostProcessCommonParams
 	 * proxy keeps the texture's reference, which follows it as it grows (see FDreamVisualPostProcessRenderProxy).
 	 */
 	const UTexture* ClipDataTexture = nullptr;
+	/**
+	 * The textures the visual's clips read, by slot (FDreamUIMaskTextures), null where none reads one: read on the render
+	 * thread by the same command, as the clip data texture is.
+	 */
+	const UTexture* ClipMaskTextures[2] = { nullptr, nullptr };
 	bool bUseFullSize = false;
 	FBox BoundingBox = FBox(EForceInit::ForceInit);
 	/** See FDreamVisualPostProcessRenderProxy::TintColor. */
@@ -109,7 +114,10 @@ public:
 	 * texture it pointed into could be rebuilt or collected in between.
 	 */
 	FTextureReferenceRHIRef ClipDataTextureRHI;
-	
+	/** The clip masks' textures, by slot, and their samplers: null where the clips read none, and a white texture is bound. */
+	FTextureReferenceRHIRef ClipMaskTextureRHI[2];
+	FSamplerStateRHIRef ClipMaskSamplerRHI[2];
+
 	FMatrix44f ObjectToWorldMatrix = FMatrix44f::Identity;
 	TArray<FDreamUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
 	TArray<FDreamUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;

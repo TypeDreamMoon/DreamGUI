@@ -53,6 +53,13 @@ void FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(const FDream
 				TempRenderProxy->ObjectToWorldMatrix = Params.ObjectToWorldMatrix;
 				// The texture was alive when this was enqueued, and anything that releases it is enqueued after.
 				TempRenderProxy->ClipDataTextureRHI = Params.ClipDataTexture != nullptr ? Params.ClipDataTexture->TextureReference.TextureReferenceRHI : FTextureReferenceRHIRef();
+				for (int32 Slot = 0; Slot < 2; ++Slot)
+				{
+					const UTexture* Mask = Params.ClipMaskTextures[Slot];
+					const FTextureResource* Resource = Mask != nullptr ? Mask->GetResource() : nullptr;
+					TempRenderProxy->ClipMaskTextureRHI[Slot] = Mask != nullptr ? Mask->TextureReference.TextureReferenceRHI : FTextureReferenceRHIRef();
+					TempRenderProxy->ClipMaskSamplerRHI[Slot] = Resource != nullptr ? Resource->SamplerStateRHI : FSamplerStateRHIRef();
+				}
 				TempRenderProxy->bUseFullSize = Params.bUseFullSize;
 				TempRenderProxy->BoundingBox = Params.BoundingBox;
 				TempRenderProxy->TintColor = Params.TintColor;
@@ -247,6 +254,11 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 			PixelParameters.MaskTex = bMask ? MaskTextureRHI.GetReference() : GWhiteTexture->TextureRHI.GetReference();
 			PixelParameters.MaskTexSampler = MaskTextureSamplerState.IsValid() ? MaskTextureSamplerState.GetReference() : BilinearSampler;
 			PixelParameters.ClipDataTex = ClipDataTextureRHI.IsValid() ? static_cast<FRHITexture*>(ClipDataTextureRHI.GetReference()) : GBlackTexture->TextureRHI.GetReference();
+			// White where the clips read nothing: nothing samples it then.
+			PixelParameters.DreamUI_MaskTex0 = ClipMaskTextureRHI[0].IsValid() ? static_cast<FRHITexture*>(ClipMaskTextureRHI[0].GetReference()) : GWhiteTexture->TextureRHI.GetReference();
+			PixelParameters.DreamUI_MaskTexSampler0 = ClipMaskSamplerRHI[0].IsValid() ? ClipMaskSamplerRHI[0].GetReference() : BilinearSampler;
+			PixelParameters.DreamUI_MaskTex1 = ClipMaskTextureRHI[1].IsValid() ? static_cast<FRHITexture*>(ClipMaskTextureRHI[1].GetReference()) : GWhiteTexture->TextureRHI.GetReference();
+			PixelParameters.DreamUI_MaskTexSampler1 = ClipMaskSamplerRHI[1].IsValid() ? ClipMaskSamplerRHI[1].GetReference() : BilinearSampler;
 			PixelParameters.SceneDepthTex = IsWorldSpace ? PSShaderParameters->SceneDepthTex->GetRHI() : GBlackTexture->TextureRHI.GetReference();
 			PixelParameters.SceneDepthTexSampler = BilinearSampler;
 			PixelParameters.SceneDepthTextureScaleOffset = DepthTextureScaleOffset;

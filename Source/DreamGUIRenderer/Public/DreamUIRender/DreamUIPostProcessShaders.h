@@ -201,6 +201,11 @@ public:
 		SHADER_PARAMETER_SAMPLER(SamplerState, MaskTexSampler)
 		/** The canvas's clip data. A black texture clips nothing: its first clip reads as the end of the list. */
 		SHADER_PARAMETER_TEXTURE(Texture2D, ClipDataTex)
+		/** The textures the clips' masks read, by slot (FDreamVisualPostProcessRenderProxy::ClipMaskTextureRHI). */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex0)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler0)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex1)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler1)
 		SHADER_PARAMETER_TEXTURE(Texture2D, SceneDepthTex)
 		SHADER_PARAMETER_SAMPLER(SamplerState, SceneDepthTexSampler)
 		SHADER_PARAMETER(FVector4f, SceneDepthTextureScaleOffset)

@@ -22,6 +22,7 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "Core/Components/DreamVisualPostProcess.h"
 #if WITH_ACCESSIBILITY
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Accessibility/SlateAccessibleMessageHandler.h"
@@ -1041,6 +1042,11 @@ void UDreamWidget::MarkClipMaskTexturesChanged() const
 		if (UDreamVisualBatchMesh* BatchMesh = Cast<UDreamVisualBatchMesh>(Widget->GetVisual()))
 		{
 			BatchMesh->MarkMaterialDirty();
+		}
+		else if (UDreamVisualPostProcess* PostProcess = Cast<UDreamVisualPostProcess>(Widget->GetVisual()))
+		{
+			// Its proxy takes the textures with its region (UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy).
+			PostProcess->MarkUVDirty();
 		}
 		for (const UDreamWidget* Child : Widget->GetChildren())
 		{

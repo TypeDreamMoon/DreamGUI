@@ -9,6 +9,8 @@
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIClipData.h"
+#include "Core/DreamUIClipMask.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
@@ -292,6 +294,19 @@ void UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		if (IsValid(ClipDataTex))
 		{
 			Params.ClipDataTexture = ClipDataTex;
+		}
+		// The textures the clips around read, as an element's geometry takes them (UDreamVisualBatchMesh::UpdateGeometry).
+		if (UDreamWidget* OwnWidget = GetWidget())
+		{
+			if (TSharedPtr<FDreamUIClipData> Clip = OwnWidget->GetClipData().Pin())
+			{
+				FDreamUIMaskTextures Textures;
+				Clip->GetMaskTextures(Textures);
+				for (int32 Slot = 0; Slot < DreamUIClipLayout::TextureSlots; ++Slot)
+				{
+					Params.ClipMaskTextures[Slot] = Textures.Slots[Slot].Get();
+				}
+			}
 		}
 		FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(RenderProxy, MoveTemp(Params));
 	}
