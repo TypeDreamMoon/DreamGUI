@@ -743,10 +743,36 @@ bool FDreamGroupOfOneTest::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGroupWorldSpaceTest,
-	"DreamGUI.Group.AWorldSpaceCanvasDrawsItsGroupsPassedThroughAndSaysSo",
+	"DreamGUI.Group.ACanvasTheEnginesRendererDrawsDrawsItsGroupsPassedThroughAndSaysSo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamGroupWorldSpaceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBlendGroupTestLocal;
+	FStage Stage(EDreamRenderMode::WorldSpace);
+	if (!TestTrue(TEXT("The stage is set up"), Stage.IsUsable()))
+	{
+		return false;
+	}
+	UWorld* World = Stage.World.World;
+	UDreamWidget* Container = MakeWidget(World, Stage.Root, TEXT("Container"), FVector2D(200.0, 200.0));
+	MakeBlock(World, Container, TEXT("A"), FVector2D(60.0, 60.0));
+	MakeBlock(World, Container, TEXT("B"), FVector2D(60.0, 60.0), FVector2D(30.0, 0.0), EDreamUIBlendMode::Overlay);
+	Container->AddComponent<UDreamLayerGroup>()->SetGroupOpacity(0.5f);
+	AddExpectedMessagePlain(TEXT("are not drawn apart"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+	AddExpectedMessagePlain(TEXT("is drawn Normal"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+	Stage.Frames();
+	TestFalse(TEXT("The canvas does not draw groups apart"), Stage.Canvas->CanDrawGroupsApart());
+	TestFalse(TEXT("No markers"), Stage.Shape().Contains(TEXT("(")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGroupWorldSpaceDreamRendererTest,
+	"DreamGUI.Group.AWorldSpaceCanvasDreamGUIsRendererDrawsDrawsItsGroupsApart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamGroupWorldSpaceDreamRendererTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamBlendGroupTestLocal;
 	FStage Stage(EDreamRenderMode::WorldSpace_DreamUI);
@@ -758,10 +784,9 @@ bool FDreamGroupWorldSpaceTest::RunTest(const FString& Parameters)
 	UDreamWidget* Container = MakeWidget(World, Stage.Root, TEXT("Container"), FVector2D(200.0, 200.0));
 	MakeBlock(World, Container, TEXT("A"), FVector2D(60.0, 60.0));
 	Container->AddComponent<UDreamLayerGroup>()->SetGroupOpacity(0.5f);
-	AddExpectedMessagePlain(TEXT("are not drawn apart"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
 	Stage.Frames();
-	TestFalse(TEXT("The canvas does not draw groups apart"), Stage.Canvas->CanDrawGroupsApart());
-	TestFalse(TEXT("No markers"), Stage.Shape().Contains(TEXT("(")));
+	TestTrue(TEXT("The canvas draws groups apart"), Stage.Canvas->CanDrawGroupsApart());
+	TestEqual(TEXT("...and puts its markers round the group"), Stage.Shape(), FString(TEXT("(B)")));
 	return true;
 }
 
