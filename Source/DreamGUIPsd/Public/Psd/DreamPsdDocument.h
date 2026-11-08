@@ -455,6 +455,22 @@ enum class EDreamPsdEffectKind : uint8
 	Stroke,
 };
 
+/** An effect's contour: the curve that maps its falloff, points in 0..255, input along, output up. */
+struct DREAMGUIPSD_API FDreamPsdContour
+{
+	struct FPoint
+	{
+		float Input = 0.0f;
+		float Output = 0.0f;
+		/** The curve turns a corner here instead of passing through smoothly ('Cnty' off). */
+		bool bCorner = false;
+	};
+	/** The preset's name as the file writes it ('Linear', 'Cone'...). */
+	FString Name;
+	/** Empty for linear. */
+	TArray<FPoint> Points;
+};
+
 /** One layer effect, every kind in one struct. Pixels for sizes and distances, degrees for angles, 0..1 for opacity and percentages. */
 struct DREAMGUIPSD_API FDreamPsdEffect
 {
@@ -473,11 +489,11 @@ struct DREAMGUIPSD_API FDreamPsdEffect
 	/** Blur size. */
 	float Size = 0.0f;
 	float Noise = 0.0f;
+	/** The contour's anti-alias. */
 	bool bAntiAlias = false;
-	FString ContourName;
-	/** The contour curve as (input, output) points in 0..255; empty for linear. */
-	TArray<FVector2f> Contour;
-	/** Glows: range and jitter, 0..1. */
+	/** The effect's contour: 'TrnS' for shadows and glows, 'MpgS' for satin and for a bevel's own contour. */
+	FDreamPsdContour Contour;
+	/** Glows: range and jitter, 0..1. A bevel's contour range is Range too. */
 	float Range = 0.5f;
 	float Jitter = 0.0f;
 	bool bLayerKnocksOutShadow = true;
@@ -503,6 +519,10 @@ struct DREAMGUIPSD_API FDreamPsdEffect
 	FString ShadowBlendMode = TEXT("Mltp");
 	FLinearColor ShadowColor = FLinearColor::Black;
 	float ShadowOpacity = 0.75f;
+	/** The shading's gloss contour ('TrnS') and its anti-alias. */
+	FDreamPsdContour GlossContour;
+	bool bGlossAntiAlias = false;
+	/** The bevel's own contour (Contour, over Range) is on. */
 	bool bUseShape = false;
 	bool bUseTexture = false;
 
@@ -518,6 +538,7 @@ struct DREAMGUIPSD_API FDreamPsdEffect
 	// Stroke
 	/** 'OutF', 'InsF' or 'CtrF'. */
 	FString StrokePosition = TEXT("OutF");
+	bool bOverprint = false;
 
 	TSharedPtr<FDreamPsdDescriptor> Descriptor;
 };

@@ -38,28 +38,28 @@ namespace DreamPsdBlocksLocal
 		}
 	}
 
-	TArray<FVector2f> ReadContour(const FDreamPsdDescriptor* InContour, FString* OutName)
+	FDreamPsdContour ReadContour(const FDreamPsdDescriptor* InContour)
 	{
-		TArray<FVector2f> Points;
+		FDreamPsdContour Contour;
 		if (InContour == nullptr)
 		{
-			return Points;
+			return Contour;
 		}
-		if (OutName != nullptr)
-		{
-			*OutName = InContour->GetString(TEXT("Nm  "));
-		}
+		Contour.Name = InContour->GetString(TEXT("Nm  "));
 		if (const TArray<FDreamPsdValue>* Curve = InContour->GetList(TEXT("Crv ")))
 		{
 			for (const FDreamPsdValue& V : *Curve)
 			{
 				if (V.Descriptor.IsValid())
 				{
-					Points.Emplace((float)V.Descriptor->GetNumber(TEXT("Hrzn")), (float)V.Descriptor->GetNumber(TEXT("Vrtc")));
+					FDreamPsdContour::FPoint& Point = Contour.Points.AddDefaulted_GetRef();
+					Point.Input = (float)V.Descriptor->GetNumber(TEXT("Hrzn"));
+					Point.Output = (float)V.Descriptor->GetNumber(TEXT("Vrtc"));
+					Point.bCorner = !V.Descriptor->GetBool(TEXT("Cnty"), true);
 				}
 			}
 		}
-		return Points;
+		return Contour;
 	}
 
 	void ReadEffect(const FDreamPsdDescriptor& D, EDreamPsdEffectKind InKind, const FDreamPsdDocument& InDoc, FDreamPsdEffect& E)
@@ -77,7 +77,9 @@ namespace DreamPsdBlocksLocal
 		E.Size = (float)D.GetUnitFloat(TEXT("blur"), 0.0);
 		E.Noise = (float)D.GetUnitFloat(TEXT("Nose"), 0.0) / 100.0f;
 		E.bAntiAlias = D.GetBool(TEXT("AntA"), false);
-		E.Contour = ReadContour(D.GetDescriptor(TEXT("TrnS")), &E.ContourName);
+		// Satin's and a bevel's contour shapes the effect itself ('MpgS'); a bevel's 'TrnS' is its gloss.
+		const bool bShapeContour = InKind == EDreamPsdEffectKind::Satin || InKind == EDreamPsdEffectKind::BevelEmboss;
+		E.Contour = ReadContour(D.GetDescriptor(bShapeContour ? TEXT("MpgS") : TEXT("TrnS")));
 		E.Range = (float)D.GetUnitFloat(TEXT("Inpr"), 50.0) / 100.0f;
 		E.Jitter = (float)D.GetUnitFloat(TEXT("ShdN"), 0.0) / 100.0f;
 		E.bLayerKnocksOutShadow = D.GetBool(TEXT("layerConceals"), true);
@@ -98,13 +100,14 @@ namespace DreamPsdBlocksLocal
 			E.ShadowBlendMode = D.GetEnum(TEXT("sdwM"), E.ShadowBlendMode);
 			D.GetColor(TEXT("sdwC"), E.ShadowColor);
 			E.ShadowOpacity = (float)D.GetUnitFloat(TEXT("sdwO"), 75.0) / 100.0f;
+			E.GlossContour = ReadContour(D.GetDescriptor(TEXT("TrnS")));
+			E.bGlossAntiAlias = D.GetBool(TEXT("antialiasGloss"), false);
 			E.bUseShape = D.GetBool(TEXT("useShape"), false);
 			E.bUseTexture = D.GetBool(TEXT("useTexture"), false);
 		}
 		if (InKind == EDreamPsdEffectKind::Satin)
 		{
 			E.bInvert = D.GetBool(TEXT("Invr"), false);
-			E.Contour = ReadContour(D.GetDescriptor(TEXT("MpgS")), &E.ContourName);
 		}
 		if (InKind == EDreamPsdEffectKind::GradientOverlay || D.Has(TEXT("Grad")))
 		{
@@ -119,6 +122,7 @@ namespace DreamPsdBlocksLocal
 			E.StrokePosition = D.GetEnum(TEXT("Styl"), E.StrokePosition);
 			E.FillType = D.GetEnum(TEXT("PntT"), E.FillType);
 			E.Size = (float)D.GetUnitFloat(TEXT("Sz  "), 1.0);
+			E.bOverprint = D.GetBool(TEXT("overprint"), false);
 		}
 	}
 

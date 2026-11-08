@@ -644,15 +644,52 @@ bool FDreamPsdEffectsAdjustmentsTest::RunTest(const FString& Parameters)
 	Stroke.Items.Emplace(TEXT("Styl"), MakeEnum(TEXT("FStl"), TEXT("InsF")));
 	Stroke.Items.Emplace(TEXT("PntT"), MakeEnum(TEXT("FrFl"), TEXT("SClr")));
 	Stroke.Items.Emplace(TEXT("Sz  "), MakeUnitFloat(TEXT("#Pxl"), 3.0));
+	Stroke.Items.Emplace(TEXT("overprint"), MakeBool(true));
 	FDreamPsdDescriptor Off = Effect(TEXT("OrGl"));
 	Off.Items[0].Value = MakeBool(false);
+	// A contour: (input, output, smooth) points.
+	auto Contour = [](const TCHAR* InName, const TArray<FVector3f>& InPoints)
+	{
+		FDreamPsdDescriptor C;
+		C.ClassId = TEXT("ShpC");
+		C.Items.Emplace(TEXT("Nm  "), MakeString(InName));
+		TArray<FDreamPsdValue> Points;
+		for (const FVector3f& P : InPoints)
+		{
+			FDreamPsdDescriptor Point;
+			Point.ClassId = TEXT("CrPt");
+			Point.Items.Emplace(TEXT("Hrzn"), MakeNumber(P.X));
+			Point.Items.Emplace(TEXT("Vrtc"), MakeNumber(P.Y));
+			if (P.Z == 0.0f)
+			{
+				Point.Items.Emplace(TEXT("Cnty"), MakeBool(false));
+			}
+			Points.Add(MakeDescriptor(Point));
+		}
+		C.Items.Emplace(TEXT("Crv "), MakeList(Points));
+		return MakeDescriptor(C);
+	};
+	FDreamPsdDescriptor Bevel = Effect(TEXT("ebbl"));
+	Bevel.Items.Emplace(TEXT("TrnS"), Contour(TEXT("Cone"), { FVector3f(0, 0, 1), FVector3f(128, 255, 0), FVector3f(255, 0, 1) }));
+	Bevel.Items.Emplace(TEXT("antialiasGloss"), MakeBool(true));
+	Bevel.Items.Emplace(TEXT("useShape"), MakeBool(true));
+	Bevel.Items.Emplace(TEXT("MpgS"), Contour(TEXT("Half Round"), { FVector3f(0, 0, 1), FVector3f(255, 255, 1) }));
+	Bevel.Items.Emplace(TEXT("Inpr"), MakeUnitFloat(TEXT("#Prc"), 40.0));
+	FDreamPsdDescriptor Satin = Effect(TEXT("ChFX"));
+	Satin.Items.Emplace(TEXT("MpgS"), Contour(TEXT("Gaussian"), { FVector3f(0, 0, 1), FVector3f(64, 200, 1), FVector3f(255, 255, 1) }));
+	// Several shadows: the list, with the first also written alone as the editor does.
+	FDreamPsdDescriptor Second = Shadow;
+	Second.Items.Emplace(TEXT("Nose"), MakeUnitFloat(TEXT("#Prc"), 30.0));
 	FDreamPsdDescriptor Root;
 	Root.ClassId = TEXT("null");
 	Root.Items.Emplace(TEXT("Scl "), MakeUnitFloat(TEXT("#Prc"), 100.0));
 	Root.Items.Emplace(TEXT("masterFXSwitch"), MakeBool(true));
 	Root.Items.Emplace(TEXT("DrSh"), MakeDescriptor(Shadow));
+	Root.Items.Emplace(TEXT("dropShadowMulti"), MakeList({ MakeDescriptor(Shadow), MakeDescriptor(Second) }));
 	Root.Items.Emplace(TEXT("FrFX"), MakeDescriptor(Stroke));
 	Root.Items.Emplace(TEXT("OrGl"), MakeDescriptor(Off));
+	Root.Items.Emplace(TEXT("ebbl"), MakeDescriptor(Bevel));
+	Root.Items.Emplace(TEXT("ChFX"), MakeDescriptor(Satin));
 
 	FDreamPsdWriteDocument Doc;
 	Doc.Width = 64;
@@ -692,13 +729,27 @@ bool FDreamPsdEffectsAdjustmentsTest::RunTest(const FString& Parameters)
 	const FDreamPsdLayer* S = FindLayer(Read, TEXT("Styled"));
 	if (TestTrue(TEXT("the layer has its effects"), S != nullptr && S->Effects.bPresent && S->Effects.HasEnabled()))
 	{
-		TestEqual(TEXT("three effects, in the editor's drawing order (shadow, glow, stroke)"), S->Effects.Effects.Num(), 3);
-		const FDreamPsdEffect* D = S->Effects.Effects.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::DropShadow; });
+		const TArray<FDreamPsdEffect>& All = S->Effects.Effects;
+		TestEqual(TEXT("six effects: two shadows from the list (not the lone copy), the glow, the bevel, the satin and the stroke"), All.Num(), 6);
+		const FDreamPsdEffect* D = All.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::DropShadow; });
 		TestTrue(TEXT("the shadow uses the global light, so its angle is the document's"), D != nullptr && D->bUseGlobalLight && D->Angle == 135.0f);
 		TestTrue(TEXT("its distance, spread, size, opacity, colour and blend mode"), D != nullptr && D->Distance == 6.0f && FMath::IsNearlyEqual(D->Spread, 0.2f)
 			&& D->Size == 9.0f && FMath::IsNearlyEqual(D->Opacity, 0.75f) && D->Color.Equals(FLinearColor(0.2f, 0.4f, 0.6f), 1e-3f) && D->BlendMode == TEXT("Mltp"));
-		const FDreamPsdEffect* K = S->Effects.Effects.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::Stroke; });
-		TestTrue(TEXT("the stroke: inside, a colour, 3 pixels"), K != nullptr && K->StrokePosition == TEXT("InsF") && K->FillType == TEXT("SClr") && K->Size == 3.0f);
+		TestTrue(TEXT("the shadows keep the list's order"), All.Num() > 1 && All[0].Kind == EDreamPsdEffectKind::DropShadow && All[1].Kind == EDreamPsdEffectKind::DropShadow
+			&& All[0].Noise == 0.0f && FMath::IsNearlyEqual(All[1].Noise, 0.3f));
+		const FDreamPsdEffect* K = All.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::Stroke; });
+		TestTrue(TEXT("the stroke: inside, a colour, 3 pixels, overprinted"), K != nullptr && K->StrokePosition == TEXT("InsF") && K->FillType == TEXT("SClr") && K->Size == 3.0f && K->bOverprint);
+		const FDreamPsdEffect* B = All.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::BevelEmboss; });
+		if (TestTrue(TEXT("the bevel is there"), B != nullptr))
+		{
+			TestTrue(TEXT("its gloss contour is 'TrnS', its middle point a corner"), B->GlossContour.Name == TEXT("Cone") && B->GlossContour.Points.Num() == 3
+				&& !B->GlossContour.Points[0].bCorner && B->GlossContour.Points[1].bCorner && B->GlossContour.Points[1].Input == 128.0f
+				&& B->GlossContour.Points[1].Output == 255.0f && B->bGlossAntiAlias);
+			TestTrue(TEXT("its own contour is 'MpgS', on, over a 40 % range"), B->Contour.Name == TEXT("Half Round") && B->Contour.Points.Num() == 2
+				&& B->bUseShape && FMath::IsNearlyEqual(B->Range, 0.4f));
+		}
+		const FDreamPsdEffect* T = All.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::Satin; });
+		TestTrue(TEXT("the satin's contour is 'MpgS'"), T != nullptr && T->Contour.Name == TEXT("Gaussian") && T->Contour.Points.Num() == 3 && T->Contour.Points[1].Output == 200.0f);
 		const FDreamPsdEffect* G = S->Effects.Effects.FindByPredicate([](const FDreamPsdEffect& E) { return E.Kind == EDreamPsdEffectKind::OuterGlow; });
 		TestTrue(TEXT("the glow is there, turned off"), G != nullptr && !G->bEnabled);
 		TestEqual(TEXT("descriptor blend ids name blend modes"), FDreamPsdMapper::DescriptorBlendModeName(TEXT("Mltp")), FString(TEXT("Multiply")));
