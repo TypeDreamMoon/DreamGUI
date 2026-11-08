@@ -900,6 +900,8 @@ public:
 	void UpdateCompositeBounds();
 	/** The draw calls in hand hold a group marker or a draw of a mode that reads what is behind it. */
 	bool bHasCompositeDrawCalls = false;
+	/** The direct meshes among the draw calls that write their segments every frame (UDreamVisualDirectMesh::WantsFrameRefresh). */
+	TArray<TWeakObjectPtr<UDreamVisualDirectMesh>> FrameRefreshDirectMeshes;
 	/** A world-space canvas was told once that its groups are drawn passed through. */
 	bool bWarnedGroupsNotApart = false;
 	/** ...and that its elements of a mode that reads what is behind are drawn Normal. */

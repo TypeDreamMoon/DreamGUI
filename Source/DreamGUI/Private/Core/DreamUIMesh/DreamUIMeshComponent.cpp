@@ -1881,22 +1881,33 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 		}
 		return TSharedPtr<FDreamUIRenderSection>();
 	};
-	auto GetDirectMeshRenderSectionFromPool = [&](const UDreamVisualDirectMesh* DirectMesh)
+	auto GetDirectMeshRenderSectionFromPool = [&](const UDreamVisualDirectMesh* DirectMesh, int32 InSegment)
 	{
+		// The same element's section for the same segment first, whose buffers hold what it last drew; then one an element
+		// that is gone left, as before segments.
+		TDoubleLinkedList<TSharedPtr<FDreamUIRenderSection>>::TDoubleLinkedListNode* Orphan = nullptr;
 		for (auto Node = RenderSectionPool.GetHead(); Node != nullptr; Node = Node->GetNextNode() )
 		{
 			auto RenderSection = Node->GetValue();
 			if (RenderSection->Type == EDreamUIRenderSectionType::DirectMesh)
 			{
 				auto DirectMeshRenderSection = static_cast<FDreamUIRenderSection_DirectMesh*>(RenderSection.Get());
-				if (DirectMeshRenderSection->DirectMeshVisualObject == DirectMesh//keep reference of DirectMeshVisualObject
-					|| DirectMeshRenderSection->DirectMeshVisualObject == nullptr//if old one is deleted then we can use it
-					)
+				if (DirectMeshRenderSection->DirectMeshVisualObject == DirectMesh && DirectMeshRenderSection->Segment == InSegment)//keep reference of DirectMeshVisualObject
 				{
 					RenderSectionPool.RemoveNode(Node);
 					return RenderSection;
 				}
+				if (Orphan == nullptr && DirectMeshRenderSection->DirectMeshVisualObject == nullptr)//if old one is deleted then we can use it
+				{
+					Orphan = Node;
+				}
 			}
+		}
+		if (Orphan != nullptr)
+		{
+			TSharedPtr<FDreamUIRenderSection> RenderSection = Orphan->GetValue();
+			RenderSectionPool.RemoveNode(Orphan);
+			return RenderSection;
 		}
 		return TSharedPtr<FDreamUIRenderSection>();
 	};
@@ -1920,7 +1931,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 		}
 		break;
 	case EDreamUIRenderSectionType::DirectMesh:
-		RenderSection = GetDirectMeshRenderSectionFromPool(InDrawCallData->DirectMeshVisualObject.Get());
+		RenderSection = GetDirectMeshRenderSectionFromPool(InDrawCallData->DirectMeshVisualObject.Get(), InDrawCallData->DirectMeshSegment);
 		break;
 	case EDreamUIRenderSectionType::PostProcess:
 	case EDreamUIRenderSectionType::ChildCanvas:
@@ -2026,6 +2037,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			auto DirectMeshSectionPtr = StaticCastSharedPtr<FDreamUIRenderSection_DirectMesh>(RenderSection);
 			auto DirectMeshVisualObject = InDrawCallData->DirectMeshVisualObject;
 			DirectMeshSectionPtr->DirectMeshVisualObject = DirectMeshVisualObject;
+			DirectMeshSectionPtr->Segment = InDrawCallData->DirectMeshSegment;
 			// World space, as every section's box is: the widget's rect taken onto the canvas as the visual places its
 			// vertices (item to canvas), then by this mesh's transform, as SetupDirectMeshRenderSection takes the box the
 			// visual writes when it rebuilds. A section handed back with nothing to rebuild keeps this one; it was the
@@ -2046,7 +2058,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 				BoundingBox = BoundingBox.TransformBy(ItemToCanvasTf);
 			}
 			DirectMeshSectionPtr->BoundingBox = BoundingBox.TransformBy(GetComponentTransform());
-			DirectMeshVisualObject->OnSupplyMeshSection(this, DirectMeshSectionPtr);
+			DirectMeshVisualObject->OnSupplyMeshSegment(this, DirectMeshSectionPtr, InDrawCallData->DirectMeshSegment);
 			// Taken back from the pool: pooling disabled the section on the render thread and dropped its
 			// material, and the visual resends only what changed. What it did not resend is switched back
 			// on here, with the material the section has now.
@@ -2320,8 +2332,14 @@ bool UDreamUIMeshComponent::PatchMeshSection(FDreamUIRenderSection_Mesh* InMeshS
 
 void UDreamUIMeshComponent::SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial)
 {
+	UpdateDirectMeshSectionGeometry(InDirectMeshSection, bNeedExpandMeshSection);
+	SetDirectMeshRenderSectionMaterial(InDirectMeshSection, InMaterial);
+}
+
+void UDreamUIMeshComponent::UpdateDirectMeshSectionGeometry(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection)
+{
 	InDirectMeshSection->BoundingBox = InDirectMeshSection->BoundingBox.TransformBy(GetComponentTransform());
-	
+
 	if (InDirectMeshSection->RenderProxy)//if we have valid render-proxy then recreate data or update data
 	{
 		if (bNeedExpandMeshSection)
@@ -2341,8 +2359,6 @@ void UDreamUIMeshComponent::SetupDirectMeshRenderSection(FDreamUIRenderSection_D
 			Root->AddSectionData(InDirectMeshSection);
 		}
 	}
-
-	SetDirectMeshRenderSectionMaterial(InDirectMeshSection, InMaterial);
 }
 
 void UDreamUIMeshComponent::SetDirectMeshRenderSectionMaterial(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial)
@@ -2553,7 +2569,8 @@ void UDreamUIMeshComponent::SetRenderSectionRenderPriority(const TSharedPtr<FDre
 void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial, const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& InMaterialProxy)
 {
 	auto RenderSection = RenderSectionArray[InSectionIndex];
-	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
+	// A direct mesh segment the canvas shades (UDreamVisualDirectMesh::GetSegmentShading) is given these as a batched section is.
+	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh || RenderSection->Type == EDreamUIRenderSectionType::DirectMesh);
 	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->Material = InMaterial;
 	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->MaterialProxy = InMaterialProxy;
 	if (RenderRoot.IsValid())
@@ -2580,7 +2597,8 @@ void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMateri
 void UDreamUIMeshComponent::SetMeshSectionBuiltIn(int32 InSectionIndex, const FDreamUIBuiltInDrawParams& InParams)
 {
 	auto RenderSection = RenderSectionArray[InSectionIndex];
-	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
+	// A direct mesh segment the canvas shades (UDreamVisualDirectMesh::GetSegmentShading) is given these as a batched section is.
+	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh || RenderSection->Type == EDreamUIRenderSectionType::DirectMesh);
 	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->BuiltIn = InParams;
 	if (RenderRoot.IsValid())
 	{
@@ -2608,7 +2626,8 @@ void UDreamUIMeshComponent::SetMeshSectionBuiltIn(int32 InSectionIndex, const FD
 bool UDreamUIMeshComponent::IsMeshSectionBuiltIn(int32 InSectionIndex) const
 {
 	auto RenderSection = RenderSectionArray[InSectionIndex];
-	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
+	// A direct mesh segment the canvas shades (UDreamVisualDirectMesh::GetSegmentShading) is given these as a batched section is.
+	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh || RenderSection->Type == EDreamUIRenderSectionType::DirectMesh);
 	return (static_cast<const FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->BuiltIn.bEnabled;
 }
 

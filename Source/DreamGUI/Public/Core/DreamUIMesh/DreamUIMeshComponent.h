@@ -88,6 +88,8 @@ struct FDreamUIRenderSection_DirectMesh : public FDreamUIRenderSection_Mesh
 	virtual ~FDreamUIRenderSection_DirectMesh()override{}
 
 	TWeakObjectPtr<class UDreamVisualDirectMesh> DirectMeshVisualObject = nullptr;
+	/** Which of the element's segments this is (UDreamVisualDirectMesh::GetSegmentCount): a pooled section goes back to the same one. */
+	int32 Segment = 0;
 };
 struct FDreamUIRenderSection_PostProcess : public FDreamUIRenderSection
 {
@@ -221,6 +223,13 @@ public:
 	bool CanDrawRenderLayers() const;
 	void SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
 	void SetDirectMeshRenderSectionMaterial(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
+	/**
+	 * What SetupDirectMeshRenderSection does but the material: the section's vertices and indices, and its box (canvas space,
+	 * taken to the world here), sent to the render thread. For a segment the canvas shades (UDreamVisualDirectMesh::GetSegmentShading),
+	 * whose material or built-in parameters are the canvas's to set. bNeedExpandMeshSection: the arrays grew past what the
+	 * section's buffers were made for.
+	 */
+	void UpdateDirectMeshSectionGeometry(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection);
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, int32 InSortPriority);
 	/** InMaterialProxy, when given, is what the section draws through, InMaterial its source (FDreamUIRenderSection_Mesh::MaterialProxy). */

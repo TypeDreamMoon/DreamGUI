@@ -2496,6 +2496,7 @@ void UDreamCanvas::AppendRenderDataOf(UDreamWidget* Widget, TArray<FDreamUIRende
 			if (!DreamVisualDirectMesh->HaveValidData())return;
 			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
 			RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
+			RenderData.DirectMeshSegmentCount = FMath::Max(1, DreamVisualDirectMesh->GetSegmentCount());
 			RenderData.Widget = Widget;
 			OutRenderDataArray.Add(MoveTemp(RenderData));
 		}
@@ -2521,6 +2522,7 @@ void UDreamCanvas::VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrep
 			&& A.PostProcessBoundsMin2DInCanvasSpace == B.PostProcessBoundsMin2DInCanvasSpace
 			&& A.PostProcessBoundsMax2DInCanvasSpace == B.PostProcessBoundsMax2DInCanvasSpace
 			&& A.DirectMeshVisualObject == B.DirectMeshVisualObject
+			&& A.DirectMeshSegmentCount == B.DirectMeshSegmentCount
 			&& A.ChildCanvas == B.ChildCanvas;
 	};
 	int32 First = INDEX_NONE;
@@ -2923,9 +2925,13 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			break;
 		case EDreamUIDrawCallType::DirectMesh:
 			{
-				//every direct mesh is a draw-call
+				//every segment of a direct mesh is a draw-call, in segment order
 				bool is2DUIItem = true;//post process just use true because it not matter
-				PushSingleDrawCall(RenderData, EDreamUIDrawCallType::DirectMesh, is2DUIItem);
+				for (int32 Segment = 0; Segment < FMath::Max(1, RenderData.DirectMeshSegmentCount); ++Segment)
+				{
+					PushSingleDrawCall(RenderData, EDreamUIDrawCallType::DirectMesh, is2DUIItem);
+					InOutUIDrawCallList.Last().DirectMeshSegment = Segment;
+				}
 				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
 			}
 			break;
@@ -3413,6 +3419,15 @@ void UDreamCanvas::FinishDrawCallBatchData()
 		}
 	}
 	DrawCallsLeftToUpdate.Reset();
+	// The direct meshes whose vertices change every frame write them now, after this frame's simulation and before the frame's
+	// section updates go: what they send goes with the rest, and the groups' boxes below take their segments' boxes.
+	for (int32 Index = 0; Index < FrameRefreshDirectMeshes.Num(); ++Index)
+	{
+		if (UDreamVisualDirectMesh* DirectMesh = FrameRefreshDirectMeshes[Index].Get())
+		{
+			bRefreshMovedBounds |= DirectMesh->RefreshMeshSegments();
+		}
+	}
 	if (bRefreshMovedBounds)
 	{
 		DREAMUI_DETAIL_SCOPE(DreamUI_UpdateMeshBounds);
@@ -3463,6 +3478,8 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	UIMesh->PoolAllRenderSection();
 	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
 	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
+	// The direct meshes that write their segments every frame, as this build finds them (FinishDrawCallBatchData).
+	FrameRefreshDirectMeshes.Reset();
 	bool bNeedToUpdateBounds = false;
 	bool bAnySectionCreated = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
@@ -3476,6 +3493,28 @@ void UDreamCanvas::UpdateDrawCallMesh()
 				{
 					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Invalid DirectMesh draw-call, will ignore it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 					continue;
+				}
+				// How the canvas shades the segment, when the element leaves that to it: asked before the section is supplied, so
+				// that the element writes its vertices knowing it. The clip masks' textures are its widget's, as a batched
+				// element's are.
+				UDreamVisualDirectMesh* const DirectMesh = DrawCallItem.DirectMeshVisualObject.Get();
+				FDreamUIDirectMeshShading Shading;
+				DrawCallItem.bDirectMeshShaded = DirectMesh->GetSegmentShading(DrawCallItem.DirectMeshSegment, Shading);
+				if (DrawCallItem.bDirectMeshShaded)
+				{
+					DrawCallItem.bDirectMeshBuiltIn = Shading.bBuiltIn;
+					DrawCallItem.Texture = Shading.Texture;
+					DrawCallItem.Material = Shading.bBuiltIn ? nullptr : Shading.Material;
+					DrawCallItem.BlendMode = Shading.bBuiltIn ? Shading.BlendMode : EDreamUIBlendMode::Alpha;
+					const UDreamWidget* DirectMeshWidget = DirectMesh->GetWidget();
+					if (TSharedPtr<FDreamUIClipData> Clip = DirectMeshWidget != nullptr ? DirectMeshWidget->GetClipData().Pin() : nullptr)
+					{
+						Clip->GetMaskTextures(DrawCallItem.MaskTextures);
+					}
+				}
+				if (DrawCallItem.DirectMeshSegment == 0 && DirectMesh->WantsFrameRefresh())
+				{
+					FrameRefreshDirectMeshes.Add(DirectMesh);
 				}
 				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(EDreamUIRenderSectionType::DirectMesh, &DrawCallItem);
 				bAnySectionCreated = true;
@@ -3533,7 +3572,8 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	}
 	bHasCompositeDrawCalls = CurrentDrawCallData.DrawCallArray.ContainsByPredicate([](const FDreamUIDrawCall& InDrawCall)
 	{
-		return InDrawCall.IsGroupMarker() || (InDrawCall.Type == EDreamUIDrawCallType::BatchMesh && DreamUIBlend::ReadsBackdrop(InDrawCall.BlendMode));
+		return InDrawCall.IsGroupMarker()
+			|| ((InDrawCall.Type == EDreamUIDrawCallType::BatchMesh || (InDrawCall.Type == EDreamUIDrawCallType::DirectMesh && InDrawCall.bDirectMeshBuiltIn)) && DreamUIBlend::ReadsBackdrop(InDrawCall.BlendMode));
 	});
 
 	if (bAnySectionCreated)
@@ -3878,6 +3918,14 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		}
 		switch (DrawCallItem.Type)
 		{
+		case EDreamUIDrawCallType::DirectMesh:
+			// A segment the element left to the canvas is shaded as a batched draw call is; any other keeps the material the
+			// element set on its section.
+			if (!DrawCallItem.bDirectMeshShaded || !DrawCallItem.RenderSection.IsValid())
+			{
+				break;
+			}
+			[[fallthrough]];
 		case EDreamUIDrawCallType::BatchMesh:
 			if (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr))
 			{
@@ -3961,7 +4009,6 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 			break;
 		case EDreamUIDrawCallType::PostProcess:
 		case EDreamUIDrawCallType::ChildCanvas:
-		case EDreamUIDrawCallType::DirectMesh:
 		case EDreamUIDrawCallType::GroupBegin:
 		case EDreamUIDrawCallType::GroupEnd:
 			{
@@ -5323,6 +5370,11 @@ void UDreamCanvas::UpdateCompositeBounds()
 			else
 			{
 				bUnknown = true;
+			}
+			// A segment the built-in shader draws in a mode that reads what is behind it copies what its box covers, as a batch does.
+			if (DrawCall.Type == EDreamUIDrawCallType::DirectMesh && DrawCall.bDirectMeshBuiltIn && DreamUIBlend::ReadsBackdrop(DrawCall.BlendMode))
+			{
+				UIMesh->SetMeshSectionBackdropBounds(DrawCall.RenderSection, Box);
 			}
 			break;
 		}

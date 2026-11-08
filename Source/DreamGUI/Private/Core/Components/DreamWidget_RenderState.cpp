@@ -1102,6 +1102,11 @@ void UDreamWidget::MarkClipMaskTexturesChanged() const
 			// Its proxy takes the textures with its region (UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy).
 			PostProcess->MarkUVDirty();
 		}
+		else if (Widget->GetVisual() != nullptr && Widget->GetVisual()->GetVisualType() == EDreamVisualType::DirectMesh)
+		{
+			// A direct mesh the canvas shades is given the textures as its draw calls are built (UDreamVisualDirectMesh::GetSegmentShading).
+			Widget->MarkCanvasUpdate(true);
+		}
 		for (const UDreamWidget* Child : Widget->GetChildren())
 		{
 			Pending.Add(Child);

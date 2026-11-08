@@ -66,6 +66,8 @@ public:
 	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
+	/** How many segments the direct mesh draws in, read off it on the game thread: the batching makes a draw call of each. */
+	int32 DirectMeshSegmentCount = 1;
 
 	TWeakObjectPtr<UDreamCanvas> ChildCanvas;
 
@@ -119,6 +121,15 @@ public:
 	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
+	/** Which of the direct mesh's segments this draw call draws (UDreamVisualDirectMesh::GetSegmentCount). */
+	int32 DirectMeshSegment = 0;
+	/**
+	 * The canvas shades this direct mesh segment itself (UDreamVisualDirectMesh::GetSegmentShading): Texture, Material and
+	 * BlendMode say how, as for a batched draw call, and bDirectMeshBuiltIn whether the built-in shader draws it. Set on the
+	 * game thread as the sections are set up.
+	 */
+	bool bDirectMeshShaded = false;
+	bool bDirectMeshBuiltIn = false;
 
 	/**
 	 * The render section this draw-call produced in UpdateDrawCallMesh, or null when it was skipped
