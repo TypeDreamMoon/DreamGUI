@@ -176,6 +176,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **Direct-mesh segments.** A `UDreamVisualDirectMesh` can draw in several segments, a draw call each, can leave its
   shading to the canvas -- the built-in shader or a material, with the clip, the clip masks' textures and the blend mode, as
   a batched element is -- and can write its vertices every frame the canvas sends its sections.
+- **Layered document import.** A `.psd` or `.psb` imports as a DreamUI widget: a `.dui` laying its layers out as widgets,
+  their textures, and a widget Blueprint whose source the `.dui` is -- from a folder's DreamGUI menu, a commandlet
+  (`-run=DreamPsdImport`), or the Content Browser's Import once a setting says so. Pixel layers become images of trimmed
+  textures, groups containers (a layer group where they blend or fade), live rectangles and circles rect blocks, fills a
+  block's body, texts texts through a font map; masks become clip masks, clipping `bClipToBelow`, blend modes the 27
+  modes. Layer names can say `!skip`, `@Button` and `#9(l,t,r,b)`. Importing again edits the `.dui` the last import
+  wrote, keeping every node and line an author added and listing what it overwrote. Layer effects, adjustment layers and
+  text warps are read and listed, not imported yet. The new editor module is `DreamGUIPsd`. See
+  [Importing layered documents](Docs/guides/layered-document-import.md).
 
 ### Changed
 

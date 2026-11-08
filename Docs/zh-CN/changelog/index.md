@@ -67,6 +67,12 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   见[作用于背后画面的效果](../concepts/backdrop-effects.md)。
 - **Niagara 粒子。** 新模块 `DreamGUINiagara` 把 Niagara 系统画进 DreamGUI 画布：`NiagaraSystem` 视觉用一个不渲染、不受可伸缩性管理的组件模拟系统，tick 之后读取每个 CPU 发射器的 Sprite 和 Ribbon 渲染器，写成自己的网格段——各一个绘制调用——像任何元素一样被裁剪、遮罩、混合和编组。Sprite 保留图集帧和帧间混合、轴心、旋转、对齐和排序；Ribbon 保留 id、link order、两套 UV 和穿过各点的曲线。一个单位是控件平面（XZ 或 XY）上的一个像素；时间可以暂停、缩放、游戏暂停时照跑、固定步长推进和快进。内置着色器用粒子材质的贴图和混合方式画，或者用转换出的 UI 材质画：**Convert Particle Materials** 把粒子材质复制成 UI 材质，粒子输入改读顶点，不透明度经过 DreamGUI 的裁剪。系统里声明了 `User.DreamUI_WidgetSize`、`User.DreamUI_PointerPosition`、`User.DreamUI_PointerInside` 或 `User.DreamUI_TargetPosition` 的会被写入。`BurstAt` 在一点再生成一次系统，`BurstTo` 让飞行粒子（默认用插件的飞行模板）飞向另一个控件，`Niagara Trigger` 组件在点击、指针进出和进度填满时播放系统。GPU 发射器和 Mesh 渲染器会被报告，暂不绘制。插件现在依赖 Niagara。见 [Niagara 粒子](../concepts/niagara.md)。
 - **直绘网格段。** `UDreamVisualDirectMesh` 可以分多个网格段画、每段一个绘制调用，可以把着色交给画布——内置着色器或材质，像批处理元素一样拿到裁剪数据、遮罩纹理和混合模式——也可以在画布每帧发送网格段时写自己的顶点。
+- **导入分层文档。** `.psd` 或 `.psb` 导入为 DreamUI 控件：一个把图层排成控件的 `.dui`、它们的贴图，以及以这个 `.dui`
+  为源文件的控件蓝图——从文件夹的 DreamGUI 菜单、commandlet（`-run=DreamPsdImport`），或打开设置后从内容浏览器的 Import 导入。
+  像素图层变成裁过边的贴图图片，组变成容器（混合或淡出时挂图层组），实时矩形和圆变成 RectBlock，填充变成 body，文字经字体映射
+  变成文字；蒙版变成裁剪遮罩，剪贴变成 `bClipToBelow`，混合模式对应 27 种。图层名可写 `!skip`、`@Button`、`#9(l,t,r,b)`。
+  再次导入会编辑上次写的 `.dui`，保留作者加的每个节点和每一行，并列出被覆盖的内容。图层样式、调整图层和文字变形已读出并列出，
+  暂未导入。新编辑器模块为 `DreamGUIPsd`。见[导入分层文档](../guides/layered-document-import.md)。
 
 <a id="changed"></a>
 
