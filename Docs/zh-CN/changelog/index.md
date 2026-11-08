@@ -65,6 +65,8 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **融合形状里的玻璃。** `UDreamGlass` 的 `Shape` 设为 `ShapeBlend` 时取形状融合组把 RectBlock 融成的形状——`ShapeBlendGroup`
   指定的控件上的，或它自己控件上的——画满整个形状，成员伸到哪里画到哪里，边缘沿融合后的轮廓折射背后画面；点击落在形状上即命中。
   见[作用于背后画面的效果](../concepts/backdrop-effects.md)。
+- **Niagara 粒子。** 新模块 `DreamGUINiagara` 把 Niagara 系统画进 DreamGUI 画布：`NiagaraSystem` 视觉用一个不渲染、不受可伸缩性管理的组件模拟系统，tick 之后读取每个 CPU 发射器的 Sprite 和 Ribbon 渲染器，写成自己的网格段——各一个绘制调用——像任何元素一样被裁剪、遮罩、混合和编组。Sprite 保留图集帧和帧间混合、轴心、旋转、对齐和排序；Ribbon 保留 id、link order、两套 UV 和穿过各点的曲线。一个单位是控件平面（XZ 或 XY）上的一个像素；时间可以暂停、缩放、游戏暂停时照跑、固定步长推进和快进。内置着色器用粒子材质的贴图和混合方式画，或者用转换出的 UI 材质画：**Convert Particle Materials** 把粒子材质复制成 UI 材质，粒子输入改读顶点，不透明度经过 DreamGUI 的裁剪。系统里声明了 `User.DreamUI_WidgetSize`、`User.DreamUI_PointerPosition`、`User.DreamUI_PointerInside` 或 `User.DreamUI_TargetPosition` 的会被写入。`BurstAt` 在一点再生成一次系统，`BurstTo` 让飞行粒子（默认用插件的飞行模板）飞向另一个控件，`Niagara Trigger` 组件在点击、指针进出和进度填满时播放系统。GPU 发射器和 Mesh 渲染器会被报告，暂不绘制。插件现在依赖 Niagara。见 [Niagara 粒子](../concepts/niagara.md)。
+- **直绘网格段。** `UDreamVisualDirectMesh` 可以分多个网格段画、每段一个绘制调用，可以把着色交给画布——内置着色器或材质，像批处理元素一样拿到裁剪数据、遮罩纹理和混合模式——也可以在画布每帧发送网格段时写自己的顶点。
 
 <a id="changed"></a>
 
@@ -82,6 +84,7 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 
 - **创建一个抽象类的 widget 会记一条错误**，而不是停在 NewObject 的断言上。从列表里选的类不会是抽象的，但由变量喂给类引脚或 Create Dream Widget Of Class 调用的类可能是。
 - **DreamUI Widget Blueprint 的缩略图就是它编写的那个界面。** 内容浏览器的磁贴以前是编写时锚点矩形的线框，不知道布局把东西排到了哪里，所以大多数界面画出来是一个灰框加一两条线。缩略图现在像设计器的预览一样建出 widget，在设计画布上排好、画出来，和 UMG 画 widget 缩略图一样；没有编译出类的 Blueprint 仍然画线框。它在资产没有干净的缩略图时和保存时画，不会在指针停在上面的每一帧都画，所以大界面不会卡住浏览器。已经存进资产的缩略图会一直显示，直到资产下一次被修改并保存。见[内容浏览器](../tools/designer.md#the-content-browser)。
+- **开了 Substrate 的工程里，Additive 材质画得出来了。** 开 Substrate 时，引擎把旧式 Additive 材质转成「自发光乘不透明度、全透射」的无光照层，DreamGUI 的渲染器把它当成没有覆盖，材质什么都没画。现在画的和不开 Substrate 时一样：自发光，按不透明度。
 
 <a id="100"></a>
 

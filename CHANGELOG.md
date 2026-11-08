@@ -160,6 +160,22 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `ClipMask`, and fully shown it costs nothing. See [Mask transitions](Docs/concepts/mask-transitions.md).
 - **Reversed clip masks.** `FDreamClipMask::bReverse` runs a texture's or pattern's value the other way before the
   threshold: a gradient from right to left, a radial one from the edge in.
+- **Niagara particles.** A new module, `DreamGUINiagara`, draws Niagara systems on DreamGUI canvases: the `NiagaraSystem`
+  visual simulates a system with a component that renders nothing and is out of the scalability's reach, reads each CPU
+  emitter's sprite and ribbon renderers after the tick, and writes them as segments of its own -- one draw call each --
+  clipped, masked, blended and grouped like any element. Sprites keep their sheet frames and the blend between them, pivot,
+  rotation, alignment and sort; ribbons their ids, link order, both UV sets and a curve through their points. One unit is a
+  pixel on the widget's plane (XZ or XY); time can be paused, dilated, run while the game is paused, stepped at a fixed rate
+  and advanced. The built-in shader draws them with the particle material's texture and blend, or a converted UI material
+  does: **Convert Particle Materials** copies a particle material as a UI one, its particle inputs read from the vertex and
+  its opacity through DreamGUI's clip. A system that declares `User.DreamUI_WidgetSize`, `User.DreamUI_PointerPosition`,
+  `User.DreamUI_PointerInside` or `User.DreamUI_TargetPosition` is given it. `BurstAt` spawns the system again at a point,
+  `BurstTo` sends a flight -- the plugin's fly-to template by default -- to another widget, and the `Niagara Trigger`
+  component plays a system on clicks, the pointer coming and going, and a progress filling. GPU emitters and mesh renderers
+  are reported and not drawn yet. The plugin now depends on Niagara. See [Niagara particles](Docs/concepts/niagara.md).
+- **Direct-mesh segments.** A `UDreamVisualDirectMesh` can draw in several segments, a draw call each, can leave its
+  shading to the canvas -- the built-in shader or a material, with the clip, the clip masks' textures and the blend mode, as
+  a batched element is -- and can write its vertices every frame the canvas sends its sections.
 
 ### Changed
 
@@ -404,6 +420,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   [Running the DreamGUI tests](Tools/Tests/README.md).
 - **A post-process visual under a clip mask's texture is clipped by the texture.** A background blur, a pixelate or a pixel
   sort inside a clip whose mask reads a texture took every texel of it as white.
+- **Additive materials draw under Substrate.** With Substrate on, the engine makes a legacy additive material an unlit
+  slab of its emissive times its opacity and full transmittance, which DreamGUI's renderer took for no coverage: the
+  material drew nothing. It now draws what it draws without Substrate, the emissive by its opacity.
 
 [#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
 [#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
