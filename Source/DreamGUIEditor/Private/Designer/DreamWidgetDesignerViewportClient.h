@@ -464,6 +464,34 @@ private:
 	void DrawShippedImageOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
 	/** InWidget's own clip mask and the layer below it, outlined where they cut (UDreamUIDesignerSettings::bShowClipMasks). */
 	void DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
+
+	/**
+	 * A point of the selection that can be dragged in the viewport: a control point of a warp's lattice, or a point of a
+	 * path. Owner is the preview's object (the warp, the path visual); the drag writes it, and the template, through the
+	 * preview host as the details panel does (DreamWidgetDesignerPointHandles.cpp).
+	 */
+	struct FDesignerPoint
+	{
+		TWeakObjectPtr<UObject> Owner;
+		TWeakObjectPtr<UDreamWidget> Widget;
+		int32 Index = INDEX_NONE;
+		bool bLattice = false;
+		/** In the widget's local space. */
+		FVector2D Local = FVector2D::ZeroVector;
+	};
+	/** The points of the single selected widget, in drawing order. */
+	void CollectDesignerPoints(TArray<FDesignerPoint>& OutPoints) const;
+	bool HitTestDesignerPoint(const FVector2D& InPixel, FDesignerPoint& OutPoint) const;
+	void BeginDesignerPointDrag(const FDesignerPoint& InPoint);
+	void UpdateDesignerPointDrag();
+	void FinishDesignerPointDrag(bool bCancel);
+	void DrawDesignerPoints(FSceneView& View, FCanvas& Canvas) const;
+	bool bDesignerPointDragging = false;
+	bool bDesignerPointChanged = false;
+	FDesignerPoint DraggedDesignerPoint;
+	/** The whole array the dragged point is in, as it was when it was grabbed: what Esc puts back. */
+	TArray<FVector2D> DraggedPointsBefore;
+	TUniquePtr<class FScopedTransaction> DesignerPointTransaction;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	/** The title-safe rect of the design canvas. Silent on platforms that declare no safe area. */

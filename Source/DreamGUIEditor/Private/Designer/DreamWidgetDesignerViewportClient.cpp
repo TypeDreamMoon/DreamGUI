@@ -1451,6 +1451,7 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			DrawClipMaskOutline(WeakWidget.Get(), View, Canvas);
 		}
 	}
+	DrawDesignerPoints(View, Canvas);
 	// The selection outline and its handles follow the widget wherever the camera is.
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
@@ -1684,6 +1685,7 @@ void FDreamWidgetDesignerViewportClient::ReceivedFocus(FViewport* InViewport)
 void FDreamWidgetDesignerViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
+	if (bDesignerPointDragging)FinishDesignerPointDrag(true);
 	// An arrow held while the focus went never sends its release here.
 	EndNudgeTransaction();
 	bDesignerMarqueePending = false;
@@ -1706,6 +1708,7 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 
 	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
+	if (bDesignerPointDragging)UpdateDesignerPointDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
 
@@ -1729,6 +1732,16 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
 	if (!DesignerPtr.IsValid())return false;
+	if (bDesignerPointDragging && EventArgs.Event == IE_Pressed && EventArgs.Key == EKeys::Escape)
+	{
+		FinishDesignerPointDrag(true);
+		return true;
+	}
+	if (bDesignerPointDragging && EventArgs.Event == IE_Released && EventArgs.Key == EKeys::LeftMouseButton)
+	{
+		FinishDesignerPointDrag(false);
+		return true;
+	}
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;
@@ -1786,7 +1799,17 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		if (bDesignerMarqueePending)FinishDesignerMarquee();
 		return false;
 	}
-	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || !Viewport)return false;
+	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || bDesignerPointDragging || !Viewport)return false;
+	// A lattice's or a path's point is smaller than any handle and sits inside the selection, so it is tried first.
+	{
+		FDesignerPoint Point;
+		if (HitTestDesignerPoint(FVector2D(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY()), Point))
+		{
+			BeginDesignerPointDrag(Point);
+			KeepTickingThroughGesture();
+			return true;
+		}
+	}
 
 	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 	FSceneView* View = CalcSceneView(&ViewFamily);
