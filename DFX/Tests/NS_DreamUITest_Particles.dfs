@@ -1,0 +1,122 @@
+// The Niagara system DreamGUI's tests draw: every particle placed by its index, nothing random, so that what a test reads
+// and what a golden image shows are the same on every machine and at every frame rate.
+//
+//   Grid   16 sprites on a 4 by 4 grid, 40 units apart, in the system's local space: each a frame of a 2 by 2 sheet
+//          (half way to the next, the renderer blending), turned 15 degrees more than the one before, coloured by its
+//          place. They live for 1000 seconds and do not move.
+//   Trail  one ribbon of 8 points along a wave above the grid, in link order, cut in four between points.
+//   Fall   6 sprites in the simulation's world, thrown right and falling: what a fixed step is tested on.
+//
+// It declares the user parameters DreamGUI writes, so that a test can read what it was given.
+System(Name="Tests/Niagara/NS_DreamUITest_Particles", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        Vector2  DreamUI_WidgetSize      = (0, 0)    [ Group="DreamUI" ];
+        Position DreamUI_PointerPosition = (0, 0, 0) [ Group="DreamUI" ];
+        bool     DreamUI_PointerInside   = false     [ Group="DreamUI" ];
+    }
+
+    Emitter Grid
+    {
+        Settings = {
+            SimTarget   = CPU;
+            LocalSpace  = true;
+            Determinism = true;
+            RandomSeed  = 4242;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 1000.0);
+            SpawnBurst_Instantaneous(SpawnCount = 16, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 1000.0);
+            Position Particles.Position       = hlsl { float3(fmod(ExecIndex() * 1.0, 4.0) * 40.0 - 60.0, 0.0, floor(ExecIndex() * 0.25) * 40.0 - 60.0) };
+            Vector2  Particles.SpriteSize     = (24, 24);
+            Color    Particles.Color          = hlsl { float4(0.35 + 0.2 * fmod(ExecIndex() * 1.0, 4.0), 0.35 + 0.2 * floor(ExecIndex() * 0.25), 0.9, 1.0) };
+            float    Particles.SpriteRotation = hlsl { ExecIndex() * 15.0 };
+            float    Particles.SubImageIndex  = hlsl { fmod(ExecIndex() * 1.0, 4.0) + 0.5 };
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+        }
+
+        SpriteRenderer Grid
+        {
+            SubImageSize   = (2, 2);
+            bSubImageBlend = true;
+            Alignment      = Unaligned;
+            FacingMode     = FaceCamera;
+        }
+    }
+
+    Emitter Trail
+    {
+        Settings = {
+            SimTarget   = CPU;
+            LocalSpace  = true;
+            Determinism = true;
+            RandomSeed  = 4343;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 1000.0);
+            SpawnBurst_Instantaneous(SpawnCount = 8, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 1000.0);
+            Position Particles.Position        = hlsl { float3(ExecIndex() * 20.0 - 70.0, 0.0, 95.0 + 18.0 * sin(ExecIndex() * 0.9)) };
+            float    Particles.RibbonLinkOrder = hlsl { ExecIndex() * 1.0 };
+            float    Particles.RibbonWidth     = 10.0;
+            Color    Particles.Color           = (1.0, 0.6, 0.2, 1.0);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+        }
+
+        RibbonRenderer Trail
+        {
+            TessellationMode   = Custom;
+            TessellationFactor = 4;
+            bUseConstantFactor = true;
+        }
+    }
+
+    Emitter Fall
+    {
+        Settings = {
+            SimTarget   = CPU;
+            LocalSpace  = false;
+            Determinism = true;
+            RandomSeed  = 4444;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 1000.0);
+            SpawnBurst_Instantaneous(SpawnCount = 6, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 1000.0);
+            SystemLocation();
+            Vector  Particles.Velocity   = hlsl { float3(40.0 + ExecIndex() * 10.0, 0.0, 30.0) };
+            Vector2 Particles.SpriteSize = (8, 8);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            GravityForce(Gravity = (0, 0, -100));
+            SolveForcesAndVelocity();
+        }
+
+        SpriteRenderer Fall
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}
