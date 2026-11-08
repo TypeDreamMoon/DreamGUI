@@ -22,6 +22,8 @@
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamLayerGroup.h"
+#include "Core/Components/DreamLayerStyle.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBlendMath.h"
@@ -518,6 +520,145 @@ bool FDreamWorldSpaceBackdropDepthPixelTest::RunTest(const FString& Parameters)
 				TestTrue(*FString::Printf(TEXT("Stripe %d, in front of the scene: the stripes turned over, %s, want %s"), Stripe, *FDreamPixelProbe::Describe(Got), *FDreamPixelProbe::Describe(Turned))
 					, FDreamPixelProbe::IsNear(Got, Turned, 4));
 			}
+		}
+	});
+	Steps.PerformLatent();
+	Rig->Finish();
+	return true;
+}
+
+namespace DreamWorldSpaceCompositePixelTestLocal
+{
+	/** A layer style's cell: its centre on the panel, the style in the element's own pixels on the left, drawn apart on the right. */
+	FVector2D StyleCellCentre(int32 InIndex, bool bInApart)
+	{
+		return FVector2D(bInApart ? 64.0 : -64.0, InIndex == 0 ? 40.0 : -40.0);
+	}
+	const FVector2D StyledBlockSize(56.0, 36.0);
+	const FIntPoint StyleCellSize(120, 76);
+	const FColor StyleBackdrop(120, 130, 150, 255);
+	const FColor StrokeColour(30, 20, 60, 255);
+
+	TArray<FDreamLayerEffects> WorldStyles()
+	{
+		TArray<FDreamLayerEffects> Styles;
+		{
+			// An outside stroke over a drop shadow.
+			FDreamLayerEffects S;
+			FDreamStyleDropShadow& Shadow = S.DropShadows.AddDefaulted_GetRef();
+			Shadow.bUseGlobalLight = false;
+			Shadow.Angle = 120.0f;
+			Shadow.Distance = 6.0f;
+			Shadow.Size = 8.0f;
+			Shadow.Opacity = 0.75f;
+			FDreamStyleStroke& Stroke = S.Strokes.AddDefaulted_GetRef();
+			Stroke.Size = 4.0f;
+			Stroke.Position = EDreamStyleStrokePosition::Outside;
+			Stroke.Color = StrokeColour;
+			Styles.Add(S);
+		}
+		{
+			// An outer glow round a bevel.
+			FDreamLayerEffects S;
+			S.OuterGlow.bEnabled = true;
+			S.OuterGlow.Color = FColor(255, 210, 90);
+			S.OuterGlow.Size = 12.0f;
+			S.OuterGlow.Opacity = 1.0f;
+			S.OuterGlow.BlendMode = EDreamUIBlendMode::Alpha;
+			S.BevelEmboss.bEnabled = true;
+			S.BevelEmboss.Size = 6.0f;
+			Styles.Add(S);
+		}
+		return Styles;
+	}
+
+	void SetUpStyledBlock(UDreamWidget* InWidget)
+	{
+		if (UDreamRectBlock* Block = InWidget != nullptr ? Cast<UDreamRectBlock>(InWidget->GetVisual()) : nullptr)
+		{
+			Block->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+			Block->SetCornerRadius(FVector4(8.0, 8.0, 8.0, 8.0));
+			Block->SetBodyColor(FColor(220, 140, 80, 255));
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamWorldSpaceLayerStylePixelTest,
+	"DreamGUI.World.RHI.AStyleDrawnApartOnAWorldSpaceCanvasLooksAsItDoesInARectBlocksOwnPixels",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamWorldSpaceLayerStylePixelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldSpaceCompositePixelTestLocal;
+	const TSharedRef<FState> State = MakeShared<FState>();
+	const TSharedRef<FDreamDriverPieRig> Rig = FDreamDriverPieRig::Create(*this);
+	Rig->Start();
+	Rig->WhenReady([this, State](FDreamDriverPieRig& InRig)
+	{
+		SetUpCamera(*this, InRig, *State);
+	});
+	FDreamDriverSequence Steps = Rig->Sequence();
+	Steps.WaitFrames(4);
+	Steps.Then([this, State, Rig](FDreamDriverContext& Context)
+	{
+		// How the designer draws a screen-space canvas: on a world-space one DreamGUI's renderer draws. Each style twice: in a rect
+		// block's own pixels, and on a holder round the same block, which is drawn apart and measured from its pixels.
+		UDreamWidget* Panel = nullptr;
+		if (!PlacePanel(*this, *Rig, *State, TEXT("StylePanel"), 0, 1.0f, Panel))
+		{
+			return;
+		}
+		AddBlock(*Rig, Panel, TEXT("Backdrop"), FVector2D(PanelSize), FVector2D::ZeroVector, StyleBackdrop);
+		const TArray<FDreamLayerEffects> Styles = WorldStyles();
+		for (int32 Index = 0; Index < Styles.Num(); ++Index)
+		{
+			if (UDreamWidget* Own = Rig->MakeWidgetWithVisual(UDreamRectBlock::StaticClass(), FString::Printf(TEXT("OwnPixels%d"), Index), Panel, StyledBlockSize, StyleCellCentre(Index, false)))
+			{
+				SetUpStyledBlock(Own);
+				Own->AddComponent<UDreamLayerStyle>()->SetStyle(Styles[Index]);
+			}
+			if (UDreamWidget* Holder = Rig->MakeWidget(FString::Printf(TEXT("Holder%d"), Index), Panel, StyledBlockSize, StyleCellCentre(Index, true)))
+			{
+				SetUpStyledBlock(Rig->MakeWidgetWithVisual(UDreamRectBlock::StaticClass(), FString::Printf(TEXT("Held%d"), Index), Holder, StyledBlockSize, FVector2D::ZeroVector));
+				UDreamLayerStyle* Style = Holder->AddComponent<UDreamLayerStyle>();
+				Style->SetStyle(Styles[Index]);
+				TestEqual(*FString::Printf(TEXT("Style %d on the holder is drawn apart"), Index), Style->GetPath(), EDreamLayerStylePath::Group);
+			}
+		}
+	});
+	Steps.WaitFrames(12);
+	Steps.Then([this, State](FDreamDriverContext& Context)
+	{
+		TArray<FColor> Pixels;
+		if (!State->Panel.IsValid() || !ReadPanel(*this, Context.World, *State, Pixels))
+		{
+			return;
+		}
+		FDreamPixelProbe::SaveCapture(Pixels, PanelSize, TEXT("World_LayerStyle"));
+		for (int32 Index = 0; Index < 2; ++Index)
+		{
+			auto CellOf = [&Pixels](FVector2D InCentre)
+			{
+				const FIntPoint Centre = PixelOf(InCentre);
+				return Crop(Pixels, Centre - StyleCellSize / 2, StyleCellSize);
+			};
+			const TArray<FColor> Own = CellOf(StyleCellCentre(Index, false));
+			const TArray<FColor> Apart = CellOf(StyleCellCentre(Index, true));
+			// The same tolerance as the parity on a render target: the flood is half a texel out here and there.
+			FDreamPixelProbe::ExpectPicturesMatch(*this, Own, StyleCellSize, Apart, StyleCellSize, FString::Printf(TEXT("World_LayerStyle_ApartAgainstElement%d"), Index), 24, 0.04);
+			int32 Styled = 0;
+			for (const FColor& Colour : Apart)
+			{
+				Styled += FDreamPixelProbe::IsNear(Colour, StyleBackdrop, 6) || FDreamPixelProbe::IsNear(Colour, FColor(220, 140, 80, 255), 6) ? 0 : 1;
+			}
+			TestTrue(*FString::Printf(TEXT("Style %d drawn apart puts down more than the block (%d pixels neither backdrop nor block)"), Index, Styled), Styled > 400);
+		}
+		// The outside stroke, two units past the block's right edge, on both.
+		for (const bool bApart : { false, true })
+		{
+			const FVector2D Point = StyleCellCentre(0, bApart) + FVector2D(StyledBlockSize.X * 0.5 + 2.0, 0.0);
+			FDreamPixelProbe::ExpectColorAt(*this, Pixels, PanelSize, PixelOf(Point), StrokeColour, 6
+				, bApart ? TEXT("The stroke drawn apart, outside the block") : TEXT("The stroke in the block's own pixels, outside it"));
 		}
 	});
 	Steps.PerformLatent();
