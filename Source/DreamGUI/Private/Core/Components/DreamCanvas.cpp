@@ -4851,8 +4851,10 @@ TSharedPtr<FDreamUIClipData> UDreamCanvas::MakeGroupMaskClipData(UDreamWidget* I
 
 bool UDreamCanvas::CanDrawGroupsApart()const
 {
-	// A screen-space canvas in an editor world is drawn into the world (CheckUIMesh), as the designer draws its own.
-	return IsRenderToRenderTarget() || (IsRenderToScreenSpace() && DreamUI::IsGameWorld(this));
+	// Whatever DreamGUI's own renderer draws: a screen-space canvas -- drawn into the world in an editor world (CheckUIMesh),
+	// as the designer draws its own -- a render-target one, and a world-space one drawn by it. A world-space canvas the
+	// engine's renderer draws, as a primitive of the scene, is the one that cannot.
+	return IsRenderByDreamUIRendererOrUERenderer();
 }
 
 namespace DreamCanvasCompositeLocal
@@ -4911,14 +4913,14 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 	});
 	if (!CanDrawGroupsApart())
 	{
-		// The renderer draws a world-space canvas's elements of a mode that reads what is behind Normal: it copies nothing there.
+		// The engine's renderer draws a canvas's elements through their materials, which blend as their own blend modes say.
 		if (!bWarnedBackdropNotRead && InOutData.ContainsByPredicate([](const FDreamUIRenderData& InEntry)
 			{
 				return InEntry.Type == EDreamUIDrawCallType::BatchMesh && InEntry.BatchMeshGeometry.IsValid() && DreamUIBlend::ReadsBackdrop(InEntry.BatchMeshGeometry->BlendMode);
 			}))
 		{
 			bWarnedBackdropNotRead = true;
-			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' draws into the world, where an element of a blend mode that reads what is behind it is drawn Normal. Those modes are drawn on screen-space canvases in a game and on render-target canvases; Normal, Additive, Multiply, Screen, Exclusion and Dissolve are drawn everywhere.")
+			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' is drawn by the engine's renderer (World Space - UE Renderer), where an element of a blend mode that reads what is behind it is drawn Normal. Those modes are drawn by DreamGUI's own renderer: on screen-space and render-target canvases, and on world-space ones in World Space - DreamUI Renderer.")
 				, GetWidget() != nullptr ? *GetWidget()->GetDisplayName() : TEXT("none"));
 		}
 	}
@@ -4931,7 +4933,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		if (!bWarnedGroupsNotApart && bAnyWidget)
 		{
 			bWarnedGroupsNotApart = true;
-			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' draws into the world, where a layer group, and clipping to a layer below that is not an image or a rect block, are not drawn apart: they are drawn as if passed through. Groups are drawn apart on screen-space canvases in a game and on render-target canvases.")
+			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' is drawn by the engine's renderer (World Space - UE Renderer), where a layer group, and clipping to a layer below that is not an image or a rect block, are not drawn apart: they are drawn as if passed through. Groups are drawn apart by DreamGUI's own renderer: on screen-space and render-target canvases, and on world-space ones in World Space - DreamUI Renderer.")
 				, GetWidget() != nullptr ? *GetWidget()->GetDisplayName() : TEXT("none"));
 		}
 		return;
