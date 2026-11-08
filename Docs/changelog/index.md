@@ -123,6 +123,31 @@ What is on `main` after 1.0.0, and ships with the next version.
   rect blocks into — the group on the widget `ShapeBlendGroup` names, or on its own — and is drawn over the whole of it,
   wherever the members reach, its edge bending what is behind along the melted outline; a click lands on it wherever the
   shape is. See [Effects on what is behind](../concepts/backdrop-effects.md#glass).
+- **Mesh warps.** `UDreamMeshModifierWarp` bends what any batch-mesh visual draws — an image, a rect block, a text
+  glyph by glyph — by one of fifteen styles named as an image editor's text warp names them (arc, arc lower and upper,
+  arch, bulge, shell lower and upper, flag, wave, fish, rise, fisheye, inflate, squeeze, twist), with a bend and a
+  horizontal and vertical distortion, or by a Bezier lattice of 2 to 5 points each way, dragged in the designer's
+  viewport. The mesh is cut finer first along one grid shared by the whole mesh, every attribute interpolated, so rounded
+  corners, glyph distance fields and pixels bend with it; at rest it costs nothing. See
+  [Warps, jellies and text on a path](../concepts/warp-and-text-on-path.md).
+- **Jellies.** `UDreamMeshModifierJelly` holds the mesh on a lattice of damped springs that lag behind the widget's
+  moves, squash while it is pressed, bounce when it is let go and stretch after a drag, stepped in fixed steps so that
+  the same frames give the same wobble; presses and drags pass on to the widget's button or scroll view.
+- **Text on a path.** `UDreamMeshModifierTextOnPath` lays a text's glyphs along a circle, an arc or the path a
+  `UDreamPath` widget draws (a new line visual through editable points, straight or smooth, open or closed, drawn or
+  not): aligned to its start, middle or end, spaced, lifted off it, flipped to its other side, scrolled along it, each
+  glyph turned whole or bent; a text animation's moves are kept.
+- **Modifier stages.** Mesh modifiers run in stages (`GetStage`): those that work on characters, text on a path, the
+  warps that cut the mesh, then the copies (shadow, outline, long shadow) — which now copy a bent mesh whichever
+  component was added first.
+- **Mask transitions.** `UDreamMaskTransition` reveals or hides a widget's subtree through a moving clip mask — wipe,
+  clock, iris, diamond, blinds, checker, dissolve, ink, shatter or a texture's order — with softness, reverse, invert
+  and a centre; its `Progress` takes tweens and property tracks. `CrossFade` swaps two widgets through one shape, each
+  pixel shown by one of them, and `PlayScreenTransition` covers and uncovers the screen. Ink, shatter and checker read
+  textures made in code. It drives the widget's clip (`UDreamWidget::SetDrivenClipMask`, new) without touching its
+  `ClipMask`, and fully shown it costs nothing. See [Mask transitions](../concepts/mask-transitions.md).
+- **Reversed clip masks.** `FDreamClipMask::bReverse` runs a texture's or pattern's value the other way before the
+  threshold: a gradient from right to left, a radial one from the edge in.
 
 ### Changed
 

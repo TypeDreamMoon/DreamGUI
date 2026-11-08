@@ -19,11 +19,16 @@ description: "裁剪控件的裁剪遮罩——形状、羽化边、纹理或程
 | `Pattern`、`Frequency`、`Seed` | 程序化图案：`Linear`、`Radial`、`Angular`（时钟擦除）、`Diamond` 在裁剪范围内从 0 走到 1；`Blinds`、`Checker`、`Noise` 在范围内重复 `Frequency` 次 |
 | `Rotation`、`Scale`、`Offset` | 旋转（绕裁剪中心顺时针的角度）、缩放、平移纹理或图案。`Rotation` 就是线性渐变的角度 |
 | `Threshold`、`Softness` | 来源值 `v` 变为 `saturate((v - Threshold + Softness) / (2 * Softness))`。取 `0.5` 和 `0.5` 时就是 `v` 本身；`Softness` 很小时在 `Threshold` 处一刀切——驱动 `Threshold` 即可做擦除、溶解 |
+| `bReverse` | 让纹理或图案的值反向（过阈值前 `v` 变为 `1 - v`）：从右到左的渐变、从边缘向内的径向渐变、逆时针的时钟擦除。与 `bInvert` 不同，它不动形状，也不动裁剪矩形之外的部分 |
 | `bInvert` | 显示遮罩藏起的、藏起遮罩显示的——**裁剪矩形之外也一样**，聚光灯就靠这个：被反相椭圆裁剪的遮挡层盖住椭圆以外的一切 |
 | `HitTest` | `Bounds`（默认：按裁剪矩形做点击检测，与没有遮罩时相同）或 `Mask`（遮罩值至少一半处才命中） |
 
 默认值的遮罩等于没有遮罩：裁剪就是原来的矩形，开销与原来完全相同。细节面板里遮罩位于 **外观 ▸ Clipping**；设计器会描出所选控件
 的遮罩轮廓（视口工具栏的 **Clip Masks** 开关）。
+
+行为组件可以在运行期间代替 `ClipMask` 驱动控件的裁剪遮罩（`UDreamWidget::SetDrivenClipMask`）：[遮罩转场](mask-transitions.md)就是这样
+做的。被驱动的遮罩不保存、不显示，也不写进 `ClipMask`；驱动期间，原本不裁剪到自身边界的控件会裁剪（Inherit 按 Clip To Bounds、
+Disabled 按 Clip To Bounds Without Intersecting）。`GetEffectiveClipMask` 返回裁剪实际绘制和点击检测所用的遮罩。
 
 ### 纹理遮罩与绘制调用
 

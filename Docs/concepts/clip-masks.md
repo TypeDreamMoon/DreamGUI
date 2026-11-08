@@ -21,12 +21,18 @@ by the same formulas.
 | `Pattern`, `Frequency`, `Seed` | A procedural pattern: `Linear`, `Radial`, `Angular` (a clock wipe), `Diamond` run 0 to 1 across the clip; `Blinds`, `Checker` and `Noise` repeat `Frequency` times across it |
 | `Rotation`, `Scale`, `Offset` | Turn (degrees clockwise, about the clip's centre), scale and move the texture or pattern. `Rotation` is a linear gradient's angle |
 | `Threshold`, `Softness` | The source value `v` becomes `saturate((v - Threshold + Softness) / (2 * Softness))`. At `0.5` and `0.5`, `v` as it is; a small `Softness` cuts at `Threshold` — drive `Threshold` for wipes and dissolves |
+| `bReverse` | Runs the texture's or pattern's value the other way (`v` becomes `1 - v` before the threshold): a gradient from right to left, a radial one from the edge in, a clock wipe anticlockwise. Unlike `bInvert` it leaves the shape, and what is outside the clip rect, alone |
 | `bInvert` | Shows what the mask hides and hides what it shows — **outside the clip rect too**, which is what makes a spotlight: a veil clipped by an inverted ellipse covers everything but the ellipse |
 | `HitTest` | `Bounds` (the default: hit-tested by the clip rect, as without a mask) or `Mask` (a point hits where the mask is at least one half) |
 
 A mask at its defaults is no mask: the clip is the plain rect, and costs exactly what it always did. In the details panel
 the mask is under **Appearance ▸ Clipping**; the designer outlines the selected widget's mask (the **Clip Masks** switch of
 the viewport's toolbar).
+
+A behaviour can drive a widget's clip mask in place of `ClipMask` while it runs (`UDreamWidget::SetDrivenClipMask`):
+[mask transitions](mask-transitions.md) do. The driven mask is not saved, shown or written into `ClipMask`; while one is
+driven, a widget that does not clip to its bounds does (Inherit as Clip To Bounds, Disabled as Clip To Bounds Without
+Intersecting). `GetEffectiveClipMask` is the mask the clip is drawn and hit-tested with.
 
 ### Texture masks and draw calls
 
