@@ -102,6 +102,23 @@ What is on `main` after 1.0.0, and ships with the next version.
 - **Stylize effects.** `UDreamStylizeEffect` lays up to eight layers over what is behind it or over its own children: a
   CRT screen, a glitch (`TriggerBurst` flares it), chromatic aberration, a halftone screen of one ink or four, ordered
   dithering, film grain, a vignette, posterization.
+- **Layer styles.** `UDreamLayerStyle` puts an image editor's layer style on any widget (`FDreamLayerEffects`): drop
+  shadows, an outer glow, inner shadows, an inner glow, a bevel and emboss (inner, outer, emboss, pillow, stroke; smooth or
+  chiselled), a satin, colour, gradient and pattern overlays and strokes (outside, inside, centred; colour, gradient or
+  pattern), each with its own blend mode, opacity and the dialog's own settings — contours, noise, spread and choke,
+  range and jitter, global light. `UDreamLayerStylePreset` keeps one to share. A rect block draws its style in its own
+  pixels, batched as before; anything else — a text, an image, a container's subtree, a layer group — is drawn apart,
+  measured by a jump flood of its alpha, and put down layer by layer, each outer effect by its own mode. A rect block's own
+  shadows, border and gradient read and write as a layer style (`GetEffectsAsLayerStyle`, `SetEffectsFromLayerStyle`). See
+  [Layer styles, shape blends and light](../concepts/layer-styles.md).
+- **Shape blends.** `UDreamShapeBlendGroup` melts the rect blocks among a container's children into one shape by a smooth
+  minimum — a union, a cut or an intersection each, by `ShapeBlendOperation` — drawn by the first of them in one quad, in
+  the members' blended colours, with the group's layer style round it; a click lands on the nearest member, by the same
+  formula.
+- **Pointer light, tilt card and holo foil.** `UDreamPointerLight` follows the pointer and lights the bevels of the layer
+  styles under it and the borders of the rect blocks under it (a reveal highlight); `UDreamTiltCard` tilts a widget towards
+  the pointer on a spring; `UDreamHoloFoil` draws an image or a rect block with a trading card's foil, its angle of view
+  the pointer's or a tilt card's.
 
 ### Changed
 

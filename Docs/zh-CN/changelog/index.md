@@ -52,6 +52,16 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   这些以前哪里都能加，加了之后什么都不做。粘贴、复制和拖到面板上的组件资产
   遵守同样的规则；被拒绝的拖放会说明原因。项目在自己的编辑器模块里为自己的组件加规则。
   见[组件](../tools/designer.md#components)。
+- **图层样式。** `UDreamLayerStyle` 给任何控件加图像编辑器式的图层样式（`FDreamLayerEffects`）：投影、外发光、内阴影、
+  内发光、斜面和浮雕（内斜面、外斜面、浮雕、枕状浮雕、描边浮雕；平滑或雕刻）、光泽、颜色/渐变/图案叠加和描边（外部、内部、
+  居中；颜色、渐变或图案），各有自己的混合模式、不透明度和对话框里的那些设置——等高线、杂色、扩展与阻塞、范围与抖动、全局光。
+  `UDreamLayerStylePreset` 存一份共用。RectBlock 在自己的像素里画样式，照旧合批；其它的——文字、图片、容器的子树、图层组——
+  单独绘制，按 alpha 做跳跃泛洪量距离，再逐层放下，每个外部效果按自己的模式。RectBlock 自己的阴影、描边和渐变可以按图层样式
+  读写（`GetEffectsAsLayerStyle`、`SetEffectsFromLayerStyle`）。见[图层样式、形状融合与光](../concepts/layer-styles.md)。
+- **形状融合。** `UDreamShapeBlendGroup` 用平滑最小值把容器子项里的 RectBlock 融成一个形状——各按 `ShapeBlendOperation`
+  并集、相减或相交——由第一个成员用一个四边形画出，颜色按成员混合，组上的图层样式围绕它绘制；点击按同一公式落在最近的成员上。
+- **指针光、倾斜卡和全息箔。** `UDreamPointerLight` 跟随指针，照亮它下面图层样式的斜面和 RectBlock 的描边（Reveal 高光）；
+  `UDreamTiltCard` 让控件带弹簧地朝指针倾斜；`UDreamHoloFoil` 给图片或 RectBlock 画上闪卡的全息箔，视角取指针或倾斜卡。
 
 <a id="changed"></a>
 

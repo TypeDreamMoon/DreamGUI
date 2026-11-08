@@ -208,7 +208,7 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 `ClippingMargin` 和遮罩 `ClipMask`；`bClipToBelow` 让控件只在下方图层画出的地方显示（见
 [裁剪遮罩与剪贴到下方图层](clip-masks.md)）。视觉元素的 `BlendMode` 和容器上的 `UDreamLayerGroup` 决定画出的内容如何合成
 （见[混合模式与图层组](blend-modes-and-groups.md)）；调整图层、渐进模糊、玻璃与风格化效果作用于背后的画面
-（见[作用于背后画面的效果](backdrop-effects.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
+（见[作用于背后画面的效果](backdrop-effects.md)）。`UDreamLayerStyle` 给控件加图像编辑器式的图层样式，`UDreamShapeBlendGroup` 把容器子项里的 RectBlock 融成一个形状（见[图层样式、形状融合与光](layer-styles.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
 
 <a id="making-widgets-in-code"></a>
 
