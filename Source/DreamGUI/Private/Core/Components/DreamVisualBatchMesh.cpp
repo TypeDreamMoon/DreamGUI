@@ -227,7 +227,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		if (bMaterialChanged)
 		{
 			bMaterialChanged = false;
-			UIGeometry->Material = GetMaterialToCreateGeometry();
+			UIGeometry->Material = MaterialOverride != nullptr ? MaterialOverride.Get() : GetMaterialToCreateGeometry();
 		}
 		//cheap, and unconditional so that it cannot go stale: the geometry is what the batcher sees,
 		//and the blend mode is part of a draw-call's identity there
@@ -656,6 +656,15 @@ UMaterialInterface* UDreamVisualBatchMesh::GetMaterialToCreateGeometry()
 		return ReceiveGetMaterialToCreateGeometry();
 	}
 	return nullptr;
+}
+
+void UDreamVisualBatchMesh::SetMaterialOverride(UMaterialInterface* InMaterial)
+{
+	if (MaterialOverride != InMaterial)
+	{
+		MaterialOverride = InMaterial;
+		MarkMaterialDirty();
+	}
 }
 
 void UDreamVisualBatchMesh::OnBeforeCreateOrUpdateGeometry()

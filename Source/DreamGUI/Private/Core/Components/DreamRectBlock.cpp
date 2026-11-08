@@ -572,6 +572,10 @@ static_assert(UDreamRectBlock::BuiltInShaderMark > static_cast<uint8>(EDreamUIFo
 
 bool UDreamRectBlock::IsDrawnByBuiltInShader() const
 {
+	if (MaterialOverride != nullptr)
+	{
+		return false;
+	}
 	// Its shape in its world's rows -- not the asset's own, which a world with no UI manager keeps -- of the default data,
 	// which is what a built-in draw binds (UDreamCanvas::UpdateDrawCallMaterial).
 	if (RectBlockData == nullptr || DataRows == nullptr || DataRows.Get() == RectBlockData.Get()
@@ -662,6 +666,15 @@ void UDreamRectBlock::SetRevealHighlight(bool bInOn, const FVector2f& InCenter, 
 	MarkNeedUpdateBlockData();
 }
 
+void UDreamRectBlock::SetMaterialOverride(UMaterialInterface* InMaterial)
+{
+	if (MaterialOverride != InMaterial)
+	{
+		Super::SetMaterialOverride(InMaterial);
+		// Its data rows are bound one way for the built-in shader and another for a material.
+		MarkAllDirty();
+	}
+}
 void UDreamRectBlock::OnLayerStyleChanged()
 {
 	// The quad only when the style reaches out further or less far: a light moving over a bevel changes its record alone.

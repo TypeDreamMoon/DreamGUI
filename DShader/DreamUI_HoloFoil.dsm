@@ -1,0 +1,98 @@
+// DreamGUI's holo foil over an image, a sprite or a texture (UDreamHoloFoil).
+// Edit this file, then rebuild -- the .uasset is an output.
+//
+// The element is shaded exactly as DreamUI_ImageAndFont shades it (MF_DreamUI_Shade: its texture, its clip, its masks), and the
+// foil is added over its colour within its alpha by DreamUIHoloFoil_Shade (DreamUIHoloFoil.ush). The component sets the four foil
+// parameters on its own instance every frame the angle of view moves.
+
+VirtualFunction(Name="MF_DreamUI_Shade")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_Shade");
+	}
+	Inputs = {
+		opt float4 Tint = float4(1.0, 1.0, 1.0, 1.0);
+	}
+	Outputs = {
+		float4 Result;
+	}
+}
+
+// SelfContained, with the #include attached to the Custom node itself: see MF_DreamUI_RectBlock.dsf for why.
+Function SelfContained float3 DreamUIHoloFoilApply(in float3 BaseColor, in float BaseAlpha, in float2 UV, in Texture2D MaskTex, in Texture2D RainbowTex,
+	in float4 View, in float4 Pattern)
+{
+	#include "/Plugin/DreamGUI/Private/DreamUIHoloFoil.ush"
+	return DreamUIHoloFoil_Shade(BaseColor, BaseAlpha, UV, MaskTex, MaskTexSampler, RainbowTex, RainbowTexSampler, View, Pattern);
+}
+
+Shader(Name="Materials/DreamUI_HoloFoil", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		ScalarParameter DreamUI_IsRenderByDreamUIRenderer = 0.0 [
+			Group="DreamUI";
+		];
+		TextureObjectParameter DreamUI_FoilMask = Path(Engine, "EngineResources/WhiteSquareTexture") [
+			Group="Foil";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_FoilRainbow = Path(Engine, "EngineResources/WhiteSquareTexture") [
+			Group="Foil";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		VectorParameter DreamUI_FoilView = float4(0.0, 0.0, 0.8, 1.0) [
+			Group="Foil";
+		];
+		VectorParameter DreamUI_FoilPattern = float4(2.5, 0.6, 48.0, 0.08) [
+			Group="Foil";
+		];
+	}
+
+	Settings = {
+		// Graph, not the project default ThinCustom: see DreamUI_ImageAndFont.dsm.
+		Backend = "Graph";
+		Domain = "Surface";
+		ShadingModel = "Unlit";
+		BlendMode = "AlphaComposite";
+		TwoSided = true;
+	}
+
+	Outputs = {
+		float3 EmissiveColor;
+		float Opacity;
+
+		Base.EmissiveColor = EmissiveColor;
+		Base.Opacity = Opacity;
+	}
+
+	Graph = {
+		// rgb straight colour, a opacity with the clip applied.
+		float4 Shaded = MF_DreamUI_Shade();
+		float2 UV = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float3 Foiled = DreamUIHoloFoilApply(Shaded.rgb, Shaded.a, UV, DreamUI_FoilMask, DreamUI_FoilRainbow, DreamUI_FoilView, DreamUI_FoilPattern);
+
+		#Region "DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha"
+		float3 Premultiplied = (Foiled * Shaded.a);
+		float3 Emissive = lerp(Premultiplied, Foiled, DreamUI_IsRenderByDreamUIRenderer);
+		#EndRegion
+
+		EmissiveColor = Emissive;
+		Opacity = Shaded.a;
+	}
+
+	Layout = {
+		Node(Var="Shaded", X=-900, Y=128);
+		Node(Var="UV", X=-900, Y=288);
+		Node(Var="DreamUI_FoilMask", X=-900, Y=400);
+		Node(Var="DreamUI_FoilRainbow", X=-900, Y=528);
+		Node(Var="DreamUI_FoilView", X=-900, Y=656);
+		Node(Var="DreamUI_FoilPattern", X=-900, Y=768);
+		Node(Var="Foiled", X=-560, Y=256);
+		Comment(Name="DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha", X=-352, Y=48, W=560, H=256, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="Premultiplied", X=-320, Y=112);
+		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=-320, Y=224);
+		Node(Var="Emissive", X=-80, Y=112);
+		Node(Var="EmissiveColor", X=256, Y=96);
+		Node(Var="Opacity", X=256, Y=224);
+	}
+}

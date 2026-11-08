@@ -145,6 +145,8 @@ public:
 	 */
 	void SetRevealHighlight(bool bInOn, const FVector2f& InCenter, float InRadius, const FColor& InColor);
 	bool HasRevealHighlight() const { return bRevealHighlight; }
+	/** Drawn by that material rather than the built-in shader while it is set. */
+	virtual void SetMaterialOverride(UMaterialInterface* InMaterial) override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

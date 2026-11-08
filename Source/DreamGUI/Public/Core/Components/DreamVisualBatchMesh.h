@@ -181,6 +181,13 @@ public:
 	void AddMeshModifier(UDreamMeshModifierBase* InModifier);
 	void RemoveMeshModifier(UDreamMeshModifierBase* InModifier);
 	void MarkMeshModifierOrderChanged();
+
+	/**
+	 * A material to draw with in place of its own while set, by an effect that made it (a UDreamHoloFoil's); null puts its
+	 * own back. Neither saved nor copied: the element's own material properties are left as the author set them.
+	 */
+	virtual void SetMaterialOverride(UMaterialInterface* InMaterial);
+	UMaterialInterface* GetMaterialOverride() const { return MaterialOverride; }
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
@@ -197,6 +204,9 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/** See SetMaterialOverride. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UMaterialInterface> MaterialOverride = nullptr;
 	TArray<TWeakObjectPtr<UDreamMeshModifierBase>> MeshModifierArray;
 
 	/** texture for render this UI element */
