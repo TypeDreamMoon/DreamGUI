@@ -58,5 +58,5 @@ description: "裁剪控件的裁剪遮罩——形状、羽化边、纹理或程
 没有遮罩的裁剪层仍是画布裁剪数据里的五个 texel；有遮罩或剪贴到下方图层的层多四个，只由它裁剪的像素读取。没有任何遮罩的裁剪链上传的
 字节数与以前完全相同。材质路径以 `DreamUI_ClipMaskTexture0` 和 `DreamUI_ClipMaskTexture1` 读取遮罩纹理，画布会在每个 UI 材质
 （`MF_DreamUI_Shade`、`MF_DreamUI_Clip`）上设置它们；以原有参数调用 `DreamUI_CalculateClipData` 或 `DreamUI_ShadePixel` 的
-自定义材质照样能编译，其纹理遮罩把每个 texel 当作白色。被遮罩裁剪的背景效果（`UDreamBackgroundBlur` 等后处理元素）会被遮罩的形状、
-羽化和图案裁剪，但不读取遮罩纹理。
+自定义材质照样能编译，其纹理遮罩把每个 texel 当作白色。被遮罩裁剪的背景效果（`UDreamBackgroundBlur` 等后处理元素，以及
+[作用于背后画面的效果](backdrop-effects.md)）会被遮罩的形状、羽化、图案和纹理裁剪。

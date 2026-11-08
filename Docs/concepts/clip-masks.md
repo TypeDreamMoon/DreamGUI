@@ -70,5 +70,5 @@ four more, read only by the pixels it clips. A chain with no mask uploads exactl
 path reads the mask textures as `DreamUI_ClipMaskTexture0` and `DreamUI_ClipMaskTexture1`, which the canvas sets on every
 UI material (`MF_DreamUI_Shade`, `MF_DreamUI_Clip`); a custom material that calls `DreamUI_CalculateClipData` or
 `DreamUI_ShadePixel` with the arguments it always passed still compiles, its texture masks taking every texel as white.
-A background effect (`UDreamBackgroundBlur` and the other post-process visuals) inside a masked clip is clipped by the
-mask's shape, feather and pattern; it does not read a mask texture.
+A background effect (`UDreamBackgroundBlur` and the other post-process visuals, and the [effects on what is
+behind](backdrop-effects.md)) inside a masked clip is clipped by the mask's shape, feather, pattern and texture.

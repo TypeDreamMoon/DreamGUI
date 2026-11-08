@@ -78,8 +78,12 @@ included. With an `EffectMaterial` the texture is drawn through that material in
   frame is drawn), a clear, and one pass over that rect to put it down; a mode that reads what is behind adds a copy of
   that rect. Nothing batches across a group's edges.
 - A draw of a mode that reads what is behind costs a copy of the rect it covers, and splits its pass.
-- Groups, the modes that read what is behind, and groups of one are drawn on **screen-space canvases in a game and on
-  render-target canvases**. A world-space canvas -- the level editor's and the designer's previews among them -- draws
-  groups as if passed through and those modes as Normal, with a warning naming the canvas; the hardware's six modes work
-  everywhere. A screen-space canvas with groups, or with elements of those modes, is not drawn at a reduced
-  `ScreenSpaceRenderScale`, and inside a group the screen-space depth test is off.
+- Groups, the modes that read what is behind, and groups of one are drawn on **every canvas DreamGUI's own renderer
+  draws**: screen-space and render-target canvases, world-space canvases in World Space - DreamUI Renderer, and the
+  designer's and the level editor's previews. On a world-space canvas a group's texture is drawn through the same view
+  and occluded by the scene's depth as its elements are, and an element of a mode that reads what is behind is occluded
+  first and blended after. A canvas the engine's renderer draws (World Space - UE Renderer) draws groups as if passed
+  through and those modes as Normal, with a warning naming the canvas; the hardware's six modes work everywhere. A
+  screen-space canvas with groups, or with elements of those modes, is not drawn at a reduced `ScreenSpaceRenderScale`,
+  and inside a group the screen-space depth test is off. On a world-space canvas a group ends the pass its canvas's
+  draws would otherwise merge into with other canvases'.

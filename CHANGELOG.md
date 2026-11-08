@@ -34,8 +34,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `GroupMask` masks the composite. Inside an isolated group the children's modes blend with the group alone. Groups nest;
   their textures come from the frame's pool. Clipping to a layer below that no clip level follows -- a text, a tiled image,
   a container, a group -- is done through such a group, and `UDreamRetainerBox` puts its retained texture down through
-  the same composite (with a new `GroupBlendMode`). On screen-space canvases in a game and on render-target canvases;
-  a world-space canvas draws them passed through, with a warning.
+  the same composite (with a new `GroupBlendMode`). On every canvas DreamGUI's own renderer draws -- world-space
+  canvases in World Space - DreamUI Renderer and the designer's and the level editor's previews included, a group's
+  texture occluded by the scene as its elements are; a canvas the engine's renderer draws passes them through, with a
+  warning.
 
 - **View models.** A `.dui` file declares the view models its class holds in a `viewmodels { … }` block -- by class,
   with where each comes from: the host (a creation pin, `SetViewModel`, a host's `.dui` line), `= new`, `= global` /
@@ -98,6 +100,20 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   number of 15 degrees, and grid snapping leaves angles alone. The angle is written to `RelativeRotationEuler`, in the
   asset and in the `.dui` the class names, as one undo step; Esc during the drag puts the angle back. The pointer is a
   hand over the handle. Two widgets selected have no handle, and the 3D view keeps the engine's transform gizmo.
+- **Adjustment layers.** `UDreamAdjustmentLayer` works on what is behind it, as far as its rect, clips and masks reach: up
+  to eight operations in order -- brightness and contrast, levels, curves, exposure, hue and saturation (or colorize),
+  vibrance, colour balance, black and white, photo filter, channel mixer, invert, posterize, threshold, gradient map and a
+  lookup table -- mixed with what they were made from by any of the 27 blend modes and an opacity. With `Target` set to
+  `Children` it works on its own widget's subtree instead, drawn as a group. See
+  [Effects on what is behind](Docs/concepts/backdrop-effects.md).
+- **Progressive blur.** `UDreamBackgroundBlur` takes a `StrengthMap` -- a texture's channel, a linear or radial ramp, or
+  a clip mask's pattern -- and blurs each pixel as strongly as the map says there, from a blur pyramid over what is
+  behind. With no map it is the uniform blur it was.
+- **Glass.** `UDreamGlass` is a rounded rect of glass whose edge bends what is behind it, red and blue a little apart,
+  optionally frosted, tinted and lit along the edge; its corners are a rect block's, and a click outside them misses it.
+- **Stylize effects.** `UDreamStylizeEffect` lays up to eight layers over what is behind it or over its own children: a
+  CRT screen, a glitch (`TriggerBurst` flares it), chromatic aberration, a halftone screen of one ink or four, ordered
+  dithering, film grain, a vignette, posterization.
 
 ### Changed
 
@@ -340,6 +356,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   editor (LNK1104); the nightly and the bench launcher stopped on the error, and matched any project of the same file
   name. All three now fall back to editors holding a DLL from inside the project. See
   [Running the DreamGUI tests](Tools/Tests/README.md).
+- **A post-process visual under a clip mask's texture is clipped by the texture.** A background blur, a pixelate or a pixel
+  sort inside a clip whose mask reads a texture took every texel of it as white.
 
 [#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
 [#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
