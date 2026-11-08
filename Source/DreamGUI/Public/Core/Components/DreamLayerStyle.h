@@ -37,7 +37,8 @@ enum class EDreamLayerStylePath : uint8
  * opacity; the drop shadows and the outer glow lie behind the widget, the rest on it.
  *
  * What it is drawn round: the widget's own element when it has one -- a rect block in its own pixels, anything else drawn apart
- * and measured -- and the widget's subtree when it has no element of its own (a container) or is a layer group drawn apart.
+ * and measured -- and the widget's subtree when it has no element of its own (a container) or is a layer group drawn apart. On a
+ * shape blend group's widget (UDreamShapeBlendGroup) it is round the melted shape, in the pixels of the member that draws it.
  * A preset names a shared style (UDreamLayerStylePreset); while there is one, its style is drawn and this one's is not.
  *
  * A rect block's own shadows, border and gradient (UDreamRectBlock) are a second way to write four of these effects: see
@@ -74,6 +75,9 @@ public:
 	const FDreamUILayerStyleRecord& GetRecord() const;
 	/** The render thread's style for a group's composite (EDreamLayerStylePath::Group); null when it draws nothing. */
 	FDreamUILayerStyleRef GetComposite() const;
+	/** The widget changed what the style is drawn round (a shape blend group came or went): the path asked again. */
+	void RefreshPath() { NoteChanged(); }
+
 	/** Whether the style is drawn round the widget's subtree rather than its own element. */
 	bool StylesSubtree() const;
 

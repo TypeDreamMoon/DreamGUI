@@ -70,8 +70,19 @@ float DreamUI_sdRoundRect(float2 p, float2 b, float4 r)
  * The shape a layer style drawn in a rect block's pixels is measured round: its rounded rect, ShapeA.xy its half size and
  * ShapeB its corners' radii, P in units from its centre as sdFragCoord is.
  */
+// A shape blend group's melted shape (UDreamShapeBlendGroup), drawn by its leader: in a row of the same rect block data.
+#define DREAMUI_SHAPE_BLEND_PARAMS , Texture2D ShapeRows, int ShapeRow
+#define DREAMUI_SHAPE_BLEND_ROW(Index) ShapeRows.Load(int3((Index), ShapeRow, 0))
+#include "/Plugin/DreamGUI/Private/DreamUIShapeBlend.ush"
+
+/** Or a shape blend group's melted shape, when ShapeA.z says so: ShapeA.w its row. */
 float DreamUIRectBlock_StyleDistance(float2 P, float4 ShapeA, float4 ShapeB, Texture2D Rec)
 {
+    if (ShapeA.z > 0.5f)
+    {
+        float4 Unused;
+        return DreamUIShapeBlend_Distance(P, Unused, Rec, (int)round(ShapeA.w));
+    }
     return DreamUI_sdRoundRect(P, ShapeA.xy, ShapeB);
 }
 #define DREAMUI_STYLE_DISTANCE(P) DreamUIRectBlock_StyleDistance((P), ShapeA, ShapeB, Rec)
@@ -189,6 +200,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
 
     half _EnableRadialFill;
     half _EnableStyle;
+    float _ShapeRow;
     float2 _RadialFillCenter;
     float _RadialFillAngle;
     float _RadialFillRotation;
@@ -218,6 +230,8 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         _EnableRadialFill = (BoolValues >> 1) & 1;
         _EnableStyle = BoolValues & 1;
         
+        // A shape blend group's leader names the row of the shape it draws, plus one (UDreamRectBlock::FillData).
+        _ShapeRow = PixelData.g;
         _QuadSize = PixelData.ba;
 
         PixelData = DataTex.Load(Position);Position.x += 1;
@@ -279,7 +293,25 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
 
     float2 sdQuadSize = _QuadSize * 0.5f;
     float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
-    float dOuter = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
+    // A shape blend group's leader draws the group's melted shape in its members' colours, and none of its own effects: they
+    // measure its own rect. A layer style on the group is drawn round the melted shape below.
+    const bool bMelted = _ShapeRow > 0.5f;
+    float dOuter;
+    BRANCH
+    if (bMelted)
+    {
+        float4 MeltedColor;
+        dOuter = DreamUIShapeBlend_Distance(sdFragCoord, MeltedColor, DataTex, (int)round(_ShapeRow) - 1);
+        _BodyColor = HALF4_TYPE(MeltedColor);
+        _EnableGradient = 0;
+        _EnableBorder = 0;
+        _EnableInnerShadow = 0;
+        _EnableOuterShadow = 0;
+    }
+    else
+    {
+        dOuter = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
+    }
     // Taken here, in uniform flow, and kept for the layer style below, which runs inside a branch.
     const float dOuterWidth = fwidth(dOuter);
     float dOuterSharp = dOuter / dOuterWidth;
@@ -343,7 +375,10 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         }
 
         float4 MainTexColor = DREAMUI_RECT_BLOCK_SAMPLE(MainTex, MainTexSampler, texUV);
+        // A melted shape reaches past the leader's own rect, where its UVs leave 0..1 and the texture's edge would fade it: it
+        // is drawn in its members' colours alone.
         MainTexColor.a *= SliceCentreFade;
+        MainTexColor = bMelted ? float4(1.0f, 1.0f, 1.0f, 1.0f) : MainTexColor;
         float4 bodyColor = MainTexColor * _BodyColor;
         bodyColor.rgb *= bodyColor.a;
 
@@ -414,7 +449,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         const int2 StyleAt = int2(DREAMUI_RECT_BLOCK_STYLE_FIRST, (int)round(UV3.x));
         FDreamUIStyleShaded Styled = DreamUIStyle_Shade(DataTex, StyleAt, sdFragCoord, sdQuadSize, AA,
             DreamUIBlend_ToSrgb(saturate(Straight)), Opacity, dOuter01, int2(floor(sdFragCoord / AA)),
-            float4(sdQuadSize, 0.0f, 0.0f), _CornerRadius);
+            float4(sdQuadSize, bMelted ? 1.0f : 0.0f, round(_ShapeRow) - 1.0f), _CornerRadius);
         const float StyledAlpha = saturate(Styled.Flat.a);
         const float3 StyledStraight = StyledAlpha > 0.0f ? Styled.Flat.rgb / StyledAlpha : float3(0.0f, 0.0f, 0.0f);
         color = HALF4_TYPE(DreamUIBlend_ToLinear(saturate(StyledStraight)) * StyledAlpha, StyledAlpha);

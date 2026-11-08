@@ -4,6 +4,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamLayerGroup.h"
 #include "Core/Components/DreamRectBlock.h"
+#include "Core/Components/DreamShapeBlendGroup.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamLayerStylePreset.h"
 #include "Core/DreamUILayerStyleMath.h"
@@ -87,6 +88,11 @@ EDreamLayerStylePath UDreamLayerStyle::GetPath() const
 	{
 		return EDreamLayerStylePath::None;
 	}
+	// Round a shape blend group's melted shape, in the pixels of the member that draws it.
+	if (const UDreamShapeBlendGroup* Blend = Widget->GetComponent<UDreamShapeBlendGroup>(); Blend != nullptr && Blend->IsActive() && !GetRecord().UsesPatterns())
+	{
+		return EDreamLayerStylePath::Element;
+	}
 	if (StylesSubtree())
 	{
 		return EDreamLayerStylePath::Group;
@@ -167,6 +173,13 @@ void UDreamLayerStyle::OnUnregister()
 		{
 			Block->OnLayerStyleChanged();
 		}
+		if (const UDreamShapeBlendGroup* Blend = Widget->GetComponent<UDreamShapeBlendGroup>())
+		{
+			if (UDreamRectBlock* Leader = Blend->GetLeader())
+			{
+				Leader->OnLayerStyleChanged();
+			}
+		}
 		if (UDreamCanvas* Canvas = Widget->GetRenderCanvas())
 		{
 			Canvas->MarkCanvasUpdate(LastPath == EDreamLayerStylePath::Group);
@@ -208,6 +221,13 @@ void UDreamLayerStyle::NoteChanged()
 	if (UDreamRectBlock* Block = Cast<UDreamRectBlock>(Widget->GetVisual()))
 	{
 		Block->OnLayerStyleChanged();
+	}
+	if (const UDreamShapeBlendGroup* Blend = Widget->GetComponent<UDreamShapeBlendGroup>())
+	{
+		if (UDreamRectBlock* Leader = Blend->GetLeader())
+		{
+			Leader->OnLayerStyleChanged();
+		}
 	}
 	const EDreamLayerStylePath Path = GetPath();
 	// A group's style is read every frame; only starting or stopping to draw the widget apart makes the draw calls again.

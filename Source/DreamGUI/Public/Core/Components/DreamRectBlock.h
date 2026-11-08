@@ -7,6 +7,7 @@
 #include "Core/DreamUIDataAsTexture.h"
 #include "Layout/Margin.h"
 #include "Core/DreamLayerStyleTypes.h"
+#include "Core/DreamUIShapeBlend.h"
 #include "DreamRectBlock.generated.h"
 
 
@@ -68,6 +69,7 @@ enum class EDreamRectBlockTextureMode : uint8
 };
 
 class UDreamUISpriteData_BaseObject;
+class UDreamShapeBlendGroup;
 
 /**
  * UV channel-
@@ -120,6 +122,21 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
 	void SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle);
+
+	/** Its corners' radii in units, as its unit mode resolves them at its widget's size. */
+	FVector4f GetResolvedCornerRadius() const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	EDreamShapeBlendOperation GetShapeBlendOperation() const { return ShapeBlendOperation; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetShapeBlendOperation(EDreamShapeBlendOperation Value);
+	/**
+	 * What its parent's shape blend group (UDreamShapeBlendGroup) says of it: a member melted into the group's shape, drawn by
+	 * the group's first member, the leader, which draws InShape (in its own frame) over InBounds. A null group: on its own again.
+	 */
+	void SetShapeBlend(UDreamShapeBlendGroup* InGroup, bool bInLeader, const FDreamUIShapeBlendShape* InShape, const FBox2f& InBounds);
+	/** Melted into a shape blend group's shape, drawn by its leader or by nothing of its own. */
+	bool IsMeltedIntoShapeBlend() const { return ShapeBlendGroup.IsValid(); }
+	bool IsShapeBlendLeader() const { return bShapeBlendLeader && ShapeBlendGroup.IsValid(); }
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -371,6 +388,10 @@ private:
 		TObjectPtr<class UDreamUIDataAsTexture> DataRows = nullptr;
 	/** Its world's rows, or the asset's own in a world with no UI manager to keep any. */
 	UDreamUIDataAsTexture* FindDataRows() const;
+	/** How this rect block joins the shape its parent's shape blend group makes, when there is one (UDreamShapeBlendGroup). */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+		EDreamShapeBlendOperation ShapeBlendOperation = EDreamShapeBlendOperation::Union;
+
 	/** When do raycast interaction, will the CornerRadius be considered? Only support RaycastType.Rect. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Raycast")
 		bool bRaycastSupportCornerRadius = true;
@@ -395,6 +416,13 @@ private:
 	uint8 bNeedUpdateBlockData : 1;
 	/** How far its layer style reached when its quad was last made. */
 	float LastStyleReach = 0.0f;
+	/** The shape blend group it is melted into, the shape it draws as the group's leader and the row that holds it. */
+	TWeakObjectPtr<UDreamShapeBlendGroup> ShapeBlendGroup;
+	FDreamUIShapeBlendShape ShapeBlendShape;
+	FBox2f ShapeBlendBounds = FBox2f(ForceInit);
+	int32 ShapeBlendRow = INDEX_NONE;
+	bool bShapeBlendLeader = false;
+	void ReleaseShapeBlendRow();
 	uint8 bHasAddToSprite : 1;
 public:
 	/** Its body's rounded rect: what a widget clipping to it as the layer below is clipped to. */

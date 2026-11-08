@@ -293,7 +293,9 @@ public:
 		UDreamCanvas* renderCanvas, UDreamVisual* uiComp, FColor color,
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged,
 		/** How far past the rect a layer style drawn in its pixels reaches (UDreamLayerStyle): the quad grows by it. */
-		float styleReach = 0.0f
+		float styleReach = 0.0f,
+		/** Bounds, in the quad's own space, it grows to cover as well: a shape blend group's, for the member that draws it. */
+		const FBox2f* extraBounds = nullptr
 	);
 #pragma endregion
 #pragma region UISprite_UITexture_Border

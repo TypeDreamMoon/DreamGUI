@@ -23,6 +23,7 @@
 #include "Event/DreamPointerEventData.h"
 #include "Core/Components/DreamLayerStyle.h"
 #include "Core/DreamUILayerStyleMath.h"
+#include "Core/Components/DreamShapeBlendGroup.h"
 
 
 #define LOCTEXT_NAMESPACE "DreamRectBlock"
@@ -55,6 +56,10 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDr
 		, static_cast<uint8>(GetBodySampledTexture() != nullptr
 			? BodyTextureDrawMode : EDreamRectBlockTextureDrawMode::Image)
 		, DataOffset);
+	// The first texel's second word, spare since this block was designed: the row of the shape a shape blend group's leader
+	// draws, plus one (0 for none).
+	const float ShapeRowValue = IsShapeBlendLeader() && ShapeBlendRow != INDEX_NONE ? static_cast<float>(ShapeBlendRow + 1) : 0.0f;
+	FMemory::Memcpy(Data + 4, &ShapeRowValue, sizeof(float));
 
 	FillVector2ToData(Data, FVector2f(width, height), DataOffset);
 
@@ -416,6 +421,7 @@ void UDreamRectBlock::OnUnregister()
 	// RectBlockData is null when OnRegister could not load the settings default, and DataStartPosition
 	// is then still its as-declared 0 rather than INDEX_NONE -- so the row test alone would call
 	// UnregisterBuffer on nothing.
+	ReleaseShapeBlendRow();
 	if (DataRows != nullptr && DataStartPosition > INDEX_NONE)
 	{
 		DataRows->UnregisterBuffer(DataStartPosition);
@@ -581,8 +587,65 @@ bool UDreamRectBlock::IsDrawnByBuiltInShader() const
 
 const FDreamUILayerStyleRecord* UDreamRectBlock::FindLayerStyleRecord() const
 {
-	const UDreamLayerStyle* Style = UDreamLayerStyle::Find(GetWidget());
+	const UDreamWidget* Widget = GetWidget();
+	if (IsMeltedIntoShapeBlend())
+	{
+		// Melted: the group's widget's style, round the melted shape, drawn by the leader alone.
+		const UDreamLayerStyle* GroupStyle = IsShapeBlendLeader() && Widget != nullptr ? UDreamLayerStyle::Find(Widget->GetParent()) : nullptr;
+		return GroupStyle != nullptr && GroupStyle->GetPath() == EDreamLayerStylePath::Element ? &GroupStyle->GetRecord() : nullptr;
+	}
+	const UDreamLayerStyle* Style = UDreamLayerStyle::Find(Widget);
 	return Style != nullptr && Style->GetPath() == EDreamLayerStylePath::Element ? &Style->GetRecord() : nullptr;
+}
+
+FVector4f UDreamRectBlock::GetResolvedCornerRadius() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return Widget != nullptr ? GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, Widget->GetWidth(), Widget->GetHeight(), 0.5f) : CornerRadius;
+}
+
+void UDreamRectBlock::SetShapeBlendOperation(EDreamShapeBlendOperation Value)
+{
+	if (ShapeBlendOperation != Value)
+	{
+		ShapeBlendOperation = Value;
+		if (UDreamShapeBlendGroup* Group = ShapeBlendGroup.Get())
+		{
+			Group->Refresh();
+		}
+	}
+}
+
+void UDreamRectBlock::SetShapeBlend(UDreamShapeBlendGroup* InGroup, bool bInLeader, const FDreamUIShapeBlendShape* InShape, const FBox2f& InBounds)
+{
+	ShapeBlendGroup = InGroup;
+	bShapeBlendLeader = InGroup != nullptr && bInLeader && InShape != nullptr;
+	if (bShapeBlendLeader)
+	{
+		ShapeBlendShape = *InShape;
+		ShapeBlendBounds = InBounds;
+		if (ShapeBlendRow == INDEX_NONE && DataRows != nullptr)
+		{
+			ShapeBlendRow = DataRows->RegisterBuffer();
+		}
+	}
+	else
+	{
+		ShapeBlendShape.Texels.Reset();
+		ShapeBlendBounds = FBox2f(ForceInit);
+		ReleaseShapeBlendRow();
+	}
+	LastStyleReach = -1.0f;
+	MarkAllDirty();
+}
+
+void UDreamRectBlock::ReleaseShapeBlendRow()
+{
+	if (ShapeBlendRow != INDEX_NONE && DataRows != nullptr)
+	{
+		DataRows->UnregisterBuffer(ShapeBlendRow);
+	}
+	ShapeBlendRow = INDEX_NONE;
 }
 
 void UDreamRectBlock::OnLayerStyleChanged()
@@ -907,8 +970,14 @@ bool UDreamRectBlock::LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& 
 	if (FMath::Sign(LocalSpaceRayOrigin.X) != FMath::Sign(LocalSpaceRayEnd.X))
 	{
 		auto result = FMath::LinePlaneIntersection(LocalSpaceRayOrigin, LocalSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
+		// Melted into a shape blend: where the melted shape is, and this the member nearest it -- the shader's formula.
+		const UDreamShapeBlendGroup* Group = IsMeltedIntoShapeBlend() ? ShapeBlendGroup.Get() : nullptr;
+		const FVector WorldResult = bPerspective ? FVector(WidgetToWorldMatrix.TransformPosition(result)) : Widget->GetWorldTransform().TransformPosition(result);
+		const bool bOnShape = Group != nullptr
+			? Group->HitTest(this, WorldResult)
+			: (result.Y > Widget->GetLocalSpaceLeft() && result.Y < Widget->GetLocalSpaceRight() && result.Z > Widget->GetLocalSpaceBottom() && result.Z < Widget->GetLocalSpaceTop());
 		//hit point inside rect area
-		if (result.Y > Widget->GetLocalSpaceLeft() && result.Y < Widget->GetLocalSpaceRight() && result.Z > Widget->GetLocalSpaceBottom() && result.Z < Widget->GetLocalSpaceTop())
+		if (bOnShape)
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
@@ -924,7 +993,7 @@ bool UDreamRectBlock::LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& 
 			OutHit.ImpactPoint = OutHit.Location;
 
 			//check corner radius
-			if (bRaycastSupportCornerRadius)
+			if (bRaycastSupportCornerRadius && Group == nullptr)
 			{
 				return LineTraceUI_CheckCornerRadius(FVector2D(result.Y, result.Z));
 			}
@@ -940,6 +1009,13 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 	auto Widget = GetWidget();
 	static FDreamUISpriteInfo SimpleRectSpriteData;
 	const FDreamUILayerStyleRecord* Style = FindLayerStyleRecord();
+	// The leader's quad covers its group's shape: the shape's bounds, from its rect's centre +Y down, in its own space.
+	FBox2f ShapeBlendQuad(ForceInit);
+	if (IsShapeBlendLeader() && ShapeBlendBounds.bIsValid)
+	{
+		const FVector2f Centre(Widget->GetLocalSpaceCenter());
+		ShapeBlendQuad = FBox2f(FVector2f(Centre.X + ShapeBlendBounds.Min.X, Centre.Y - ShapeBlendBounds.Max.Y), FVector2f(Centre.X + ShapeBlendBounds.Max.X, Centre.Y - ShapeBlendBounds.Min.Y));
+	}
 	FDreamUIGeometry::UpdateRectBlockVertex(&InGeo
 		, this->bEnableOuterShadow
 		, this->GetOuterShadowOffset(Widget->GetWidth(), Widget->GetHeight())
@@ -951,7 +1027,16 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		, Widget->GetRenderCanvas(), this, GetFinalColor(),
 		InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		, Style != nullptr ? Style->OuterReach : 0.0f
+		, IsShapeBlendLeader() ? &ShapeBlendQuad : nullptr
 	);
+	if (IsMeltedIntoShapeBlend() && !IsShapeBlendLeader() && (InVertexPositionChanged || InTriangleChanged))
+	{
+		// Melted into a shape its leader draws: nothing of its own, every corner on one point.
+		for (FDreamUIOriginVertexData& Vertex : InGeo.OriginVertices)
+		{
+			Vertex.Position = FVector3f::ZeroVector;
+		}
+	}
 
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
@@ -976,6 +1061,14 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		BlockBuffer.SetNumZeroed(PixelCount * 16);
 		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight(), Style);
 		DataRows->UpdateBlock(0, DataStartPosition, MoveTemp(BlockBuffer), PixelCount);
+		if (IsShapeBlendLeader() && ShapeBlendRow != INDEX_NONE && ShapeBlendShape.Texels.Num() > 0)
+		{
+			// The group's shape, in a row of its own.
+			TArray<uint8> ShapeBuffer;
+			ShapeBuffer.SetNumZeroed(ShapeBlendShape.Texels.Num() * sizeof(FVector4f));
+			FMemory::Memcpy(ShapeBuffer.GetData(), ShapeBlendShape.Texels.GetData(), ShapeBuffer.Num());
+			DataRows->UpdateBlock(0, ShapeBlendRow, MoveTemp(ShapeBuffer), ShapeBlendShape.Texels.Num());
+		}
 	}
 }
 
