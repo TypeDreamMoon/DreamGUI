@@ -19,7 +19,14 @@ END_SHADER_PARAMETER_STRUCT()
 
 FDreamVisualPostProcessRenderProxy::FDreamVisualPostProcessRenderProxy()
 {
-	
+
+}
+
+void FDreamVisualPostProcessRenderProxy::Render_RenderThread(const FDreamUIPostProcessContext& InContext)
+{
+	OnRenderPostProcess_RenderThread(InContext.GraphBuilder, InContext.SceneDepth, InContext.Renderer, InContext.TargetTexture, InContext.GlobalShaderMap
+		, InContext.ViewProjectionMatrix, InContext.bIsWorldSpace, InContext.bIsRenderTarget, InContext.BlendDepthForWorld, InContext.DepthFadeForWorld
+		, InContext.ViewRect, InContext.DepthTextureScaleOffset, InContext.ViewTextureScaleOffset);
 }
 
 void FDreamVisualPostProcessRenderProxy::ReleaseOnRenderThread(FDreamVisualPostProcessRenderProxyPtr&& InProxy)

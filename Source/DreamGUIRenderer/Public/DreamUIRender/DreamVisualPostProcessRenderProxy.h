@@ -12,6 +12,43 @@
 class FTexture2DResource;
 class UTexture;
 class UTextureRenderTarget2D;
+class FDreamUICompositeStack;
+
+/**
+ * Everything a post process is given to draw with, at its place among a canvas's draws (FDreamVisualPostProcessRenderProxy::
+ * Render_RenderThread).
+ */
+struct FDreamUIPostProcessContext
+{
+	explicit FDreamUIPostProcessContext(FRDGBuilder& InGraphBuilder) : GraphBuilder(InGraphBuilder) {}
+
+	FRDGBuilder& GraphBuilder;
+	FDreamUIRenderer* Renderer = nullptr;
+	FGlobalShaderMap* GlobalShaderMap = nullptr;
+	/** The view's resolved scene depth, which a world-space effect is tested against. */
+	FRDGTextureRef SceneDepth = nullptr;
+	/** What the effect reads and draws into: the view's target, or the texture of the group it is drawn inside. */
+	FTextureRHIRef TargetTexture;
+	/** World to clip: the effect's vertices are in world space once through its object-to-world matrix. */
+	FMatrix44f ViewProjectionMatrix = FMatrix44f::Identity;
+	bool bIsWorldSpace = false;
+	bool bIsRenderTarget = false;
+	float BlendDepthForWorld = 0.0f;
+	int32 DepthFadeForWorld = 0;
+	/** The view's rect on the current target, as a pass drawing into it sets its viewport. */
+	FIntRect ViewRect;
+	FVector4f DepthTextureScaleOffset = FVector4f(1, 1, 0, 0);
+	FVector4f ViewTextureScaleOffset = FVector4f(1, 1, 0, 0);
+	/**
+	 * The targets the canvas is drawing into: what an effect copies what is behind it from, in the target's own pixels, and
+	 * whose current texture it draws back into. Null for a caller that has none, where only the older effects draw.
+	 */
+	FDreamUICompositeStack* Stack = nullptr;
+	/** The current target holds linear light (a render target), not encoded values (a viewport). */
+	bool bLinearTarget = false;
+	/** The world's time, in seconds, for an effect that moves. */
+	float TimeSeconds = 0.0f;
+};
 
 /**
  * What a post-process visual sends its proxy whenever its region, transform or tint changes: worked out on the
@@ -87,6 +124,12 @@ public:
 	int32 TintMode = 0;
 	virtual bool CanRender() const = 0;
 	/**
+	 * What the renderer calls, at the effect's place among the canvas's draws. By default the older entry point below, with
+	 * what it takes of InContext; an effect that copies what is behind it in the target's own pixels, or draws through a
+	 * blend of its own, overrides this one.
+	 */
+	virtual void Render_RenderThread(const FDreamUIPostProcessContext& InContext);
+	/**
 	 * render thread function that will do the post process draw
 	 * @param	SceneDepth						The view's resolved scene depth, which a world-space effect is tested against
 	 * @param	ScreenTargetTexture				The full screen render target
@@ -106,7 +149,7 @@ public:
 		const FIntRect& ViewRect,
 		const FVector4f& DepthTextureScaleOffset,
 		const FVector4f& ViewTextureScaleOffset
-	) = 0;
+	) {}
 public:
 	/**
 	 * The clip data texture's reference, which is whatever texture the canvas's clip data lives in now -- it grows in

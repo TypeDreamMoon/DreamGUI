@@ -1752,21 +1752,23 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 								{
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
 									TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordPostProcess);
-									Primitive->OnRenderPostProcess_RenderThread(
-										GraphBuilder,
-										SceneDepth,
-										this,
-										Stack.Current().TextureRHI,
-										GlobalShaderMap,
-										ViewProjectionMatrix,
-										true,
-										false,
-										RenderSequenceItem.BlendDepth,
-										RenderSequenceItem.DepthFade,
-										Stack.GetCurrentViewport(),
-										DepthTextureScaleOffset,
-										Stack.GetCurrentTextureScaleOffset(ColorTextureScaleOffset)
-									);
+									FDreamUIPostProcessContext Context(GraphBuilder);
+									Context.Renderer = this;
+									Context.GlobalShaderMap = GlobalShaderMap;
+									Context.SceneDepth = SceneDepth;
+									Context.TargetTexture = Stack.Current().TextureRHI;
+									Context.ViewProjectionMatrix = ViewProjectionMatrix;
+									Context.bIsWorldSpace = true;
+									Context.bIsRenderTarget = false;
+									Context.BlendDepthForWorld = RenderSequenceItem.BlendDepth;
+									Context.DepthFadeForWorld = RenderSequenceItem.DepthFade;
+									Context.ViewRect = Stack.GetCurrentViewport();
+									Context.DepthTextureScaleOffset = DepthTextureScaleOffset;
+									Context.ViewTextureScaleOffset = Stack.GetCurrentTextureScaleOffset(ColorTextureScaleOffset);
+									Context.Stack = &Stack;
+									Context.bLinearTarget = GammaValue == 1.0f;
+									Context.TimeSeconds = InView.Family->Time.GetWorldTimeSeconds();
+									Primitive->Render_RenderThread(Context);
 								}
 							}
 						}
@@ -2217,21 +2219,21 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				{
 					SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
 					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordPostProcess);
-					Primitive->OnRenderPostProcess_RenderThread(
-						GraphBuilder,
-						SceneDepth,
-						this,
-						Stack.Current().TextureRHI,
-						GlobalShaderMap,
-						InLayer.ViewProjectionMatrix,
-						/*IsWorldSpace*/false,
-						/*IsRenderToRenderTarget*/bIsRenderTarget,
-						/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
-						/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
-						PassViewport,
-						DepthTextureScaleOffset,
-						PassTextureScaleOffset
-					);
+					FDreamUIPostProcessContext Context(GraphBuilder);
+					Context.Renderer = this;
+					Context.GlobalShaderMap = GlobalShaderMap;
+					Context.SceneDepth = SceneDepth;
+					Context.TargetTexture = Stack.Current().TextureRHI;
+					Context.ViewProjectionMatrix = InLayer.ViewProjectionMatrix;
+					Context.bIsWorldSpace = false;
+					Context.bIsRenderTarget = bIsRenderTarget;
+					Context.ViewRect = PassViewport;
+					Context.DepthTextureScaleOffset = DepthTextureScaleOffset;
+					Context.ViewTextureScaleOffset = PassTextureScaleOffset;
+					Context.Stack = &Stack;
+					Context.bLinearTarget = GammaValue == 1.0f;
+					Context.TimeSeconds = InView.Family->Time.GetWorldTimeSeconds();
+					Primitive->Render_RenderThread(Context);
 				}
 			}
 		}
