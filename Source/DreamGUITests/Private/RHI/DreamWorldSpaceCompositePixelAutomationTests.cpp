@@ -13,6 +13,7 @@
 #include "Engine/World.h"
 #include "FXRenderingUtils.h"
 #include "GameFramework/PlayerController.h"
+#include "NiagaraSystem.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphUtils.h"
 #include "SceneRenderTargetParameters.h"
@@ -28,6 +29,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBlendMath.h"
 #include "Core/DreamUISettings.h"
+#include "DreamNiagaraEngineAccess.h"
+#include "DreamNiagaraSystem.h"
 #include "DreamUICaptureLibrary.h"
 #include "Extensions/Effects/DreamAdjustmentLayer.h"
 #include "Utils/DreamUIUtils.h"
@@ -74,6 +77,8 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		const EDreamUIRendererAntiAliasingMethod SavedAA = GetDefault<UDreamUISettings>()->AntiAliasingMethod;
 		const bool bSavedBuiltIn = GetDefault<UDreamUISettings>()->bUseBuiltInUIShader;
 		TArray<TStrongObjectPtr<UTexture2D>> Textures;
+		/** The particle systems a test draws, kept for as long as it runs. */
+		TArray<TStrongObjectPtr<UNiagaraSystem>> Systems;
 		/** What writes the scene's depth for a test that needs it: an extension lives as long as a reference to it. */
 		TSharedPtr<ISceneViewExtension, ESPMode::ThreadSafe> DepthWriter;
 		TWeakObjectPtr<ACameraActor> Camera;
@@ -660,6 +665,130 @@ bool FDreamWorldSpaceLayerStylePixelTest::RunTest(const FString& Parameters)
 			FDreamPixelProbe::ExpectColorAt(*this, Pixels, PanelSize, PixelOf(Point), StrokeColour, 6
 				, bApart ? TEXT("The stroke drawn apart, outside the block") : TEXT("The stroke in the block's own pixels, outside it"));
 		}
+	});
+	Steps.PerformLatent();
+	Rig->Finish();
+	return true;
+}
+
+namespace DreamWorldSpaceCompositePixelTestLocal
+{
+	/** The particles' holders: the same system, the same steps, its falling sprites in two modes, over the same stripes. */
+	const FVector2D ParticleHolderSize(84.0, 150.0);
+	FVector2D ParticleHolderCentre(bool bInOverlay)
+	{
+		// A whole number of the stripes' periods apart (32 units each), so that both stand over the same stripes.
+		return FVector2D(bInOverlay ? 64.0 : -64.0, 0.0);
+	}
+
+	UDreamNiagaraSystem* AddWorldParticles(FAutomationTestBase& InTest, FDreamDriverPieRig& InRig, FState& InState, UDreamWidget* InPanel, bool bInOverlay)
+	{
+		UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, TEXT("/DreamGUI/Tests/Niagara/NS_DreamUITest_Particles.NS_DreamUITest_Particles"));
+		if (!InTest.TestNotNull(TEXT("The test system loads"), System))
+		{
+			return nullptr;
+		}
+		System->WaitForCompilationComplete();
+		if (!DreamNiagaraEngine::IsReadyToRun(System))
+		{
+			System->RequestCompile(false);
+			System->WaitForCompilationComplete();
+		}
+		InState.Systems.Emplace(System);
+		UDreamWidget* Holder = InRig.MakeWidgetWithVisual(UDreamNiagaraSystem::StaticClass(), bInOverlay ? TEXT("Overlaid") : TEXT("Normal"), InPanel
+			, ParticleHolderSize, ParticleHolderCentre(bInOverlay));
+		UDreamNiagaraSystem* Visual = Holder != nullptr ? Cast<UDreamNiagaraSystem>(Holder->GetVisual()) : nullptr;
+		if (!InTest.TestNotNull(TEXT("A Niagara system visual"), Visual))
+		{
+			return nullptr;
+		}
+		Visual->SetPixelsPerUnit(0.5f);
+		TArray<FDreamNiagaraRendererOverride> Overrides;
+		FDreamNiagaraRendererOverride& Fall = Overrides.AddDefaulted_GetRef();
+		Fall.Emitter = TEXT("Fall");
+		Fall.bOverrideBlendMode = true;
+		Fall.BlendMode = bInOverlay ? EDreamUIBlendMode::Overlay : EDreamUIBlendMode::Alpha;
+		Visual->SetRendererOverrides(Overrides);
+		Visual->SetSystem(System);
+		// Stepped and held, as the gallery's are: both holders show the same moment.
+		Visual->Advance(30.0f / 30.0f, 1.0f / 30.0f);
+		Visual->SetPaused(true);
+		return Visual;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamWorldSpaceParticlesPixelTest,
+	"DreamGUI.World.RHI.ParticlesOfAModeThatReadsWhatIsBehindAreDrawnOnAWorldSpaceCanvas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamWorldSpaceParticlesPixelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldSpaceCompositePixelTestLocal;
+	const TSharedRef<FState> State = MakeShared<FState>();
+	const TSharedRef<FDreamDriverPieRig> Rig = FDreamDriverPieRig::Create(*this);
+	Rig->Start();
+	Rig->WhenReady([this, State](FDreamDriverPieRig& InRig)
+	{
+		SetUpCamera(*this, InRig, *State);
+	});
+	FDreamDriverSequence Steps = Rig->Sequence();
+	Steps.WaitFrames(4);
+	Steps.Then([this, State, Rig](FDreamDriverContext& Context)
+	{
+		// Stripes, and the test system twice: its falling sprites drawn Normal on the left and in Overlay, a mode that reads
+		// what is behind, on the right. On a world-space canvas the Overlay sprites need what is behind them copied first.
+		UDreamWidget* Panel = nullptr;
+		if (!PlacePanel(*this, *Rig, *State, TEXT("ParticlePanel"), 0, 1.0f, Panel))
+		{
+			return;
+		}
+		UTexture2D* Stripes = MakeTexture(*State, 64, [](int32 X, int32 Y) { return (X / 8) % 2 == 0 ? FColor(200, 70, 60, 255) : FColor(60, 160, 200, 255); });
+		AddBlock(*Rig, Panel, TEXT("Stripes"), FVector2D(PanelSize), FVector2D::ZeroVector, FColor::White, Stripes);
+		AddWorldParticles(*this, *Rig, *State, Panel, false);
+		AddWorldParticles(*this, *Rig, *State, Panel, true);
+	});
+	Steps.WaitFrames(12);
+	Steps.Then([this, State](FDreamDriverContext& Context)
+	{
+		TArray<FColor> Pixels;
+		if (!State->Panel.IsValid() || !ReadPanel(*this, Context.World, *State, Pixels))
+		{
+			return;
+		}
+		FDreamPixelProbe::SaveCapture(Pixels, PanelSize, TEXT("World_NiagaraOverlay"));
+		const FIntPoint HolderSize(FMath::RoundToInt32(ParticleHolderSize.X), FMath::RoundToInt32(ParticleHolderSize.Y));
+		auto HolderPixels = [&Pixels, HolderSize](bool bInOverlay)
+		{
+			return Crop(Pixels, PixelOf(ParticleHolderCentre(bInOverlay)) - HolderSize / 2, HolderSize);
+		};
+		const TArray<FColor> Normal = HolderPixels(false);
+		const TArray<FColor> Overlaid = HolderPixels(true);
+		// What the stripes are under a holder's pixel: the same under both.
+		const TArray<FColor> Behind = [HolderSize]()
+		{
+			TArray<FColor> Out;
+			Out.SetNumUninitialized(HolderSize.X * HolderSize.Y);
+			for (int32 Y = 0; Y < HolderSize.Y; ++Y)
+			{
+				for (int32 X = 0; X < HolderSize.X; ++X)
+				{
+					const FVector2D Unit = ParticleHolderCentre(false) + FVector2D(X - HolderSize.X * 0.5 + 0.5, HolderSize.Y * 0.5 - Y - 0.5);
+					const int32 Texel = FMath::FloorToInt((Unit.X + PanelSize.X * 0.5) / PanelSize.X * 64.0);
+					Out[Y * HolderSize.X + X] = (Texel / 8) % 2 == 0 ? FColor(200, 70, 60, 255) : FColor(60, 160, 200, 255);
+				}
+			}
+			return Out;
+		}();
+		int32 NormalDrawn = 0, OverlaidDrawn = 0, Apart = 0;
+		for (int32 Index = 0; Index < Normal.Num(); ++Index)
+		{
+			NormalDrawn += FDreamPixelProbe::IsNear(Normal[Index], Behind[Index], 6) ? 0 : 1;
+			OverlaidDrawn += FDreamPixelProbe::IsNear(Overlaid[Index], Behind[Index], 6) ? 0 : 1;
+			Apart += FDreamPixelProbe::IsNear(Normal[Index], Overlaid[Index], 6) ? 0 : 1;
+		}
+		TestTrue(*FString::Printf(TEXT("The particles are drawn on the world-space canvas (%d pixels of the left holder over the stripes)"), NormalDrawn), NormalDrawn > 200);
+		TestTrue(*FString::Printf(TEXT("...and with their falling sprites in Overlay (%d pixels of the right holder)"), OverlaidDrawn), OverlaidDrawn > 200);
+		TestTrue(*FString::Printf(TEXT("The falling sprites in Overlay are blended over what is behind them, not drawn Normal (%d pixels differ between the two)"), Apart), Apart > 40);
 	});
 	Steps.PerformLatent();
 	Rig->Finish();
