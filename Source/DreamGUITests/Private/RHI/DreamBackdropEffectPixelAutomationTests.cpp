@@ -10,6 +10,7 @@
 #include "UObject/StrongObjectPtr.h"
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamShapeBlendGroup.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIAdjustment.h"
@@ -574,6 +575,123 @@ bool FDreamGlassPixelTest::RunTest(const FString& Parameters)
 			}
 		}
 		TestTrue(FString::Printf(TEXT("Along the edge what shows is bent (%d of 61 points differ from what is behind)"), Moved), Moved >= 20);
+	});
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGlassShapeBlendPixelTest,
+	"DreamGUI.RHI.Glass.GlassInAShapeBlendBendsTheMeltedEdgeWhereverItReachesAndMatchesItsGoldenImage",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamGlassShapeBlendPixelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBackdropEffectPixelTestLocal;
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	Stage->UseBuiltInShader(true);
+	UTexture2D* Fine = Stage->MakeChecker(64, 2, Patches[2], Patches[4]);
+	Stage->AddBlock(TEXT("Scene"), FVector2D(256.0, 256.0), FVector2D::ZeroVector, FColor::White, Fine);
+	// Rect blocks with no colour of their own melted into one shape, and glass in that shape: a widget of its own, much
+	// narrower than the shape, and drawn over all of it.
+	auto AddMember = [&Stage](UDreamWidget* InGroup, const TCHAR* InName, FVector2D InSize, FVector2D InPosition, float InCorner
+		, EDreamShapeBlendOperation InOperation = EDreamShapeBlendOperation::Union)
+	{
+		if (UDreamRectBlock* Block = Stage->AddWidget(InName, InSize, InPosition, InGroup)->CreateNewVisual<UDreamRectBlock>())
+		{
+			Block->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+			Block->SetCornerRadius(FVector4(InCorner, InCorner, InCorner, InCorner));
+			Block->SetBodyColor(FColor(255, 255, 255, 0));
+			Block->SetShapeBlendOperation(InOperation);
+		}
+	};
+	// Above: two blocks a gap of 2 apart, melted into a waist, clear glass. Their outer ends, at 91, are three units short of
+	// a square of the checker, about what the edge bends the light in by a unit and a half in: a pixel there shows the next
+	// square.
+	UDreamWidget* Pair = Stage->AddWidget(TEXT("Pair"), FVector2D(240.0, 100.0), FVector2D(0.0, 64.0));
+	AddMember(Pair, TEXT("PairLeft"), FVector2D(90.0, 50.0), FVector2D(-46.0, 0.0), 12.0f);
+	AddMember(Pair, TEXT("PairRight"), FVector2D(90.0, 50.0), FVector2D(46.0, 0.0), 12.0f);
+	if (UDreamShapeBlendGroup* Blend = Pair->AddComponent<UDreamShapeBlendGroup>())
+	{
+		Blend->SetSmoothness(40.0f);
+	}
+	if (UDreamGlass* Clear = Stage->AddWidget(TEXT("ClearGlass"), FVector2D(60.0, 100.0), FVector2D(0.0, 64.0))->CreateNewVisual<UDreamGlass>())
+	{
+		Clear->SetShape(EDreamGlassShape::ShapeBlend);
+		Clear->SetShapeBlendGroup(Pair);
+		Clear->SetEdgeWidth(18.0f);
+		Clear->SetRefraction(12.0f);
+		Clear->SetDispersion(0.2f);
+		Clear->SetSaturation(1.0f);
+		Clear->SetBrightness(0.0f);
+		// A thin highlight, so that the melted outline shows: it reaches two units in, short of the middles held below.
+		Clear->SetHighlight(FColor::White, 0.5f, 2.0f, 315.0f);
+		Clear->SetInnerShadow(0.0f, 0.0f);
+	}
+	// Below: three drops, one with a hole cut out of it, frosted, tinted and lit glass.
+	UDreamWidget* Drops = Stage->AddWidget(TEXT("Drops"), FVector2D(240.0, 110.0), FVector2D(0.0, -64.0));
+	AddMember(Drops, TEXT("DropLeft"), FVector2D(70.0, 70.0), FVector2D(-62.0, 4.0), 24.0f);
+	AddMember(Drops, TEXT("DropMiddle"), FVector2D(64.0, 64.0), FVector2D(10.0, -8.0), 32.0f);
+	AddMember(Drops, TEXT("DropHole"), FVector2D(26.0, 26.0), FVector2D(10.0, -8.0), 13.0f, EDreamShapeBlendOperation::Subtract);
+	AddMember(Drops, TEXT("DropRight"), FVector2D(40.0, 40.0), FVector2D(78.0, 18.0), 20.0f);
+	if (UDreamShapeBlendGroup* Blend = Drops->AddComponent<UDreamShapeBlendGroup>())
+	{
+		Blend->SetSmoothness(22.0f);
+	}
+	if (UDreamGlass* Frosted = Stage->AddWidget(TEXT("FrostedGlass"), FVector2D(40.0, 40.0), FVector2D(0.0, -64.0))->CreateNewVisual<UDreamGlass>())
+	{
+		Frosted->SetShape(EDreamGlassShape::ShapeBlend);
+		Frosted->SetShapeBlendGroup(Drops);
+		Frosted->SetFrost(0.45f);
+		Frosted->SetGlassTint(FColor(210, 230, 255), 0.2f);
+		Frosted->SetHighlight(FColor::White, 0.7f, 4.0f, 315.0f);
+	}
+	EnqueuePictureCheck(Stage, TEXT("Gallery_Glass_ShapeBlend"), 30000);
+	EnqueueReadBack(Stage, [this](const TArray<FColor>& InPixels, FIntPoint InSize)
+	{
+		auto Scene = [](FVector2D InCanvas)
+		{
+			const int32 X = FMath::Clamp(FMath::FloorToInt((InCanvas.X + 128.0) / 4.0), 0, 63);
+			const int32 Y = FMath::Clamp(FMath::FloorToInt((128.0 - InCanvas.Y) / 4.0), 0, 63);
+			return ((X / 2) + (Y / 2)) % 2 == 0 ? Patches[2] : Patches[4];
+		};
+		auto Expect = [this, &InPixels, InSize, &Scene](FVector2D InPoint, const TCHAR* InWhat)
+		{
+			FDreamPixelProbe::ExpectColorAt(*this, InPixels, InSize, FIntPoint(FMath::FloorToInt(InPoint.X + 128.0), FMath::FloorToInt(128.0 - InPoint.Y)), Scene(InPoint), 3
+				, *FString::Printf(TEXT("%s, at %s"), InWhat, *InPoint.ToString()));
+		};
+		// The members' middles, far past the glass's own rect (60 wide) and far from the shape's edge: flat glass shows what
+		// is behind as it is.
+		for (const FVector2D& Point : { FVector2D(-62.0, 64.0), FVector2D(-70.0, 66.0), FVector2D(62.0, 62.0), FVector2D(70.0, 64.0) })
+		{
+			Expect(Point, TEXT("A member's middle, outside the glass's rect, is clear glass"));
+		}
+		// The glass's own rect where the shape is not: nothing of the glass.
+		for (const FVector2D& Point : { FVector2D(-2.0, 110.0), FVector2D(14.0, 18.0) })
+		{
+			Expect(Point, TEXT("Its own rect off the shape shows what is behind"));
+		}
+		// The shape's outer ends, sixty units past the glass's rect, a unit and a half in along their straight run: their
+		// edge bends what is behind in from the next square.
+		for (const double Edge : { -89.5, 89.5 })
+		{
+			int32 Moved = 0, Points = 0;
+			for (double Y = 52.0; Y <= 76.0; Y += 2.0)
+			{
+				const FVector2D Point(Edge, Y + 0.5);
+				Moved += FDreamPixelProbe::IsNear(PixelAt(InPixels, InSize, Point), Scene(Point), 6) ? 0 : 1;
+				++Points;
+			}
+			TestTrue(FString::Printf(TEXT("The shape's end at x %.1f, past the glass's rect, is glass: what shows is bent (%d of %d points differ)"), Edge, Moved, Points), Moved >= Points / 2);
+		}
+		// Past the shape's ends, nothing.
+		Expect(FVector2D(-112.0, 64.0), TEXT("Past the shape's left end"));
+		Expect(FVector2D(112.0, 64.0), TEXT("Past its right end"));
 	});
 	EnqueueTearDown(Stage);
 	return true;

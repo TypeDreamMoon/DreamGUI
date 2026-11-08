@@ -13,6 +13,7 @@
 #include "Misc/Paths.h"
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamShapeBlendGroup.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIAdjustment.h"
@@ -21,6 +22,7 @@
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIStylize.h"
 #include "DreamUIRender/DreamUICompositor.h"
+#include "Event/DreamPointerEventData.h"
 #include "Extensions/Effects/DreamAdjustmentLayer.h"
 #include "Extensions/Effects/DreamGlass.h"
 #include "Extensions/Effects/DreamStylizeEffect.h"
@@ -539,6 +541,161 @@ bool FDreamGlassHitTest::RunTest(const FString& Parameters)
 	Glass->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Percentage);
 	Glass->SetCornerRadius(FVector4f(1.0f, 1.0f, 1.0f, 1.0f));
 	TestTrue(TEXT("A percentage of half the smaller side: 1 is a capsule"), Glass->MakeParams().CornerRadii.Equals(FVector4f(50.0f, 50.0f, 50.0f, 50.0f)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGlassShapeBlendTest,
+	"DreamGUI.Glass.GlassInAShapeBlendTakesTheMeltedShapeAndIsDrawnOverAllOfIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamGlassShapeBlendTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBackdropEffectTestLocal;
+	TestEqual(TEXT("The renderer's rows for a melted shape are a shape blend's record"), DreamUIGlassShapeLayout::MaxTexels, DreamUIShapeBlendLayout::MaxTexels);
+	TMap<FString, int64> Defines;
+	if (ReadDefines(*this, TEXT("DreamUIBackdropComposite.usf"), TEXT("DREAMUI_GLASS_"), Defines))
+	{
+		TestEqual(TEXT("...and the shader declares as many"), Defines.FindRef(TEXT("SHAPE_ROWS")), static_cast<int64>(DreamUIGlassShapeLayout::MaxTexels));
+	}
+
+	FStage Stage;
+	if (!TestTrue(TEXT("The stage is set up"), Stage.IsUsable()))
+	{
+		return false;
+	}
+	// Two rect blocks, the left a little up and the right a little down, melted across a gap of 20 (a smooth minimum of 48
+	// sinks 12 there), and reaching well past the glass's own rect, which is narrow and tall.
+	UDreamWidget* Blob = Stage.MakeWidget(TEXT("Blob"), Stage.Root, FVector2D(300.0, 160.0));
+	auto MakeMember = [&Stage, Blob](const TCHAR* InName, FVector2D InPosition)
+	{
+		UDreamWidget* Widget = Stage.MakeWidget(InName, Blob, FVector2D(60.0, 60.0), InPosition);
+		UDreamRectBlock* Block = Widget->CreateNewVisual<UDreamRectBlock>();
+		if (Block != nullptr)
+		{
+			Block->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+			Block->SetCornerRadius(FVector4(8.0, 8.0, 8.0, 8.0));
+			Block->SetBodyColor(FColor(255, 255, 255, 0));
+		}
+		return Block;
+	};
+	UDreamRectBlock* Left = MakeMember(TEXT("Left"), FVector2D(-40.0, 20.0));
+	UDreamRectBlock* Right = MakeMember(TEXT("Right"), FVector2D(40.0, -20.0));
+	UDreamShapeBlendGroup* Blend = Blob->AddComponent<UDreamShapeBlendGroup>();
+	if (!TestNotNull(TEXT("The members"), Left) || !TestNotNull(TEXT("...the second"), Right) || !TestNotNull(TEXT("The group"), Blend))
+	{
+		return false;
+	}
+	Blend->SetSmoothness(48.0f);
+	UDreamWidget* GlassWidget = Stage.MakeWidget(TEXT("Glass"), Stage.Root, FVector2D(60.0, 200.0));
+	UDreamGlass* Glass = GlassWidget->CreateNewVisual<UDreamGlass>();
+	if (!TestNotNull(TEXT("Glass"), Glass))
+	{
+		return false;
+	}
+	Stage.Frames();
+	TestTrue(TEXT("A rounded rect until it is told otherwise"), Glass->FindShapeBlendGroup() == nullptr && Glass->MakeParams().ShapeKind == 0);
+	FVector2D RectMin, RectMax;
+	Glass->GetGeometryBoundsInLocalSpace(RectMin, RectMax);
+
+	Glass->SetShape(EDreamGlassShape::ShapeBlend);
+	Glass->SetShapeBlendGroup(Blob);
+	Stage.Frames();
+	TestTrue(TEXT("It takes the group's shape"), Glass->FindShapeBlendGroup() == Blend);
+	const FDreamUIGlassParams Params = Glass->MakeParams();
+	TestEqual(TEXT("...sent as the second kind"), Params.ShapeKind, 1);
+	TestEqual(TEXT("...a header and four texels a member"), Params.ShapeTexels.Num(), 1 + 2 * DreamUIShapeBlendLayout::MemberTexels);
+
+	// The shape the glass draws is the group's, in the glass's frame: built here by hand from where the members are, +Y down.
+	TArray<FDreamUIShapeBlendMember> Members;
+	for (const FVector2D& Centre : { FVector2D(-40.0, -20.0), FVector2D(40.0, 20.0) })
+	{
+		FDreamUIShapeBlendMember& Member = Members.AddDefaulted_GetRef();
+		Member.Centre = FVector2f(Centre);
+		Member.HalfSize = FVector2f(30.0f, 30.0f);
+		Member.CornerRadii = FVector4f(8.0f, 8.0f, 8.0f, 8.0f);
+	}
+	FDreamUIShapeBlendShape ByHand;
+	FDreamUIShapeBlendMath::Pack(Members, 48.0f, ByHand);
+	int32 Agree = 0, Points = 0, On = 0;
+	for (int32 Y = -100; Y <= 100; Y += 5)
+	{
+		for (int32 X = -130; X <= 130; X += 5)
+		{
+			const bool bByHand = FDreamUIShapeBlendMath::Distance(ByHand.Texels.GetData(), FVector2f(static_cast<float>(X), static_cast<float>(-Y))) <= 0.0f;
+			Agree += Glass->IsPointOnGlass(FVector2D(X, Y)) == bByHand ? 1 : 0;
+			On += bByHand ? 1 : 0;
+			++Points;
+		}
+	}
+	TestEqual(FString::Printf(TEXT("A click is on the glass where the melted shape is, and only there (%d of the points on it)"), On), Agree, Points);
+	TestTrue(TEXT("...the left member's middle, outside the glass's own rect"), Glass->IsPointOnGlass(FVector2D(-40.0, 20.0)));
+	TestTrue(TEXT("...the bridge between the two"), Glass->IsPointOnGlass(FVector2D(0.0, 0.0)));
+	TestFalse(TEXT("...not a point of its own rect the shape is not at"), Glass->IsPointOnGlass(FVector2D(0.0, 90.0)));
+	TestFalse(TEXT("...nor the left member's place mirrored down"), Glass->IsPointOnGlass(FVector2D(-40.0, -40.0)));
+
+	// A ray: on the shape past the glass's rect, a hit; on the rect but off the shape, none.
+	auto Hits = [Glass, GlassWidget](FVector2D InPoint)
+	{
+		const FVector World = GlassWidget->GetWorldTransform().TransformPosition(FVector(0.0, InPoint.X, InPoint.Y));
+		const FVector Normal = GlassWidget->GetWorldTransform().TransformVectorNoScale(FVector(1.0, 0.0, 0.0));
+		FDreamUIHitResult Hit;
+		return Glass->LineTraceUI(Hit, World + Normal * 100.0, World - Normal * 100.0);
+	};
+	TestTrue(TEXT("A ray onto the right member, past the glass's rect, hits it"), Hits(FVector2D(45.0, -20.0)));
+	TestFalse(TEXT("A ray onto its rect where the shape is not misses it"), Hits(FVector2D(0.0, -90.0)));
+	TestFalse(TEXT("The raycaster may not cull it by its rect"), Glass->GetHitGeometryFitsWidgetRect());
+
+	// Drawn over the whole shape: its quad, and the bounds batching reads, are the shape's, grown by the smoothness.
+	FVector2D Min, Max;
+	Glass->GetGeometryBoundsInLocalSpace(Min, Max);
+	TestTrue(*FString::Printf(TEXT("Its quad reaches the members' outer edges and the smoothness past them (%s .. %s)"), *Min.ToString(), *Max.ToString())
+		, Min.X <= -70.0 - 48.0 && Max.X >= 70.0 + 48.0 && Min.Y <= -50.0 - 48.0 && Max.Y >= 50.0 + 48.0);
+	TestTrue(TEXT("...past the glass's own rect"), Min.X < RectMin.X && Max.X > RectMax.X);
+	const FDreamUIDrawCall* PostProcess = Stage.Canvas->GetCurrentDrawCalls().FindByPredicate([](const FDreamUIDrawCall& InDrawCall)
+	{
+		return InDrawCall.Type == EDreamUIDrawCallType::PostProcess;
+	});
+	if (TestNotNull(TEXT("The glass is a draw call"), PostProcess))
+	{
+		TestTrue(*FString::Printf(TEXT("...whose bounds on the canvas are the quad's (%s .. %s)"), *PostProcess->PostProcessBoundsMin2DInCanvasSpace.ToString(), *PostProcess->PostProcessBoundsMax2DInCanvasSpace.ToString())
+			, PostProcess->PostProcessBoundsMin2DInCanvasSpace.X <= -118.0 && PostProcess->PostProcessBoundsMax2DInCanvasSpace.X >= 118.0);
+	}
+
+	// The members move: the shape follows by the next frame, and so does the quad.
+	const FDreamUIShapeBlendShape Before = Glass->GetDrawnShape();
+	Right->GetWidget()->SetAnchoredPosition(FVector2D(90.0, -20.0));
+	Stage.Frames();
+	TestFalse(TEXT("A member moved, the shape the glass draws is another"), Glass->GetDrawnShape() == Before);
+	Glass->GetGeometryBoundsInLocalSpace(Min, Max);
+	TestTrue(TEXT("...and its quad reaches the member where it went"), Max.X >= 120.0 + 48.0);
+	// The glass moves and the group does not: the shape is in the glass's frame, so it moves the other way in it.
+	GlassWidget->SetAnchoredPosition(FVector2D(10.0, 0.0));
+	Stage.Frames();
+	TestTrue(TEXT("The glass moved right, the left member's middle is ten further left in it"), Glass->IsPointOnGlass(FVector2D(-50.0, 20.0)) && !Glass->IsPointOnGlass(FVector2D(-40.0 + 40.0, 20.0 + 40.0)));
+
+	// The group off: the rounded rect again, its quad the rect.
+	Blend->SetBlendEnabled(false);
+	Stage.Frames();
+	TestTrue(TEXT("The group off, the glass is the rounded rect"), Glass->FindShapeBlendGroup() == nullptr && Glass->MakeParams().ShapeKind == 0 && Glass->GetDrawnShape().IsEmpty());
+	Glass->GetGeometryBoundsInLocalSpace(Min, Max);
+	TestTrue(TEXT("...its quad its own rect"), Min.Equals(RectMin) && Max.Equals(RectMax));
+	TestTrue(TEXT("...and a click off its rect misses it"), !Glass->IsPointOnGlass(FVector2D(-40.0, 20.0)));
+	Blend->SetBlendEnabled(true);
+
+	// Glass on the group's own widget takes that group, with no widget named.
+	UDreamWidget* Own = Stage.MakeWidget(TEXT("OwnBlob"), Stage.Root, FVector2D(100.0, 100.0), FVector2D(0.0, 200.0));
+	UDreamGlass* OwnGlass = Own->CreateNewVisual<UDreamGlass>();
+	UDreamWidget* Only = Stage.MakeWidget(TEXT("OnlyMember"), Own, FVector2D(40.0, 40.0), FVector2D(70.0, 0.0));
+	Only->CreateNewVisual<UDreamRectBlock>();
+	UDreamShapeBlendGroup* OwnBlend = Own->AddComponent<UDreamShapeBlendGroup>();
+	if (TestNotNull(TEXT("The second glass"), OwnGlass) && TestNotNull(TEXT("...its group"), OwnBlend))
+	{
+		OwnGlass->SetShape(EDreamGlassShape::ShapeBlend);
+		Stage.Frames();
+		TestTrue(TEXT("Glass on a shape blend group's widget takes that group"), OwnGlass->FindShapeBlendGroup() == OwnBlend);
+		TestTrue(TEXT("...and its member, past the glass's rect, is glass"), OwnGlass->IsPointOnGlass(FVector2D(70.0, 0.0)));
+	}
 	return true;
 }
 
