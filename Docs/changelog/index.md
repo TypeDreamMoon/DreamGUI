@@ -119,6 +119,10 @@ What is on `main` after 1.0.0, and ships with the next version.
   styles under it and the borders of the rect blocks under it (a reveal highlight); `UDreamTiltCard` tilts a widget towards
   the pointer on a spring; `UDreamHoloFoil` draws an image or a rect block with a trading card's foil, its angle of view
   the pointer's or a tilt card's.
+- **Glass in a melted shape.** `UDreamGlass` with `Shape` set to `ShapeBlend` takes the shape a shape blend group melts its
+  rect blocks into — the group on the widget `ShapeBlendGroup` names, or on its own — and is drawn over the whole of it,
+  wherever the members reach, its edge bending what is behind along the melted outline; a click lands on it wherever the
+  shape is. See [Effects on what is behind](../concepts/backdrop-effects.md#glass).
 
 ### Changed
 

@@ -64,7 +64,8 @@ RectBlock 一直有自己的外阴影、内阴影、描边和本体渐变。它�
 组所在控件上的图层样式在同一批像素里围绕融合后的形状绘制。移动子项，形状随之变化。点击落在离点最近的成员上，前提是融合后
 的形状覆盖该点——CPU 用的是着色器同一公式。最多 32 个成员。
 
-`MakeShapeInFrame` 把融合后的形状换到另一个控件的坐标里，供着色器读取（`DreamUIShapeBlend.ush`）。
+`MakeShapeInFrame` 把融合后的形状换到另一个控件的坐标里，供着色器读取（`DreamUIShapeBlend.ush`）：玻璃就是这样从融合组
+取形状的（`UDreamGlass` 的 `Shape` 设为 `ShapeBlend`，见[玻璃](backdrop-effects.md)）。
 
 ## 光与全息箔
 

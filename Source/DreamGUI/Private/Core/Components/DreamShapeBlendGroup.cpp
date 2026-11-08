@@ -103,9 +103,13 @@ void UDreamShapeBlendGroup::GatherMembers(const UDreamWidget* InFrame, TArray<FD
 	}
 }
 
-void UDreamShapeBlendGroup::MakeShapeInFrame(const UDreamWidget* InFrame, FDreamUIShapeBlendShape& OutShape) const
+void UDreamShapeBlendGroup::MakeShapeInFrame(const UDreamWidget* InFrame, FDreamUIShapeBlendShape& OutShape, FBox2f* OutBounds) const
 {
 	OutShape.Texels.Reset();
+	if (OutBounds != nullptr)
+	{
+		*OutBounds = FBox2f(ForceInit);
+	}
 	if (!IsActive())
 	{
 		return;
@@ -115,6 +119,10 @@ void UDreamShapeBlendGroup::MakeShapeInFrame(const UDreamWidget* InFrame, FDream
 	if (Gathered.Num() > 0)
 	{
 		FDreamUIShapeBlendMath::Pack(Gathered, Smoothness, OutShape);
+		if (OutBounds != nullptr)
+		{
+			*OutBounds = FDreamUIShapeBlendMath::Bounds(Gathered, Smoothness);
+		}
 	}
 }
 

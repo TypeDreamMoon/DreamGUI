@@ -78,7 +78,8 @@ with the built-in shader or its material, batched as any rect block is. A layer 
 the melted shape in the same pixels. Move the children and the shape follows. A click lands on the member nearest it,
 wherever the melted shape covers the point -- the shader's formula, on the CPU. Up to 32 members.
 
-`MakeShapeInFrame` gives the melted shape in another widget's space, for a shader to read (`DreamUIShapeBlend.ush`).
+`MakeShapeInFrame` gives the melted shape in another widget's space, for a shader to read (`DreamUIShapeBlend.ush`): glass
+takes its shape from a group this way (`UDreamGlass`, `Shape` `ShapeBlend`; see [Glass](backdrop-effects.md#glass)).
 
 ## Light and foil
 

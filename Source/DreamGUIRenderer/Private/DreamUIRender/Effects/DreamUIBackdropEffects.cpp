@@ -138,7 +138,9 @@ public:
 	class FEffect : SHADER_PERMUTATION_RANGE_INT("DREAMUI_BACKDROP_EFFECT", 0, 3);
 	class FBlendDepth : SHADER_PERMUTATION_BOOL("LEXUI_BLEND_DEPTH");
 	class FMask : SHADER_PERMUTATION_BOOL("LEXUI_MASK");
-	using FPermutationDomain = TShaderPermutationDomain<FEffect, FBlendDepth, FMask>;
+	/** Glass in a shape blend's melted shape: the one permutation that carries the shape's rows. */
+	class FGlassShape : SHADER_PERMUTATION_BOOL("DREAMUI_GLASS_SHAPE_BLEND");
+	using FPermutationDomain = TShaderPermutationDomain<FEffect, FBlendDepth, FMask, FGlassShape>;
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_BackdropTex)
@@ -175,9 +177,15 @@ public:
 		SHADER_PARAMETER(FVector4f, DreamUI_GlassTone)
 		SHADER_PARAMETER(FVector4f, DreamUI_GlassHighlight)
 		SHADER_PARAMETER(FVector4f, DreamUI_GlassLight)
+		SHADER_PARAMETER_ARRAY(FVector4f, DreamUI_GlassShapeRows, [DreamUIGlassShapeLayout::MaxTexels])
 	END_SHADER_PARAMETER_STRUCT()
 
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		// Only glass takes a melted shape.
+		const FPermutationDomain Permutation(Parameters.PermutationId);
+		return !Permutation.Get<FGlassShape>() || Permutation.Get<FEffect>() == 2;
+	}
 };
 
 IMPLEMENT_GLOBAL_SHADER(FDreamUIBackdropCompositeVS, "/Plugin/DreamGUI/Private/DreamUIBackdropComposite.usf", "MainVS", SF_Vertex);
@@ -567,10 +575,12 @@ void DreamUIBackdropPasses::DrawComposite(const FDreamUIPostProcessContext& InCo
 				return InTexture != nullptr ? InTexture : InFallback->TextureRHI.GetReference();
 			};
 			RHICmdList.SetViewport(Viewport.Min.X, Viewport.Min.Y, 0.0f, Viewport.Max.X, Viewport.Max.Y, 1.0f);
+			const bool bGlassShape = Composite.Effect == 2 && Composite.Glass.ShapeKind == 1 && Composite.Glass.ShapeTexels.Num() > 0;
 			FDreamUIBackdropCompositePS::FPermutationDomain Permutation;
 			Permutation.Set<FDreamUIBackdropCompositePS::FEffect>(Composite.Effect);
 			Permutation.Set<FDreamUIBackdropCompositePS::FBlendDepth>(bWorld);
 			Permutation.Set<FDreamUIBackdropCompositePS::FMask>(Mask.IsValid());
+			Permutation.Set<FDreamUIBackdropCompositePS::FGlassShape>(bGlassShape);
 			TShaderMapRef<FDreamUIBackdropCompositeVS> VertexShader(ShaderMap);
 			TShaderMapRef<FDreamUIBackdropCompositePS> PixelShader(ShaderMap, Permutation);
 
@@ -629,6 +639,15 @@ void DreamUIBackdropPasses::DrawComposite(const FDreamUIPostProcessContext& InCo
 			Parameters.DreamUI_GlassTone = FVector4f(Glass.Saturation, Glass.Brightness, Glass.Opacity, Glass.Dispersion);
 			Parameters.DreamUI_GlassHighlight = Glass.HighlightColor;
 			Parameters.DreamUI_GlassLight = FVector4f(Glass.HighlightWidth, Glass.LightAngle, Glass.ShadowWidth, Glass.ShadowStrength);
+			if (bGlassShape)
+			{
+				// The melted shape's rows; past its members the header's count keeps the shader from reading.
+				const int32 Count = FMath::Min(Glass.ShapeTexels.Num(), DreamUIGlassShapeLayout::MaxTexels);
+				for (int32 Row = 0; Row < Count; ++Row)
+				{
+					Parameters.DreamUI_GlassShapeRows[Row] = Glass.ShapeTexels[Row];
+				}
+			}
 			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 
 			FBufferRHIRef VertexBuffer = UE::RHIResourceUtils::CreateVertexBufferFromArray(RHICmdList, TEXT("DreamUIBackdropComposite"), EBufferUsageFlags::Volatile, MakeConstArrayView(Vertices));

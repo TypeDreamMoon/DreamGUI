@@ -74,7 +74,7 @@ drawn full size or into an output render target; those fall back to the uniform 
 ## Glass
 
 `UDreamGlass` is a rounded rect of its widget's size, its corners a rect block's (`CornerRadius`, in units or as a fraction
-of half the smaller side). A click outside the rounded corners misses it.
+of half the smaller side), or a shape blend's melted shape (below). A click outside the shape misses it.
 
 | Group | Properties |
 | --- | --- |
@@ -84,8 +84,17 @@ of half the smaller side). A click outside the rounded corners misses it.
 | Highlight | `HighlightColor`, `HighlightStrength` and `HighlightWidth` along the edge facing `LightAngle` (0 from above, clockwise, and a little on the far side); `ShadowWidth`, `ShadowStrength` inside the edge |
 
 Its flat middle -- further in than `EdgeWidth` -- shows what is behind as it is (frost and tone aside). Its alpha fades it.
-The shape is measured in one place, so a shape another visual gives (several rounded rects melted into one) can take its
-place later.
+
+With `Shape` set to `ShapeBlend` the glass takes the shape a shape blend group melts its rect blocks into (see
+[Shape blends](layer-styles.md#shape-blends)): the group on the widget `ShapeBlendGroup` names, or on the glass's own widget
+when it names none. The glass is drawn over the whole melted shape, wherever its members reach, its own rect only the frame
+the shape is measured in; a click lands on it wherever the shape is. The members still draw the shape in their own colours,
+so rect blocks with a transparent body leave the glass alone. Move them and the glass follows by the next frame. While the
+group is off, or has no rect block among its children, the glass is its rounded rect.
+
+Measuring the melted shape is a pass over every member, three times a pixel (the distance and its slope), so a large glass
+over many members costs more than a rounded rect; plain glass does not carry the shape's 2 KB of constants, which only its
+own shader permutation reads. A quad that grows or shrinks as members move rebuilds the canvas's draw calls that frame.
 
 ## Stylize effect
 

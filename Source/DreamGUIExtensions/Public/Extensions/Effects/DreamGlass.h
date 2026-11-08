@@ -4,8 +4,12 @@
 
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisualPostProcess.h"
+#include "Core/DreamUIShapeBlend.h"
 #include "DreamUIRender/DreamUIBackdropEffects.h"
 #include "DreamGlass.generated.h"
+
+class UDreamShapeBlendGroup;
+class UDreamUIManagerWorldSubsystem;
 
 /** Where glass's shape comes from. */
 UENUM(BlueprintType)
@@ -13,6 +17,12 @@ enum class EDreamGlassShape : uint8
 {
 	/** A rect of the widget's size, its corners rounded as a rect block's are. */
 	RoundedRect,
+	/**
+	 * The shape a shape blend group melts its rect blocks into (UDreamShapeBlendGroup): ShapeBlendGroup's, or this widget's
+	 * own. The glass is drawn over the whole of it, wherever it reaches, its own rect only the frame it is measured in; while
+	 * the group is off or has no rect block, the glass is the rounded rect.
+	 */
+	ShapeBlend,
 };
 
 /** How glass rises from its edge: the profile its refraction follows. */
@@ -30,8 +40,8 @@ enum class EDreamGlassProfile : uint8
 /**
  * Refractive glass: what is behind it seen through a slab whose edge bends the light in, the red and blue channels bending a
  * little apart; optionally frosted, tinted, its saturation and brightness changed; an edge highlight from a light at an
- * angle and an inner shadow. Its shape is a rounded rect of its widget's size, its corners as a rect block's; a click
- * outside the rounded rect misses it.
+ * angle and an inner shadow. Its shape is a rounded rect of its widget's size, its corners as a rect block's, or the shape
+ * a shape blend group melts its rect blocks into (EDreamGlassShape::ShapeBlend); a click outside the shape misses it.
  *
  * Drawn by DreamGUI's own renderer, as the other effects that read what is behind are. Its alpha (its colour's, its
  * widgets' opacity) fades it.
@@ -44,6 +54,15 @@ class DREAMGUIEXTENSIONS_API UDreamGlass : public UDreamVisualPostProcess
 public:
 	UDreamGlass(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetShape(EDreamGlassShape Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI")
+	EDreamGlassShape GetShape() const { return Shape; }
+	/** The widget whose shape blend group the glass takes its shape from (Shape ShapeBlend); none for this widget's own. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetShapeBlendGroup(UDreamWidget* Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI")
+	UDreamWidget* GetShapeBlendGroup() const { return ShapeBlendGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetCornerRadius(const FVector4f& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -71,22 +90,43 @@ public:
 
 	/** What the glass draws with, as the composite shader takes it: for a test, or a tool, to look at. */
 	FDreamUIGlassParams MakeParams()const;
-	/** Whether a point of the widget's rect (its local space, from its centre, +Y up) is on the glass. */
+	/**
+	 * Whether a point of the widget's local space, from its rect's centre (+Y up), is on the glass: inside the rounded rect, or
+	 * on the melted shape, measured now as the shader measures it.
+	 */
 	bool IsPointOnGlass(const FVector2D& InFromCentre)const;
+	/** The shape blend group the glass takes its shape from now: Shape ShapeBlend and the group active; else null. */
+	UDreamShapeBlendGroup* FindShapeBlendGroup()const;
+	/** The melted shape the glass draws now, in its frame, and where it reaches: empty while it is the rounded rect. */
+	const FDreamUIShapeBlendShape& GetDrawnShape()const { return DrawnShape; }
+	const FBox2f& GetDrawnShapeBounds()const { return DrawnShapeBounds; }
+	/** The group's shape made again in this widget's frame, now: what every frame does while Shape is ShapeBlend. */
+	void RefreshShapeBlend();
 
 	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	virtual bool GetHitGeometryFitsWidgetRect()const override;
+	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
 
 protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
+	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void SendRegionVertexDataToRenderProxy()override;
 
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass")
+	UPROPERTY(EditAnywhere, BlueprintSetter = "SetShape", Category = "DreamGUI|Glass")
 	EDreamGlassShape Shape = EDreamGlassShape::RoundedRect;
+	/**
+	 * The widget whose shape blend group (UDreamShapeBlendGroup) the glass takes its shape from: none for this widget's own.
+	 * Its rect blocks draw the melted shape too, in their colours; transparent ones leave only the glass.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass", meta = (EditCondition = "Shape==EDreamGlassShape::ShapeBlend", EditConditionHides))
+	TWeakObjectPtr<UDreamWidget> ShapeBlendGroup;
 	/** As a rect block's: in units, or as a fraction of half the smaller side. */
 	UPROPERTY(EditAnywhere, BlueprintSetter = "SetCornerRadius", Category = "DreamGUI|Glass")
 	FVector4f CornerRadius = FVector4f(24.0f, 24.0f, 24.0f, 24.0f);
@@ -134,4 +174,17 @@ private:
 	void SendGlassToRenderProxy();
 	/** The corners' radii in units, as the unit mode resolves them at the widget's size. */
 	FVector4f GetResolvedCornerRadius()const;
+	/** Whether the glass draws a melted shape now. */
+	bool DrawsShapeBlend()const { return !DrawnShape.IsEmpty() && DrawnShapeBounds.bIsValid; }
+	/** Listens for the frame's last moment before the canvases update while Shape is ShapeBlend, and makes the shape again. */
+	void ListenForShapeBlend();
+	void StopListeningForShapeBlend();
+	/** The trace onto the widget's plane, wherever on it, tested against the melted shape. */
+	bool LineTraceShapeBlend(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
+
+	/** The melted shape last sent, in this widget's frame (units from its rect's centre, +Y down), and its bounds there. */
+	FDreamUIShapeBlendShape DrawnShape;
+	FBox2f DrawnShapeBounds = FBox2f(ForceInit);
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> ListenedManager;
+	FDelegateHandle BeforeCanvasesUpdateHandle;
 };

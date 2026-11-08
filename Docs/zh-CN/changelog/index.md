@@ -62,6 +62,9 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   并集、相减或相交——由第一个成员用一个四边形画出，颜色按成员混合，组上的图层样式围绕它绘制；点击按同一公式落在最近的成员上。
 - **指针光、倾斜卡和全息箔。** `UDreamPointerLight` 跟随指针，照亮它下面图层样式的斜面和 RectBlock 的描边（Reveal 高光）；
   `UDreamTiltCard` 让控件带弹簧地朝指针倾斜；`UDreamHoloFoil` 给图片或 RectBlock 画上闪卡的全息箔，视角取指针或倾斜卡。
+- **融合形状里的玻璃。** `UDreamGlass` 的 `Shape` 设为 `ShapeBlend` 时取形状融合组把 RectBlock 融成的形状——`ShapeBlendGroup`
+  指定的控件上的，或它自己控件上的——画满整个形状，成员伸到哪里画到哪里，边缘沿融合后的轮廓折射背后画面；点击落在形状上即命中。
+  见[作用于背后画面的效果](../concepts/backdrop-effects.md)。
 
 <a id="changed"></a>
 

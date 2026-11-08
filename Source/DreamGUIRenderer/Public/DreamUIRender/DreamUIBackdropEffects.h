@@ -128,14 +128,30 @@ struct FDreamUIBlurStrengthMap
 	int32 MaxLevel = 5;
 };
 
+/**
+ * The most texels a melted shape glass takes (FDreamUIGlassParams::ShapeTexels): a shape blend's header and four for each of
+ * its members, at most 32 -- DreamUIShapeBlendLayout::MaxTexels, which this module cannot see; DreamGlass.cpp holds the two
+ * to each other, and DreamUIBackdropComposite.usf declares its rows with the same count.
+ */
+namespace DreamUIGlassShapeLayout
+{
+	inline constexpr int32 MaxTexels = 129;
+}
+
 /** What glass draws (UDreamGlass), as the composite shader takes it. */
 struct FDreamUIGlassParams
 {
 	/**
-	 * The shape: 0 a rounded rect of the element's size. A shape another visual gives (the smooth union of several, later)
-	 * is the next kind; the shader measures it in one place, DreamUIGlass_Distance.
+	 * The shape: 0 a rounded rect of the element's size; 1 the shape a shape blend group melts its rect blocks into, as
+	 * ShapeTexels hold it. The shader measures it in one place, DreamUIGlass_Distance, the second kind in a permutation of
+	 * its own that alone carries the texels.
 	 */
 	int32 ShapeKind = 0;
+	/**
+	 * Kind 1: the melted shape, as DreamUIShapeBlend.ush reads it (a header texel, four a member), in the element's frame --
+	 * units from its rect's centre, +Y down. At most DreamUIGlassShapeLayout::MaxTexels.
+	 */
+	TArray<FVector4f> ShapeTexels;
 	/** The corners' radii in units, in a rect block's order (UDreamRectBlock::CornerRadius, as its unit mode resolves it). */
 	FVector4f CornerRadii = FVector4f(16.0f, 16.0f, 16.0f, 16.0f);
 	/** Refraction: the band along the edge that bends, how far it bends at the edge (units), the profile (0 squircle, 1 circle, 2 linear). */

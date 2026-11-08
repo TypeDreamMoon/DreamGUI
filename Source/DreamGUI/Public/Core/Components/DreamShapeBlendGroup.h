@@ -52,8 +52,9 @@ public:
 	/**
 	 * The melted shape in InFrame's space -- units from InFrame's rect's centre, +Y down, as a rect block measures its own
 	 * shape -- for a shader to read (DreamUIShapeBlend.ush): what glass takes for its shape. Empty when the group is not active.
+	 * OutBounds, when given, is where the shape can reach in the same space: its members' bounds grown by the smoothness.
 	 */
-	void MakeShapeInFrame(const class UDreamWidget* InFrame, FDreamUIShapeBlendShape& OutShape) const;
+	void MakeShapeInFrame(const class UDreamWidget* InFrame, FDreamUIShapeBlendShape& OutShape, FBox2f* OutBounds = nullptr) const;
 	/** Whether InWorldPoint, on the members' plane, is on the melted shape where InMember is the member nearest it. */
 	bool HitTest(const UDreamRectBlock* InMember, const FVector& InWorldPoint) const;
 
