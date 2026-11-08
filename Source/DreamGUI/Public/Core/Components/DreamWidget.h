@@ -1769,8 +1769,25 @@ public:
 	UDreamLayerGroup* GetLayerGroup()const;
 	/** Set by the layer group as it registers with this widget, and cleared as it unregisters. */
 	void SetLayerGroup(UDreamLayerGroup* InGroup);
+	/**
+	 * The mask this widget's clip is drawn and hit-tested with: the one a behaviour drives on it (SetDrivenClipMask), or
+	 * Clip Mask. While a mask is driven, a widget that does not clip to its bounds does -- Inherit as Clip To Bounds,
+	 * Disabled as Clip To Bounds Without Intersecting -- so that there is a clip for the mask to cut.
+	 */
+	const FDreamClipMask& GetEffectiveClipMask()const;
+	/**
+	 * For a behaviour that drives this widget's clip mask in place of Clip Mask while it runs (UDreamMaskTransition). InMask
+	 * is read on every update of the clip, and must stay where it is for as long as InDriver drives it; nothing of it is
+	 * saved, shown or written into Clip Mask. A null InMask stops InDriver's driving, and leaves another driver's alone.
+	 */
+	void SetDrivenClipMask(const UObject* InDriver, const FDreamClipMask* InMask);
+	/** The driven mask changed, and with bInTextureChanged the texture it reads: the clip takes it on its next update. */
+	void MarkDrivenClipMaskChanged(bool bInTextureChanged);
+	bool IsClipMaskDriven()const;
 private:
 	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	TWeakObjectPtr<const UObject> ClipMaskDriver;
+	const FDreamClipMask* DrivenClipMask = nullptr;
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

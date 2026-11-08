@@ -272,7 +272,19 @@ void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSh
 	{
 		ParentClip = Parent->ClipData.Pin();
 	}
-	const EDreamWidgetClipping EffectiveClipping = GetClipping();
+	EDreamWidgetClipping EffectiveClipping = GetClipping();
+	// A driven mask needs a clip of this widget's own to cut.
+	if (IsClipMaskDriven())
+	{
+		if (EffectiveClipping == EDreamWidgetClipping::Inherit)
+		{
+			EffectiveClipping = EDreamWidgetClipping::ClipToBounds;
+		}
+		else if (EffectiveClipping == EDreamWidgetClipping::Disabled)
+		{
+			EffectiveClipping = EDreamWidgetClipping::ClipToBoundsWithoutIntersecting;
+		}
+	}
 	TSharedPtr<FDreamUIClipData> Current = ClipData.Pin();
 	const bool bOwnsClip = Current.IsValid() && Current->GetWidget() == this;
 	/**
@@ -340,6 +352,48 @@ UDreamLayerGroup* UDreamWidget::GetLayerGroup() const
 void UDreamWidget::SetLayerGroup(UDreamLayerGroup* InGroup)
 {
 	LayerGroup = InGroup;
+}
+
+bool UDreamWidget::IsClipMaskDriven() const
+{
+	return DrivenClipMask != nullptr && ClipMaskDriver.IsValid();
+}
+
+const FDreamClipMask& UDreamWidget::GetEffectiveClipMask() const
+{
+	return IsClipMaskDriven() ? *DrivenClipMask : ClipMask;
+}
+
+void UDreamWidget::SetDrivenClipMask(const UObject* InDriver, const FDreamClipMask* InMask)
+{
+	if (InMask == nullptr && ClipMaskDriver.Get() != InDriver)
+	{
+		return;
+	}
+	const bool bWasDriven = IsClipMaskDriven();
+	const UTexture* OldTexture = GetEffectiveClipMask().GetActiveTexture();
+	ClipMaskDriver = InMask != nullptr ? InDriver : nullptr;
+	DrivenClipMask = InMask;
+	// Starting or stopping changes whether this widget clips at all (GetClipping does not say, UpdateClip does), so the
+	// clip is made again; and what it reads, so the draw calls are too.
+	MarkClipDirty(bWasDriven != IsClipMaskDriven());
+	if (bWasDriven != IsClipMaskDriven() || OldTexture != GetEffectiveClipMask().GetActiveTexture())
+	{
+		MarkClipMaskTexturesChanged();
+	}
+}
+
+void UDreamWidget::MarkDrivenClipMaskChanged(bool bInTextureChanged)
+{
+	if (!IsClipMaskDriven())
+	{
+		return;
+	}
+	MarkClipDirty(false);
+	if (bInTextureChanged)
+	{
+		MarkClipMaskTexturesChanged();
+	}
 }
 
 void UDreamWidget::UpdateVisual() const

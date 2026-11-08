@@ -155,7 +155,7 @@ bool FDreamUIClipData::DescribeLevel(FLevel& OutLevel) const
 		OutLevel.CentreToWorld = DreamUIClipDataLocal::CentreToWorld(GetClipperToWorldMatrix(Owner), Centre);
 		OutLevel.HalfSize = (FVector2f(Owner->GetWidth(), Owner->GetHeight()) + ClippingMargin.GetDesiredSize2f()) * 0.5f;
 		OutLevel.CornerRadius = Owner->GetClippingCornerRadius();
-		const FDreamClipMask& Mask = Owner->GetClipMask();
+		const FDreamClipMask& Mask = Owner->GetEffectiveClipMask();
 		if (Mask.IsActive())
 		{
 			OutLevel.Mask = &Mask;
@@ -230,7 +230,7 @@ void FDreamUIClipData::GetMaskTextures(FDreamUIMaskTextures& OutTextures) const
 		}
 		if (Node->Kind == EKind::Bounds)
 		{
-			const FDreamClipMask& Mask = Owner->GetClipMask();
+			const FDreamClipMask& Mask = Owner->GetEffectiveClipMask();
 			Textures.Add(Mask.IsActive() ? Mask.GetActiveTexture() : nullptr);
 		}
 		else
