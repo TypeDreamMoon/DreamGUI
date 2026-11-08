@@ -18,6 +18,9 @@ class UDreamCanvas;
 class UDreamVisualCustomRaycast;
 class UDreamVisual;
 struct FDreamUICompositeDesc;
+class FDreamUIImageEffect;
+/** Repeated from DreamUIBackdropEffects.h rather than included, as FDreamVisualPostProcessRenderProxyPtr is: the same type. */
+using FDreamUIImageEffectRef = TSharedPtr<const FDreamUIImageEffect, ESPMode::ThreadSafe>;
 
 /**
  * This component is only used when DreamVisual's RaycastType = Custom
@@ -194,9 +197,20 @@ public:
 	 */
 	virtual bool GetCompositeSource(FDreamUICompositeDesc& OutDesc)const { return false; }
 	bool DrawsThroughComposite()const { return bDrawsThroughComposite; }
+	/**
+	 * An effect on the subtree of the widget this visual is on: the widget and its children are drawn as a group, and the
+	 * group's picture goes through the effect before it is put down (FDreamUICompositeDesc::Effect) -- an adjustment layer
+	 * or a stylize effect whose target is its own children. Asked as the canvas makes its draw calls and every frame after,
+	 * while DrawsChildrenThroughEffect says so, and only on a canvas that draws groups apart. The same effect, asked again,
+	 * until it changes. Null for none.
+	 */
+	virtual FDreamUIImageEffectRef GetChildrenEffect()const { return nullptr; }
+	bool DrawsChildrenThroughEffect()const { return bDrawsChildrenThroughEffect; }
 protected:
 	/** See GetCompositeSource: a subclass sets it while it has a composite to give. */
 	bool bDrawsThroughComposite = false;
+	/** See GetChildrenEffect: a subclass sets it while it has an effect for its children, and asks its canvas to rebuild. */
+	bool bDrawsChildrenThroughEffect = false;
 public:
 	/**
 	 * The colour this visual is drawn with: Color, times the content tint of every widget above it

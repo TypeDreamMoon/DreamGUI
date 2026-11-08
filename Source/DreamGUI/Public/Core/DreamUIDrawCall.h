@@ -77,6 +77,8 @@ public:
 	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
 	/** The element a group drawn already is for (UDreamVisual::GetCompositeSource): what its composite is read from every frame. */
 	TWeakObjectPtr<UDreamVisual> CompositeVisual;
+	/** The visual whose effect a group's picture goes through (UDreamVisual::GetChildrenEffect): read every frame. */
+	TWeakObjectPtr<UDreamVisual> EffectVisual;
 
 	/**
 	 * The widget the entry was prepared from, as a key: the canvas finds the entry's place in its widget list with it on
@@ -188,6 +190,7 @@ public:
 	TSharedPtr<const FDreamUICompositeDesc> Composite;
 	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
 	TWeakObjectPtr<UDreamVisual> CompositeVisual;
+	TWeakObjectPtr<UDreamVisual> EffectVisual;
 	bool bCompositeBegin = false;
 	bool IsGroupMarker() const { return Type == EDreamUIDrawCallType::GroupBegin || Type == EDreamUIDrawCallType::GroupEnd; }
 public:

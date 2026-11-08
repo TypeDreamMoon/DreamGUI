@@ -697,6 +697,10 @@ public:
 				, Textures = InDesc.Textures.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList) mutable
 			{
 				Desc.Textures.ResolveTextures_RenderThread(Textures);
+				if (Desc.Effect.IsValid())
+				{
+					Desc.Effect->ResolveTextures_RenderThread();
+				}
 				SectionProxy->bBegin = bInBegin;
 				SectionProxy->Desc = MoveTemp(Desc);
 				SectionProxy->bCanRender = true;
@@ -2149,7 +2153,7 @@ void UDreamUIMeshComponent::SetGroupSectionComposite(const TSharedPtr<FDreamUIRe
 		&& Sent.WorldBounds == InDesc.WorldBounds && Sent.CanvasToWorld.Equals(InDesc.CanvasToWorld, 0.0) && Sent.MaskClipCoordinate == InDesc.MaskClipCoordinate
 		&& Sent.Textures.ClipDataTexture == InDesc.Textures.ClipDataTexture && Sent.Textures.MaskTexture0 == InDesc.Textures.MaskTexture0
 		&& Sent.Textures.MaskTexture1 == InDesc.Textures.MaskTexture1 && Sent.Textures.MainTexture == InDesc.Textures.MainTexture
-		&& Sent.bExternal == InDesc.bExternal && Sent.CanvasToUV.Equals(InDesc.CanvasToUV, 0.0f);
+		&& Sent.bExternal == InDesc.bExternal && Sent.CanvasToUV.Equals(InDesc.CanvasToUV, 0.0f) && Sent.Effect == InDesc.Effect;
 	if (bSame)
 	{
 		return;

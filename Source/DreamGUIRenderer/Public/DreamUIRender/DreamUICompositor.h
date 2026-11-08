@@ -6,6 +6,7 @@
 #include "RenderGraphFwd.h"
 #include "RHIResources.h"
 #include "RendererInterface.h"
+#include "DreamUIRender/DreamUIBackdropEffects.h"
 #include "DreamUIRender/DreamUIBaseShaders.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
 
@@ -55,6 +56,11 @@ struct FDreamUICompositeDesc
 	 */
 	bool bExternal = false;
 	FMatrix44f CanvasToUV = FMatrix44f::Identity;
+	/**
+	 * An effect the group's picture goes through before it is put down: an adjustment or a stylize effect whose target is
+	 * the subtree of the widget it is on (UDreamVisual::GetChildrenEffect). Resolved by the render command that delivers it.
+	 */
+	FDreamUIImageEffectRef Effect;
 
 	bool HasMask() const { return MaskClipCoordinate > 0.5f; }
 	/** Whether the closing marker reads what is behind, rather than leaving the blend to the hardware. */
@@ -140,6 +146,8 @@ public:
 
 	/** How many groups were put down in the recording: for the frame's counters. */
 	int32 GetCompositeCount() const { return CompositeCount; }
+	/** The world's time, which a group's effect that moves is given. */
+	void SetTimeSeconds(float InSeconds) { TimeSeconds = InSeconds; }
 
 private:
 	/** Puts the top frame down onto the one under it and pops it. */
@@ -157,4 +165,5 @@ private:
 	bool bLinearTarget = false;
 	ERHIFeatureLevel::Type FeatureLevel;
 	int32 CompositeCount = 0;
+	float TimeSeconds = 0.0f;
 };

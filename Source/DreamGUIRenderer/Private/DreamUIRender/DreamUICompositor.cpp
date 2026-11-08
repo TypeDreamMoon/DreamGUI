@@ -93,6 +93,29 @@ namespace DreamUICompositorLocal
 	{
 		return EnumHasAnyFlags(InLike->Desc.Flags, TexCreate_SRGB) ? TexCreate_SRGB : TexCreate_None;
 	}
+
+	/** How many of the view's pixels a unit of the group's canvas is, at the middle of what the group covers: 1 where unknown. */
+	float PixelsPerCanvasUnit(const FDreamUICompositeDesc& InDesc, const FMatrix& InWorldToClip, const FIntRect& InViewRect)
+	{
+		const FVector Centre = InDesc.WorldBounds.IsValid ? InDesc.WorldBounds.GetCenter() : InDesc.CanvasToWorld.GetOrigin();
+		auto ToPixel = [&InWorldToClip, &InViewRect](const FVector& InWorld, FVector2D& OutPixel)
+		{
+			const FVector4 Clip = InWorldToClip.TransformFVector4(FVector4(InWorld, 1.0));
+			if (Clip.W <= UE_KINDA_SMALL_NUMBER)
+			{
+				return false;
+			}
+			OutPixel = FVector2D((Clip.X / Clip.W * 0.5 + 0.5) * InViewRect.Width(), (0.5 - Clip.Y / Clip.W * 0.5) * InViewRect.Height());
+			return true;
+		};
+		FVector2D A, B, C;
+		if (!ToPixel(Centre, A) || !ToPixel(Centre + InDesc.CanvasToWorld.TransformVector(FVector(0.0, 1.0, 0.0)), B)
+			|| !ToPixel(Centre + InDesc.CanvasToWorld.TransformVector(FVector(0.0, 0.0, 1.0)), C))
+		{
+			return 1.0f;
+		}
+		return static_cast<float>(FMath::Max((FVector2D::Distance(A, B) + FVector2D::Distance(A, C)) * 0.5, 1e-3));
+	}
 }
 
 FIntRect FDreamUICompositor::ProjectBounds(const FBox& InWorldBox, const FMatrix& InWorldToClip, const FIntRect& InViewRect)
@@ -333,6 +356,20 @@ void FDreamUICompositeStack::PopAndComposite()
 	const FVector4f ViewportRect(ParentViewport.Min.X, ParentViewport.Min.Y, FMath::Max(ParentViewport.Width(), 1), FMath::Max(ParentViewport.Height(), 1));
 	const bool bMask = Desc.HasMask() && Desc.Textures.ClipDataTextureRHI.IsValid();
 	FRDGTextureRef GroupTexture = Top.Texture;
+	if (Desc.Effect.IsValid() && !bExternal)
+	{
+		// The group's picture through its effect first: the effect's own opacity and mode mix it with what it was, and the
+		// group puts down what comes out.
+		FDreamUIImageEffectContext EffectContext;
+		EffectContext.bLinear = bLinearTarget;
+		EffectContext.bOpaque = false;
+		EffectContext.TimeSeconds = TimeSeconds;
+		EffectContext.Origin = Top.Origin;
+		EffectContext.Frame = FVector4f(0.0f, 0.0f, static_cast<float>(Top.Rect.Width()), static_cast<float>(Top.Rect.Height()));
+		EffectContext.PixelScale = DreamUICompositorLocal::PixelsPerCanvasUnit(Desc, WorldToClip, ViewRect);
+		GroupTexture = Desc.Effect->Apply_RenderThread(GraphBuilder, GetGlobalShaderMap(FeatureLevel), GroupTexture, EffectContext);
+		PassParameters->GroupTexture = GroupTexture;
+	}
 	const uint8 NumSamples = Parent.NumSamples;
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("DreamUIComposite"),

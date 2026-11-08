@@ -2956,6 +2956,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				MarkerDrawCall.Composite = RenderData.Composite;
 				MarkerDrawCall.LayerGroup = RenderData.LayerGroup;
 				MarkerDrawCall.CompositeVisual = RenderData.CompositeVisual;
+				MarkerDrawCall.EffectVisual = RenderData.EffectVisual;
 				MarkerDrawCall.bCompositeBegin = RenderData.Type == EDreamUIDrawCallType::GroupBegin;
 				InOutUIDrawCallList.Add(MoveTemp(MarkerDrawCall));
 				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
@@ -4891,11 +4892,17 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		const FDreamUIGeometry& Geometry = *InEntry.BatchMeshGeometry;
 		return !DreamUIBlend::IsMaterialDecided(Geometry.BlendMode) && (Geometry.Material.IsValid() || !bUseBuiltInShader);
 	};
+	// A visual whose effect works on its own widget's subtree: that subtree is a group, through the effect.
+	auto ChildrenEffectVisualOf = [](const UDreamWidget* InWidget) -> UDreamVisual*
+	{
+		UDreamVisual* Visual = InWidget->GetVisual();
+		return Visual != nullptr && Visual->DrawsChildrenThroughEffect() ? Visual : nullptr;
+	};
 	bool bAnyWidget = false;
 	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
 	{
 		if (IsValid(Widget) && Widget->GetRenderCanvas() == this
-			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow()))
+			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow() || ChildrenEffectVisualOf(Widget) != nullptr))
 		{
 			bAnyWidget = true;
 			break;
@@ -4973,6 +4980,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		EOrder Order = EOrder::LayerGroup;
 		TSharedPtr<FDreamUICompositeDesc> Desc;
 		TWeakObjectPtr<UDreamLayerGroup> Group;
+		TWeakObjectPtr<UDreamVisual> EffectVisual;
 		TObjectKey<UDreamWidget> Widget;
 	};
 	TArray<FComposite> Composites;
@@ -5000,13 +5008,21 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 			{
 				continue;
 			}
-			if (UDreamLayerGroup* Group = Widget->GetLayerGroup())
+			// A layer group drawn apart, and an effect on the widget's own subtree: one group, the effect run on its picture.
+			UDreamLayerGroup* Group = Widget->GetLayerGroup();
+			UDreamVisual* EffectVisual = ChildrenEffectVisualOf(Widget);
+			if ((Group != nullptr && Group->IsIsolated()) || EffectVisual != nullptr)
 			{
-				if (Group->IsIsolated())
+				FComposite& Composite = AddComposite(Index, SubtreeEnd[Index] - 1, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
+				if (Group != nullptr && Group->IsIsolated())
 				{
-					FComposite& Composite = AddComposite(Index, SubtreeEnd[Index] - 1, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
 					Composite.Group = Group;
 					Group->FillComposite(*Composite.Desc, this);
+				}
+				if (EffectVisual != nullptr)
+				{
+					Composite.EffectVisual = EffectVisual;
+					Composite.Desc->Effect = EffectVisual->GetChildrenEffect();
 				}
 			}
 			// The first of the widgets that clip to one layer below that no clip level follows: the layer and they make a
@@ -5108,6 +5124,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		FDreamUIRenderData Marker(bInBegin ? EDreamUIDrawCallType::GroupBegin : EDreamUIDrawCallType::GroupEnd);
 		Marker.Composite = Composite.Desc;
 		Marker.LayerGroup = Composite.Group;
+		Marker.EffectVisual = Composite.EffectVisual;
 		Marker.Widget = Composite.Widget;
 		Out.Add(MoveTemp(Marker));
 	};
@@ -5196,6 +5213,15 @@ void UDreamCanvas::UpdateCompositeBounds()
 		{
 			// Nothing of what it holds drew a box: a box of nothing, so that it takes no more than a pixel or two.
 			Desc.WorldBounds = InOpen.bWhole ? FBox(ForceInit) : (InOpen.Bounds.IsValid ? InOpen.Bounds : FBox(CanvasToWorld.GetOrigin(), CanvasToWorld.GetOrigin()));
+		}
+		if (const UDreamVisual* EffectVisual = Marker.EffectVisual.Get())
+		{
+			// The effect its picture goes through, and the room the effect reads beyond what the group draws.
+			Desc.Effect = EffectVisual->GetChildrenEffect();
+			if (Desc.Effect.IsValid() && Desc.WorldBounds.IsValid && Desc.Effect->GetReach() > 0.0f)
+			{
+				Desc.WorldBounds = Desc.WorldBounds.ExpandBy(Desc.Effect->GetReach() * CanvasToWorld.GetMaximumAxisScale());
+			}
 		}
 		Desc.CanvasToWorld = CanvasToWorld;
 		UIMesh->SetGroupSectionComposite(Marker.RenderSection, Desc);

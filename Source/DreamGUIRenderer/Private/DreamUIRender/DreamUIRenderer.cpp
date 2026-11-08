@@ -1521,6 +1521,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			 */
 			FDreamUICompositeStack Stack(GraphBuilder, this, RenderTargetTexture, ScreenColorRenderTargetTexture, ViewRect, NumSamples
 				, RenderView->ViewMatrices.GetWorldToClip(), /*bInOpaqueBackdrop*/ true, /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
+			Stack.SetTimeSeconds(InView.Family->Time.GetWorldTimeSeconds());
 			// The collection the stretch of primitives being recorded is collected into, and its pass so far.
 			DreamUIRendererLocal::FCollectedMeshBatches* Collecting = nullptr;
 			FPassDraws* PendingDraws = nullptr;
@@ -2178,6 +2179,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		, RenderScaleTarget.IsValid() ? RenderScaleTarget->GetRHI() : ScreenColorRenderTargetTexture.GetReference()
 		, ViewRect, NumSamples, RenderView->ViewMatrices.GetWorldToClip()
 		, /*bInOpaqueBackdrop*/ !bIsRenderTarget && !RenderScaleTarget.IsValid(), /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
+	Stack.SetTimeSeconds(InView.Family->Time.GetWorldTimeSeconds());
 	for (int32 SequenceIndex = 0; SequenceIndex < RenderSequenceArray.Num(); ++SequenceIndex)
 	{
 		auto& RenderSequenceItem = RenderSequenceArray[SequenceIndex];
