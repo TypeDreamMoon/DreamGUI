@@ -47,7 +47,8 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDr
 	int DataOffset = 0;
 
 	// The last flag, spare until a layer style came: its record follows this block's own texels.
-	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, InStyle != nullptr);
+	// A reveal highlight is the border's gradient, centred on the light that makes it (SetRevealHighlight).
+	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient || bRevealHighlight, bEnableInnerShadow, bEnableRadialFill, InStyle != nullptr);
 	Fill8BytesToData(Data
 		, BoolAsByte
 		, static_cast<uint8>(BodyTextureScaleMode)
@@ -76,10 +77,10 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDr
 
 	FillFloatToData(Data, GetValueWithUnitMode(BorderWidth, BorderWidthUnitMode, width, height, 0.5f), DataOffset);
 	FillColorToData(Data, BorderColor, DataOffset);
-	FillColorToData(Data, BorderGradientColor, DataOffset);
-	FillVector2ToData(Data, GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, width, height), DataOffset);
-	FillVector2ToData(Data, GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, width, height), DataOffset);
-	FillFloatToData(Data, BorderGradientRotation, DataOffset);
+	FillColorToData(Data, bRevealHighlight ? RevealColor : BorderGradientColor, DataOffset);
+	FillVector2ToData(Data, bRevealHighlight ? RevealCenter : GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, width, height), DataOffset);
+	FillVector2ToData(Data, bRevealHighlight ? FVector2f(RevealRadius, RevealRadius) : GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, width, height), DataOffset);
+	FillFloatToData(Data, bRevealHighlight ? 0.0f : BorderGradientRotation, DataOffset);
 
 	FillColorToData(Data, InnerShadowColor, DataOffset);
 	FillFloatToData(Data, GetValueWithUnitMode(InnerShadowSize, InnerShadowSizeUnitMode, width, height, 0.5f), DataOffset);
@@ -646,6 +647,19 @@ void UDreamRectBlock::ReleaseShapeBlendRow()
 		DataRows->UnregisterBuffer(ShapeBlendRow);
 	}
 	ShapeBlendRow = INDEX_NONE;
+}
+
+void UDreamRectBlock::SetRevealHighlight(bool bInOn, const FVector2f& InCenter, float InRadius, const FColor& InColor)
+{
+	if (bRevealHighlight == bInOn && (!bInOn || (RevealCenter == InCenter && RevealRadius == InRadius && RevealColor == InColor)))
+	{
+		return;
+	}
+	bRevealHighlight = bInOn;
+	RevealCenter = InCenter;
+	RevealRadius = FMath::Max(InRadius, 1e-3f);
+	RevealColor = InColor;
+	MarkNeedUpdateBlockData();
 }
 
 void UDreamRectBlock::OnLayerStyleChanged()

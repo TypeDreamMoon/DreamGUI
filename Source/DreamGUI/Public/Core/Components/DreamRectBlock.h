@@ -138,6 +138,14 @@ public:
 	bool IsMeltedIntoShapeBlend() const { return ShapeBlendGroup.IsValid(); }
 	bool IsShapeBlendLeader() const { return bShapeBlendLeader && ShapeBlendGroup.IsValid(); }
 
+	/**
+	 * A reveal highlight on its border (a UDreamPointerLight over it): the border's gradient centred on InCenter (units from its
+	 * rect's bottom left, as BorderGradientCenter in units), InRadius across, in InColor, in place of its own border gradient
+	 * while on. Not saved.
+	 */
+	void SetRevealHighlight(bool bInOn, const FVector2f& InCenter, float InRadius, const FColor& InColor);
+	bool HasRevealHighlight() const { return bRevealHighlight; }
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -422,6 +430,11 @@ private:
 	FBox2f ShapeBlendBounds = FBox2f(ForceInit);
 	int32 ShapeBlendRow = INDEX_NONE;
 	bool bShapeBlendLeader = false;
+	/** See SetRevealHighlight. */
+	bool bRevealHighlight = false;
+	FVector2f RevealCenter = FVector2f::ZeroVector;
+	float RevealRadius = 0.0f;
+	FColor RevealColor = FColor::Transparent;
 	void ReleaseShapeBlendRow();
 	uint8 bHasAddToSprite : 1;
 public:
