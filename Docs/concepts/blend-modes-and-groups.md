@@ -76,7 +76,9 @@ included. With an `EffectMaterial` the texture is drawn through that material in
 
 - A group drawn apart costs a texture the size of what it draws on the target (from the frame's pool, given back when the
   frame is drawn), a clear, and one pass over that rect to put it down; a mode that reads what is behind adds a copy of
-  that rect. Nothing batches across a group's edges.
+  that rect. Nothing batches across a group's edges. The texture is in the target's format, except over a target that
+  keeps little alpha -- a viewport's back buffer is 10:10:10:2 by default, four levels of it -- where it is in half floats,
+  twice the memory, so that the soft edges and half transparent pixels in a group come through as they were drawn.
 - A draw of a mode that reads what is behind costs a copy of the rect it covers, and splits its pass.
 - Groups, the modes that read what is behind, and groups of one are drawn on **every canvas DreamGUI's own renderer
   draws**: screen-space and render-target canvases, world-space canvases in World Space - DreamUI Renderer, and the

@@ -94,6 +94,27 @@ namespace DreamUICompositorLocal
 		return EnumHasAnyFlags(InLike->Desc.Flags, TexCreate_SRGB) ? TexCreate_SRGB : TexCreate_None;
 	}
 
+	/**
+	 * The format a group's texture is kept in: its target's, unless that keeps too little of an alpha for what is drawn into a
+	 * group -- the soft edge of a shadow or a glow, a half transparent child, a particle. A viewport's back buffer is 10:10:10:2
+	 * by default (r.DefaultBackBufferPixelFormat), four levels of alpha; a group drawn over such a target is kept in half
+	 * floats, which hold the same values with an alpha of their own.
+	 */
+	EPixelFormat GroupFormatOf(EPixelFormat InTarget)
+	{
+		switch (InTarget)
+		{
+		case PF_A2B10G10R10:
+		case PF_B5G5R5A1_UNORM:
+		case PF_R5G6B5_UNORM:
+		case PF_FloatR11G11B10:
+		case PF_FloatRGB:
+			return PF_FloatRGBA;
+		default:
+			return InTarget;
+		}
+	}
+
 	/** How many of the view's pixels a unit of the group's canvas is, at the middle of what the group covers: 1 where unknown. */
 	float PixelsPerCanvasUnit(const FDreamUICompositeDesc& InDesc, const FMatrix& InWorldToClip, const FIntRect& InViewRect)
 	{
@@ -207,8 +228,9 @@ void FDreamUICompositeStack::Begin(const FDreamUICompositeDesc& InDesc)
 	}
 	if (!Frame.bCulled)
 	{
-		const FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(Frame.Rect.Size(), Parent.Texture->Desc.Format, FClearValueBinding::Transparent
-			, SrgbOf(Parent.Texture), TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
+		const EPixelFormat Format = GroupFormatOf(Parent.Texture->Desc.Format);
+		const FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(Frame.Rect.Size(), Format, FClearValueBinding::Transparent
+			, Format == Parent.Texture->Desc.Format ? SrgbOf(Parent.Texture) : TexCreate_None, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
 		GRenderTargetPool.FindFreeElement(GraphBuilder.RHICmdList, Desc, Frame.Pooled, TEXT("DreamUI_GroupTexture"));
 		if (Frame.Pooled.IsValid())
 		{
