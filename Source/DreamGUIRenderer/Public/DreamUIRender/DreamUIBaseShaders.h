@@ -194,8 +194,8 @@ public:
 		{
 			return false;
 		}
-		// A backdrop is read only on screen-space and render-target canvases, and never for helper geometry.
-		if (PermutationVector.Get<FBackdrop>() && (PermutationVector.Get<FPlainColor>() || PermutationVector.Get<FBlendDepth>()))
+		// Helper geometry never reads a backdrop. A world-space element does, its alpha the scene's occlusion first.
+		if (PermutationVector.Get<FBackdrop>() && PermutationVector.Get<FPlainColor>())
 		{
 			return false;
 		}

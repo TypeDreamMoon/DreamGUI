@@ -892,9 +892,9 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	const ERHIFeatureLevel::Type FeatureLevel = View.GetFeatureLevel();
 
 	const bool bDepthFade = bBlendDepth && DepthFade > 0;
-	// A mode that reads what is behind is drawn over the copy it was given, and Normal where it was given none: on a
-	// world-space canvas, which copies nothing (FDreamUIBuiltInBackdrop).
-	const bool bBackdrop = InBackdrop != nullptr && InBackdrop->Texture != nullptr && !bBlendDepth;
+	// A mode that reads what is behind is drawn over the copy it was given, and Normal where it was given none
+	// (FDreamUIBuiltInBackdrop). On a world-space canvas its alpha is the scene's occlusion first, then the blend's.
+	const bool bBackdrop = InBackdrop != nullptr && InBackdrop->Texture != nullptr;
 	const EDreamUIBlendMode BlendMode = DreamUIBlend::ReadsBackdrop(Params.BlendMode) && !bBackdrop ? EDreamUIBlendMode::Alpha : Params.BlendMode;
 	const int32 Permutation = (bBlendDepth ? 1 : 0) | (bDepthFade ? 2 : 0) | (bBackdrop ? 4 : 0);
 	TShaderRef<FDreamUIBaseVS> VertexShader;
@@ -1498,26 +1498,44 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			 */
 			struct FMeshDrawRun
 			{
+				int32 FirstBatch = 0;
 				int32 EndBatch = 0;
 				float BlendDepth = 0.0f;
 				int DepthFade = 0;
 			};
+			/**
+			 * One pass's draws: runs of the batches of a collection, which the passes cut from one stretch of primitives share.
+			 * A stretch is cut into several passes where a group opens or closes and around a draw that reads what is behind.
+			 */
 			struct FPassDraws
 			{
-				DreamUIRendererLocal::FCollectedMeshBatches Collected;
+				DreamUIRendererLocal::FCollectedMeshBatches* Collected = nullptr;
 				TArray<FMeshDrawRun, TInlineAllocator<64>> Runs;
 			};
 			constexpr int32 MaxPrimitivesPerPass = 64;
+			/**
+			 * What the draws below draw into: the view's target, and a group's texture above it for every group open
+			 * (FDreamUICompositeStack), as on a screen-space canvas. The scene's picture counts as opaque to what blends over it.
+			 * A group's texture is drawn through the same view as the target, its viewport moved by minus its origin: what is
+			 * drawn into it is still tested against the scene's depth in clip space, so a group put down is occluded already.
+			 */
+			FDreamUICompositeStack Stack(GraphBuilder, this, RenderTargetTexture, ScreenColorRenderTargetTexture, ViewRect, NumSamples
+				, RenderView->ViewMatrices.GetWorldToClip(), /*bInOpaqueBackdrop*/ true, /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
+			// The collection the stretch of primitives being recorded is collected into, and its pass so far.
+			DreamUIRendererLocal::FCollectedMeshBatches* Collecting = nullptr;
 			FPassDraws* PendingDraws = nullptr;
-			auto FlushPendingDraws = [&]()
+			int32 PendingPrimitives = 0;
+			/** InDraws in one pass into the current target; InBackdrop, when given, is what the pass's one draw blends over. */
+			auto AddWorldPass = [&](FPassDraws* InDraws, FRDGTextureRef InBackdrop, FIntPoint InBackdropOrigin)
 			{
-				if (PendingDraws == nullptr || PendingDraws->Runs.Num() == 0)
-				{
-					return;
-				}
+				const FDreamUICompositeStack::FFrame& Frame = Stack.Current();
+				const FIntRect PassViewport = Stack.GetCurrentViewport();
+				const uint8 PassSamples = Frame.NumSamples;
+				const bool bOpaqueBackdrop = Stack.IsBackdropOpaque();
 				auto* PassParameters = GraphBuilder.AllocParameters<FDreamUIWorldRenderPSParameter>();
 				PassParameters->SceneDepthTex = SceneDepth;
-				PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
+				PassParameters->BackdropTexture = InBackdrop;
+				PassParameters->RenderTargets[0] = FRenderTargetBinding(Frame.Texture, ERenderTargetLoadAction::ELoad);
 				GraphBuilder.AddPass(
 					RDG_EVENT_NAME("DreamUIRender_WorldSpace"),
 					PassParameters,
@@ -1527,8 +1545,8 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 					//serial stretch used to be. Everything below is FRHICommandList API, and it
 					//reads only what was collected when the pass was recorded: it calls the
 					//renderer's static helpers alone, and holds no pointer to the renderer.
-					[Draws = PendingDraws, RenderView, ViewRect, PassParameters
-						, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
+					[Draws = InDraws, RenderView, ViewRect = PassViewport, PassParameters, InBackdrop, InBackdropOrigin, bOpaqueBackdrop
+						, SceneDepthTexST = DepthTextureScaleOffset, NumSamples = PassSamples, GammaValue
 						, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 					{
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderMesh);
@@ -1543,15 +1561,23 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 						// The scene depth the pass's draws through a material blend against, and its sampler: one uniform buffer for
 						// the pass, made at the first of them (FDreamUIWorldRenderPS::SetDepthBlendParameter).
 						TUniformBufferRef<FDreamUIWorldRenderDepthTexUB> DepthTextureBuffer;
+						FDreamUIBuiltInBackdrop Backdrop;
+						if (InBackdrop != nullptr)
+						{
+							InBackdrop->MarkResourceAsUsed();
+							Backdrop.Texture = InBackdrop->GetRHI();
+							Backdrop.Origin = InBackdropOrigin;
+							// The scene's picture counts as opaque; a group's texture has the alpha its composite reads.
+							Backdrop.bOpaque = bOpaqueBackdrop;
+						}
 
-						const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Draws->Collected.Batches;
-						int32 FirstOfRun = 0;
+						const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Draws->Collected->Batches;
 						for (const FMeshDrawRun& Run : Draws->Runs)
 						{
 							const float BlendDepth = Run.BlendDepth;
 							const int DepthFade = Run.DepthFade;
 							const int32 EndOfRun = Run.EndBatch;
-							for (int MeshIndex = FirstOfRun; MeshIndex < EndOfRun; MeshIndex++)
+							for (int MeshIndex = Run.FirstBatch; MeshIndex < EndOfRun; MeshIndex++)
 							{
 								auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 								const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
@@ -1562,7 +1588,8 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 									{
 										DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 											, NumSamples, GammaValue, false
-											, true, BlendDepth, DepthFade, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI(), &BuiltInCache);
+											, true, BlendDepth, DepthFade, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI(), &BuiltInCache
+											, Backdrop.Texture != nullptr ? &Backdrop : nullptr);
 										// It set a pipeline of its own.
 										PipelineKey.bSet = false;
 										return;
@@ -1650,10 +1677,33 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 									DoRender(true);
 								}
 							}
-							FirstOfRun = EndOfRun;
 						}
 					});
+			};
+			/** What is collected and not drawn yet goes into a pass: before anything that reads or changes the target. */
+			auto FlushPendingDraws = [&]()
+			{
+				if (PendingDraws != nullptr && PendingDraws->Runs.Num() > 0)
+				{
+					AddWorldPass(PendingDraws, nullptr, FIntPoint::ZeroValue);
+				}
 				PendingDraws = nullptr;
+			};
+			/** The stretch of primitives ends: the next primitive collects into a collection of its own. */
+			auto EndStretch = [&]()
+			{
+				FlushPendingDraws();
+				Collecting = nullptr;
+				PendingPrimitives = 0;
+			};
+			auto AddRun = [&](int32 InFirst, int32 InEnd, float InBlendDepth, int InDepthFade)
+			{
+				if (PendingDraws == nullptr)
+				{
+					PendingDraws = GraphBuilder.AllocObject<FPassDraws>();
+					PendingDraws->Collected = Collecting;
+				}
+				PendingDraws->Runs.Add(FMeshDrawRun{ InFirst, InEnd, InBlendDepth, InDepthFade });
 			};
 
 			for (const FSortKey& SortKey : SortedSequence)
@@ -1664,12 +1714,35 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 					switch (RenderPrimitiveItem.Type)
 					{
 					case EDreamUIRendererPrimitiveType::Group:
-						// A world-space canvas draws no group apart: UDreamCanvas::InsertCompositeMarkers puts none there.
+						{
+							// What is drawn so far goes where it was going: into the target, or the group open before this one.
+							EndStretch();
+							for (const FDreamUIPrimitiveSectionDataContainer& Section : RenderPrimitiveItem.Sections)
+							{
+								bool bBegin = false;
+								if (const FDreamUICompositeDesc* Desc = RenderPrimitiveItem.Primitive->DreamUI_GetCompositeElement(Section.SectionPointer, bBegin))
+								{
+									if (bBegin)
+									{
+										Stack.Begin(*Desc);
+									}
+									else
+									{
+										Stack.End(Desc->Id);
+									}
+								}
+							}
+						}
 						break;
 					case EDreamUIRendererPrimitiveType::PostProcess://render post process
 						{
 							// What is drawn so far goes in first: the post process reads it.
-							FlushPendingDraws();
+							EndStretch();
+							// Inside a group, a post process reads and writes the group's texture: what the group has drawn so far.
+							if (!Stack.IsDrawing())
+							{
+								break;
+							}
 							for (int i = 0; i < RenderPrimitiveItem.Sections.Num(); i++)
 							{
 								// A reference, held for the call: the passes added below capture the proxy raw and
@@ -1683,16 +1756,16 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 										GraphBuilder,
 										SceneDepth,
 										this,
-										ScreenColorRenderTargetTexture,
+										Stack.Current().TextureRHI,
 										GlobalShaderMap,
 										ViewProjectionMatrix,
 										true,
 										false,
 										RenderSequenceItem.BlendDepth,
 										RenderSequenceItem.DepthFade,
-										ViewRect,
+										Stack.GetCurrentViewport(),
 										DepthTextureScaleOffset,
-										ColorTextureScaleOffset
+										Stack.GetCurrentTextureScaleOffset(ColorTextureScaleOffset)
 									);
 								}
 							}
@@ -1700,18 +1773,23 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 						break;
 					case EDreamUIRendererPrimitiveType::Mesh://render mesh
 						{
+							if (!Stack.IsDrawing())
+							{
+								// Inside a group that is out of view: nothing of it is drawn.
+								break;
+							}
 							// Collected now, on the render thread while the pass is recorded, and not when it
 							// runs: the pass may run on a task after this function has returned, and the
 							// primitive -- a scene proxy -- may be gone by then, and every virtual call into
 							// it with it. The graph owns what is collected, uniform buffers and all, until
 							// its passes have run.
-							if (PendingDraws == nullptr)
+							if (Collecting == nullptr)
 							{
-								PendingDraws = GraphBuilder.AllocObject<FPassDraws>();
+								Collecting = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
 								// Mostly a section or two a primitive: room for the pass, grown by doubling past it.
-								PendingDraws->Collected.Batches.Reserve(MaxPrimitivesPerPass * 2);
+								Collecting->Batches.Reserve(MaxPrimitivesPerPass * 2);
 							}
-							DreamUIRendererLocal::FCollectedMeshBatches& Collected = PendingDraws->Collected;
+							DreamUIRendererLocal::FCollectedMeshBatches& Collected = *Collecting;
 							const int32 FirstBatch = Collected.Batches.Num();
 							{
 								TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
@@ -1723,16 +1801,50 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 							{
 								MakeViewUniformBuffer();
 							}
-							PendingDraws->Runs.Add(FMeshDrawRun{ Collected.Batches.Num(), RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade });
-							if (PendingDraws->Runs.Num() >= MaxPrimitivesPerPass)
+							// Cut at each draw that reads what is behind: what comes before it is drawn first, then what it covers is
+							// copied, and it is drawn over the copy in a pass of its own.
+							int32 RunStart = FirstBatch;
+							for (int32 BatchIndex = FirstBatch; BatchIndex < Collected.Batches.Num(); ++BatchIndex)
 							{
+								const FDreamUIMeshBatchContainer& Batch = Collected.Batches[BatchIndex];
+								if (!bRenderLit || !Batch.bBuiltIn || !DreamUIBlend::ReadsBackdrop(Batch.GetBuiltIn().BlendMode))
+								{
+									continue;
+								}
+								if (RunStart < BatchIndex)
+								{
+									AddRun(RunStart, BatchIndex, RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade);
+								}
 								FlushPendingDraws();
+								RunStart = BatchIndex + 1;
+								const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, RenderView->ViewMatrices.GetWorldToClip(), ViewRect);
+								FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
+								if (FRDGTextureRef Backdrop = Stack.CopyBackdrop(Covered, BackdropOrigin, TEXT("DreamUI_ElementBackdrop")))
+								{
+									FPassDraws* Single = GraphBuilder.AllocObject<FPassDraws>();
+									Single->Collected = Collecting;
+									Single->Runs.Add(FMeshDrawRun{ BatchIndex, BatchIndex + 1, RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade });
+									AddWorldPass(Single, Backdrop, BackdropOrigin);
+								}
+							}
+							// The primitive's last run, as every primitive had one before: drawn with the stretch's others.
+							AddRun(RunStart, Collected.Batches.Num(), RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade);
+							if (++PendingPrimitives >= MaxPrimitivesPerPass)
+							{
+								EndStretch();
 							}
 						}break;
 					}
 				}
+				// A group belongs to one canvas, whose draws are all here: whatever it left open is put down before the next
+				// canvas draws. A canvas that opened none goes on into the pass the next one draws in.
+				if (!Stack.IsAtBottom())
+				{
+					EndStretch();
+					Stack.EndAll();
+				}
 			}
-			FlushPendingDraws();
+			EndStretch();
 #if WITH_EDITOR
 			RenderGizmoMesh_RenderThread(WorldSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif

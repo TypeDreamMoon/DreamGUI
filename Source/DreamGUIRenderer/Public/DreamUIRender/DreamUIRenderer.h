@@ -451,5 +451,7 @@ extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> G
 extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderPSParameter, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
+	/** The copy of what is behind a draw of a mode that reads it, for a pass of that draw alone; none otherwise. */
+	RDG_TEXTURE_ACCESS(BackdropTexture, ERHIAccess::SRVGraphics)
 	RENDER_TARGET_BINDING_SLOTS()
 END_SHADER_PARAMETER_STRUCT()
