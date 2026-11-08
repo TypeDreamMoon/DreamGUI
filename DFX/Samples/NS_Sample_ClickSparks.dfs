@@ -1,0 +1,54 @@
+// A click's sparks: a ring of short, bright streaks thrown out from where the pointer pressed, falling and fading in half
+// a second. One shot: UDreamNiagaraTrigger bursts it where the click is (BurstAtPointer). Drawn additively by the sample.
+System(Name="Samples/Niagara/NS_Sample_ClickSparks", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        int   Count = 22                       [ Group="Burst" ];
+        float Speed = 320.0                    [ Group="Burst" ];
+        Color Hot   = (1.0, 0.86, 0.45, 1.0)   [ Group="Look" ];
+        Color Cool  = (1.0, 0.36, 0.12, 1.0)   [ Group="Look" ];
+    }
+
+    Emitter Sparks
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = false;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 0.1);
+            SpawnBurst_Instantaneous(SpawnCount = User.Count, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(
+                LifetimeMode = Random,
+                LifetimeMin  = 0.3,
+                LifetimeMax  = 0.55,
+                ColorMode    = RandomRange,
+                ColorMinimum = User.Cool,
+                ColorMaximum = User.Hot
+            );
+            SystemLocation();
+            float   Particles.DreamUI.Angle = RandomRangeFloat(Minimum = 0.0, Maximum = 6.2832);
+            float   Particles.DreamUI.Speed = RandomRangeFloat(Minimum = User.Speed * 0.45, Maximum = User.Speed);
+            Vector  Particles.Velocity      = hlsl { float3(cos(Particles.DreamUI.Angle), 0.0, sin(Particles.DreamUI.Angle)) * Particles.DreamUI.Speed };
+            Vector2 Particles.SpriteSize    = (3, 14);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            GravityForce(Gravity = (0, 0, -520));
+            Drag(Drag = 2.5);
+            SolveForcesAndVelocity();
+            Color Particles.Color = hlsl { float4(Particles.Color.rgb, saturate(1.0 - Particles.NormalizedAge)) };
+        }
+
+        SpriteRenderer Sparks
+        {
+            Alignment  = VelocityAligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}

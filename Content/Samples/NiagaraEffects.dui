@@ -1,0 +1,198 @@
+// Niagara in DreamGUI: five small effects, each a Niagara system drawn by a NiagaraSystem visual and played by a
+// DreamNiagaraTrigger on the widget that takes the pointer. The systems are in /DreamGUI/Samples/Niagara, made from the text
+// under the plugin's DFX/Samples.
+//
+// WHAT TO DO WITH IT
+//   As with HelloDreamGUI.dui: a DreamUI Widget Blueprint whose class is the `class` line below, Set Source File... to this
+//   file, compile, and show it. Play in the editor to try it: the designer previews the systems, but the pointer is a game's.
+//
+// WHAT IT SHOWS, card by card
+//   Sparks    a click bursts sparks where it lands (OnClick = BurstAtPointer), drawn additively.
+//   Trail     the pointer leaves a ribbon while it is over the card (OnEnter = Activate, OnExit = Deactivate); the system
+//             reads where the pointer is from User.DreamUI_PointerPosition, which DreamGUI writes.
+//   Border    sparks run round a button's edge while it is hovered; the system reads the button's size from
+//             User.DreamUI_WidgetSize.
+//   Charge    each click fills the bar a quarter (ClickAddsProgress); a full bar bursts (OnProgressFull).
+//   Coins     a click sends coins from the chest to the counter (OnClick = BurstToTarget) on the plugin's fly-to template.
+class /Game/UI/WBP_NiagaraEffects
+
+style Card {
+    Brush.TintColor = #1F232CFF
+    @slot HorizontalAlignment = Fill
+    @slot VerticalAlignment   = Fill
+}
+
+style Caption {
+    Font     = /DreamGUI/DefaultFont_DistanceField
+    FontSize = 15
+    Color    = #C9CEDA
+    HAlign   = Center
+}
+
+style Additive {
+    bOverrideBlendMode = true
+    BlendMode          = Additive
+}
+
+Widget Root {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+
+    + Overlay {}
+
+    Widget Row {
+        AnchorData.SizeDelta = (1080, 300)
+        @slot HorizontalAlignment = Center
+        @slot VerticalAlignment   = Center
+
+        + HorizontalBox {
+            Spacing = 16
+        }
+
+        Image SparksCard : Card {
+            AnchorData.SizeDelta = (200, 300)
+            Clipping = ClipToBounds
+            @slot SizeRule = Auto
+
+            + DreamNiagaraTrigger {
+                OnClick = BurstAtPointer
+            }
+
+            NiagaraSystem Sparks : Additive {
+                AnchorData.AnchorMin = (0, 0)
+                AnchorData.AnchorMax = (1, 1)
+                AnchorData.SizeDelta = (0, 0)
+                System        = /DreamGUI/Samples/Niagara/NS_Sample_ClickSparks
+                bAutoActivate = false
+            }
+
+            Text SparksLabel : Caption {
+                AnchorData.SizeDelta = (180, 24)
+                Text = "Click"
+            }
+        }
+
+        Image TrailCard : Card {
+            AnchorData.SizeDelta = (200, 300)
+            Clipping = ClipToBounds
+            @slot SizeRule = Auto
+
+            + DreamNiagaraTrigger {
+                OnClick = None
+                OnEnter = Activate
+                OnExit  = Deactivate
+            }
+
+            NiagaraSystem Trail : Additive {
+                AnchorData.AnchorMin = (0, 0)
+                AnchorData.AnchorMax = (1, 1)
+                AnchorData.SizeDelta = (0, 0)
+                System        = /DreamGUI/Samples/Niagara/NS_Sample_PointerTrail
+                bAutoActivate = false
+            }
+
+            Text TrailLabel : Caption {
+                AnchorData.SizeDelta = (180, 24)
+                Text = "Move over"
+            }
+        }
+
+        Image BorderCard : Card {
+            AnchorData.SizeDelta = (200, 300)
+            @slot SizeRule = Auto
+
+            RectBlock Button {
+                AnchorData.SizeDelta = (150, 52)
+                Color = #3B6E63FF
+
+                + DreamNiagaraTrigger {
+                    OnClick = None
+                    OnEnter = Activate
+                    OnExit  = Deactivate
+                }
+
+                NiagaraSystem Edge : Additive {
+                    AnchorData.AnchorMin = (0, 0)
+                    AnchorData.AnchorMax = (1, 1)
+                    AnchorData.SizeDelta = (0, 0)
+                    System        = /DreamGUI/Samples/Niagara/NS_Sample_BorderGlow
+                    bAutoActivate = false
+                }
+
+                Text BorderLabel : Caption {
+                    AnchorData.SizeDelta = (150, 24)
+                    Text = "Hover"
+                }
+            }
+        }
+
+        Image ChargeCard : Card {
+            AnchorData.SizeDelta = (200, 300)
+            @slot SizeRule = Auto
+
+            + DreamNiagaraTrigger {
+                OnClick            = None
+                ClickAddsProgress  = 0.25
+                ProgressWidgetName = Charge
+                OnProgressFull     = BurstAtCentre
+                SystemWidget       = Burst
+            }
+
+            Native.ProgressBar Charge {
+                AnchorData.SizeDelta = (160, 18)
+                Percent = 0
+            }
+
+            NiagaraSystem Burst : Additive {
+                AnchorData.SizeDelta = (160, 18)
+                System        = /DreamGUI/Samples/Niagara/NS_Sample_FullBurst
+                bAutoActivate = false
+            }
+
+            Text ChargeLabel : Caption {
+                AnchorData.AnchorMin = (0.5, 0)
+                AnchorData.AnchorMax = (0.5, 0)
+                AnchorData.SizeDelta = (180, 24)
+                AnchorData.AnchoredPosition = (0, 40)
+                Text = "Click to charge"
+            }
+        }
+
+        Image CoinCard : Card {
+            AnchorData.SizeDelta = (200, 300)
+            @slot SizeRule = Auto
+
+            RectBlock Chest {
+                AnchorData.AnchorMin = (0.5, 0)
+                AnchorData.AnchorMax = (0.5, 0)
+                AnchorData.SizeDelta = (96, 64)
+                AnchorData.AnchoredPosition = (0, 70)
+                Color = #8A6A2EFF
+
+                + DreamNiagaraTrigger {
+                    OnClick          = BurstToTarget
+                    FlightTargetName = Counter
+                    SystemWidget     = Coins
+                }
+            }
+
+            Text Counter : Caption {
+                AnchorData.AnchorMin = (0.5, 1)
+                AnchorData.AnchorMax = (0.5, 1)
+                AnchorData.SizeDelta = (120, 32)
+                AnchorData.AnchoredPosition = (0, -40)
+                Text = "0 coins"
+            }
+        }
+    }
+
+    // Above every card and clipped by none: the coins fly from the chest to the counter across it.
+    NiagaraSystem Coins : Additive {
+        AnchorData.SizeDelta = (10, 10)
+        @slot HorizontalAlignment = Center
+        @slot VerticalAlignment   = Center
+        FlightSystem = /DreamGUI/Niagara/NS_DreamUI_FlyTo
+        bAutoActivate = false
+    }
+}

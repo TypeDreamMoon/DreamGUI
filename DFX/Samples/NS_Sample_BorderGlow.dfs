@@ -1,0 +1,57 @@
+// Sparks along a button's border while the pointer is over it: points taken round the rectangle User.DreamUI_WidgetSize
+// gives (DreamGUI writes it), drifting a little outward and up as they fade. Local space: the sparks follow the button.
+System(Name="Samples/Niagara/NS_Sample_BorderGlow", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        Vector2 DreamUI_WidgetSize = (200, 60)           [ Group="DreamUI" ];
+        float   Rate               = 140.0               [ Group="Look" ];
+        Color   Tint               = (0.55, 1.0, 0.8, 1) [ Group="Look" ];
+    }
+
+    Emitter Edge
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = true;
+            AllocationMode     = Fixed;
+            PreAllocationCount = 128;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Infinite);
+            SpawnRate(SpawnRate = User.Rate);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.35, LifetimeMax = 0.7);
+            float Particles.DreamUI.Along = RandomRangeFloat(Minimum = 0.0, Maximum = 1.0);
+            // Round the rectangle, a quarter of the way for each side: top, right, bottom, left.
+            Position Particles.Position = hlsl {
+                float3(
+                    Particles.DreamUI.Along < 0.25 ? lerp(-0.5, 0.5, Particles.DreamUI.Along * 4.0) * User.DreamUI_WidgetSize.x
+                        : (Particles.DreamUI.Along < 0.5 ? 0.5 * User.DreamUI_WidgetSize.x
+                        : (Particles.DreamUI.Along < 0.75 ? lerp(0.5, -0.5, (Particles.DreamUI.Along - 0.5) * 4.0) * User.DreamUI_WidgetSize.x
+                        : -0.5 * User.DreamUI_WidgetSize.x)),
+                    0.0,
+                    Particles.DreamUI.Along < 0.25 ? 0.5 * User.DreamUI_WidgetSize.y
+                        : (Particles.DreamUI.Along < 0.5 ? lerp(0.5, -0.5, (Particles.DreamUI.Along - 0.25) * 4.0) * User.DreamUI_WidgetSize.y
+                        : (Particles.DreamUI.Along < 0.75 ? -0.5 * User.DreamUI_WidgetSize.y
+                        : lerp(-0.5, 0.5, (Particles.DreamUI.Along - 0.75) * 4.0) * User.DreamUI_WidgetSize.y)))
+            };
+            Vector  Particles.Velocity   = hlsl { normalize(Particles.Position + float3(0.0, 0.0, 0.001)) * 18.0 + float3(0.0, 0.0, 22.0) };
+            Vector2 Particles.SpriteSize = (5, 5);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            SolveForcesAndVelocity();
+            Color Particles.Color = hlsl { float4(User.Tint.rgb * 1.4, sin(Particles.NormalizedAge * 3.14159)) };
+        }
+
+        SpriteRenderer Edge
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}
