@@ -1,4 +1,4 @@
-﻿{
+{
 	"FileVersion": 3,
 	"Version": 100,
 	"VersionName": "1.0.0",
@@ -17,6 +17,10 @@
 	"Plugins": [
 		{
 			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
 			"Enabled": true
 		}
 	],
@@ -71,6 +75,12 @@
 		},
 		{
 			"Name": "DreamTween",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUINiagara",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
