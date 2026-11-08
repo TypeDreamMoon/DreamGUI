@@ -16,6 +16,7 @@
 //          its paint slot, position across the fill run (see DreamUIText.ush)
 //   UV3    glyphs: fill progress; a field glyph's glow boost, a coverage glyph's contrast, a colour glyph's texels per em
 //   UV4    painted glyphs: where the quad sits in its paint slot's boxes (DreamUIPaint.ush); (0, 0) on everything else
+//   A particle (mark DREAMUI_PARTICLE_MARK): UV0 its frame, UV2 the next, UV3.x its colour scale and frame blend (DreamUIParticle.ush)
 //   A rect block, where the host draws one (DREAMUI_SHADE_RECT_BLOCK): UV0 across its quad, UV2 its body texture's
 //   coordinate, UV3.x its row of rect block data (DreamUIRectBlock.ush)
 //   Colour authored in sRGB
@@ -28,6 +29,7 @@
 #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIText.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIPaint.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIParticle.ush"
 // The built-in UI shader draws rect blocks too, and says so before including this. A material host does not: there a
 // rect block's mark falls to the sprite branch, as a mark of 0 did before rect blocks had one.
 #if DREAMUI_SHADE_RECT_BLOCK
@@ -55,6 +57,12 @@ float4 DreamUIShade_ShadeUnclipped(float2 UV0, float2 UV1, float2 UV2, float2 UV
 	// Vertex colour is authored in sRGB; the pipeline works in linear.
 	float4 VertexColor = float4(sRGBToLinear(RawVertexColor.rgb), RawVertexColor.a);
 	float4 Color;
+	if (abs(FontMark - DREAMUI_PARTICLE_MARK) < 0.5)
+	{
+		// A particle (DreamGUINiagara): its frame blended towards the next, in its colour times its scale (DreamUIParticle.ush).
+		Color = DreamUIParticle_Shade(MainTex, MainSampler, UV0, UV2, UV3.x, VertexColor);
+	}
+	else
 #if DREAMUI_SHADE_RECT_BLOCK
 	if (FontMark > 3.5)
 	{

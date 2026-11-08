@@ -1,0 +1,43 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A particle's pixel, as DreamGUINiagara writes its vertices (DreamNiagaraVertexLayout.h holds the same constants, and a
+// test reads them from here):
+//   UV0    the sprite's frame, or a ribbon's first UV set
+//   UV1.x  the widget property record, whose mark is DREAMUI_PARTICLE_MARK; UV1.y the dynamic parameter's x
+//   UV2    the frame blended towards (the next one), or a ribbon's second UV set
+//   UV3.x  the colour's scale and the frame blend, packed: whole part = scale * DREAMUI_PARTICLE_SCALE_STEPS, fraction =
+//          blend * DREAMUI_PARTICLE_BLEND_RANGE. The colour is written divided by its scale, so that a colour brighter
+//          than 1 survives an 8-bit vertex colour. Constant across a sprite's quad and along a ribbon, so that it never
+//          interpolates between two packings.
+//   UV3.y  the dynamic parameter's y; UV4 its z and w
+//   Colour authored in sRGB, as every vertex colour is
+
+#ifndef DREAMUI_PARTICLE_USH
+#define DREAMUI_PARTICLE_USH
+
+#define DREAMUI_PARTICLE_MARK 5
+#define DREAMUI_PARTICLE_SCALE_STEPS 16.0
+#define DREAMUI_PARTICLE_BLEND_RANGE 0.99609375
+
+/** UV3.x taken apart: the colour's scale (at least 1) and the frame blend (0 to 1). */
+void DreamUIParticle_Unpack(float Packed, out float Scale, out float Blend)
+{
+	const float Whole = floor(Packed);
+	Scale = max(Whole, DREAMUI_PARTICLE_SCALE_STEPS) / DREAMUI_PARTICLE_SCALE_STEPS;
+	Blend = saturate((Packed - Whole) / DREAMUI_PARTICLE_BLEND_RANGE);
+}
+
+/**
+ * The particle's colour, straight: its frame, blended towards the next, in the vertex colour (linear) times its scale. Both
+ * frames are always sampled -- a branch around a sample would leave it without derivatives.
+ */
+float4 DreamUIParticle_Shade(Texture2D MainTex, SamplerState MainSampler, float2 UV0, float2 UV2, float Packed, float4 VertexColor)
+{
+	float Scale, Blend;
+	DreamUIParticle_Unpack(Packed, Scale, Blend);
+	const float4 Frame = DREAMUI_SAMPLE(MainTex, MainSampler, UV0);
+	const float4 Next = DREAMUI_SAMPLE(MainTex, MainSampler, UV2);
+	return lerp(Frame, Next, Blend) * float4(VertexColor.rgb * Scale, VertexColor.a);
+}
+
+#endif // DREAMUI_PARTICLE_USH
