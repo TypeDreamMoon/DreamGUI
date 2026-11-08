@@ -29,6 +29,18 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBlendMath.h"
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetPropertyBinding.h"
+#include "Core/DreamWidgetTree.h"
+#include "Import/DreamPsdDuiModel.h"
+#include "Import/DreamPsdImporter.h"
+#include "Import/DreamPsdMapper.h"
+#include "Psd/DreamPsdReader.h"
+#include "Psd/DreamPsdTestDocuments.h"
+#include "Text/DreamUIAst.h"
+#include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUISourceFile.h"
+#include "Text/DreamUITextBuilder.h"
 #include "DreamNiagaraEngineAccess.h"
 #include "DreamNiagaraSystem.h"
 #include "DreamUICaptureLibrary.h"
@@ -86,6 +98,10 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		/** The viewport's size, and the pixel of it the panel's centre falls on. */
 		FIntPoint ViewportSize = FIntPoint::ZeroValue;
 		FIntPoint PanelOrigin = FIntPoint::ZeroValue;
+		/** The panel's size in units, and so in pixels: PanelSize unless a test places one of another. */
+		FIntPoint PlacedSize = PanelSize;
+		/** What an imported document is drawn from, kept for as long as the test runs. */
+		TArray<TStrongObjectPtr<UObject>> Kept;
 	};
 
 	UTexture2D* MakeTexture(FState& InState, int32 InExtent, TFunctionRef<FColor(int32 X, int32 Y)> InColourAt)
@@ -154,7 +170,7 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 	 * pixel's corner, so that its edges fall on pixel edges whichever way the view's size is odd.
 	 */
 	bool PlacePanel(FAutomationTestBase& InTest, FDreamDriverPieRig& InRig, FState& InState, const TCHAR* InName, int32 InSortOrder, float InBlendDepth
-		, UDreamWidget*& OutPanel)
+		, UDreamWidget*& OutPanel, FIntPoint InSize = PanelSize)
 	{
 		ULocalPlayer* Player = InRig.GetLocalPlayer();
 		UGameViewportClient* Client = InRig.GetViewportClient();
@@ -168,7 +184,7 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		const FIntPoint View = ViewRect.Size();
 		InState.ViewportSize = Client->Viewport->GetSizeXY();
 		if (!InTest.TestTrue(FString::Printf(TEXT("The view %s fills the viewport %s and holds the panel"), *ViewRect.ToString(), *InState.ViewportSize.ToString())
-			, ViewRect.Min == FIntPoint::ZeroValue && View == InState.ViewportSize && View.X >= PanelSize.X + 8 && View.Y >= PanelSize.Y + 8))
+			, ViewRect.Min == FIntPoint::ZeroValue && View == InState.ViewportSize && View.X >= InSize.X + 8 && View.Y >= InSize.Y + 8))
 		{
 			return false;
 		}
@@ -179,7 +195,7 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		InState.PanelOrigin = FIntPoint((View.X + 1) / 2, (View.Y + 1) / 2);
 		const double Right = InState.PanelOrigin.X - View.X * 0.5;
 		const double Down = InState.PanelOrigin.Y - View.Y * 0.5;
-		UDreamWidget* Panel = InRig.MakeWorldPanel(InName, FTransform(Projection.ViewOrigin + FVector(Distance, Right, -Down)), FVector2D(PanelSize));
+		UDreamWidget* Panel = InRig.MakeWorldPanel(InName, FTransform(Projection.ViewOrigin + FVector(Distance, Right, -Down)), FVector2D(InSize));
 		UDreamCanvas* Canvas = Panel != nullptr ? Panel->GetComponent<UDreamCanvas>() : nullptr;
 		if (!InTest.TestNotNull(TEXT("A world-space panel"), Canvas))
 		{
@@ -190,6 +206,7 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		Canvas->SetDepthFade(0);
 		Canvas->SetBlendDepth(InBlendDepth);
 		InState.Panel = Panel;
+		InState.PlacedSize = InSize;
 		OutPanel = Panel;
 		return true;
 	}
@@ -204,13 +221,14 @@ namespace DreamWorldSpaceCompositePixelTestLocal
 		{
 			return false;
 		}
-		const FIntPoint Min = InState.PanelOrigin - PanelSize / 2;
-		OutPixels.SetNumUninitialized(PanelSize.X * PanelSize.Y);
-		for (int32 Y = 0; Y < PanelSize.Y; ++Y)
+		const FIntPoint Placed = InState.PlacedSize;
+		const FIntPoint Min = InState.PanelOrigin - Placed / 2;
+		OutPixels.SetNumUninitialized(Placed.X * Placed.Y);
+		for (int32 Y = 0; Y < Placed.Y; ++Y)
 		{
-			for (int32 X = 0; X < PanelSize.X; ++X)
+			for (int32 X = 0; X < Placed.X; ++X)
 			{
-				OutPixels[Y * PanelSize.X + X] = Whole[(Min.Y + Y) * Size.X + Min.X + X];
+				OutPixels[Y * Placed.X + X] = Whole[(Min.Y + Y) * Size.X + Min.X + X];
 			}
 		}
 		return true;
@@ -789,6 +807,120 @@ bool FDreamWorldSpaceParticlesPixelTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("The particles are drawn on the world-space canvas (%d pixels of the left holder over the stripes)"), NormalDrawn), NormalDrawn > 200);
 		TestTrue(*FString::Printf(TEXT("...and with their falling sprites in Overlay (%d pixels of the right holder)"), OverlaidDrawn), OverlaidDrawn > 200);
 		TestTrue(*FString::Printf(TEXT("The falling sprites in Overlay are blended over what is behind them, not drawn Normal (%d pixels differ between the two)"), Apart), Apart > 40);
+	});
+	Steps.PerformLatent();
+	Rig->Finish();
+	return true;
+}
+
+namespace DreamWorldSpaceCompositePixelTestLocal
+{
+	/** The gallery document's background at its pixel (X, Y): DreamPsdTestDocuments::MakeGallery's gradient and cells. */
+	FColor PsdGalleryBackground(int32 X, int32 Y)
+	{
+		const float T = Y / 191.0f;
+		const int32 Lift = ((X / 16) + (Y / 16)) % 2 == 0 ? 14 : 0;
+		return FColor((uint8)FMath::RoundToInt(40 + 10 * T + Lift), (uint8)FMath::RoundToInt(70 + 70 * T + Lift), (uint8)FMath::RoundToInt(120 + 10 * T + Lift), 255);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamWorldSpacePsdImportPixelTest,
+	"DreamGUI.World.RHI.AnImportedDocumentsGroupsAndBlendModesAreDrawnOnAWorldSpaceCanvas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamWorldSpacePsdImportPixelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldSpaceCompositePixelTestLocal;
+	// The gallery document read, mapped and printed as a .dui, as an import does, and built into a widget tree.
+	FDreamPsdWriteDocument Write = DreamPsdTestDocuments::MakeGallery();
+	const TArray<uint8> Bytes = DreamPsdTestDocuments::WriteWithComposite(Write, DreamGalleryStage::Backdrop);
+	TSharedRef<FDreamPsdDocument> Document = MakeShared<FDreamPsdDocument>();
+	FDreamPsdMessages Messages;
+	if (!TestTrue(FString::Printf(TEXT("the gallery reads (%s)"), *Messages.ToString()), DreamPsdReader::Read(Bytes, *Document, Messages)))
+	{
+		return false;
+	}
+	FDreamPsdMapOptions Options;
+	Options.DocumentName = TEXT("WorldGallery");
+	Options.TextureFolder = TEXT("/Temp/DreamGUITests/PsdWorld/WorldGallery");
+	FDreamPsdMapper Mapper(*Document, Options);
+	FDreamPsdMapResult Map;
+	Mapper.Map(Map);
+	const TSharedRef<FState> State = MakeShared<FState>();
+	for (UTexture2D* Texture : DreamPsdImporter::MakeTextures(Map.Textures, false, Messages))
+	{
+		State->Kept.Emplace(Texture);
+	}
+	const FString Text = DreamPsdDui::Print(Map.Root, FString(), TEXT("WorldGallery.psd"));
+	FDreamUIDiagnosticBag Diagnostics;
+	FDreamUIAst Ast;
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	const bool bParsed = FDreamUISourceFile::Parse(Text, TEXT("WorldGallery.dui"), Ast, Diagnostics);
+	UDreamWidgetTree* Tree = bParsed ? FDreamUITextBuilder::Build(Ast, GetTransientPackage(), Diagnostics, Bindings) : nullptr;
+	if (!TestTrue(FString::Printf(TEXT("the import's .dui builds: %s"), *Diagnostics.ToString()), Tree != nullptr && !Diagnostics.HasErrors()))
+	{
+		return false;
+	}
+	State->Kept.Emplace(Tree);
+	const FIntPoint DocumentSize(Document->Width, Document->Height);
+
+	const TSharedRef<FDreamDriverPieRig> Rig = FDreamDriverPieRig::Create(*this);
+	Rig->Start();
+	Rig->WhenReady([this, State](FDreamDriverPieRig& InRig)
+	{
+		SetUpCamera(*this, InRig, *State);
+	});
+	FDreamDriverSequence Steps = Rig->Sequence();
+	Steps.WaitFrames(4);
+	Steps.Then([this, State, Rig, Tree, DocumentSize](FDreamDriverContext& Context)
+	{
+		// The document on a world-space canvas DreamGUI's renderer draws, one of its pixels to one of the view's: how the
+		// designer draws the widget the import makes.
+		UDreamWidget* Panel = nullptr;
+		if (!PlacePanel(*this, *Rig, *State, TEXT("PsdPanel"), 0, 1.0f, Panel, DocumentSize))
+		{
+			return;
+		}
+		AddBlock(*Rig, Panel, TEXT("Backdrop"), FVector2D(DocumentSize), FVector2D::ZeroVector, DreamGalleryStage::Backdrop);
+		TestNotNull(TEXT("the import comes to life on the panel"), DuplicateDreamWidgetHierarchy(Context.World, Tree->RootWidget.Get(), Panel));
+	});
+	Steps.WaitFrames(16);
+	Steps.Then([this, State](FDreamDriverContext& Context)
+	{
+		TArray<FColor> Pixels;
+		if (!State->Panel.IsValid() || !ReadPanel(*this, Context.World, *State, Pixels))
+		{
+			return;
+		}
+		const FIntPoint Size = State->PlacedSize;
+		FDreamPixelProbe::SaveCapture(Pixels, Size, TEXT("World_PsdGallery"));
+		auto Got = [&Pixels, Size](int32 X, int32 Y) { return Pixels[Y * Size.X + X]; };
+		// A viewport blends in encoded values, as the world-space chart has it (Expected): the document's merged image blends
+		// normal layers in linear light, so the picture is held to the formulas here, layer by layer.
+		const FColor Shade(200, 120, 255, 255);
+		const FColor Glow(250, 230, 90, 204);
+		const FColor Yellow(250, 220, 60, 255);
+		const FColor Green(60, 200, 90, 255);
+		{
+			const FIntPoint P(158, 40);
+			FDreamPixelProbe::ExpectColorAt(*this, Pixels, Size, P, Expected(EDreamUIBlendMode::Multiply, PsdGalleryBackground(P.X, P.Y), Shade), 6
+				, TEXT("The layer in Multiply multiplies the background"));
+		}
+		{
+			const FIntPoint P(236, 110);
+			FDreamPixelProbe::ExpectColorAt(*this, Pixels, Size, P, Expected(EDreamUIBlendMode::Overlay, PsdGalleryBackground(P.X, P.Y), Glow), 6
+				, TEXT("The layer in Overlay at 80 % is laid over the background by the formula"));
+		}
+		{
+			// The isolated group at 60 %: where its yellow square covers its green one, the yellow alone, faded once.
+			const FIntPoint P(158, 140);
+			const FColor Behind = PsdGalleryBackground(P.X, P.Y);
+			const FColor Isolated = Lerp(Behind, Yellow, 0.6f);
+			const FColor PassedThrough = Lerp(Lerp(Behind, Green, 0.6f), Yellow, 0.6f);
+			FDreamPixelProbe::ExpectColorAt(*this, Pixels, Size, P, Isolated, 6, TEXT("The isolated group at 60 % shows its top square alone where they overlap"));
+			TestFalse(*FString::Printf(TEXT("...not the green under it showing through (%s)"), *FDreamPixelProbe::Describe(Got(P.X, P.Y)))
+				, FDreamPixelProbe::IsNear(Got(P.X, P.Y), PassedThrough, 6));
+		}
 	});
 	Steps.PerformLatent();
 	Rig->Finish();
