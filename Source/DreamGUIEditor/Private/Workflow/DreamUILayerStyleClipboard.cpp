@@ -9,6 +9,7 @@
 #include "DreamWidgetBlueprint.h"
 #include "Text/DreamUITextPatcher.h"
 #include "Text/DreamUITextWriteBack.h"
+#include "Workflow/DreamUILayerStyleDialog.h"
 
 #include "Core/Components/DreamLayerStyle.h"
 #include "Core/Components/DreamVisual.h"
@@ -235,6 +236,23 @@ namespace DreamUILayerStyleClipboardLocal
 			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakDesigner = InDesigner;
 			MenuBuilder.BeginSection("DreamUILayerStyle", LOCTEXT("LayerStyleSection", "Layer Style"));
 			{
+				MenuBuilder.AddMenuEntry(
+					LOCTEXT("EditLayerStyle", "Layer Style..."),
+					LOCTEXT("EditLayerStyleTooltip", "Edit the selected widgets' layer style in the Layer Style dialog: every effect, previewed on the widgets, written when you press OK."),
+					FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Adjust")),
+					FUIAction(
+						FExecuteAction::CreateLambda([WeakDesigner]()
+						{
+							if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = WeakDesigner.Pin())
+							{
+								DreamUILayerStyleDialog::Open(*Designer, ValidSelection(*Designer));
+							}
+						}),
+						FCanExecuteAction::CreateLambda([WeakDesigner]()
+						{
+							const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = WeakDesigner.Pin();
+							return Designer.IsValid() && ValidSelection(*Designer).Num() > 0;
+						})));
 				MenuBuilder.AddMenuEntry(
 					LOCTEXT("CopyLayerStyle", "Copy Layer Style"),
 					LOCTEXT("CopyLayerStyleTooltip", "Copy the selected widget's layer style -- and its blend mode and mask, as Copy Includes says -- as lines of .dui. Paste them onto other widgets, in this Blueprint or another, or into a .dui."),

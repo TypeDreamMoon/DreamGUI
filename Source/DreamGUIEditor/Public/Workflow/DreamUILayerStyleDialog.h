@@ -205,6 +205,12 @@ namespace DreamUILayerStyleDialog
 	 * designer is cancelled first. The window, or null when none of the widgets can be written to.
 	 */
 	DREAMGUIEDITOR_API TSharedPtr<SWindow> Open(FDreamWidgetBlueprintEditor& InDesigner, TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	/**
+	 * Open the dialog from one of a designer's preview widgets -- its row in the details panel, its mark in the hierarchy:
+	 * on the designer's whole selection when the widget is one of it, on the widget alone when it is not. Null when the
+	 * widget is no designer's.
+	 */
+	DREAMGUIEDITOR_API TSharedPtr<SWindow> OpenFrom(UDreamWidget* InPreviewWidget);
 	/** The dialog open for InDesigner, if one is. */
 	DREAMGUIEDITOR_API TSharedPtr<SDreamUILayerStyleDialog> Find(const FDreamWidgetBlueprintEditor& InDesigner);
 }

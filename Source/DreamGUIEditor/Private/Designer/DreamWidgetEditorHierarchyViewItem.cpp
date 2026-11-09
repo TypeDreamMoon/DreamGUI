@@ -31,9 +31,27 @@
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp
 #include "Workflow/DreamUIPresetLibrary.h"//FDreamUIPresetDragDropOp
+#include "Workflow/DreamUILayerStyleDialog.h"
+#include "Widgets/Layout/SBorder.h"
+#if PLATFORM_WINDOWS
+#include "Windows/WindowsHWrapper.h"
+#endif
 #include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetEditorHierarchyViewItem"
+
+namespace DreamWidgetEditorHierarchyViewItemLocal
+{
+	/** How long a second click may follow a first and make a double-click: the desktop's setting where it has one. */
+	float DoubleClickSeconds()
+	{
+#if PLATFORM_WINDOWS
+		return static_cast<float>(::GetDoubleClickTime()) / 1000.0f;
+#else
+		return 0.5f;
+#endif
+	}
+}
 
 
 TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New(const TArray<UDreamWidget*>& InWidgets)
@@ -600,9 +618,16 @@ TSharedRef<SWidget> SDreamWidgetEditorHierarchyViewItem::MakeLayerMarks()
 			.ToolTipText(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip, Kind)
 			.OnClicked(this, &SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked, Kind)
 			[
-				SNew(SImage)
-				.Image(DreamUILayerEffects::KindIcon(static_cast<EDreamUILayerEffectKind>(Kind)))
-				.ColorAndOpacity(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor, Kind)
+				// The image's border takes the double-click before the button does, which would read it as a click.
+				SNew(SBorder)
+				.BorderImage(FAppStyle::GetNoBrush())
+				.Padding(0.0f)
+				.OnMouseDoubleClick_Lambda([this, Kind](const FGeometry&, const FPointerEvent&) { return OnLayerMarkDoubleClicked(Kind); })
+				[
+					SNew(SImage)
+					.Image(DreamUILayerEffects::KindIcon(static_cast<EDreamUILayerEffectKind>(Kind)))
+					.ColorAndOpacity(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor, Kind)
+				]
 			]
 		];
 	}
@@ -670,6 +695,10 @@ FText SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip(uint8 InKind) con
 	{
 		Lines.Add(LOCTEXT("LayerMarkClick", "Click to turn these off or on, to compare with and without them.").ToString());
 	}
+	if (InKind == static_cast<uint8>(EDreamUILayerEffectKind::Style))
+	{
+		Lines.Add(LOCTEXT("LayerMarkDoubleClick", "Double-click to open the Layer Style dialog.").ToString());
+	}
 	return FText::FromString(FString::Join(Lines, TEXT("\n")));
 }
 
@@ -692,15 +721,39 @@ FReply SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked(uint8 InKind)
 	// After the click has returned: carrying the edit to the template can rebuild the preview, and with it this row.
 	if (GEditor != nullptr)
 	{
-		GEditor->GetTimerManager()->SetTimerForNextTick([Switchable, bOn = !bAnyOn]()
+		const auto Switch = [Switchable, bOn = !bAnyOn]()
 		{
 			const FScopedTransaction Transaction(bOn ? LOCTEXT("LayerMarkOn", "Turn Layer Effects On") : LOCTEXT("LayerMarkOffTransaction", "Turn Layer Effects Off"));
 			for (const FDreamUILayerEffect& Effect : Switchable)
 			{
 				DreamUILayerEffects::SetOn(Effect, bOn);
 			}
-		});
+		};
+		if (InKind == static_cast<uint8>(EDreamUILayerEffectKind::Style))
+		{
+			// The layer style's mark opens the Layer Style dialog on a double-click: its click waits to be no double-click's first.
+			GEditor->GetTimerManager()->SetTimer(PendingStyleSwitch, FTimerDelegate::CreateLambda(Switch),
+				DreamWidgetEditorHierarchyViewItemLocal::DoubleClickSeconds(), /*bLoop*/false);
+		}
+		else
+		{
+			GEditor->GetTimerManager()->SetTimerForNextTick(Switch);
+		}
 	}
+	return FReply::Handled();
+}
+
+FReply SDreamWidgetEditorHierarchyViewItem::OnLayerMarkDoubleClicked(uint8 InKind)
+{
+	if (InKind != static_cast<uint8>(EDreamUILayerEffectKind::Style))
+	{
+		return FReply::Unhandled();
+	}
+	if (GEditor != nullptr)
+	{
+		GEditor->GetTimerManager()->ClearTimer(PendingStyleSwitch);
+	}
+	DreamUILayerStyleDialog::OpenFrom(Widget.Get());
 	return FReply::Handled();
 }
 

@@ -569,4 +569,28 @@ TSharedPtr<SDreamUILayerStyleDialog> DreamUILayerStyleDialog::Find(const FDreamW
 	return Dialog.IsValid() && !Dialog->GetSession()->IsFinished() ? Dialog : nullptr;
 }
 
+TSharedPtr<SWindow> DreamUILayerStyleDialog::OpenFrom(UDreamWidget* InPreviewWidget)
+{
+	FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(InPreviewWidget);
+	if (Designer == nullptr)
+	{
+		return nullptr;
+	}
+	TArray<UDreamWidget*> Targets;
+	bool bInSelection = false;
+	for (const TWeakObjectPtr<UDreamWidget>& Selected : Designer->GetSelectedWidgets())
+	{
+		bInSelection |= Selected.Get() == InPreviewWidget;
+		if (Selected.IsValid())
+		{
+			Targets.Add(Selected.Get());
+		}
+	}
+	if (!bInSelection)
+	{
+		Targets = { InPreviewWidget };
+	}
+	return Open(*Designer, Targets);
+}
+
 #undef LOCTEXT_NAMESPACE

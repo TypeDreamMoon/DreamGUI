@@ -9,6 +9,7 @@
 #include "Designer/DreamUILayerEffects.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/SDreamWidgetDesignerDetails.h"
+#include "Workflow/DreamUILayerStyleDialog.h"
 #include "DetailCustomization/DreamDetailsLayout.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
@@ -167,8 +168,12 @@ namespace DreamWidgetLayerSectionLocal
 		});
 	}
 
-	/** A switch for a component of InClass, and a button that opens the first one's own properties. */
-	TSharedRef<SWidget> MakeComponentSwitch(const FWidgets& InWidgets, UClass* InClass, TWeakPtr<IPropertyUtilities> InUtilities, FText InOpenToolTip)
+	/**
+	 * A switch for a component of InClass, and a button that opens the first one's own properties -- or, given InOpen, does
+	 * that instead, for any of the widgets (the layer style's opens the Layer Style dialog). InTag names the button.
+	 */
+	TSharedRef<SWidget> MakeComponentSwitch(const FWidgets& InWidgets, UClass* InClass, TWeakPtr<IPropertyUtilities> InUtilities, FText InOpenToolTip,
+		TFunction<void(const FWidgets&)> InOpen = nullptr, FName InTag = NAME_None)
 	{
 		return SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
@@ -189,15 +194,24 @@ namespace DreamWidgetLayerSectionLocal
 			.Padding(6.0f, 0.0f, 0.0f, 0.0f)
 			[
 				SNew(SButton)
+				.Tag(InTag)
 				.Text(LOCTEXT("EditComponent", "Edit..."))
 				.ToolTipText(InOpenToolTip)
-				.IsEnabled_Lambda([InWidgets, InClass]()
+				.IsEnabled_Lambda([InWidgets, InClass, bOpen = !!InOpen]()
 				{
+					if (bOpen)
+					{
+						return InWidgets.Num() > 0 && InWidgets[0].IsValid();
+					}
 					return InWidgets.Num() == 1 && InWidgets[0].IsValid() && InWidgets[0]->GetComponent(InClass) != nullptr;
 				})
-				.OnClicked_Lambda([InWidgets, InClass]()
+				.OnClicked_Lambda([InWidgets, InClass, InOpen]()
 				{
-					if (InWidgets.Num() == 1 && InWidgets[0].IsValid())
+					if (InOpen)
+					{
+						InOpen(InWidgets);
+					}
+					else if (InWidgets.Num() == 1 && InWidgets[0].IsValid())
 					{
 						TWeakObjectPtr<UDreamUIBehaviour> Component = InWidgets[0]->GetComponent(InClass);
 						Defer([Component]() { ShowComponent(Component.Get()); });
@@ -350,7 +364,17 @@ void DreamWidgetLayerSection::Build(IDetailLayoutBuilder& InDetailBuilder, const
 		]
 		.ValueContent()
 		[
-			MakeComponentSwitch(InWidgets, UDreamLayerStyle::StaticClass(), WeakUtilities, LOCTEXT("EditStyleTip", "Open the layer style's own settings"))
+			MakeComponentSwitch(InWidgets, UDreamLayerStyle::StaticClass(), WeakUtilities,
+				LOCTEXT("EditStyleTip", "Open the Layer Style dialog: every effect, previewed on the widgets, written when you press OK."),
+				[](const FWidgets& InStyled)
+				{
+					// The details panel shows the selection, or one widget of it: the dialog takes the whole selection.
+					if (InStyled.Num() > 0 && InStyled[0].IsValid())
+					{
+						DreamUILayerStyleDialog::OpenFrom(InStyled[0].Get());
+					}
+				},
+				TEXT("DreamGUI.LayerSection.EditLayerStyle"))
 		];
 	Layer.AddCustomRow(LOCTEXT("LayerGroup", "Layer Group"))
 		.NameContent()
