@@ -22,6 +22,7 @@
 #include "RenderingThread.h"
 #include "RHI/DreamPixelProbe.h"
 #include "Slate/SceneViewport.h"
+#include "Workflow/DreamUILayerStyleDialog.h"
 
 /*
  * The effects' viewport handles on a class whose hierarchy is a .dui: Tab steps through the kinds a selection has and then
@@ -711,6 +712,74 @@ bool FDreamDesignerEffectHandlePixelTest::RunTest(const FString&)
 		TestTrue(*FString::Printf(TEXT("%s: the handle is drawn at %s: %s shown, %s off"), Case.Widget, *Pixel.ToString(), *With.ToString(), *Without.ToString()),
 			FMath::Max3(FMath::Abs(With.R - Without.R), FMath::Abs(With.G - Without.G), FMath::Abs(With.B - Without.B)) > 40);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerShadowWhileStyleDialogTest,
+	"DreamGUI.Designer.Driver.AShadowDraggedWhileTheLayerStyleDialogEditsTheWidgetMovesTheDialogsStyleAndWritesNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The Layer Style dialog's session editing the Card (the dialog without its window), and the Card's drop shadow on the
+ * global light dragged straight down: the session's global light comes from above and it has a change to write, while the
+ * template and the file are as they were. Committed, the session writes the light into the file, and one undo takes it
+ * back. A try that is not kept, as Esc ends a drag, puts the session's style back.
+ */
+bool FDreamDesignerShadowWhileStyleDialogTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEffectHandleTestLocal;
+	FScopedDesignerPreferences Preferences;
+	Preferences.SetGridSnap(false);
+	FScopedActiveHandles Active(StyleShadowHandles());
+	FScopedDuiDesigner Scoped(TEXT("DesignerShadowStyleDialog"), MakeFile(TEXT("RectBlock"), {
+		TEXT("+ DreamLayerStyle { Style.DropShadows = [\"(Distance=12)\"] }") }));
+	UDreamWidget* Template = nullptr;
+	UDreamWidget* Preview = nullptr;
+	if (!Prepare(*this, Scoped, Template, Preview))
+	{
+		return false;
+	}
+	const TSharedPtr<FDreamUILayerStyleSession> Session = FDreamUILayerStyleSession::Begin(*Scoped.Driver->Toolkit(), { Preview });
+	if (!TestTrue(TEXT("A Layer Style session edits the Card"), Session.IsValid()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("...and is the one found editing it"), FDreamUILayerStyleSession::FindEditing(Preview) == Session);
+	Scoped.Driver->PumpFrame();
+	const FString Before = Scoped.ReadFile();
+
+	// A try not kept puts the working copy back.
+	FDreamLayerEffects Tried = Session->GetStyle();
+	Tried.GlobalLightAngle = 10.0f;
+	Session->TryStyle(Tried);
+	TestEqual(TEXT("A tried style is the working copy"), Session->GetStyle().GlobalLightAngle, 10.0f);
+	Session->EndTry(/*bInKeep*/false);
+	TestEqual(TEXT("...and not kept, it is put back"), Session->GetStyle().GlobalLightAngle, 120.0f);
+	TestFalse(TEXT("...and is no change"), Session->IsDirty());
+
+	const double PixelsPerUnit = MeasurePixelsPerUnit(*Scoped.Driver, Preview);
+	FVector2D Handle;
+	FVector2D Below;
+	if (!TestTrue(TEXT("The drop shadow's handle is on screen"), FindHandle(*Scoped.Driver, Preview, StyleShadowHandles(), Shadow::FirstDropShadow, Handle))
+		|| !TestTrue(TEXT("...and the place to take it"), LocalToPixel(*Scoped.Driver, Preview, Preview->GetLocalSpaceCenter() + FVector2D(0.0, -30.0 / PixelsPerUnit), Below)))
+	{
+		Session->Cancel();
+		return false;
+	}
+	PressAndCarry(*Scoped.Driver, RoundPixel(Handle), RoundPixel(Below));
+	LetGo(*Scoped.Driver);
+	TestTrue(*FString::Printf(TEXT("The session's global light comes from above: %.2f degrees"), Session->GetStyle().GlobalLightAngle),
+		FMath::IsNearlyEqual(Session->GetStyle().GlobalLightAngle, 90.0f, 2.0f));
+	TestTrue(TEXT("...a change the session has to write"), Session->IsDirty());
+	TestEqualSensitive(TEXT("The viewport wrote nothing to the file"), Scoped.ReadFile(), Before);
+	TestTrue(TEXT("...nor to the template"), StyleOf(Template) != nullptr && StyleOf(Template)->GetStyle().GlobalLightAngle == 120.0f);
+
+	TestEqual(TEXT("Committed, the session writes the Card"), Session->Commit(), 1);
+	TestTrue(TEXT("...the global light into the file"), Scoped.ReadFile().Contains(TEXT("GlobalLightAngle")));
+	TestTrue(TEXT("There is something to undo"), GEditor->UndoTransaction());
+	Scoped.Driver->PumpFrame();
+	TestEqualSensitive(TEXT("One undo takes the file back"), Scoped.ReadFile(), Before);
 	return true;
 }
 
