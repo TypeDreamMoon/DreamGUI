@@ -222,6 +222,8 @@ The window stays open beside the designer, one per designer.
   closing the window -- puts the preview back, and the file is byte for byte what it was.
 - **New Style...** keeps the style being edited, with the layer's blending, as a preset, through the
   [preset library](#the-preset-library)'s New Style window.
+- While the dialog is open, dragging a widget's style shadow or its global light in the viewport moves the dialog's
+  style: shown at once, kept as an edit OK writes, put back by Esc; the viewport writes nothing of it.
 
 On several widgets the dialog starts from the first one's style and blending and writes to all of them. OK with nothing
 changed writes nothing. The blend mode and opacity are written only when Blending Options changed them, so a style given

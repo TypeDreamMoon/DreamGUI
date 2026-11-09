@@ -8,6 +8,7 @@
 #include "Designer/DreamDesignerHandles.h"
 #include "DreamDesignerHandleShapes.h"
 #include "Extensions/Effects/DreamPointerLight.h"
+#include "Workflow/DreamUILayerStyleDialog.h"
 
 #define LOCTEXT_NAMESPACE "DreamDesignerLightHandles"
 
@@ -34,14 +35,21 @@ namespace DreamDesignerLightHandlesLocal
 	constexpr double DiscPixels = 56.0;
 
 	/** The widget's layer style, when it draws its own and something in it takes the global light. */
+	/** The style a widget's light handles show and edit: the Layer Style dialog's working copy while it edits the widget. */
+	const FDreamLayerEffects& StyleShown(const UDreamWidget* InWidget, const UDreamLayerStyle& InComponent)
+	{
+		const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget);
+		return Dialog.IsValid() ? Dialog->GetStyle() : InComponent.GetStyle();
+	}
+
 	UDreamLayerStyle* FindGloballyLitStyle(const UDreamWidget* InWidget)
 	{
 		UDreamLayerStyle* Component = UDreamLayerStyle::Find(InWidget);
-		if (Component == nullptr || Component->GetPreset() != nullptr || !Component->GetStyle().bEnabled)
+		if (Component == nullptr || Component->GetPreset() != nullptr || !StyleShown(InWidget, *Component).bEnabled)
 		{
 			return nullptr;
 		}
-		const FDreamLayerEffects& Style = Component->GetStyle();
+		const FDreamLayerEffects& Style = StyleShown(InWidget, *Component);
 		const bool bUses = Style.DropShadows.ContainsByPredicate([](const FDreamStyleDropShadow& S) { return S.bEnabled && S.bUseGlobalLight; })
 			|| Style.InnerShadows.ContainsByPredicate([](const FDreamStyleInnerShadow& S) { return S.bEnabled && S.bUseGlobalLight; })
 			|| (Style.BevelEmboss.bEnabled && Style.BevelEmboss.bUseGlobalLight);
@@ -148,7 +156,7 @@ namespace DreamDesignerLightHandlesLocal
 			{
 				return;
 			}
-			const FDreamLayerEffects& Style = Component->GetStyle();
+			const FDreamLayerEffects& Style = StyleShown(InWidget, *Component);
 			const FVector2D Centre = InWidget->GetLocalSpaceCenter();
 			const FLinearColor Guide = FDreamDesignerHandles::GetGuideColor();
 			const double Disc = DiscPixels / FMath::Max(OutSet.PixelsPerUnit, UE_KINDA_SMALL_NUMBER);
@@ -184,7 +192,8 @@ namespace DreamDesignerLightHandlesLocal
 			{
 				return false;
 			}
-			FDreamLayerEffects Style = Component->GetStyle();
+			const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget);
+			FDreamLayerEffects Style = Dialog.IsValid() ? Dialog->GetStyle() : Component->GetStyle();
 			const FVector2D Spoke = InDrag.GetTarget() - InWidget->GetLocalSpaceCenter();
 			const double Disc = DiscPixels / FMath::Max(InDrag.PixelsPerUnit, UE_KINDA_SMALL_NUMBER);
 			float Unused = 0.0f;
@@ -198,12 +207,30 @@ namespace DreamDesignerLightHandlesLocal
 				const double In = FMath::Clamp(Spoke.Size() / FMath::Max(Disc, UE_KINDA_SMALL_NUMBER), 0.0, 1.0);
 				DreamLayerStyleLight::SetAltitude(Style, /*bInUseGlobalLight*/ true, Unused, static_cast<float>(90.0 * (1.0 - In)));
 			}
+			if (Dialog.IsValid())
+			{
+				// The dialog's to keep or put back: nothing here for the viewport to write.
+				if (!(Style == Dialog->GetStyle()))
+				{
+					Dialog->TryStyle(Style);
+				}
+				return false;
+			}
 			if (Style == Component->GetStyle())
 			{
 				return false;
 			}
 			Component->SetStyle(Style);
 			return true;
+		}
+
+		virtual bool EndDrag(UDreamWidget* InWidget, const FDreamDesignerHandleDrag& InDrag, bool bInCancelled) override
+		{
+			if (const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget))
+			{
+				Dialog->EndTry(!bInCancelled);
+			}
+			return false;
 		}
 	};
 }

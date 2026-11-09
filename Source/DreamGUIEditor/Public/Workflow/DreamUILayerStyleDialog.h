@@ -99,6 +99,14 @@ class DREAMGUIEDITOR_API FDreamUILayerStyleSession : public TSharedFromThis<FDre
 public:
 	/** A session on InPreviewWidgets of InDesigner's preview. Null when none of them has a template to write to. */
 	static TSharedPtr<FDreamUILayerStyleSession> Begin(FDreamWidgetBlueprintEditor& InDesigner, TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	/**
+	 * The session, not yet finished, that edits InPreviewWidget's layer style, if one does. While one does, the layer style the
+	 * widget shows is the session's working copy: what else edits it there -- a viewport handle on a shadow or on the global
+	 * light -- edits the working copy (TryStyle, EndTry) and leaves the writing to the session.
+	 */
+	static TSharedPtr<FDreamUILayerStyleSession> FindEditing(const UDreamWidget* InPreviewWidget);
+	/** Whether InPreviewWidget is one of the widgets this session previews on. */
+	bool IsEditing(const UDreamWidget* InPreviewWidget) const;
 	~FDreamUILayerStyleSession();
 
 	/** The rows, in an image editor's order: Blending Options, Bevel and Emboss (Contour, Texture), Stroke, ... Drop Shadow. */
@@ -140,6 +148,14 @@ public:
 	 * again. The blending the widgets show is the working copy's only while it differs from where it started, or was changed.
 	 */
 	void PreviewChanged(EDreamUIStyleDialogPage InPage, FName InProperty = NAME_None);
+
+	/**
+	 * A style tried from outside the dialog -- a viewport handle being dragged: the working copy becomes InStyle and is
+	 * previewed, not yet counted as a change. EndTry ends the trying: kept, it is a change OK will write; not kept, the
+	 * working copy is what it was before the first try. Nothing happens on an EndTry with no try before it.
+	 */
+	void TryStyle(const FDreamLayerEffects& InStyle);
+	void EndTry(bool bInKeep);
 
 	/** Preview on the widgets, or show them as they are. On by default. */
 	void SetPreviewEnabled(bool bInEnabled);
@@ -194,6 +210,8 @@ private:
 	FDreamUIStyleDialogModel Model;
 	/** The blending the dialog opened with (the first widget's). */
 	FDreamUIStyleDialogBlending InitialBlending;
+	/** The working style before the first of a run of tries (TryStyle), to put back when they are not kept. */
+	TOptional<FDreamLayerEffects> StyleBeforeTry;
 	bool bPreview = true;
 	bool bDirty = false;
 	bool bBlendingChanged = false;

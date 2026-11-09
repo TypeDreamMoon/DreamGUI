@@ -73,6 +73,13 @@ namespace DreamUILayerStyleSessionLocal
 		}
 	}
 
+	/** Every session begun, so that what else edits a widget's layer style can find the one editing it. */
+	TArray<TWeakPtr<FDreamUILayerStyleSession>>& LiveSessions()
+	{
+		static TArray<TWeakPtr<FDreamUILayerStyleSession>> Sessions;
+		return Sessions;
+	}
+
 	const TCHAR* ContourFields[] = { TEXT("Contour"), TEXT("bContourAntiAliased"), TEXT("ContourRange") };
 	const TCHAR* TextureFields[] = { TEXT("Texture"), TEXT("TextureDepth"), TEXT("bTextureInvert") };
 }
@@ -117,7 +124,32 @@ TSharedPtr<FDreamUILayerStyleSession> FDreamUILayerStyleSession::Begin(FDreamWid
 	{
 		Session->PreviewRebuiltHandle = Host->OnPreviewRebuilt.AddSP(Session, &FDreamUILayerStyleSession::OnPreviewRebuilt);
 	}
+	LiveSessions().RemoveAll([](const TWeakPtr<FDreamUILayerStyleSession>& InSession) { return !InSession.IsValid(); });
+	LiveSessions().Add(Session);
 	return Session;
+}
+
+TSharedPtr<FDreamUILayerStyleSession> FDreamUILayerStyleSession::FindEditing(const UDreamWidget* InPreviewWidget)
+{
+	using namespace DreamUILayerStyleSessionLocal;
+	if (InPreviewWidget == nullptr)
+	{
+		return nullptr;
+	}
+	for (const TWeakPtr<FDreamUILayerStyleSession>& Weak : LiveSessions())
+	{
+		const TSharedPtr<FDreamUILayerStyleSession> Session = Weak.Pin();
+		if (Session.IsValid() && !Session->IsFinished() && Session->IsEditing(InPreviewWidget))
+		{
+			return Session;
+		}
+	}
+	return nullptr;
+}
+
+bool FDreamUILayerStyleSession::IsEditing(const UDreamWidget* InPreviewWidget) const
+{
+	return Previews.ContainsByPredicate([InPreviewWidget](const FPreviewTarget& InTarget) { return InTarget.Widget.Get() == InPreviewWidget; });
 }
 
 FDreamUILayerStyleSession::~FDreamUILayerStyleSession()
@@ -283,6 +315,38 @@ void FDreamUILayerStyleSession::SetPreviewEnabled(bool bInEnabled)
 	{
 		RestorePreview();
 	}
+}
+
+void FDreamUILayerStyleSession::TryStyle(const FDreamLayerEffects& InStyle)
+{
+	if (bFinished)
+	{
+		return;
+	}
+	if (!StyleBeforeTry.IsSet())
+	{
+		StyleBeforeTry = Model.Style;
+	}
+	Model.Style = InStyle;
+	ApplyPreview();
+}
+
+void FDreamUILayerStyleSession::EndTry(bool bInKeep)
+{
+	if (bFinished || !StyleBeforeTry.IsSet())
+	{
+		return;
+	}
+	if (bInKeep)
+	{
+		bDirty |= !(Model.Style == StyleBeforeTry.GetValue());
+	}
+	else
+	{
+		Model.Style = StyleBeforeTry.GetValue();
+	}
+	StyleBeforeTry.Reset();
+	ApplyPreview();
 }
 
 void FDreamUILayerStyleSession::PreviewChanged(EDreamUIStyleDialogPage InPage, FName InProperty)

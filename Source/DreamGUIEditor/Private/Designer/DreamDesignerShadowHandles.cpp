@@ -8,6 +8,7 @@
 #include "Core/DreamLayerStyleTypes.h"
 #include "Designer/DreamDesignerHandles.h"
 #include "DreamDesignerHandleShapes.h"
+#include "Workflow/DreamUILayerStyleDialog.h"
 
 #define LOCTEXT_NAMESPACE "DreamDesignerShadowHandles"
 
@@ -17,7 +18,9 @@
  * (diamonds), and a rect block's own outer and inner shadow. Dragging one sets its angle and its distance together, as an
  * image editor's canvas does while its style dialog is open; a style's shadow that uses the global light turns the global
  * light (DreamLayerStyleLight), so every effect that uses it turns with it. Shift snaps the angle to 15 degrees. A style that
- * follows a preset is the preset's to change, and has no handles here.
+ * follows a preset is the preset's to change, and has no handles here. While the Layer Style dialog edits the widget, its
+ * style's shadows are the dialog's working copy's: a drag is tried on the copy, kept by the dialog when let go, and the
+ * viewport writes nothing.
  */
 namespace DreamDesignerShadowHandlesLocal
 {
@@ -69,7 +72,8 @@ namespace DreamDesignerShadowHandlesLocal
 	{
 		if (const UDreamLayerStyle* Component = InSource == ESource::Style ? FindStyle(InWidget) : nullptr)
 		{
-			const FDreamLayerEffects& Style = Component->GetStyle();
+			const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget);
+			const FDreamLayerEffects& Style = Dialog.IsValid() ? Dialog->GetStyle() : Component->GetStyle();
 			const float Scale = FMath::Max(Style.Scale, 0.01f);
 			for (int32 Index = 0; Index < Style.DropShadows.Num(); ++Index)
 			{
@@ -193,7 +197,8 @@ namespace DreamDesignerShadowHandlesLocal
 				{
 					return false;
 				}
-				FDreamLayerEffects Style = Component->GetStyle();
+				const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget);
+				FDreamLayerEffects Style = Dialog.IsValid() ? Dialog->GetStyle() : Component->GetStyle();
 				const float Scale = FMath::Max(Style.Scale, 0.01f);
 				auto Place = [&InDrag, &Offset, &Style, Scale](bool bInGlobal, float& InOutAngle, float& InOutDistance)
 				{
@@ -220,6 +225,15 @@ namespace DreamDesignerShadowHandlesLocal
 					}
 					FDreamStyleInnerShadow& Inner = Style.InnerShadows[Id - Ids::FirstInnerShadow];
 					Place(Inner.bUseGlobalLight, Inner.Angle, Inner.Distance);
+				}
+				if (Dialog.IsValid())
+				{
+					// The dialog's to keep or put back: nothing here for the viewport to write.
+					if (!(Style == Dialog->GetStyle()))
+					{
+						Dialog->TryStyle(Style);
+					}
+					return false;
 				}
 				if (Style == Component->GetStyle())
 				{
@@ -258,6 +272,18 @@ namespace DreamDesignerShadowHandlesLocal
 				Block->SetInnerShadowDistance(Written);
 			}
 			return true;
+		}
+
+		virtual bool EndDrag(UDreamWidget* InWidget, const FDreamDesignerHandleDrag& InDrag, bool bInCancelled) override
+		{
+			if (IsStyleShadow(InDrag.HandleId))
+			{
+				if (const TSharedPtr<FDreamUILayerStyleSession> Dialog = FDreamUILayerStyleSession::FindEditing(InWidget))
+				{
+					Dialog->EndTry(!bInCancelled);
+				}
+			}
+			return false;
 		}
 
 	private:
