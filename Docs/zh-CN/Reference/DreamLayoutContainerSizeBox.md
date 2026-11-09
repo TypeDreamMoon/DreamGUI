@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerSizeBox"
-description: "UDreamLayoutContainerSizeBox"
----
-
 <a id="udreamlayoutcontainersizebox"></a>
 
 # UDreamLayoutContainerSizeBox
@@ -97,3 +92,4 @@ UMG 类中所有面向蓝图的成员，以及它们在这里的去向。*adopt*
 | `USizeBox` | `ClearMinAspectRatio` | adopt | `ClearMinAspectRatio` |  |
 | `USizeBox` | `SetMaxAspectRatio` | adopt | `SetMaxAspectRatio` |  |
 | `USizeBox` | `ClearMaxAspectRatio` | adopt | `ClearMaxAspectRatio` |  |
+

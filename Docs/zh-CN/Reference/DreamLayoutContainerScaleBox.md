@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerScaleBox"
-description: "UDreamLayoutContainerScaleBox"
----
-
 <a id="udreamlayoutcontainerscalebox"></a>
 
 # UDreamLayoutContainerScaleBox
@@ -56,3 +51,4 @@ UMG 类中所有面向蓝图的成员，以及它们各自的去向。*adopt*：
 | `UScaleBox` | `SetStretchDirection` | adopt | `SetStretchDirection` |  |
 | `UScaleBox` | `SetUserSpecifiedScale` | adopt | `SetUserSpecifiedScale` |  |
 | `UScaleBox` | `SetIgnoreInheritedScale` | adopt | `SetIgnoreInheritedScale` |  |
+

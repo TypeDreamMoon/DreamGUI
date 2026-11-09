@@ -1,8 +1,3 @@
----
-title: "UDreamUserWidget"
-description: "UDreamUserWidget"
----
-
 <a id="udreamuserwidget"></a>
 
 # UDreamUserWidget
@@ -13,22 +8,13 @@ description: "UDreamUserWidget"
 
 声明于 `Public/Core/DreamUserWidget.h`。
 
-一种控件层级，它是一个类而不是资源实例——对应 UMG 的
-UUserWidget，也是 DreamUI 预制体正在成为的东西。
+一种控件层级，它是一个类而不是资源实例——对应 UMG 的 UUserWidget，也是 DreamUI 预制体正在成为的东西。
 
-它自身就是一个 UDreamWidget，正如 UUserWidget 本身就是一个 UWidget。这正是嵌套能够自然
-成立的原因：将其中一个放入另一个层级中，它就是该层级中的一个控件，
-而它自身的内容则来自它自己的类。
+它自身就是一个 UDreamWidget，正如 UUserWidget 本身就是一个 UWidget。这正是嵌套能够自然成立的原因：将其中一个放入另一个层级中，它就是该层级中的一个控件，而它自身的内容则来自它自己的类。
 
-它的内容存放在 WidgetTree 之后，而不是直接放在 Children 中，这种间接性并非
-装饰。没有它，“一个控件的类”和“一个层级的类”就会是同一
-回事，而 UDreamWidget 子类（它们是 Blueprintable 的）就无法与
-层级模板区分开来。UMG 用 UWidgetTree 实现了同样的分离，这里也同样
-不是可选的。
+它的内容存放在 WidgetTree 之后，而不是直接放在 Children 中，这种间接性并非装饰。没有它，“一个控件的类”和“一个层级的类”就会是同一回事，而 UDreamWidget 子类（它们是 Blueprintable 的）就无法与层级模板区分开来。UMG 用 UWidgetTree 实现了同样的分离，这里也同样不是可选的。
 
-WidgetTree 是 Transient 的：类模板绝不能携带已展开的子树，否则嵌套的用户
-控件就会被烘焙进其父级的模板中，并停止跟踪它自己的类。它在
-Initialize 时从类构建，每次都是如此。
+WidgetTree 是 Transient 的：类模板绝不能携带已展开的子树，否则嵌套的用户控件就会被烘焙进其父级的模板中，并停止跟踪它自己的类。它在 Initialize 时从类构建，每次都是如此。
 
 <a id="properties"></a>
 
@@ -36,9 +22,9 @@ Initialize 时从类构建，每次都是如此。
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
-| `bWantsTick` | `bool` | DreamGUI|UserWidget | yes | read only | 每帧 OnTick，默认关闭：tick 的代价是每帧一个管理器列表条目、一次虚函数调用和一次蓝图 ProcessEvent，任何控件都不应为它从未使用过的表面付出这种代价。 |
-| `bAllowEventBubbleUp` | `bool` | DreamGUI|UserWidget | yes | read only | 每个指针/拖拽 Native* 默认返回的冒泡策略。为 True，与 UISelectable 的 false 不同：用户控件是一个容器，而一个静默吞掉其内部每次点击的容器会破坏它被放置到的每个屏幕。设为 false 可在此边界消费事件。 |
-| `bCanNavigateHere` | `bool` | DreamGUI|UserWidget | yes | read only | 此控件本身是否是一个导航停靠点。默认关闭，以便导航搜索像往常一样经过它——一个充满 UISelectable 的用户控件绝不能窃取它们的移动。选择启用后 OnNavigate 才可达。 |
+| `bWantsTick` | `bool` | DreamGUI|UserWidget | yes | read only | Per-frame OnTick, off by default: the cost of a tick is a manager list entry, a virtual call and a Blueprint ProcessEvent every frame, which no widget should pay for a surface it never uses. |
+| `bAllowEventBubbleUp` | `bool` | DreamGUI|UserWidget | yes | read only | The bubble policy every pointer/drag Native* returns by default. True, unlike UISelectable's false: a user widget is a container, and a container that silently swallowed every click inside it would break each screen it was placed on. Set false to consume events at this boundary. |
+| `bCanNavigateHere` | `bool` | DreamGUI|UserWidget | yes | read only | Whether this widget itself is a navigation stop. Off by default so the navigation search walks past it exactly as it always has -- a user widget full of UISelectables must not steal their moves. Opting in makes OnNavigate reachable. |
 
 <a id="functions"></a>
 
@@ -168,3 +154,4 @@ Initialize 时从类构建，每次都是如此。
 | 事件 | 签名 | 描述 |
 |---|---|---|
 | `OnAnimationEvent` | `void DreamUIAnimEventDelegate__DelegateSignature(FName EventName)` | 在此控件的某个动画播放期间，一个 DreamUI 事件轨道关键帧被越过。 |
+

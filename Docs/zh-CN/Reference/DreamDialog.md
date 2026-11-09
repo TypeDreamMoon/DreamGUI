@@ -1,8 +1,3 @@
----
-title: "UDreamDialog"
-description: "UDreamDialog"
----
-
 <a id="udreamdialog"></a>
 
 # UDreamDialog
@@ -87,3 +82,4 @@ description: "UDreamDialog"
 |---|---|---|
 | `OnDialogClosed` | `void DreamDialogResultEvent__DelegateSignature(FName Result)` | 对话框已关闭，无论以何种方式关闭。恰好触发一次，在模态宿主将其拆除之前。 |
 | `OnButtonClicked` | `void DreamDialogResultEvent__DelegateSignature(FName Result)` | 按钮所发出的内容，在控件上重新广播：消费者在此绑定，而不是绑定到某个按钮。 |
+

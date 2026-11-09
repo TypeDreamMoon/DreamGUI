@@ -3,7 +3,7 @@
 [English](README.md) · [简体中文](zh-CN/README.md)
 
 English documents in this directory are the canonical plugin sources. The website generates its English pages from
-these files; Chinese translations are maintained under `zh-CN/` in this plugin and published after a plugin translation PR is reviewed and merged.
+these files; Chinese translations are maintained under `zh-CN/` in this plugin and published once merged into this plugin.
 
 | Section | Start here |
 | --- | --- |
@@ -26,6 +26,6 @@ these files; Chinese translations are maintained under `zh-CN/` in this plugin a
 - Website page IDs are stable. A source-file move updates `docs-sync/config.json` in the website repository, not the public URL.
 - Documentation additions from website PRs [#2](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/2) and [#3](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/3) are maintained here, including widget tags, the widget tree, mesh modifiers, sprites, lyrics, reflected binding and transactional text write-back.
 
-The `zh-CN/` tree mirrors English source paths. Imported translations are unreviewed; the [initial migration snapshot](zh-CN/TRANSLATIONS.md) preserves the original imported and missing translation lists. For current status, run `python -B Docs/translation-status.py` or check the translation status issue in the website repository. `.translations/` records source versions without treating an import as approval. Website-only notes remain in the website repository.
+The `zh-CN/` tree mirrors English source paths. Beside it, `zh-CN/.align/` records which English paragraph each Chinese paragraph was translated from, so when the English changes only the changed paragraphs are translated again. Correct a translation by editing the Chinese page directly; the next run keeps the edit. Website-only notes remain in the website repository.
 
-Check translation status locally with `python -B Docs/translation-status.py`; add `--all` to include every source or `--json` for structured output. This read-only tool does not need the website repository or a Git checkout.
+Translations are made and checked with [dreamdocs](https://github.com/TypeDreamMoon/dreamdocs): `dreamdocs status` lists the stale and missing paragraphs, `dreamdocs translate` translates them, and `dreamdocs check --plugin .` is what CI runs. Its settings for this plugin are in `dreamdocs.json`.

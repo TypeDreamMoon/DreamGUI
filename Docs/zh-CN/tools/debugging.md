@@ -1,6 +1,6 @@
 ---
-title: "调试与测量"
-description: "不开调试器看 DreamGUI 画了什么、花了多少：DreamUI.Capture、DreamUI.Stats 与 Insights 作用域、stat DreamGUI、DreamGUI.Memory、两个校验开关、诊断命令、可供 A/B 的控制台变量和日志分类。"
+title: 调试与测量
+description: 不开调试器看 DreamGUI 画了什么、花了多少：DreamUI.Capture、DreamUI.Stats 与 Insights 作用域、stat DreamGUI、DreamGUI.Memory、两个校验开关、诊断命令、可供 A/B 的控制台变量和日志分类。
 ---
 
 两个问题——"它画了什么"和"它花了多少"——都能不用调试器回答。
@@ -13,9 +13,7 @@ description: "不开调试器看 DreamGUI 画了什么、花了多少：DreamUI.
 DreamUI.Capture [Directory]
 ```
 
-把当前世界的 UI 写成 PNG：视口一张，每个渲染到渲染目标的根画布各一张。不给目录时写进
-`Saved/DreamUI/Captures` 下一个新建的、带时间戳的目录。画布直接画在屏幕上时没有自己的图——它是视口那张图的一部分，
-截视口就行。
+把当前世界的 UI 写成 PNG：视口一张，每个渲染到渲染目标的根画布各一张。不给目录时写进 `Saved/DreamUI/Captures` 下一个新建的、带时间戳的目录。画布直接画在屏幕上时没有自己的图——它是视口那张图的一部分，截视口就行。
 
 同样的事是一个 Blueprint 库，[`UDreamUICaptureLibrary`](../Reference/DreamUICaptureLibrary.md)：
 
@@ -27,9 +25,7 @@ DreamUI.Capture [Directory]
 | `SaveRenderTargetToPng` | 一张渲染目标的像素，保留 alpha |
 | `GetCaptureDirectory` | `<Project>/Saved/DreamUI/Captures`，相对路径从这里算 |
 
-每次调用都要把图从 GPU 读回来，所以会等渲染线程把手上的活做完：这是用来看的工具，不是每帧做的事。没有 GPU
-（`-nullrhi`）时没东西可读，调用在日志里说明并返回 false。在游戏里，视口是直接画进窗口的、帧与帧之间没有纹理，
-所以 `SaveViewportToPng` 返回 false 并提示改用引擎自己的截图请求。
+每次调用都要把图从 GPU 读回来，所以会等渲染线程把手上的活做完：这是用来看的工具，不是每帧做的事。没有 GPU （`-nullrhi`）时没东西可读，调用在日志里说明并返回 false。在游戏里，视口是直接画进窗口的、帧与帧之间没有纹理，所以 `SaveViewportToPng` 返回 false 并提示改用引擎自己的截图请求。
 
 <a id="what-it-cost-dreamuistats-and-insights"></a>
 
@@ -49,17 +45,9 @@ DreamUI.Stats
 | `DrawCallSubmit` | 提交绘制调用 |
 | `RenderRecord` | 渲染线程录制 |
 
-每个阶段给出每帧毫秒数和运行次数。后面是计数器，每帧平均和总数：`BatchesRecorded`、
-`VerticesRecorded`、`SectionUploads`、`UploadedBytes`、`DataTextureUpdates`、`GeometryCopies`、`SectionReuses`、
-`WidgetsUpdated`、`SectionPatches`、`DrawCallRebuilds`、`InPlaceRefreshes`、渲染层的 `RenderLayerMoves` /
-`Promotions` / `Demotions`，以及文字的 `TextPaints`、`TextMoveRepaints`、`SmallTextPlacements`、`SharpenSweepTexts`、
-`SharpenRepaints`、`CoverageItemsDrawn`、`CoverageGlyphLookups`、`CoverageRastersSync`、`CoverageJobs`、
-`CoverageFlushes` 和 `FontAtlasUploadBytes`。
+每个阶段给出每帧毫秒数和运行次数。后面是计数器，每帧平均和总数：`BatchesRecorded`、 `VerticesRecorded`、`SectionUploads`、`UploadedBytes`、`DataTextureUpdates`、`GeometryCopies`、`SectionReuses`、 `WidgetsUpdated`、`SectionPatches`、`DrawCallRebuilds`、`InPlaceRefreshes`、渲染层的 `RenderLayerMoves` / `Promotions` / `Demotions`，以及文字的 `TextPaints`、`TextMoveRepaints`、`SmallTextPlacements`、`SharpenSweepTexts`、 `SharpenRepaints`、`CoverageItemsDrawn`、`CoverageGlyphLookups`、`CoverageRastersSync`、`CoverageJobs`、 `CoverageFlushes` 和 `FontAtlasUploadBytes`。
 
-**在 Unreal Insights 里**，每个阶段也是一个具名作用域，名字以 `DreamUI_` 开头（`DreamUI_LayoutPass`、
-`DreamUI_UpdateRootCanvases`、`DreamUI_TextLayout`、`DreamUI_RecordScreenSpace`、`DreamUI_WorldSpaceRaycast`……），
-在 CPU 通道上。每个画布、每个分段、每个 widget 都要跑一次的细粒度作用域在一个单独的通道
-`DreamUIDetail` 上，默认关闭——几千个 widget 的墙上它们会跑几千次，每次读两遍时钟，开着的一帧就说明不了没开的一帧。需要时：
+**在 Unreal Insights 里**，每个阶段也是一个具名作用域，名字以 `DreamUI_` 开头（`DreamUI_LayoutPass`、 `DreamUI_UpdateRootCanvases`、`DreamUI_TextLayout`、`DreamUI_RecordScreenSpace`、`DreamUI_WorldSpaceRaycast`……），在 CPU 通道上。每个画布、每个分段、每个 widget 都要跑一次的细粒度作用域在一个单独的通道 `DreamUIDetail` 上，默认关闭——几千个 widget 的墙上它们会跑几千次，每次读两遍时钟，开着的一帧就说明不了没开的一帧。需要时：
 
 ```text
 -trace=default,DreamUIDetail
@@ -68,8 +56,7 @@ Trace.Enable DreamUIDetail
 
 前者在命令行上，后者在控制台里。
 
-**`stat DreamGUI`** 是插件的 stat 组：显示画布的合批、绘制调用更新、几何体更新、顶点变换、布局、属性绑定轮询、
-根画布更新等计时，以及动画播放器的两个计数（自己计时的、由 Sequencer 更新的）。
+**`stat DreamGUI`** 是插件的 stat 组：显示画布的合批、绘制调用更新、几何体更新、顶点变换、布局、属性绑定轮询、根画布更新等计时，以及动画播放器的两个计数（自己计时的、由 Sequencer 更新的）。
 
 <a id="what-it-holds-dreamguimemory"></a>
 
@@ -81,9 +68,7 @@ DreamGUI.Memory Json
 DreamGUI.Memory File=<path>
 ```
 
-每个字体的字形图集（切片数、GPU 字节数和 CPU 副本、格子、字形、字体文件字节）、精灵图集页，以及每个有 UI 管理器的世界里
-画布网格的分段和绘制参数行。`Json` 改打印 JSON，`File=` 把 JSON 写进文件（相对于 `Saved`）。打包测试里的探针就是用它
-记录内存报告的。
+每个字体的字形图集（切片数、GPU 字节数和 CPU 副本、格子、字形、字体文件字节）、精灵图集页，以及每个有 UI 管理器的世界里画布网格的分段和绘制参数行。`Json` 改打印 JSON，`File=` 把 JSON 写进文件（相对于 `Saved`）。打包测试里的探针就是用它记录内存报告的。
 
 <a id="the-two-verification-switches"></a>
 
@@ -96,8 +81,7 @@ DreamGUI.Memory File=<path>
 | `r.DreamUI.VerifyPartialPrepare 1` | 画布每次从上一次增量准备（只重做请求了的、新来的、移动了的 widget 画的东西），都和一次全量准备对比；有差异就是一个点名画布的 ensure |
 | `r.DreamUI.VerifyKeptPointers 1` | DreamGUI 不每帧查找而是**保留**的对象——widget 的画布、画布的渲染层、UI 管理器的画布、动画属性绑定的对象——在每次使用时也查找一遍；不一致就是一个说明是哪个的 ensure |
 
-两者默认都关，开着有代价（全量准备、查找本来省下的开销）。测试宿主在 `Config/DefaultEngine.ini` 里把它们打开，
-所以整个测试套件都在它们下面跑：
+两者默认都关，开着有代价（全量准备、查找本来省下的开销）。测试宿主在 `Config/DefaultEngine.ini` 里把它们打开，所以整个测试套件都在它们下面跑：
 
 ```ini
 [ConsoleVariables]
@@ -105,8 +89,7 @@ r.DreamUI.VerifyPartialPrepare=1
 r.DreamUI.VerifyKeptPointers=1
 ```
 
-基准测试（`Tools/Bench`）在测量的会话里会把它们关掉。文字的增量布局有自己的对应开关：
-`DreamGUI.Text.VerifyIncremental 1` 让每次基于保留状态的布局都再从头布一次并比较，第一处差异写进日志，用新的那份。
+基准测试（`Tools/Bench`）在测量的会话里会把它们关掉。文字的增量布局有自己的对应开关： `DreamGUI.Text.VerifyIncremental 1` 让每次基于保留状态的布局都再从头布一次并比较，第一处差异写进日志，用新的那份。
 
 <a id="diagnostic-commands"></a>
 
@@ -121,14 +104,9 @@ r.DreamUI.VerifyKeptPointers=1
 | `DreamUI.Binding.Dump` | 列出每个带属性绑定的活 user widget：多少绑定是订阅的（变化时才更新）、多少每帧读、多少是常量、多少是旧格式，以及每个每帧读的绑定是因为哪个成员才留在轮询上的。见[绑定什么时候更新](../language/bindings.md#bindings-and-routes) |
 | `DreamUI.Binding.ForcePoll 1` | 之后初始化的 widget，所有按依赖订阅的绑定都改回每帧读。值不更新时用它区分"没人宣布这次变化"和"它从来没变"，默认 0 |
 
-⚠️ **不是所有 DreamUI 的「命令」都是控制台命令。** 编辑器侧有两个名字同族的入口走的是**工具栏与 Tools 菜单**，
-不是控制台：`DreamUI.OpenWorkspace`（重写并打开 `DUI/DreamUI.code-workspace`）和 `DreamUI.RebuildAll`
-（整项目重编译文本支撑的控件蓝图，**会先弹确认框**）。它们各有 toolbar 与 Tools 菜单两个 id
-（`DreamUI.OpenWorkspaceTools` / `DreamUI.RebuildAllTools`），见[设计器](designer.md)。
+⚠️ **不是所有 DreamUI 的「命令」都是控制台命令。** 编辑器侧有两个名字同族的入口走的是**工具栏与 Tools 菜单**，不是控制台：`DreamUI.OpenWorkspace`（重写并打开 `DUI/DreamUI.code-workspace`）和 `DreamUI.RebuildAll` （整项目重编译文本支撑的控件蓝图，**会先弹确认框**）。它们各有 toolbar 与 Tools 菜单两个 id （`DreamUI.OpenWorkspaceTools` / `DreamUI.RebuildAllTools`），见[设计器](designer.md)。
 
-追踪类变量，打开后往日志里写：`dreamgui.LayoutTrace 1`（每次面板排列和它提交的每个矩形）、
-`dreamgui.ScrollBoxTrace 1`（每次改变状态的滚动框拖动增量和物理 tick），以及 `dreamgui.DumpMaterialDraws 1`
-（每次屏幕空间材质绘制尝试走了哪个分支，直到设回 0）。
+追踪类变量，打开后往日志里写：`dreamgui.LayoutTrace 1`（每次面板排列和它提交的每个矩形）、 `dreamgui.ScrollBoxTrace 1`（每次改变状态的滚动框拖动增量和物理 tick），以及 `dreamgui.DumpMaterialDraws 1` （每次屏幕空间材质绘制尝试走了哪个分支，直到设回 0）。
 
 <a id="switches-for-ab-runs"></a>
 

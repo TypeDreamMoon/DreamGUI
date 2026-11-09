@@ -1,8 +1,3 @@
----
-title: "UDreamTabView"
-description: "UDreamTabView"
----
-
 <a id="udreamtabview"></a>
 
 # UDreamTabView
@@ -82,3 +77,4 @@ description: "UDreamTabView"
 | `OnValueChangedBP` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | `<->` 约定：双向绑定会针对这个确切的名称合成其反向路由，因此值控件会将其与自身的显式事件一起携带。它会与这些事件一同触发。 |
 | `OnTabClosed` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | 某个选项卡正在关闭。在页面被销毁、标题被移除之前触发，因此想要保留该页面的使用者可以在此将其从切换器中取出——这与 UDreamDialog::Close 的广播顺序相同，原因也相同。 |
 | `OnTabReordered` | `void DreamTabViewReorderEvent__DelegateSignature(int32 FromIndex, int32 ToIndex)` | 某个选项卡被拖动到了新位置。两个索引都是相对于移动前的选项卡条而言的。 |
+

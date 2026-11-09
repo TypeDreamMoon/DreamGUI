@@ -1,8 +1,3 @@
----
-title: "FDreamRadioButtonStyle"
-description: "FDreamRadioButtonStyle"
----
-
 <a id="fdreamradiobuttonstyle"></a>
 
 # FDreamRadioButtonStyle
@@ -34,3 +29,4 @@ description: "FDreamRadioButtonStyle"
 | `CornerRadius` | `float` | Radio Button Style | yes | read / write |  |
 | `BoxBrush` | `FDreamUIFaceBrush` | Radio Button Style | yes | read / write |  |
 | `DotBrush` | `FDreamUIFaceBrush` | Radio Button Style | yes | read / write |  |
+

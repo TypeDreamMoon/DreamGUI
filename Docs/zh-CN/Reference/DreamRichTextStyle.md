@@ -1,8 +1,3 @@
----
-title: "FDreamRichTextStyle"
-description: "FDreamRichTextStyle"
----
-
 <a id="fdreamrichtextstyle"></a>
 
 # FDreamRichTextStyle
@@ -26,3 +21,4 @@ description: "FDreamRichTextStyle"
 | `Font` | `TObjectPtr<UDreamUIFontData_BaseObject>` | 富文本样式 | 是 | 读 / 写 |  |
 | `TextStyle` | `FDreamTextStyle` | 富文本样式 | 是 | 读 / 写 |  |
 | `OverrideMaterial` | `TObjectPtr<UMaterialInterface>` | 富文本样式 | 是 | 读 / 写 |  |
+

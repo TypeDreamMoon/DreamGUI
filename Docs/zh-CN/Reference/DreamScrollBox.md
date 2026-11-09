@@ -1,8 +1,3 @@
----
-title: "UDreamScrollBox"
-description: "UDreamScrollBox"
----
-
 <a id="udreamscrollbox"></a>
 
 # UDreamScrollBox
@@ -207,3 +202,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UScrollBox` | `ScrollToEnd` | adopt | `ScrollToEnd` |  |
 | `UScrollBox` | `ScrollWidgetIntoView` | adopt | `ScrollWidgetIntoView` | 全部四个参数，附加目的地和内边距，以便旧的二参数调用保持其含义：Configured 和负内边距均表示“此框所设置的任何内容”。在 UUIScrollView 和 UDreamLayoutContainerScrollBox 上具有相同的签名。 |
 | `UScrollBox` | `GetIsScrolling` | adopt | `GetIsScrolling` |  |
+

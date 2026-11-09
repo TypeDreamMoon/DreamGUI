@@ -1,8 +1,3 @@
----
-title: "UDreamBorder"
-description: "UDreamBorder"
----
-
 <a id="udreamborder"></a>
 
 # UDreamBorder
@@ -15,21 +10,11 @@ description: "UDreamBorder"
 
 一种层级结构是代码而非资产的边框：一个面子、一个内边距，以及一个用来放东西的洞。
 
-UMG 的 Border 是一个单子级面板，会在其容纳内容背后绘制一个画刷，而本库
-已经以调色板面板的形式提供了那种形状——一个承载图像视觉的 overlay。这里是
-控件的写法，而二者的区别正是贯穿这整个家族的那一点：面板的
-画刷、颜色和内边距是按实例编写的，而控件的则来自项目样式
-表，因此重新设计一个项目中的方框样式只需编辑一处，而不是每个方框各改一次。
+UMG 的 Border 是一个单子级面板，会在其容纳内容背后绘制一个画刷，而本库已经以调色板面板的形式提供了那种形状——一个承载图像视觉的 overlay。这里是控件的写法，而二者的区别正是贯穿这整个家族的那一点：面板的画刷、颜色和内边距是按实例编写的，而控件的则来自项目样式表，因此重新设计一个项目中的方框样式只需编辑一处，而不是每个方框各改一次。
 
-刻意支持多个子级，而 UMG 的 border 只接受一个。面子承载一个 overlay，因此一个
-`Native.Border { A B }` 会将 A 堆叠在 B 之下，二者都填满带内边距的区域——这正是
-overlay 的含义，也是读这两行的人所预期的。UDreamScrollBox 的内容槽出于
-同样的理由做出了同样的选择；一个只接受恰好一个子级的洞会把每隔一个的
-子级送到某个看不见的地方。
+刻意支持多个子级，而 UMG 的 border 只接受一个。面子承载一个 overlay，因此一个 `Native.Border { A B }` 会将 A 堆叠在 B 之下，二者都填满带内边距的区域——这正是 overlay 的含义，也是读这两行的人所预期的。UDreamScrollBox 的内容槽出于同样的理由做出了同样的选择；一个只接受恰好一个子级的洞会把每隔一个的子级送到某个看不见的地方。
 
-轮廓是面子的一部分，而不是第二个控件：UDreamRectBlock 会绘制它自己
-的边框，因此 BorderThickness 和 BorderColor 被推入 rect，不消耗任何节点。零厚度
-即为 UMG 的普通边框，也就是样式默认提供的。
+轮廓是面子的一部分，而不是第二个控件：UDreamRectBlock 会绘制它自己的边框，因此 BorderThickness 和 BorderColor 被推入 rect，不消耗任何节点。零厚度即为 UMG 的普通边框，也就是样式默认提供的。
 
 <a id="properties"></a>
 
@@ -122,3 +107,4 @@ UMG 类中每个面向蓝图的成员，以及它去了哪里。*adopt*：同名
 | `UBorder` | `GetDynamicMaterial` | reject |  | 矩形没有自己的材质实例：它通过其绘制调用的材质来绘制，而画布通过与批处理进同一次调用的每一个其他控件共享的渲染线程代理来应答该材质的参数。没有任何东西可以交出去，使得在它上面设置参数就能仅重新着色此边框。 |
 | `UBorder` | `SetDesiredSizeScale` | map | `UDreamLayoutContainerBorder::SetDesiredSizeScale` | 见上面的 DesiredSizeScale。 |
 | `UBorder` | `SetStyle` | adopt | `SetStyle` | UBorder 根本没有样式结构体；这是本家族在运行时替换外观的拼写。 |
+

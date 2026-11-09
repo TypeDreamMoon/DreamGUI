@@ -1,8 +1,3 @@
----
-title: "FDreamExpandableAreaStyle"
-description: "FDreamExpandableAreaStyle"
----
-
 <a id="fdreamexpandableareastyle"></a>
 
 # FDreamExpandableAreaStyle
@@ -38,3 +33,4 @@ description: "FDreamExpandableAreaStyle"
 | `ContentBrush` | `FDreamUIFaceBrush` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `ExpandedBrush` | `FDreamUIFaceBrush` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `CollapsedBrush` | `FDreamUIFaceBrush` | 可展开区域样式 | 是 | 读 / 写 |  |
+

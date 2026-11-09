@@ -1,8 +1,3 @@
----
-title: "UDreamSpinBox"
-description: "UDreamSpinBox"
----
-
 <a id="udreamspinbox"></a>
 
 # UDreamSpinBox
@@ -15,37 +10,15 @@ description: "UDreamSpinBox"
 
 一个层级是代码、而非资源的数字输入框。
 
-USpinBox 的务实内核：一个数字、一个范围、一个步进——以三部分组成的行来表示，[-] 输入字段
-[+]，因为这一行可以用库中已有的东西构建出来。步进面承载
-UIButton 行为，输入字段承载 UUITextInput，以文化无关文本托管该值，
-而 CONTROL 拥有这个数字：按钮和提交的文本是通往同一条
-钳制-赋值-推送-广播道路的两条路，因此输入字段、属性和事件永远不会对
-这个值是什么产生分歧。
+USpinBox 的务实内核：一个数字、一个范围、一个步进——以三部分组成的行来表示，[-] 输入字段 [+]，因为这一行可以用库中已有的东西构建出来。步进面承载 UIButton 行为，输入字段承载 UUITextInput，以文化无关文本托管该值，而 CONTROL 拥有这个数字：按钮和提交的文本是通往同一条钳制-赋值-推送-广播道路的两条路，因此输入字段、属性和事件永远不会对这个值是什么产生分歧。
 
-向各部分推送的每一次都是 WithoutNotify——写入作者状态不是用户编辑——
-而 OnValueChanged 恰好在钳制后的值真正改变时触发。
+向各部分推送的每一次都是 WithoutNotify——写入作者状态不是用户编辑—— 而 OnValueChanged 恰好在钳制后的值真正改变时触发。
 
-拖拽擦除（DRAG TO SCRUB）是 USpinBox 的另一半，最终它并不需要自己的
-捕获管线：UUITextInput 在未被编辑时已经会把拖拽向上传递（它的 OnPointerBeginDrag
-在 bInputActive 为假时返回“冒泡”），因此从空闲字段开始的拖拽会作为该
-控件自身的 NativeOnBeginDrag 到达这里，而在玩家正在编辑的字段内开始的拖拽则仍归文本
-选择所有。这恰恰是 SSpinBox 遵循的规则——点击输入，拖拽擦除——通过追问谁已经拥有
-这个手势、而不是发明一种模式来达成。
+拖拽擦除（DRAG TO SCRUB）是 USpinBox 的另一半，最终它并不需要自己的捕获管线：UUITextInput 在未被编辑时已经会把拖拽向上传递（它的 OnPointerBeginDrag 在 bInputActive 为假时返回“冒泡”），因此从空闲字段开始的拖拽会作为该控件自身的 NativeOnBeginDrag 到达这里，而在玩家正在编辑的字段内开始的拖拽则仍归文本选择所有。这恰恰是 SSpinBox 遵循的规则——点击输入，拖拽擦除——通过追问谁已经拥有这个手势、而不是发明一种模式来达成。
 
-擦除在控件自身宽度上扫过 MinSliderValue..MaxSliderValue（默认是硬范围），
-由 SliderExponent 弯曲，使大范围在一端附近仍能精细操作。它
-从拖拽被识别的位置开始计数，而不是从按下开始：把按下
-变成拖拽的那段移动不会移动任何值，与 SSpinBox 一致，因此值不会在擦除开始的瞬间
-因拖拽阈值而跳变。
+擦除在控件自身宽度上扫过 MinSliderValue..MaxSliderValue（默认是硬范围），由 SliderExponent 弯曲，使大范围在一端附近仍能精细操作。它从拖拽被识别的位置开始计数，而不是从按下开始：把按下变成拖拽的那段移动不会移动任何值，与 SSpinBox 一致，因此值不会在擦除开始的瞬间因拖拽阈值而跳变。
 
-方向键可以步进它，正如 SSpinBox::OnKeyDown 所做的那样：只要焦点在控件内任意处且
-输入字段未被编辑，上键和右键增加一个步进，下键和左键减少一个，立即提交。
-步进为 StepSize，无论按住哪个修饰键；当 StepSize 为零时，使用 SSpinBox 的默认步进
-——在十个或更小的拖拽范围内为十分之一，在更大范围内为一——再乘以 Shift 的十倍、Shift+Alt 的
-百倍、Ctrl 的十分之一或 Ctrl+Alt 的百分之一。步进后的值保持在拖拽扫过的范围内，并
-落在 StepSize 网格上。这四个键在控件拥有焦点时归控件所有：它们不会像在 UMG 中那样
-把焦点移交到相邻控件。手柄的十字键不在其中，仍然用于导航，
-而在正在编辑的字段中，方向键归字段所有，用于移动其插入符。
+方向键可以步进它，正如 SSpinBox::OnKeyDown 所做的那样：只要焦点在控件内任意处且输入字段未被编辑，上键和右键增加一个步进，下键和左键减少一个，立即提交。步进为 StepSize，无论按住哪个修饰键；当 StepSize 为零时，使用 SSpinBox 的默认步进 ——在十个或更小的拖拽范围内为十分之一，在更大范围内为一——再乘以 Shift 的十倍、Shift+Alt 的百倍、Ctrl 的十分之一或 Ctrl+Alt 的百分之一。步进后的值保持在拖拽扫过的范围内，并落在 StepSize 网格上。这四个键在控件拥有焦点时归控件所有：它们不会像在 UMG 中那样把焦点移交到相邻控件。手柄的十字键不在其中，仍然用于导航，而在正在编辑的字段中，方向键归字段所有，用于移动其插入符。
 
     /Script/DreamGUIControls.DreamSpinBox Count {
         Value = 5
@@ -211,3 +184,4 @@ UMG 类的每个面向蓝图的成员，以及它的去向。*adopt*：同名同
 | `USpinBox` | `MaxValue` | adopt | `MaxValue` |  |
 | `USpinBox` | `MinSliderValue` | adopt | `MinSliderValue` | 默认不勾选：除非有人收窄，拖动会扫过值范围。 |
 | `USpinBox` | `MaxSliderValue` | adopt | `MaxSliderValue` |  |
+

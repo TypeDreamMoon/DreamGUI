@@ -1,8 +1,3 @@
----
-title: "UDreamTextPaintLibrary"
-description: "UDreamTextPaintLibrary"
----
-
 <a id="udreamtextpaintlibrary"></a>
 
 # UDreamTextPaintLibrary
@@ -24,3 +19,4 @@ description: "UDreamTextPaintLibrary"
 | `UDreamTweener* PaintAngleTo(UDreamText* Text, float To, float Duration, float Delay, EDreamTweenEase Ease)` | callable | 将文本的每个 paint（UDreamText::SetPaintAngleOffset）的角度偏移从当前值转到 To，单位为度。 |
 | `UDreamTweener* PaintPhaseTo(UDreamText* Text, EDreamTextPaintLayer Layer, float To, float Duration, float Delay, EDreamTweenEase Ease)` | callable | 将某个 paint 的相位（UDreamText::SetFacePaintPhase 及其同类函数）从当前位置移到 To：其渐变沿其线条滑动，1 表示一个完整渐变。当没有文本，或没有可运行它的补间管理器时，返回 null。 |
 | `UDreamTweener* PlayShimmer(UDreamText* Text, float Duration, float Delay, int32 Loops)` | callable | 让覆盖层 paint 扫过文本：其相位以匀速从 -1 到 1，Duration 秒为一趟，每趟结束后再从 -1 开始，Loops 表示趟数（-1：直到被停止，或直到文本消失）。外观由覆盖层决定：一个两端透明的条带——linear-gradient(90deg, transparent 40%, white 50%, transparent 60%)——配合 OverlayBlend Add 即为闪光效果。在延迟期间，相位保持在 -1，这会使这样的条带不显示在文本上。 |
+

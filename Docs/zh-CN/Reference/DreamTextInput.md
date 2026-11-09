@@ -1,8 +1,3 @@
----
-title: "UDreamTextInput"
-description: "UDreamTextInput"
----
-
 <a id="udreamtextinput"></a>
 
 # UDreamTextInput
@@ -225,3 +220,4 @@ UMG 类中所有面向蓝图的成员，以及它们去了哪里。*adopt*：同
 | `UMultiLineEditableTextBox` | `SetIsReadOnly` | adopt | `SetIsReadOnly` |  |
 | `UMultiLineEditableTextBox` | `SetTextStyle` | map | `SetStyle` | UMG 中组成框外观的 FTextBlockStyle 那一半。颜色和大小属于 FDreamTextInputStyle；轮廓/阴影/发光那一半是 UDreamText::TextStyle（FDreamTextStyle），控件尚未转发它 -- 关于字体和效果各自所在的位置，参见 EditableText.json 的 GetFont。 |
 | `UMultiLineEditableTextBox` | `SetForegroundColor` | map | `FDreamTextInputStyle::TextColor` | 外观位于样式结构体中；它通过 SetStyle 或项目表传递。 |
+

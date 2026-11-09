@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerUniformGridPanel"
-description: "UDreamLayoutContainerUniformGridPanel"
----
-
 <a id="udreamlayoutcontaineruniformgridpanel"></a>
 
 # UDreamLayoutContainerUniformGridPanel
@@ -54,3 +49,4 @@ UMG 类中所有面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UUniformGridPanel` | `SetMinDesiredSlotWidth` | adopt | `SetMinDesiredSlotWidth` |  |
 | `UUniformGridPanel` | `SetMinDesiredSlotHeight` | adopt | `SetMinDesiredSlotHeight` |  |
 | `UUniformGridPanel` | `AddChildToUniformGrid` | map | `AddChild` | 这里一个槽类意味着一项操作；行和列在它返回的槽上设置。 |
+

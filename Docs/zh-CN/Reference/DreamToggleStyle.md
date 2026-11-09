@@ -1,8 +1,3 @@
----
-title: "FDreamToggleStyle"
-description: "FDreamToggleStyle"
----
-
 <a id="fdreamtogglestyle"></a>
 
 # FDreamToggleStyle
@@ -37,3 +32,4 @@ description: "FDreamToggleStyle"
 | `UncheckedBrush` | `FDreamUIFaceBrush` | 开关样式 | 是 | 读 / 写 |  |
 | `UndeterminedBrush` | `FDreamUIFaceBrush` | 开关样式 | 是 | 读 / 写 |  |
 | `StateFaces` | `FDreamUIStateFaces` | 开关样式 | 是 | 读 / 写 |  |
+

@@ -1,8 +1,3 @@
----
-title: "FDreamRingMenuStyle"
-description: "FDreamRingMenuStyle"
----
-
 <a id="fdreamringmenustyle"></a>
 
 # FDreamRingMenuStyle
@@ -51,3 +46,4 @@ description: "FDreamRingMenuStyle"
 | `LabelHeight` | `float` | Ring Menu Style|Text | 是 | 读 / 写 |  |
 | `OpenDuration` | `float` | Ring Menu Style|Open | 是 | 读 / 写 |  |
 | `OpenScaleFrom` | `float` | Ring Menu Style|Open | 是 | 读 / 写 |  |
+

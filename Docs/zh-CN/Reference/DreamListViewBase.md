@@ -1,8 +1,3 @@
----
-title: "UDreamListViewBase"
-description: "UDreamListViewBase"
----
-
 <a id="udreamlistviewbase"></a>
 
 # UDreamListViewBase
@@ -15,113 +10,71 @@ description: "UDreamListViewBase"
 
 列表和树共有的一切，而这几乎是全部。
 
-树就是一个会缩进的列表，而这个类正是为此而写的：视口、
-条、被滚动的列、行模板、行池、行的颜色和唯一选中的
-索引都在这里，每个具体控件只添加让它成为它自己的东西 —— 它带类型的样式，
-以及（对于树来说）每个条目的深度、每行的缩进和一个展开箭头。FDreamTreeViewStyle 也是
-以同样的方式构建的，它携带一整个 FDreamListStyle，而不是重述它的字段。
+树就是一个会缩进的列表，而这个类正是为此而写的：视口、条、被滚动的列、行模板、行池、行的颜色和唯一选中的索引都在这里，每个具体控件只添加让它成为它自己的东西 —— 它带类型的样式，以及（对于树来说）每个条目的深度、每行的缩进和一个展开箭头。FDreamTreeViewStyle 也是以同样的方式构建的，它携带一整个 FDreamListStyle，而不是重述它的字段。
 
-这个类是抽象的，并且不持有任何样式属性。这是有意为之的，也正是
-存在基类、而不是让 UDreamTreeView 继承自 UDreamListView 的原因：这个
-家族的约定是，一个控件的外观是唯一的一个决定（参见 UDreamUIControl），而一棵树
-继承一个它永远不会解析的多余的 FDreamListStyle，会成为第二个事实来源，
-却顶着和真正来源一样的名字。每个子类声明带类型的 `Style`，并用它的列表
-那一半来回答 ResolveListStyle()。
+这个类是抽象的，并且不持有任何样式属性。这是有意为之的，也正是存在基类、而不是让 UDreamTreeView 继承自 UDreamListView 的原因：这个家族的约定是，一个控件的外观是唯一的一个决定（参见 UDreamUIControl），而一棵树继承一个它永远不会解析的多余的 FDreamListStyle，会成为第二个事实来源，却顶着和真正来源一样的名字。每个子类声明带类型的 `Style`，并用它的列表那一半来回答 ResolveListStyle()。
+
+<a id="the-shape"></a>
 
 THE SHAPE
 ---------
-承载外观的面、被裁剪在它内部持有滚动行为的视口、
-在视口内滑动的列，以及沿着视口边缘的一条 —— UDreamScrollBox 的
-安排方式，理由也是它的理由。其中两点值得重述，因为它们并不显而易见：
-行为位于视口上，而条是视口的兄弟，因为滚动视图
-接受来自其自身控件内任意位置的拖拽，所以如果条挂在它下面，
-每次抓取手柄都会滚动内容；还有，列的高度是控件对
-可以滚动多远的声明，绝不是布局输出。
+承载外观的面、被裁剪在它内部持有滚动行为的视口、在视口内滑动的列，以及沿着视口边缘的一条 —— UDreamScrollBox 的安排方式，理由也是它的理由。其中两点值得重述，因为它们并不显而易见：行为位于视口上，而条是视口的兄弟，因为滚动视图接受来自其自身控件内任意位置的拖拽，所以如果条挂在它下面，每次抓取手柄都会滚动内容；还有，列的高度是控件对可以滚动多远的声明，绝不是布局输出。
+
+<a id="rows-are-placed-not-arranged"></a>
 
 ROWS ARE PLACED, NOT ARRANGED
 -----------------------------
-列中没有任何布局容器，每一行都声明自己的矩形：顶部锚定、横向
-拉伸，并按它的索引乘以行间距进行偏移。由此产生三件事，而且三件都重要：
+列中没有任何布局容器，每一行都声明自己的矩形：顶部锚定、横向拉伸，并按它的索引乘以行间距进行偏移。由此产生三件事，而且三件都重要：
 
- - 行的高度就是样式的 RowHeight，仅此而已。之前的形态把行放在
-   一个垂直盒子里，使用等权重的 Fill 槽位，然后把列的高度设定为恰好
-   rows*RowHeight + gaps，这样盒子就会把它重新分配出来 —— 这是一个在两处求解的方程
-   而且必须一致，而一旦有任何东西测量行的内容，它就不再一致；
- - 放置第 N 行的成本为零，且不依赖任何兄弟节点，这正是回收之所以可能的原因
-   所在：盒子会安排它拥有的每一个子项，所以盒子永远无法为一百万项显示一个窗口；
- - 而且答案无需任何布局过程即可获得，这正是无头测试和
-   设计师第一帧实际看到的东西。
+ - 行的高度就是样式的 RowHeight，仅此而已。之前的形态把行放在一个垂直盒子里，使用等权重的 Fill 槽位，然后把列的高度设定为恰好 rows*RowHeight + gaps，这样盒子就会把它重新分配出来 —— 这是一个在两处求解的方程而且必须一致，而一旦有任何东西测量行的内容，它就不再一致；
+ - 放置第 N 行的成本为零，且不依赖任何兄弟节点，这正是回收之所以可能的原因所在：盒子会安排它拥有的每一个子项，所以盒子永远无法为一百万项显示一个窗口；
+ - 而且答案无需任何布局过程即可获得，这正是无头测试和设计师第一帧实际看到的东西。
+
+<a id="virtualization-is-a-threshold-not-a-mode"></a>
 
 VIRTUALIZATION IS A THRESHOLD, NOT A MODE
 -----------------------------------------
-在 VirtualizationThreshold 个项目以下，每个项目有一个行控件，GetRowWidget 会为
-每个索引作出回答 —— 这是该控件一直以来的约定，也是让它在
-没有安排任何视口的无头测试中正确的原因。达到或超过它时，池的大小会调整为
-窗口加上一个过扫描量，并且行会随着视图移动重新绑定，这正是 UMG 的 ListView
-所做的，也是十万行不会是卡死的唯一办法。GetRowWidget 这时
-对已实现的行作出回答，对其余行返回 null，这也是 UMG 的约定。
+在 VirtualizationThreshold 个项目以下，每个项目有一个行控件，GetRowWidget 会为每个索引作出回答 —— 这是该控件一直以来的约定，也是让它在没有安排任何视口的无头测试中正确的原因。达到或超过它时，池的大小会调整为窗口加上一个过扫描量，并且行会随着视图移动重新绑定，这正是 UMG 的 ListView 所做的，也是十万行不会是卡死的唯一办法。GetRowWidget 这时对已实现的行作出回答，对其余行返回 null，这也是 UMG 的约定。
+
+<a id="navigation-steps-by-item-as-slistviews-does"></a>
 
 NAVIGATION STEPS BY ITEM, AS SListView's DOES
 --------------------------------------------
-对某一行的导航按压由列表来回答（参见 UDreamListRowButton）：沿着滚动轴，
-下一个或前一个项目 —— ResolveNavigationTarget，平铺视图会按行、按
-列来回答 —— 会被滚动到视图中，并且在 bSelectItemOnNavigation 开启时，会被选中，
-就像 SListView::OnNavigation 和 NavigationSelect 所做的那样。在列表内部无路可去的按压（越过
-任一端，或横穿单列列表）会被留给普通的几何扫描，它会把焦点
-带到列表旁边的任何东西上 —— STableViewBase::OnNavigation 的回答。从外部
-到达列表也是同样的扫描，它会落在最近的行上，且不会选中它。
+对某一行的导航按压由列表来回答（参见 UDreamListRowButton）：沿着滚动轴，下一个或前一个项目 —— ResolveNavigationTarget，平铺视图会按行、按列来回答 —— 会被滚动到视图中，并且在 bSelectItemOnNavigation 开启时，会被选中，就像 SListView::OnNavigation 和 NavigationSelect 所做的那样。在列表内部无路可去的按压（越过任一端，或横穿单列列表）会被留给普通的几何扫描，它会把焦点带到列表旁边的任何东西上 —— STableViewBase::OnNavigation 的回答。从外部到达列表也是同样的扫描，它会落在最近的行上，且不会选中它。
+
+<a id="multi-selection-is-slistviews"></a>
 
 MULTI SELECTION IS SListView's
 ------------------------------
-在 Multi 模式下，点击按 STableRow::OnMouseButtonDown 和 OnMouseButtonUp 的方式选择：普通
-点击选中它落在的行，别的什么都不选；Ctrl 添加该行或将其移除；Shift 把
-从范围锚点到这一行的每一行添加到已经选中的内容中，Ctrl 加 Shift 做同样的事。锚点是
-上一次普通点击、Ctrl 点击、手指点按或普通导航步骤所落在的行 —— SListView 的 RangeSelectionStart
-—— 而 Shift 范围会把它留在原处。手指没有
-修饰键，STableRow::OnTouchEnded 给 Multi 模式下的点按赋予它唯一能有的含义：它
-添加它抬起时所在的行，并且从不移除任何行。这些键是 SListView::NavigationSelect 和
-OnKeyDown 的：带 Shift 的方向键从锚点选到它移动到的行，别的都不选；带
-Ctrl 和 Shift 则添加那个范围；只带 Ctrl 则添加它移动到的行；Ctrl+A 选中每一行。
-读取点击时所用的修饰键属于点击的玩家，按玩家
-控制器所持有的状态握在他们手下；Ctrl 的位置与 Cmd 共享。每一次选择仍然要问过否决
-（OnIsItemSelectableOrNavigable），而且点击仍然在完成它的释放时选中。
+在 Multi 模式下，点击按 STableRow::OnMouseButtonDown 和 OnMouseButtonUp 的方式选择：普通点击选中它落在的行，别的什么都不选；Ctrl 添加该行或将其移除；Shift 把从范围锚点到这一行的每一行添加到已经选中的内容中，Ctrl 加 Shift 做同样的事。锚点是上一次普通点击、Ctrl 点击、手指点按或普通导航步骤所落在的行 —— SListView 的 RangeSelectionStart —— 而 Shift 范围会把它留在原处。手指没有修饰键，STableRow::OnTouchEnded 给 Multi 模式下的点按赋予它唯一能有的含义：它添加它抬起时所在的行，并且从不移除任何行。这些键是 SListView::NavigationSelect 和 OnKeyDown 的：带 Shift 的方向键从锚点选到它移动到的行，别的都不选；带 Ctrl 和 Shift 则添加那个范围；只带 Ctrl 则添加它移动到的行；Ctrl+A 选中每一行。读取点击时所用的修饰键属于点击的玩家，按玩家控制器所持有的状态握在他们手下；Ctrl 的位置与 Cmd 共享。每一次选择仍然要问过否决（OnIsItemSelectableOrNavigable），而且点击仍然在完成它的释放时选中。
+
+<a id="tab-sees-one-stop"></a>
 
 TAB SEES ONE STOP
 -----------------
-列表是一个 Tab 停靠点，就像浏览器的列表框一样：TabNavigation 为 Once，Tab 从
-ResolveTabEntry 的行进入 —— 选中项的行，否则是第一项的行，Shift+Tab 则是最后一项的行，
-按索引找到、滚动到视图中并构建，因为行只为显示的内容而存在 —— 而下一个
-Tab 会离开列表。方向键在其中移动。Next 和 Prev 从不归这些行来逐步经过
-（HandleRowNavigation 把它们留给 Tab 遍历），而条根本不是停靠点。
+列表是一个 Tab 停靠点，就像浏览器的列表框一样：TabNavigation 为 Once，Tab 从 ResolveTabEntry 的行进入 —— 选中项的行，否则是第一项的行，Shift+Tab 则是最后一项的行，按索引找到、滚动到视图中并构建，因为行只为显示的内容而存在 —— 而下一个 Tab 会离开列表。方向键在其中移动。Next 和 Prev 从不归这些行来逐步经过（HandleRowNavigation 把它们留给 Tab 遍历），而条根本不是停靠点。
+
+<a id="why-the-plain-scroll-view-not-uuilistview"></a>
 
 WHY THE PLAIN SCROLL VIEW, NOT UUIListView
 ------------------------------------------
-回收栈（UUIRecyclableScrollView，以及在其之上的 UUIListView）对于
-数据源来说是正确答案，对于控件来说则是错误答案，原因全都在那些文件里：
+回收栈（UUIRecyclableScrollView，以及在其之上的 UUIListView）对于数据源来说是正确答案，对于控件来说则是错误答案，原因全都在那些文件里：
 
- - 它的单位是 UObject* 项，因为 IUIRecyclableScrollViewDataSource 是一个 UObject 协议。
-   Native.List 的自然项目是一行文本 —— 与 FDreamDropdownStyle 的选项
-   所做的同一调用 —— 而喂给回收器将意味着为每个标签铸造一个 UObject；
- - 单元格只有在 Start() 之后才存在，而 Start() 需要一个活动世界、一棵已注册的树以及一个已安排的
-   视口：InitializeOnDataSource 根据内容父级的局部空间
-   范围来确定单元格池的大小。控件必须在它的属性被设置的那一刻就是正确的；
- - 而且 UUIListView::Awake 把它的数据源席位交给最先声明它的任何人，这就是
-   一个 `each` 块的适配器进入的方式。承载一个这样的控件的控件会成为那个席位的第三方。
+ - 它的单位是 UObject* 项，因为 IUIRecyclableScrollViewDataSource 是一个 UObject 协议。 Native.List 的自然项目是一行文本 —— 与 FDreamDropdownStyle 的选项所做的同一调用 —— 而喂给回收器将意味着为每个标签铸造一个 UObject；
+ - 单元格只有在 Start() 之后才存在，而 Start() 需要一个活动世界、一棵已注册的树以及一个已安排的视口：InitializeOnDataSource 根据内容父级的局部空间范围来确定单元格池的大小。控件必须在它的属性被设置的那一刻就是正确的；
+ - 而且 UUIListView::Awake 把它的数据源席位交给最先声明它的任何人，这就是一个 `each` 块的适配器进入的方式。承载一个这样的控件的控件会成为那个席位的第三方。
 
-所以行在这里从模板构建，进入一个普通 UUIScrollView 内的列中 —— 这
-正是 UDreamDropdown 的选项列表所做的，因为这是同一个问题。
+所以行在这里从模板构建，进入一个普通 UUIScrollView 内的列中 —— 这正是 UDreamDropdown 的选项列表所做的，因为这是同一个问题。
+
+<a id="how-this-relates-to-each"></a>
 
 HOW THIS RELATES TO `each`
 --------------------------
 它们是同一需求的两半，而且它们并不竞争：
 
-  `each Track in Tracks { ... }` 是语言路线。它把一个重复的子树编译进
-  生成的类，通过 UDreamUIEachAdapter 供给宿主可回收视图，并把每一行的
-  字段绑定到项目的成员（`Text <- Track.Title`）。你可以获得任意的行形状和逐字段
-  绑定，代价是你必须有一个 .dui 类来容纳它，以及一个必须自己绘制的行。
+  `each Track in Tracks { ... }` 是语言路线。它把一个重复的子树编译进生成的类，通过 UDreamUIEachAdapter 供给宿主可回收视图，并把每一行的字段绑定到项目的成员（`Text <- Track.Title`）。你可以获得任意的行形状和逐字段绑定，代价是你必须有一个 .dui 类来容纳它，以及一个必须自己绘制的行。
 
-  `Native.List` 是控件路线。一个标签、两个属性，你就有了一个看起来
-  像项目中其他所有列表一样的列表，因为它的行来自样式表。
+  `Native.List` 是控件路线。一个标签、两个属性，你就有了一个看起来像项目中其他所有列表一样的列表，因为它的行来自样式表。
 
 当行是有意思的部分时，用 `each`。当列表是有意思的部分时，用 Native.List。
 
@@ -163,17 +116,17 @@ HOW THIS RELATES TO `each`
 | `bEnableShadowBrush` | `bool` | 列表 | 是 | `GetEnableShadowBrush` / `SetEnableShadowBrush` | 当窗口之外还有更多列表内容时，在窗口两端绘制淡出效果——即 UMG 的 bEnableShadowBrush。 |
 | `ShadowBrush` | `FDreamUIFaceBrush` | 列表 | 是 | `SetShadowBrush` | 该淡出效果用什么来绘制——即 UMG 的 ShadowBrushStyle。 |
 | `ShadowBrushThickness` | `float` | List | 是 | `GetShadowBrushThickness` / `SetShadowBrushThickness` | 渐变深入窗口的深度，以本地单位计。 |
-| `bAllowDragging` | `bool` | List|Drag | 是 | `GetAllowDragging` / `SetAllowDragging` | 行是否可以被拾起 -- 即 UMG 的 bAllowDragging。 |
-| `bAllowDragDrop` | `bool` | List|Drag | 是 | `GetAllowDragDrop` / `SetAllowDragDrop` | 行是否可以作为放置目标 -- 即 UMG 的 bAllowDragDrop。 |
-| `FingerDrag` | `EDreamListFingerDrag` | List|Drag | 是 | `GetFingerDrag` / `SetFingerDrag` | 手指沿可被拾起的行拖动时的行为：滚动列表（默认行为，即 UMG 的行为）还是拾起该行。 |
-| `DragDropVisualPivot` | `FVector2D` | List|Drag | 是 | `SetDragDropVisualPivot` | 拖拽视觉元素相对于指针的位置，以其自身大小为比例 -- 即 UMG 的 DragDropVisualPivot。(0,0) 将其悬挂在光标右下方，(0.5,0.5) 则将其以光标为中心。 |
-| `DragDropVisualOffset` | `FVector2D` | List|Drag | 是 | `SetDragDropVisualOffset` | 在枢轴之后再以本地单位进行的额外微调 -- 即 UMG 的 DragDropVisualOffset。 |
-| `DragDropVisualEntryClass` | `TSubclassOf<UDreamUserWidget>` | List|Drag | 是 | `SetDragDropVisualEntryClass` | 拖拽时在光标下显示的内容 -- 即 UMG 的 DragDropVisualEntryClass。 |
-| `DragDropOperationClass` | `TSubclassOf<UDreamDragDropOperation>` | List|Drag | 是 | `SetDragDropOperationClass` | 行拖拽所构建的操作类 -- 即 UMG 的 DragDropOperationClass。 |
-| `DragOperationTag` | `FName` | List|Drag | 是 | `SetDragOperationTag` | 复制到该列表创建的每个操作上的标签，供放置目标进行筛选。 |
-| `bEnableDragEdgeScrolling` | `bool` | List|Drag | 是 | `GetEnableDragEdgeScrolling` / `SetEnableDragEdgeScrolling` | 拖拽保持在视口边缘附近时是否向该边缘方向滚动列表 -- UMG 的列表不会这样做，而这正是能够将内容放置到屏幕外的行上的根本原因。 |
-| `DragEdgeScrollBandSize` | `float` | List|Drag | 是 | `GetDragEdgeScrollBandSize` / `SetDragEdgeScrollBandSize` | 视口两端的区域深度，以沿滚动轴的本地单位计。整个区域以相同速度滚动；为零则关闭该区域，同时也关闭边缘滚动。 |
-| `DragEdgeScrollSpeed` | `float` | List|Drag | 是 | `GetDragEdgeScrollSpeed` / `SetDragEdgeScrollSpeed` | 在该区域内拖拽时滚动列表的速度，以本地单位每秒计。 |
+| `bAllowDragging` | `bool` | List|Drag | 是 | `GetAllowDragging` / `SetAllowDragging` | Whether a row can be picked UP -- UMG's bAllowDragging. |
+| `bAllowDragDrop` | `bool` | List|Drag | 是 | `GetAllowDragDrop` / `SetAllowDragDrop` | Whether a row can be dropped ON -- UMG's bAllowDragDrop. |
+| `FingerDrag` | `EDreamListFingerDrag` | List|Drag | 是 | `GetFingerDrag` / `SetFingerDrag` | What a finger dragged along rows that can be picked up does: scroll the list (the default, UMG's) or pick the row up. |
+| `DragDropVisualPivot` | `FVector2D` | List|Drag | 是 | `SetDragDropVisualPivot` | Where the drag visual sits relative to the pointer, as a fraction of its own size -- UMG's DragDropVisualPivot. (0,0) hangs it below-right of the cursor, (0.5,0.5) centres it on it. |
+| `DragDropVisualOffset` | `FVector2D` | List|Drag | 是 | `SetDragDropVisualOffset` | A further nudge in local units, after the pivot -- UMG's DragDropVisualOffset. |
+| `DragDropVisualEntryClass` | `TSubclassOf<UDreamUserWidget>` | List|Drag | 是 | `SetDragDropVisualEntryClass` | What to show under the cursor while dragging -- UMG's DragDropVisualEntryClass. |
+| `DragDropOperationClass` | `TSubclassOf<UDreamDragDropOperation>` | List|Drag | 是 | `SetDragDropOperationClass` | The operation class a row's drag builds -- UMG's DragDropOperationClass. |
+| `DragOperationTag` | `FName` | List|Drag | 是 | `SetDragOperationTag` | The tag copied onto every operation this list creates, for drop targets to filter on. |
+| `bEnableDragEdgeScrolling` | `bool` | List|Drag | 是 | `GetEnableDragEdgeScrolling` / `SetEnableDragEdgeScrolling` | Whether a drag held near the viewport's edge scrolls the list towards that edge -- which UMG's list does not do, and which is what makes a drop onto a row that is off screen possible at all. |
+| `DragEdgeScrollBandSize` | `float` | List|Drag | 是 | `GetDragEdgeScrollBandSize` / `SetDragEdgeScrollBandSize` | How deep the band along each end of the viewport is, in local units along the scroll axis. The whole band scrolls at the same speed; zero turns the band, and with it edge scrolling, off. |
+| `DragEdgeScrollSpeed` | `float` | List|Drag | 是 | `GetDragEdgeScrollSpeed` / `SetDragEdgeScrollSpeed` | How fast a drag in the band scrolls the list, in local units per second. |
 | `OnIsItemSelectableOrNavigable` | `FDreamListItemSelectableQuery` | List | - | 读 / 写 | 某个项是否可以被选中或导航到 -- 即 UMG 的 BP_OnIsItemSelectableOrNavigable。 |
 | `FaceNode` | `TObjectPtr<UDreamWidget>` | List | - | 只读 | 表面：列表自身的外观，以及在圆角边缘处将一切裁切掉的部分。 |
 | `ViewportNode` | `TObjectPtr<UDreamWidget>` | List | - | 只读 | 行在其后滑动的窗口，也是滚动行为所在之处。 |
@@ -341,3 +294,4 @@ HOW THIS RELATES TO `each`
 | `OnItemAcceptDrop` | `void DreamListItemDropEvent__DelegateSignature(int32 ItemIndex, UObject* Item, UDreamDragDropOperation* Operation, EDreamItemDropZone DropZone)` | 放置落到了某行上——即 UMG 的 BP_OnItemAcceptDrop，并带有其落入的区域。 |
 | `OnItemDragCancelled` | `void DreamListItemDragEvent__DelegateSignature(int32 ItemIndex, UObject* Item, UDreamDragDropOperation* Operation)` | 从此列表发起的拖动以无人接受而结束——即 UMG 的 BP_OnItemDragCancelled。 |
 | `OnDraggingStateChanged` | `void DreamListDraggingStateEvent__DelegateSignature(bool bIsDragging)` | 此列表开始或停止拖动其某一行——即 UMG 的 BP_OnListViewDraggingStateChanged。 |
+
