@@ -8,6 +8,7 @@
 #include "EditorViewportClient.h"
 #include "Animation/AnimInstance.h"
 #include "LevelEditorViewport.h"
+#include "Designer/DreamDesignerHandles.h"
 
 class UDreamVisual;
 class UDreamWidget;
@@ -465,33 +466,43 @@ private:
 	/** InWidget's own clip mask and the layer below it, outlined where they cut (UDreamUIDesignerSettings::bShowClipMasks). */
 	void DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
 
-	/**
-	 * A point of the selection that can be dragged in the viewport: a control point of a warp's lattice, or a point of a
-	 * path. Owner is the preview's object (the warp, the path visual); the drag writes it, and the template, through the
-	 * preview host as the details panel does (DreamWidgetDesignerPointHandles.cpp).
+	/*
+	 * The viewport handles of the selection (Designer/DreamDesignerHandles.h; DreamWidgetDesignerHandles.cpp): the points
+	 * the registered providers give the single selected widget -- a warp's lattice, a path, a rect block's gradient -- drawn,
+	 * grabbed, dragged as one undo step and written to the .dui when the button comes up.
 	 */
-	struct FDesignerPoint
+	/** One provider's handles and guide lines for the selection, as collected this frame. */
+	struct FDesignerHandleSet
 	{
-		TWeakObjectPtr<UObject> Owner;
-		TWeakObjectPtr<UDreamWidget> Widget;
-		int32 Index = INDEX_NONE;
-		bool bLattice = false;
-		/** In the widget's local space. */
-		FVector2D Local = FVector2D::ZeroVector;
+		TSharedPtr<class IDreamDesignerHandleProvider> Provider;
+		FDreamDesignerHandleSet Set;
 	};
-	/** The points of the single selected widget, in drawing order. */
-	void CollectDesignerPoints(TArray<FDesignerPoint>& OutPoints) const;
-	bool HitTestDesignerPoint(const FVector2D& InPixel, FDesignerPoint& OutPoint) const;
-	void BeginDesignerPointDrag(const FDesignerPoint& InPoint);
-	void UpdateDesignerPointDrag();
-	void FinishDesignerPointDrag(bool bCancel);
-	void DrawDesignerPoints(FSceneView& View, FCanvas& Canvas) const;
-	bool bDesignerPointDragging = false;
-	bool bDesignerPointChanged = false;
-	FDesignerPoint DraggedDesignerPoint;
-	/** The whole array the dragged point is in, as it was when it was grabbed: what Esc puts back. */
-	TArray<FVector2D> DraggedPointsBefore;
-	TUniquePtr<class FScopedTransaction> DesignerPointTransaction;
+	/** A handle under the pointer, and whose it is. */
+	struct FDesignerHandleHit
+	{
+		TSharedPtr<class IDreamDesignerHandleProvider> Provider;
+		FDreamDesignerHandle Handle;
+	};
+	/** A held handle: what it writes, the preview's values before (Esc), the drag as it stands, and its transaction. */
+	struct FDesignerHandleGesture;
+	/** The single selected widget the providers are asked about: the preview's, unlocked, the asset's own; else null. */
+	UDreamWidget* GetHandleWidget() const;
+	void CollectDesignerHandles(UDreamWidget* InWidget, const FSceneView& InView, TArray<FDesignerHandleSet>& OutSets) const;
+	bool HitTestDesignerHandles(const FVector2D& InPixel, FDesignerHandleHit& OutHit) const;
+	bool BeginDesignerHandleDrag(const FDesignerHandleHit& InHit, const FVector2D& InPixel);
+	void UpdateDesignerHandleDrag();
+	void FinishDesignerHandleDrag(bool bCancel);
+	/** A double click handed to the providers; true when one of them took it. */
+	bool HandleDesignerDoubleClick(const FVector2D& InPixel);
+	void DrawDesignerHandles(FSceneView& View, FCanvas& Canvas) const;
+	/** Where a viewport pixel lands on InWidget's plane, in its local space. */
+	bool PixelToWidgetLocal(const FVector2D& InPixel, const UDreamWidget* InWidget, FVector2D& OutLocal) const;
+	/** Screen pixels per unit of InWidget's local space, as InView draws it. */
+	double MeasurePixelsPerUnit(const FSceneView& InView, const UDreamWidget* InWidget) const;
+	bool IsDraggingDesignerHandle() const { return HandleGesture.IsValid(); }
+	TSharedPtr<FDesignerHandleGesture> HandleGesture;
+	/** A double click a provider took: the release that follows it is the click's, not the designer's. */
+	bool bSwallowNextLeftRelease = false;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	/** The title-safe rect of the design canvas. Silent on platforms that declare no safe area. */

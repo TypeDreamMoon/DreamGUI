@@ -61,6 +61,8 @@
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.h"
 #include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "Designer/DreamDesignerHandles.h"
+#include "Designer/DreamDesignerPointHandleProviders.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
@@ -152,6 +154,20 @@ const FName FDreamGUIEditorModule::DreamUIWidgetInspectorTabName(TEXT("DreamUIWi
 
 #define LOCTEXT_NAMESPACE "FDreamGUIEditorModule"
 DEFINE_LOG_CATEGORY(DreamGUIEditor);
+
+namespace DreamGUIEditorModuleLocal
+{
+	/** The viewport handle providers this module registered, to unregister when it stops. */
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> DesignerHandleProviders;
+
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> MakeDesignerHandleProviders()
+	{
+		return {
+			DreamDesignerPointHandles::MakeLatticeProvider(),
+			DreamDesignerPointHandles::MakePathProvider(),
+		};
+	}
+}
 
 void FDreamGUIEditorModule::StartupModule()
 {
@@ -276,6 +292,12 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontFallbackCustomization::MakeInstance));
 		// A text's paints, a gradient asset and a custom style's paint all show their gradients through this one.
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamGradientCustomization::MakeInstance));
+		// The designer viewport's handles: a warp's lattice, a path's points.
+		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::MakeDesignerHandleProviders())
+		{
+			FDreamDesignerHandles::Register(Provider);
+			DreamGUIEditorModuleLocal::DesignerHandleProviders.Add(Provider);
+		}
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance)));
@@ -551,6 +573,11 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName());
+		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::DesignerHandleProviders)
+		{
+			FDreamDesignerHandles::Unregister(Provider);
+		}
+		DreamGUIEditorModuleLocal::DesignerHandleProviders.Reset();
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());

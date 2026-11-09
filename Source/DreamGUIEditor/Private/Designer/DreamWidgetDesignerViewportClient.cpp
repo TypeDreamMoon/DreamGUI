@@ -1451,7 +1451,7 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			DrawClipMaskOutline(WeakWidget.Get(), View, Canvas);
 		}
 	}
-	DrawDesignerPoints(View, Canvas);
+	DrawDesignerHandles(View, Canvas);
 	// The selection outline and its handles follow the widget wherever the camera is.
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
@@ -1685,7 +1685,7 @@ void FDreamWidgetDesignerViewportClient::ReceivedFocus(FViewport* InViewport)
 void FDreamWidgetDesignerViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
-	if (bDesignerPointDragging)FinishDesignerPointDrag(true);
+	if (IsDraggingDesignerHandle())FinishDesignerHandleDrag(true);
 	// An arrow held while the focus went never sends its release here.
 	EndNudgeTransaction();
 	bDesignerMarqueePending = false;
@@ -1708,7 +1708,7 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 
 	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
-	if (bDesignerPointDragging)UpdateDesignerPointDrag();
+	if (IsDraggingDesignerHandle())UpdateDesignerHandleDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
 
@@ -1732,14 +1732,29 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
 	if (!DesignerPtr.IsValid())return false;
-	if (bDesignerPointDragging && EventArgs.Event == IE_Pressed && EventArgs.Key == EKeys::Escape)
+	if (IsDraggingDesignerHandle() && EventArgs.Event == IE_Pressed && EventArgs.Key == EKeys::Escape)
 	{
-		FinishDesignerPointDrag(true);
+		FinishDesignerHandleDrag(true);
 		return true;
 	}
-	if (bDesignerPointDragging && EventArgs.Event == IE_Released && EventArgs.Key == EKeys::LeftMouseButton)
+	if (IsDraggingDesignerHandle() && EventArgs.Event == IE_Released && EventArgs.Key == EKeys::LeftMouseButton)
 	{
-		FinishDesignerPointDrag(false);
+		FinishDesignerHandleDrag(false);
+		return true;
+	}
+	if (bSwallowNextLeftRelease && EventArgs.Key == EKeys::LeftMouseButton && EventArgs.Event == IE_Released)
+	{
+		bSwallowNextLeftRelease = false;
+		return true;
+	}
+	// A double click is offered to the handles' providers first: on a gradient's line it adds a stop.
+	if (EventArgs.Key == EKeys::LeftMouseButton && EventArgs.Event == IE_DoubleClick && EventArgs.Viewport != nullptr
+		&& !bDesignerDragging && !bDesignerDragPending && !IsDraggingDesignerHandle()
+		&& HandleDesignerDoubleClick(FVector2D(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY())))
+	{
+		bDesignerMarqueePending = false;
+		bDesignerMarqueeActive = false;
+		bSwallowNextLeftRelease = true;
 		return true;
 	}
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
@@ -1799,13 +1814,14 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		if (bDesignerMarqueePending)FinishDesignerMarquee();
 		return false;
 	}
-	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || bDesignerPointDragging || !Viewport)return false;
-	// A lattice's or a path's point is smaller than any handle and sits inside the selection, so it is tried first.
+	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || IsDraggingDesignerHandle() || !Viewport)return false;
+	// A provider's handle -- a lattice's point, a path's, a gradient's end or stop -- is smaller than any of the selection's
+	// own handles and sits inside the selection, so it is tried first.
 	{
-		FDesignerPoint Point;
-		if (HitTestDesignerPoint(FVector2D(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY()), Point))
+		const FVector2D Pixel(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
+		FDesignerHandleHit Hit;
+		if (HitTestDesignerHandles(Pixel, Hit) && BeginDesignerHandleDrag(Hit, Pixel))
 		{
-			BeginDesignerPointDrag(Point);
 			KeepTickingThroughGesture();
 			return true;
 		}
@@ -4382,7 +4398,20 @@ EMouseCursor::Type FDreamWidgetDesignerViewportClient::GetCursor(FViewport* InVi
 	{
 		return EMouseCursor::GrabHandClosed;
 	}
-	if (bDesignerDragging || bDesignerDragPending || bDesignerMarqueeActive || !IsOrtho())return EngineCursor;
+	// A provider's handle (a lattice's point, a gradient's end or stop) under the pointer, or held.
+	if (IsDraggingDesignerHandle())
+	{
+		return EMouseCursor::Crosshairs;
+	}
+	if (bDesignerDragging || bDesignerDragPending || bDesignerMarqueeActive)return EngineCursor;
+	{
+		FDesignerHandleHit Hit;
+		if (HitTestDesignerHandles(FVector2D(X, Y), Hit))
+		{
+			return EMouseCursor::Crosshairs;
+		}
+	}
+	if (!IsOrtho())return EngineCursor;
 	// Read against the handles as they were last drawn, which in a realtime viewport is this frame's: the cursor talks
 	// about what is on screen, so with the chrome switched off -- the handle still grabbable but not drawn, and its
 	// place not refreshed -- it says nothing.
