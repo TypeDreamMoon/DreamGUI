@@ -369,8 +369,10 @@ namespace DreamDesignerLayerEffectsPixelTestLocal
 				B.Subject = B.Widget(TEXT("Stylize"), FVector2D(220.0, 150.0), FVector2D::ZeroVector);
 				if (UDreamStylizeEffect* Effect = B.Subject ? B.Subject->CreateNewVisual<UDreamStylizeEffect>() : nullptr)
 				{
+					// No flicker: a flickering screen never holds still to be compared.
 					FDreamStylizeLayer Crt;
 					Crt.Type = EDreamStylizeType::CRT;
+					Crt.FlickerStrength = 0.0f;
 					Effect->SetLayers({ Crt });
 				}
 			}
