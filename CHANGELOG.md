@@ -423,6 +423,17 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **Additive materials draw under Substrate.** With Substrate on, the engine makes a legacy additive material an unlit
   slab of its emissive times its opacity and full transmittance, which DreamGUI's renderer took for no coverage: the
   material drew nothing. It now draws what it draws without Substrate, the emissive by its opacity.
+- **Niagara sprites draw in a play session.** The built-in shader read a particle's frame blend off its packed colour
+  scale with a bare floor. The value reaches the pixel interpolated, and in a play session's screen-space view a whole
+  step could arrive a hair under itself: the sprite then blended wholly into its next frame, which for a sprite of one
+  frame lies past the texture, where the soft default disc is transparent. Sprites drew in the designer and in render
+  targets and not at all in a game's viewport; ribbons were not affected. The step is now read half the gap the blend
+  leaves below the next one, in the built-in shader and in converted particle materials alike.
+- **The Niagara effects sample is laid out, and its sparks spread.** Its row and cards measured by their captions, so
+  the five cards came out a word wide; they now ask for 1080 by 300 and 200 by 300. Three of its systems read, in one
+  Set Parameters module, attributes that module wrote, which Niagara reads as they were before it: the click sparks and
+  the full bar's shards were thrown at no speed, and the border sparks all began at one corner. Each now writes what it
+  reads in an earlier group.
 
 [#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
 [#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
