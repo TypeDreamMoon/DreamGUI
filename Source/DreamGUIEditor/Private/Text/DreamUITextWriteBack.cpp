@@ -391,6 +391,40 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
+	 * One element of a container. A struct with no short form is written the way the builder reads one there -- a quoted
+	 * string it hands the engine's importer, `Style.DropShadows = ["(Angle=120,Distance=6)"]` -- with only the fields that
+	 * differ from the struct's defaults, so two equal values print alike and an untouched field is not spelled. Anything
+	 * else prints as a leaf does.
+	 */
+	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
+	{
+		if (PrintLiteral(InElement, InValuePtr, OutText, OutValueIsUnrepresentable))
+		{
+			return true;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InElement);
+		if (AsStruct == nullptr || AsStruct->Struct == nullptr || DreamUIValueFormat::HasShortForm(InElement)
+			|| (OutValueIsUnrepresentable != nullptr && *OutValueIsUnrepresentable))
+		{
+			return false;
+		}
+		const UScriptStruct* Struct = AsStruct->Struct;
+		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
+		Struct->InitializeStruct(Defaults);
+		FString Exported;
+		AsStruct->ExportTextItem_Direct(Exported, InValuePtr, Defaults, nullptr, PPF_None);
+		Struct->DestroyStruct(Defaults);
+		FMemory::Free(Defaults);
+		if (Exported.IsEmpty())
+		{
+			// Every field at its default: the importer reads an empty list of fields as that.
+			Exported = TEXT("()");
+		}
+		OutText = QuoteString(Exported);
+		return true;
+	}
+
+	/**
 	 * A container's entries as they print: a list's elements in order, a set's elements and a map's `key: value`s in
 	 * the order the container holds them, with each entry's identity (the element, the key) in OutKeys. False when an
 	 * entry has no spelling -- then neither has the container.
@@ -411,7 +445,7 @@ namespace DreamUIWriteBackLocal
 			for (int32 Index = 0; Index < Helper.Num(); ++Index)
 			{
 				FString Element;
-				if (!PrintLiteral(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
+				if (!PrintContainerElement(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
@@ -436,7 +470,7 @@ namespace DreamUIWriteBackLocal
 				}
 				--Left;
 				FString Element;
-				if (!PrintLiteral(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
+				if (!PrintContainerElement(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
@@ -462,7 +496,7 @@ namespace DreamUIWriteBackLocal
 				FString Key;
 				FString Value;
 				if (!PrintLiteral(AsMap->KeyProp, Helper.GetKeyPtr(Index), Key, OutValueIsUnrepresentable)
-					|| !PrintLiteral(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
+					|| !PrintContainerElement(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
