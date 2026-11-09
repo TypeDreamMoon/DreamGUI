@@ -165,9 +165,12 @@ protected:
 	friend class FDreamRectBlockCustomization;
 
 #pragma region BlockData
+	// DreamGUI_Hidden on every *UnitMode below, the body's texture mode and texture, and bUniformSetCornerRadius: the
+	// details panel edits each on another property's row -- the unit button beside a value, the Texture/Sprite switch and
+	// picker heading the body's texture group, the lock on the corner radius (FDreamRectBlockCustomization).
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector4f CornerRadius = FVector4f(0.1f, 0.1f, 0.1f, 0.1f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode CornerRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
 	/** Prevent edge aliasing, useful when in 3d. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", AdvancedDisplay)
@@ -177,9 +180,9 @@ protected:
 		bool bEnableBody = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FColor BodyColor = FColor::White;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockTextureMode BodyTextureMode = EDreamRectBlockTextureMode::Sprite;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false", DreamGUI_Hidden))
 		TObjectPtr<class UTexture> BodyTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<UDreamUISpriteData_BaseObject> BodySpriteTexture = nullptr;
@@ -204,11 +207,11 @@ protected:
 		FColor BodyGradientColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f BodyGradientCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BodyGradientCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f BodyGradientRadius = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BodyGradientRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 		float BodyGradientRotation = 0;
@@ -217,7 +220,7 @@ protected:
 		bool bEnableBorder = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float BorderWidth = 2;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BorderWidthUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FColor BorderColor = FColor::Black;
@@ -227,11 +230,11 @@ protected:
 		FColor BorderGradientColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f BorderGradientCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BorderGradientCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f BorderGradientRadius = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BorderGradientRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 		float BorderGradientRotation = 0;
@@ -242,24 +245,24 @@ protected:
 		FColor InnerShadowColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowSize = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowSizeUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowBlur = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 		float InnerShadowAngle = 45;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowDistance = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowDistanceUnitMode = EDreamRectBlockUnitMode::Value;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableRadialFill = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f RadialFillCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode RadialFillCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float RadialFillRotation = 0;
@@ -272,17 +275,17 @@ protected:
 		FColor OuterShadowColor = FColor(0, 0, 0, 128);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float OuterShadowSize = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowSizeUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0"))
 		float OuterShadowBlur = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 		float OuterShadowAngle = 45;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float OuterShadowDistance = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowDistanceUnitMode = EDreamRectBlockUnitMode::Value;
 
 	void FillData(uint8* Data, float width, float height, const struct FDreamUILayerStyleRecord* InStyle = nullptr);
@@ -384,7 +387,7 @@ private:
 #pragma endregion
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		bool bUniformSetCornerRadius = true;
 #endif
 

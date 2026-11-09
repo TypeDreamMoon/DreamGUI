@@ -178,6 +178,9 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 		auto PropertyHandle = DetailBuilder.GetProperty(PropertyName);
 		PropertyHandle->SetPropertyDisplayName(PropertyDisplayName);
 		auto PropertyUnitHandle = DetailBuilder.GetProperty(FName(*(PropertyName.ToString() + TEXT("UnitMode"))));
+		// Drawn on this row of its own, so out of the category's default rows.
+		DetailBuilder.HideProperty(PropertyHandle);
+		DetailBuilder.HideProperty(PropertyUnitHandle);
 		auto ValueHorizontalBox = SNew(SHorizontalBox);
 		uint32 NumChildren = 0;
 		PropertyHandle->GetNumChildren(NumChildren);
@@ -241,8 +244,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 	
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	
-	DetailBuilder.HideCategory(TEXT("DreamGUI-ProceduralRect"));
-	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bUniformSetCornerRadius));
+	// The rows below lay the rect block's own category out; what they do not place stays in it, and what they edit on another
+	// property's row (the unit buttons, the lock, the texture switch) is tagged DreamGUI_Hidden.
 
 	auto UniformSetCornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bUniformSetCornerRadius));
 	auto CornerRadiusUnitModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, CornerRadiusUnitMode));
@@ -268,6 +271,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 		}
 		}));
 
+	// Drawn on the row below, so out of the category's default rows.
+	DetailBuilder.HideProperty(CornerRadiusHandle);
 	DreamGUICategory.AddCustomRow(LOCTEXT("CornerRadius", "CornerRadius"), false)
 	.PropertyHandleList({ CornerRadiusHandle, UniformSetCornerRadiusHandle, CornerRadiusUnitModeHandle })
 	.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
@@ -419,6 +424,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			: BodyGroup.AddGroup(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodySpriteTexture), BodySpriteTextureHandle->GetPropertyDisplayName(), true)
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == EDreamRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
+		// The group's header row below draws the switch and whichever picker it selects.
+		DetailBuilder.HideProperty(BodySpriteTextureHandle);
 		TextureGroup.HeaderRow()
 			.FilterString(TempBodyTextureHandle->GetPropertyDisplayName())
 			.PropertyHandleList({ BodyTextureModeHandle, BodyTextureHandle, BodySpriteTextureHandle })
@@ -545,12 +552,16 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 
 		auto BodyTextureScaleModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureScaleMode));
 		BodyTextureScaleModeHandle->SetPropertyDisplayName(LOCTEXT("BodyTextureScaleMode_DisplayName", "Scale Mode"));
-		TextureGroup.AddPropertyRow(BodyTextureScaleModeHandle).IsEnabled(TAttribute<bool>::CreateLambda([=]()
+		const TAttribute<bool> HasBodyTexture = TAttribute<bool>::CreateLambda([=]()
 		{
 			UObject* BodyTexture = nullptr;
 			TempBodyTextureHandle->GetValue(BodyTexture);
 			return BodyTexture != nullptr && EnableBodyAttribute.Get();
-		}));
+		});
+		TextureGroup.AddPropertyRow(BodyTextureScaleModeHandle).IsEnabled(HasBodyTexture);
+		// Nine-slicing: how the texture is drawn, and the margins it keeps at their own size.
+		TextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureDrawMode))).IsEnabled(HasBodyTexture);
+		TextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureMargin))).IsEnabled(HasBodyTexture);
 
 		//gradient
 		auto EnableBodyGradientHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bEnableBodyGradient));
