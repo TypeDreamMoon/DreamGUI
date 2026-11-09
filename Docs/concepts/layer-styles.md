@@ -89,7 +89,8 @@ takes its shape from a group this way (`UDreamGlass`, `Shape` `ShapeBlend`; see 
   bevel of a layer style under it from where it is, instead of by the style's own angle, and centres the border gradient
   of every rect block with a border under it on itself -- a reveal highlight that costs a rect block's row. Following the
   pointer it fades in while the pointer is over its widget's plane within reach and out when it leaves, and everything goes
-  back to its own light.
+  back to its own light. In a world that is not playing -- the designer's preview -- there is no pointer to follow, so it
+  stands at its `LightPosition` there, which is where to put it to see what it lights.
 - **`UDreamTiltCard`** tilts a widget towards the pointer on a spring, the edge under the pointer dipping away, and grows it
   a little while the pointer is over it; through the render transform, so layout is untouched. Put it in a perspective scope
   (a parent with `Perspective` on) for the tilt to foreshorten.
@@ -98,3 +99,7 @@ takes its shape from a group this way (`UDreamGlass`, `Shape` `ShapeBlend`; see 
   twinkle as it turns, where its mask says. The angle of view is the pointer's offset from the centre, a tilt card's tilt
   on the same widget, or set by hand. The materials (`DreamUI_HoloFoil`, `DreamUI_HoloFoilRect`) are made by DreamShader
   from `DShader/`; a material is a draw call of its own.
+
+Each of the three has a `bEnabled` switch: off, the light lights nothing, the card lies flat and the element draws with its
+own material, every other setting kept. A layer style's switch is its style's own `bEnabled`, a shape blend group's its
+`bBlendEnabled`.

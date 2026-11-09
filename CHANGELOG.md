@@ -186,6 +186,20 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   text warps are read and listed, not imported yet. The new editor module is `DreamGUIPsd`. See
   [Importing layered documents](Docs/guides/layered-document-import.md).
 
+- **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
+  mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
+  turn off a layer style and a layer group, and every effect on the widget with an eye to turn it off and its name to open
+  its settings. The hierarchy marks each widget's effects after its name -- style, group, mask, blend, effect, warp,
+  particles -- with what they are in the tooltip and a click to turn them off and on. The palette has them all: Glass,
+  Adjustment Layer and Stylize under Effects, Layer Style, Layer Group, Shape Blend Group, Mask Transition, Holo Foil,
+  Pointer Light and Tilt Card under Components, Warp, Jelly and Text On Path under Modifiers, Path under Shapes, each
+  arriving set up to be seen; a post-process Blueprint is listed by its name without `BP_` and `_C`. See
+  [The widget designer](Docs/tools/designer.md).
+- **Off switches on the layer effects.** `UDreamLayerGroup`, `UDreamMaskTransition`, `UDreamHoloFoil`,
+  `UDreamPointerLight`, `UDreamTiltCard` and every post-process visual (`UDreamVisualPostProcess`: glass, adjustment layer,
+  stylize, background blur...) have a `bEnabled` property, on by default and written to a `.dui` only when off: off, the
+  effect is drawn as if it were not there and keeps its settings.
+
 ### Changed
 
 - **A binding that reads only FieldNotify variables no longer reads them every frame** once its Blueprint is
@@ -504,6 +518,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 [#54]: https://github.com/TypeDreamMoon/DreamGUI/issues/54
 [#55]: https://github.com/TypeDreamMoon/DreamGUI/issues/55
 [#56]: https://github.com/TypeDreamMoon/DreamGUI/issues/56
+
+- **A pointer light shows in the designer.** Following the pointer, it lit nothing in a world that is not playing, where
+  there is no pointer; there it now stands at its `LightPosition`.
 
 ## 1.0.0
 

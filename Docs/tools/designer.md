@@ -37,6 +37,14 @@ UMG, the widget's own name, place, slot, components and children all stay put; o
 *Show / Hide in Designer*, *Lock / Unlock*, *Find References*, *Focus Selection* (what the F key does), and
 *Reveal in VS Code*.
 
+After a widget's name, the hierarchy marks what makes it a layer, one small icon per kind: a **style** (a layer style),
+a **group** (a layer group or a shape blend group), a **mask** (a mask on its clip, clipping to the layer below, a mask
+transition), a **blend** mode other than normal, an **effect** (a post-process visual such as glass or an adjustment
+layer, a holo foil, a pointer light, a tilt card, a mesh modifier), a **warp** (warp, jelly, text on a path) and
+**particles**. Hovering a mark lists what it stands for and how each is set. Clicking it turns the effects of that kind
+off, and on again, through their own switches -- to compare with and without them; the mark dims while they are off. It
+is an ordinary edit: one undo step, saved, and written to the `.dui` of a class backed by one.
+
 ## The palette
 
 The palette lists what can be placed, grouped the way UMG's is: **Basic** (Widget, Text, Image, RectBlock), Panels,
@@ -53,6 +61,26 @@ Created** (the project's widget Blueprints), and last **Legacy**.
   favourites keep their stars.
 - **Search**: the search box filters entries, with every group expanded while it does.
 
+The layer effects are all here, and each arrives showing something, since several draw nothing at their class
+defaults:
+
+| Group | Row | What it puts down |
+| --- | --- | --- |
+| Effects | Glass | glass with a little frost, so that it shows over a plain colour |
+| Effects | Adjustment Layer | an adjustment layer turning what is behind it black and white |
+| Effects | Stylize | a CRT effect |
+| Components | Layer Style | a rect block with a drop shadow and a light stroke |
+| Components | Layer Group | an isolated group at 60 % with two overlapping blocks in it |
+| Components | Shape Blend Group | two circles that melt into one |
+| Components | Mask Transition | a block part way through a wipe |
+| Components | Holo Foil, Pointer Light, Tilt Card | a block to show it on |
+| Modifiers | Warp, Text On Path | a text bent into an arc, a text round a circle |
+| Modifiers | Jelly | a block |
+| Shapes | Path | a curve |
+
+Everything they set is an ordinary authored value. A post-process Blueprint is listed under Effects by its name without
+its `BP_` and `_C`.
+
 A project's own registered controls come after DreamGUI's categories, in the order they were registered. The category
 names are in `DreamUIPaletteCategory` (`DreamUIControlRegistry.h`); an extension that compared
 `FDreamUIControlDescriptor::Category` with "Controls", "Post Process", "Extensions" or a legacy category name reads them
@@ -60,16 +88,31 @@ from there instead.
 
 ## The details panel
 
-A selected widget's categories run in the order a widget is put together: where it sits (Slot, Canvas, Layout), what it
-is (Visual, Panel, Self Layout), how it acts (Appearance, Behavior), then Render Transform and — collapsed —
-Perspective, Navigation, Accessibility and Localization. Is Enabled is in Behavior. The Transform and anchor-data
-categories at the bottom, which repeated the Layout rows raw, are gone.
+A selected widget's categories run in the order a widget is put together: what makes it a layer (Layer), where it sits
+(Slot, Canvas, Layout), what it is (Visual, Panel, Self Layout), how it acts (Appearance, Behavior), then Render Transform
+and — collapsed — Perspective, Navigation, Accessibility and Localization. Is Enabled is in Behavior. The Transform and
+anchor-data categories at the bottom, which repeated the Layout rows raw, are gone.
+
+The **Layer** category gathers what makes a widget a layer, from wherever it lives:
+
+| Row | What it edits |
+| --- | --- |
+| Opacity | the widget's `RenderOpacity` |
+| Blend Mode | its visual's, when the visual is an element (an image, a text, a rect block...) |
+| Clip To Layer Below | `bClipToBelow` |
+| Mask | a shape to pick at once -- picking one makes the widget clip to its bounds, which the mask needs -- and the whole mask (`ClipMask`) under it |
+| Layer Style, Layer Group | a switch each: on adds one to a widget that has none, as *Add Component* does; off turns it off and keeps its settings. *Edit...* opens its own properties |
+| Group Mode | the layer group's isolation, while every selected widget has one |
+| Effects | every layer effect on the widget: an eye that turns it off and on, and its name, which opens its properties |
+
+None of these rows is anywhere else as well: the opacity used to be in Appearance, the mask and clipping to the layer
+below under Appearance > Clipping, the blend mode among the visual's own rows.
 
 A visual's own rows are ordered by what they do:
 
 - A **Text** leads with Text, Font, Font Size, Font Style, Color, alignment, Overflow Type, Auto Wrap Text and Rich Text;
   the rest — Wrapping, Typography (the language picker included), Text Style / Paint, Rendering (override material,
-  preset materials, blend mode, mesh size, small-text raster and so on) — is in groups that start closed.
+  preset materials, mesh size, small-text raster and so on) — is in groups that start closed.
 - An **Image** leads with its brush and ends with the raycast rows.
 - A **Sprite**'s or **Texture**'s colour sits under its sprite or texture.
 

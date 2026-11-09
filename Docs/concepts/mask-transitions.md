@@ -32,6 +32,7 @@ and makes again only when the widget's shape, `Centre`, `Seed` or `Count` change
 ## Driving it
 
 - `Progress` is an animatable property: key it in a widget animation, tween it, or set it from Blueprint.
+- `bEnabled` off shows the widget whole whatever the progress, to compare with and without the transition.
 - `PlayForward`, `PlayBackward` and `PlayFromTo` tween it and return the tween, to chain on (`OnComplete`); `Stop`
   stops it where it is.
 - `CrossFade(From, To, Preset, Duration)` gives `From` way to `To` through one shape: `To` is shown exactly where

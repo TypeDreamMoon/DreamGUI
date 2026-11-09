@@ -35,6 +35,12 @@ description: "对照 UMG 设计器重建的 DreamUI Designer：按矩形拾取�
 *Show / Hide in Designer*、*Lock / Unlock*、*Find References*、*Focus Selection*（等同于 F 键），以及
 *Reveal in VS Code*。
 
+层级面板在 widget 名字后面用小图标标出它作为图层带了什么，每类一个：**样式**（图层样式）、**组**（图层组或形状融合组）、
+**遮罩**（裁剪上的遮罩、剪贴到下一层、遮罩转场）、非正常的**混合**模式、**效果**（玻璃、调整图层这类后处理视觉，全息箔、
+指针光、倾斜卡，网格修改器）、**变形**（变形、果冻、路径文字）和**粒子**。悬停在标记上会列出它代表什么、各自怎么设的。
+点一下，用效果自己的开关把这一类关掉，再点打开——方便对比前后；关掉时标记变暗。这是普通的编辑：一步撤销，会保存，
+由 .dui 支撑的类还会写回 .dui。
+
 <a id="the-palette"></a>
 
 ## 调色板
@@ -51,6 +57,24 @@ Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects�
 - **收藏**：常用的条目可以收藏，收藏组排在最前面。注册键没变，所以以前的收藏都还在。
 - **搜索**：搜索框过滤条目，过滤时所有分组展开。
 
+图层效果都在调色板里，而且拖进来就能看到东西——有几个效果在类默认值下什么都不画：
+
+| 分组 | 条目 | 拖进来是什么 |
+| --- | --- | --- |
+| Effects | Glass | 带一点磨砂的玻璃，放在纯色上也看得出 |
+| Effects | Adjustment Layer | 把背后变成黑白的调整图层 |
+| Effects | Stylize | CRT 效果 |
+| Components | Layer Style | 带投影和浅色描边的 RectBlock |
+| Components | Layer Group | 透明度 60% 的独立组，里面两个重叠的块 |
+| Components | Shape Blend Group | 融成一体的两个圆 |
+| Components | Mask Transition | 擦除到一半的块 |
+| Components | Holo Foil、Pointer Light、Tilt Card | 一个用来看效果的块 |
+| Modifiers | Warp、Text On Path | 弯成弧形的文字、绕圆排列的文字 |
+| Modifiers | Jelly | 一个块 |
+| Shapes | Path | 一条曲线 |
+
+它们设的都是普通的作者值。后处理蓝图在 Effects 里按去掉 `BP_` 和 `_C` 的名字列出。
+
 项目自己注册的控件，分类在 DreamGUI 的分类之后、按注册顺序排列。分类名来自 `DreamUIPaletteCategory`
 （`DreamUIControlRegistry.h`）；以前拿 `FDreamUIControlDescriptor::Category` 去和 "Controls"、"Post Process"、"Extensions" 或
 某个旧分类名比较的扩展代码，要改用那里的名字。
@@ -59,16 +83,30 @@ Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects�
 
 ## 细节面板
 
-选中一个 widget 时，分类按一个 widget 的构成排列：先是它放在哪（Slot、Canvas、Layout），再是它是什么
-（Visual、Panel、Self Layout），然后是它怎么表现（Appearance、Behavior），最后是 Render Transform，以及
+选中一个 widget 时，分类按一个 widget 的构成排列：先是它作为图层的样子（Layer），再是它放在哪（Slot、Canvas、
+Layout），然后是它是什么（Visual、Panel、Self Layout）、它怎么表现（Appearance、Behavior），最后是 Render Transform，以及
 默认折叠的 Perspective、Navigation、Accessibility 和 Localization。Is Enabled 在 Behavior 里。以前排在最
 下面、把 Layout 的行原样重复一遍的 Transform 和锚点数据分类已经去掉了。
+
+**Layer** 分类把让 widget 成为图层的东西集中到一处，不管它们原本在哪个对象上：
+
+| 行 | 编辑什么 |
+| --- | --- |
+| Opacity | widget 的 `RenderOpacity` |
+| Blend Mode | 视觉的混合模式，视觉是元素（图片、文字、RectBlock……）时才有 |
+| Clip To Layer Below | `bClipToBelow` |
+| Mask | 快速选一个形状——选了就让 widget 裁剪到自身边界，遮罩需要这个——下面是完整的遮罩（`ClipMask`） |
+| Layer Style、Layer Group | 各一个开关：打开时给没有的 widget 加一个，和 *Add Component* 一样；关掉时关闭它但保留设置。*Edit...* 打开它自己的属性 |
+| Group Mode | 图层组的隔离方式，所有选中 widget 都有图层组时显示 |
+| Effects | widget 上的每个图层效果：一只眼睛负责开关，点名字打开它的属性 |
+
+这些行都不会在别处重复出现：不透明度以前在 Appearance，遮罩和剪贴到下一层在 Appearance > Clipping，混合模式在视觉自己的行里。
 
 视觉自己的行也按用途排：
 
 - **Text** 以 Text、Font、Font Size、Font Style、Color、对齐、Overflow Type、Auto Wrap Text 和 Rich Text
   开头；其余的——Wrapping、Typography（包括语言选择）、Text Style / Paint、Rendering（覆盖材质、预设材质、
-  混合模式、网格尺寸、小字栅格化等）——放在默认折叠的组里。
+  网格尺寸、小字栅格化等）——放在默认折叠的组里。
 - **Image** 的刷子排在最前，射线检测的行排在最后。
 - **Sprite** 和 **Texture** 的颜色在 sprite / 纹理的下面。
 

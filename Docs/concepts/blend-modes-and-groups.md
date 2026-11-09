@@ -47,6 +47,7 @@ DreamGUI picks the way from the mode and from what draws the element; there is n
 
 | Property | Does |
 | --- | --- |
+| `bEnabled` | Off, the subtree is drawn as if there were no group, every other setting kept: to compare with and without it |
 | `Isolation` | `PassThrough` (the default: drawn as if there were no group) or `Isolated` (drawn apart). An opacity, a mode or a mask other than the default draws it apart whatever this says |
 | `GroupOpacity` | Applied once to the composited subtree: children that overlap fade together, not through each other as they do when each takes the widget's `RenderOpacity` |
 | `GroupBlendMode` | How the composited subtree blends with what is behind it, any of the 27 |

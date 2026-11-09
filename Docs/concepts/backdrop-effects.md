@@ -19,6 +19,9 @@ widget's. They are drawn by DreamGUI's own renderer -- screen-space, render-targ
 canvases, and the designer's and the level editor's previews. A canvas the engine's renderer draws (World Space - UE
 Renderer) draws none of them. The post-process visual's `Tint` and its output render target are not used by these four.
 
+Every post-process visual has a `bEnabled` switch: off, it draws nothing and what it covers shows as if it were not there
+-- an adjustment or a stylize effect on its children draws them as they are -- every setting kept.
+
 ## Adjustment layer
 
 The operations (`Adjustments`, an array of `FDreamAdjustment`), each working on what the one before made:

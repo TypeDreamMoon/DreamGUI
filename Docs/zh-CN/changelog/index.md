@@ -74,6 +74,16 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   再次导入会编辑上次写的 `.dui`，保留作者加的每个节点和每一行，并列出被覆盖的内容。图层样式、调整图层和文字变形已读出并列出，
   暂未导入。新编辑器模块为 `DreamGUIPsd`。见[导入分层文档](../guides/layered-document-import.md)。
 
+- **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
+  选了自动开启裁剪到边界）、添加或关闭图层样式和图层组的开关，以及控件上的每个效果——眼睛负责开关，点名字打开设置。层级面板在
+  名字后用小图标标出每个控件的效果（样式、组、遮罩、混合、效果、变形、粒子），悬停看详情，点击开关。调色板收齐了它们：Effects
+  里的 Glass、Adjustment Layer、Stylize，Components 里的 Layer Style、Layer Group、Shape Blend Group、Mask Transition、Holo Foil、
+  Pointer Light、Tilt Card，Modifiers 里的 Warp、Jelly、Text On Path，Shapes 里的 Path，拖进来就能看到；后处理蓝图按去掉 `BP_`
+  和 `_C` 的名字列出。见[控件设计器](../tools/designer.md)。
+- **图层效果的开关。** `UDreamLayerGroup`、`UDreamMaskTransition`、`UDreamHoloFoil`、`UDreamPointerLight`、`UDreamTiltCard`
+  和所有后处理视觉（`UDreamVisualPostProcess`：玻璃、调整图层、风格化、背景模糊……）都有 `bEnabled` 属性，默认开，只有关掉时才写进
+  `.dui`：关掉时效果如同不存在，设置都保留。
+
 <a id="changed"></a>
 
 ### 变更
@@ -94,6 +104,7 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **Niagara 的精灵粒子在 PIE 里画得出来了。** 内置着色器用一个裸 floor 从打包的颜色倍率里取帧混合。这个值到像素时已经过插值，PIE 的屏幕空间视图里一个整数步可能差一点点落到它下面，精灵就整个混合到「下一帧」——单帧精灵的下一帧在贴图外面，默认的柔和圆点在那里是透明的。所以精灵在设计器和渲染目标里画得出来，游戏视口里一个都不画；条带不受影响。现在内置着色器和转换出来的粒子材质都按混合在下一步之下留出的间隙的一半来取整数步。
 - **Niagara 效果示例排好了，火花也散开了。** 示例的行和卡片按标题文字量尺寸，五张卡只有一个词那么宽；现在分别要 1080×300 和 200×300。其中三个系统在同一个 Set Parameters 模块里读这个模块自己写的属性，Niagara 读到的是模块之前的值：点击火花和满条碎片的速度是零，边框火花全从一个角出发。现在每个系统都在更早的一组里写它要读的值。
 - **NiagaraSystem 视觉的系统不会再在世界里画一帧了。** 模拟它的组件关了渲染，但 Niagara 只在组件 tick 时才把这个开关交给它的场景代理，系统激活或爆发时新建的代理会先画一帧：整个系统，亮着，画在 UI 后面的世界里——PIE 里每次爆发闪一下，在不 tick 组件的世界里则一直画着。现在组件根本不给场景建代理。
+- **设计器里能看到指针光。** 跟随指针时，它在不在运行的世界里（没有指针）什么都不照；现在在那里停在 `LightPosition`。
 
 <a id="100"></a>
 

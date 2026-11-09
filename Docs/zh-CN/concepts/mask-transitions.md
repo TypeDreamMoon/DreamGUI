@@ -31,6 +31,7 @@ Ink、Shatter 和 Checker 读取的纹理由这个组件自己用代码生成—
 ## 驱动方式
 
 - `Progress` 是可做动画的属性：可以在控件动画里打关键帧、用 Tween 驱动，或在蓝图里设置。
+- `bEnabled` 关掉时不论进度如何控件都完整显示，方便对比有无转场。
 - `PlayForward`、`PlayBackward`、`PlayFromTo` 用 Tween 驱动它并返回 Tween，便于链式调用（`OnComplete`）；`Stop` 让它停在当前位置。
 - `CrossFade(From, To, Preset, Duration)` 让 `From` 通过同一种形状让位给 `To`：`To` 恰好在 `From` 隐藏的地方显示。没有转场组件的
   会自动添加；消失的一方沿用出现一方的设置，保证两者形状一致。
