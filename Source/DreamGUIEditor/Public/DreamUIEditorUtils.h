@@ -6,6 +6,7 @@
 #include "DetailWidgetRow.h"
 #include "IDetailPropertyRow.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIEditorUtils"
@@ -41,19 +42,27 @@ public:
 			}
 		}
 	}
-	static void ShowError_RequireComponent(IDetailLayoutBuilder* DetailBuilder, UDreamUIBehaviour* Component, TSubclassOf<UDreamUIBehaviour> RequireComponentType)
+	/** An error row when Component's widget has no RequiredClass: a component of that class, or a visual of it. */
+	static void ShowError_RequireComponent(IDetailLayoutBuilder* DetailBuilder, UDreamUIBehaviour* Component, const UClass* RequiredClass)
 	{
+		if (RequiredClass == nullptr)
+		{
+			return;
+		}
 		if (auto Widget = Component->GetWidget())
 		{
-			auto Components = Widget->GetComponents(RequireComponentType);
-			if (Components.Num() == 0)
+			// What the sequence players need is a visual, which a TSubclassOf<UDreamUIBehaviour> made from it held as null.
+			const bool bHasIt = RequiredClass->IsChildOf(UDreamVisual::StaticClass())
+				? Widget->GetVisual() != nullptr && Widget->GetVisual()->IsA(RequiredClass)
+				: RequiredClass->IsChildOf(UDreamUIBehaviour::StaticClass()) && Widget->GetComponents(const_cast<UClass*>(RequiredClass)).Num() > 0;
+			if (!bHasIt)
 			{
 				IDetailCategoryBuilder& Category = DetailBuilder->EditCategory(ErrorInfoCategory, FText::GetEmpty(), ECategoryPriority::Variable);
 				Category.AddCustomRow(LOCTEXT("RequireComponentRow", "RequireComponent"))
 					.WholeRowContent()
 					[
 						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("RequireComponentTip", "This component require {0} component on widget!"), FText::FromName(RequireComponentType->GetFName())))
+						.Text(FText::Format(LOCTEXT("RequireComponentTip", "This component require {0} component on widget!"), FText::FromName(RequiredClass->GetFName())))
 						.ColorAndOpacity(FLinearColor(FColor::Red))
 						.AutoWrapText(true)
 					]
