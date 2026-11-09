@@ -1584,7 +1584,7 @@ protected:
 	 * pattern, inverted if asked. It clips the whole subtree, as the clip rect does. At its defaults it is no mask.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping==EDreamWidgetClipping::ClipToBounds||Clipping==EDreamWidgetClipping::ClipToBoundsWithoutIntersecting",
-		DreamGUI_Section = "Layer", DreamGUI_Group = "Mask", DreamGUI_Order = 40))
+		DreamGUI_Section = "Layer", DreamGUI_Group = "Mask", DreamGUI_Order = 40, DreamGUI_Handle = "MaskShape"))
 	FDreamClipMask ClipMask;
 	/**
 	 * Shows this widget and everything under it only where the layer below it is drawn, and through that layer's opacity:

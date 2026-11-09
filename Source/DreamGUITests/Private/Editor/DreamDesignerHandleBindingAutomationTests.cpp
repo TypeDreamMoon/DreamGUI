@@ -83,7 +83,9 @@ bool FDreamDesignerHandleBindingTest::RunTest(const FString&)
 	const TArray<FName> Names = NamesOf(First);
 	TestTrue(*FString::Printf(TEXT("The viewport is given a provider for each gradient: %s"), *FString::JoinBy(Names, TEXT(", "), [](FName InName) { return InName.ToString(); })),
 		Names.Contains(BodyName) && Names.Contains(BorderName));
-	TestTrue(TEXT("...after the registered providers"), Names.Num() >= 2 && Names.Last(1) == BodyName && Names.Last() == BorderName);
+	const int32 Registered = FDreamDesignerHandles::GetProviders().Num();
+	TestTrue(TEXT("...after the registered providers, the body's before the border's"),
+		Names.IndexOfByKey(BodyName) >= Registered && Names.IndexOfByKey(BorderName) > Names.IndexOfByKey(BodyName));
 	const TArray<TSharedRef<IDreamDesignerHandleProvider>> Again = FDreamDesignerHandles::GetProvidersFor(Widget);
 	TestTrue(TEXT("Asked again, the same providers: a drag's state stays from frame to frame"), First == Again);
 
