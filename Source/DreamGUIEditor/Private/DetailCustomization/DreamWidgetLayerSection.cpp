@@ -4,11 +4,12 @@
 
 #include "Core/Components/DreamLayerGroup.h"
 #include "Core/Components/DreamLayerStyle.h"
-#include "Core/Components/DreamVisualBatchMesh.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamUILayerEffects.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/SDreamWidgetDesignerDetails.h"
+#include "DetailCustomization/DreamDetailsLayout.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
@@ -233,60 +234,47 @@ namespace DreamWidgetLayerSectionLocal
 	}
 }
 
-bool DreamWidgetLayerSection::ShowsVisualProperty(FName InPropertyName)
-{
-	return InPropertyName == FName(TEXT("BlendMode"));
-}
-
 void DreamWidgetLayerSection::Build(IDetailLayoutBuilder& InDetailBuilder, const TArray<TWeakObjectPtr<UDreamWidget>>& InWidgets, TSharedPtr<IPropertyUtilities> InUtilities)
 {
 	using namespace DreamWidgetLayerSectionLocal;
-	IDetailCategoryBuilder& Layer = InDetailBuilder.EditCategory("DreamLayer", LOCTEXT("LayerCategory", "Layer"), ECategoryPriority::Important);
+	FDreamDetailsLayout Layout(InDetailBuilder);
 	// Above the slot: what a layer is comes before where it sits.
-	Layer.SetSortOrder(-110);
+	IDetailCategoryBuilder& Layer = Layout.Section(DreamPropertyMeta::ESection::Layer);
 	const TWeakPtr<IPropertyUtilities> WeakUtilities = InUtilities;
 
-	// Opacity.
-	const TSharedRef<IPropertyHandle> Opacity = InDetailBuilder.GetProperty(TEXT("RenderOpacity"), UDreamWidget::StaticClass());
-	InDetailBuilder.HideProperty(Opacity);
-	Layer.AddProperty(Opacity).DisplayName(LOCTEXT("Opacity", "Opacity"));
-
-	// Blend mode: the visual's, where every selected widget's visual is an element that has one.
+	// What its tags put in the section, in their order: the widget's opacity, its visual's blend mode (where every selected
+	// widget's visual is of one class), clipping to the layer below, the mask.
+	TArray<UObject*> Visuals;
+	for (const TWeakObjectPtr<UDreamWidget>& Widget : InWidgets)
 	{
-		TArray<UObject*> Elements;
-		for (const TWeakObjectPtr<UDreamWidget>& Widget : InWidgets)
+		UDreamVisual* Visual = Widget.IsValid() ? Widget->GetVisual() : nullptr;
+		if (Visual == nullptr || (Visuals.Num() > 0 && Visuals[0]->GetClass() != Visual->GetClass()))
 		{
-			UDreamVisualBatchMesh* Element = Widget.IsValid() ? Cast<UDreamVisualBatchMesh>(Widget->GetVisual()) : nullptr;
-			if (Element == nullptr)
-			{
-				Elements.Reset();
-				break;
-			}
-			Elements.Add(Element);
+			Visuals.Reset();
+			break;
 		}
-		if (Elements.Num() > 0)
-		{
-			if (IDetailPropertyRow* Row = Layer.AddExternalObjectProperty(Elements, FName(TEXT("BlendMode"))))
-			{
-				Row->DisplayName(LOCTEXT("BlendMode", "Blend Mode"));
-			}
-		}
+		Visuals.Add(Visual);
+	}
+	const TMap<FName, IDetailPropertyRow*> Rows = Layout.PlaceSection(DreamPropertyMeta::ESection::Layer, Visuals);
+	if (IDetailPropertyRow* const* Opacity = Rows.Find(TEXT("RenderOpacity")))
+	{
+		(*Opacity)->DisplayName(LOCTEXT("Opacity", "Opacity"));
+	}
+	if (IDetailPropertyRow* const* Blend = Rows.Find(TEXT("BlendMode")))
+	{
+		(*Blend)->DisplayName(LOCTEXT("BlendMode", "Blend Mode"));
+	}
+	if (IDetailPropertyRow* const* MaskRow = Rows.Find(TEXT("ClipMask")))
+	{
+		(*MaskRow)->DisplayName(LOCTEXT("MaskSettings", "Mask Settings"));
 	}
 
-	// Clipping to the layer below.
-	{
-		const TSharedRef<IPropertyHandle> ClipToBelow = InDetailBuilder.GetProperty(TEXT("bClipToBelow"), UDreamWidget::StaticClass());
-		InDetailBuilder.HideProperty(ClipToBelow);
-		Layer.AddProperty(ClipToBelow);
-	}
-
-	// The mask: a shape to pick at once, and the whole mask under it.
+	// The mask group's header: a shape to pick at once, over the whole mask.
 	{
 		const TSharedRef<IPropertyHandle> Mask = InDetailBuilder.GetProperty(TEXT("ClipMask"), UDreamWidget::StaticClass());
 		const TSharedRef<IPropertyHandle> Clipping = InDetailBuilder.GetProperty(TEXT("Clipping"), UDreamWidget::StaticClass());
-		InDetailBuilder.HideProperty(Mask);
 		const TSharedPtr<IPropertyHandle> Shape = Mask->GetChildHandle(TEXT("Shape"));
-		IDetailGroup& MaskGroup = Layer.AddGroup(TEXT("LayerMask"), LOCTEXT("Mask", "Mask"));
+		IDetailGroup& MaskGroup = Layout.Group(DreamPropertyMeta::ESection::Layer, TEXT("Mask"));
 		const FWidgets Widgets = InWidgets;
 		auto PickShape = [Widgets, Mask, Clipping, Shape](TOptional<EDreamClipMaskShape> InShape)
 		{
@@ -349,7 +337,6 @@ void DreamWidgetLayerSection::Build(IDetailLayoutBuilder& InDetailBuilder, const
 					return Menu.MakeWidget();
 				})
 			];
-		MaskGroup.AddPropertyRow(Mask).DisplayName(LOCTEXT("MaskSettings", "Mask Settings"));
 	}
 
 	// The layer style and the layer group: a switch each, and a way to their own settings.

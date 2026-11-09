@@ -202,7 +202,8 @@ protected:
 	 * an element with a material of its own composites the way that material says, and this then only
 	 * takes part in the batching decision.
 	 */
-	UPROPERTY(EditAnywhere, Category = DreamGUI)
+	// In the Layer section of the widget's details, with its opacity and mask, rather than with the visual's own rows.
+	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (DreamGUI_Section = "Layer", DreamGUI_Order = 20))
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 	/** See SetMaterialOverride. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)

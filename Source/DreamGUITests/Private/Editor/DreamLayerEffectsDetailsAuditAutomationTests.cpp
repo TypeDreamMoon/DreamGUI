@@ -11,7 +11,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/SDreamWidgetComponentEditor.h"
-#include "DetailCustomization/DreamWidgetLayerSection.h"
+#include "DetailCustomization/DreamDetailsLayout.h"
 #include "DreamNiagaraSystem.h"
 #include "DreamNiagaraTrigger.h"
 #include "DreamUIComponentSupport.h"
@@ -251,8 +251,8 @@ bool FDreamLayerEffectsDetailsAuditTest::RunTest(const FString& Parameters)
 			{
 				continue;
 			}
-			// The blend mode of an element is the widget's Layer category's (DreamWidgetLayerSection), not its visual's.
-			if (Subject.Kind == EKind::Visual && DreamWidgetLayerSection::ShowsVisualProperty(Pair.Value->GetFName()))
+			// A visual's Layer rows (its blend mode) are the widget's Layer section's, not its own.
+			if (FDreamDetailsLayout::IsDrawnByHost(Subject.Class, DreamPropertyMeta::GetSection(Pair.Value)))
 			{
 				continue;
 			}

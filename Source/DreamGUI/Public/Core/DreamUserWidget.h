@@ -1138,7 +1138,7 @@ private:
 	 * Per-frame OnTick, off by default: the cost of a tick is a manager list entry, a virtual call and
 	 * a Blueprint ProcessEvent every frame, which no widget should pay for a surface it never uses.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetWantsTick", Setter = "SetWantsTick", meta = (AllowPrivateAccess = true, DisplayName = "Wants Tick"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetWantsTick", Setter = "SetWantsTick", meta = (AllowPrivateAccess = true, DisplayName = "Wants Tick", DreamGUI_Section = "Behavior", DreamGUI_Advanced))
 	bool bWantsTick = false;
 
 	/**
@@ -1146,7 +1146,7 @@ private:
 	 * false: a user widget is a container, and a container that silently swallowed every click inside
 	 * it would break each screen it was placed on. Set false to consume events at this boundary.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetAllowEventBubbleUp", Setter = "SetAllowEventBubbleUp", meta = (AllowPrivateAccess = true, DisplayName = "Allow Event Bubble Up"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetAllowEventBubbleUp", Setter = "SetAllowEventBubbleUp", meta = (AllowPrivateAccess = true, DisplayName = "Allow Event Bubble Up", DreamGUI_Section = "Behavior", DreamGUI_Advanced))
 	bool bAllowEventBubbleUp = true;
 
 	/**
@@ -1154,7 +1154,7 @@ private:
 	 * past it exactly as it always has -- a user widget full of UISelectables must not steal their
 	 * moves. Opting in makes OnNavigate reachable.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetCanNavigateHere", Setter = "SetCanNavigateHere", meta = (AllowPrivateAccess = true, DisplayName = "Can Navigate Here"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetCanNavigateHere", Setter = "SetCanNavigateHere", meta = (AllowPrivateAccess = true, DisplayName = "Can Navigate Here", DreamGUI_Section = "Behavior", DreamGUI_Advanced))
 	bool bCanNavigateHere = false;
 
 #if WITH_DEV_AUTOMATION_TESTS
