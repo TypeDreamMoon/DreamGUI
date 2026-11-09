@@ -1,10 +1,11 @@
 ---
 title: Niagara 粒子
-description: NiagaraSystem 视觉——由一个不渲染的组件模拟、由画布绘制的 Niagara 系统，每个 Sprite / Ribbon 渲染器一个绘制调用，像其它元素一样裁剪、遮罩、混合、编组；它的空间、时间、着色、注入的参数、爆发与飞行、触发器，以及它不画什么。
+description: NiagaraSystem 视觉——由一个不进场景的组件模拟、由画布绘制的 Niagara 系统，每个 Sprite / Ribbon 渲染器一个绘制调用，像其它元素一样裁剪、遮罩、混合、编组；它的空间、时间、着色、注入的参数、爆发与飞行、触发器，以及它不画什么。
 ---
 
 `UDreamNiagaraSystem`（`NiagaraSystem` 视觉，位于 `DreamGUINiagara` 模块）把一个 Niagara 系统放到控件上。元素持有一个
-Niagara 组件，注册到所在世界、但不挂到任何东西上：组件只**模拟**、不渲染（`SetRenderingEnabled(false)`），也不受 Niagara
+Niagara 组件，注册到所在世界、但不挂到任何东西上：组件只**模拟**，场景里不给它建代理（它的
+`CreateSceneProxy` 不返回任何东西），所以它的任何部分都不会画进世界，连激活的那一帧也不会；也不受 Niagara
 可伸缩性管理（`SetAllowScalability(false)`），所以特效不会因为“没被看见”而被剔除。画布每帧发送网格段之前，元素等模拟的
 tick 结束，按渲染器的属性绑定读取每个渲染器的粒子，写进自己的网格段。从这里开始粒子就是 DreamGUI 的几何：像任何元素一样
 被裁剪、遮罩、混合、放进图层组。

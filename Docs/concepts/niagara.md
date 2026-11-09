@@ -1,12 +1,13 @@
 ---
 title: Niagara particles
-description: The NiagaraSystem visual -- a Niagara system simulated by a component that renders nothing and drawn by the canvas, one draw call per sprite or ribbon renderer, clipped, masked, blended and grouped like any element; its space, its time, its shading, the parameters it is given, bursts and flights, the trigger, and what it does not draw.
+description: The NiagaraSystem visual -- a Niagara system simulated by a component the scene never draws and drawn by the canvas, one draw call per sprite or ribbon renderer, clipped, masked, blended and grouped like any element; its space, its time, its shading, the parameters it is given, bursts and flights, the trigger, and what it does not draw.
 ---
 
 `UDreamNiagaraSystem` (the `NiagaraSystem` visual, in the `DreamGUINiagara` module) puts a Niagara system on a widget. The
-element owns a Niagara component that it registers with its world but attaches to nothing: the component **simulates** and
-renders nothing (`SetRenderingEnabled(false)`), and Niagara's scalability leaves it alone (`SetAllowScalability(false)`), so
-an effect is never culled for not being seen. Every frame the canvas sends its sections, the element waits for the
+element owns a Niagara component that it registers with its world but attaches to nothing: the component **simulates**, and
+the scene is given no proxy for it -- its `CreateSceneProxy` returns none --
+so nothing of it is ever drawn in the world, not even the frame it is activated in. Niagara's scalability leaves it alone
+(`SetAllowScalability(false)`), so an effect is never culled for not being seen. Every frame the canvas sends its sections, the element waits for the
 simulation's tick to finish, reads each renderer's particles through its attribute bindings, and writes them into a segment
 of its own. The particles are DreamGUI geometry from there on: clipped, masked, blended and put into layer groups like any
 element.
