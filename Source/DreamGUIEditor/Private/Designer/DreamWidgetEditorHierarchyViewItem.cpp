@@ -3,6 +3,10 @@
 
 #include "DreamWidgetEditorHierarchyViewItem.h"
 #include "DreamWidgetBlueprint.h"
+#include "Designer/DreamUILayerEffects.h"
+#include "TimerManager.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SButton.h"
 
 #include "ClassIconFinder.h"
 #include "DetailLayoutBuilder.h"
@@ -512,6 +516,15 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 				.IsSelected(this, &SDreamWidgetEditorHierarchyViewItem::IsSelectedExclusively)
 			]
 
+			// What makes it a layer: a mark for each kind of effect on it.
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4, 0, 0, 0)
+			[
+				MakeLayerMarks()
+			]
+
 			// What the widget is made of. Every row here is a UDreamWidget, so the name is the only
 			// thing telling a text block from a horizontal box unless the type is printed as well.
 			+SHorizontalBox::Slot()
@@ -568,6 +581,126 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 			]
 		],
 		InOwnerTableView);
+}
+
+TSharedRef<SWidget> SDreamWidgetEditorHierarchyViewItem::MakeLayerMarks()
+{
+	TSharedRef<SHorizontalBox> Marks = SNew(SHorizontalBox);
+	for (uint8 Kind = 0; Kind < static_cast<uint8>(EDreamUILayerEffectKind::Count); ++Kind)
+	{
+		Marks->AddSlot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SButton)
+			.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
+			.ContentPadding(FMargin(1, 0))
+			.Visibility(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkVisibility, Kind)
+			.ToolTipText(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip, Kind)
+			.OnClicked(this, &SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked, Kind)
+			[
+				SNew(SImage)
+				.Image(DreamUILayerEffects::KindIcon(static_cast<EDreamUILayerEffectKind>(Kind)))
+				.ColorAndOpacity(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor, Kind)
+			]
+		];
+	}
+	return Marks;
+}
+
+const TArray<FDreamUILayerEffect>& SDreamWidgetEditorHierarchyViewItem::GetLayerEffects() const
+{
+	if (CachedLayerEffectsFrame != GFrameCounter)
+	{
+		CachedLayerEffectsFrame = GFrameCounter;
+		CachedLayerEffects.Reset();
+		DreamUILayerEffects::Collect(Widget.Get(), CachedLayerEffects);
+	}
+	return CachedLayerEffects;
+}
+
+EVisibility SDreamWidgetEditorHierarchyViewItem::GetLayerMarkVisibility(uint8 InKind) const
+{
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) == InKind)
+		{
+			return EVisibility::Visible;
+		}
+	}
+	return EVisibility::Collapsed;
+}
+
+FSlateColor SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor(uint8 InKind) const
+{
+	// Dimmed while everything of the kind that can be turned off is off.
+	bool bAnySwitch = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) != InKind || !DreamUILayerEffects::HasSwitch(Effect))
+		{
+			continue;
+		}
+		bAnySwitch = true;
+		if (DreamUILayerEffects::IsOn(Effect))
+		{
+			return FSlateColor::UseForeground();
+		}
+	}
+	return bAnySwitch ? FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 0.3f)) : FSlateColor::UseForeground();
+}
+
+FText SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip(uint8 InKind) const
+{
+	TArray<FString> Lines;
+	bool bAnySwitch = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) != InKind)
+		{
+			continue;
+		}
+		const bool bSwitch = DreamUILayerEffects::HasSwitch(Effect) && Effect.SwitchUnavailable.IsEmpty();
+		bAnySwitch |= bSwitch;
+		Lines.Add(FString::Printf(TEXT("%s%s: %s"), *Effect.Name.ToString(),
+			bSwitch && !DreamUILayerEffects::IsOn(Effect) ? *LOCTEXT("LayerMarkOff", " (off)").ToString() : TEXT(""), *Effect.Detail.ToString()));
+	}
+	if (bAnySwitch)
+	{
+		Lines.Add(LOCTEXT("LayerMarkClick", "Click to turn these off or on, to compare with and without them.").ToString());
+	}
+	return FText::FromString(FString::Join(Lines, TEXT("\n")));
+}
+
+FReply SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked(uint8 InKind)
+{
+	TArray<FDreamUILayerEffect> Switchable;
+	bool bAnyOn = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) == InKind && DreamUILayerEffects::HasSwitch(Effect) && Effect.SwitchUnavailable.IsEmpty())
+		{
+			Switchable.Add(Effect);
+			bAnyOn |= DreamUILayerEffects::IsOn(Effect);
+		}
+	}
+	if (Switchable.Num() == 0)
+	{
+		return FReply::Unhandled();
+	}
+	// After the click has returned: carrying the edit to the template can rebuild the preview, and with it this row.
+	if (GEditor != nullptr)
+	{
+		GEditor->GetTimerManager()->SetTimerForNextTick([Switchable, bOn = !bAnyOn]()
+		{
+			const FScopedTransaction Transaction(bOn ? LOCTEXT("LayerMarkOn", "Turn Layer Effects On") : LOCTEXT("LayerMarkOffTransaction", "Turn Layer Effects Off"));
+			for (const FDreamUILayerEffect& Effect : Switchable)
+			{
+				DreamUILayerEffects::SetOn(Effect, bOn);
+			}
+		});
+	}
+	return FReply::Handled();
 }
 
 void SDreamWidgetEditorHierarchyViewItem::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)

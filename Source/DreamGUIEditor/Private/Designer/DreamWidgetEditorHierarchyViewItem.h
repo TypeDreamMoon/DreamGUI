@@ -8,6 +8,7 @@
 #include "Widgets/Views/STreeView.h"
 #include "Widgets/Views/STableRow.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
+#include "Designer/DreamUILayerEffects.h"
 
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
@@ -121,7 +122,18 @@ private:
 
 	bool SupportDrop(UDreamWidget* Dragging, UDreamWidget* Current, EItemDropZone DropZone);
 
+	/** The marks after the name: one per kind of layer effect the widget has. */
+	TSharedRef<SWidget> MakeLayerMarks();
+	/** The widget's layer effects, gathered once per frame however many marks ask. */
+	const TArray<struct FDreamUILayerEffect>& GetLayerEffects() const;
+	EVisibility GetLayerMarkVisibility(uint8 InKind) const;
+	FSlateColor GetLayerMarkColor(uint8 InKind) const;
+	FText GetLayerMarkToolTip(uint8 InKind) const;
+	FReply OnLayerMarkClicked(uint8 InKind);
+
 private:
+	mutable TArray<struct FDreamUILayerEffect> CachedLayerEffects;
+	mutable uint64 CachedLayerEffectsFrame = MAX_uint64;
 	TWeakPtr<SDreamWidgetEditorHierarchyView> HierarchyView;
 	TWeakPtr<FDreamWidgetBlueprintEditor> Manager;
 	FSimpleDelegate MouseEnter;
