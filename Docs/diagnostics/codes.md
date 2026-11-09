@@ -33,6 +33,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills. |
 | DUI2020 | MalformedRows | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
 | DUI2021 | MalformedViewModelsBlock | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
+| DUI2022 | MalformedTextAnnotation | `@note(…)` not holding one string, `@max(…)` not one whole number of at least 1, either after a value that is not a string, an annotation written twice, or `@noloc` with `@key`, `@note` or `@max`. |
 | DUI2023 | MalformedContainer | A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. |
 | DUI3001 | DuplicateNodeId | Two nodes share an id. |
 | DUI3002 | InvalidNodeId | An id that is not an identifier, starts with a digit, or is a keyword. |
@@ -115,6 +116,8 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI6021 | LoopItemMemberNotFound | `Item.Member` that the loop source's element class does not have. |
 | DUI6022 | LoopItemRouteMismatch | `-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event. |
 | DUI6023 | SourceFileWritePending | The document has edits that could not be written, so compiling the older file was refused. |
+| DUI6024 | TranslationDoesNotFit | With DreamLoc in the project: a language's translation of a text, laid out in the text, is cut or runs past its box. A warning. |
+| DUI6025 | TranslationGlyphsMissing | With DreamLoc in the project: a language's translation of a text has characters no face of the text's font has. A warning. |
 | DUI7001 | PatchTargetNotFound | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
 | DUI7002 | SourceFileChangedUnderEdit | The file changed under a pending edit; nothing was written. |
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |

@@ -33,6 +33,7 @@
 #include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIExpressionThunks.h"
 #include "Text/DreamUILocalizationManifest.h"
+#include "Localization/DreamUITranslationFit.h"
 #include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
@@ -265,11 +266,16 @@ namespace DreamWidgetTextMembersLocal
 				OutReason = TEXT("a Text default is a quoted string");
 				return false;
 			}
+			if (Value.bNoLocalize)
+			{
+				FTextStringHelper::WriteToBuffer(OutDefault, FText::AsCultureInvariant(FString(Value.Raw)));
+				return true;
+			}
 			// Localizable, under the namespace the builder keys the file's other strings by and a key of the prop's
 			// own (or the one `@key(...)` pins): a component's default label is text a translator has to see.
 			const FString Key = Value.LocalizationKeyOverride.IsEmpty()
 				? FString::Printf(TEXT("props.%s"), *InProp.Name) : Value.LocalizationKeyOverride;
-			FTextStringHelper::WriteToBuffer(OutDefault, FText::AsLocalizable_Advanced(InLocalizationNamespace, Key, FString(Value.Raw)));
+			FTextStringHelper::WriteToBuffer(OutDefault, FText::AsLocalizable_Advanced(InLocalizationNamespace, Key, FString(Value.Raw), Value.LocalizationNote));
 			return true;
 		}
 		if (Category == UEdGraphSchema_K2::PC_String)
@@ -708,7 +714,8 @@ void FDreamWidgetBlueprintCompilerContext::DeclareTextMembers(const FDreamUIAst&
 	};
 
 	// The namespace the builder keys this file's strings by, so a prop's default text sits beside them.
-	const FString LocalizationNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
+	// The builder's namespace, spelt the same way: the class line, or the file's path relative to its DUI root.
+	const FString LocalizationNamespace = InAst.ClassPath.IsEmpty() ? DreamUIPaths::MakePortablePath(OutDiagnostics.SourceName) : InAst.ClassPath;
 
 	for (const FDreamUIPropDecl& Prop : InAst.Props)
 	{
@@ -1258,6 +1265,9 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// The texts this compile made, for localization tools to pick up -- in the editor and in a commandlet alike, since
 	// both compile here. A build that failed keeps the last good manifest, as it keeps the last good tree.
 	DreamUILocalizationManifest::Write(ResolvedPath, Localization);
+	// And, where DreamLoc is, each language's translation laid out in the text it is for: what does not fit or has
+	// characters the font lacks is said with the compile's own messages, so the designer shows it as it recompiles.
+	DreamUITranslationFit::ReportTranslations(NewTree, Localization, OutDiagnostics);
 
 	// The emit handlers' bodies, now that there is a tree to find each route's source event on: a handler has to take
 	// exactly what that event sends, and which event it is -- a widget's, its visual's, a behaviour's, of whatever
@@ -1641,7 +1651,8 @@ namespace DreamWidgetRenameMigrationLocal
 			{
 				if (!Property.IsBinding()
 					&& Property.Value.Kind == EDreamUIValueKind::String
-					&& Property.Value.LocalizationKeyOverride.IsEmpty())
+					&& Property.Value.LocalizationKeyOverride.IsEmpty()
+					&& !Property.Value.bNoLocalize)
 				{
 					return true;
 				}

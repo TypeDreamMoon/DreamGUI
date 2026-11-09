@@ -55,6 +55,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | error | 出现两次 `default` 的 slot，或既声明又填充的块。 |
 | [DUI2020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020) | `MalformedRows` | error | 无法读取的 `rows` 表：列清单不是名称、某一列出现两次、某行的值数量不对。 |
 | [DUI2021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021) | `MalformedViewModelsBlock` | error | 不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels` 行（包括为空的 `""` 名称），或位于节点内部的 `viewmodels` 块。 |
+| [DUI2022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2022) | `MalformedTextAnnotation` | error | `@note(…)` 里不是一个字符串、`@max(…)` 里不是一个不小于 1 的整数、它们跟在不是字符串的值后面、同一个注解写了两次，或者 `@noloc` 和 `@key`、`@note`、`@max` 写在一起。 |
 | [DUI2023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023) | `MalformedContainer` | 错误 | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
 | [DUI3001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001) | `DuplicateNodeId` | error | 两个节点共享同一个 id。 |
 | [DUI3002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002) | `InvalidNodeId` | error | 不是标识符、以数字开头或是关键字的 id。 |
@@ -136,6 +137,8 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI6020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6020) | `TwoWayTargetReadOnly` | 错误 | `<-> Path.Member` 其成员写不回去：只读，且没有 `Set<Member>`。 |
 | [DUI6021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6021) | `LoopItemMemberNotFound` | 错误 | `Item.Member` 循环来源的元素类上没有。 |
 | [DUI6022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6022) | `LoopItemRouteMismatch` | 错误 | `-> Item.Func` 元素类上没有，或者其参数既不是什么都不接收、也不是事件的那些。 |
+| [DUI6024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6024) | `TranslationDoesNotFit` | 警告 | 工程里有 DreamLoc 时：某个语言的译文放进文字控件里排版后被截断，或排出了控件的框。 |
+| [DUI6025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6025) | `TranslationGlyphsMissing` | 警告 | 工程里有 DreamLoc 时：某个语言的译文里有字符，文字控件字体的所有字面都没有。 |
 | [DUI7001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001) | `PatchTargetNotFound` | 错误 | 设计器的一次编辑在文件里找不到落脚处：未知的节点、被绑定的属性、没有块的 slot。 |
 | [DUI7002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002) | `SourceFileChangedUnderEdit` | 错误 | 文件在一次待写入的编辑底下被改动了，于是什么都没有写入。 |
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | 错误 | 一个这门语言写不出来的值（非有限的数），它所在的那一行保持原样。 |

@@ -90,6 +90,15 @@ struct DREAMGUI_API FDreamUIValue
 	/** String only: the key written in `@key("…")`, empty when the author did not override it. */
 	FString LocalizationKeyOverride;
 
+	/** String only: `@note("…")`, what the text is for, said to its translator. Empty when there is none. */
+	FString LocalizationNote;
+
+	/** String only: `@max(n)`, the longest a translation may be, in display width (a full-width character counts 2); -1 for none. */
+	int32 LocalizationMax = -1;
+
+	/** String only: `@noloc`, a text that is the same in every language (a version number, a name): never translated. */
+	bool bNoLocalize = false;
+
 	FDreamUISourceLocation Location;
 };
 

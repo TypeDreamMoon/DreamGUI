@@ -774,9 +774,10 @@ FString FDreamUISymbolExport::ExportNow()
 	Root->SetArrayField(TEXT("keywords"), DescribeKeywords());
 	{
 		// What may follow an '@' at the start of a line, besides a resource used as a node type: the slot line or block,
-		// and its shorthand. `@key("…")` follows a value and is listed for the same completion.
+		// and its shorthand. `@key("…")`, `@note("…")`, `@max(n)` and `@noloc` follow a string and are listed for the
+		// same completion.
 		TArray<TSharedPtr<FJsonValue>> Annotations;
-		for (const TCHAR* Annotation : { TEXT("slot"), TEXT("fill"), TEXT("key") })
+		for (const TCHAR* Annotation : { TEXT("slot"), TEXT("fill"), TEXT("key"), TEXT("note"), TEXT("max"), TEXT("noloc") })
 		{
 			Annotations.Add(MakeShared<FJsonValueString>(Annotation));
 		}
