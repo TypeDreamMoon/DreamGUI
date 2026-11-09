@@ -73,6 +73,16 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   变成文字；蒙版变成裁剪遮罩，剪贴变成 `bClipToBelow`，混合模式对应 27 种。图层名可写 `!skip`、`@Button`、`#9(l,t,r,b)`。
   再次导入会编辑上次写的 `.dui`，保留作者加的每个节点和每一行，并列出被覆盖的内容。图层样式、调整图层和文字变形已读出并列出，
   暂未导入。新编辑器模块为 `DreamGUIPsd`。见[导入分层文档](../guides/layered-document-import.md)。
+- **RectBlock 的多色标渐变。** RectBlock 的主体和描边改用 `BodyGradient`、`BorderGradient`，都是最多 16 个色标的 `FDreamGradient`——
+  线性、径向、角度（Conic）、菱形、对称或四角，和文字涂色是同一种渐变，从世界的同一组渐变行里画——代替原来的两色径向渐变，
+  内置着色器和 RectBlock 材质都支持。细节面板里显示成带类型和预设的色带；`.dui` 里写它的 CSS。以前的两色渐变自动迁移：
+  渐变没有色标时画成两个色标（每通道最多差一级），`.dui` 里的旧行在渐变被改动前原样保留，改动后由渐变的一行替换；
+  旧 setter 仍可用。见[渐变与视口手柄](../concepts/gradients.md)。
+- **设计器里的渐变手柄。** 选中的 RectBlock 的渐变像图像编辑器的渐变工具那样画在上面：可拖的端点和中心，连线旁的色标
+  （沿线拖动、拖离删除），双击连线加色标。Shift 让旋转按 15° 一档，Esc 还原；一次拖动一步撤销，松开鼠标时写回 `.dui`。
+- **通用视口手柄。** 用 `FDreamDesignerHandles::Register` 注册的 `IDreamDesignerHandleProvider` 给选中的控件提供可在设计器视口里拖的点；
+  命中、绘制、撤销、Esc、双击和写回 `.dui` 由视口统一处理。变形晶格点和路径点也改走这套。
+- **对称渐变。** `EDreamPaintType::Reflected`（`reflected-gradient(…)`）从过渐变中心的一条线向两边对称展开，文字和 RectBlock 都能用。
 
 - **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
   选了自动开启裁剪到边界）、添加或关闭图层样式和图层组的开关，以及控件上的每个效果——眼睛负责开关，点名字打开设置。层级面板在
@@ -97,6 +107,10 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **内容浏览器的添加菜单在最上面提供 DreamGUI Widget**，和引擎的 Blueprint Class 与 Material 并列，而不再只在一级子菜单里。子菜单本身现在叫 DreamGUI，分节——Basic（DreamGUI Widget、Widget Animation）、Fonts、Graphics、Rich Text——每项一个短标签和一行提示，而不是一整列按类型名排序、widget 排在最后、提示是类的代码注释的列表。不再开发的位图字体显示为 Legacy Bitmap Font，并指向距离场字体。资产的类型名——磁贴上、过滤器里的——不变。
 - **设计器的调色板按 UMG 的方式分组。** Basic、Panels、Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects、Components、Modifiers、Advanced、User Created，最后是默认折叠的 Legacy——以前是一个三十多行、无所不包的 Controls 分类，旁边是十来个只差一个词的小分类。条目按名字列出，面板去掉了 "UMG " 前缀，Tile View 和 Scroll Box 两个行为挪进 Legacy，和取代它们的控件放在一起。User Created 不再列插件自己的预设目录。层级面板的 Create 菜单用同样的分组。注册键没变，收藏都还在；拿 `FDreamUIControlDescriptor::Category` 去和 "Controls"、"Post Process"、"Extensions" 或旧分类名比较的项目扩展，改从 `DreamUIPaletteCategory` 读名字。见[调色板](../tools/designer.md#the-palette)。
 - **细节面板把 widget 是什么放在它放在哪的正下面。** Slot、Layout，然后 Visual、Panel、Self Layout，然后 Appearance 和 Behavior，然后 Render Transform 和默认折叠的 Perspective、Navigation、Accessibility、Localization；以前视觉排在 Behavior、Appearance、Panel、Self Layout 之后。Text 的行以 Text、Font、Size、Style、Color 和对齐开头，换行、排版、渲染设置放在默认折叠的组里；Sprite 和 Texture 的颜色在它的 sprite / 纹理下面。底部重复 Layout 行的 Transform 和锚点数据分类去掉了，Is Enabled 进了 Behavior。见[细节面板](../tools/designer.md#the-details-panel)。
+- **径向渐变的椭圆随 `Angle` 旋转**，和菱形一样。径向渐变的角度不是 0 或 180 的文字涂色（从线性切过来时留下的）现在会画成旋转后的椭圆；圆形不变。
+- **RectBlock 的两色渐变属性**不再显示在细节面板里，它们的 setter 标为 deprecated：渐变已有色标时，它们改第一个色标的颜色、中心、半径和角度。
+  按单位写的中心和半径只在渐变还是两色时按单位固定。半透明的主体纹理现在像被主体颜色那样被渐变染色。
+- **渐变行的行头多了类型下拉**，在色带和预设旁边。
 
 <a id="fixed"></a>
 

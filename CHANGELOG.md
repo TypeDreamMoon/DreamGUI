@@ -185,6 +185,26 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   wrote, keeping every node and line an author added and listing what it overwrote. Layer effects, adjustment layers and
   text warps are read and listed, not imported yet. The new editor module is `DreamGUIPsd`. See
   [Importing layered documents](Docs/guides/layered-document-import.md).
+- **Multi-stop gradients on rect blocks.** A rect block fills its body and draws its border with `BodyGradient` and
+  `BorderGradient`, each an `FDreamGradient` of up to 16 stops -- linear, radial, angle (conic), diamond, reflected or four
+  corners, the gradients a text paints with, from the same rows of the world's paint rows -- in place of the two-colour
+  radial gradient, by the built-in shader and through the rect block's material (`MF_DreamUI_RectBlock` reads the paint
+  rows). The details panel shows each as a strip with its type and the presets; a `.dui` writes its CSS. A two-colour
+  gradient from before carries over: drawn as two stops (to a level per channel) while the gradient has none, its `.dui`
+  lines kept until the gradient is edited, then replaced by the gradient's line (`meta=(DreamGUI_Replaces)`); the
+  old setters still work. `GetEffectsAsLayerStyle` and `SetEffectsFromLayerStyle` carry the stops. See
+  [Gradients and viewport handles](Docs/concepts/gradients.md).
+- **Gradient handles in the designer.** A selected rect block's gradient is drawn over it as an image editor's gradient
+  tool draws one: a linear's or a reflected's start and end, a radial's, an angle's or a diamond's centre and end (and a
+  radial ellipse's second radius) to drag; its stops beside the line, dragged along it or off it to take one out; a double
+  click on the line adds a stop of the colour there. Shift keeps a turn to 15 degrees, Esc puts a drag back; a drag is one
+  undo step and is written to the `.dui` when the button comes up.
+- **Viewport handles for anything.** `IDreamDesignerHandleProvider`, registered with `FDreamDesignerHandles::Register`
+  (DreamGUIEditor, `Designer/DreamDesignerHandles.h`), gives the selected widget points to drag in the designer's viewport;
+  the viewport does the hit testing, drawing, the one transaction per drag, Esc, double clicks and the write to the asset
+  and the `.dui`. A warp's lattice points and a path's points now go through it.
+- **Reflected gradients.** `EDreamPaintType::Reflected` (`reflected-gradient(…)`) runs both ways from a line through the
+  gradient's centre, for texts as for rect blocks.
 
 - **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
   mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
@@ -321,6 +341,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
   not hold, so such a layer lost its effect when scaled ([#9]). It now draws at full resolution, as one with a post
   process already did.
+- **A radial gradient's ellipse turns with its `Angle`**, as a diamond does (`radial-gradient(30deg …)` in CSS). A text
+  paint whose radial gradient kept an angle other than 0 or 180 -- left from a linear it was switched from -- now draws
+  its ellipse turned; a circle draws as before.
+- **A rect block's two-colour gradient properties** (`BodyGradientColor`, `…Center`, `…Radius`, `…Rotation`, their unit
+  modes, and the border's) are no longer in the details panel, and their setters are deprecated: on a gradient that has
+  stops they set its first stop's colour, its centre, its radius and its angle, and the tweens follow. A centre or radius
+  written in units keeps to units only while the gradient is two-colour. A body texture that is itself partly see-through
+  is tinted by the gradient as by the body colour; it used to have the gradient colour laid over its alpha a second time.
+- **The gradient row's header has a type picker** beside its strip and presets, for every `FDreamGradient` (text paints,
+  gradient assets, rect blocks).
 
 ### Fixed
 

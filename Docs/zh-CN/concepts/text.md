@@ -114,8 +114,9 @@ Widget Panel {
 `FDreamTextStyle` 上——`FacePaint`、`OutlinePaint`、`OverlayPaint`——每层是一个 `FDreamTextPaint`（`bEnabled`、共享的
 `Preset`，或自带的 `Gradient`）。
 
-- **种类**：`Linear`、`Radial`、`Conic`、`Diamond` 和 `Corners`（四角色，TextMeshPro 的那种），最多 16 个色标；
-  超出两端时 `Pad`、`Repeat` 或 `Reflect`；在 sRGB、线性光或 Oklab 里混色。
+- **种类**：`Linear`、`Radial`（椭圆按 `Angle` 旋转）、`Conic`、`Diamond`、`Reflected`（对称：从过中心的一条线向两边展开）
+  和 `Corners`（四角色，TextMeshPro 的那种），最多 16 个色标；超出两端时 `Pad`、`Repeat` 或 `Reflect`；在 sRGB、线性光或 Oklab 里混色。
+  RectBlock 的主体和描边用的也是这种渐变（见[渐变与视口手柄](gradients.md)）。
 - **按 CSS 的写法写**：`linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)`，可写在细节面板、
   `.dui` 中，或作为富文本的一段。按 Chrome 的方式读取，只有两点不同：`to <corner>` 无论盒子什么形状都取正方形的角度，颜色名是 CSS 的（`green` 是 #008000，而 `<color=green>` 是 #00FF00）。
 - **量在什么上**：`PaintBoxHorizontal` / `PaintBoxVertical` 分轴选择 `TextBlock`、`ContentBox`、`Line`、

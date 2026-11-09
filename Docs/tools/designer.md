@@ -22,6 +22,9 @@ The designer was reviewed against UMG's widget designer. Added since upstream:
   fixes that.
 - **Hover feedback**: the widget under the pointer is outlined.
 - **Per-axis resize handles**, and the **anchor medallion**, which shows the selected widget's anchors on the canvas.
+- **Handles for what the selection has**: a warp's lattice points, a path's points, a rect block's gradient — its ends,
+  centre and stops (see [Gradients and viewport handles](../concepts/gradients.md#viewport-handles)). A drag is one undo
+  step, Esc puts it back, and a class backed by a `.dui` gets the change in its file when the button comes up.
 - **Marquee selection**: drag a box over empty space to select the widgets in it.
 - **Drag to reparent on the canvas**: drag a widget into another container.
 - **Content Browser drops**: drag assets straight onto the design surface.

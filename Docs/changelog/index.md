@@ -173,6 +173,23 @@ What is on `main` after 1.0.0, and ships with the next version.
   wrote, keeping every node and line an author added and listing what it overwrote. Layer effects, adjustment layers and
   text warps are read and listed, not imported yet. The new editor module is `DreamGUIPsd`. See
   [Importing layered documents](../guides/layered-document-import.md).
+- **Multi-stop gradients on rect blocks.** A rect block fills its body and draws its border with `BodyGradient` and
+  `BorderGradient`, each an `FDreamGradient` of up to 16 stops — linear, radial, angle (conic), diamond, reflected or four
+  corners, the gradients a text paints with, from the same rows of the world's paint rows — in place of the two-colour
+  radial gradient, by the built-in shader and through the rect block's material. The details panel shows each as a strip
+  with its type and the presets; a `.dui` writes its CSS. A two-colour gradient from before carries over: drawn as two
+  stops (to a level per channel) while the gradient has none, its `.dui` lines kept as they are until the gradient is
+  edited, then replaced by the gradient's line; the old setters still work. See
+  [Gradients and viewport handles](../concepts/gradients.md).
+- **Gradient handles in the designer.** A selected rect block's gradient is drawn over it as an image editor's gradient
+  tool draws one: its ends and centre to drag, its stops beside the line to drag along it or off it, a double click on the
+  line to add a stop. Shift keeps a turn to 15 degrees, Esc puts a drag back; a drag is one undo step and is written to the
+  `.dui` when the button comes up.
+- **Viewport handles for anything.** `IDreamDesignerHandleProvider`, registered with `FDreamDesignerHandles::Register`,
+  gives the selected widget points to drag in the designer's viewport; the viewport does the hit testing, drawing, undo,
+  Esc, double clicks and the write to the `.dui`. A warp's lattice points and a path's points now go through it.
+- **Reflected gradients.** `EDreamPaintType::Reflected` (`reflected-gradient(…)`) runs both ways from a line through the
+  gradient's centre, for texts as for rect blocks.
 
 - **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
   mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
@@ -224,6 +241,14 @@ What is on `main` after 1.0.0, and ships with the next version.
   groups that start closed, and a Sprite's or Texture's colour sits under its sprite or texture. The Transform and
   anchor-data categories at the bottom, which repeated the Layout rows raw, are gone, and Is Enabled joined Behavior.
   See [The details panel](../tools/designer.md#the-details-panel).
+- **A radial gradient's ellipse turns with its `Angle`**, as a diamond does. A text paint whose radial gradient kept an
+  angle other than 0 or 180 — left from a linear it was switched from — now draws its ellipse turned; a circle draws as
+  before.
+- **A rect block's two-colour gradient properties** are no longer in the details panel, and their setters are
+  deprecated: on a gradient that has stops they set its first stop's colour, its centre, its radius and its angle. A
+  centre or radius written in units keeps to units only while the gradient is two-colour. A partly see-through body
+  texture is tinted by the gradient as by the body colour.
+- **The gradient row's header has a type picker** beside its strip and presets.
 
 ### Fixed
 

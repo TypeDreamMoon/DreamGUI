@@ -61,10 +61,11 @@ see-through draws no shadow. Its gradients and patterns are laid across the widg
 
 A rect block has had its own outer shadow, inner shadow, border and body gradient all along. They are a second way to
 write four of a layer style's effects: `GetEffectsAsLayerStyle` gives them as a style (the outer shadow a drop shadow, the
-inner shadow an inner shadow, the border an inside stroke with its gradient, the body gradient a radial gradient overlay),
-and `SetEffectsFromLayerStyle` writes a style's first drop shadow, inner shadow, stroke and gradient overlay into them.
-What they cannot say -- a blend mode, a contour, noise, a stroke outside the edge -- is dropped. The rect block keeps
-drawing them itself, exactly as it did; a layer style on its widget adds to them.
+inner shadow an inner shadow, the border an inside stroke with its gradient, the body gradient a gradient overlay of the
+same stops and type), and `SetEffectsFromLayerStyle` writes a style's first drop shadow, inner shadow, stroke and gradient
+overlay into them (a gradient's stops and type into the rect block's [multi-stop gradients](gradients.md)). What they
+cannot say -- a blend mode, a contour, noise, a stroke outside the edge, a midpoint -- is dropped. The rect block keeps
+drawing them itself; a layer style on its widget adds to them.
 
 ## Shape blends
 
