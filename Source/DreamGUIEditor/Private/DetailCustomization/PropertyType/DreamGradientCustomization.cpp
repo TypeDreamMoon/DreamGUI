@@ -30,6 +30,7 @@
 #include "UObject/UnrealType.h"
 #include "Widget/SDreamGradientPreview.h"
 #include "Widget/SDreamUIEyedropper.h"
+#include "Workflow/DreamUIPresetLibrary.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -1501,43 +1502,56 @@ void FDreamGradientCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> Pr
 	.MinDesiredWidth(250.0f)
 	.MaxDesiredWidth(600.0f)
 	[
-		SNew(SHorizontalBox)
-		+ SHorizontalBox::Slot()
-		.FillWidth(1.0f)
-		.VAlign(VAlign_Center)
-		.Padding(0.0f, 2.0f, 4.0f, 2.0f)
-		[
-			SNew(SDreamGradientPreview)
-			.DesiredSize(FVector2D(160.0, 18.0))
-			.Gradient_Lambda([PreviewCache]()
+		// A gradient preset dragged from the preset library onto the row paints with it, as one undo step.
+		SNew(SDreamUIPresetDropTarget)
+		.Kind(EDreamUIPresetKind::Gradient)
+		.OnDropped_Lambda([PropertyHandle](const FDreamUIPresetDragDropOp& InOperation)
+		{
+			FDreamGradient Dropped;
+			if (CanEdit(PropertyHandle) && InOperation.GetGradient(Dropped))
 			{
-				return PreviewCache->Get().Gradient;
-			})
-			.ToolTipText_Lambda([PropertyHandle]() { return GetSummaryText(PropertyHandle); })
-		]
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
-		.Padding(0.0f, 0.0f, 4.0f, 0.0f)
+				ApplyPreset(PropertyHandle, Dropped, FText::FromName(InOperation.GetPreset().Name));
+			}
+		})
 		[
-			MakeTypePicker(PropertyHandle, PreviewCache)
-		]
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
-		[
-			SNew(SComboButton)
-			.ComboButtonStyle(FAppStyle::Get(), "SimpleComboButton")
-			.HasDownArrow(true)
-			.ContentPadding(FMargin(2.0f, 0.0f))
-			.ToolTipText(LOCTEXT("Presets_ToolTip", "Paint with a preset -- one of the project's gradient assets, or of its presets in Project Settings > Plugins > Dream GUI -- or keep this gradient as one."))
-			.ButtonContent()
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 2.0f, 4.0f, 2.0f)
 			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(LOCTEXT("Presets", "Presets"))
+				SNew(SDreamGradientPreview)
+				.DesiredSize(FVector2D(160.0, 18.0))
+				.Gradient_Lambda([PreviewCache]()
+				{
+					return PreviewCache->Get().Gradient;
+				})
+				.ToolTipText_Lambda([PropertyHandle]() { return GetSummaryText(PropertyHandle); })
 			]
-			.OnGetMenuContent_Lambda([PropertyHandle]() { return MakePresetMenu(PropertyHandle); })
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 0.0f, 4.0f, 0.0f)
+			[
+				MakeTypePicker(PropertyHandle, PreviewCache)
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SComboButton)
+				.ComboButtonStyle(FAppStyle::Get(), "SimpleComboButton")
+				.HasDownArrow(true)
+				.ContentPadding(FMargin(2.0f, 0.0f))
+				.ToolTipText(LOCTEXT("Presets_ToolTip", "Paint with a preset -- one of the project's gradient assets, or of its presets in Project Settings > Plugins > Dream GUI -- or keep this gradient as one."))
+				.ButtonContent()
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.Text(LOCTEXT("Presets", "Presets"))
+				]
+				.OnGetMenuContent_Lambda([PropertyHandle]() { return MakePresetMenu(PropertyHandle); })
+			]
 		]
 	]
 	// The row's Copy and Paste speak CSS, the spelling a .dui and a project preset take; a paste of the property system's

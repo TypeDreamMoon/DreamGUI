@@ -308,6 +308,22 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Editor|Palette")
 	TArray<FDreamUISwatch> ProjectSwatches;
 
+	/**
+	 * Layer styles kept as text, by name: the lines of `.dui` a node's block takes -- a `+ DreamLayerStyle { ... }` line, and
+	 * BlendMode and RenderOpacity when the style keeps the layer's blending. The designer's preset library shelves them
+	 * beside the style preset assets (UDreamLayerStylePreset) and applies them as a pasted layer style.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Presets", meta = (MultiLine = true))
+	TMap<FName, FString> StylePresets;
+
+	/**
+	 * Effect settings kept as text, by name: an effect's node, `Glass { Refraction = 18  Frost = 0.25 }`, or a behaviour's
+	 * line, `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }`. Applied from the designer's preset library to a widget of
+	 * that effect (or, for a behaviour, any widget), they set the values they name and leave the others.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Presets", meta = (MultiLine = true))
+	TMap<FName, FString> EffectPresets;
+
 	// ---------------------------------------------------------------- Spawned actors
 
 	/**

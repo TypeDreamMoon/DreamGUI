@@ -30,6 +30,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp
+#include "Workflow/DreamUIPresetLibrary.h"//FDreamUIPresetDragDropOp
 #include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetEditorHierarchyViewItem"
@@ -729,6 +730,11 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 	const UDreamWidget* LockOwner = DreamWidgetHierarchyDrop::GetLockOwnerForDropZone(Widget.Get(), DropZone);
 	if (LockOwner != nullptr && Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(LockOwner))return TOptional<EItemDropZone>();
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
+	// A preset from the preset library is applied to the row's widget: always onto it, never above or below.
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid())
+	{
+		return FDreamUIPresetDragDropOp::CanDropOnto(DragDropEvent, Widget.Get()) ? TOptional<EItemDropZone>(EItemDropZone::OntoItem) : TOptional<EItemDropZone>();
+	}
 	// Dropping an ASSET onto a hierarchy row used to nest a prefab under it, and the only check worth
 	// making was "not into itself". Nothing is placed from the content browser this way any more.
 	if (DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>().IsValid())
@@ -776,6 +782,12 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 }
 FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<UDreamWidget> TargetItem)
 {
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid())
+	{
+		const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = Manager.Pin();
+		return Designer.IsValid() && FDreamUIPresetDragDropOp::DropOnto(DragDropEvent, *Designer, Widget.Get())
+			? FReply::Handled() : FReply::Unhandled();
+	}
 	const bool bIsDrop = true;
 	TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 	if (Zone.IsSet())
