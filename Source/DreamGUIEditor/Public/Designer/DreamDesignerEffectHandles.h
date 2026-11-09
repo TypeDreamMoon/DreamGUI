@@ -10,6 +10,7 @@
  * meta=(DreamGUI_Handle="Kind"), which the editor module registers. Each tagged property's provider is named Kind.Property.
  *  - MaskShape, on a widget's ClipMask: its clip and the mask on it -- the clip rect's sides (its margins), the rect's
  *    corners, a polygon's roundness, a star's or a ring's inner size, and the feather;
+ *  - GlassShape, on a glass's CornerRadius: its corners, its edge's width and where its highlight's light comes from;
  * Each drag is one undo step and writes the .dui when the button comes up, as every provider's does. A corner, or a side's
  * feather, moves all four with it (as the widget's uniform corner setting says, for a clip); Alt moves it alone. An effect
  * that is off has no handles.
@@ -33,5 +34,17 @@ namespace DreamDesignerEffectHandles
 		constexpr int32 InnerRatio = 21;
 		/** The feather: a shape's one, or a rect's sides -- left, top, right, bottom. */
 		constexpr int32 FirstFeather = 30;
+	}
+
+	DREAMGUIEDITOR_API extern const FName GlassKindName;
+	DREAMGUIEDITOR_API FDreamDesignerHandleKindFactory MakeGlassKindFactory();
+
+	namespace GlassIds
+	{
+		/** Its corners, CornerRadius in its order: right-bottom, right-top, left-top, left-bottom. */
+		constexpr int32 FirstCorner = 10;
+		constexpr int32 EdgeWidth = 20;
+		/** Where the highlight's light comes from: LightAngle. */
+		constexpr int32 LightAngle = 30;
 	}
 }

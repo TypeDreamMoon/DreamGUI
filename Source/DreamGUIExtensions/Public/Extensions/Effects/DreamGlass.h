@@ -128,7 +128,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass", meta = (EditCondition = "Shape==EDreamGlassShape::ShapeBlend", EditConditionHides))
 	TWeakObjectPtr<UDreamWidget> ShapeBlendGroup;
 	/** As a rect block's: in units, or as a fraction of half the smaller side. */
-	UPROPERTY(EditAnywhere, BlueprintSetter = "SetCornerRadius", Category = "DreamGUI|Glass")
+	UPROPERTY(EditAnywhere, BlueprintSetter = "SetCornerRadius", Category = "DreamGUI|Glass", meta = (DreamGUI_Handle = "GlassShape"))
 	FVector4f CornerRadius = FVector4f(24.0f, 24.0f, 24.0f, 24.0f);
 	UPROPERTY(EditAnywhere, BlueprintSetter = "SetCornerRadiusUnitMode", Category = "DreamGUI|Glass")
 	EDreamRectBlockUnitMode CornerRadiusUnitMode = EDreamRectBlockUnitMode::Value;
