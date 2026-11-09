@@ -36,5 +36,7 @@ void FDreamVisualBatchMeshCustomization::CustomizeDetails(IDetailLayoutBuilder& 
 	}
 
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
+	// The blend mode is a row of the widget's Layer category, beside its opacity and mask.
+	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamVisualBatchMesh, BlendMode));
 }
 #undef LOCTEXT_NAMESPACE

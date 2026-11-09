@@ -170,6 +170,14 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamPath", new STARSHIP_ICON(TEXT("Curves"), Icon16x16));
 	Style->Set("ClassIcon.DreamNiagaraSystem", new STARSHIP_ICON(TEXT("ParticleSprites"), Icon16x16));
 	Style->Set("ClassIcon.DreamNiagaraTrigger", new STARSHIP_ICON(TEXT("ParticleSprites"), Icon16x16));
+	// The marks after a hierarchy row's name, one per kind of effect on the widget.
+	Style->Set("DreamGUIEditor.LayerMark.Style", new STARSHIP_ICON(TEXT("Layers"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Group", new STARSHIP_ICON(TEXT("GroupActors"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Mask", new STARSHIP_ICON(TEXT("ColorChannelAlpha"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Blend", new STARSHIP_ICON(TEXT("color"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Effect", new STARSHIP_ICON(TEXT("VisualEffects"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Warp", new STARSHIP_ICON(TEXT("BrushWireframe"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Particles", new STARSHIP_ICON(TEXT("ParticleSprites"), FVector2D(12.0f, 12.0f)));
 
 	// Behaviour classes that previously fell through to the DreamUIBehaviour icon. Subclasses
 	// (UISelectableTransition, UISpriteSequencePlayer, ...) inherit through FSlateIconFinder's

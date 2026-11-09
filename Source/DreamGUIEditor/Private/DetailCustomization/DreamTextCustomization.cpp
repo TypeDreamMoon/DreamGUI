@@ -332,9 +332,8 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		.AutoWrapText(true)
 	]
 	;
-	// UDreamVisualBatchMesh's, declared on the base, so by name.
+	// UDreamVisualBatchMesh's, declared on the base, so by name. Its blend mode is a row of the widget's Layer category.
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(FName(TEXT("PropertiesForMaterial")), UDreamVisualBatchMesh::StaticClass()));
-	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(FName(TEXT("BlendMode")), UDreamVisualBatchMesh::StaticClass()));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, ExpandMeshSize)));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, SmallTextRaster)));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, DynamicPixelsPerUnit)));
