@@ -75,7 +75,7 @@ protected:
 	/** Follow the pointer (on), or stand at LightPosition (off). */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")
 	bool bFollowPointer = true;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light", meta = (EditCondition = "!bFollowPointer"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light", meta = (EditCondition = "!bFollowPointer", DreamGUI_Handle = "Light"))
 	FVector2D LightPosition = FVector2D::ZeroVector;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")
 	FColor LightColor = FColor::White;

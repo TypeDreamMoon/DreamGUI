@@ -14,6 +14,8 @@
  *  - Shadow, on a layer style's Style and on a rect block's OuterShadowAngle: the style's shadows, or the rect block's own
  *    two, dragged where they fall -- angle and distance together; a style's shadow on the global light turns the global
  *    light, and every effect that uses it turns with it;
+ *  - Light, on a pointer light's LightPosition and on a layer style's Style.GlobalLightAngle: where the pointer light stands
+ *    and how far it reaches; the style's global light, its angle and its altitude.
  * Each drag is one undo step and writes the .dui when the button comes up, as every provider's does. A corner, or a side's
  * feather, moves all four with it (as the widget's uniform corner setting says, for a clip); Alt moves it alone. An effect
  * that is off has no handles.
@@ -62,5 +64,17 @@ namespace DreamDesignerEffectHandles
 		/** A rect block's own two. */
 		constexpr int32 RectBlockOuterShadow = 300;
 		constexpr int32 RectBlockInnerShadow = 301;
+	}
+
+	DREAMGUIEDITOR_API extern const FName LightKindName;
+	DREAMGUIEDITOR_API FDreamDesignerHandleKindFactory MakeLightKindFactory();
+
+	namespace LightIds
+	{
+		/** A layer style's global light: its angle round the disc, its altitude in from the rim. */
+		constexpr int32 GlobalLight = 1;
+		/** A pointer light's place, and its reach. */
+		constexpr int32 PointerLightPlace = 100;
+		constexpr int32 PointerLightReach = 101;
 	}
 }

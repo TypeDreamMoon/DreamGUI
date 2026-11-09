@@ -676,7 +676,7 @@ struct DREAMGUI_API FDreamLayerEffects
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (ClampMin = "0", ClampMax = "1"))
 	float FillOpacity = 1.0f;
 	/** The light every effect that uses the global light takes, degrees. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (UIMin = "-180", UIMax = "180"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Handle = "Light"))
 	float GlobalLightAngle = 120.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (ClampMin = "0", ClampMax = "90"))
 	float GlobalLightAltitude = 30.0f;

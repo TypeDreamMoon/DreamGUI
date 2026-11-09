@@ -178,6 +178,7 @@ namespace DreamGUIEditorModuleLocal
 			{ DreamDesignerEffectHandles::MaskKindName, DreamDesignerEffectHandles::MakeMaskKindFactory() },
 			{ DreamDesignerEffectHandles::GlassKindName, DreamDesignerEffectHandles::MakeGlassKindFactory() },
 			{ DreamDesignerEffectHandles::ShadowKindName, DreamDesignerEffectHandles::MakeShadowKindFactory() },
+			{ DreamDesignerEffectHandles::LightKindName, DreamDesignerEffectHandles::MakeLightKindFactory() },
 		};
 	}
 }
@@ -306,7 +307,7 @@ void FDreamGUIEditorModule::StartupModule()
 		// A text's paints, a gradient asset and a custom style's paint all show their gradients through this one.
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamGradientCustomization::MakeInstance));
 		// The designer viewport's handles: a warp's lattice and a path's points, and the kinds properties are tagged with --
-		// a rect block's gradients, a clip's mask, a glass and shadows.
+		// a rect block's gradients, a clip's mask, a glass, shadows and lights.
 		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::MakeDesignerHandleProviders())
 		{
 			FDreamDesignerHandles::Register(Provider);
