@@ -434,6 +434,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Set Parameters module, attributes that module wrote, which Niagara reads as they were before it: the click sparks and
   the full bar's shards were thrown at no speed, and the border sparks all began at one corner. Each now writes what it
   reads in an earlier group.
+- **A NiagaraSystem visual's system is no longer drawn in the world for a frame.** The component that simulates it had its
+  rendering turned off, but Niagara hands that flag to a component's scene proxy only as the component ticks, and the
+  proxy made when a system was activated or burst drew the frame before: the whole system, lit, in the world behind the
+  UI -- a flash at every burst in a play session, and a system drawn all along in a world that does not tick its
+  components. The component now gives the scene no proxy at all.
 
 [#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
 [#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
