@@ -245,12 +245,6 @@ bool FDreamLayerEffectsDetailsAuditTest::RunTest(const FString& Parameters)
 		TArray<FString> Missing, Conditional;
 		for (const TPair<FString, const FProperty*>& Pair : Expected)
 		{
-			// An advanced row of a sub-category ("DreamGUI|Pointer Light") goes under its category's advanced expander, which a
-			// row generator does not list; the panel a component is edited in does.
-			if (Pair.Value->HasAnyPropertyFlags(CPF_AdvancedDisplay) && Pair.Value->GetMetaData(TEXT("Category")).Contains(TEXT("|")))
-			{
-				continue;
-			}
 			// A visual's Layer rows (its blend mode) are the widget's Layer section's, not its own.
 			if (FDreamDetailsLayout::IsDrawnByHost(Subject.Class, DreamPropertyMeta::GetSection(Pair.Value)))
 			{

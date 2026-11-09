@@ -385,10 +385,7 @@ bool FDreamDetailsCoverageTest::RunTest(const FString& Parameters)
 			const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
 			return FDreamDetailsLayout::IsDrawnByHost(Class, DreamPropertyMeta::GetSection(InProperty))
 				|| (AsStruct != nullptr && (AsStruct->Struct->IsChildOf(FDreamUIEventDelegate::StaticStruct()) || AsStruct->Struct == FDataTableRowHandle::StaticStruct()))
-				|| InProperty->HasAnyPropertyFlags(CPF_DisableEditOnInstance)
-				// An advanced row of a sub-category ("DreamGUI|Pointer Light") goes under its category's advanced expander,
-				// which neither a row generator nor a details view lists; the panel shows it under the expander.
-				|| (InProperty->HasAnyPropertyFlags(CPF_AdvancedDisplay) && InProperty->GetMetaData(TEXT("Category")).Contains(TEXT("|")));
+				|| InProperty->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
 		}));
 		// And none drawn twice: a row of a customization's own and the default row it was meant to replace.
 		for (const TPair<const FProperty*, int32>& Pair : Shown.RowCounts)
