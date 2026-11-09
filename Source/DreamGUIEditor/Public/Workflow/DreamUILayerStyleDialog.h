@@ -134,6 +134,12 @@ public:
 	 * Blending Options page, BlendMode and Opacity (or a change not named) are the layer's blending, written from then on.
 	 */
 	void NotifyChanged(EDreamUIStyleDialogPage InPage, FName InProperty = NAME_None);
+	/**
+	 * The working copy holds a value being tried -- a drag in progress, a blend mode hovered in a list: preview it, without
+	 * counting it as a change. A drag ends, and a pick is made, with NotifyChanged; a hover puts the value back and calls this
+	 * again. The blending the widgets show is the working copy's only while it differs from where it started, or was changed.
+	 */
+	void PreviewChanged(EDreamUIStyleDialogPage InPage, FName InProperty = NAME_None);
 
 	/** Preview on the widgets, or show them as they are. On by default. */
 	void SetPreviewEnabled(bool bInEnabled);
@@ -186,6 +192,8 @@ private:
 	TArray<FString> TargetNames;
 	TArray<FPreviewTarget> Previews;
 	FDreamUIStyleDialogModel Model;
+	/** The blending the dialog opened with (the first widget's). */
+	FDreamUIStyleDialogBlending InitialBlending;
 	bool bPreview = true;
 	bool bDirty = false;
 	bool bBlendingChanged = false;

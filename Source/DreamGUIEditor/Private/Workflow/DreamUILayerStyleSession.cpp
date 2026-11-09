@@ -110,6 +110,7 @@ TSharedPtr<FDreamUILayerStyleSession> FDreamUILayerStyleSession::Begin(FDreamWid
 	ReadBlendMode(FirstTemplate, Mode);
 	Session->Model.Blending.BlendMode = Mode;
 	Session->Model.Blending.Opacity = FirstTemplate->GetRenderOpacity();
+	Session->InitialBlending = Session->Model.Blending;
 
 	Session->FindPreviews();
 	if (const TSharedPtr<FDreamWidgetPreviewHost> Host = InDesigner.GetPreviewHost())
@@ -186,6 +187,8 @@ void FDreamUILayerStyleSession::ApplyPreview()
 	{
 		return;
 	}
+	const bool bModeEdited = bBlendingChanged || Model.Blending.BlendMode != InitialBlending.BlendMode;
+	const bool bOpacityEdited = bBlendingChanged || Model.Blending.Opacity != InitialBlending.Opacity;
 	for (FPreviewTarget& Target : Previews)
 	{
 		UDreamWidget* Widget = Target.Widget.Get();
@@ -206,14 +209,12 @@ void FDreamUILayerStyleSession::ApplyPreview()
 			PreviewStyle->SetPreset(nullptr);
 			PreviewStyle->SetStyle(Model.Style);
 		}
-		if (bBlendingChanged)
+		// Each widget keeps its own blending until the working copy's is changed, or is being tried.
+		if (Target.bHadBlendMode)
 		{
-			if (Target.bHadBlendMode)
-			{
-				WriteBlendMode(Widget, Model.Blending.BlendMode);
-			}
-			Widget->SetRenderOpacity(Model.Blending.Opacity);
+			WriteBlendMode(Widget, bModeEdited ? Model.Blending.BlendMode : Target.OriginalBlendMode);
 		}
+		Widget->SetRenderOpacity(bOpacityEdited ? Model.Blending.Opacity : Target.OriginalOpacity);
 	}
 }
 
@@ -281,6 +282,14 @@ void FDreamUILayerStyleSession::SetPreviewEnabled(bool bInEnabled)
 	else
 	{
 		RestorePreview();
+	}
+}
+
+void FDreamUILayerStyleSession::PreviewChanged(EDreamUIStyleDialogPage InPage, FName InProperty)
+{
+	if (!bFinished)
+	{
+		ApplyPreview();
 	}
 }
 

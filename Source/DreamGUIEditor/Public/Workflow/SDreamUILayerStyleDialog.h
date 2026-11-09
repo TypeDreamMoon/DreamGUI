@@ -6,6 +6,7 @@
 #include "Workflow/DreamUILayerStyleDialog.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Widgets/SCompoundWidget.h"
+#include "Misc/NotifyHook.h"
 #include "Widgets/Views/SListView.h"
 
 class IDetailLayoutBuilder;
@@ -24,7 +25,7 @@ struct FPropertyChangedEvent;
  * a field's metadata -- an angle dial, a curve, a blend mode picker -- is used here as in a widget's details, and an editor
  * that looks up from its field to the style (a light angle turning the global light) finds the style it is in.
  */
-class DREAMGUIEDITOR_API SDreamUILayerStyleDialog : public SCompoundWidget
+class DREAMGUIEDITOR_API SDreamUILayerStyleDialog : public SCompoundWidget, public FNotifyHook
 {
 public:
 	SLATE_BEGIN_ARGS(SDreamUILayerStyleDialog) {}
@@ -61,6 +62,12 @@ public:
 	/** New Style: the working style as a preset, through InPrompt (DreamUIStylePresets::PromptNewStyle by default). */
 	bool NewStyle(TFunctionRef<bool(const FDreamUIStylePresetSaveArgs&)> InPrompt);
 
+	/**
+	 * A change made in the parameter area, as its details view's notify hook hears every one: an interactive change (a drag
+	 * in progress, a value an editor tries -- a blend mode hovered) is previewed, any other is an edit.
+	 */
+	virtual void NotifyPostChange(const FPropertyChangedEvent& InEvent, FProperty* InPropertyThatChanged) override;
+
 private:
 	void RefreshRows();
 	void ShowSelected();
@@ -68,7 +75,6 @@ private:
 	void OnSelectionChanged(TSharedPtr<FDreamUIStyleDialogRow> InRow, ESelectInfo::Type InInfo);
 	/** The details view's layout: the selected page's fields of the model, in a category named after the page. */
 	void CustomizePage(IDetailLayoutBuilder& InBuilder);
-	void OnPropertiesChanged(const FPropertyChangedEvent& InEvent);
 	void CloseWindow();
 
 	TSharedPtr<FDreamUILayerStyleSession> Session;

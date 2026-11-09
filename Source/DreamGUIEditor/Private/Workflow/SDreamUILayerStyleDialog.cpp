@@ -113,6 +113,8 @@ void SDreamUILayerStyleDialog::Construct(const FArguments& InArgs, const TShared
 	ViewArgs.bHideSelectionTip = true;
 	ViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
 	ViewArgs.bShowOptions = false;
+	// The hook, not the finished-changing event: it hears interactive changes too, and changes an editor notifies by hand.
+	ViewArgs.NotifyHook = this;
 	FStructureDetailsViewArgs StructArgs;
 	Details = PropertyEditor.CreateStructureDetailView(ViewArgs, StructArgs, nullptr);
 	if (IDetailsView* View = Details->GetDetailsView())
@@ -129,7 +131,6 @@ void SDreamUILayerStyleDialog::Construct(const FArguments& InArgs, const TShared
 				});
 			}));
 	}
-	Details->GetOnFinishedChangingPropertiesDelegate().AddSP(this, &SDreamUILayerStyleDialog::OnPropertiesChanged);
 
 	const TArray<FString> Names = Session->GetTargetNames();
 	const FText Targets = Names.Num() > 1
@@ -341,10 +342,17 @@ bool SDreamUILayerStyleDialog::IsFieldShown(FName InField) const
 	return ShownFields.Contains(InField);
 }
 
-void SDreamUILayerStyleDialog::OnPropertiesChanged(const FPropertyChangedEvent& InEvent)
+void SDreamUILayerStyleDialog::NotifyPostChange(const FPropertyChangedEvent& InEvent, FProperty* InPropertyThatChanged)
 {
 	// The field edited, however deep: on Blending Options, whether it was the layer's blending or the style's.
-	Session->NotifyChanged(Selected.Page, InEvent.GetPropertyName());
+	if ((InEvent.ChangeType & EPropertyChangeType::Interactive) != 0)
+	{
+		Session->PreviewChanged(Selected.Page, InEvent.GetPropertyName());
+	}
+	else
+	{
+		Session->NotifyChanged(Selected.Page, InEvent.GetPropertyName());
+	}
 }
 
 void SDreamUILayerStyleDialog::OnSelectionChanged(TSharedPtr<FDreamUIStyleDialogRow> InRow, ESelectInfo::Type InInfo)
