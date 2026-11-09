@@ -17,7 +17,6 @@
 #include "Core/DreamLayerStylePreset.h"
 
 #include "Framework/MultiBox/MultiBoxBuilder.h"
-#include "HAL/PlatformApplicationMisc.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Widgets/Text/STextBlock.h"
 
@@ -25,18 +24,12 @@
  * Copy Layer Style and Paste Layer Style (DreamUILayerStyleClipboard): the copied look is lines of `.dui` that read back as
  * the look they were written from; a paste writes it onto every selected widget of a `.dui`-backed Blueprint -- into its own
  * `+ DreamLayerStyle` line, added where it had none, and onto its blend mode and mask when the copy carries them -- and the
- * whole paste is one undo step, the file included. The clipboard is the desktop's own, so each test puts back what it found.
+ * whole paste is one undo step, the file included. The tests copy to and paste from a clipboard of the editor's own
+ * (FScopedClipboard), in place of the one every program on the desktop shares.
  */
 namespace DreamLayerStyleClipboardTestLocal
 {
 	using namespace DreamUITextStructureFixtures;
-
-	struct FClipboardKeeper
-	{
-		FString Found;
-		FClipboardKeeper() { FPlatformApplicationMisc::ClipboardPaste(Found); }
-		~FClipboardKeeper() { FPlatformApplicationMisc::ClipboardCopy(*Found); }
-	};
 
 	const TArray<FString>& SourceLines()
 	{
@@ -258,7 +251,7 @@ bool FDreamLayerStylePasteTest::RunTest(const FString&)
 {
 	using namespace DreamLayerStyleClipboardTestLocal;
 
-	FClipboardKeeper Keeper;
+	DreamUILayerStyleClipboard::FScopedClipboard Clipboard;
 	FScopedDuiFile File(TEXT("LayerStylePaste.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), File.Write(SourceLines()))) return false;
 	FScopedTextBlueprint Scoped(TEXT("BP_LayerStylePaste"), File.FilePath);
@@ -323,7 +316,7 @@ bool FDreamLayerStylePastePartsTest::RunTest(const FString&)
 {
 	using namespace DreamLayerStyleClipboardTestLocal;
 
-	FClipboardKeeper Keeper;
+	DreamUILayerStyleClipboard::FScopedClipboard Clipboard;
 	FScopedDuiFile File(TEXT("LayerStylePasteParts.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), File.Write(SourceLines()))) return false;
 	FScopedTextBlueprint Scoped(TEXT("BP_LayerStylePasteParts"), File.FilePath);
@@ -357,7 +350,7 @@ bool FDreamLayerStyleMenuTest::RunTest(const FString&)
 {
 	using namespace DreamLayerStyleClipboardTestLocal;
 
-	FClipboardKeeper Keeper;
+	DreamUILayerStyleClipboard::FScopedClipboard Clipboard;
 	FScopedDuiFile File(TEXT("LayerStyleMenu.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), File.Write(SourceLines()))) return false;
 	FScopedTextBlueprint Scoped(TEXT("BP_LayerStyleMenu"), File.FilePath);
@@ -365,7 +358,7 @@ bool FDreamLayerStyleMenuTest::RunTest(const FString&)
 	UDreamWidget* Source = Scoped.FindPreview(TEXT("Source"));
 	if (!TestNotNull(TEXT("the source has a preview"), Source)) return false;
 	Scoped.Designer->SelectWidgets({ Source }, /*bAppendOrToggle*/false);
-	DreamUILayerStyleClipboard::Copy(Scoped.FindTemplate(TEXT("Source")), EDreamUIStyleParts::All);
+	TestTrue(TEXT("the source's look is copied"), DreamUILayerStyleClipboard::Copy(Scoped.FindTemplate(TEXT("Source")), EDreamUIStyleParts::All));
 
 	FMenuBuilder Builder(/*bShouldCloseWindowAfterMenuSelection*/true, nullptr);
 	const TSharedRef<FDreamWidgetBlueprintEditor> Designer = StaticCastSharedRef<FDreamWidgetBlueprintEditor>(Scoped.Designer->AsShared());

@@ -17,6 +17,7 @@
 
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "HAL/PlatformApplicationMisc.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/ConfigCacheIni.h"
 #include "ScopedTransaction.h"
 #include "Styling/AppStyle.h"
@@ -33,6 +34,29 @@ namespace DreamUILayerStyleClipboardLocal
 	FString CachedText;
 	bool bCachedValid = false;
 	FDreamUILayerStyleSnippet CachedSnippet;
+
+	/**
+	 * The desktop clipboard's text. While another program holds the clipboard open a read finds nothing, as on an empty
+	 * clipboard: a patient read asks again for a moment before it takes nothing for the answer.
+	 */
+	/** The clipboard in the desktop's place, while one is. */
+	FScopedClipboard* GScopedClipboard = nullptr;
+
+	FString ReadClipboardText(bool bInPatient)
+	{
+		if (GScopedClipboard != nullptr)
+		{
+			return GScopedClipboard->Text;
+		}
+		FString Text;
+		FPlatformApplicationMisc::ClipboardPaste(Text);
+		for (int32 Attempt = 0; bInPatient && Text.IsEmpty() && Attempt < 10; ++Attempt)
+		{
+			FPlatformProcess::Sleep(0.02f);
+			FPlatformApplicationMisc::ClipboardPaste(Text);
+		}
+		return Text;
+	}
 
 	UDreamLayerStyle* FindOwnStyle(UDreamWidget* InTemplate)
 	{
@@ -326,6 +350,19 @@ void DreamUILayerStyleClipboard::SetCopyParts(EDreamUIStyleParts InParts)
 	}
 }
 
+DreamUILayerStyleClipboard::FScopedClipboard::FScopedClipboard()
+{
+	using namespace DreamUILayerStyleClipboardLocal;
+	check(GScopedClipboard == nullptr);
+	GScopedClipboard = this;
+}
+
+DreamUILayerStyleClipboard::FScopedClipboard::~FScopedClipboard()
+{
+	using namespace DreamUILayerStyleClipboardLocal;
+	GScopedClipboard = nullptr;
+}
+
 bool DreamUILayerStyleClipboard::Copy(const UDreamWidget* InWidget, EDreamUIStyleParts InParts)
 {
 	const FDreamUILayerStyleSnippet Snippet = FDreamUILayerStyleSnippet::FromWidget(InWidget, InParts);
@@ -333,15 +370,30 @@ bool DreamUILayerStyleClipboard::Copy(const UDreamWidget* InWidget, EDreamUIStyl
 	{
 		return false;
 	}
-	FPlatformApplicationMisc::ClipboardCopy(*Snippet.GetText());
-	return true;
+	if (DreamUILayerStyleClipboardLocal::GScopedClipboard != nullptr)
+	{
+		DreamUILayerStyleClipboardLocal::GScopedClipboard->Text = Snippet.GetText();
+		return true;
+	}
+	// The clipboard is the desktop's: while another program holds it open -- a clipboard history reading every new copy,
+	// another editor -- a write fails without a word and a read finds nothing. Write, read until the clipboard answers, and
+	// write again only when it answers with something else: every write is a new copy for such a program to read.
+	const FString Text = Snippet.GetText().Replace(TEXT("\r"), TEXT(""));
+	for (int32 Attempt = 0; Attempt < 5; ++Attempt)
+	{
+		FPlatformApplicationMisc::ClipboardCopy(*Snippet.GetText());
+		if (DreamUILayerStyleClipboardLocal::ReadClipboardText(/*bInPatient*/true).Replace(TEXT("\r"), TEXT("")) == Text)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
-bool DreamUILayerStyleClipboard::ReadClipboard(FDreamUILayerStyleSnippet& OutSnippet)
+bool DreamUILayerStyleClipboard::ReadClipboard(FDreamUILayerStyleSnippet& OutSnippet, bool bInPatient)
 {
 	using namespace DreamUILayerStyleClipboardLocal;
-	FString Text;
-	FPlatformApplicationMisc::ClipboardPaste(Text);
+	const FString Text = ReadClipboardText(bInPatient);
 	if (Text != CachedText || (CachedText.IsEmpty() && !bCachedValid))
 	{
 		CachedText = Text;
@@ -419,7 +471,7 @@ int32 DreamUILayerStyleClipboard::Apply(FDreamWidgetBlueprintEditor& InDesigner,
 int32 DreamUILayerStyleClipboard::Paste(FDreamWidgetBlueprintEditor& InDesigner, TConstArrayView<UDreamWidget*> InPreviewWidgets)
 {
 	FDreamUILayerStyleSnippet Snippet;
-	if (!ReadClipboard(Snippet))
+	if (!ReadClipboard(Snippet, /*bInPatient*/true))
 	{
 		return 0;
 	}

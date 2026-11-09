@@ -18,7 +18,6 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
-#include "HAL/PlatformApplicationMisc.h"
 #include "RenderingThread.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -36,7 +35,8 @@
  * Saved/DreamGUITests/Captures (Workflow_*.png) -- what the panels look like, for a reader who has no editor open -- and
  * each has to have drawn something on its background.
  *
- * The presets, the palette and the clipboard are the project's and the desktop's: each is put back as it was found.
+ * The presets and the palette are the project's: each is put back as it was found. The menu's copy goes to a clipboard of
+ * the editor's own, not the desktop's.
  */
 namespace DreamWorkflowPanelsPixelTestLocal
 {
@@ -50,7 +50,8 @@ namespace DreamWorkflowPanelsPixelTestLocal
 		FString File;
 		FString Text;
 		bool bHadFile = false;
-		FString Clipboard;
+		/** The menu's copy goes to a clipboard of the editor's own, not the desktop's. */
+		DreamUILayerStyleClipboard::FScopedClipboard Clipboard;
 
 		FSettingsKeeper()
 		{
@@ -60,7 +61,6 @@ namespace DreamWorkflowPanelsPixelTestLocal
 			Swatches = Settings->ProjectSwatches;
 			File = Settings->GetDefaultConfigFilename();
 			bHadFile = FFileHelper::LoadFileToString(Text, *File);
-			FPlatformApplicationMisc::ClipboardPaste(Clipboard);
 		}
 		~FSettingsKeeper()
 		{
@@ -77,7 +77,6 @@ namespace DreamWorkflowPanelsPixelTestLocal
 				// The test made the file by saving a setting: it goes again.
 				IFileManager::Get().Delete(*File, /*RequireExists*/false, /*EvenReadOnly*/true, /*Quiet*/true);
 			}
-			FPlatformApplicationMisc::ClipboardCopy(*Clipboard);
 		}
 	};
 

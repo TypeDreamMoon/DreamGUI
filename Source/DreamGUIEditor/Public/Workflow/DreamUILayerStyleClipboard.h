@@ -24,15 +24,37 @@ class UDreamWidget;
  */
 namespace DreamUILayerStyleClipboard
 {
+	/**
+	 * A clipboard of the editor's own, in the desktop's place for Copy, ReadClipboard and Paste while it lives: a test's, so
+	 * that it neither waits on nor disturbs the clipboard every program on the desktop shares. One at a time.
+	 */
+	struct DREAMGUIEDITOR_API FScopedClipboard
+	{
+		FScopedClipboard();
+		~FScopedClipboard();
+		FScopedClipboard(const FScopedClipboard&) = delete;
+		FScopedClipboard& operator=(const FScopedClipboard&) = delete;
+
+		/** What it holds. */
+		FString Text;
+	};
+
 	/** The parts Copy Layer Style takes: the style always, the blending and the mask as the user last chose. */
 	DREAMGUIEDITOR_API EDreamUIStyleParts GetCopyParts();
 	DREAMGUIEDITOR_API void SetCopyParts(EDreamUIStyleParts InParts);
 
-	/** InWidget's look (its InParts) onto the system clipboard. False when it has none of them -- nothing was copied. */
+	/**
+	 * InWidget's look (its InParts) onto the system clipboard, checked by reading it back (another program can hold the
+	 * clipboard open for a moment). False when it has none of them, or the clipboard would not take it.
+	 */
 	DREAMGUIEDITOR_API bool Copy(const UDreamWidget* InWidget, EDreamUIStyleParts InParts);
 
-	/** What the clipboard holds, when it holds a layer style. Read again only when the clipboard's text changed. */
-	DREAMGUIEDITOR_API bool ReadClipboard(FDreamUILayerStyleSnippet& OutSnippet);
+	/**
+	 * What the clipboard holds, when it holds a layer style. Read again only when the clipboard's text changed. A read while
+	 * another program holds the clipboard open finds nothing: bInPatient asks again for a moment first (Paste does; a menu,
+	 * which asks on every frame, does not).
+	 */
+	DREAMGUIEDITOR_API bool ReadClipboard(FDreamUILayerStyleSnippet& OutSnippet, bool bInPatient = false);
 
 	/**
 	 * InSnippet's parts that InParts selects, written onto the authoring templates of InPreviewWidgets (the designer's
