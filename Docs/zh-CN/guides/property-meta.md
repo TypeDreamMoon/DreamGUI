@@ -25,6 +25,10 @@ DreamGUI 的面板不会整类隐藏分类，所以给类新加的属性，不�
 
 「只有另一个属性取某个值时才显示」继续用引擎的 `EditCondition` 和 `EditConditionHides`：行始终在，条件一满足就出现。
 
+子分类（`Category = "DreamGUI|Pointer Light"`）里的属性标了 `AdvancedDisplay`，在 DreamGUI 的面板里不会收进「高级」展开项：引擎画子分类时
+根本不画它的高级行，开不开「显示全部高级项」都一样。所以 DreamGUI 把这类属性作为子分类里的普通行，排在其它行后面。想把属性收起来，
+用 `DreamGUI_Advanced`，或者放进没有子分类的分类。
+
 ```cpp
 // 和控件的不透明度、遮罩一起放在图层区，排第二。
 UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (DreamGUI_Section = "Layer", DreamGUI_Order = 20))

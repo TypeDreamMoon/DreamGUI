@@ -135,6 +135,9 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   在还没有贴图时的内边距和边框。这些以前只能在 `.dui` 里写。
 - **打开序列帧播放器的细节面板不再让编辑器崩溃。** `UUISpriteSequencePlayer` 和 `UUISpriteSheetTexturePlayer` 的错误提示行
   在控件的组件里找它们需要的视觉，再从空指针上读名字。
+- **子分类里的高级属性有行了。** 引擎画子分类（`DreamGUI|Pointer Light`）时不画它的高级行，开着「显示全部高级项」也一样，
+  所以全息箔、指针光、倾斜卡的 *User Index* 和 *Pointer Id* 在哪个面板里都看不到。DreamGUI 的面板把这类属性作为子分类里的普通行，
+  排在其它行后面。
 
 <a id="100"></a>
 

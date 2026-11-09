@@ -27,6 +27,11 @@ them, and a customization of your own places them by calling `FDreamDetailsLayou
 Showing a property only while another one has some value stays the engine's `EditCondition` and `EditConditionHides`:
 the row is always there, and shows the moment the condition holds.
 
+`AdvancedDisplay` on a property of a sub-category (`Category = "DreamGUI|Pointer Light"`) does not hide it behind an
+expander in DreamGUI's panels: the engine draws a sub-category without its advanced rows -- "show all advanced" or not --
+so DreamGUI gives such a property an ordinary row of its sub-category instead, after the others. To fold a property away,
+use `DreamGUI_Advanced`, or put it in a category with no sub-category.
+
 ```cpp
 // Shown with the widget's opacity and mask in the Layer section, second.
 UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (DreamGUI_Section = "Layer", DreamGUI_Order = 20))

@@ -585,6 +585,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **A sequence player's details no longer crash the editor.** The error row of `UUISpriteSequencePlayer` and
   `UUISpriteSheetTexturePlayer` looked for the visual they need among the widget's components and read its name off
   nothing.
+- **Advanced properties of a sub-category have rows.** The engine draws a sub-category (`DreamGUI|Pointer Light`)
+  without its advanced rows, with "show all advanced" on as well, so a holo foil's, a pointer light's and a tilt card's
+  *User Index* and *Pointer Id* were in no panel. DreamGUI's panels give such a property an ordinary row of its
+  sub-category, after the others.
 
 ## 1.0.0
 
