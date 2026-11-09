@@ -16,6 +16,13 @@ void UDreamLayerStylePreset::SetStyle(const FDreamLayerEffects& InStyle)
 	StyleChangedEvent.Broadcast();
 }
 
+void UDreamLayerStylePreset::SetBlending(bool bInInclude, const FDreamLayerStyleBlending& InBlending)
+{
+	// The blending is applied once, by whoever applies the preset; nothing that follows the preset draws it, so there is no one to tell.
+	bIncludeBlending = bInInclude;
+	Blending = InBlending;
+}
+
 #if WITH_EDITOR
 void UDreamLayerStylePreset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
