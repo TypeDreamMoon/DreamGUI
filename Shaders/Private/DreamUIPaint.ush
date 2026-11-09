@@ -191,7 +191,7 @@ bool DreamUIPaint_Evaluate(Texture2D PaintDataTex, float Row, float2 BoxUV, floa
 	const int Spread = (int)round(Header.y);
 	const int Interpolation = (int)round(Header.z);
 	const int Count = clamp((int)round(Header.w), 0, DREAMUI_PAINT_MAX_STOPS);
-	if (Type <= DREAMUI_PAINT_TYPE_NONE || Type > DREAMUI_PAINT_TYPE_CORNERS || Count < 1)
+	if (Type <= DREAMUI_PAINT_TYPE_NONE || Type > DREAMUI_PAINT_TYPE_LAST || Count < 1)
 	{
 		return false;
 	}
@@ -237,19 +237,26 @@ bool DreamUIPaint_Evaluate(Texture2D PaintDataTex, float Row, float2 BoxUV, floa
 				const float AngleDegrees = (FromCenter.x != 0.0 || FromCenter.y != 0.0) ? degrees(atan2(FromCenter.x, -FromCenter.y)) : 0.0;
 				T = frac((AngleDegrees - Angle) / 360.0);
 			}
+			else if (Type == DREAMUI_PAINT_TYPE_REFLECTED)
+			{
+				// A Linear's line through the centre, measured both ways from it, at twice the rate: 1 where a Linear's ends are.
+				float SinA, CosA;
+				sincos(radians(Angle), SinA, CosA);
+				T = 2.0 * abs(dot(FromCenter, float2(SinA, -CosA))) / max(abs(Aspect * SinA) + abs(CosA), 1e-6);
+			}
 			else
 			{
+				// Radial and Diamond: the point turned back by Angle, then the ellipse's length or the diamond's |x| / Rx + |y| / Ry.
 				const float2 Radii = DreamUIPaint_RadialRadii(Type, (int)round(ShapeInfo.w), (int)round(SizeInfo.x), Center, CenterInfo.zw, Aspect);
+				float SinA, CosA;
+				sincos(radians(Angle), SinA, CosA);
+				const float2 Turned = float2(FromCenter.x * CosA + FromCenter.y * SinA, -FromCenter.x * SinA + FromCenter.y * CosA);
 				if (Type == DREAMUI_PAINT_TYPE_RADIAL)
 				{
-					T = length(FromCenter / Radii);
+					T = length(Turned / Radii);
 				}
 				else
 				{
-					// Diamond: the point turned back by Angle, then |x| / Rx + |y| / Ry.
-					float SinA, CosA;
-					sincos(radians(Angle), SinA, CosA);
-					const float2 Turned = float2(FromCenter.x * CosA + FromCenter.y * SinA, -FromCenter.x * SinA + FromCenter.y * CosA);
 					T = abs(Turned.x) / Radii.x + abs(Turned.y) / Radii.y;
 				}
 			}

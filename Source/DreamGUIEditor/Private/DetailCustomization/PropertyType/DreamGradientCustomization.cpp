@@ -1401,6 +1401,7 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 	const bool bRadial = InType == EDreamPaintType::Radial;
 	const bool bConic = InType == EDreamPaintType::Conic;
 	const bool bDiamond = InType == EDreamPaintType::Diamond;
+	const bool bReflected = InType == EDreamPaintType::Reflected;
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Type) || InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Stops))
 	{
 		// Kept in sight whatever the type: a type that paints nothing still holds its stops.
@@ -1412,13 +1413,13 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Angle))
 	{
-		// A Linear's direction, a Conic's start, a Diamond's turn.
-		return bLinear || bConic || bDiamond;
+		// A Linear's and a Reflected's direction, a Conic's start, a Radial ellipse's and a Diamond's turn.
+		return bLinear || bReflected || bConic || bRadial || bDiamond;
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Center))
 	{
 		// A Linear runs through the box's middle.
-		return bRadial || bConic || bDiamond;
+		return bRadial || bConic || bDiamond || bReflected;
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Shape))
 	{
@@ -1438,7 +1439,7 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 		|| InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Offset))
 	{
 		// Along the gradient's line: Corners has none.
-		return bLinear || bRadial || bConic || bDiamond;
+		return bLinear || bRadial || bConic || bDiamond || bReflected;
 	}
 	// A field this does not know is shown.
 	return true;
