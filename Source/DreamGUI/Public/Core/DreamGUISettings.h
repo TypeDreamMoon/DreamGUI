@@ -104,6 +104,23 @@ enum class EDreamUIInputConsumePolicy : uint8
 	WhenHandled,
 };
 
+/** One colour of the project's palette (UDreamGUISettings::ProjectSwatches). */
+USTRUCT()
+struct DREAMGUI_API FDreamUISwatch
+{
+	GENERATED_BODY()
+
+	FDreamUISwatch() = default;
+	FDreamUISwatch(const FString& InName, const FColor& InColor) : Name(InName), Color(InColor) {}
+
+	/** What the palette calls it. */
+	UPROPERTY(EditAnywhere, Category = "Palette")
+	FString Name;
+	/** sRGB with straight alpha, as a `.dui` writes a colour. */
+	UPROPERTY(EditAnywhere, Category = "Palette")
+	FColor Color = FColor::White;
+};
+
 /**
  * Every asset and class DreamGUI reaches for by itself, in one place a project can edit.
  *
@@ -283,6 +300,13 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Editor")
 	FString PresetControlFolder;
+
+	/**
+	 * The project's palette: colours the designer offers beside a colour, a click away, and adds to from there or from its
+	 * eyedropper. Kept with the project so that every author picks the same colours.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Palette")
+	TArray<FDreamUISwatch> ProjectSwatches;
 
 	// ---------------------------------------------------------------- Spawned actors
 

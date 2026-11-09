@@ -29,6 +29,8 @@
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 #include "Widget/SDreamGradientPreview.h"
+#include "Widget/SDreamUIEyedropper.h"
+#include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
@@ -928,6 +930,75 @@ namespace DreamGradientCustomizationLocal
 		];
 	}
 
+	/**
+	 * Under the stops, one eyedropper per stop, beside a block of the stop's colour: a pick from the designer viewport (or
+	 * the screen) becomes that stop's colour, keeping its alpha, as one undo step.
+	 */
+	TSharedRef<SWidget> MakeStopPicks(const TSharedRef<IPropertyHandle>& InGradientHandle)
+	{
+		const auto StopColor = [InGradientHandle](int32 InIndex, FColor& OutColor)
+		{
+			FDreamGradient Gradient;
+			if (!ReadFirstGradient(InGradientHandle, Gradient) || !Gradient.Stops.IsValidIndex(InIndex))
+			{
+				return false;
+			}
+			OutColor = Gradient.Stops[InIndex].Color;
+			return true;
+		};
+		TSharedRef<SHorizontalBox> Picks = SNew(SHorizontalBox);
+		for (int32 Index = 0; Index < FDreamGradient::MaxStops; ++Index)
+		{
+			Picks->AddSlot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 0.0f, 6.0f, 0.0f)
+			[
+				SNew(SHorizontalBox)
+				.Visibility_Lambda([StopColor, Index]()
+				{
+					FColor Unused;
+					return StopColor(Index, Unused) ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(SColorBlock)
+					.Size(FVector2D(12.0, 12.0))
+					.Color_Lambda([StopColor, Index]()
+					{
+						FColor Color = FColor::White;
+						StopColor(Index, Color);
+						return FLinearColor::FromSRGBColor(Color);
+					})
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(SDreamUIEyedropperButton)
+					.IsEnabled_Lambda([InGradientHandle]() { return CanEdit(InGradientHandle); })
+					.ToolTipText(FText::Format(LOCTEXT("PickStop_ToolTip", "Pick stop {0}'s colour from the designer viewport, or anywhere on the screen."), FText::AsNumber(Index + 1)))
+					.OnPicked_Lambda([InGradientHandle, Index](const FDreamUIPickedColor& InPicked)
+					{
+						DreamGradientDetails::EditGradients(InGradientHandle, LOCTEXT("PickStopColour", "Pick Gradient Stop Colour"),
+							[Index, &InPicked](FDreamGradient& InOutGradient)
+							{
+								if (InOutGradient.Stops.IsValidIndex(Index))
+								{
+									const uint8 Alpha = InOutGradient.Stops[Index].Color.A;
+									InOutGradient.Stops[Index].Color = InPicked.SRGB;
+									InOutGradient.Stops[Index].Color.A = Alpha;
+								}
+							});
+					})
+				]
+			];
+		}
+		return Picks;
+	}
+
 	void AddStopsRow(IDetailChildrenBuilder& ChildBuilder, const TSharedRef<IPropertyHandle>& InGradientHandle, const TSharedRef<IPropertyHandle>& InStopsHandle)
 	{
 		const TSharedRef<FStopsWriter> Writer = MakeShared<FStopsWriter>(InGradientHandle);
@@ -968,7 +1039,18 @@ namespace DreamGradientCustomizationLocal
 		.MinDesiredWidth(250.0f)
 		.MaxDesiredWidth(1000.0f)
 		[
-			GradientEditor
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				GradientEditor
+			]
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 2.0f, 0.0f, 2.0f)
+			[
+				MakeStopPicks(InGradientHandle)
+			]
 		];
 	}
 }
