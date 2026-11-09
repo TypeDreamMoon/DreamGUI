@@ -129,6 +129,14 @@ void UDreamPointerLight::Update(float DeltaTime)
 			const FVector2D Half(Widget->GetWidth() * 0.5, Widget->GetHeight() * 0.5);
 			bPresent = FMath::Abs(Target.X) <= Half.X + Radius && FMath::Abs(Target.Y) <= Half.Y + Radius;
 		}
+		// A world that is not playing has no pointer to follow -- the designer's preview is one -- so the light stands where it
+		// stands when it does not follow: an author sees what it lights, and moves it by its Light Position.
+		const UWorld* World = GetWorld();
+		if (!bPresent && World != nullptr && !World->IsGameWorld())
+		{
+			Target = LightPosition;
+			bPresent = true;
+		}
 	}
 	const float WantedIntensity = bPresent ? Intensity : 0.0f;
 	if (DeltaTime <= 0.0f || !bFollowPointer)
