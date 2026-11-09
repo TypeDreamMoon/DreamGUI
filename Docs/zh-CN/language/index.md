@@ -1,8 +1,3 @@
----
-title: "`.dui` 语言"
-description: "`.dui` 语言"
----
-
 <a id="the-dui-language"></a>
 
 # `.dui` 语言

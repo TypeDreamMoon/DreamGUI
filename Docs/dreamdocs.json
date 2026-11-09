@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "tool": "0.2.0",
+  "source": "en",
+  "targets": [
+    "zh-CN"
+  ],
+  "exclude": [
+    "Docs/DuiLanguage.md",
+    "Docs/FontsAndPackaging.md",
+    "Docs/Migration.md"
+  ],
+  "codes": [
+    "DUI\\d{4}"
+  ],
+  "keep": [],
+  "site": "TypeDreamMoon/gui.toolchain.64hz.cn"
+}

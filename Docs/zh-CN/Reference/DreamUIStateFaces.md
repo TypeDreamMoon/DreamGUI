@@ -1,8 +1,3 @@
----
-title: "FDreamUIStateFaces"
-description: "FDreamUIStateFaces"
----
-
 <a id="fdreamuistatefaces"></a>
 
 # FDreamUIStateFaces
@@ -41,3 +36,4 @@ description: "FDreamUIStateFaces"
 | `HoveredSound` | `TObjectPtr<USoundBase>` | 状态脸面 | 是 | 读 / 写 | 控件发出声音的三个时刻，作为一项 样式 决定：一次点击听起来应该像此 UI 中的其他点击，这与颜色所持的论点相同。 |
 | `PressedSound` | `TObjectPtr<USoundBase>` | 状态脸面 | 是 | 读 / 写 |  |
 | `ClickedSound` | `TObjectPtr<USoundBase>` | 状态脸面 | 是 | 读 / 写 |  |
+

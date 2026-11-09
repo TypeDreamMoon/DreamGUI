@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerGridPanel"
-description: "UDreamLayoutContainerGridPanel"
----
-
 <a id="udreamlayoutcontainergridpanel"></a>
 
 # UDreamLayoutContainerGridPanel
@@ -54,3 +49,4 @@ UMG 类中所有面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UGridPanel` | `SetColumnFill` | map | `SetColumnFillAt` | UMG 的版本接受一个索引和一个系数。朴素名称已经是 ColumnFill 的整个数组 BlueprintSetter，而且两个反射函数不能同名，因此针对单条轨道的形式带有后缀。 |
 | `UGridPanel` | `SetRowFill` | map | `SetRowFillAt` | 同 SetColumnFill。 |
 | `UGridPanel` | `ClearFill` | adopt | `ClearFill` |  |
+

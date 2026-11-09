@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerHorizontalBox"
-description: "UDreamLayoutContainerHorizontalBox"
----
-
 <a id="udreamlayoutcontainerhorizontalbox"></a>
 
 # UDreamLayoutContainerHorizontalBox
@@ -24,3 +19,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | UMG | 成员 | 状态 | 此处 | 说明 |
 |---|---|---|---|---|
 | `UHorizontalBox` | `AddChildToHorizontalBox` | map | `AddChild` | 此处一个插槽类意味着一个动词；AddChild 返回该插槽。 |
+

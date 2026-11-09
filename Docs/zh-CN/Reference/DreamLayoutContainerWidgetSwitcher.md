@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerWidgetSwitcher"
-description: "UDreamLayoutContainerWidgetSwitcher"
----
-
 <a id="udreamlayoutcontainerwidgetswitcher"></a>
 
 # UDreamLayoutContainerWidgetSwitcher
@@ -53,3 +48,4 @@ UMG 类中每一个面向蓝图的成员，以及它去了哪里。*adopt*：名
 | `UWidgetSwitcher` | `SetActiveWidget` | adopt | `SetActiveWidget` | 返回是否找到该控件；任何不是子项的内容都会被忽略，而不是静默切换到第 0 页。 |
 | `UWidgetSwitcher` | `GetWidgetAtIndex` | adopt | `GetWidgetAtIndex` |  |
 | `UWidgetSwitcher` | `GetActiveWidget` | adopt | `GetActiveWidget` |  |
+

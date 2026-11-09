@@ -1,8 +1,3 @@
----
-title: "FDreamUIImageBrush"
-description: "FDreamUIImageBrush"
----
-
 <a id="fdreamuiimagebrush"></a>
 
 # FDreamUIImageBrush
@@ -32,3 +27,4 @@ Dream UIImage Brush
 | `FillDirectionFlip` | `bool` | ImageBrush | 是 | 读取 / 写入 | 仅限 Filled：从另一端开始填充。 |
 | `CornerRadius` | `FVector4f` | ImageBrush | 是 | 读取 / 写入 | 仅限 RoundedBox：圆角半径，以像素为单位，X 为左上角，Y 为右上角，Z 为右下角，W 为左下角——从左上角开始按顺时针方向，这也是 CSS 和 UDreamRectBlock 使用的顺序。每个值都会被限制为较短边的一半，因此足够大的半径会形成胶囊形状，而不是报错。 |
 | `CornerSegments` | `int32` | ImageBrush | 是 | 读取 / 写入 | 仅限 RoundedBox：每条圆角弧线上的点数。越多越平滑，每个点消耗两个三角形。 |
+

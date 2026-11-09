@@ -1,8 +1,3 @@
----
-title: "UDreamMenuAnchor"
-description: "UDreamMenuAnchor"
----
-
 <a id="udreammenuanchor"></a>
 
 # UDreamMenuAnchor
@@ -106,3 +101,4 @@ UMG 类中所有面向蓝图的成员，以及它们去了哪里。*adopt*：相
 | `UMenuAnchor` | `GetMenuPosition` | adopt | `GetMenuPosition` | 弹出层在此锚点本地空间中的锚定位置；弹出层在被提升之前先相对于锚点放置，因此无论哪种方式该数值都成立。 |
 | `UMenuAnchor` | `HasOpenSubMenus` | adopt | `HasOpenSubMenus` | 遍历弹出层的子树（UDreamWidget::CollectChildrenWidgets）以查找此类的另一个已打开锚点，因为这里子菜单就是这样——没有应用程序范围的菜单栈可供查询。 |
 | `UMenuAnchor` | `SetStyle` | adopt | `SetStyle` | UMenuAnchor 没有样式结构体；这是该系列在运行时替换外观的写法。 |
+

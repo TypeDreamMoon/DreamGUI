@@ -1,8 +1,3 @@
----
-title: "UDreamUIWidgetGeometryLibrary"
-description: "UDreamUIWidgetGeometryLibrary"
----
-
 <a id="udreamuiwidgetgeometrylibrary"></a>
 
 # UDreamUIWidgetGeometryLibrary
@@ -64,3 +59,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `USlateBlueprintLibrary` | `ScreenToWidgetLocal` | adopt | `ScreenToWidgetLocal` | 没有 bIncludeWindowPosition 参数：此处屏幕位置和视口像素位置是同一空间，因为本框架在视口内绘制，从不针对桌面绘制。 |
 | `USlateBlueprintLibrary` | `ScreenToWidgetAbsolute` | adopt | `ScreenToWidgetAbsolute` | 恒等变换，原因见上一行。它存在是为了让移植的图表保持其形状，并让这种等价关系在某处被明确陈述。 |
 | `USlateBlueprintLibrary` | `ScreenToViewport` | adopt | `ScreenToViewport` |  |
+

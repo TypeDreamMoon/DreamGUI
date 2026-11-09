@@ -1,8 +1,3 @@
----
-title: "UDreamUIAnimationLibrary"
-description: "UDreamUIAnimationLibrary"
----
-
 <a id="udreamuianimationlibrary"></a>
 
 # UDreamUIAnimationLibrary
@@ -24,3 +19,4 @@ FDreamUIAnimationHandle 的蓝图侧辅助函数，结构体本身无法承载�
 | `bool EqualAnimationHandles(FDreamUIAnimationHandle A, FDreamUIAnimationHandle B)` | 纯函数 | 相等（动画句柄） |
 | `UMovieSceneSequence* GetAnimationFromHandle(FDreamUIAnimationHandle Handle)` | 纯函数 | 句柄对应实例播放的动画；实例销毁后返回 null。 |
 | `bool IsAnimationHandleValid(FDreamUIAnimationHandle Handle)` | 纯函数 | 当句柄所指向的实例仍然存活（播放中或暂停）时为 true。 |
+

@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerScrollBox"
-description: "UDreamLayoutContainerScrollBox"
----
-
 <a id="udreamlayoutcontainerscrollbox"></a>
 
 # UDreamLayoutContainerScrollBox
@@ -127,3 +122,4 @@ UMG 滚动框
 | 事件 | 签名 | 说明 |
 |---|---|---|
 | `OnUserScrolled` | `void DreamScrollBoxUserScrolledEvent__DelegateSignature(float CurrentOffset)` |  |
+

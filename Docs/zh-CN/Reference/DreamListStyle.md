@@ -1,8 +1,3 @@
----
-title: "FDreamListStyle"
-description: "FDreamListStyle"
----
-
 <a id="fdreamliststyle"></a>
 
 # FDreamListStyle
@@ -39,3 +34,4 @@ Declared in `Public/Controls/DreamControlStyles.h`.
 | `RowBrush` | `FDreamUIFaceBrush` | List Style | yes | read / write |  |
 | `StateFaces` | `FDreamUIStateFaces` | List Style | yes | read / write |  |
 | `Bar` | `FDreamScrollBarStyle` | List Style | yes | read / write |  |
+

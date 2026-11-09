@@ -1,8 +1,3 @@
----
-title: "UDreamTreeView"
-description: "UDreamTreeView"
----
-
 <a id="udreamtreeview"></a>
 
 # UDreamTreeView
@@ -17,6 +12,8 @@ description: "UDreamTreeView"
 
 树本质上就是一个带缩进的列表，而这个类正是被写成一个比 UDreamListView 恰好多出这些的东西——两者都派生自 UDreamListViewBase，后者拥有视口、滚动列、行模板和行；而本类则为每个条目增加一个深度、每行一个缩进，以及一个可展开和折叠的折叠箭头。FDreamTreeViewStyle 的构建方式也是如此：它携带一个完整的 FDreamListStyle 而不是重新陈述其字段，因此为项目的列表设置样式也就为它的树的行设置了样式。
 
+<a id="the-source-is-flat-and-on-purpose"></a>
+
 源是扁平的，而且是有意为之
 ----------------------------------
 条目（或 ItemObjects）加上 ItemDepths：树的先序遍历，每个条目旁边带着它的深度。这正是 UUITreeView 在能够布局一行之前将其源展平成的那种形状（Items + ItemDepths，每当展开状态变化时重建），而且它是控件能从设计者那里接受的唯一形状——嵌套的源需要在条目类上有一个接口，而那是 .dui 作者无法签署、细节面板也无法绘制的契约。
@@ -24,6 +21,8 @@ description: "UDreamTreeView"
 扁平形式除了可作者化之外还带来什么：一行的子树正是紧随其后、深度更大的那段连续行，因此折叠是一次跳过而不是一次图遍历，而且永远不需要询问任何条目它的子项是谁。
 
 最初一切都是展开的——作者编写的列表就是你看到的——而 CollapsedItems 是例外集合。选择保持为对源的索引，因此它能挺过一次折叠。
+
+<a id="ongetitemchildren-builds-the-flat-source-it-does-not-replace-it"></a>
 
 OnGetItemChildren 构建扁平源；它不会替换扁平源
 ----------------------------------------------------------------
@@ -34,6 +33,8 @@ UMG 的 TreeView 向每个条目询问其子项并遍历答案，这个类也是
 这个决定的代价是被陈述出来而不是被隐藏：无界或惰性加载的层次结构无法用这种方式表达，因为遍历会访问每个节点一次。那么大的树反而需要回收栈（UUITreeView），这正是那个类保留的原因。
 
 循环是可以存活的：一个已经访问过的条目不会被再次访问，因此图会产生一棵树而不是卡死。
+
+<a id="left-and-right-are-the-trees"></a>
 
 左和右是树的
 -----------------------------
@@ -101,3 +102,4 @@ UMG 类中所有面向蓝图的成员，以及它们去了哪里。*adopt*：名
 | `UTreeView` | `CollapseAll` | adopt | `CollapseAll` |  |
 | `UTreeView` | `BP_OnGetItemChildren` | map | `OnGetItemChildren` | FDreamTreeGetItemChildren，带有 UMG 的签名。像 UMG 的一样是单播：这是一个问题，而一个问题有两个答案是任何东西都无法解决的歧义。未绑定时，遍历回退到 IUITreeViewItem::GetTreeChildren。 |
 | `UTreeView` | `BP_OnItemExpansionChanged` | map | `OnItemExpansionChanged` | 携带源索引和新状态。在可见行重建之后触发，因此统计行的处理器看到的是用户刚刚生成的树。 |
+

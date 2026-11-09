@@ -1,8 +1,3 @@
----
-title: "UDreamRichTextBlock"
-description: "UDreamRichTextBlock"
----
-
 <a id="udreamrichtextblock"></a>
 
 # UDreamRichTextBlock
@@ -16,6 +11,8 @@ description: "UDreamRichTextBlock"
 一种层次结构由代码而非资源定义的富文本块：一个读取标记的段落。
 
 UMG 的 RichTextBlock 针对装饰器集合解析 `<Tag>text</Tag>`；本库的文本栈自诞生起就有着相同的理念——UDreamText::bRichText 加上两个数据资源，一个将标签映射到样式，一个将标签映射到图像——而缺失的是一个把它开启的控件。这就是这个类的全部：一个设置了标志位的文本节点、两个暴露出来的资源，以及像其他所有控件一样来自项目样式表的颜色和大小。
+
+<a id="why-it-is-a-control-and-not-a-flag-on-a-text-node"></a>
 
 为什么它是控件而不是文本节点上的标志位
 -------------------------------------------------
@@ -128,3 +125,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `URichTextBlock` | `SetTextStyleSet` | map | `SetCustomStyleData` | 重新解析，因为哪个标签意味着什么是在解析时读取的，而不是之后。 |
 | `URichTextBlock` | `GetDecoratorByClass` | reject |  | 没有可返回的装饰器对象。FRichTextParser 会直接针对两个数据资产评估每个标签，并将结果交给文本渲染器；该路径中没有任何东西是可以交给调用者、让调用者持有或重新配置的对象。这里的扩展方式是通过编写数据资产完成的，而不是通过子类化装饰器。 |
 | `URichTextBlock` | `RefreshTextLayout` | adopt | `RefreshTextLayout` | 将同一段文本再次送入解析器，这正是拾取自上次解析以来被就地编辑的样式或图像资产的方式。 |
+

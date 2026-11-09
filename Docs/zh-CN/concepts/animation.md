@@ -1,6 +1,6 @@
 ---
-title: "动"
-description: "让物体运动的三种方式——DreamTween 模块提供的补间（针对面板内控件的 RenderOffsetTo、RenderScaleTo、RenderAngleTo 和 RenderTranslationTo，EDreamTweenEase，DreamTween.MaxStepSeconds），控件动画（UDreamWidgetAnimation 和 Sequencer），以及 .dui 时间轴。"
+title: 动
+description: 让物体运动的三种方式——DreamTween 模块提供的补间（针对面板内控件的 RenderOffsetTo、RenderScaleTo、RenderAngleTo 和 RenderTranslationTo，EDreamTweenEase，DreamTween.MaxStepSeconds），控件动画（UDreamWidgetAnimation 和 Sequencer），以及 .dui 时间轴。
 ---
 
 在 DreamGUI 中让物体运动有三种方式，每种适用于不同类型的任务：
@@ -15,23 +15,18 @@ description: "让物体运动的三种方式——DreamTween 模块提供的补�
 
 ## 补间
 
-`DreamTween` 是一个独立的底层模块。每个 `*To` 函数都返回一个 `UDreamTweener`，你可以链式调用：
-`SetEase`、`SetDelay`、`SetLoop`（`Once`、`Restart`、`Yoyo`、`Incremental`；计数为 `-1` 表示无限）、`SetTimeScale`、
-`SetAutoKill`，以及回调 `OnStart`、`OnUpdate`、`OnCycleStart`、`OnCycleComplete`、`OnComplete` 和 `OnKill`；
-控制它则使用 `Pause`、`Resume`、`Restart`、`Goto`、`ForceComplete` 和 `Kill`。
+`DreamTween` 是一个独立的底层模块。每个 `*To` 函数都返回一个 `UDreamTweener`，你可以链式调用： `SetEase`、`SetDelay`、`SetLoop`（`Once`、`Restart`、`Yoyo`、`Incremental`；计数为 `-1` 表示无限）、`SetTimeScale`、 `SetAutoKill`，以及回调 `OnStart`、`OnUpdate`、`OnCycleStart`、`OnCycleComplete`、`OnComplete` 和 `OnKill`；控制它则使用 `Pause`、`Resume`、`Restart`、`Goto`、`ForceComplete` 和 `Kill`。
 
 控件、视觉元素和行为都带有自己的补间：
 
 | 对象 | 补间 |
 | --- | --- |
 | `UDreamWidget` | `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo`、`RenderOpacityTo`、`LocalPositionTo`、`LocalScaleTo`、`LocalRotatorTo`、`WorldPositionTo`……以及下一节的渲染变换补间 |
-| `UDreamVisual` | `ColorTo`、`AlphaTo` |
+| `UDreamVisual` | `ColorTo`, `AlphaTo` |
 | `UDreamTextPaintLibrary` | `PaintPhaseTo`、`PaintAngleTo`、`PlayShimmer`（参见[文本](text.md)） |
 | `UDreamTweenBPLibrary` | 通用的 `FloatTo`、`Vector3To`、`ColorTo`、`MaterialScalarParameterTo`、`DelayCall`、`SpringFloat`……以及用于 UMG 控件的 `UMG_*` 补间 |
 
-缓动是 `EDreamTweenEase` 中的一个**名称**，整个插件共用一份词表：`Linear`；`In`、`Out` 和 `InOut`
-搭配 `Quad`、`Cubic`、`Quart`、`Sine`、`Expo`、`Circ`、`Elastic`、`Back` 和 `Bounce`；以及 `CurveFloat`，它遵循一条
-曲线（`SetCurveFloat`）。控件补间默认使用 `OutCubic`，时长为 0.5 秒。
+缓动是 `EDreamTweenEase` 中的一个**名称**，整个插件共用一份词表：`Linear`；`In`、`Out` 和 `InOut` 搭配 `Quad`、`Cubic`、`Quart`、`Sine`、`Expo`、`Circ`、`Elastic`、`Back` 和 `Bounce`；以及 `CurveFloat`，它遵循一条曲线（`SetCurveFloat`）。控件补间默认使用 `OutCubic`，时长为 0.5 秒。
 
 有几条规则容易让人踩坑：
 
@@ -43,20 +38,15 @@ description: "让物体运动的三种方式——DreamTween 模块提供的补�
 
 ### 暂停与时间膨胀
 
-控件补间遵循项目设置：屏幕上的 UI 遵循 `bScreenSpaceUIAffectByGamePause` 和
-`bScreenSpaceUIAffectByTimeDilation`（两者默认关闭），其他所有内容遵循 `bWorldSpaceUIAffectByGamePause` 和
-`bWorldSpaceUIAffectByTimeDilation`（两者默认开启）。布局动画和嵌入的 UMG 控件遵循同样的规则。
+控件补间遵循项目设置：屏幕上的 UI 遵循 `bScreenSpaceUIAffectByGamePause` 和 `bScreenSpaceUIAffectByTimeDilation`（两者默认关闭），其他所有内容遵循 `bWorldSpaceUIAffectByGamePause` 和 `bWorldSpaceUIAffectByTimeDilation`（两者默认开启）。布局动画和嵌入的 UMG 控件遵循同样的规则。
 
-`DreamTween.MaxStepSeconds`（一个控制台变量；`0` 为默认值，表示关闭）限制了一帧能推进补间的最大步长：
-超过该上限的一帧——例如屏幕正在加载资源、新文本的首次绘制——只会按上限推进由世界 tick 驱动的补间。
-在此类卡顿之前刚开始的入场动画，会从它原来的位置继续播放，而不是直接跳到结尾。手动 tick 永远不会被限制。
+`DreamTween.MaxStepSeconds`（一个控制台变量；`0` 为默认值，表示关闭）限制了一帧能推进补间的最大步长：超过该上限的一帧——例如屏幕正在加载资源、新文本的首次绘制——只会按上限推进由世界 tick 驱动的补间。在此类卡顿之前刚开始的入场动画，会从它原来的位置继续播放，而不是直接跳到结尾。手动 tick 永远不会被限制。
 
 <a id="widgets-inside-panels-animate-the-render-transform"></a>
 
 ## 面板内的控件：为渲染变换做动画
 
-面板会在它的下一轮中写回子控件的锚定位置和尺寸，因此对面板所放置的控件使用 `AnchoredPositionTo` 或
-`LocalPositionTo` 只会与布局轮流生效。应该运动的是**被绘制的内容**，而不是布局：
+面板会在它的下一轮中写回子控件的锚定位置和尺寸，因此对面板所放置的控件使用 `AnchoredPositionTo` 或 `LocalPositionTo` 只会与布局轮流生效。应该运动的是**被绘制的内容**，而不是布局：
 
 | 补间 | 移动内容 |
 | --- | --- |
@@ -65,8 +55,7 @@ description: "让物体运动的三种方式——DreamTween 模块提供的补�
 | `RenderScaleTo(FVector)` | 围绕 `RenderTransformPivot` 缩放 |
 | `RenderAngleTo(float)` | 平面内角度（`SetRenderTransformAngle`） |
 
-它们移动、缩放和旋转的是被绘制的内容，而绝不会影响布局，因此相邻元素不会为其让出空间。渲染变换
-持续变化的控件会被其画布设为渲染层，并在 GPU 上移动（参见[渲染](rendering.md)）。
+它们移动、缩放和旋转的是被绘制的内容，而绝不会影响布局，因此相邻元素不会为其让出空间。渲染变换持续变化的控件会被其画布设为渲染层，并在 GPU 上移动（参见[渲染](rendering.md)）。
 
 ```cpp
 // Card sits in a VerticalBox: move what is drawn, not its slot
@@ -99,9 +88,7 @@ Icon->RenderScaleTo(FVector(1.15, 1.15, 1.0), 0.6f, 0.0f, EDreamTweenEase::InOut
 | 四个事件 | — | `OnStart` / `OnUpdateProgress` / `OnComplete` / `OnCycleComplete` |
 | `bAffectByGamePause` / `bAffectByTimeDilation` | **false** | **与控件自身补间相反**（UI 通常不会被暂停拖住） |
 
-入口点是 `Start` / `Stop` / `GetTweener`。共有 **10** 个类型化子类：`Float`、`Double`、`Color`、`Int`、
-`LinearColor`、`Quaternion`、`Rotator`、`Vector2`、`Vector3`、`Vector4`——每个都增加了一对 `From` / `To` 以及一个
-`OnUpdateValue(interpolated value)`。
+入口点是 `Start` / `Stop` / `GetTweener`。共有 **10** 个类型化子类：`Float`、`Double`、`Color`、`Int`、 `LinearColor`、`Quaternion`、`Rotator`、`Vector2`、`Vector3`、`Vector4`——每个都增加了一对 `From` / `To` 以及一个 `OnUpdateValue(interpolated value)`。
 
 `LoopCount` 的默认值从 `-1` 改为 **1** 是有意为之：如果默认无限，那么作者一旦选择循环类型，补间就**永不结束**——它永远不会离开管理器，会让播放器以及其背后的控件保持存活，等待它的序列组件也永远无法进入下一步。
 
@@ -116,10 +103,7 @@ Icon->RenderScaleTo(FVector(1.15, 1.15, 1.0), 0.6f, 0.0f, EDreamTweenEase::InOut
 
 ### 二十二个补间器，其中十九个不是公共 API
 
-公开的门面是 `Public/DreamTweener.h` 中的**基类 `UDreamTweener`**。总共有 **22** 个：**1 个基类 + 19 个
-具体实现 + 1 个 `Spring` + 1 个 `Sequence`**。按值划分，具体实现为 `Float`、`Double`、`Integer`、`Color`、
-`LinearColor`、`Vector`、`Vector2D`、`Vector4`、`Quaternion`、`Rotator`、`RotationEuler`、`RotationQuat`、`Position`、
-`MaterialScalar`、`MaterialVector`，外加无值的 `Frame`、`Callback`、`Update` 和 `Virtual`。
+公开的门面是 `Public/DreamTweener.h` 中的**基类 `UDreamTweener`**。总共有 **22** 个：**1 个基类 + 19 个具体实现 + 1 个 `Spring` + 1 个 `Sequence`**。按值划分，具体实现为 `Float`、`Double`、`Integer`、`Color`、 `LinearColor`、`Vector`、`Vector2D`、`Vector4`、`Quaternion`、`Rotator`、`RotationEuler`、`RotationQuat`、`Position`、 `MaterialScalar`、`MaterialVector`，外加无值的 `Frame`、`Callback`、`Update` 和 `Virtual`。
 
 ⚠️ **那 19 个具体补间的头文件在 `Private/Tweener/` 下** —— 它们**不是公共 API**：别把它们当作可以继承的类，也别直接 `#include`。公共门面只有基类 `UDreamTweener` 与 `UDreamTweenBPLibrary`。
 

@@ -1,8 +1,3 @@
----
-title: "FDreamUIWidgetGeometry"
-description: "FDreamUIWidgetGeometry"
----
-
 <a id="fdreamuiwidgetgeometry"></a>
 
 # FDreamUIWidgetGeometry
@@ -28,8 +23,9 @@ FGeometry 在这里派不上用场：它描述的是 SWidget 在 Slate 窗口中
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
-| `Widget` | `TWeakObjectPtr<UDreamWidget>` | DreamGUI|Geometry | - | read only | 读取来源的控件。其他所有内容都是该时刻对它的快照。 |
-| `LocalSize` | `FVector2D` | DreamGUI|Geometry | - | read only | 控件以其自身单位表示的大小——即 UMG 的 GetLocalSize。 |
-| `AbsolutePosition` | `FVector2D` | DreamGUI|Geometry | - | read only | 以视口像素表示的控件矩形角。仅在 bHasAbsolute 为真时有意义。 |
-| `AbsoluteSize` | `FVector2D` | DreamGUI|Geometry | - | read only | 以视口像素表示的控件大小。仅在 bHasAbsolute 为真时有意义。 |
-| `bHasAbsolute` | `bool` | DreamGUI|Geometry | - | read only | 当该矩形无法放置在视口中时为 false。参见类注释。 |
+| `Widget` | `TWeakObjectPtr<UDreamWidget>` | DreamGUI|Geometry | - | read only | The widget this was read from. Everything else is a snapshot of it at that moment. |
+| `LocalSize` | `FVector2D` | DreamGUI|Geometry | - | read only | The widget's size in its own units -- UMG's GetLocalSize. |
+| `AbsolutePosition` | `FVector2D` | DreamGUI|Geometry | - | read only | The widget's rect corner in viewport pixels. Only meaningful while bHasAbsolute. |
+| `AbsoluteSize` | `FVector2D` | DreamGUI|Geometry | - | read only | The widget's size in viewport pixels. Only meaningful while bHasAbsolute. |
+| `bHasAbsolute` | `bool` | DreamGUI|Geometry | - | read only | False when this rect cannot be placed in the viewport. See the class comment. |
+

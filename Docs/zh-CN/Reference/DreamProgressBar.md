@@ -1,8 +1,3 @@
----
-title: "UDreamProgressBar"
-description: "UDreamProgressBar"
----
-
 <a id="udreamprogressbar"></a>
 
 # UDreamProgressBar
@@ -85,3 +80,4 @@ UMG 类中每一个面向蓝图的成员，以及它们去了哪里。*adopt*：
 | `UProgressBar` | `SetIsMarquee` | adopt | `SetIsMarquee` |  |
 | `UProgressBar` | `SetFillColorAndOpacity` | adopt | `SetFillColorAndOpacity` |  |
 | `UProgressBar` | `SetStyle` | adopt | `SetStyle` | 在 UProgressBar 上并不是 UFUNCTION（其 Setter 元数据给它起了名）；这里加上它，是为了能在运行时替换外观。 |
+

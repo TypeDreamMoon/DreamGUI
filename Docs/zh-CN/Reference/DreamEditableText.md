@@ -1,8 +1,3 @@
----
-title: "UDreamEditableText"
-description: "UDreamEditableText"
----
-
 <a id="udreameditabletext"></a>
 
 # UDreamEditableText
@@ -15,22 +10,11 @@ description: "UDreamEditableText"
 
 一个没有边框的文本字段：即 UMG 的 EditableText，而 Native.TextInput 则是它的 EditableTextBox。
 
-UMG 为一个字段提供了四个类——EditableText、EditableTextBox、MultiLineEditableText、
-MultiLineEditableTextBox——而它划分它们所依据的两个维度是“它是否绘制边框”以及“它
-是否接受多行”。本库早已将第二个维度作为属性提供
-（UDreamTextInput::bMultiLine），所以真正缺失的只有第一个：一个在文本后方
-不绘制任何内容的字段。
+UMG 为一个字段提供了四个类——EditableText、EditableTextBox、MultiLineEditableText、 MultiLineEditableTextBox——而它划分它们所依据的两个维度是“它是否绘制边框”以及“它是否接受多行”。本库早已将第二个维度作为属性提供（UDreamTextInput::bMultiLine），所以真正缺失的只有第一个：一个在文本后方不绘制任何内容的字段。
 
-所以这就是一个不绘制外观的 UDreamTextInput，仅此而已。每一个属性、事件、
-验证器和按键规则都保持原样，这正是重点所在：Native.TextInput 的含义
-没有改变，想要带边框字段的作者只需像以前一样书写即可。
+所以这就是一个不绘制外观的 UDreamTextInput，仅此而已。每一个属性、事件、验证器和按键规则都保持原样，这正是重点所在：Native.TextInput 的含义没有改变，想要带边框字段的作者只需像以前一样书写即可。
 
-“没有边框”的确切含义，因为含糊其辞的回答正是控件最终变成
-一个悬停时仍会着色的不可见边框的原因：外观的笔刷被清空，并且行为的
-全部五种状态颜色都被推为透明——因此没有静止填充、没有悬停着色，也
-没有聚焦着色。光标和选区高亮才是显示该字段处于活动状态的东西，这
-也是 UMG 的 EditableText 所做的。样式的内边距、字体、文本颜色和光标颜色
-仍然全部适用：无边框字段仍然是一个有样式的字段。
+“没有边框”的确切含义，因为含糊其辞的回答正是控件最终变成一个悬停时仍会着色的不可见边框的原因：外观的笔刷被清空，并且行为的全部五种状态颜色都被推为透明——因此没有静止填充、没有悬停着色，也没有聚焦着色。光标和选区高亮才是显示该字段处于活动状态的东西，这也是 UMG 的 EditableText 所做的。样式的内边距、字体、文本颜色和光标颜色仍然全部适用：无边框字段仍然是一个有样式的字段。
 
 <a id="compared-with-umg"></a>
 
@@ -79,3 +63,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UEditableText` | `EnableIntegratedKeyboard` | reject |  | Slate 的集成键盘是一个视口内键盘控件，由平台层为游戏主机替换进来。本库在世界空间中绘制自己的 UI，没有这样的控件，也没有提供它的平台途径。 |
 | `UEditableText` | `FontFacesLoadingPaintPolicy` | reject |  | 没有需要绕过的异步字体外观加载：本库从自己的字体数据资产进行渲染。 |
 | `UEditableText` | `OnAllFontFacesFinishLoading` | reject |  | 原因与 FontFacesLoadingPaintPolicy 相同。 |
+

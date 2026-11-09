@@ -1,8 +1,3 @@
----
-title: "UDreamUIBPLibrary"
-description: "UDreamUIBPLibrary"
----
-
 <a id="udreamuibplibrary"></a>
 
 # UDreamUIBPLibrary
@@ -131,3 +126,4 @@ Dream UIBPLibrary
 | `void K2_DreamUICompRef_GetComponent(FDreamUIComponentReference InDreamUICompRef, UActorComponent*& OutResult)` | pure | 获取 |
 | `void PrepareDuplicateData(UDreamWidget* Target, FDreamUIDuplicateDataContainer& Data)` | callable | 当您需要多次复制同一 actor 时，DuplicateActor 节点的优化版本。在 DuplicateActorWithPreparedData 节点中使用结果数据。 |
 | `void RemoveFromViewport(UObject* WorldContextObject, UDreamWidget* InRoot)` | callable | 销毁已跟踪的视口页面，并将其从屏幕注册表中移除。 |
+

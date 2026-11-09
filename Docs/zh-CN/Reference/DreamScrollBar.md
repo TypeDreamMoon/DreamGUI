@@ -1,8 +1,3 @@
----
-title: "UDreamScrollBar"
-description: "UDreamScrollBar"
----
-
 <a id="udreamscrollbar"></a>
 
 # UDreamScrollBar
@@ -15,34 +10,19 @@ description: "UDreamScrollBar"
 
 一个层级结构由代码而非资源定义的滚动条。
 
-两个节点：一条轨道，以及轨道内部的一个滑块。BP_HorizontalScrollbar 和 BP_VerticalScrollbar 是两个
-资源，因为资源无法根据属性分支；而这是一个控件，因为代码可以，并且
-Direction 是它们唯一意见不一致的地方。滑块的父级就是轨道，行为正是以轨道为基准测量
-值的——滚动条的滑块在整个轨道上滑动（不像滑块控件的滑块，它会被自身尺寸内缩），因为它的长度本身就会缩短行程。
+两个节点：一条轨道，以及轨道内部的一个滑块。BP_HorizontalScrollbar 和 BP_VerticalScrollbar 是两个资源，因为资源无法根据属性分支；而这是一个控件，因为代码可以，并且 Direction 是它们唯一意见不一致的地方。滑块的父级就是轨道，行为正是以轨道为基准测量值的——滚动条的滑块在整个轨道上滑动（不像滑块控件的滑块，它会被自身尺寸内缩），因为它的长度本身就会缩短行程。
+
+<a id="what-this-class-stopped-doing"></a>
 
 本类不再做的事
 -----------------------------
-它过去携带一个 UUIScrollbar 子类并自行重新放置滑块，因为该组件
-写入比例锚点，并且除了细节面板之外不向任何对象暴露 Handle 或 DirectionType。
-这三项现在都在源头修复了：UUIScrollbar 以绝对
-几何位置放置滑块，通过公开的 setter 接受这两种写入，并且拥有最小长度下限，
-连同它必须与之保持一致的拖拽缩放。这里剩下的就是一个控件该做的事——样式、
-设计师和 `<->` 绑定可以访问的属性，以及到滚动视图的链接。
+它过去携带一个 UUIScrollbar 子类并自行重新放置滑块，因为该组件写入比例锚点，并且除了细节面板之外不向任何对象暴露 Handle 或 DirectionType。这三项现在都在源头修复了：UUIScrollbar 以绝对几何位置放置滑块，通过公开的 setter 接受这两种写入，并且拥有最小长度下限，连同它必须与之保持一致的拖拽缩放。这里剩下的就是一个控件该做的事——样式、设计师和 `<->` 绑定可以访问的属性，以及到滚动视图的链接。
 
-没有滚动视图的滚动条本身就是一个值控件：它的值是一个 0 到 1 的位置，
-HandleSize 是滑块覆盖轨道的比例。把它指向一个 UUIScrollView，这两个
-数字就都变成视图的了——进度输入，进度输出——独立滚动条就是以这种方式驱动
-滚动框的。
+没有滚动视图的滚动条本身就是一个值控件：它的值是一个 0 到 1 的位置， HandleSize 是滑块覆盖轨道的比例。把它指向一个 UUIScrollView，这两个数字就都变成视图的了——进度输入，进度输出——独立滚动条就是以这种方式驱动滚动框的。
 
-在滑块之外点击轨道会把滑块的中心放到点击轨道的位置，并钳制到
-两端，从此按下并拖拽就继续下去——这是 SScrollBar 的行为。在这次与 5.8 源码核对之前，
-点击轨道会向指针方向翻过一个滑块长度（Unity 的
-行为），所以现有界面现在会跳到它们过去逐步移动的位置。
+在滑块之外点击轨道会把滑块的中心放到点击轨道的位置，并钳制到两端，从此按下并拖拽就继续下去——这是 SScrollBar 的行为。在这次与 5.8 源码核对之前，点击轨道会向指针方向翻过一个滑块长度（Unity 的行为），所以现有界面现在会跳到它们过去逐步移动的位置。
 
-轨道和箭头都不是手柄导航落点或 Tab 停靠点，这也是
-SScrollBar 的行为方式：轨道的 UUIScrollbar 初始时 bCanNavigateHere 为关闭（见其类注释），
-而箭头在 WireParts 中也同样设置。按键和摇杆改为通过
-聚焦的控件滚动滚动条所跟随的内容。
+轨道和箭头都不是手柄导航落点或 Tab 停靠点，这也是 SScrollBar 的行为方式：轨道的 UUIScrollbar 初始时 bCanNavigateHere 为关闭（见其类注释），而箭头在 WireParts 中也同样设置。按键和摇杆改为通过聚焦的控件滚动滚动条所跟随的内容。
 
 <a id="properties"></a>
 
@@ -130,3 +110,4 @@ UMG 类中每个面向蓝图的成员，以及它去了哪里。*adopt*：同名
 | `UScrollBar` | `Thickness` | map | `FDreamScrollBarStyle::Thickness` | 在样式中，因为它就是绘制滚动条的来源。一个 float：滚动条沿自身轴只有一个粗细，而它的长度是它所滚动的任何内容。 |
 | `UScrollBar` | `Padding` | map | `FDreamScrollBarStyle::BarPadding` | 新样式字段，默认 FMargin(0) = 每个滚动条一直以来绘制的结果。作用于滚动条的矩形，而不是轨道的矩形，因此轨道仍然能够到达滚动条所跨越的两端。 |
 | `UScrollBar` | `SetState` | adopt | `SetState` | 一次调用同时设置位置和可见比例，这正是滚动视图实际推送的形式：逐个写入它们会让滑块为一次变更布局两次。指针只有在 AcceptedMouseButtons 中的鼠标按键下才会移动位置——默认只有左键，这是 SScrollBar 的规则（它的 OnMouseButtonDown 测试 EKeys::LeftMouseButton）；AcceptedMouseButtons 是此控件自己的旋钮，就像 UDreamButton 上那样，而触摸始终算数。在滑块之外的轨道上点击会将滑块的中心放在那里，就像 SScrollBar 的 ExecuteOnUserScrolled 那样，而不是翻页。 |
+

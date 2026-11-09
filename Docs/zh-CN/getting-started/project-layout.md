@@ -1,16 +1,13 @@
 ---
-title: "项目里的布局"
-description: "运行时模块的分层与各自装什么、C++ 要在 Build.cs 里加哪个模块、.dui 文件放在哪里、插件目录里每个文件夹是什么，以及日志类别。"
+title: 项目里的布局
+description: 运行时模块的分层与各自装什么、C++ 要在 Build.cs 里加哪个模块、.dui 文件放在哪里、插件目录里每个文件夹是什么，以及日志类别。
 ---
 
 <a id="module-layers"></a>
 
 ## 模块分层
 
-运行时按层拆成几个模块。一个模块只依赖它下面各层的模块，从不依赖同层的兄弟；反方向的 include 会让
-`Tools/Tests/static_checks.py` 失败（规则 `layering`）。
-UI 的六个运行时模块都在 `PostConfigInit` 加载，
-所以它们的类型和 `.dui` 标签在任何东西编译之前就已就位。
+运行时按层拆成几个模块。一个模块只依赖它下面各层的模块，从不依赖同层的兄弟；反方向的 include 会让 `Tools/Tests/static_checks.py` 失败（规则 `layering`）。 UI 的六个运行时模块都在 `PostConfigInit` 加载，所以它们的类型和 `.dui` 标签在任何东西编译之前就已就位。
 
 ```text
 L4   DreamGUISamples
@@ -59,9 +56,7 @@ PublicDependencyModuleNames.AddRange(new string[] { "DreamGUI", "DreamGUIInput",
 
 ## .dui 文件放在哪
 
-放在一个 `DUI/` 目录下：项目自己的（`<Project>/DUI/`），或者某个已启用插件的（`<Plugin>/DUI/`）。
-**不放在 `Content/` 下** —— `.dui` 是源码，不是资产：放进 `Content/` 意味着烹饪器要去走它，内容浏览器里多出一个打不开的文件，
-而一个发布控件类的插件得把源码混进烹饪内容里才能被找到。
+放在一个 `DUI/` 目录下：项目自己的（`<Project>/DUI/`），或者某个已启用插件的（`<Plugin>/DUI/`）。**不放在 `Content/` 下** —— `.dui` 是源码，不是资产：放进 `Content/` 意味着烹饪器要去走它，内容浏览器里多出一个打不开的文件，而一个发布控件类的插件得把源码混进烹饪内容里才能被找到。
 
 指向另一个文件的路径 —— 蓝图的 Source File，或者 `use` 后面那个 —— 有三种写法：
 
@@ -71,9 +66,7 @@ PublicDependencyModuleNames.AddRange(new string[] { "DreamGUI", "DreamGUIInput",
 | `Plugin.MyPlugin:Panels/Settings.dui` | 那个插件的 `DUI/` 目录 |
 | `D:/Work/Proj/DUI/Panels/Settings.dui` | 绝对路径，按原样使用 |
 
-裸的相对路径意思是"哪个根有它就是哪个"，方便，但两个根里有同一个相对路径时就有歧义 —— 这正是插件限定写法存在的原因。
-在设计器里选文件时，选到的绝对路径会被转回可移植的写法：项目根下的存成相对路径，插件根下的存成 `Plugin.X:…`，
-都不在的才原样存成绝对路径（拒收会让选择框悄悄丢掉你的选择）。
+裸的相对路径意思是"哪个根有它就是哪个"，方便，但两个根里有同一个相对路径时就有歧义 —— 这正是插件限定写法存在的原因。在设计器里选文件时，选到的绝对路径会被转回可移植的写法：项目根下的存成相对路径，插件根下的存成 `Plugin.X:…`，都不在的才原样存成绝对路径（拒收会让选择框悄悄丢掉你的选择）。
 
 ```dui
 use "Settings/SettingsLibrary.dui"
@@ -87,9 +80,7 @@ VerticalBox Root {
 }
 ```
 
-编辑器还会往项目的 `DUI/` 里写两个文件：`.dui-symbols.json`（启动时和执行 `DreamUI.ExportSymbols` 时重写，
-是 VS Code 扩展做补全用的符号表），以及 `DreamUI.code-workspace`
-（*Tools ▸ Open DreamUI Workspace (VSCode)* 按当前的源码根重写并打开）。
+编辑器还会往项目的 `DUI/` 里写两个文件：`.dui-symbols.json`（启动时和执行 `DreamUI.ExportSymbols` 时重写，是 VS Code 扩展做补全用的符号表），以及 `DreamUI.code-workspace` （*Tools ▸ Open DreamUI Workspace (VSCode)* 按当前的源码根重写并打开）。
 
 一个用了 DreamGUI 的项目大概是这样：
 
@@ -140,35 +131,26 @@ DreamGUI/
 
 从 1.0.0 起插件不再带 CoreRedirects，按旧名字保存的资产怎么重存一次，见[升级](../guides/upgrading.md#from-21-to-100)。
 
-- **`Game.ini`** —— 把 `/DreamGUI` 加进 `DirectoriesToAlwaysCook`。插件自己伸手去拿的资产（默认材质、字体、精灵预设……）
-  是赋给原生 CDO 的软指针，不产生资产依赖；没有这一行，按显式包列表烹饪时它们一个也不会进包，整个 UI 画成空白。
-  文件必须叫 `Game.ini` 才会被并入 Game 分支。
-- **`FilterPlugin.ini`** —— BuildPlugin 默认只打包 `/Source`、`/Content`、`/Resources`、`/Shaders` 和
-  `/Binaries/ThirdParty`；这里列出其余必须随插件走的文件：上面的 `Game.ini`、README、CHANGELOG、`Docs/` 下的文档和参考，以及 msdfgen 的源码与许可证。
+- **`Game.ini`** —— 把 `/DreamGUI` 加进 `DirectoriesToAlwaysCook`。插件自己伸手去拿的资产（默认材质、字体、精灵预设……）是赋给原生 CDO 的软指针，不产生资产依赖；没有这一行，按显式包列表烹饪时它们一个也不会进包，整个 UI 画成空白。文件必须叫 `Game.ini` 才会被并入 Game 分支。
+- **`FilterPlugin.ini`** —— BuildPlugin 默认只打包 `/Source`、`/Content`、`/Resources`、`/Shaders` 和 `/Binaries/ThirdParty`；这里列出其余必须随插件走的文件：上面的 `Game.ini`、README、CHANGELOG、`Docs/` 下的文档和参考，以及 msdfgen 的源码与许可证。
 
 <a id="content"></a>
 
 ### Content
 
-默认字体（`DefaultFont_DistanceField` 及其 `_Bold`、`_Italic`、`_BoldItalic` 和 `_CJK` 四个字面，还有
-`DefaultFont_Bitmap`）、`Materials/` 下的材质与材质函数、精灵与纹理预设、`Blueprints/` 下的事件系统 Actor、
-`Controls/` 下的控件蓝图（`BP_Button`、`BP_Toggle`、`BP_Dropdown`……）、`EnhancedInput/` 下的输入动作和映射上下文
-（`IA_*`、`IMC_DreamUIInputContext`），以及 `Samples/HelloDreamGUI.dui`。
+默认字体（`DefaultFont_DistanceField` 及其 `_Bold`、`_Italic`、`_BoldItalic` 和 `_CJK` 四个字面，还有 `DefaultFont_Bitmap`）、`Materials/` 下的材质与材质函数、精灵与纹理预设、`Blueprints/` 下的事件系统 Actor、 `Controls/` 下的控件蓝图（`BP_Button`、`BP_Toggle`、`BP_Dropdown`……）、`EnhancedInput/` 下的输入动作和映射上下文（`IA_*`、`IMC_DreamUIInputContext`），以及 `Samples/HelloDreamGUI.dui`。
 
 <a id="dshader"></a>
 
 ### DShader
 
-`Content/Materials` 的源码（`.dsm` / `.dsf`）。`.uasset` 是构建产物，和源码一起提交，
-所以 **DreamGUI 不依赖 DreamShader**：没装 DreamShader 时，那些材质就是普通的 `UMaterial` 和
-`UMaterialFunction`。只有想从文本重建它们时才需要 DreamShader。
+`Content/Materials` 的源码（`.dsm` / `.dsf`）。`.uasset` 是构建产物，和源码一起提交，所以 **DreamGUI 不依赖 DreamShader**：没装 DreamShader 时，那些材质就是普通的 `UMaterial` 和 `UMaterialFunction`。只有想从文本重建它们时才需要 DreamShader。
 
 <a id="docs"></a>
 
 ### Docs
 
-`DuiLanguage.md`（整个 `.dui` 语言）、`Migration.md`、`FontsAndPackaging.md`，以及 `Reference/` —— 逐类的属性
-与函数参考，从反射打印出来、不是手写的，所以不会落后于头文件：
+`DuiLanguage.md`（整个 `.dui` 语言）、`Migration.md`、`FontsAndPackaging.md`，以及 `Reference/` —— 逐类的属性与函数参考，从反射打印出来、不是手写的，所以不会落后于头文件：
 
 ```powershell
 UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
@@ -180,15 +162,13 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 
 ### Resources
 
-插件图标、编辑器图标，以及 `UMGParity/`：每个 UMG 类一张表（共 58 张），每个成员都标注为：在此处名称和含义相同、在此处以其他名称或位于其他类型上，或是被有意省略并说明原因。自动化测试套件将这些表与 UMG 自身的反射进行双向核对。参见
-[它与 UMG 有何不同](about.md) 和 [UMG 对等](../controls/umg-parity.md)。
+插件图标、编辑器图标，以及 `UMGParity/`：每个 UMG 类一张表（共 58 张），每个成员都标注为：在此处名称和含义相同、在此处以其他名称或位于其他类型上，或是被有意省略并说明原因。自动化测试套件将这些表与 UMG 自身的反射进行双向核对。参见[它与 UMG 有何不同](about.md) 和 [UMG 对等](../controls/umg-parity.md)。
 
 <a id="shaders-source-thirdparty"></a>
 
 ### Shaders、Source、ThirdParty
 
-`Shaders/Private` 存放渲染器的 `.usf` / `.ush`；`Source/` 存放上述十个模块；`ThirdParty/` 存放 msdfgen
-子模块和提交的单文件副本（参见 [安装](installation.md)）。
+`Shaders/Private` 存放渲染器的 `.usf` / `.ush`；`Source/` 存放上述十个模块；`ThirdParty/` 存放 msdfgen 子模块和提交的单文件副本（参见 [安装](installation.md)）。
 
 <a id="tools"></a>
 

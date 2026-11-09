@@ -1,8 +1,3 @@
----
-title: "FDreamSliderStyle"
-description: "FDreamSliderStyle"
----
-
 <a id="fdreamsliderstyle"></a>
 
 # FDreamSliderStyle
@@ -32,3 +27,4 @@ description: "FDreamSliderStyle"
 | `TrackBrush` | `FDreamUIFaceBrush` | Slider Style | yes | read / write |  |
 | `FillBrush` | `FDreamUIFaceBrush` | Slider Style | yes | read / write |  |
 | `HandleBrush` | `FDreamUIFaceBrush` | Slider Style | yes | read / write |  |
+
