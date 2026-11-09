@@ -10,6 +10,7 @@
 
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
+#include "Designer/DreamDesignerGradientHandles.h"
 #include "Designer/DreamDesignerHandles.h"
 #include "Designer/DreamGradientHandleMath.h"
 #include "DreamUICaptureLibrary.h"
@@ -277,7 +278,10 @@ bool FDreamDesignerGradientHandleStopsTest::RunTest(const FString&)
 	const UDreamWidget* PreviewNow = Driver.PreviewFor(Template);
 	FDreamDesignerHandleSet Set;
 	Set.PixelsPerUnit = PixelsPerUnitFor(Driver, PreviewNow).X;
-	const TSharedPtr<IDreamDesignerHandleProvider> Provider = FDreamDesignerHandles::FindProvider(TEXT("RectBlockGradient"));
+	const FName BodyName = FDreamDesignerHandles::MakeBoundName(DreamDesignerGradientHandles::KindName, TEXT("BodyGradient"));
+	const TArray<TSharedRef<IDreamDesignerHandleProvider>> Providers = FDreamDesignerHandles::GetProvidersFor(PreviewNow);
+	const TSharedRef<IDreamDesignerHandleProvider>* Found = Providers.FindByPredicate([&BodyName](const TSharedRef<IDreamDesignerHandleProvider>& InProvider) { return InProvider->GetName() == BodyName; });
+	const TSharedPtr<IDreamDesignerHandleProvider> Provider = Found != nullptr ? TSharedPtr<IDreamDesignerHandleProvider>(*Found) : nullptr;
 	if (!TestTrue(TEXT("the gradient handles are registered"), Provider.IsValid()))
 	{
 		return false;

@@ -79,7 +79,11 @@ RectBlock 以前的渐变是两色径向：`BodyGradientColor` 在 `BodyGradient
 视口手柄是一个框架（DreamGUIEditor 模块里的 `Designer/DreamDesignerHandles.h`），选中的任何东西都可以用。提供者——用
 `FDreamDesignerHandles::Register` 注册的 `IDreamDesignerHandleProvider`——针对选中的控件说明：有哪些点、画哪些辅助线、
 拖一个点会写哪些属性、拖动的每一步怎么改预览对象。其余的事视口对所有提供者都一样处理：命中、绘制、一次拖动一个事务、
-Esc 时还原预览、松开时把属性写进资产再写回 `.dui`，还有双击。变形晶格点、路径点和 RectBlock 渐变就是三个提供者。
+Esc 时还原预览、松开时把属性写进资产再写回 `.dui`，还有双击。变形晶格点和路径点是对所有控件注册的提供者。
+
+属性也可以用标签自己要手柄：`meta=(DreamGUI_Handle="Kind")`，或带参数的 `"Kind:Args"`。模块用 `FDreamDesignerHandles::RegisterKind`
+和一个工厂注册种类，视口给选中控件每个打了标签的属性——控件自己的、视觉的、行为的——一个由工厂为它造的提供者，名字是 `种类.属性`。
+RectBlock 的 `BodyGradient` 和 `BorderGradient` 标的是 `Gradient` 种类；标签和种类的表见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
 
 ```cpp
 #include "Designer/DreamDesignerHandles.h"

@@ -244,7 +244,7 @@ protected:
 	 * writes takes the place of the two-colour lines.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "bEnableBodyGradient",
-		DreamGUI_GradientFallback = "GetEffectiveBodyGradient",
+		DreamGUI_Handle = "Gradient", DreamGUI_GradientFallback = "GetEffectiveBodyGradient",
 		DreamGUI_Replaces = "BodyGradientColor,BodyGradientCenter,BodyGradientCenterUnitMode,BodyGradientRadius,BodyGradientRadiusUnitMode,BodyGradientRotation"))
 		FDreamGradient BodyGradient;
 	/**
@@ -277,7 +277,7 @@ protected:
 		bool bEnableBorderGradient = false;
 	/** What the border is drawn in place of BorderColor while bEnableBorderGradient is on: as BodyGradient is for the body. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "bEnableBorderGradient",
-		DreamGUI_GradientFallback = "GetEffectiveBorderGradient",
+		DreamGUI_Handle = "Gradient", DreamGUI_GradientFallback = "GetEffectiveBorderGradient",
 		DreamGUI_Replaces = "BorderGradientColor,BorderGradientCenter,BorderGradientCenterUnitMode,BorderGradientRadius,BorderGradientRadiusUnitMode,BorderGradientRotation"))
 		FDreamGradient BorderGradient;
 	/** The border's two-colour gradient, as BodyGradientColor and the rest are the body's. */

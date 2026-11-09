@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Math/Color.h"
+#include "Templates/Function.h"
 #include "Templates/SharedPointer.h"
 #include "UObject/WeakObjectPtr.h"
 
@@ -136,6 +137,25 @@ public:
 	virtual void OnRestored(UDreamWidget* InWidget, TConstArrayView<FDreamDesignerEditedProperty> InProperties);
 };
 
+/**
+ * A property of a widget's object that asks for handles: meta=(DreamGUI_Handle="Kind"), or "Kind:Args" with arguments for
+ * the kind. The object is the widget's visual, one of its behaviours or the widget itself; the property is on it, or a
+ * member of a plain struct property on it, one level down.
+ */
+struct DREAMGUIEDITOR_API FDreamDesignerHandleBinding
+{
+	TWeakObjectPtr<UObject> Owner;
+	/** The property on the owner: the tagged one, or the struct property the tagged one is a member of. */
+	FName HeadProperty;
+	/** The tagged property. */
+	FName Property;
+	FName Kind;
+	FString Args;
+};
+
+/** Makes the provider of one binding's handles; null for none. */
+using FDreamDesignerHandleKindFactory = TFunction<TSharedPtr<IDreamDesignerHandleProvider>(const FDreamDesignerHandleBinding& InBinding)>;
+
 /** The providers the designer's viewport asks, and what they share. */
 class DREAMGUIEDITOR_API FDreamDesignerHandles
 {
@@ -145,6 +165,21 @@ public:
 	static void Unregister(const TSharedRef<IDreamDesignerHandleProvider>& InProvider);
 	static const TArray<TSharedRef<IDreamDesignerHandleProvider>>& GetProviders();
 	static TSharedPtr<IDreamDesignerHandleProvider> FindProvider(FName InName);
+
+	/**
+	 * A kind of handles properties ask for by name (meta=(DreamGUI_Handle="Kind")): InFactory makes the provider of one tagged
+	 * property's handles, once for each object that has it, and the provider is kept while the object lives -- what it holds
+	 * during a drag stays from step to step. A module registers its kinds when it starts and unregisters them when it stops.
+	 */
+	static void RegisterKind(FName InKind, FDreamDesignerHandleKindFactory InFactory);
+	static void UnregisterKind(FName InKind);
+	static bool IsKindRegistered(FName InKind);
+	/** InWidget's tagged properties: its visual's, then each of its behaviours', then its own, each object's in its class's order. */
+	static void CollectBindings(const UDreamWidget* InWidget, TArray<FDreamDesignerHandleBinding>& OutBindings);
+	/** What the viewport asks about InWidget: the registered providers, then the provider of each binding of a registered kind. */
+	static TArray<TSharedRef<IDreamDesignerHandleProvider>> GetProvidersFor(const UDreamWidget* InWidget);
+	/** The name a binding's provider goes by: "Kind.Property". */
+	static FName MakeBoundName(FName InKind, FName InProperty);
 
 	/** A point of InWidget's rect as fractions of it from its top left (0, 0) to its bottom right (1, 1), in its local space. */
 	static FVector2D RectFractionToLocal(const UDreamWidget* InWidget, const FVector2D& InFromTopLeft);

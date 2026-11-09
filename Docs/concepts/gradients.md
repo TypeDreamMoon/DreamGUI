@@ -91,8 +91,14 @@ selected can use. A provider — an `IDreamDesignerHandleProvider` registered wi
 says, for the selected widget, which points it has and which lines to draw, which properties a drag of one writes, and how
 a step of the drag changes the preview's objects. The viewport does the rest the same way for all of them: hit testing,
 drawing, one transaction per drag, putting the preview back on Esc, writing the properties to the asset and the asset to
-the `.dui` when the button comes up, and double-clicks. A warp's lattice points, a path's points and the rect block
-gradients are three providers.
+the `.dui` when the button comes up, and double-clicks. A warp's lattice points and a path's points are providers
+registered for every widget.
+
+A property can ask for handles itself, by its tag: `meta=(DreamGUI_Handle="Kind")`, or `"Kind:Args"` with arguments for
+the kind. A module registers the kind with `FDreamDesignerHandles::RegisterKind` and a factory, and the viewport gives each
+tagged property of the selected widget -- its own, its visual's, its behaviours' -- a provider the factory makes for it,
+named `Kind.Property`. A rect block's `BodyGradient` and `BorderGradient` are tagged with the `Gradient` kind; the tags and
+the kinds are listed in [Property meta tags](../guides/property-meta.md#viewport-handles).
 
 ```cpp
 #include "Designer/DreamDesignerHandles.h"

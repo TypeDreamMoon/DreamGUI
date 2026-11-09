@@ -56,6 +56,27 @@ float FillAmount = 1;
 视觉显示在所属控件的细节面板里，所以视觉的 `Layer` 属性由控件的图层区来画，不再出现在视觉自己的行里——视觉的混合模式就是这样
 和控件的不透明度排在一起的。
 
+<a id="viewport-handles"></a>
+
+## 视口手柄
+
+`DreamGUI_Handle` 写的是一种手柄：选中控件时，设计器视口为这个属性画这种手柄。控件自己的属性、它的视觉的、它的行为的属性都算，
+普通结构体属性的成员往下看一层。每个打了标签的属性各有一个提供者，名字是 `种类.属性`（如 "Gradient.BodyGradient"）；冒号后的内容原样交给种类。
+
+| 种类 | 标在哪儿 | 手柄 |
+|---|---|---|
+| `Gradient` | RectBlock 的 `BodyGradient`、`BorderGradient` | 渐变的端点、中心和色标（见[渐变](../concepts/gradients.md#视口手柄)） |
+
+种类由画它的模块注册，给一个为单个标签属性造提供者的工厂：
+
+```cpp
+FDreamDesignerHandles::RegisterKind(TEXT("MyKind"), [](const FDreamDesignerHandleBinding& InBinding) -> TSharedPtr<IDreamDesignerHandleProvider>
+{
+	// InBinding.Owner 是对象，InBinding.Property 是打标签的属性，InBinding.Args 是冒号后的内容。
+	return Cast<UMyVisual>(InBinding.Owner.Get()) ? MakeShared<FMyHandles>(InBinding.Property) : nullptr;
+});
+```
+
 ## 在自己的定制里
 
 ```cpp

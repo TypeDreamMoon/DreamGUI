@@ -82,6 +82,9 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   （沿线拖动、拖离删除），双击连线加色标。Shift 让旋转按 15° 一档，Esc 还原；一次拖动一步撤销，松开鼠标时写回 `.dui`。
 - **通用视口手柄。** 用 `FDreamDesignerHandles::Register` 注册的 `IDreamDesignerHandleProvider` 给选中的控件提供可在设计器视口里拖的点；
   命中、绘制、撤销、Esc、双击和写回 `.dui` 由视口统一处理。变形晶格点和路径点也改走这套。
+- **属性用标签要手柄。** 控件、视觉或行为的属性标上 `meta=(DreamGUI_Handle="Kind")`（或 `"Kind:Args"`），视口就为它画这种手柄，
+  提供者由该种类的工厂为它造（`FDreamDesignerHandles::RegisterKind`）。RectBlock 的 `BodyGradient`、`BorderGradient` 标的是 `Gradient`。
+  见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
 - **对称渐变。** `EDreamPaintType::Reflected`（`reflected-gradient(…)`）从过渐变中心的一条线向两边对称展开，文字和 RectBlock 都能用。
 
 - **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，

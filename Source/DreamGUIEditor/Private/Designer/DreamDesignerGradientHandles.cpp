@@ -121,16 +121,25 @@ namespace DreamDesignerGradientHandlesLocal
 		return On + Away * InOffsetUnits;
 	}
 
+	/**
+	 * One of a rect block's gradients, the provider of its tagged property. Its handles are shown while it is the gradient
+	 * the handles edit (FindShownSlot): the body's while both are on, until the border's is asked for.
+	 */
 	class FGradientHandles : public IDreamDesignerHandleProvider
 	{
 	public:
-		virtual FName GetName() const override { return DreamDesignerGradientHandles::ProviderName; }
+		explicit FGradientHandles(EDreamRectBlockGradientSlot InSlot) : OwnSlot(InSlot) {}
+
+		virtual FName GetName() const override
+		{
+			return FDreamDesignerHandles::MakeBoundName(DreamDesignerGradientHandles::KindName, GetPropertyName(OwnSlot));
+		}
 
 		virtual void CollectHandles(UDreamWidget* InWidget, FDreamDesignerHandleSet& OutSet) const override
 		{
 			const UDreamRectBlock* Block = Cast<UDreamRectBlock>(InWidget->GetVisual());
 			EDreamRectBlockGradientSlot Slot;
-			if (!FindShownSlot(Block, Slot))
+			if (!FindShownSlot(Block, Slot) || Slot != OwnSlot)
 			{
 				return;
 			}
@@ -339,29 +348,40 @@ namespace DreamDesignerGradientHandlesLocal
 		/** The gradient as it was when the held handle was grabbed. */
 		TOptional<FGrab> Grabbed;
 
-		/** The slot a handle (or, for INDEX_NONE, the shown gradient) belongs to, when it is shown. */
-		static bool ResolveSlot(const UDreamRectBlock* InBlock, int32 InHandleId, EDreamRectBlockGradientSlot& OutSlot)
+		EDreamRectBlockGradientSlot OwnSlot;
+
+		/** This provider's slot, when the handle (or, for INDEX_NONE, a click off the handles) is its own and it is shown. */
+		bool ResolveSlot(const UDreamRectBlock* InBlock, int32 InHandleId, EDreamRectBlockGradientSlot& OutSlot) const
 		{
-			if (InHandleId == INDEX_NONE)
-			{
-				return FindShownSlot(InBlock, OutSlot);
-			}
-			const int32 SlotValue = InHandleId / SlotStride;
-			if (SlotValue < 0 || SlotValue > static_cast<int32>(EDreamRectBlockGradientSlot::Border))
+			if (InHandleId != INDEX_NONE && InHandleId / SlotStride != static_cast<int32>(OwnSlot))
 			{
 				return false;
 			}
-			OutSlot = static_cast<EDreamRectBlockGradientSlot>(SlotValue);
-			return IsSlotShown(InBlock, OutSlot);
+			return FindShownSlot(InBlock, OutSlot) && OutSlot == OwnSlot;
 		}
 	};
 }
 
-const FName DreamDesignerGradientHandles::ProviderName(TEXT("RectBlockGradient"));
+const FName DreamDesignerGradientHandles::KindName(TEXT("Gradient"));
 
-TSharedRef<IDreamDesignerHandleProvider> DreamDesignerGradientHandles::MakeProvider()
+FDreamDesignerHandleKindFactory DreamDesignerGradientHandles::MakeKindFactory()
 {
-	return MakeShared<DreamDesignerGradientHandlesLocal::FGradientHandles>();
+	return [](const FDreamDesignerHandleBinding& InBinding) -> TSharedPtr<IDreamDesignerHandleProvider>
+	{
+		using namespace DreamDesignerGradientHandlesLocal;
+		if (Cast<UDreamRectBlock>(InBinding.Owner.Get()) == nullptr || InBinding.HeadProperty != InBinding.Property)
+		{
+			return nullptr;
+		}
+		for (const EDreamRectBlockGradientSlot Slot : { EDreamRectBlockGradientSlot::Body, EDreamRectBlockGradientSlot::Border })
+		{
+			if (InBinding.Property == GetPropertyName(Slot))
+			{
+				return MakeShared<FGradientHandles>(Slot);
+			}
+		}
+		return nullptr;
+	};
 }
 
 void DreamDesignerGradientHandles::SetPreferredSlot(EDreamRectBlockGradientSlot InSlot)

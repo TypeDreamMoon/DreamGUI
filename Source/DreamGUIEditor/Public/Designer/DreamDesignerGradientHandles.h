@@ -3,9 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Designer/DreamDesignerHandles.h"
 #include "Templates/SharedPointer.h"
-
-class IDreamDesignerHandleProvider;
 
 /** A rect block's two gradients. */
 enum class EDreamRectBlockGradientSlot : uint8
@@ -14,11 +13,16 @@ enum class EDreamRectBlockGradientSlot : uint8
 	Border,
 };
 
-/** The viewport handles of a rect block's gradients (Designer/DreamDesignerHandles.h), which the editor module registers. */
+/**
+ * The viewport handles of a rect block's gradients (Designer/DreamDesignerHandles.h): the kind its BodyGradient and
+ * BorderGradient are tagged with, meta=(DreamGUI_Handle="Gradient"), which the editor module registers. Each tagged
+ * gradient has a provider of its own, named "Gradient.BodyGradient" or "Gradient.BorderGradient".
+ */
 namespace DreamDesignerGradientHandles
 {
-	DREAMGUIEDITOR_API extern const FName ProviderName;
-	DREAMGUIEDITOR_API TSharedRef<IDreamDesignerHandleProvider> MakeProvider();
+	DREAMGUIEDITOR_API extern const FName KindName;
+	/** The kind's factory: a provider for a rect block's BodyGradient or BorderGradient, none for anything else. */
+	DREAMGUIEDITOR_API FDreamDesignerHandleKindFactory MakeKindFactory();
 
 	/**
 	 * Which gradient the handles edit while a rect block has both on: the body's until the border's is asked for (its row's

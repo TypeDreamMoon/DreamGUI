@@ -59,6 +59,27 @@ of, top to bottom:
 A visual is shown inside its widget's details, so a visual's `Layer` properties are drawn by the widget's Layer section
 and left out of the visual's own rows -- that is how a visual's blend mode sits beside the widget's opacity.
 
+## Viewport handles
+
+`DreamGUI_Handle` names a kind of handles the designer's viewport draws over the selected widget for the property: the
+widget's own properties, its visual's and its behaviours', and a plain struct property's members one level down. Each
+tagged property gets a provider of its own, named `Kind.Property` ("Gradient.BodyGradient"); what follows a colon is handed
+to the kind as it is.
+
+| Kind | Tagged on | Handles |
+|---|---|---|
+| `Gradient` | a rect block's `BodyGradient`, `BorderGradient` | The gradient's ends, centre and stops ([Gradients](../concepts/gradients.md#viewport-handles)) |
+
+A kind is registered by the module that draws it, with a factory that makes the provider for one tagged property:
+
+```cpp
+FDreamDesignerHandles::RegisterKind(TEXT("MyKind"), [](const FDreamDesignerHandleBinding& InBinding) -> TSharedPtr<IDreamDesignerHandleProvider>
+{
+	// InBinding.Owner is the object, InBinding.Property the tagged property, InBinding.Args what follows the colon.
+	return Cast<UMyVisual>(InBinding.Owner.Get()) ? MakeShared<FMyHandles>(InBinding.Property) : nullptr;
+});
+```
+
 ## In a customization of your own
 
 ```cpp

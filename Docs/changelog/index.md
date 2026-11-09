@@ -188,6 +188,10 @@ What is on `main` after 1.0.0, and ships with the next version.
 - **Viewport handles for anything.** `IDreamDesignerHandleProvider`, registered with `FDreamDesignerHandles::Register`,
   gives the selected widget points to drag in the designer's viewport; the viewport does the hit testing, drawing, undo,
   Esc, double clicks and the write to the `.dui`. A warp's lattice points and a path's points now go through it.
+- **Handles a property asks for by its tag.** `meta=(DreamGUI_Handle="Kind")` (or `"Kind:Args"`) on a property of a widget,
+  its visual or a behaviour gives it the handles of that kind in the viewport, from a provider the kind's factory makes for
+  it (`FDreamDesignerHandles::RegisterKind`). A rect block's `BodyGradient` and `BorderGradient` are tagged `Gradient`. See
+  [Property meta tags](../guides/property-meta.md#viewport-handles).
 - **Reflected gradients.** `EDreamPaintType::Reflected` (`reflected-gradient(…)`) runs both ways from a line through the
   gradient's centre, for texts as for rect blocks.
 

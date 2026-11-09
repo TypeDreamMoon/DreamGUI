@@ -2,7 +2,11 @@
 
 #include "Designer/DreamDesignerHandles.h"
 
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIBehaviour.h"
+#include "DetailCustomization/DreamPropertyMeta.h"
+#include "UObject/ObjectKey.h"
 #include "UObject/UnrealType.h"
 
 namespace DreamDesignerHandlesLocal
@@ -11,6 +15,71 @@ namespace DreamDesignerHandlesLocal
 	{
 		static TArray<TSharedRef<IDreamDesignerHandleProvider>> Providers;
 		return Providers;
+	}
+
+	TMap<FName, FDreamDesignerHandleKindFactory>& GetKinds()
+	{
+		static TMap<FName, FDreamDesignerHandleKindFactory> Kinds;
+		return Kinds;
+	}
+
+	/** A class's tagged properties, found once: the owner is filled in for each object. */
+	const TArray<FDreamDesignerHandleBinding>& GetClassBindings(const UClass* InClass)
+	{
+		static TMap<TObjectKey<UClass>, TArray<FDreamDesignerHandleBinding>> Cache;
+		if (const TArray<FDreamDesignerHandleBinding>* Found = Cache.Find(InClass))
+		{
+			return *Found;
+		}
+		TArray<FDreamDesignerHandleBinding>& Bindings = Cache.Add(InClass);
+		auto Take = [&Bindings](const FProperty* InHead, const FProperty* InProperty)
+		{
+			FString Args;
+			const FName Kind = DreamPropertyMeta::GetHandle(InProperty, &Args);
+			if (!Kind.IsNone())
+			{
+				FDreamDesignerHandleBinding& Binding = Bindings.AddDefaulted_GetRef();
+				Binding.HeadProperty = InHead->GetFName();
+				Binding.Property = InProperty->GetFName();
+				Binding.Kind = Kind;
+				Binding.Args = MoveTemp(Args);
+			}
+		};
+		for (TFieldIterator<FProperty> It(InClass); It; ++It)
+		{
+			Take(*It, *It);
+			if (const FStructProperty* AsStruct = CastField<FStructProperty>(*It))
+			{
+				for (TFieldIterator<FProperty> Member(AsStruct->Struct); Member; ++Member)
+				{
+					Take(*It, *Member);
+				}
+			}
+		}
+		return Bindings;
+	}
+
+	/** The providers made for bindings, by the object and the property they are for; dropped once the object is gone. */
+	struct FBoundKey
+	{
+		FObjectKey Owner;
+		FName HeadProperty;
+		FName Property;
+
+		bool operator==(const FBoundKey& InOther) const
+		{
+			return Owner == InOther.Owner && HeadProperty == InOther.HeadProperty && Property == InOther.Property;
+		}
+		friend uint32 GetTypeHash(const FBoundKey& InKey)
+		{
+			return HashCombine(GetTypeHash(InKey.Owner), HashCombine(GetTypeHash(InKey.HeadProperty), GetTypeHash(InKey.Property)));
+		}
+	};
+
+	TMap<FBoundKey, TSharedPtr<IDreamDesignerHandleProvider>>& GetBound()
+	{
+		static TMap<FBoundKey, TSharedPtr<IDreamDesignerHandleProvider>> Bound;
+		return Bound;
 	}
 }
 
@@ -103,6 +172,90 @@ TSharedPtr<IDreamDesignerHandleProvider> FDreamDesignerHandles::FindProvider(FNa
 		}
 	}
 	return nullptr;
+}
+
+void FDreamDesignerHandles::RegisterKind(FName InKind, FDreamDesignerHandleKindFactory InFactory)
+{
+	DreamDesignerHandlesLocal::GetKinds().Add(InKind, MoveTemp(InFactory));
+	DreamDesignerHandlesLocal::GetBound().Reset();
+}
+
+void FDreamDesignerHandles::UnregisterKind(FName InKind)
+{
+	DreamDesignerHandlesLocal::GetKinds().Remove(InKind);
+	DreamDesignerHandlesLocal::GetBound().Reset();
+}
+
+bool FDreamDesignerHandles::IsKindRegistered(FName InKind)
+{
+	return DreamDesignerHandlesLocal::GetKinds().Contains(InKind);
+}
+
+void FDreamDesignerHandles::CollectBindings(const UDreamWidget* InWidget, TArray<FDreamDesignerHandleBinding>& OutBindings)
+{
+	OutBindings.Reset();
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+	auto Collect = [&OutBindings](UObject* InOwner)
+	{
+		if (!IsValid(InOwner))
+		{
+			return;
+		}
+		for (const FDreamDesignerHandleBinding& Binding : DreamDesignerHandlesLocal::GetClassBindings(InOwner->GetClass()))
+		{
+			FDreamDesignerHandleBinding& Bound = OutBindings.Add_GetRef(Binding);
+			Bound.Owner = InOwner;
+		}
+	};
+	Collect(InWidget->GetVisual());
+	for (UDreamUIBehaviour* Behaviour : InWidget->GetComponents(UDreamUIBehaviour::StaticClass()))
+	{
+		Collect(Behaviour);
+	}
+	Collect(const_cast<UDreamWidget*>(InWidget));
+}
+
+TArray<TSharedRef<IDreamDesignerHandleProvider>> FDreamDesignerHandles::GetProvidersFor(const UDreamWidget* InWidget)
+{
+	using namespace DreamDesignerHandlesLocal;
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> Providers = GetRegistry();
+	TArray<FDreamDesignerHandleBinding> Bindings;
+	CollectBindings(InWidget, Bindings);
+	TMap<FBoundKey, TSharedPtr<IDreamDesignerHandleProvider>>& Bound = GetBound();
+	for (auto It = Bound.CreateIterator(); It; ++It)
+	{
+		if (It.Key().Owner.ResolveObjectPtr() == nullptr)
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (const FDreamDesignerHandleBinding& Binding : Bindings)
+	{
+		const FDreamDesignerHandleKindFactory* Factory = GetKinds().Find(Binding.Kind);
+		if (Factory == nullptr)
+		{
+			continue;
+		}
+		const FBoundKey Key{ FObjectKey(Binding.Owner.Get()), Binding.HeadProperty, Binding.Property };
+		TSharedPtr<IDreamDesignerHandleProvider>* Made = Bound.Find(Key);
+		if (Made == nullptr)
+		{
+			Made = &Bound.Add(Key, (*Factory)(Binding));
+		}
+		if (Made->IsValid())
+		{
+			Providers.Add(Made->ToSharedRef());
+		}
+	}
+	return Providers;
+}
+
+FName FDreamDesignerHandles::MakeBoundName(FName InKind, FName InProperty)
+{
+	return FName(*FString::Printf(TEXT("%s.%s"), *InKind.ToString(), *InProperty.ToString()));
 }
 
 FVector2D FDreamDesignerHandles::RectFractionToLocal(const UDreamWidget* InWidget, const FVector2D& InFromTopLeft)

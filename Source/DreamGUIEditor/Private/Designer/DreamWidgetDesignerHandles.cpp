@@ -128,7 +128,7 @@ void FDreamWidgetDesignerViewportClient::CollectDesignerHandles(UDreamWidget* In
 		return;
 	}
 	const double PixelsPerUnit = MeasurePixelsPerUnit(InView, InWidget);
-	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : FDreamDesignerHandles::GetProviders())
+	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : FDreamDesignerHandles::GetProvidersFor(InWidget))
 	{
 		FDesignerHandleSet& Set = OutSets.AddDefaulted_GetRef();
 		Set.Provider = Provider;
@@ -357,7 +357,7 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerDoubleClick(const FVector
 	}
 	else
 	{
-		Candidates = FDreamDesignerHandles::GetProviders();
+		Candidates = FDreamDesignerHandles::GetProvidersFor(HandleWidget);
 	}
 	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : Candidates)
 	{
