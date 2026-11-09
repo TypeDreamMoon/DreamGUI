@@ -30,9 +30,11 @@ System(Name="Samples/Niagara/NS_Sample_ClickSparks", Root="Plugin.DreamGUI")
                 ColorMinimum = User.Cool,
                 ColorMaximum = User.Hot
             );
-            SystemLocation();
+            // The angle and the speed in a group of their own, before the velocity that reads them: the entries of one Set
+            // Parameters module read the attributes as they were before it, so a velocity beside them would read zero.
             float   Particles.DreamUI.Angle = RandomRangeFloat(Minimum = 0.0, Maximum = 6.2832);
             float   Particles.DreamUI.Speed = RandomRangeFloat(Minimum = User.Speed * 0.45, Maximum = User.Speed);
+            SystemLocation();
             Vector  Particles.Velocity      = hlsl { float3(cos(Particles.DreamUI.Angle), 0.0, sin(Particles.DreamUI.Angle)) * Particles.DreamUI.Speed };
             Vector2 Particles.SpriteSize    = (3, 14);
         }

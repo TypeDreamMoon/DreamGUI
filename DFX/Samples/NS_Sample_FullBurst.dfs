@@ -48,9 +48,11 @@ System(Name="Samples/Niagara/NS_Sample_FullBurst", Root="Plugin.DreamGUI")
         }
 
         ParticleSpawn = {
-            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.5, LifetimeMax = 0.9);
+            // The angle and the speed in a group of their own, before the velocity that reads them: the entries of one Set
+            // Parameters module read the attributes as they were before it, so a velocity beside them would read zero.
             float   Particles.DreamUI.Angle = hlsl { ExecIndex() * 0.1745329 };
             float   Particles.DreamUI.Speed = RandomRangeFloat(Minimum = 180.0, Maximum = 420.0);
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.5, LifetimeMax = 0.9);
             Vector  Particles.Velocity      = hlsl { float3(cos(Particles.DreamUI.Angle) * 1.6, 0.0, sin(Particles.DreamUI.Angle) * 0.5) * Particles.DreamUI.Speed };
             Vector2 Particles.SpriteSize    = (4, 16);
         }

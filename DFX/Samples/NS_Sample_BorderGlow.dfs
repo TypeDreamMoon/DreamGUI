@@ -23,8 +23,10 @@ System(Name="Samples/Niagara/NS_Sample_BorderGlow", Root="Plugin.DreamGUI")
         }
 
         ParticleSpawn = {
-            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.35, LifetimeMax = 0.7);
+            // Where round the rectangle, in a group of its own before what reads it: the entries of one Set Parameters module
+            // read the attributes as they were before it, so a position beside it would read zero, a corner, every time.
             float Particles.DreamUI.Along = RandomRangeFloat(Minimum = 0.0, Maximum = 1.0);
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.35, LifetimeMax = 0.7);
             // Round the rectangle, a quarter of the way for each side: top, right, bottom, left.
             Position Particles.Position = hlsl {
                 float3(
@@ -38,7 +40,14 @@ System(Name="Samples/Niagara/NS_Sample_BorderGlow", Root="Plugin.DreamGUI")
                         : (Particles.DreamUI.Along < 0.75 ? -0.5 * User.DreamUI_WidgetSize.y
                         : lerp(-0.5, 0.5, (Particles.DreamUI.Along - 0.75) * 4.0) * User.DreamUI_WidgetSize.y)))
             };
-            Vector  Particles.Velocity   = hlsl { normalize(Particles.Position + float3(0.0, 0.0, 0.001)) * 18.0 + float3(0.0, 0.0, 22.0) };
+            // Out from the side it is on, and up: from where round the rectangle, not from the position written beside it.
+            Vector  Particles.Velocity   = hlsl {
+                float3(
+                    Particles.DreamUI.Along < 0.25 ? 0.0 : (Particles.DreamUI.Along < 0.5 ? 1.0 : (Particles.DreamUI.Along < 0.75 ? 0.0 : -1.0)),
+                    0.0,
+                    Particles.DreamUI.Along < 0.25 ? 1.0 : (Particles.DreamUI.Along < 0.5 ? 0.0 : (Particles.DreamUI.Along < 0.75 ? -1.0 : 0.0))) * 18.0
+                    + float3(0.0, 0.0, 22.0)
+            };
             Vector2 Particles.SpriteSize = (5, 5);
         }
 

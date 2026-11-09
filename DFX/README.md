@@ -43,5 +43,10 @@ a plugin DreamGUI does not ship with.
 Niagara VM: write `fmod(x, 4.0)` and `floor(x * 0.25)` rather than `%` and `/` on integers, and a smoothstep out in full
 (`t * t * (3 - 2 * t)` of a saturated `t`). `ExecIndex()` is there, and is what places the test system's particles.
 
+**An assignment does not see the one beside it.** Consecutive assignments become one Set Parameters module, and every entry
+of it reads the attributes as they were before the module ran: a velocity worked out from an angle assigned on the line
+above reads an angle of zero. Write what is read in an earlier group -- a module call between the two starts a new one --
+as the click sparks do with their angle and speed.
+
 **DreamGUI draws CPU emitters' sprite and ribbon renderers.** A GPU emitter or a mesh renderer builds, and is then reported
 and left out by the visual.
