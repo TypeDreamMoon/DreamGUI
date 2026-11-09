@@ -3,6 +3,74 @@
 #include "Core/DreamLayerStyleTypes.h"
 #include "Core/DreamUILayerStyleMath.h"
 
+FString FDreamStyleContour::ToText() const
+{
+	if (Shape != EDreamStyleContourShape::Custom)
+	{
+		return StaticEnum<EDreamStyleContourShape>()->GetNameStringByValue(static_cast<int64>(Shape));
+	}
+	TArray<FString> Parts;
+	for (const FDreamStyleContourPoint& Point : Points)
+	{
+		Parts.Add(FString::Printf(TEXT("%s %s%s"), *FString::SanitizeFloat(Point.Input, 0), *FString::SanitizeFloat(Point.Output, 0), Point.bCorner ? TEXT(" corner") : TEXT("")));
+	}
+	return FString::Printf(TEXT("custom(%s)"), *FString::Join(Parts, TEXT(", ")));
+}
+
+bool FDreamStyleContour::ParseText(const FString& InText, FDreamStyleContour& OutContour)
+{
+	const FString Text = InText.TrimStartAndEnd();
+	if (Text.StartsWith(TEXT("custom("), ESearchCase::IgnoreCase) && Text.EndsWith(TEXT(")")))
+	{
+		const FString Body = Text.Mid(7, Text.Len() - 8).TrimStartAndEnd();
+		FDreamStyleContour Parsed;
+		Parsed.Shape = EDreamStyleContourShape::Custom;
+		TArray<FString> Items;
+		Body.ParseIntoArray(Items, TEXT(","), /*InCullEmpty*/true);
+		for (const FString& Item : Items)
+		{
+			TArray<FString> Words;
+			Item.ParseIntoArrayWS(Words);
+			if (Words.Num() < 2 || Words.Num() > 3 || !Words[0].IsNumeric() || !Words[1].IsNumeric()
+				|| (Words.Num() == 3 && !Words[2].Equals(TEXT("corner"), ESearchCase::IgnoreCase)))
+			{
+				return false;
+			}
+			const float Input = FCString::Atof(*Words[0]);
+			const float Output = FCString::Atof(*Words[1]);
+			if (!FMath::IsFinite(Input) || !FMath::IsFinite(Output))
+			{
+				return false;
+			}
+			Parsed.Points.Emplace(Input, Output, Words.Num() == 3);
+		}
+		OutContour = MoveTemp(Parsed);
+		return true;
+	}
+	const int64 Value = StaticEnum<EDreamStyleContourShape>()->GetValueByNameString(Text, EGetByNameFlags::CaseSensitive);
+	int64 Found = Value;
+	if (Found == INDEX_NONE)
+	{
+		// A name in any case, as an author types one.
+		const UEnum* Enum = StaticEnum<EDreamStyleContourShape>();
+		for (int32 Index = 0; Index < Enum->NumEnums() - 1; ++Index)
+		{
+			if (Enum->GetNameStringByIndex(Index).Equals(Text, ESearchCase::IgnoreCase))
+			{
+				Found = Enum->GetValueByIndex(Index);
+				break;
+			}
+		}
+	}
+	if (Found == INDEX_NONE || Found == static_cast<int64>(EDreamStyleContourShape::Custom))
+	{
+		return false;
+	}
+	OutContour.Shape = static_cast<EDreamStyleContourShape>(Found);
+	OutContour.Points.Reset();
+	return true;
+}
+
 bool FDreamStyleContour::IsLinear() const
 {
 	return Shape == EDreamStyleContourShape::Linear || (Shape == EDreamStyleContourShape::Custom && Points.Num() < 2);

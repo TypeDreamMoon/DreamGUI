@@ -85,6 +85,13 @@ struct DREAMGUI_API FDreamStyleContour
 	bool IsLinear() const;
 	/** The curve at X (0..1), exactly: what the shader's table of samples is made from. */
 	float Evaluate(float X) const;
+	/**
+	 * The contour as a .dui spells it: a named shape by its name ("Gaussian"), a custom one as its points,
+	 * "custom(0 0, 0.5 1 corner, 1 0)" -- each point its input and output, "corner" after one the curve bends at.
+	 */
+	FString ToText() const;
+	/** ToText's spelling read back, a name in any case; false, OutContour untouched, for text that is neither. */
+	static bool ParseText(const FString& InText, FDreamStyleContour& OutContour);
 
 	bool operator==(const FDreamStyleContour& Other) const { return Shape == Other.Shape && Points == Other.Points; }
 };
