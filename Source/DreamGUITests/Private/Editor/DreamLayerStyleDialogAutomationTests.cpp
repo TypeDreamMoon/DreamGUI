@@ -61,6 +61,12 @@ namespace DreamLayerStyleDialogTestLocal
 		return nullptr;
 	}
 
+	EDreamUIBlendMode BlendModeOf(const UDreamWidget* InWidget)
+	{
+		const UDreamVisualBatchMesh* Visual = InWidget != nullptr ? Cast<UDreamVisualBatchMesh>(InWidget->GetVisual()) : nullptr;
+		return Visual != nullptr ? Visual->GetBlendMode() : EDreamUIBlendMode::Alpha;
+	}
+
 	bool HasRow(const TArray<FDreamUIStyleDialogRow>& InRows, EDreamUIStyleDialogPage InPage, int32 InIndex)
 	{
 		return InRows.Contains(FDreamUIStyleDialogRow{ InPage, InIndex });
@@ -266,7 +272,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * OK with nothing changed writes nothing. Opened again on both widgets, a satin ticked and the blend mode changed: OK
+ * A blend mode tried through the parameter area's hook (as a hovered list item is) is previewed and put back, and is no
+ * change: OK writes nothing. Opened again on both widgets, a satin ticked and the blend mode changed: OK
  * writes the style and the blend mode into both widgets' lines and the compiled tree; one undo puts the file back.
  */
 bool FDreamLayerStyleDialogOkTest::RunTest(const FString&)
@@ -281,6 +288,17 @@ bool FDreamLayerStyleDialogOkTest::RunTest(const FString&)
 	{
 		FOpenDialog Untouched(*Scoped.Designer, { Scoped.FindPreview(TEXT("Card")) });
 		if (!TestTrue(TEXT("the dialog opens"), Untouched.Dialog.IsValid())) return false;
+		// A blend mode hovered in a list, as an editor tries one: the value written into the working copy and an interactive
+		// change heard by the parameter area's hook -- previewed, then put back, and no change.
+		FProperty* ModeProperty = FDreamUIStyleDialogBlending::StaticStruct()->FindPropertyByName(TEXT("BlendMode"));
+		FDreamUIStyleDialogBlending& Blending = Untouched.Dialog->GetSession()->GetMutableBlending();
+		Blending.BlendMode = EDreamUIBlendMode::Screen;
+		Untouched.Dialog->NotifyPostChange(FPropertyChangedEvent(ModeProperty, EPropertyChangeType::Interactive), ModeProperty);
+		TestEqual(TEXT("a hovered blend mode is previewed"), BlendModeOf(Scoped.FindPreview(TEXT("Card"))), EDreamUIBlendMode::Screen);
+		Blending.BlendMode = EDreamUIBlendMode::Alpha;
+		Untouched.Dialog->NotifyPostChange(FPropertyChangedEvent(ModeProperty, EPropertyChangeType::Interactive), ModeProperty);
+		TestEqual(TEXT("and put back when the pointer leaves"), BlendModeOf(Scoped.FindPreview(TEXT("Card"))), EDreamUIBlendMode::Alpha);
+		TestFalse(TEXT("a value tried is no change"), Untouched.Dialog->GetSession()->IsDirty());
 		TestEqual(TEXT("OK with nothing changed writes nothing"), Untouched.Dialog->Ok(), 0);
 		TestEqual(TEXT("the file is as it was"), File.Read(), Before);
 	}
