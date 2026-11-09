@@ -269,6 +269,53 @@ void FDreamDetailsLayout::PlaceTagged()
 		Placements.Add({ Property, {} });
 	}
 	Place(Placements, nullptr);
+	PlaceAdvancedOfSubcategories(Base);
+}
+
+void FDreamDetailsLayout::PlaceAdvancedOfSubcategories(const UClass* InClass)
+{
+	// Per sub-category, in the order they are first met: its rows not placed yet, the ordinary ones and the advanced ones.
+	TArray<FName> Subcategories;
+	TMap<FName, TArray<TSharedRef<IPropertyHandle>>> Ordinary;
+	TMap<FName, TArray<TSharedRef<IPropertyHandle>>> Advanced;
+	for (const FProperty* Property : PropertiesInOrder(InClass))
+	{
+		if (DreamPropertyMeta::IsHidden(Property) || DreamPropertyMeta::HasPlacement(Property))
+		{
+			continue;
+		}
+		const FString Category = Property->GetMetaData(TEXT("Category"));
+		if (!Category.Contains(TEXT("|")))
+		{
+			continue;
+		}
+		const TSharedRef<IPropertyHandle> Handle = Builder.GetProperty(Property->GetFName(), Property->GetOwnerClass());
+		if (!Handle->IsValidHandle() || Handle->IsCustomized())
+		{
+			continue;
+		}
+		const FName Key(*Category);
+		Subcategories.AddUnique(Key);
+		(Property->HasAnyPropertyFlags(CPF_AdvancedDisplay) ? Advanced : Ordinary).FindOrAdd(Key).Add(Handle);
+	}
+	for (const FName& Key : Subcategories)
+	{
+		const TArray<TSharedRef<IPropertyHandle>>* Lost = Advanced.Find(Key);
+		if (Lost == nullptr)
+		{
+			// Nothing of it would be lost: the engine lays it out.
+			continue;
+		}
+		IDetailCategoryBuilder& Category = Builder.EditCategory(Key);
+		for (const TSharedRef<IPropertyHandle>& Handle : Ordinary.FindRef(Key))
+		{
+			Category.AddProperty(Handle);
+		}
+		for (const TSharedRef<IPropertyHandle>& Handle : *Lost)
+		{
+			Category.AddProperty(Handle);
+		}
+	}
 }
 
 namespace DreamDetailsLayoutLocal
@@ -325,11 +372,14 @@ namespace DreamDetailsLayoutLocal
 		return Handle;
 	}
 
-	bool DeclaresTags(const UClass* InClass)
+	/** Whether InClass declares a property this layout places: a tagged one, or an advanced one of a sub-category. */
+	bool NeedsLayout(const UClass* InClass)
 	{
 		for (TFieldIterator<FProperty> It(InClass, EFieldIteratorFlags::ExcludeSuper); It; ++It)
 		{
-			if (DreamPropertyMeta::HasPlacement(*It) || DreamPropertyMeta::IsHidden(*It))
+			if (DreamPropertyMeta::HasPlacement(*It) || DreamPropertyMeta::IsHidden(*It)
+				|| (It->HasAllPropertyFlags(CPF_Edit | CPF_AdvancedDisplay)
+					&& It->GetMetaData(TEXT("Category")).Contains(TEXT("|"))))
 			{
 				return true;
 			}
@@ -344,7 +394,7 @@ namespace DreamDetailsLayoutLocal
 		for (TObjectIterator<UClass> It; It; ++It)
 		{
 			const UClass* Class = *It;
-			if (Class->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) || !DeclaresTags(Class))
+			if (Class->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) || !NeedsLayout(Class))
 			{
 				continue;
 			}

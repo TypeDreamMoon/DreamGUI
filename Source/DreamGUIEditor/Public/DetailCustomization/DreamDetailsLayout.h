@@ -18,8 +18,9 @@ class IPropertyHandle;
  * A customization builds the rows it draws itself, then calls PlaceTagged last: every property of the objects being
  * customized that the customization has not placed or hidden already, and that says where it goes, is put there -- into
  * its section, its group, in its order, under the advanced expander when it asks to be -- and every one tagged
- * DreamGUI_Hidden is hidden. A property without tags is left alone, so the engine shows it under its own Category.
- * Nothing is hidden by category: a panel built this way cannot lose a property it was not told to hide.
+ * DreamGUI_Hidden is hidden. A property without tags is left alone, so the engine shows it under its own Category -- save
+ * an advanced property of a sub-category, which the engine never draws, and which is given an ordinary row of its
+ * sub-category instead. Nothing is hidden by category: a panel built this way cannot lose a property it was not told to hide.
  *
  *   void FMyCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
  *   {
@@ -69,8 +70,9 @@ public:
 	/** InCustomization, then PlaceTagged on the panel it laid out: how each DreamGUI class customization is registered. */
 	static FOnGetDetailCustomizationInstance Wrap(FOnGetDetailCustomizationInstance InCustomization);
 	/**
-	 * A customization that only places tags, registered for every class that has tags and no customization of its own or of
-	 * a base -- now, and for the classes of each module loaded after. Registered last, by the editor module.
+	 * A customization that only lays a class out (its tags, its advanced rows of a sub-category), registered for every class
+	 * that needs one and has no customization of its own or of a base -- now, and for the classes of each module loaded after.
+	 * Registered last, by the editor module.
 	 */
 	static void RegisterForTaggedClasses();
 	static void UnregisterForTaggedClasses();
@@ -83,6 +85,13 @@ private:
 		TArray<UObject*> Objects;
 	};
 
+	/**
+	 * The engine draws a sub-category's rows ("DreamGUI|Pointer Light") without its advanced ones, with "show all advanced"
+	 * on as well, and leaves them out too where it folds a sub-category into its category: an advanced property of a
+	 * sub-category is never shown. Each sub-category that has one is laid out here instead, as ordinary rows in the order
+	 * they are declared, the advanced ones after the others.
+	 */
+	void PlaceAdvancedOfSubcategories(const UClass* InClass);
 	IDetailCategoryBuilder& CategoryFor(const FProperty* InProperty);
 	IDetailGroup& GroupIn(IDetailCategoryBuilder& InCategory, const TArray<FString>& InPath, bool bInAdvanced);
 	void Place(TArray<FPlacement>& InPlacements, TMap<FName, IDetailPropertyRow*>* OutRows);
