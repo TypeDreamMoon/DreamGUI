@@ -41,7 +41,8 @@ description: "对照 UMG 设计器重建的 DreamUI Designer：按矩形拾取�
 **遮罩**（裁剪上的遮罩、剪贴到下一层、遮罩转场）、非正常的**混合**模式、**效果**（玻璃、调整图层这类后处理视觉，全息箔、
 指针光、倾斜卡，网格修改器）、**变形**（变形、果冻、路径文字）和**粒子**。悬停在标记上会列出它代表什么、各自怎么设的。
 点一下，用效果自己的开关把这一类关掉，再点打开——方便对比前后；关掉时标记变暗。这是普通的编辑：一步撤销，会保存，
-由 .dui 支撑的类还会写回 .dui。
+由 .dui 支撑的类还会写回 .dui。双击样式标记会打开[图层样式对话框](#the-layer-style-dialog)，所以点这个标记时会先等过
+双击的时间再切换。
 
 <a id="viewport-handles"></a>
 
@@ -129,7 +130,7 @@ Layout），然后是它是什么（Visual、Panel、Self Layout）、它怎么�
 | Blend Mode | 视觉的混合模式，视觉是元素（图片、文字、RectBlock……）时才有 |
 | Clip To Layer Below | `bClipToBelow` |
 | Mask | 快速选一个形状——选了就让 widget 裁剪到自身边界，遮罩需要这个——下面是完整的遮罩（`ClipMask`） |
-| Layer Style、Layer Group | 各一个开关：打开时给没有的 widget 加一个，和 *Add Component* 一样；关掉时关闭它但保留设置。*Edit...* 打开它自己的属性 |
+| Layer Style、Layer Group | 各一个开关：打开时给没有的 widget 加一个，和 *Add Component* 一样；关掉时关闭它但保留设置。*Edit...*：图层样式的打开[图层样式对话框](#the-layer-style-dialog)，图层组的打开它自己的属性 |
 | Group Mode | 图层组的隔离方式，所有选中 widget 都有图层组时显示 |
 | Effects | widget 上的每个图层效果：一只眼睛负责开关，点名字打开它的属性 |
 
@@ -186,6 +187,30 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 <a id="layer-styles-colours-and-presets"></a>
 
 ## 图层样式、颜色与预设
+
+<a id="the-layer-style-dialog"></a>
+
+### 图层样式对话框
+
+widget 菜单 Layer Style 一节最上面的 **Layer Style...**、细节面板 Layer 区里图层样式开关旁的 **Edit...**，以及在层级面板
+里双击 widget 的样式标记，都会在选中的 widget 上打开图像编辑器那样的图层样式对话框（从 Layer 区或标记打开时，那个 widget
+不在选择里就只对它自己）。窗口不是模态的，开在设计器旁边，每个设计器同时只开一个。
+
+- 左边是**混合选项**——图层的混合模式和不透明度、填充不透明度、所有尺寸的缩放、全局光——以及图层样式有的各种效果，
+  顺序和图像编辑器一样：斜面和浮雕（下挂等高线、纹理）、描边、内阴影、内发光、光泽、颜色叠加、渐变叠加、图案叠加、
+  外发光、投影。勾选框开关效果；勾上一种还没有的效果就加一个。
+- 描边、内阴影、颜色叠加、渐变叠加和投影可以有多个：**+** 在这一行后面加一个（复制这一行），垃圾桶删掉它；把一行
+  拖到同类的另一行上可以调整绘制顺序，后面的画在前面的上面。
+- 右边是选中那一行的参数。它们就是样式自己的字段，所以项目或 DreamGUI 按字段类型或元数据注册的编辑控件，在这里和
+  细节面板里一样会用上。
+- 每次改动都立刻显示在 widget 上，只在设计器的预览里；取消勾选 *Preview* 就不显示。按 **OK** 之前什么都不写；OK 把
+  样式写到每个 widget 上，一步撤销，并写进 `.dui`。**Cancel**（或直接关窗口）把预览恢复原样，文件逐字节不变。
+- **New Style...** 把正在编辑的样式连同图层的混合存成预设，用的是[预设库](#the-preset-library)的新建样式窗口。
+
+多选时，对话框从第一个 widget 的样式和混合开始，写到所有 widget 上。什么都没改就按 OK，不写任何东西。混合模式和
+不透明度只有在混合选项里改过才写，否则多个 widget 各自保留自己的混合。原来跟随预设的样式会变成 widget 自己的样式。
+`DreamUILayerStyleDialog::Open` 和 `OpenFrom`（`DreamGUIEditor` 模块）供项目自己的编辑器打开这个对话框，`FDreamUILayerStyleSession`
+是不带窗口的编辑过程。
 
 <a id="copying-and-pasting-a-layer-style"></a>
 

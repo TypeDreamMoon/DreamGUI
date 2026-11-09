@@ -46,7 +46,9 @@ transition), a **blend** mode other than normal, an **effect** (a post-process v
 layer, a holo foil, a pointer light, a tilt card, a mesh modifier), a **warp** (warp, jelly, text on a path) and
 **particles**. Hovering a mark lists what it stands for and how each is set. Clicking it turns the effects of that kind
 off, and on again, through their own switches -- to compare with and without them; the mark dims while they are off. It
-is an ordinary edit: one undo step, saved, and written to the `.dui` of a class backed by one.
+is an ordinary edit: one undo step, saved, and written to the `.dui` of a class backed by one. A double-click on the
+style mark opens the [Layer Style dialog](#the-layer-style-dialog), so a click on that mark waits a double-click's time
+before it switches.
 
 ### Viewport handles
 
@@ -140,7 +142,7 @@ The **Layer** category gathers what makes a widget a layer, from wherever it liv
 | Blend Mode | its visual's, when the visual is an element (an image, a text, a rect block...) |
 | Clip To Layer Below | `bClipToBelow` |
 | Mask | a shape to pick at once -- picking one makes the widget clip to its bounds, which the mask needs -- and the whole mask (`ClipMask`) under it |
-| Layer Style, Layer Group | a switch each: on adds one to a widget that has none, as *Add Component* does; off turns it off and keeps its settings. *Edit...* opens its own properties |
+| Layer Style, Layer Group | a switch each: on adds one to a widget that has none, as *Add Component* does; off turns it off and keeps its settings. *Edit...* opens the layer style's [Layer Style dialog](#the-layer-style-dialog), the layer group's own properties |
 | Group Mode | the layer group's isolation, while every selected widget has one |
 | Effects | every layer effect on the widget: an eye that turns it off and on, and its name, which opens its properties |
 
@@ -198,6 +200,34 @@ Blueprint ones included. A project adds rules for its own components from its ed
 `RequireVisual`, `RequireComponent`, `OnePerWidget` or `AddRule`.
 
 ## Layer styles, colours and presets
+
+### The Layer Style dialog
+
+**Layer Style...**, first in the widget menu's Layer Style section, **Edit...** beside the layer style's switch in the
+details panel's Layer section, and a double-click on a widget's style mark in the hierarchy open an image editor's Layer
+Style dialog on the selected widgets -- from the Layer section or a mark, on that widget alone when it is not one of them.
+The window stays open beside the designer, one per designer.
+
+- On the left, **Blending Options** -- the layer's blend mode and opacity, the fill opacity, the scale of every size and
+  the global light -- and the effects a layer style has, in an image editor's order: Bevel & Emboss (with its Contour and
+  Texture), Stroke, Inner Shadow, Inner Glow, Satin, Color Overlay, Gradient Overlay, Pattern Overlay, Outer Glow and
+  Drop Shadow. A tick switches an effect on or off; ticking a kind there is none of adds one.
+- Strokes, inner shadows, colour and gradient overlays and drop shadows can be there more than once: **+** adds another
+  after the row (a copy of it), the bin takes it out, and a row dragged onto another of its kind changes the order they
+  draw in, a later one over an earlier one.
+- On the right, the selected row's parameters. They are the style's own fields, so an editor a project or DreamGUI
+  registers for a field's type or metadata is used here as in the details panel.
+- Every change is shown on the widgets at once, in the designer's preview only; *Preview* turns that off. Nothing is
+  written until **OK**, which writes the style onto every widget as one undo step, into the `.dui`. **Cancel** -- or
+  closing the window -- puts the preview back, and the file is byte for byte what it was.
+- **New Style...** keeps the style being edited, with the layer's blending, as a preset, through the
+  [preset library](#the-preset-library)'s New Style window.
+
+On several widgets the dialog starts from the first one's style and blending and writes to all of them. OK with nothing
+changed writes nothing. The blend mode and opacity are written only when Blending Options changed them, so a style given
+to several widgets otherwise leaves each its own blending. A widget whose style followed a preset gets a style of its own.
+`DreamUILayerStyleDialog::Open` and `OpenFrom` (module `DreamGUIEditor`) open the dialog for an editor of a project's
+own, and `FDreamUILayerStyleSession` is the editing without the window.
 
 ### Copying and pasting a layer style
 

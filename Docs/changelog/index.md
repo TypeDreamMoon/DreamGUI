@@ -220,6 +220,12 @@ What is on `main` after 1.0.0, and ships with the next version.
   widget, followed or copied, and kept from a selection. A style preset asset can keep the layer's blend mode and opacity
   (`bIncludeBlending`); `DreamUIStylePresets` makes style presets for an editor of a project's own. See
   [The widget designer](../tools/designer.md#the-preset-library).
+- **A Layer Style dialog.** The designer opens an image editor's Layer Style dialog on the selected widgets -- *Layer
+  Style...* in the widget menu, *Edit...* beside the layer style in the Layer section, or a double-click on a style mark
+  in the hierarchy: the effects listed with their ticks, more than one of a kind added and reordered, each one's
+  parameters beside them, every change previewed on the widgets at once, OK written into the `.dui` as one undo step,
+  Cancel leaving the file as it was, and New Style keeping the style as a preset. See
+  [The widget designer](../tools/designer.md#the-layer-style-dialog).
 - **Lists of structs are written back to a `.dui`.** A layer style's drop shadows, strokes and overlays, an adjustment
   layer's adjustments and every other list, set or map of structs with no short form is written the way it is read —
   `Style.DropShadows = ["(Angle=120,Distance=6)"]`, the fields that differ from the struct's defaults — where the

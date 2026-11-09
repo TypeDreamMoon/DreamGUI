@@ -99,6 +99,9 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   以及新增的 `StylePresets`、`EffectPresets`）和资产（`UDreamGradientAsset`、`UDreamLayerStylePreset`）——双击或拖到 widget
   上套用到选择，可跟随也可复制，也能从选中的 widget 存成预设。样式预设资产可以带上图层的混合模式和不透明度
   （`bIncludeBlending`）；`DreamUIStylePresets` 供项目自己的编辑器创建样式预设。见[控件设计器](../tools/designer.md#the-preset-library)。
+- **图层样式对话框。** 设计器可以在选中的 widget 上打开图像编辑器那样的图层样式对话框——widget 菜单里的 *Layer Style...*、
+  Layer 区图层样式旁的 *Edit...*，或在层级面板里双击样式标记：效果带勾选框列出，同类效果可加多个、可拖动排序，旁边是各自的参数；每次改动立刻在
+  widget 上预览，OK 一步撤销写进 `.dui`，Cancel 文件不变，New Style 存成预设。见[控件设计器](../tools/designer.md#the-layer-style-dialog)。
 - **结构体列表能写回 `.dui` 了。** 图层样式的投影、描边和叠加，调整图层的各项调整，以及其他没有简写的结构体列表、Set、Map，都按读入的写法写回——`Style.DropShadows = ["(Angle=120,Distance=6)"]`，只写与结构体默认值不同的字段；以前设计器能从文件读这种列表，却写不回去。见[写回](../language/write-back.md#what-the-designer-writes-back)。
 
 - **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
