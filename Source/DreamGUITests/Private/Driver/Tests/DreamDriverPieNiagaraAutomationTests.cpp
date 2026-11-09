@@ -20,6 +20,7 @@
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/Paths.h"
+#include "NiagaraComponent.h"
 #include "Slate/SceneViewport.h"
 #include "UnrealClient.h"
 
@@ -33,7 +34,9 @@
  * level Blueprint makes one (Create Dream Widget, Add to Viewport, the cursor shown, game and UI input), in a viewport the size
  * of a new play window, and each card's effect asked for with the pointer -- moved, pressed and let go of through the play
  * session's player controller, as a mouse button reaches it. Each effect is held to the play session's own picture: the
- * card's pixels after the gesture against its pixels before, and how far apart the ones that changed are.
+ * card's pixels after the gesture against its pixels before, and how far apart the ones that changed are. After a burst,
+ * frame by frame, the scene round the UI is held to what it was: the components that simulate the systems are DreamGUI's to
+ * draw, and once drew their first frame in the world as well, behind the cards.
  *
  * In a play session the world ticks the systems' components and the screen-space canvas draws them into the scene's view;
  * in the designer and the pixel tests the element steps the systems and a stage's target takes the picture. This is the one
@@ -200,14 +203,109 @@ namespace DreamPieNiagaraTestLocal
 			FString::Printf(TEXT("%s at (%.2f, %.2f)"), *Name, InLocal01.X, InLocal01.Y));
 	}
 
-	/** Queue: a click at InWidget's InLocal01: the press, a frame, the release, a frame. */
-	void ClickOn(FDreamDriverSequence& InSteps, const TSharedRef<FState>& InState, const TCHAR* InWidget, FVector2D InLocal01)
+	/** Queue: a click at InWidget's InLocal01: the press, a frame, the release, and InFramesAfter frames. */
+	void ClickOn(FDreamDriverSequence& InSteps, const TSharedRef<FState>& InState, const TCHAR* InWidget, FVector2D InLocal01, int32 InFramesAfter = 1)
 	{
 		MoveTo(InSteps, InState, InWidget, InLocal01);
 		InSteps.Press();
 		InSteps.WaitFrames(1);
 		InSteps.Release();
-		InSteps.WaitFrames(1);
+		if (InFramesAfter > 0)
+		{
+			InSteps.WaitFrames(InFramesAfter);
+		}
+	}
+
+	/** The systems the sample has, by their widgets' names. */
+	const TCHAR* const SystemNames[] = { TEXT("Sparks"), TEXT("Trail"), TEXT("Edge"), TEXT("Burst"), TEXT("Coins") };
+
+	/** How many of the sample's Niagara components the scene has a proxy for: each one is a system drawn in the world as well. */
+	int32 CountSceneProxies(const FState& InState)
+	{
+		int32 Count = 0;
+		for (const TCHAR* Name : SystemNames)
+		{
+			const UDreamWidget* Widget = Find(InState, Name);
+			const UDreamNiagaraSystem* System = Widget != nullptr ? Cast<UDreamNiagaraSystem>(Widget->GetVisual()) : nullptr;
+			if (System == nullptr)
+			{
+				continue;
+			}
+			TArray<UObject*> Subobjects;
+			GetObjectsWithOuter(System, Subobjects, EGetObjectsFlags::None);
+			for (const UObject* Object : Subobjects)
+			{
+				const UNiagaraComponent* Component = Cast<UNiagaraComponent>(Object);
+				Count += Component != nullptr && Component->SceneProxy != nullptr ? 1 : 0;
+			}
+		}
+		return Count;
+	}
+
+	/**
+	 * Queue: InFrames frames from now on, the scene round the sample held to the snapshot -- every pixel outside the row of
+	 * cards, where the UI draws nothing, as it was before the gesture -- and none of the sample's Niagara components given a
+	 * proxy by the scene. A system DreamGUI draws is simulated by a component of its own, which must not be drawn in the world
+	 * too: not even the frame it is activated in, before Niagara turns a component's rendering off at its first tick.
+	 */
+	void WatchTheScene(FAutomationTestBase& InTest, FDreamDriverSequence& InSteps, const TSharedRef<FState>& InState, const TCHAR* InEffect, int32 InFrames)
+	{
+		struct FWatch
+		{
+			int32 MostChanged = 0;
+			int32 FrameOfMost = -1;
+			int32 MostProxies = 0;
+			int32 FramesRead = 0;
+		};
+		const TSharedRef<FWatch> Watch = MakeShared<FWatch>();
+		for (int32 Frame = 0; Frame < InFrames; ++Frame)
+		{
+			InSteps.Then([InState, Watch, Frame](FDreamDriverContext& InContext)
+			{
+				Watch->MostProxies = FMath::Max(Watch->MostProxies, CountSceneProxies(*InState));
+				TArray<FColor> Now;
+				FIntPoint Size = FIntPoint::ZeroValue;
+				const TOptional<FBox2D> Row = FDreamDriverProjection::WidgetToPixelRect(Find(*InState, TEXT("Row")));
+				if (!ReadViewport(InContext, Now, Size) || Size != InState->BeforeSize || !Row.IsSet())
+				{
+					return;
+				}
+				++Watch->FramesRead;
+				// The row, and a pixel round it for its edges' filtering, is the UI's; the rest of the viewport is the scene's.
+				const FBox2D Ui(Row->Min - FVector2D(2.0, 2.0), Row->Max + FVector2D(2.0, 2.0));
+				int32 Changed = 0;
+				for (int32 Y = 0; Y < Size.Y; ++Y)
+				{
+					for (int32 X = 0; X < Size.X; ++X)
+					{
+						if (Ui.IsInside(FVector2D(X, Y)))
+						{
+							continue;
+						}
+						const FColor A = InState->Before[Y * Size.X + X];
+						const FColor B = Now[Y * Size.X + X];
+						Changed += FMath::Abs(A.R - B.R) + FMath::Abs(A.G - B.G) + FMath::Abs(A.B - B.B) > 12 ? 1 : 0;
+					}
+				}
+				if (Changed > Watch->MostChanged)
+				{
+					Watch->MostChanged = Changed;
+					Watch->FrameOfMost = Frame;
+					FDreamPixelProbe::SaveCapture(Now, Size, TEXT("Pie_NiagaraSample_SceneChanged"));
+				}
+			});
+			InSteps.WaitFrames(1);
+		}
+		FAutomationTestBase* Test = &InTest;
+		const FString Effect(InEffect);
+		InSteps.Then([Test, Watch, Effect, InFrames](FDreamDriverContext&)
+		{
+			Test->TestEqual(*FString::Printf(TEXT("%s: every frame of the %d after the gesture is read back"), *Effect, InFrames), Watch->FramesRead, InFrames);
+			Test->TestEqual(*FString::Printf(TEXT("%s: the scene round the UI is untouched in every one of them (most pixels changed: %d, %d frames in)"),
+				*Effect, Watch->MostChanged, Watch->FrameOfMost), Watch->MostChanged, 0);
+			Test->TestEqual(*FString::Printf(TEXT("%s: ...and the scene has a proxy for none of the systems' components (most at once: %d)"), *Effect, Watch->MostProxies),
+				Watch->MostProxies, 0);
+		});
 	}
 
 	/** What one effect is held to. */
@@ -330,10 +428,10 @@ bool FDreamDriverPieNiagaraSampleTest::RunTest(const FString& Parameters)
 	MoveAway(Steps);
 	Steps.WaitSeconds(1.2f);
 
-	// Sparks: a click on the card throws a ring of sparks out from where it lands.
+	// Sparks: a click on the card throws a ring of sparks out from where it lands -- and nothing into the scene behind the UI.
 	Snapshot(Steps, State);
-	ClickOn(Steps, State, TEXT("SparksCard"), FVector2D(0.5, 0.7));
-	Steps.WaitSeconds(0.08f);
+	ClickOn(Steps, State, TEXT("SparksCard"), FVector2D(0.5, 0.7), 0);
+	WatchTheScene(*this, Steps, State, TEXT("Sparks"), 8);
 	ExpectDrawn(*this, Steps, State, { TEXT("Sparks"), TEXT("SparksCard"), TEXT("Sparks"), 150, FVector2D(20.0, 20.0) });
 	MoveAway(Steps);
 	Steps.WaitSeconds(1.2f);
@@ -348,19 +446,22 @@ bool FDreamDriverPieNiagaraSampleTest::RunTest(const FString& Parameters)
 
 	// Charge: four clicks fill the bar, and the full bar bursts. The bar's own pixels are left out: it fills either way.
 	Snapshot(Steps, State);
-	for (int32 Click = 0; Click < 4; ++Click)
+	for (int32 Click = 0; Click < 3; ++Click)
 	{
 		ClickOn(Steps, State, TEXT("ChargeCard"), FVector2D(0.5, 0.25));
 	}
-	Steps.WaitSeconds(0.1f);
+	// The fourth fills the bar, and the trigger bursts at the centre (BurstAtCentre) on the frames that follow.
+	ClickOn(Steps, State, TEXT("ChargeCard"), FVector2D(0.5, 0.25), 0);
+	WatchTheScene(*this, Steps, State, TEXT("Charge"), 8);
 	ExpectDrawn(*this, Steps, State, { TEXT("Charge"), TEXT("ChargeCard"), TEXT("Burst"), 40, FVector2D(100.0, 20.0), TEXT("Charge") });
 	MoveAway(Steps);
 	Steps.WaitSeconds(1.2f);
 
 	// Coins: a click on the chest sends coins from it to the counter.
 	Snapshot(Steps, State);
-	ClickOn(Steps, State, TEXT("Chest"), FVector2D(0.5, 0.5));
-	Steps.WaitSeconds(0.3f);
+	ClickOn(Steps, State, TEXT("Chest"), FVector2D(0.5, 0.5), 0);
+	WatchTheScene(*this, Steps, State, TEXT("Coins"), 8);
+	Steps.WaitSeconds(0.25f);
 	ExpectDrawn(*this, Steps, State, { TEXT("Coins"), TEXT("CoinCard"), TEXT("Coins"), 100, FVector2D(20.0, 20.0) });
 
 	Steps.Then([Rig](FDreamDriverContext&)
