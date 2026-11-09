@@ -1125,6 +1125,12 @@ namespace DreamUIPatchLocal
 		 * property for the same node in the same batch joins this body instead of writing a block of its own.
 		 */
 		int32 SynthesizedBlockOwner = INDEX_NONE;
+		/**
+		 * For a property written in front of the closing brace of a block that closes on the line it is written after
+		 * (PlanInsert), that brace's offset: another property for the same block in the same batch joins this splice. Two
+		 * splices would each take the whitespace before the brace and land on the same characters.
+		 */
+		int32 BraceOfOneLineBlock = INDEX_NONE;
 	};
 
 	bool Apply(FString& InOutText, TArray<FSplice>& InSplices)
@@ -1779,6 +1785,22 @@ namespace DreamUIPatchLocal
 			// of the line is OUTSIDE the block. The new line goes in front of the brace instead, and
 			// the brace is pushed down onto its own line -- which is also what turns a one-line block
 			// into an ordinary one the first time somebody adds to it.
+			// Another property for the same block in this batch: after the line the first one is writing, in its splice.
+			const FString BraceLine = LineEnding + OwnerIndent;
+			for (FSplice& Planned : OutSplices)
+			{
+				if (Planned.BraceOfOneLineBlock == Close)
+				{
+					if (!Planned.Text.EndsWith(BraceLine))
+					{
+						RefuseStale(OutDiagnostics, InTarget.Location, TEXT("the line planned for this block is not one another property could follow"));
+						return false;
+					}
+					Planned.Text = Planned.Text.LeftChop(BraceLine.Len()) + LineEnding + Indent + NewLine + BraceLine;
+					return true;
+				}
+			}
+
 			int32 BraceStart = Close;
 			while (BraceStart > Open + 1 && IsInlineWhitespace(InText[BraceStart - 1]))
 			{
@@ -1788,8 +1810,9 @@ namespace DreamUIPatchLocal
 			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
 			Splice.Offset = BraceStart;
 			Splice.Length = Close - BraceStart;
-			Splice.Text = LineEnding + Indent + NewLine + LineEnding + OwnerIndent;
+			Splice.Text = LineEnding + Indent + NewLine + BraceLine;
 			Splice.Order = InOutOrder++;
+			Splice.BraceOfOneLineBlock = Close;
 			return true;
 		}
 
@@ -3270,7 +3293,27 @@ namespace DreamUIPatchLocal
 			}
 		}
 
-		const int32 InsertAt = LeaveNestedConstructs(InText, Open, Close, FindLineEnd(InText, Anchor));
+		const int32 AnchorLineEnd = FindLineEnd(InText, Anchor);
+		if (Close < AnchorLineEnd)
+		{
+			// `Widget X { }` and `Text Title { Text = "Hi" }`: the block closes on the line the new block would follow, so
+			// the end of that line is OUTSIDE the block, and a `+` line written there belongs to the parent. It goes in
+			// front of the brace instead, one level in from the node, and the brace moves down onto its own line -- as
+			// PlanInsert does for a property.
+			int32 BraceStart = Close;
+			while (BraceStart > Open + 1 && IsInlineWhitespace(InText[BraceStart - 1]))
+			{
+				--BraceStart;
+			}
+			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+			Splice.Offset = BraceStart;
+			Splice.Length = Close - BraceStart;
+			Splice.Text = LineEnding + NodeIndent + DetectIndentUnit(InText) + NewLine + LineEnding + NodeIndent;
+			Splice.Order = InOutOrder++;
+			return true;
+		}
+
+		const int32 InsertAt = LeaveNestedConstructs(InText, Open, Close, AnchorLineEnd);
 		if (InsertAt == INDEX_NONE)
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
