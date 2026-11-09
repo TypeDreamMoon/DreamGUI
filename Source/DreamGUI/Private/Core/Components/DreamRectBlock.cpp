@@ -1082,7 +1082,7 @@ FDreamLayerEffects UDreamRectBlock::GetEffectsAsLayerStyle() const
 void UDreamRectBlock::SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle)
 {
 	using namespace DreamRectBlockStyleLocal;
-	auto LightAngle = [&InStyle](bool bGlobal, float InAngle) { return bGlobal ? InStyle.GlobalLightAngle : InAngle; };
+	auto LightAngle = [&InStyle](bool bGlobal, float InAngle) { return DreamLayerStyleLight::GetAngle(InStyle, bGlobal, InAngle); };
 	const float Scale = FMath::Max(InStyle.Scale, 0.01f);
 	const FDreamStyleDropShadow* Drop = InStyle.DropShadows.FindByPredicate([](const FDreamStyleDropShadow& S) { return S.bEnabled; });
 	bEnableOuterShadow = InStyle.bEnabled && Drop != nullptr;

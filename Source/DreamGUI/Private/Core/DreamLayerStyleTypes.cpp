@@ -261,3 +261,53 @@ bool FDreamLayerEffects::operator==(const FDreamLayerEffects& Other) const
 		&& InnerGlow == Other.InnerGlow && InnerShadows == Other.InnerShadows && Strokes == Other.Strokes
 		&& BevelEmboss == Other.BevelEmboss;
 }
+
+float DreamLayerStyleLight::GetAngle(const FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float InOwnAngle)
+{
+	return bInUseGlobalLight ? InStyle.GlobalLightAngle : InOwnAngle;
+}
+
+void DreamLayerStyleLight::SetAngle(FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float& InOutOwnAngle, float InAngle)
+{
+	(bInUseGlobalLight ? InStyle.GlobalLightAngle : InOutOwnAngle) = NormalizeAngle(InAngle);
+}
+
+float DreamLayerStyleLight::GetAltitude(const FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float InOwnAltitude)
+{
+	return bInUseGlobalLight ? InStyle.GlobalLightAltitude : InOwnAltitude;
+}
+
+void DreamLayerStyleLight::SetAltitude(FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float& InOutOwnAltitude, float InAltitude)
+{
+	(bInUseGlobalLight ? InStyle.GlobalLightAltitude : InOutOwnAltitude) = FMath::Clamp(InAltitude, 0.0f, 90.0f);
+}
+
+FVector2f DreamLayerStyleLight::GetShadowOffset(float InAngle, float InDistance)
+{
+	const float A = FMath::DegreesToRadians(InAngle);
+	return FVector2f(-FMath::Cos(A), -FMath::Sin(A)) * InDistance;
+}
+
+void DreamLayerStyleLight::GetAngleAndDistance(const FVector2f& InOffset, float& InOutAngle, float& OutDistance)
+{
+	OutDistance = InOffset.Size();
+	if (OutDistance > UE_KINDA_SMALL_NUMBER)
+	{
+		// The light is on the other side of the layer from its shadow.
+		InOutAngle = NormalizeAngle(FMath::RadiansToDegrees(FMath::Atan2(-InOffset.Y, -InOffset.X)));
+	}
+}
+
+float DreamLayerStyleLight::NormalizeAngle(float InAngle)
+{
+	float Angle = FMath::Fmod(InAngle, 360.0f);
+	if (Angle <= -180.0f)
+	{
+		Angle += 360.0f;
+	}
+	else if (Angle > 180.0f)
+	{
+		Angle -= 360.0f;
+	}
+	return Angle;
+}

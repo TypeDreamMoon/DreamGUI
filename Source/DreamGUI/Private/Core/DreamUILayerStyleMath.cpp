@@ -57,11 +57,11 @@ namespace DreamUILayerStyleMathLocal
 		return FVector3f(FMath::Cos(A) * FMath::Cos(B), -FMath::Sin(A) * FMath::Cos(B), FMath::Sin(B));
 	}
 
-	/** A shadow's offset: away from the light at InAngle, by InDistance, +Y down. */
+	/** A shadow's offset: away from the light at InAngle, by InDistance, +Y down -- the widget space's offset turned over. */
 	FVector2f AwayFrom(float InAngle, float InDistance)
 	{
-		const float A = FMath::DegreesToRadians(InAngle);
-		return FVector2f(-FMath::Cos(A), FMath::Sin(A)) * InDistance;
+		const FVector2f Up = DreamLayerStyleLight::GetShadowOffset(InAngle, InDistance);
+		return FVector2f(Up.X, -Up.Y);
 	}
 
 	struct FPacker
@@ -199,7 +199,7 @@ bool FDreamUILayerStyleMath::Pack(const FDreamLayerEffects& InStyle, FDreamUILay
 		return false;
 	}
 	const float Scale = FMath::Max(InStyle.Scale, 0.01f);
-	auto Angle = [&InStyle](bool bGlobal, float InAngle) { return bGlobal ? InStyle.GlobalLightAngle : InAngle; };
+	auto Angle = [&InStyle](bool bGlobal, float InAngle) { return DreamLayerStyleLight::GetAngle(InStyle, bGlobal, InAngle); };
 	FPacker Packer(OutRecord);
 	float Reach = 0.0f;
 
@@ -381,7 +381,7 @@ bool FDreamUILayerStyleMath::Pack(const FDreamLayerEffects& InStyle, FDreamUILay
 		const float HighlightOpacity = InLight != nullptr ? Saturate(Bevel.HighlightOpacity * FMath::Max(InLight->Intensity, 0.0f)) : Bevel.HighlightOpacity;
 		if (FVector4f* E = Packer.Add(KindBevel, Bevel.HighlightMode, HighlightOpacity, Flags))
 		{
-			const FVector3f L = Light(Angle(Bevel.bUseGlobalLight, Bevel.Angle), Bevel.bUseGlobalLight ? InStyle.GlobalLightAltitude : Bevel.Altitude);
+			const FVector3f L = Light(Angle(Bevel.bUseGlobalLight, Bevel.Angle), DreamLayerStyleLight::GetAltitude(InStyle, Bevel.bUseGlobalLight, Bevel.Altitude));
 			EDreamStyleBevelStyle Style = Bevel.Style;
 			float Size = Bevel.Size * Scale;
 			float Shift = 0.0f;

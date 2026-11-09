@@ -714,3 +714,27 @@ struct DREAMGUI_API FDreamLayerEffects
 	bool operator==(const FDreamLayerEffects& Other) const;
 	bool operator!=(const FDreamLayerEffects& Other) const { return !(*this == Other); }
 };
+
+/**
+ * An effect's light, read and written where it is kept: an effect that uses the global light (bUseGlobalLight) takes the
+ * style's GlobalLightAngle and GlobalLightAltitude, and setting its angle sets the global one -- every effect that uses the
+ * global light turns with it, as in an image editor. Angles are degrees, 0 a light from the right, counter-clockwise; a
+ * shadow falls away from the light.
+ */
+namespace DreamLayerStyleLight
+{
+	/** The angle the effect's light comes from. */
+	DREAMGUI_API float GetAngle(const FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float InOwnAngle);
+	/** Sets it where it is kept, (-180, 180]: the style's global angle, or the effect's own. */
+	DREAMGUI_API void SetAngle(FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float& InOutOwnAngle, float InAngle);
+	/** The light's altitude, degrees above the layer (a bevel's). */
+	DREAMGUI_API float GetAltitude(const FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float InOwnAltitude);
+	/** Sets it where it is kept, [0, 90]. */
+	DREAMGUI_API void SetAltitude(FDreamLayerEffects& InStyle, bool bInUseGlobalLight, float& InOutOwnAltitude, float InAltitude);
+	/** Where a shadow lies from its layer, the light at InAngle and the shadow InDistance from the layer: widget space, +Y up. */
+	DREAMGUI_API FVector2f GetShadowOffset(float InAngle, float InDistance);
+	/** The angle and the distance that put a shadow at InOffset (widget space, +Y up). A zero offset keeps InOutAngle. */
+	DREAMGUI_API void GetAngleAndDistance(const FVector2f& InOffset, float& InOutAngle, float& OutDistance);
+	/** InAngle in (-180, 180]. */
+	DREAMGUI_API float NormalizeAngle(float InAngle);
+}
