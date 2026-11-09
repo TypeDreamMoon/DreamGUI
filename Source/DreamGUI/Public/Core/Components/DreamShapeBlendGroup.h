@@ -77,7 +77,7 @@ protected:
 	/** How far apart, in units, two edges still melt into each other. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Shape Blend", meta = (ClampMin = "0", UIMax = "128"))
 	float Smoothness = 16.0f;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Shape Blend")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Shape Blend", meta = (DreamGUI_LayerToggle))
 	bool bBlendEnabled = true;
 
 private:

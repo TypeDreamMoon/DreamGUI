@@ -86,7 +86,7 @@ public:
 
 protected:
 	/** Off, the widget is shown whole whatever the progress: to compare with and without the transition. */
-	UPROPERTY(EditAnywhere, Category = "Transition")
+	UPROPERTY(EditAnywhere, Category = "Transition", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	/** 0 hidden, 1 shown (with Invert: 0 shown, 1 hidden). */
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetProgress, Category = "Transition", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))

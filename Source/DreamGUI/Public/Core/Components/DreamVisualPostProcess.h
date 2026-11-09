@@ -64,7 +64,7 @@ protected:
 	/** A subclass that draws its widget's children through its effect stops and starts doing so here. */
 	virtual void OnEnabledChanged();
 	/** Off, the effect draws nothing: to compare with and without it. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 
 	virtual void BeginPlay() override;

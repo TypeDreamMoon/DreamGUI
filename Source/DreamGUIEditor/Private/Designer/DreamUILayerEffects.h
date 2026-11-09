@@ -27,7 +27,8 @@ enum class EDreamUILayerEffectKind : uint8
  *
  * Object is what holds the effect -- a component, the widget's visual, or the widget itself for what is a property of
  * the widget (its mask, clipping to the layer below). SwitchPath is the property that turns the effect off and on,
- * dotted into structs, on Object; empty when it has none, because the effect IS its being there (a blend mode, a mask).
+ * dotted into structs, on Object -- the one its class tags DreamGUI_LayerToggle; empty when it has none, because the
+ * effect IS its being there (a blend mode, a mask).
  */
 struct DREAMGUIEDITOR_API FDreamUILayerEffect
 {

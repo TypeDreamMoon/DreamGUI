@@ -70,7 +70,7 @@ protected:
 #endif
 
 	/** Off, it lights nothing: to compare with and without it. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	/** Follow the pointer (on), or stand at LightPosition (off). */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")

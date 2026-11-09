@@ -667,7 +667,7 @@ struct DREAMGUI_API FDreamLayerEffects
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	/** Every size and distance of every effect, times this: an editor's "scale effects". */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (ClampMin = "0.01", UIMax = "10"))

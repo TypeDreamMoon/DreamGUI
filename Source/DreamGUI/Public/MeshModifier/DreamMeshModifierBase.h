@@ -109,7 +109,7 @@ protected:
 	FDelegateHandle ComponentsChangedDelegateHandle;
 
 	/** Enable this mesh modifier */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_LayerToggle))
 		bool bEnable = true;
 
 private:

@@ -72,7 +72,7 @@ protected:
 #endif
 
 	/** Off, the element is drawn as if there were no foil: to compare with and without it. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil")
 	EDreamHoloFoilView ViewSource = EDreamHoloFoilView::Pointer;

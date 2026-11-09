@@ -87,7 +87,7 @@ protected:
 #endif
 
 	/** Off, the subtree is drawn as if there were no group: to compare with and without it. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	EDreamLayerGroupIsolation Isolation = EDreamLayerGroupIsolation::PassThrough;

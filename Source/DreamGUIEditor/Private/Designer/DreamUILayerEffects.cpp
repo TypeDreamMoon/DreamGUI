@@ -10,6 +10,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamLayerStylePreset.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "DetailCustomization/DreamPropertyMeta.h"
 #include "DreamGUIEditorStyle.h"
 #include "Extensions/DreamMaskTransition.h"
 #include "Extensions/Effects/DreamHoloFoil.h"
@@ -120,14 +121,16 @@ void DreamUILayerEffects::Collect(const UDreamWidget* InWidget, TArray<FDreamUIL
 	{
 		return;
 	}
-	auto Add = [&OutEffects](EDreamUILayerEffectKind InKind, const UObject* InObject, FText InName, FText InDetail, const TCHAR* InSwitch) -> FDreamUILayerEffect&
+	// An effect with a switch of its own is switched by its DreamGUI_LayerToggle; one that is the widget's own state (its mask,
+	// its blend mode) has none.
+	auto Add = [&OutEffects](EDreamUILayerEffectKind InKind, const UObject* InObject, FText InName, FText InDetail, bool bInSwitched) -> FDreamUILayerEffect&
 	{
 		FDreamUILayerEffect& Effect = OutEffects.AddDefaulted_GetRef();
 		Effect.Kind = InKind;
 		Effect.Object = const_cast<UObject*>(InObject);
 		Effect.Name = MoveTemp(InName);
 		Effect.Detail = MoveTemp(InDetail);
-		Effect.SwitchPath = InSwitch;
+		Effect.SwitchPath = bInSwitched && InObject != nullptr ? DreamPropertyMeta::FindLayerTogglePath(InObject->GetClass()) : FString();
 		return Effect;
 	};
 
@@ -138,12 +141,12 @@ void DreamUILayerEffects::Collect(const UDreamWidget* InWidget, TArray<FDreamUIL
 	{
 		Add(EDreamUILayerEffectKind::Mask, InWidget, LOCTEXT("Mask", "Mask"),
 			FText::Format(LOCTEXT("MaskDetail", "{0} mask on its clip"), StaticEnum<EDreamClipMaskShape>()->GetDisplayNameTextByValue(static_cast<int64>(InWidget->GetClipMask().Shape))),
-			TEXT(""));
+			false);
 	}
 	if (InWidget->GetClipToBelow())
 	{
 		Add(EDreamUILayerEffectKind::Mask, InWidget, LOCTEXT("ClipToBelow", "Clip to Layer Below"),
-			LOCTEXT("ClipToBelowDetail", "Shown only where the layer below is drawn"), TEXT(""));
+			LOCTEXT("ClipToBelowDetail", "Shown only where the layer below is drawn"), false);
 	}
 
 	// What its visual is.
@@ -152,15 +155,15 @@ void DreamUILayerEffects::Collect(const UDreamWidget* InWidget, TArray<FDreamUIL
 		if (const UDreamVisualBatchMesh* Element = Cast<UDreamVisualBatchMesh>(Visual); Element != nullptr && Element->GetBlendMode() != EDreamUIBlendMode::Alpha)
 		{
 			Add(EDreamUILayerEffectKind::Blend, Visual, FText::Format(LOCTEXT("BlendName", "Blend: {0}"), BlendModeName(Element->GetBlendMode())),
-				LOCTEXT("BlendDetail", "How this element blends with what is drawn behind it"), TEXT(""));
+				LOCTEXT("BlendDetail", "How this element blends with what is drawn behind it"), false);
 		}
 		if (Visual->IsA<UDreamVisualPostProcess>())
 		{
-			Add(EDreamUILayerEffectKind::Effect, Visual, NameOf(Visual), LOCTEXT("PostProcessDetail", "Changes what is drawn behind it"), TEXT("bEnabled"));
+			Add(EDreamUILayerEffectKind::Effect, Visual, NameOf(Visual), LOCTEXT("PostProcessDetail", "Changes what is drawn behind it"), true);
 		}
 		else if (IsA(Visual, TEXT("/Script/DreamGUINiagara.DreamNiagaraSystem")))
 		{
-			Add(EDreamUILayerEffectKind::Particles, Visual, NameOf(Visual), LOCTEXT("ParticlesDetail", "A Niagara system drawn on the canvas"), TEXT(""));
+			Add(EDreamUILayerEffectKind::Particles, Visual, NameOf(Visual), LOCTEXT("ParticlesDetail", "A Niagara system drawn on the canvas"), false);
 		}
 	}
 
@@ -173,7 +176,7 @@ void DreamUILayerEffects::Collect(const UDreamWidget* InWidget, TArray<FDreamUIL
 		}
 		if (const UDreamLayerStyle* Style = Cast<UDreamLayerStyle>(Component))
 		{
-			FDreamUILayerEffect& Effect = Add(EDreamUILayerEffectKind::Style, Style, LOCTEXT("LayerStyle", "Layer Style"), StyleDetail(Style->GetEffectiveStyle()), TEXT("Style.bEnabled"));
+			FDreamUILayerEffect& Effect = Add(EDreamUILayerEffectKind::Style, Style, LOCTEXT("LayerStyle", "Layer Style"), StyleDetail(Style->GetEffectiveStyle()), true);
 			if (const UDreamLayerStylePreset* Preset = Style->GetPreset())
 			{
 				Effect.SwitchUnavailable = FText::Format(LOCTEXT("StyleFollowsPreset", "Follows the preset {0}: turn its effects off on the preset, or detach the style from it."), FText::FromString(Preset->GetName()));
@@ -185,32 +188,32 @@ void DreamUILayerEffects::Collect(const UDreamWidget* InWidget, TArray<FDreamUIL
 				FText::Format(LOCTEXT("GroupDetail", "{0}, {1}, opacity {2}"),
 					StaticEnum<EDreamLayerGroupIsolation>()->GetDisplayNameTextByValue(static_cast<int64>(Group->GetIsolation())),
 					BlendModeName(Group->GetGroupBlendMode()), FText::AsPercent(Group->GetGroupOpacity())),
-				TEXT("bEnabled"));
+				true);
 		}
 		else if (Component->IsA<UDreamShapeBlendGroup>())
 		{
-			Add(EDreamUILayerEffectKind::Group, Component, NameOf(Component), LOCTEXT("ShapeBlendDetail", "Its children's shapes melt into one"), TEXT("bBlendEnabled"));
+			Add(EDreamUILayerEffectKind::Group, Component, NameOf(Component), LOCTEXT("ShapeBlendDetail", "Its children's shapes melt into one"), true);
 		}
 		else if (const UDreamMaskTransition* Transition = Cast<UDreamMaskTransition>(Component))
 		{
 			Add(EDreamUILayerEffectKind::Mask, Transition, NameOf(Transition),
 				FText::Format(LOCTEXT("TransitionDetail", "{0} at {1}"), StaticEnum<EDreamMaskTransitionPreset>()->GetDisplayNameTextByValue(static_cast<int64>(Transition->GetPreset())),
 					FText::AsPercent(Transition->GetProgress())),
-				TEXT("bEnabled"));
+				true);
 		}
 		else if (Component->IsA<UDreamHoloFoil>() || Component->IsA<UDreamPointerLight>() || Component->IsA<UDreamTiltCard>())
 		{
-			Add(EDreamUILayerEffectKind::Effect, Component, NameOf(Component), Component->GetClass()->GetToolTipText(/*bShortTooltip*/true), TEXT("bEnabled"));
+			Add(EDreamUILayerEffectKind::Effect, Component, NameOf(Component), Component->GetClass()->GetToolTipText(/*bShortTooltip*/true), true);
 		}
 		else if (Component->IsA<UDreamMeshModifierBase>())
 		{
 			const bool bBends = Component->IsA<UDreamMeshModifierWarp>() || Component->IsA<UDreamMeshModifierJelly>() || Component->IsA<UDreamMeshModifierTextOnPath>();
 			Add(bBends ? EDreamUILayerEffectKind::Warp : EDreamUILayerEffectKind::Effect, Component, NameOf(Component),
-				Component->GetClass()->GetToolTipText(/*bShortTooltip*/true), TEXT("bEnable"));
+				Component->GetClass()->GetToolTipText(/*bShortTooltip*/true), true);
 		}
 		else if (IsA(Component, TEXT("/Script/DreamGUINiagara.DreamNiagaraTrigger")))
 		{
-			Add(EDreamUILayerEffectKind::Particles, Component, NameOf(Component), LOCTEXT("TriggerDetail", "Bursts particles when the widget is clicked or entered"), TEXT(""));
+			Add(EDreamUILayerEffectKind::Particles, Component, NameOf(Component), LOCTEXT("TriggerDetail", "Bursts particles when the widget is clicked or entered"), false);
 		}
 	}
 }

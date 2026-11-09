@@ -44,7 +44,7 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	/** Off, the card lies flat: to compare with and without it. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card", meta = (DreamGUI_LayerToggle))
 	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card")
 	bool bFollowPointer = true;
