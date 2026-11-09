@@ -16,10 +16,12 @@
 //   Coins     a click sends coins from the chest to the counter (OnClick = BurstToTarget) on the plugin's fly-to template.
 class /Game/UI/WBP_NiagaraEffects
 
+// A card is measured by what it holds -- here a caption, a few dozen units wide -- so it names the size it wants.
 style Card {
     Brush.TintColor = #1F232CFF
     @slot HorizontalAlignment = Fill
     @slot VerticalAlignment   = Fill
+    @slot MinDesiredSize      = (200, 300)
 }
 
 style Caption {
@@ -41,10 +43,13 @@ Widget Root {
 
     + Overlay {}
 
+    // A row of five cards, 1080 by 300, in the middle: a centred child of an Overlay is as big as it measures, so it says
+    // how big that is.
     Widget Row {
         AnchorData.SizeDelta = (1080, 300)
         @slot HorizontalAlignment = Center
         @slot VerticalAlignment   = Center
+        @slot MinDesiredSize      = (1080, 300)
 
         + HorizontalBox {
             Spacing = 16
