@@ -119,6 +119,96 @@ namespace DreamRectBlockGradientPixelTestLocal
 	}
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
+	/** A rect block of a gradient's own, by its CSS, where it stands on the stage. */
+	struct FPlacedGradient
+	{
+		const TCHAR* Name;
+		const TCHAR* Css;
+		FVector2D Position;
+	};
+
+	/** Every type, each with three stops or more and something turned or moved; the stops opaque. */
+	const FPlacedGradient MultiStopGradients[] =
+	{
+		{ TEXT("Linear"), TEXT("linear-gradient(60deg, #FF2D55, #34C759 40%, #0A84FF)"), FVector2D(-185.0, 62.0) },
+		{ TEXT("Radial"), TEXT("radial-gradient(70deg ellipse 45% 30% at 40% 60% in srgb-linear, #FFF3B0, #E8B64A 55%, #9C6A12)"), FVector2D(-62.0, 62.0) },
+		{ TEXT("Conic"), TEXT("conic-gradient(from 30deg at 50% 50%, #FF9500, #AF52DE, #5AC8FA, #FF9500)"), FVector2D(62.0, 62.0) },
+		{ TEXT("Diamond"), TEXT("diamond-gradient(20deg 40% 30% in oklab, #FFFFFF, #30B0C7 60%, #1C1C1E)"), FVector2D(185.0, 62.0) },
+		{ TEXT("Reflected"), TEXT("reflected-gradient(120deg at 50% 50%, #F2F2F7, #FF375F 50%, #2C2C2E)"), FVector2D(-62.0, -62.0) },
+		{ TEXT("Repeat"), TEXT("repeating-linear-gradient(90deg, #FFD60A, #FF453A 25%)"), FVector2D(62.0, -62.0) },
+	};
+	const FVector2D MultiStopSize(110.0, 84.0);
+	/** Codes a channel may be from the evaluator's colour: float arithmetic on both sides, and the target's 8-bit encode. */
+	constexpr int32 MultiStopTolerance = 3;
+
+	/** Each gradient's rect block, square-cornered, its gradient in place of its body colour. */
+	void BuildMultiStopGallery(FGalleryStage& InStage)
+	{
+		for (const FPlacedGradient& Placed : MultiStopGradients)
+		{
+			UDreamRectBlock* Block = InStage.AddRectBlock(Placed.Name, MultiStopSize, Placed.Position, FColor::White, 0.0f);
+			FDreamGradient Gradient;
+			if (!FDreamGradient::ParseCss(Placed.Css, Gradient))
+			{
+				InStage.GetTest().AddError(FString::Printf(TEXT("%s does not read"), Placed.Css));
+				continue;
+			}
+			Block->SetEnableBodyGradient(true);
+			Block->SetBodyGradient(Gradient);
+		}
+	}
+
+	/** How far a pixel's colour is from Evaluate's at InUV, in codes, the largest channel. */
+	int32 GetDifferenceFromEvaluate(const FDreamGradient& InGradient, const FVector2f& InUV, float InAspect, const FColor& InActual)
+	{
+		const FColor Expected = InGradient.Evaluate(InUV, InAspect).ToFColor(/*bSRGB*/ true);
+		return FMath::Max3(FMath::Abs(InActual.R - Expected.R), FMath::Abs(InActual.G - Expected.G), FMath::Abs(InActual.B - Expected.B));
+	}
+
+	/**
+	 * Every pixel inside each block (two in from its edges) held to Evaluate at the pixel's centre. A centre that lies on a
+	 * hard edge (a repeating gradient's seam) may take either side of it: such a pixel is also held to Evaluate a twentieth of a
+	 * pixel to either side, and passes on the nearer.
+	 */
+	void CheckMultiStopPixels(FAutomationTestBase& InTest, const TArray<FColor>& InPixels, FIntPoint InSize, const TCHAR* InPath)
+	{
+		const float Aspect = static_cast<float>(MultiStopSize.X / MultiStopSize.Y);
+		const FVector2f Nudge(static_cast<float>(0.05 / MultiStopSize.X), static_cast<float>(0.05 / MultiStopSize.Y));
+		for (const FPlacedGradient& Placed : MultiStopGradients)
+		{
+			FDreamGradient Gradient;
+			FDreamGradient::ParseCss(Placed.Css, Gradient);
+			const double Left = InSize.X * 0.5 + Placed.Position.X - MultiStopSize.X * 0.5;
+			const double Top = InSize.Y * 0.5 - Placed.Position.Y - MultiStopSize.Y * 0.5;
+			int32 Worst = 0;
+			FString WorstAt;
+			for (int32 Y = FMath::CeilToInt32(Top) + 2; Y < FMath::FloorToInt32(Top + MultiStopSize.Y) - 2; ++Y)
+			{
+				for (int32 X = FMath::CeilToInt32(Left) + 2; X < FMath::FloorToInt32(Left + MultiStopSize.X) - 2; ++X)
+				{
+					const FVector2f UV(static_cast<float>((X + 0.5 - Left) / MultiStopSize.X), static_cast<float>((Y + 0.5 - Top) / MultiStopSize.Y));
+					const FColor& Actual = InPixels[Y * InSize.X + X];
+					int32 Difference = GetDifferenceFromEvaluate(Gradient, UV, Aspect, Actual);
+					if (Difference > MultiStopTolerance)
+					{
+						for (const FVector2f Offset : { FVector2f(Nudge.X, 0.0f), FVector2f(-Nudge.X, 0.0f), FVector2f(0.0f, Nudge.Y), FVector2f(0.0f, -Nudge.Y) })
+						{
+							Difference = FMath::Min(Difference, GetDifferenceFromEvaluate(Gradient, UV + Offset, Aspect, Actual));
+						}
+					}
+					const FColor Expected = Gradient.Evaluate(UV, Aspect).ToFColor(/*bSRGB*/ true);
+					if (Difference > Worst)
+					{
+						Worst = Difference;
+						WorstAt = FString::Printf(TEXT("(%d, %d): drawn %s, Evaluate %s"), X, Y, *Actual.ToString(), *Expected.ToString());
+					}
+				}
+			}
+			InTest.TestTrue(*FString::Printf(TEXT("%s, %s: every pixel is what Evaluate says (worst %d at %s)"), InPath, Placed.Name, Worst, *WorstAt),
+				Worst <= MultiStopTolerance);
+		}
+	}
+
 	/** Let the scene settle and hold its picture to Golden/<InName>.png to TwoColourTolerance on every pixel. */
 	void EnqueueStrictPictureCheck(const FStageRef& InStage, const FString& InName, int32 InMinDrawn)
 	{
@@ -196,6 +286,64 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamRectBlockTwoColourMaterialPixelTest::RunTest(const FString& Parameters)
 {
 	return DreamRectBlockGradientPixelTestLocal::RunTwoColourGallery(*this, false, TEXT("RectBlock_TwoColourGradients_Material"));
+}
+
+namespace DreamRectBlockGradientPixelTestLocal
+{
+	bool RunMultiStopGallery(FAutomationTestBase& InTest, bool bInBuiltInShader)
+	{
+		FStageRef Stage = BeginStage(InTest, FIntPoint(512, 256));
+		if (!Stage->IsUsable())
+		{
+			Stage->TearDown();
+			return false;
+		}
+		if (!bInBuiltInShader)
+		{
+			FinishRectBlockMaterial(InTest);
+		}
+		Stage->UseBuiltInShader(bInBuiltInShader);
+		BuildMultiStopGallery(*Stage);
+		EnqueueFrames(Stage, 2);
+		EnqueueFramesUntilDrawn(Stage, 40000);
+		EnqueueFramesUntilStable(Stage);
+		const TCHAR* Path = bInBuiltInShader ? TEXT("built-in shader") : TEXT("material");
+		const FString Capture = bInBuiltInShader ? TEXT("RectBlock_MultiStop_BuiltIn") : TEXT("RectBlock_MultiStop_Material");
+		EnqueueDo([Stage, Path, Capture]()
+		{
+			TArray<FColor> Pixels;
+			FIntPoint Size = FIntPoint::ZeroValue;
+			if (!Stage->ReadBack(Pixels, Size))
+			{
+				Stage->GetTest().AddError(TEXT("The picture was not read back"));
+				return;
+			}
+			FDreamPixelProbe::SaveCapture(Pixels, Size, Capture);
+			CheckMultiStopPixels(Stage->GetTest(), Pixels, Size, Path);
+		});
+		EnqueueTearDown(Stage);
+		return true;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRectBlockMultiStopBuiltInPixelTest,
+	"DreamGUI.RHI.RectBlock.MultiStopGradientsOfEveryTypeDrawnByTheBuiltInShaderAreWhatEvaluateSays",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRectBlockMultiStopBuiltInPixelTest::RunTest(const FString& Parameters)
+{
+	return DreamRectBlockGradientPixelTestLocal::RunMultiStopGallery(*this, true);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRectBlockMultiStopMaterialPixelTest,
+	"DreamGUI.RHI.RectBlock.MultiStopGradientsOfEveryTypeDrawnThroughTheMaterialAreWhatEvaluateSays",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRectBlockMultiStopMaterialPixelTest::RunTest(const FString& Parameters)
+{
+	return DreamRectBlockGradientPixelTestLocal::RunMultiStopGallery(*this, false);
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
