@@ -80,6 +80,10 @@ void UDreamVisualPostProcess::PostEditChangeProperty(FPropertyChangedEvent& Prop
 	
 	SendMaskTextureToRenderProxy();
 	SendRenderTargetToRenderProxy();
+	if (PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamVisualPostProcess, bEnabled))
+	{
+		OnEnabledChanged();
+	}
 }
 bool UDreamVisualPostProcess::CanEditChange(const FProperty* InProperty) const
 {
@@ -404,7 +408,25 @@ void UDreamVisualPostProcess::SendRenderTargetToRenderProxy()
 
 bool UDreamVisualPostProcess::HaveValidData()const
 {
-	return Geometry->Vertices.Num() > 0;
+	return bEnabled && Geometry->Vertices.Num() > 0;
+}
+
+void UDreamVisualPostProcess::SetEnabled(bool Value)
+{
+	if (bEnabled != Value)
+	{
+		bEnabled = Value;
+		OnEnabledChanged();
+	}
+}
+
+void UDreamVisualPostProcess::OnEnabledChanged()
+{
+	// Whether it draws at all is read when the canvas makes its draw calls.
+	if (UDreamWidget* Widget = GetWidget())
+	{
+		Widget->MarkCanvasUpdate(true);
+	}
 }
 
 bool UDreamVisualPostProcess::LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const

@@ -41,6 +41,11 @@ class DREAMGUIEXTENSIONS_API UDreamHoloFoil : public UDreamUIBehaviour
 public:
 	UDreamHoloFoil();
 
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Holo Foil")
+	bool IsEnabled() const { return bEnabled; }
+	/** Off, the element draws with its own material again; on, with the foil's. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Holo Foil")
+	void SetEnabled(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Holo Foil")
 	void SetManualView(FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Holo Foil")
@@ -66,6 +71,9 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	/** Off, the element is drawn as if there were no foil: to compare with and without it. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil")
+	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil")
 	EDreamHoloFoilView ViewSource = EDreamHoloFoilView::Pointer;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil", meta = (EditCondition = "ViewSource == EDreamHoloFoilView::Manual", EditConditionHides))

@@ -22,6 +22,11 @@ public:
 	UDreamTiltCard();
 
 	/** Where it tilts to when it does not follow the pointer: -1..1 across and up its rect, (0, 0) flat. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Tilt Card")
+	bool IsEnabled() const { return bEnabled; }
+	/** Off, the card settles flat and at its own size, and stays there until it is turned on. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tilt Card")
+	void SetEnabled(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tilt Card")
 	void SetTargetTilt(FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tilt Card")
@@ -38,6 +43,9 @@ protected:
 	virtual void OnUnregister() override;
 	virtual void Tick(float DeltaTime) override;
 
+	/** Off, the card lies flat: to compare with and without it. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card")
+	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card")
 	bool bFollowPointer = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Tilt Card", meta = (EditCondition = "!bFollowPointer"))

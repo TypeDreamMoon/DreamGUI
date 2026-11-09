@@ -31,6 +31,11 @@ public:
 	UDreamPointerLight();
 
 	/** Where the light stands, in the widget's own space from its rect's centre (+Y up), when it does not follow the pointer. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Pointer Light")
+	bool IsEnabled() const { return bEnabled; }
+	/** Off, it lights nothing; on, it lights again from where it would be now. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Pointer Light")
+	void SetEnabled(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Pointer Light")
 	void SetLightPosition(FVector2D Value);
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Pointer Light")
@@ -64,6 +69,9 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	/** Off, it lights nothing: to compare with and without it. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")
+	bool bEnabled = true;
 	/** Follow the pointer (on), or stand at LightPosition (off). */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Pointer Light")
 	bool bFollowPointer = true;

@@ -11,6 +11,43 @@ UDreamLayerGroup::UDreamLayerGroup()
 	bCanExecuteTick = false;
 }
 
+void UDreamLayerGroup::SetEnabled(bool Value)
+{
+	if (bEnabled != Value)
+	{
+		bEnabled = Value;
+		ApplyEnabled();
+	}
+}
+
+void UDreamLayerGroup::ApplyEnabled()
+{
+	UDreamWidget* Widget = GetWidget();
+	if (Widget == nullptr || !bIsRegisteredWithWidget)
+	{
+		return;
+	}
+	// Off is the same as not being there: whatever asks the widget for its group finds none, so nothing reads it.
+	if (bEnabled && Widget->GetLayerGroup() == nullptr)
+	{
+		Widget->SetLayerGroup(this);
+		bWasIsolated = IsIsolated();
+	}
+	else if (!bEnabled && Widget->GetLayerGroup() == this)
+	{
+		ReleaseMaskClip();
+		Widget->SetLayerGroup(nullptr);
+	}
+	else
+	{
+		return;
+	}
+	if (UDreamCanvas* Canvas = Widget->GetRenderCanvas())
+	{
+		Canvas->MarkCanvasUpdate(true);
+	}
+}
+
 void UDreamLayerGroup::SetIsolation(EDreamLayerGroupIsolation Value)
 {
 	if (Isolation != Value)
@@ -70,7 +107,7 @@ void UDreamLayerGroup::FillComposite(FDreamUICompositeDesc& InOutDesc, UDreamCan
 void UDreamLayerGroup::OnRegister()
 {
 	Super::OnRegister();
-	if (UDreamWidget* Widget = GetWidget())
+	if (UDreamWidget* Widget = GetWidget(); Widget != nullptr && bEnabled)
 	{
 		Widget->SetLayerGroup(this);
 		bWasIsolated = IsIsolated();
@@ -103,6 +140,7 @@ void UDreamLayerGroup::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	GroupOpacity = FMath::Clamp(GroupOpacity, 0.0f, 1.0f);
+	ApplyEnabled();
 	NoteChanged();
 }
 #endif

@@ -139,10 +139,34 @@ void UDreamHoloFoil::Detach()
 	FoilMaterial = nullptr;
 }
 
+void UDreamHoloFoil::SetEnabled(bool Value)
+{
+	if (bEnabled == Value)
+	{
+		return;
+	}
+	bEnabled = Value;
+	if (!bIsRegisteredWithWidget)
+	{
+		return;
+	}
+	if (bEnabled)
+	{
+		Attach();
+	}
+	else
+	{
+		Detach();
+	}
+}
+
 void UDreamHoloFoil::OnRegister()
 {
 	Super::OnRegister();
-	Attach();
+	if (bEnabled)
+	{
+		Attach();
+	}
 #if WITH_EDITOR
 	UWorld* World = GetWorld();
 	if (World != nullptr && !World->IsGameWorld())
@@ -181,6 +205,17 @@ void UDreamHoloFoil::Tick(float DeltaTime)
 void UDreamHoloFoil::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (bIsRegisteredWithWidget && bEnabled != (FoilMaterial != nullptr))
+	{
+		if (bEnabled)
+		{
+			Attach();
+		}
+		else
+		{
+			Detach();
+		}
+	}
 	if (FoilMaterial != nullptr)
 	{
 		BakeRainbowTexture();

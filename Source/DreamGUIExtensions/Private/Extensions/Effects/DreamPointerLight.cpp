@@ -94,11 +94,25 @@ void UDreamPointerLight::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 }
 #endif
 
+void UDreamPointerLight::SetEnabled(bool Value)
+{
+	if (bEnabled != Value)
+	{
+		bEnabled = Value;
+		Update(0.0f);
+	}
+}
+
 void UDreamPointerLight::Update(float DeltaTime)
 {
 	const UDreamWidget* Widget = GetWidget();
 	if (Widget == nullptr)
 	{
+		return;
+	}
+	if (!bEnabled)
+	{
+		ReleaseAll();
 		return;
 	}
 	const FVector2D Centre = Widget->GetLocalSpaceCenter();

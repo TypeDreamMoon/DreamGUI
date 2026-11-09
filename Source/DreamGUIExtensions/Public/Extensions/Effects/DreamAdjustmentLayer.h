@@ -64,6 +64,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual void PostLoad() override;
+	virtual void OnEnabledChanged() override;
 	virtual void SendRegionVertexDataToRenderProxy()override;
 
 	/** The operations, in order: each works on what the one before made. The first eight enabled ones are drawn. */

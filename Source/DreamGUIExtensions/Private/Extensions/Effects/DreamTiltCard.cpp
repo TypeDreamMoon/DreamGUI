@@ -20,6 +20,18 @@ void UDreamTiltCard::SetFollowPointer(bool Value)
 	bFollowPointer = Value;
 }
 
+void UDreamTiltCard::SetEnabled(bool Value)
+{
+	if (bEnabled != Value)
+	{
+		bEnabled = Value;
+		if (!bEnabled)
+		{
+			Step(0.0f);
+		}
+	}
+}
+
 void UDreamTiltCard::OnRegister()
 {
 	Super::OnRegister();
@@ -51,9 +63,9 @@ void UDreamTiltCard::Step(float InDeltaTime)
 	{
 		return;
 	}
-	FVector2D Target = TargetTilt;
-	bool bHover = !bFollowPointer && !TargetTilt.IsNearlyZero();
-	if (bFollowPointer)
+	FVector2D Target = bEnabled ? TargetTilt : FVector2D::ZeroVector;
+	bool bHover = bEnabled && !bFollowPointer && !TargetTilt.IsNearlyZero();
+	if (bEnabled && bFollowPointer)
 	{
 		// Measured on the plane the card is laid out on, not the one it is tilted to: its own tilt must not move the pointer.
 		Target = FVector2D::ZeroVector;

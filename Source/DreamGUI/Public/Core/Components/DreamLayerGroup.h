@@ -47,6 +47,11 @@ public:
 	UDreamLayerGroup();
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool IsEnabled()const { return bEnabled; }
+	/** Off, the subtree is drawn as if there were no group; every other setting is kept for when it is turned on again. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetEnabled(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	EDreamLayerGroupIsolation GetIsolation()const { return Isolation; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetIsolation(EDreamLayerGroupIsolation Value);
@@ -81,6 +86,9 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	/** Off, the subtree is drawn as if there were no group: to compare with and without it. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	bool bEnabled = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	EDreamLayerGroupIsolation Isolation = EDreamLayerGroupIsolation::PassThrough;
 	/** Applied once to the composited subtree, so overlapping children fade together. */
@@ -99,6 +107,8 @@ private:
 	 * stops being drawn apart -- the opacity, mode and mask alone the canvas reads every frame.
 	 */
 	void NoteChanged();
+	/** Registers the group with its widget while it is on, and takes it off while it is off. */
+	void ApplyEnabled();
 	/** The mask's own chain in InCanvas's root's clip data, made when first asked for there; null while there is no mask. */
 	const FDreamUIClipData* GetMaskClip(UDreamCanvas* InCanvas);
 	void ReleaseMaskClip();

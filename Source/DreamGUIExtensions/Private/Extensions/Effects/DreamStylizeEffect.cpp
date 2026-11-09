@@ -37,6 +37,12 @@ void UDreamStylizeEffect::PostEditChangeProperty(FPropertyChangedEvent& Property
 }
 #endif
 
+void UDreamStylizeEffect::OnEnabledChanged()
+{
+	Super::OnEnabledChanged();
+	RefreshEffect();
+}
+
 void UDreamStylizeEffect::MarkAllDirty()
 {
 	Super::MarkAllDirty();
@@ -112,7 +118,7 @@ void UDreamStylizeEffect::RefreshEffect()
 	{
 		DreamUIPostProcessEffects::SetBackdropEffect_GameThread(RenderProxy, bChildren ? FDreamUIImageEffectRef() : Effect);
 	}
-	const bool bDrawsChildren = bChildren && Effect.IsValid();
+	const bool bDrawsChildren = bChildren && Effect.IsValid() && bEnabled;
 	if (bDrawsChildrenThroughEffect != bDrawsChildren)
 	{
 		bDrawsChildrenThroughEffect = bDrawsChildren;
@@ -152,7 +158,7 @@ bool UDreamStylizeEffect::HaveValidData() const
 
 FDreamUIImageEffectRef UDreamStylizeEffect::GetChildrenEffect() const
 {
-	return Target == EDreamEffectTarget::Children ? Effect : FDreamUIImageEffectRef();
+	return Target == EDreamEffectTarget::Children && bEnabled ? Effect : FDreamUIImageEffectRef();
 }
 
 DECLARE_DREAM_GUI_VISUAL("StylizeEffect", UDreamStylizeEffect)

@@ -54,7 +54,19 @@ public:
 	DECLARE_EVENT_OneParam(UDreamVisualPostProcess, FRenderTargetChangedEvent, UTextureRenderTarget2D*);
 	UDreamVisualPostProcess(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool IsEnabled()const { return bEnabled; }
+	/** Off, the effect draws nothing and what it covers shows as if it were not there; every setting is kept. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetEnabled(bool Value);
+
 protected:
+	/** A subclass that draws its widget's children through its effect stops and starts doing so here. */
+	virtual void OnEnabledChanged();
+	/** Off, the effect draws nothing: to compare with and without it. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	bool bEnabled = true;
+
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
 	virtual void OnUnregister() override;

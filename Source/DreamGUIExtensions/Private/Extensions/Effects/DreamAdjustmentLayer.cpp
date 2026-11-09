@@ -29,6 +29,12 @@ void UDreamAdjustmentLayer::PostEditChangeProperty(FPropertyChangedEvent& Proper
 }
 #endif
 
+void UDreamAdjustmentLayer::OnEnabledChanged()
+{
+	Super::OnEnabledChanged();
+	RefreshEffect();
+}
+
 void UDreamAdjustmentLayer::MarkAllDirty()
 {
 	Super::MarkAllDirty();
@@ -99,7 +105,7 @@ void UDreamAdjustmentLayer::RefreshEffect()
 	{
 		DreamUIPostProcessEffects::SetBackdropEffect_GameThread(RenderProxy, bChildren ? FDreamUIImageEffectRef() : Effect);
 	}
-	const bool bDrawsChildren = bChildren && Effect.IsValid();
+	const bool bDrawsChildren = bChildren && Effect.IsValid() && bEnabled;
 	if (bDrawsChildrenThroughEffect != bDrawsChildren)
 	{
 		bDrawsChildrenThroughEffect = bDrawsChildren;
@@ -141,7 +147,7 @@ bool UDreamAdjustmentLayer::HaveValidData() const
 
 FDreamUIImageEffectRef UDreamAdjustmentLayer::GetChildrenEffect() const
 {
-	return Target == EDreamEffectTarget::Children ? Effect : FDreamUIImageEffectRef();
+	return Target == EDreamEffectTarget::Children && bEnabled ? Effect : FDreamUIImageEffectRef();
 }
 
 DECLARE_DREAM_GUI_VISUAL("AdjustmentLayer", UDreamAdjustmentLayer)

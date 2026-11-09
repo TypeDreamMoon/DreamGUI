@@ -500,7 +500,7 @@ void UDreamMaskTransition::Refresh()
 {
 	using namespace DreamMaskTransitionLocal;
 	UDreamWidget* Widget = GetWidget();
-	if (Widget == nullptr || !bIsRegisteredWithWidget || IsFullyShown())
+	if (Widget == nullptr || !bIsRegisteredWithWidget || !bEnabled || IsFullyShown())
 	{
 		StopDriving();
 		return;
@@ -526,6 +526,15 @@ void UDreamMaskTransition::Refresh()
 	Widget->SetDrivenClipMask(this, &DrivenMask);
 	bDriving = true;
 	DrivenWidget = Widget;
+}
+
+void UDreamMaskTransition::SetEnabled(bool Value)
+{
+	if (bEnabled != Value)
+	{
+		bEnabled = Value;
+		Refresh();
+	}
 }
 
 void UDreamMaskTransition::SetProgress(float Value)
