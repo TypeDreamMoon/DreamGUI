@@ -81,7 +81,10 @@ namespace DreamDesignerHandlesLocal
 		static TMap<FBoundKey, TSharedPtr<IDreamDesignerHandleProvider>> Bound;
 		return Bound;
 	}
+	FName GActive = NAME_None;
 }
+
+const FName FDreamDesignerHandles::Off(TEXT("Off"));
 
 FDreamDesignerHandle& FDreamDesignerHandleSet::AddHandle(int32 InId, const FVector2D& InLocal)
 {
@@ -129,6 +132,32 @@ void FDreamDesignerHandleSet::AddEllipse(const FVector2D& InCenter, const FVecto
 		double PointCosine = 1.0;
 		FMath::SinCos(&PointSine, &PointCosine, UE_DOUBLE_TWO_PI * Index / Segments);
 		Points.Add(InCenter + AxisX * (PointCosine * InRadii.X) + AxisY * (PointSine * InRadii.Y));
+	}
+	AddPolyline(Points, /*bInClosed*/ true, InColor);
+}
+
+void FDreamDesignerHandleSet::AddRoundedRect(const FVector2D& InCenter, const FVector2D& InHalfSize, const FVector4f& InRadii, const FLinearColor& InColor)
+{
+	const FVector2D Half(FMath::Abs(InHalfSize.X), FMath::Abs(InHalfSize.Y));
+	const double Most = FMath::Min(Half.X, Half.Y);
+	// Corner by corner, going round anticlockwise from the right-bottom: each corner's centre, its radius and where it starts.
+	struct FCorner { FVector2D Sign; double Radius; double StartDegrees; };
+	const FCorner Corners[4] = {
+		{ FVector2D(1.0, -1.0), FMath::Clamp(static_cast<double>(InRadii.X), 0.0, Most), -90.0 },
+		{ FVector2D(1.0, 1.0), FMath::Clamp(static_cast<double>(InRadii.Y), 0.0, Most), 0.0 },
+		{ FVector2D(-1.0, 1.0), FMath::Clamp(static_cast<double>(InRadii.Z), 0.0, Most), 90.0 },
+		{ FVector2D(-1.0, -1.0), FMath::Clamp(static_cast<double>(InRadii.W), 0.0, Most), 180.0 },
+	};
+	TArray<FVector2D> Points;
+	for (const FCorner& Corner : Corners)
+	{
+		const FVector2D Centre = InCenter + Corner.Sign * (Half - FVector2D(Corner.Radius, Corner.Radius));
+		const int32 Steps = Corner.Radius > 0.0 ? 8 : 1;
+		for (int32 Step = 0; Step < Steps; ++Step)
+		{
+			const double Angle = FMath::DegreesToRadians(Corner.StartDegrees + 90.0 * Step / FMath::Max(Steps - 1, 1));
+			Points.Add(Centre + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Corner.Radius);
+		}
 	}
 	AddPolyline(Points, /*bInClosed*/ true, InColor);
 }
@@ -253,9 +282,75 @@ TArray<TSharedRef<IDreamDesignerHandleProvider>> FDreamDesignerHandles::GetProvi
 	return Providers;
 }
 
+TSharedPtr<IDreamDesignerHandleProvider> FDreamDesignerHandles::FindProviderFor(const UDreamWidget* InWidget, FName InName)
+{
+	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : GetProvidersFor(InWidget))
+	{
+		if (Provider->GetName() == InName)
+		{
+			return Provider;
+		}
+	}
+	return nullptr;
+}
+
 FName FDreamDesignerHandles::MakeBoundName(FName InKind, FName InProperty)
 {
 	return FName(*FString::Printf(TEXT("%s.%s"), *InKind.ToString(), *InProperty.ToString()));
+}
+
+void FDreamDesignerHandles::SetActive(FName InName)
+{
+	if (DreamDesignerHandlesLocal::GActive != InName)
+	{
+		DreamDesignerHandlesLocal::GActive = InName;
+		OnActiveChanged().Broadcast();
+	}
+}
+
+FName FDreamDesignerHandles::GetActive()
+{
+	return DreamDesignerHandlesLocal::GActive;
+}
+
+FSimpleMulticastDelegate& FDreamDesignerHandles::OnActiveChanged()
+{
+	static FSimpleMulticastDelegate Delegate;
+	return Delegate;
+}
+
+TSharedPtr<IDreamDesignerHandleProvider> FDreamDesignerHandles::ChooseShown(TConstArrayView<TSharedRef<IDreamDesignerHandleProvider>> InAvailable)
+{
+	const FName Active = GetActive();
+	if (Active == Off || InAvailable.IsEmpty())
+	{
+		return nullptr;
+	}
+	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : InAvailable)
+	{
+		if (Provider->GetName() == Active)
+		{
+			return Provider;
+		}
+	}
+	return InAvailable[0];
+}
+
+FName FDreamDesignerHandles::Cycle(TConstArrayView<TSharedRef<IDreamDesignerHandleProvider>> InAvailable)
+{
+	if (InAvailable.IsEmpty())
+	{
+		return GetActive();
+	}
+	const TSharedPtr<IDreamDesignerHandleProvider> Shown = ChooseShown(InAvailable);
+	FName Next = InAvailable[0]->GetName();
+	if (Shown.IsValid())
+	{
+		const int32 Index = InAvailable.IndexOfByPredicate([&Shown](const TSharedRef<IDreamDesignerHandleProvider>& InProvider) { return InProvider == Shown; });
+		Next = InAvailable.IsValidIndex(Index + 1) ? InAvailable[Index + 1]->GetName() : Off;
+	}
+	SetActive(Next);
+	return Next;
 }
 
 FVector2D FDreamDesignerHandles::RectFractionToLocal(const UDreamWidget* InWidget, const FVector2D& InFromTopLeft)

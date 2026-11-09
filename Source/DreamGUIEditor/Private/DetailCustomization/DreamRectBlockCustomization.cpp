@@ -15,6 +15,7 @@
 #include "IPropertyUtilities.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamDesignerGradientHandles.h"
+#include "Designer/DreamDesignerHandles.h"
 #include "DetailWidgetRow.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -26,11 +27,12 @@
 namespace DreamRectBlockCustomizationLocal
 {
 	/**
-	 * A toggle under one of the gradients that has the viewport's handles show it: they show the body's while a rect block
-	 * has both on, until the border's is asked for here.
+	 * A toggle under one of the gradients that has the viewport show its handles (FDreamDesignerHandles::SetActive), as Tab
+	 * in the viewport would; turned off, the viewport picks again.
 	 */
 	void AddViewportHandlesRow(IDetailGroup& InGroup, EDreamRectBlockGradientSlot InSlot, const TAttribute<bool>& InEnabled)
 	{
+		const FName Provider = DreamDesignerGradientHandles::GetProviderName(InSlot);
 		InGroup.AddWidgetRow()
 		.FilterString(LOCTEXT("ViewportHandlesSearch", "Viewport Handles"))
 		.IsEnabled(InEnabled)
@@ -44,15 +46,15 @@ namespace DreamRectBlockCustomizationLocal
 		[
 			SNew(SCheckBox)
 			.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-			.IsChecked_Lambda([InSlot]()
+			.IsChecked_Lambda([Provider]()
 			{
-				return DreamDesignerGradientHandles::GetPreferredSlot() == InSlot ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return FDreamDesignerHandles::GetActive() == Provider ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 			})
-			.OnCheckStateChanged_Lambda([InSlot](ECheckBoxState)
+			.OnCheckStateChanged_Lambda([Provider](ECheckBoxState InState)
 			{
-				DreamDesignerGradientHandles::SetPreferredSlot(InSlot);
+				FDreamDesignerHandles::SetActive(InState == ECheckBoxState::Checked ? Provider : NAME_None);
 			})
-			.ToolTipText(LOCTEXT("ViewportHandles_ToolTip", "Drag this gradient's ends and stops in the designer's viewport. With both gradients on, the viewport shows the one picked here."))
+			.ToolTipText(LOCTEXT("ViewportHandles_ToolTip", "Drag this gradient's ends and stops in the designer's viewport. The viewport shows one kind of handles at a time; Tab there steps through the others."))
 			[
 				SNew(STextBlock)
 				.Margin(FMargin(6.0f, 1.0f))

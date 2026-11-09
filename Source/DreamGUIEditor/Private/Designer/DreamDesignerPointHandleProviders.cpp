@@ -57,6 +57,7 @@ namespace DreamDesignerPointHandlesLocal
 	{
 	public:
 		virtual FName GetName() const override { return DreamDesignerPointHandles::LatticeProviderName; }
+		virtual FText GetDisplayName() const override { return LOCTEXT("LatticeName", "Warp Lattice"); }
 
 		virtual void CollectHandles(UDreamWidget* InWidget, FDreamDesignerHandleSet& OutSet) const override
 		{
@@ -135,6 +136,7 @@ namespace DreamDesignerPointHandlesLocal
 	{
 	public:
 		virtual FName GetName() const override { return DreamDesignerPointHandles::PathProviderName; }
+		virtual FText GetDisplayName() const override { return LOCTEXT("PathName", "Path Points"); }
 
 		virtual void CollectHandles(UDreamWidget* InWidget, FDreamDesignerHandleSet& OutSet) const override
 		{

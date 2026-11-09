@@ -15,15 +15,17 @@ class UDreamWidget;
  * points, a gradient's ends and stops, and whatever else registers a provider.
  *
  * A provider says what the handles are and what a drag of one changes; the viewport does the rest the same way for all of
- * them. It asks the providers only while exactly one widget is selected, unlocked and the asset's own, every frame, and:
- *  - draws their guide lines and handles over the scene, the one under the pointer a little larger;
+ * them. It asks the providers only while exactly one widget is selected, unlocked and the asset's own, every frame. Of the
+ * providers that have handles for it, ONE is shown at a time -- the active one (SetActive) when it has any, else the first
+ * registered -- and Tab steps through the others and then none, the name of what is shown written under the selection.
+ * Then the viewport:
+ *  - draws the shown provider's guide lines and handles over the scene, the one under the pointer a little larger;
  *  - on a press over a handle opens one transaction and takes two snapshots of every property the provider names: the
  *    preview's value, which Esc (or the viewport losing focus) puts back, and the template's, for undo;
  *  - while the pointer moves, has the provider change the PREVIEW's objects, so what is drawn follows the hand;
  *  - on the release writes those properties to the template and the template to the .dui -- inside the same transaction, so
  *    the drag is one undo step -- or, when nothing changed, cancels the transaction;
- *  - on a double click asks the provider of the handle under the pointer, or each provider in turn when there is none, and
- *    writes what the one that took it changed the same way.
+ *  - on a double click asks the shown provider, and writes what it changed the same way.
  * Game thread, editor only.
  */
 
@@ -74,6 +76,11 @@ struct DREAMGUIEDITOR_API FDreamDesignerHandleSet
 	void AddPolyline(TConstArrayView<FVector2D> InPoints, bool bInClosed, const FLinearColor& InColor, float InThickness = 1.0f);
 	/** An ellipse of radii InRadii about InCenter, its first axis turned InAngleDegrees from +X towards -Y (clockwise on screen). */
 	void AddEllipse(const FVector2D& InCenter, const FVector2D& InRadii, float InAngleDegrees, const FLinearColor& InColor, int32 InSegments = 48);
+	/**
+	 * A rect of half size InHalfSize about InCenter, its corners rounded by InRadii in a widget's order -- right-bottom,
+	 * right-top, left-top, left-bottom (+Y up) -- each at most the shorter half side.
+	 */
+	void AddRoundedRect(const FVector2D& InCenter, const FVector2D& InHalfSize, const FVector4f& InRadii, const FLinearColor& InColor);
 };
 
 /** One step of a drag. */
@@ -110,8 +117,10 @@ class DREAMGUIEDITOR_API IDreamDesignerHandleProvider : public TSharedFromThis<I
 public:
 	virtual ~IDreamDesignerHandleProvider() = default;
 
-	/** For the log and the tests. */
+	/** What SetActive names it by, and the log and the tests. */
 	virtual FName GetName() const = 0;
+	/** What the viewport writes under the selection while it is shown. */
+	virtual FText GetDisplayName() const { return FText::FromName(GetName()); }
 	/** InWidget's handles and guide lines, InWidget the preview's selected widget: nothing added, none. Asked every frame. */
 	virtual void CollectHandles(UDreamWidget* InWidget, FDreamDesignerHandleSet& OutSet) const = 0;
 	/** What a gesture on handle InHandleId (INDEX_NONE: a double click on no handle) writes. Nothing: the gesture does nothing. */
@@ -178,8 +187,26 @@ public:
 	static void CollectBindings(const UDreamWidget* InWidget, TArray<FDreamDesignerHandleBinding>& OutBindings);
 	/** What the viewport asks about InWidget: the registered providers, then the provider of each binding of a registered kind. */
 	static TArray<TSharedRef<IDreamDesignerHandleProvider>> GetProvidersFor(const UDreamWidget* InWidget);
+	/** Of GetProvidersFor(InWidget), the one named InName; null when there is none. */
+	static TSharedPtr<IDreamDesignerHandleProvider> FindProviderFor(const UDreamWidget* InWidget, FName InName);
 	/** The name a binding's provider goes by: "Kind.Property". */
 	static FName MakeBoundName(FName InKind, FName InProperty);
+
+	/**
+	 * Which provider's handles are shown, by its name: NAME_None for the first that has any for the selection (the start), Off
+	 * for none. One that the selection has no handles of gives way to the first that has; the choice stays for the next
+	 * selection.
+	 */
+	static void SetActive(FName InName);
+	static FName GetActive();
+	/** The name that shows no handles: the selection box alone. */
+	static const FName Off;
+	/** Told when the active provider changes, whoever changes it: a button that shows it, the viewport to redraw. */
+	static FSimpleMulticastDelegate& OnActiveChanged();
+	/** Of the providers that have handles for the selection (in registration order), the one shown; none when Off. */
+	static TSharedPtr<IDreamDesignerHandleProvider> ChooseShown(TConstArrayView<TSharedRef<IDreamDesignerHandleProvider>> InAvailable);
+	/** Tab: the provider after the shown one becomes active, none after the last, and the first after none. Returns it. */
+	static FName Cycle(TConstArrayView<TSharedRef<IDreamDesignerHandleProvider>> InAvailable);
 
 	/** A point of InWidget's rect as fractions of it from its top left (0, 0) to its bottom right (1, 1), in its local space. */
 	static FVector2D RectFractionToLocal(const UDreamWidget* InWidget, const FVector2D& InFromTopLeft);

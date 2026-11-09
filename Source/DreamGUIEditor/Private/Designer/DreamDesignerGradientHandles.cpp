@@ -30,8 +30,6 @@ namespace DreamDesignerGradientHandlesLocal
 	/** Stops a gradient keeps whatever is dragged off it. */
 	constexpr int32 MinStops = 2;
 
-	EDreamRectBlockGradientSlot GPreferredSlot = EDreamRectBlockGradientSlot::Body;
-
 	bool IsSlotShown(const UDreamRectBlock* InBlock, EDreamRectBlockGradientSlot InSlot)
 	{
 		if (InBlock == nullptr || InBlock->IsMeltedIntoShapeBlend())
@@ -41,21 +39,6 @@ namespace DreamDesignerGradientHandlesLocal
 		return InSlot == EDreamRectBlockGradientSlot::Body
 			? InBlock->GetEnableBody() && InBlock->GetEnableBodyGradient()
 			: InBlock->GetEnableBorder() && InBlock->GetEnableBorderGradient();
-	}
-
-	/** The slot whose handles are shown: the one asked for when it is on, else the other when that is. */
-	bool FindShownSlot(const UDreamRectBlock* InBlock, EDreamRectBlockGradientSlot& OutSlot)
-	{
-		const EDreamRectBlockGradientSlot Other = GPreferredSlot == EDreamRectBlockGradientSlot::Body ? EDreamRectBlockGradientSlot::Border : EDreamRectBlockGradientSlot::Body;
-		for (const EDreamRectBlockGradientSlot Slot : { GPreferredSlot, Other })
-		{
-			if (IsSlotShown(InBlock, Slot))
-			{
-				OutSlot = Slot;
-				return true;
-			}
-		}
-		return false;
 	}
 
 	FDreamGradient GetGradient(const UDreamRectBlock* InBlock, EDreamRectBlockGradientSlot InSlot)
@@ -121,25 +104,23 @@ namespace DreamDesignerGradientHandlesLocal
 		return On + Away * InOffsetUnits;
 	}
 
-	/**
-	 * One of a rect block's gradients, the provider of its tagged property. Its handles are shown while it is the gradient
-	 * the handles edit (FindShownSlot): the body's while both are on, until the border's is asked for.
-	 */
+	/** One of a rect block's gradients: its body's or its border's, each a kind of handles of its own. */
 	class FGradientHandles : public IDreamDesignerHandleProvider
 	{
 	public:
 		explicit FGradientHandles(EDreamRectBlockGradientSlot InSlot) : OwnSlot(InSlot) {}
 
-		virtual FName GetName() const override
+		virtual FName GetName() const override { return DreamDesignerGradientHandles::GetProviderName(OwnSlot); }
+		virtual FText GetDisplayName() const override
 		{
-			return FDreamDesignerHandles::MakeBoundName(DreamDesignerGradientHandles::KindName, GetPropertyName(OwnSlot));
+			return OwnSlot == EDreamRectBlockGradientSlot::Body ? LOCTEXT("BodyGradient", "Body Gradient") : LOCTEXT("BorderGradient", "Border Gradient");
 		}
 
 		virtual void CollectHandles(UDreamWidget* InWidget, FDreamDesignerHandleSet& OutSet) const override
 		{
 			const UDreamRectBlock* Block = Cast<UDreamRectBlock>(InWidget->GetVisual());
-			EDreamRectBlockGradientSlot Slot;
-			if (!FindShownSlot(Block, Slot) || Slot != OwnSlot)
+			const EDreamRectBlockGradientSlot Slot = OwnSlot;
+			if (!IsSlotShown(Block, Slot))
 			{
 				return;
 			}
@@ -350,14 +331,15 @@ namespace DreamDesignerGradientHandlesLocal
 
 		EDreamRectBlockGradientSlot OwnSlot;
 
-		/** This provider's slot, when the handle (or, for INDEX_NONE, a click off the handles) is its own and it is shown. */
+		/** This provider's slot, when the handle (or, for INDEX_NONE, the click) is its own and its gradient is shown. */
 		bool ResolveSlot(const UDreamRectBlock* InBlock, int32 InHandleId, EDreamRectBlockGradientSlot& OutSlot) const
 		{
 			if (InHandleId != INDEX_NONE && InHandleId / SlotStride != static_cast<int32>(OwnSlot))
 			{
 				return false;
 			}
-			return FindShownSlot(InBlock, OutSlot) && OutSlot == OwnSlot;
+			OutSlot = OwnSlot;
+			return IsSlotShown(InBlock, OutSlot);
 		}
 	};
 }
@@ -384,14 +366,11 @@ FDreamDesignerHandleKindFactory DreamDesignerGradientHandles::MakeKindFactory()
 	};
 }
 
-void DreamDesignerGradientHandles::SetPreferredSlot(EDreamRectBlockGradientSlot InSlot)
+FName DreamDesignerGradientHandles::GetProviderName(EDreamRectBlockGradientSlot InSlot)
 {
-	DreamDesignerGradientHandlesLocal::GPreferredSlot = InSlot;
-}
-
-EDreamRectBlockGradientSlot DreamDesignerGradientHandles::GetPreferredSlot()
-{
-	return DreamDesignerGradientHandlesLocal::GPreferredSlot;
+	static const FName Body = FDreamDesignerHandles::MakeBoundName(KindName, TEXT("BodyGradient"));
+	static const FName Border = FDreamDesignerHandles::MakeBoundName(KindName, TEXT("BorderGradient"));
+	return InSlot == EDreamRectBlockGradientSlot::Body ? Body : Border;
 }
 
 #undef LOCTEXT_NAMESPACE

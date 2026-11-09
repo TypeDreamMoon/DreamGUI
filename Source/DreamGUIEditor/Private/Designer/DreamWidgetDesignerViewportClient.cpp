@@ -1757,6 +1757,12 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		bSwallowNextLeftRelease = true;
 		return true;
 	}
+	// Tab: the selection's next kind of handles, or none -- the selection box alone -- after the last.
+	if (EventArgs.Key == EKeys::Tab && EventArgs.Event == IE_Pressed && !IsCtrlPressed() && !IsAltPressed() && !IsShiftPressed()
+		&& !bDesignerDragging && !bDesignerDragPending && CycleDesignerHandles())
+	{
+		return true;
+	}
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;

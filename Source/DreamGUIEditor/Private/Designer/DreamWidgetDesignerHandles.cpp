@@ -7,6 +7,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "CanvasItem.h"
 #include "CanvasTypes.h"
+#include "Engine/Engine.h"
 #include "GlobalRenderResources.h"
 #include "SceneView.h"
 #include "ScopedTransaction.h"
@@ -120,25 +121,73 @@ UDreamWidget* FDreamWidgetDesignerViewportClient::GetHandleWidget() const
 	return Selected;
 }
 
-void FDreamWidgetDesignerViewportClient::CollectDesignerHandles(UDreamWidget* InWidget, const FSceneView& InView, TArray<FDesignerHandleSet>& OutSets) const
+void FDreamWidgetDesignerViewportClient::CollectDesignerHandles(UDreamWidget* InWidget, const FSceneView& InView, TArray<FDesignerHandleSet>& OutSets,
+	TArray<TSharedRef<IDreamDesignerHandleProvider>>* OutAvailable) const
 {
 	OutSets.Reset();
+	if (OutAvailable != nullptr)
+	{
+		OutAvailable->Reset();
+	}
 	if (InWidget == nullptr)
 	{
 		return;
 	}
 	const double PixelsPerUnit = MeasurePixelsPerUnit(InView, InWidget);
+	TArray<FDesignerHandleSet> All;
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> Available;
 	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : FDreamDesignerHandles::GetProvidersFor(InWidget))
 	{
-		FDesignerHandleSet& Set = OutSets.AddDefaulted_GetRef();
+		FDesignerHandleSet Set;
 		Set.Provider = Provider;
 		Set.Set.PixelsPerUnit = PixelsPerUnit;
 		Provider->CollectHandles(InWidget, Set.Set);
-		if (Set.Set.Handles.IsEmpty() && Set.Set.Lines.IsEmpty())
+		if (!Set.Set.Handles.IsEmpty() || !Set.Set.Lines.IsEmpty())
 		{
-			OutSets.Pop(EAllowShrinking::No);
+			Available.Add(Provider);
+			All.Add(MoveTemp(Set));
 		}
 	}
+	// One provider's at a time: a selection with a gradient, a mask and a shadow would be a tangle of handles otherwise.
+	// The one held keeps its handles whatever is active.
+	const TSharedPtr<IDreamDesignerHandleProvider> Shown = HandleGesture.IsValid() ? HandleGesture->Provider : FDreamDesignerHandles::ChooseShown(Available);
+	for (FDesignerHandleSet& Set : All)
+	{
+		if (Set.Provider == Shown)
+		{
+			OutSets.Add(MoveTemp(Set));
+			break;
+		}
+	}
+	if (OutAvailable != nullptr)
+	{
+		*OutAvailable = MoveTemp(Available);
+	}
+}
+
+bool FDreamWidgetDesignerViewportClient::CycleDesignerHandles()
+{
+	UDreamWidget* HandleWidget = GetHandleWidget();
+	if (HandleWidget == nullptr || IsDraggingDesignerHandle() || !Viewport)
+	{
+		return false;
+	}
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	const FSceneView* View = CalcSceneView(&ViewFamily);
+	if (View == nullptr)
+	{
+		return false;
+	}
+	TArray<FDesignerHandleSet> Sets;
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> Available;
+	CollectDesignerHandles(HandleWidget, *View, Sets, &Available);
+	if (Available.IsEmpty())
+	{
+		return false;
+	}
+	FDreamDesignerHandles::Cycle(Available);
+	Invalidate(false, false);
+	return true;
 }
 
 bool FDreamWidgetDesignerViewportClient::PixelToWidgetLocal(const FVector2D& InPixel, const UDreamWidget* InWidget, FVector2D& OutLocal) const
@@ -357,7 +406,17 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerDoubleClick(const FVector
 	}
 	else
 	{
-		Candidates = FDreamDesignerHandles::GetProvidersFor(HandleWidget);
+		// Off a handle, the click is the shown provider's only: a hidden one's handles are not there to aim at.
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+		if (const FSceneView* View = CalcSceneView(&ViewFamily))
+		{
+			TArray<FDesignerHandleSet> Sets;
+			CollectDesignerHandles(HandleWidget, *View, Sets);
+			for (const FDesignerHandleSet& Set : Sets)
+			{
+				Candidates.Add(Set.Provider.ToSharedRef());
+			}
+		}
 	}
 	for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : Candidates)
 	{
@@ -389,17 +448,53 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerDoubleClick(const FVector
 	return false;
 }
 
+void FDreamWidgetDesignerViewportClient::DrawDesignerHandleCaption(UDreamWidget* InWidget, const FSceneView& View, FCanvas& Canvas,
+	const TSharedPtr<IDreamDesignerHandleProvider>& InShown, TConstArrayView<TSharedRef<IDreamDesignerHandleProvider>> InAvailable) const
+{
+	using namespace DreamDesignerHandlesViewportLocal;
+	if (InWidget == nullptr || InAvailable.IsEmpty() || GEngine == nullptr)
+	{
+		return;
+	}
+	// Under the selection's lowest corner on screen, from its leftmost.
+	FBox2D Bounds(ForceInit);
+	for (const FVector2D& Corner : { InWidget->GetLocalSpaceLeftBottomPoint(), InWidget->GetLocalSpaceRightTopPoint(),
+		FVector2D(InWidget->GetLocalSpaceLeft(), InWidget->GetLocalSpaceTop()), FVector2D(InWidget->GetLocalSpaceRight(), InWidget->GetLocalSpaceBottom()) })
+	{
+		FVector2D Pixel;
+		if (!WorldToPixel(View, LocalToWorld(InWidget, Corner), Pixel))
+		{
+			return;
+		}
+		Bounds += Pixel / Canvas.GetDPIScale();
+	}
+	const int32 ShownIndex = InShown.IsValid()
+		? InAvailable.IndexOfByPredicate([&InShown](const TSharedRef<IDreamDesignerHandleProvider>& InProvider) { return InProvider == InShown; })
+		: INDEX_NONE;
+	const FText Next = InAvailable.IsValidIndex(ShownIndex + 1)
+		? InAvailable[ShownIndex + 1]->GetDisplayName()
+		: NSLOCTEXT("DreamDesignerHandles", "HandlesOffShort", "off");
+	const FText Caption = ShownIndex != INDEX_NONE
+		? FText::Format(NSLOCTEXT("DreamDesignerHandles", "ShownCaption", "{0} handles  ·  Tab: {1}"), InAvailable[ShownIndex]->GetDisplayName(), Next)
+		: FText::Format(NSLOCTEXT("DreamDesignerHandles", "OffCaption", "Handles off  ·  Tab: {0}"), InAvailable[0]->GetDisplayName());
+	FCanvasTextItem Item(FVector2D(Bounds.Min.X, Bounds.Max.Y + 6.0), Caption, GEngine->GetSmallFont(), FDreamDesignerHandles::GetGuideColor());
+	Item.EnableShadow(FLinearColor(0.0f, 0.0f, 0.0f, 0.8f));
+	Canvas.DrawItem(Item);
+}
+
 void FDreamWidgetDesignerViewportClient::DrawDesignerHandles(FSceneView& View, FCanvas& Canvas) const
 {
 	using namespace DreamDesignerHandlesViewportLocal;
 	UDreamWidget* HandleWidget = GetHandleWidget();
 	TArray<FDesignerHandleSet> Sets;
-	CollectDesignerHandles(HandleWidget, View, Sets);
-	if (Sets.IsEmpty())
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> Available;
+	CollectDesignerHandles(HandleWidget, View, Sets, &Available);
+	if (Available.IsEmpty())
 	{
 		return;
 	}
 	const float DpiScale = Canvas.GetDPIScale();
+	DrawDesignerHandleCaption(HandleWidget, View, Canvas, Sets.IsEmpty() ? nullptr : Sets[0].Provider, Available);
 	auto ToCanvas = [&View, HandleWidget, DpiScale](const FVector2D& InLocal, FVector2D& OutPixel)
 	{
 		if (!WorldToPixel(View, LocalToWorld(HandleWidget, InLocal), OutPixel))

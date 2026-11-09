@@ -278,10 +278,7 @@ bool FDreamDesignerGradientHandleStopsTest::RunTest(const FString&)
 	const UDreamWidget* PreviewNow = Driver.PreviewFor(Template);
 	FDreamDesignerHandleSet Set;
 	Set.PixelsPerUnit = PixelsPerUnitFor(Driver, PreviewNow).X;
-	const FName BodyName = FDreamDesignerHandles::MakeBoundName(DreamDesignerGradientHandles::KindName, TEXT("BodyGradient"));
-	const TArray<TSharedRef<IDreamDesignerHandleProvider>> Providers = FDreamDesignerHandles::GetProvidersFor(PreviewNow);
-	const TSharedRef<IDreamDesignerHandleProvider>* Found = Providers.FindByPredicate([&BodyName](const TSharedRef<IDreamDesignerHandleProvider>& InProvider) { return InProvider->GetName() == BodyName; });
-	const TSharedPtr<IDreamDesignerHandleProvider> Provider = Found != nullptr ? TSharedPtr<IDreamDesignerHandleProvider>(*Found) : nullptr;
+	const TSharedPtr<IDreamDesignerHandleProvider> Provider = FDreamDesignerHandles::FindProviderFor(PreviewNow, DreamDesignerGradientHandles::GetProviderName(EDreamRectBlockGradientSlot::Body));
 	if (!TestTrue(TEXT("the gradient handles are registered"), Provider.IsValid()))
 	{
 		return false;
