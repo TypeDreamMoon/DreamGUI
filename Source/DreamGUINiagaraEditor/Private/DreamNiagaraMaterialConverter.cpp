@@ -112,7 +112,8 @@ namespace DreamNiagaraMaterialConverterLocal
 		UMaterialExpressionTextureCoordinate* Packed = TexCoord(InMaterial, InOld, 3, 160);
 		UMaterialExpressionCustom* Scale = Make<UMaterialExpressionCustom>(InMaterial, InOld, -300, 160);
 		Scale->Description = TEXT("DreamUI particle colour scale");
-		Scale->Code = TEXT("return max(floor(Packed), 16.0) / 16.0;");
+		// The step read half the gap the blend leaves below the next (DreamUIParticle_Unpack): UV3.x arrives interpolated.
+		Scale->Code = TEXT("return max(floor(Packed + 0.001953125), 16.0) / 16.0;");
 		Scale->OutputType = CMOT_Float1;
 		Scale->Inputs.Reset();
 		FCustomInput& Input = Scale->Inputs.AddDefaulted_GetRef();
@@ -186,7 +187,7 @@ namespace DreamNiagaraMaterialConverterLocal
 		}
 		UMaterialExpressionCustom* Blended = Make<UMaterialExpressionCustom>(InMaterial, InOld, -200);
 		Blended->Description = TEXT("DreamUI particle frames");
-		Blended->Code = TEXT("float Blend = saturate((Packed - floor(Packed)) / 0.99609375);\nreturn lerp(Tex.Sample(TexSampler, Frame), Tex.Sample(TexSampler, Next), Blend);");
+		Blended->Code = TEXT("float Blend = saturate((Packed - floor(Packed + 0.001953125)) / 0.99609375);\nreturn lerp(Tex.Sample(TexSampler, Frame), Tex.Sample(TexSampler, Next), Blend);");
 		Blended->OutputType = CMOT_Float4;
 		Blended->Inputs.Reset();
 		auto AddInput = [Blended](const TCHAR* InName, UMaterialExpression* InFrom, int32 InOutput)

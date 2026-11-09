@@ -19,10 +19,15 @@
 #define DREAMUI_PARTICLE_SCALE_STEPS 16.0
 #define DREAMUI_PARTICLE_BLEND_RANGE 0.99609375
 
-/** UV3.x taken apart: the colour's scale (at least 1) and the frame blend (0 to 1). */
+/**
+ * UV3.x taken apart: the colour's scale (at least 1) and the frame blend (0 to 1). The value is interpolated on its way here,
+ * and one a whole step on every vertex can arrive a hair below it, which a bare floor reads as the step below with a blend
+ * of 1 -- the next frame, past the sheet for a sprite that has one frame. So the step is read half the gap the blend leaves
+ * below the next one up.
+ */
 void DreamUIParticle_Unpack(float Packed, out float Scale, out float Blend)
 {
-	const float Whole = floor(Packed);
+	const float Whole = floor(Packed + 0.5 * (1.0 - DREAMUI_PARTICLE_BLEND_RANGE));
 	Scale = max(Whole, DREAMUI_PARTICLE_SCALE_STEPS) / DREAMUI_PARTICLE_SCALE_STEPS;
 	Blend = saturate((Packed - Whole) / DREAMUI_PARTICLE_BLEND_RANGE);
 }

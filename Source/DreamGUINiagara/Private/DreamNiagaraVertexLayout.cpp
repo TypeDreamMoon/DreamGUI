@@ -10,7 +10,8 @@ float DreamNiagaraVertexLayout::Pack(float InScale, float InBlend)
 
 void DreamNiagaraVertexLayout::Unpack(float InPacked, float& OutScale, float& OutBlend)
 {
-	const float Whole = FMath::Floor(InPacked);
+	// Half the gap the blend leaves below the next step: a value interpolated a hair below its step is still that step.
+	const float Whole = FMath::Floor(InPacked + 0.5f * (1.0f - BlendRange));
 	OutScale = FMath::Max(Whole, ScaleSteps) / ScaleSteps;
 	OutBlend = FMath::Clamp((InPacked - Whole) / BlendRange, 0.0f, 1.0f);
 }
