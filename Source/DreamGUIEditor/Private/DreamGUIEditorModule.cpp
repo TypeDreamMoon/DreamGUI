@@ -61,6 +61,7 @@
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.h"
 #include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "Designer/DreamDesignerGradientHandles.h"
 #include "Designer/DreamDesignerHandles.h"
 #include "Designer/DreamDesignerPointHandleProviders.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
@@ -165,6 +166,7 @@ namespace DreamGUIEditorModuleLocal
 		return {
 			DreamDesignerPointHandles::MakeLatticeProvider(),
 			DreamDesignerPointHandles::MakePathProvider(),
+			DreamDesignerGradientHandles::MakeProvider(),
 		};
 	}
 }
@@ -292,7 +294,7 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontFallbackCustomization::MakeInstance));
 		// A text's paints, a gradient asset and a custom style's paint all show their gradients through this one.
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamGradientCustomization::MakeInstance));
-		// The designer viewport's handles: a warp's lattice, a path's points.
+		// The designer viewport's handles: a warp's lattice, a path's points, a rect block's gradients.
 		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::MakeDesignerHandleProviders())
 		{
 			FDreamDesignerHandles::Register(Provider);

@@ -14,9 +14,54 @@
 #include "IDetailGroup.h"
 #include "IPropertyUtilities.h"
 #include "Core/Components/DreamWidget.h"
+#include "Designer/DreamDesignerGradientHandles.h"
+#include "DetailWidgetRow.h"
+#include "Styling/AppStyle.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
+#include "Widgets/Text/STextBlock.h"
 
 #define LOCTEXT_NAMESPACE "DreamRectBlockCustomization"
+
+namespace DreamRectBlockCustomizationLocal
+{
+	/**
+	 * A toggle under one of the gradients that has the viewport's handles show it: they show the body's while a rect block
+	 * has both on, until the border's is asked for here.
+	 */
+	void AddViewportHandlesRow(IDetailGroup& InGroup, EDreamRectBlockGradientSlot InSlot, const TAttribute<bool>& InEnabled)
+	{
+		InGroup.AddWidgetRow()
+		.FilterString(LOCTEXT("ViewportHandlesSearch", "Viewport Handles"))
+		.IsEnabled(InEnabled)
+		.NameContent()
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.Text(LOCTEXT("ViewportHandles", "Viewport Handles"))
+		]
+		.ValueContent()
+		[
+			SNew(SCheckBox)
+			.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+			.IsChecked_Lambda([InSlot]()
+			{
+				return DreamDesignerGradientHandles::GetPreferredSlot() == InSlot ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			})
+			.OnCheckStateChanged_Lambda([InSlot](ECheckBoxState)
+			{
+				DreamDesignerGradientHandles::SetPreferredSlot(InSlot);
+			})
+			.ToolTipText(LOCTEXT("ViewportHandles_ToolTip", "Drag this gradient's ends and stops in the designer's viewport. With both gradients on, the viewport shows the one picked here."))
+			[
+				SNew(STextBlock)
+				.Margin(FMargin(6.0f, 1.0f))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(LOCTEXT("EditInViewport", "Edit in Viewport"))
+			]
+		];
+	}
+}
 FDreamRectBlockCustomization::FDreamRectBlockCustomization()
 {
 }
@@ -242,6 +287,7 @@ Group.AddPropertyRow(PropertyName##Handle).IsEnabled(IsEnabledAttribute);
 #define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute, EnableMinMax)\
 CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), IsEnabledAttribute, EnableMinMax);
 	
+	using namespace DreamRectBlockCustomizationLocal;
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	
 	// The rows below lay the rect block's own category out; what they do not place stays in it, and what they edit on another
@@ -577,6 +623,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			});
 			// The gradient row (FDreamGradientCustomization): its strip, type and presets, its CSS, its stops and its fields.
 			AddPropertyRowToGroup(BodyGradient, Gradient, BodyGradientGroup, IsEnableGradientAttribute);
+			AddViewportHandlesRow(BodyGradientGroup, EDreamRectBlockGradientSlot::Body, IsEnableGradientAttribute);
 		}
 	}
 
@@ -610,6 +657,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			auto BorderGradientValueHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BorderGradient));
 			BorderGradientValueHandle->SetPropertyDisplayName(LOCTEXT("BorderGradient_DisplayName", "Gradient"));
 			BorderGradientGroup.AddPropertyRow(BorderGradientValueHandle).IsEnabled(IsEnableGradientAttribute);
+			AddViewportHandlesRow(BorderGradientGroup, EDreamRectBlockGradientSlot::Border, IsEnableGradientAttribute);
 		}
 	}
 
