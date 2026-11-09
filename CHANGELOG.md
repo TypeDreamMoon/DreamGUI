@@ -199,6 +199,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `UDreamPointerLight`, `UDreamTiltCard` and every post-process visual (`UDreamVisualPostProcess`: glass, adjustment layer,
   stylize, background blur...) have a `bEnabled` property, on by default and written to a `.dui` only when off: off, the
   effect is drawn as if it were not there and keeps its settings.
+- **Details panels that cannot lose a property.** DreamGUI's details panels are laid out from `DreamGUI_` meta tags on
+  the properties -- a section (`DreamGUI_Section="Layer"`), a group, an order, the advanced expander, a control, the
+  switch of an effect -- and a property without them is shown under its own category. No panel hides a category whole any
+  more, so a property cannot drop out of the editor for the category it was given; only `DreamGUI_Hidden` hides one. The
+  Layer section and the effect switches in the hierarchy are built from the tags, and rows that apply only to some values
+  (a fill, a transition's colours, a password character) show and hide with the value without the panel rebuilding. An
+  extension's classes use the same tags. See [Property meta tags](Docs/guides/property-meta.md).
 
 ### Changed
 
@@ -521,6 +528,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 - **A pointer light shows in the designer.** Following the pointer, it lit nothing in a world that is not playing, where
   there is no pointer; there it now stands at its `LightPosition`.
+- **Rows missing from the details panels.** A user widget's *Wants Tick*, *Allow Event Bubble Up* and *Can Navigate
+  Here*; a widget's tooltip widget class; an image brush's fill (amount, method, origin, direction) and its rounded box's
+  corners; a rect block's nine-slice draw mode and margins and its shape blend operation; a sprite's padding and border
+  before it has a texture. Each could only be written in a `.dui`.
+- **A sequence player's details no longer crash the editor.** The error row of `UUISpriteSequencePlayer` and
+  `UUISpriteSheetTexturePlayer` looked for the visual they need among the widget's components and read its name off
+  nothing.
 
 ## 1.0.0
 

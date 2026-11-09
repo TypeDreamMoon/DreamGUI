@@ -93,6 +93,11 @@ A selected widget's categories run in the order a widget is put together: what m
 and — collapsed — Perspective, Navigation, Accessibility and Localization. Is Enabled is in Behavior. The Transform and
 anchor-data categories at the bottom, which repeated the Layout rows raw, are gone.
 
+Where a property goes is said by `DreamGUI_` tags on it, and a property without them is shown under its own category, so
+nothing a widget, a visual or a component can be given is ever missing from the panel; rows that apply only to some values
+(a fill, a transition's colours) appear with the value. The tags, and how an extension's classes use them, are in
+[Property meta tags](../guides/property-meta.md).
+
 The **Layer** category gathers what makes a widget a layer, from wherever it lives:
 
 | Row | What it edits |

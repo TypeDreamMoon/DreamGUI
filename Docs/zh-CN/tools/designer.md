@@ -88,6 +88,9 @@ Layout），然后是它是什么（Visual、Panel、Self Layout）、它怎么�
 默认折叠的 Perspective、Navigation、Accessibility 和 Localization。Is Enabled 在 Behavior 里。以前排在最
 下面、把 Layout 的行原样重复一遍的 Transform 和锚点数据分类已经去掉了。
 
+属性放在哪，由它身上的 `DreamGUI_` 标签决定；没写标签的属性显示在它自己的分类下，所以 widget、视觉或组件能设的东西不会在面板
+里缺席；只对某些取值适用的行（填充、过渡的颜色）随取值出现。这些标签以及扩展的类怎么用它们，见[属性的 meta 标签](../guides/property-meta.md)。
+
 **Layer** 分类把让 widget 成为图层的东西集中到一处，不管它们原本在哪个对象上：
 
 | 行 | 编辑什么 |

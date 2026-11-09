@@ -83,6 +83,10 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **图层效果的开关。** `UDreamLayerGroup`、`UDreamMaskTransition`、`UDreamHoloFoil`、`UDreamPointerLight`、`UDreamTiltCard`
   和所有后处理视觉（`UDreamVisualPostProcess`：玻璃、调整图层、风格化、背景模糊……）都有 `bEnabled` 属性，默认开，只有关掉时才写进
   `.dui`：关掉时效果如同不存在，设置都保留。
+- **不会丢属性的细节面板。** DreamGUI 的细节面板按属性上的 `DreamGUI_` meta 标签排版——区（`DreamGUI_Section="Layer"`）、
+  组、顺序、「高级」展开项、编辑控件、效果的开关——没写标签的属性显示在它自己的分类下。面板不再整类隐藏分类，属性不会因为
+  分类起错就从编辑器里消失；只有 `DreamGUI_Hidden` 会藏起属性。图层区和层级里的效果开关都按标签生成；只对某些取值适用的行
+  （填充、过渡的颜色、密码字符）随取值显示和隐藏，面板不用重建。扩展的类也用同一套标签。见[属性的 meta 标签](../guides/property-meta.md)。
 
 <a id="changed"></a>
 
@@ -105,6 +109,11 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **Niagara 效果示例排好了，火花也散开了。** 示例的行和卡片按标题文字量尺寸，五张卡只有一个词那么宽；现在分别要 1080×300 和 200×300。其中三个系统在同一个 Set Parameters 模块里读这个模块自己写的属性，Niagara 读到的是模块之前的值：点击火花和满条碎片的速度是零，边框火花全从一个角出发。现在每个系统都在更早的一组里写它要读的值。
 - **NiagaraSystem 视觉的系统不会再在世界里画一帧了。** 模拟它的组件关了渲染，但 Niagara 只在组件 tick 时才把这个开关交给它的场景代理，系统激活或爆发时新建的代理会先画一帧：整个系统，亮着，画在 UI 后面的世界里——PIE 里每次爆发闪一下，在不 tick 组件的世界里则一直画着。现在组件根本不给场景建代理。
 - **设计器里能看到指针光。** 跟随指针时，它在不在运行的世界里（没有指针）什么都不照；现在在那里停在 `LightPosition`。
+- **细节面板里缺的行补上了。** 用户控件的 *Wants Tick*、*Allow Event Bubble Up* 和 *Can Navigate Here*；控件的提示框
+  控件类；图片画刷的填充（数量、方式、起点、方向）和圆角框的圆角；矩形块九宫格的绘制方式和边距，以及它的形状融合方式；精灵
+  在还没有贴图时的内边距和边框。这些以前只能在 `.dui` 里写。
+- **打开序列帧播放器的细节面板不再让编辑器崩溃。** `UUISpriteSequencePlayer` 和 `UUISpriteSheetTexturePlayer` 的错误提示行
+  在控件的组件里找它们需要的视觉，再从空指针上读名字。
 
 <a id="100"></a>
 
