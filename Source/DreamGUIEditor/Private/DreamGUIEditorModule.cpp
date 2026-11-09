@@ -23,6 +23,7 @@
 #include "Text/DreamUIMenus.h"
 #include "Text/DreamUISourceWatcher.h"
 #include "Text/DreamUISymbolExport.h"
+#include "Workflow/DreamUIEditorWorkflow.h"
 #include "DreamUIEditorCommands.h"
 #include "DreamUIEditorTools.h"
 #include "DreamUIControlRegistry.h"
@@ -258,6 +259,8 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 	// The Tools entries and this plugin's share of the Dream-family toolbar combo.
 	FDreamUIMenus::Register();
+	// Copying and pasting layer styles, the eyedropper and the project's swatches, the preset library.
+	DreamUIEditorWorkflow::Startup(*this);
 
 	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
 	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
@@ -559,6 +562,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 	FDreamUISymbolExport::Unregister();
 	FDreamUIBridgeService::Unregister();
+	DreamUIEditorWorkflow::Shutdown(*this);
 	FDreamUIMenus::Unregister();
 	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();
