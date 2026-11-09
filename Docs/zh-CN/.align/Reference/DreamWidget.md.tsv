@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/Reference/DreamWidget.md	rev=aa0301eb152c	model=deepseek-flash	page=a4f38b010190
+#dreamdocs-align 1	source=Docs/Reference/DreamWidget.md	rev=8f976bed5d73	model=deepseek-v4.1-flash	page=56477e057970
 h1	53df60980406	53df6098	m
 p	cf4ac027f3c9	7989fb5d	m
 p	ba88e3497c35	65b46204	m
@@ -29,6 +29,8 @@ row6	3211a799740f	f0b08f9f	m
 row6	c5994b8d6f51	910d0ebd	m
 row6	20bb1202d94f	08155ab4	m
 row6	7333b0954b80	d0f976ec	m
+row6	8d99337a9261	0f681370	m
+row6	7c3e93780e69	67f8bb65	m
 row6	e44703babd8f	e44703ba	m
 row6	398f4711322d	5488ee1b	m
 row6	5d848d5680cd	e862713f	m
@@ -78,6 +80,7 @@ row3	2b961393130d	9eb9a7b0	m
 row3	473ed3529288	1f513fad	m
 row3	67b8504820a3	1139c441	m
 row3	8c9c65943e3f	57c45427	m
+row3	45acd526f48b	c5451187	m
 row3	ac2448056863	b27e3a73	m
 row3	fd3c56bc88bb	681d7040	m
 row3	dcdccbaa784d	5866c846	m
@@ -98,9 +101,11 @@ row3	9a4c448e5125	e4077c12	m
 row3	09a70c27ca37	43607bfe	m
 row3	85fda2c5bc9f	d93515ef	m
 row3	6f6341827c32	bda72e77	m
+row3	4f9c5b491570	e98c53f5	m
 row3	24729320e0fb	8c9af02a	m
 row3	172558903fc1	3f74ff94	m
 row3	4d05d84b6681	afed5c77	m
+row3	d0bb3224049f	5047b03e	m
 row3	48961ace15d0	e87d1cb2	m
 row3	15e6a5f9ab5a	8c5c356a	m
 row3	0b42ff9ce9fb	f969613e	m
@@ -261,9 +266,11 @@ row3	87c66f1563b7	3619e90e	m
 row3	9446479e0a08	7033108e	m
 row3	10498eb6ff4c	282e4f93	m
 row3	a3f67ef86ff0	d43e5bd1	m
+row3	6057f682fdb3	202636d3	m
 row3	840294d0b9b8	1086ae29	m
 row3	cbdb80f96c31	07c89280	m
 row3	b7e1e7c21d08	1a99afeb	m
+row3	dd282d139eb0	ab55c69c	m
 row3	688d75975ea7	83f95aa5	m
 row3	8a6d6ccd2f57	8824ac4e	m
 row3	488b65b917fc	b1f2ac5b	m

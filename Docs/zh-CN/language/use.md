@@ -16,7 +16,7 @@ use /Game/UI/WBP_Slider as Slider        // a class with no .dui, by a short nam
 use "UI/NieR_Common.dui" as nier         // a library, under a namespace
 ```
 
-**合并。** 不带 `as` 地 `use` 一个文件，会把它的样式、资源和它声明的组件别名带进来。被引入文件自己的 `use` 行也会一起来，所以库可以一层叠一层。本文件自己声明的名字会遮住导入的同名者。
+**合并。** 对一个文件使用普通的 `use`，会引入其样式、资源以及它声明的组件别名。该文件自身的 `use` 行也会一并带入，因此库可以层层叠加。本文件声明的名称会遮蔽导入的同名名称。
 
 **一个组件。** 对**有根节点**的文件写 `use "…" as Row`，是给那个文件的类起名，别的什么也不拿：一个界面不会借用组件的样式。类就是该文件 `class` 行所指定的那个；对于没有 `class` 行的文件，编辑器会去找 Source File 是这个文件的 Blueprint（没有编辑器——比如在 commandlet 里——就是 DUI5018，补一行 `class` 即可解决）。此后 `Row` 就是一个节点类型：
 

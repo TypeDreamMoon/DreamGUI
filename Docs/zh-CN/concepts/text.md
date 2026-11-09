@@ -1,6 +1,6 @@
 ---
-title: "文本"
-description: "文本系统：距离场（MTSDF）默认字体、来自提示覆盖字形的小字号、回退字面与彩色 emoji、盒子优先的溢出处理与 Margin、LineHeightPercentage、WrapTextAt 和 Best Fit，富文本，渐变文字，按文化断行，增量布局，以及 DreamGUI.Text.* 控制台变量。"
+title: 文本
+description: 文本系统：距离场（MTSDF）默认字体、来自提示覆盖字形的小字号、回退字面与彩色 emoji、盒子优先的溢出处理与 Margin、LineHeightPercentage、WrapTextAt 和 Best Fit，富文本，渐变文字，按文化断行，增量布局，以及 DreamGUI.Text.* 控制台变量。
 ---
 
 文本由 `UDreamText` 视觉绘制（`Text`，在 `.dui` 中）。它的度量对照 Chrome 和 Slate 校过，凡是不同的地方都重写了：字素簇和双向文本层级、连字、CSS 行盒、按 Unicode 范围选择的回退字面、文化和呈现方式、真正的粗体和斜体字面、彩色 emoji、两端对齐、制表位和中间省略。
@@ -26,8 +26,8 @@ UMG 的 `TextBlock` 不会溢出，因为它的盒子是从文本推出来的；
 | 属性 | 作用 |
 | --- | --- |
 | `Margin` | 矩形和文本之间的内边距，像 UMG 文本的 Margin。文本的换行、对齐和溢出测试都针对矩形**减去**它，所以它会收窄换行宽度，而不只是挪一下结果；它也会加进文本的首选尺寸 |
-| `LineHeightPercentage` | 缩放从一行到下一行的距离，`1` 是字体自己的行高。只有间距变化，字形大小不变。`FontSpace.Y` 是额外加上的固定距离：一个随字号缩放，一个不随 |
-| `WrapTextAt` | 按这个宽度而不是内容盒的宽度换行，`0` 及以下用内容盒。盒子同时也是文本**对齐**的地方，所以更窄的换行宽度能得到一栏窄文字、仍在整个控件上居中。它不截断：`Truncate` 和 `Ellipsis` 仍按盒子量 |
+| `LineHeightPercentage` | 缩放从一行到下一行的距离，1 为字体自身的行高。只有间距变化，字形大小不变。`FontSpace.Y` 是在此之上额外增加的固定距离：一个随字体缩放，另一个不随 |
+| `WrapTextAt` | 按此宽度而非内容盒的宽度换行；为零或更小则使用内容盒。盒子同时也是文本**对齐**的基准，因此更窄的换行宽度会得到一窄列文字，仍在整个控件上居中。它不会截断：`Truncate` 和 `Ellipsis` 仍按盒子测量 |
 | `MinDesiredWidth` | 向按内容定尺寸的父级报告的宽度下限，让一个暂时很短的标签（倒数的数字、还没到的名字）不把整行压塌 |
 | `bBestFit` / `BestFitMinSize` | Best Fit：缩小字号直到文本放进内容盒。`FontSize` 变成文本**允许达到的**字号，`BestFitMinSize` 是最小能缩到多少，再小就任它溢出。`GetRenderedFontSize` 是实际画出的字号 |
 
@@ -71,7 +71,7 @@ Widget Panel {
 - **默认字体就是 Slate 的**：Roboto，带真正的常规、粗体、斜体、粗斜体字面，CJK 用 DroidSansFallback，画在轮廓多通道距离场上（`/DreamGUI/DefaultFont_DistanceField`）。
 - **距离场。** `SdfSource` 默认 `OutlineMultiChannel`（MTSDF：拐角更锐利，BGRA 图集）。描边、下衬（投影）、发光和歌词式填充（`TextStyle`，即 `FDreamTextStyle`）由内置着色器画，所以需要距离场字体并且开着 *Use Built-in UI Shader*；它们的长度以 em 计，所以同一个样式在任何字号下看起来一样。样式按控件存进画布的控件属性纹理，所以样式不同的文本仍然合进同一个 draw call。
 - **粗体和斜体。** `BoldFont`、`ItalicFont` 和 `BoldItalicFont` 指向真正的字面；没有时才用合成的。
-- **回退字面。** `Fallbacks` 里每一项（`Fallbacks`、`FDreamUIFontFallback`）有 `Font`、`Ranges`（码点）、`Cultures`（适用的语言）、`Scale` 和 `bPreferOverPrimary`。旧的 `FallbackFontArray` 在加载时转成默认设置的 `Fallbacks` 项。中文的文化名会被补上书写体系（`zh-Hans`、`zh-Hant`），所以按它们写的回退在打包后的游戏里也能命中。
+- **回退字面。** `Fallbacks` 中的每一项（`FDreamUIFontFallback`）都有 `Font`、`Ranges`（码点）、`Cultures`（适用的语言）、一个 `Scale` 和 `bPreferOverPrimary`。旧的 `FallbackFontArray` 在加载时会转成使用默认设置的 `Fallbacks` 项。中文文化名会被补回书写体系（`zh-Hans`、`zh-Hant`），因此针对它们编写的回退在打包后的游戏中也能匹配。
 - **彩色 emoji**：CBDT/CBLC、sbix 和 COLRv0；`bPreferColorEmoji` 默认开。阴影、描边和长阴影修改器给彩色 emoji 做的拷贝是剪影。
 
 怎么随游戏发出字体文件、彩色 emoji 字体和 ICU 数据，见[字体与打包](../guides/fonts-and-packaging.md)。
@@ -85,10 +85,8 @@ Widget Panel {
 - 带描边、发光或下衬的小字号文本，其字面由覆盖字形绘制（描边薄于 2 个设备像素时不提示），而这些效果由距离场绘制，并与之一一对应（`SmallTextEffectFace` `Auto`；`Field` 让此类文本完全留在距离场上）。
 - 渲染层内的小字号文本，在层静止 3 帧后由覆盖字形绘制，移动期间由距离场绘制。
 - 字面柔度和膨胀可让文本保持在距离场上。
-- 一个文本可以通过 `SmallTextRaster = Off` 在任何字号下都留在距离场上；一个字体有自己的 `SmallTextCoverage`、
-  `SmallTextMaxPixelSize` 和 `CoverageHinting`。
-- `SmallTextContrast`（默认 1）设置覆盖字形的对比度；`bSmallTextCorrection`（开启）让这些字号下仍从距离场绘制的文本变暗。一个世界每帧最多将 `SmallTextRepaintBudgetPerFrame`（512）个文本重绘到
-  覆盖字形上。
+- 一个文本可以通过 `SmallTextRaster = Off` 在任何字号下都留在距离场上；一个字体有自己的 `SmallTextCoverage`、 `SmallTextMaxPixelSize` 和 `CoverageHinting`。
+- `SmallTextContrast`（默认 1）设置覆盖字形的对比度；`bSmallTextCorrection`（开启）让这些字号下仍从距离场绘制的文本变暗。一个世界每帧最多将 `SmallTextRepaintBudgetPerFrame`（512）个文本重绘到覆盖字形上。
 - 只要有文本从覆盖字形绘制，字体就会保留这些字形的图集单元格。超过两倍 `MaxCoverageCells`（在 *项目设置 > 插件 > DreamUI* 中默认为 4）后，新的小字号字形会排队等待，期间由距离场绘制，每个字体只警告一次。
 - 不通过 `MF_DreamUI_Shade` 着色的自定义材质不会获得覆盖字形。
 
@@ -96,38 +94,24 @@ Widget Panel {
 
 ## 富文本
 
-开启 `bRichText` 后，文本中的标签生效；`RichTextTagFilterFlags` 决定解析哪些种类（`Bold`、
-`Italic`、`Underline`、`Strikethrough`、`Size`、`Color`、`Superscript`、`Subscript`、`CustomTag`、`Image`、`Hyperlink`、
-`Language`、`Gradient`），被过滤掉的标签会当作普通文字显示（例如关闭 `Language` 标志时的 `<lang>`）。
-标签包括 `<b>`、`<u>`、`<s>`、`<size=40>`、`<color=…>`、`<sup>` / `<sub>`、行内图片 `<img=Tag/>`（可选带尺寸和 `baseline` 或 `top` 之类的对齐词）、可点击的 `<a=Id>`（`OnHyperlinkClickedBP`）、`<lang=ja>`
-（其包裹的内容按该语言选择回退字体和字形），以及下一节的 `<gradient=Name>`。字面的
-`<` 写作 `&lt;`。
+开启 `bRichText` 后，文本中的标签生效；`RichTextTagFilterFlags` 决定解析哪些种类（`Bold`、 `Italic`、`Underline`、`Strikethrough`、`Size`、`Color`、`Superscript`、`Subscript`、`CustomTag`、`Image`、`Hyperlink`、 `Language`、`Gradient`），被过滤掉的标签会当作普通文字显示（例如关闭 `Language` 标志时的 `<lang>`）。标签包括 `<b>`、`<u>`、`<s>`、`<size=40>`、`<color=…>`、`<sup>` / `<sub>`、行内图片 `<img=Tag/>`（可选带尺寸和 `baseline` 或 `top` 之类的对齐词）、可点击的 `<a=Id>`（`OnHyperlinkClickedBP`）、`<lang=ja>` （其包裹的内容按该语言选择回退字体和字形），以及下一节的 `<gradient=Name>`。字面的 `<` 写作 `&lt;`。
 
-自定义标签和样式来自 `RichTextCustomStyleData`（`UDreamUIRichTextCustomStyleData`），行内图片来自
-`RichTextImageData`。控件库里的 [`UDreamRichTextBlock`](../Reference/DreamRichTextBlock.md) 是对应 UMG `RichTextBlock` 的控件。
+自定义标签和样式来自 `RichTextCustomStyleData`（`UDreamUIRichTextCustomStyleData`），行内图片来自 `RichTextImageData`。控件库里的 [`UDreamRichTextBlock`](../Reference/DreamRichTextBlock.md) 是对应 UMG `RichTextBlock` 的控件。
 
 <a id="gradient-text"></a>
 
 ## 渐变文字
 
-文本的字面、描边，以及叠在字面上的一层，各自可以用渐变来绘制。三层都在
-`FDreamTextStyle` 上——`FacePaint`、`OutlinePaint`、`OverlayPaint`——每层是一个 `FDreamTextPaint`（`bEnabled`、共享的
-`Preset`，或自带的 `Gradient`）。
+文本的字面、描边，以及叠在字面上的一层，各自可以用渐变来绘制。三层都在 `FDreamTextStyle` 上——`FacePaint`、`OutlinePaint`、`OverlayPaint`——每层是一个 `FDreamTextPaint`（`bEnabled`、共享的 `Preset`，或自带的 `Gradient`）。
 
-- **种类**：`Linear`、`Radial`（椭圆按 `Angle` 旋转）、`Conic`、`Diamond`、`Reflected`（对称：从过中心的一条线向两边展开）
-  和 `Corners`（四角色，TextMeshPro 的那种），最多 16 个色标；超出两端时 `Pad`、`Repeat` 或 `Reflect`；在 sRGB、线性光或 Oklab 里混色。
-  RectBlock 的主体和描边用的也是这种渐变（见[渐变与视口手柄](gradients.md)）。
-- **按 CSS 的写法写**：`linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)`，可写在细节面板、
-  `.dui` 中，或作为富文本的一段。按 Chrome 的方式读取，只有两点不同：`to <corner>` 无论盒子什么形状都取正方形的角度，颜色名是 CSS 的（`green` 是 #008000，而 `<color=green>` 是 #00FF00）。
-- **量在什么上**：`PaintBoxHorizontal` / `PaintBoxVertical` 分轴选择 `TextBlock`、`ContentBox`、`Line`、
-  `Glyph` 或 `Run`。
+- **种类**：`Linear`、`Radial`（椭圆按 `Angle` 旋转）、`Conic`、`Diamond`、`Reflected`（对称：从过中心的一条线向两边展开）和 `Corners`（四角色，TextMeshPro 的那种），最多 16 个色标；超出两端时 `Pad`、`Repeat` 或 `Reflect`；在 sRGB、线性光或 Oklab 里混色。 RectBlock 的主体和描边用的也是这种渐变（见[渐变与视口手柄](gradients.md)）。
+- **按 CSS 的写法写**：`linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)`，可写在细节面板、 `.dui` 中，或作为富文本的一段。按 Chrome 的方式读取，只有两点不同：`to <corner>` 无论盒子什么形状都取正方形的角度，颜色名是 CSS 的（`green` 是 #008000，而 `<color=green>` 是 #00FF00）。
+- **量在什么上**：`PaintBoxHorizontal` / `PaintBoxVertical` 分轴选择 `TextBlock`、`ContentBox`、`Line`、 `Glyph` 或 `Run`。
 - **字面渐变替代文本自己的颜色**，就像 CSS 的 `background-clip: text` 那样；其中的 `<color>` 段是纯色。叠加层通过 `OverlayBlend`（`Normal`、`Add`）混到字面上。
 - **预设**：`UDreamGradientAsset` 资产，或项目设置里按名字存的 CSS 字符串（`GradientPresets`）。用同一个渐变的文本在 GPU 上共享一行。
-- **富文本**：`<gradient=Name>…</gradient>`，名字依次查自定义样式条目、项目预设，然后
-  按去掉空格的 CSS 读取。`Gradient` 是新加的过滤位：其 `RichTextTagFilterFlags` 保存为不含该位的掩码的文本，会把标签当文字显示。
+- **富文本**：`<gradient=Name>…</gradient>`，名字依次查自定义样式条目、项目预设，然后按去掉空格的 CSS 读取。`Gradient` 是新加的过滤位：其 `RichTextTagFilterFlags` 保存为不含该位的掩码的文本，会把标签当文字显示。
 
-渐变的相位、角度、中心和缩放可以动画，**而不重新布局文本、也不重绘文本**——每次改动只写文本 paint 表里的一个像素。`FacePaintPhase`、`OutlinePaintPhase`、`OverlayPaintPhase` 和 `PaintAngleOffset`
-可在 Sequencer 里打关键帧，[`UDreamTextPaintLibrary`](../Reference/DreamTextPaintLibrary.md) 用 `PaintPhaseTo`、`PaintAngleTo` 和 `PlayShimmer` 对它们做补间：
+渐变的相位、角度、中心和缩放可以动画，**而不重新布局文本、也不重绘文本**——每次改动只写文本 paint 表里的一个像素。`FacePaintPhase`、`OutlinePaintPhase`、`OverlayPaintPhase` 和 `PaintAngleOffset` 可在 Sequencer 里打关键帧，[`UDreamTextPaintLibrary`](../Reference/DreamTextPaintLibrary.md) 用 `PaintPhaseTo`、`PaintAngleTo` 和 `PlayShimmer` 对它们做补间：
 
 ```cpp
 #include "Core/Text/DreamTextPaintLibrary.h"
@@ -158,8 +142,7 @@ UDreamTextPaintLibrary::PlayShimmer(Title, 1.2f, 0.0f, -1);   // 1.2 s a pass, u
 
 - 带 CJK 文本的游戏必须连同对应的 ICU 数据一起打包（EFIGSCJK 预设；泰语及其邻近语言用 All）。
 - 编辑器里，DreamGUI 自己的那份 ICU 被指向引擎的 ICU 数据（`Engine/Content/Internationalization`），因此编辑器与打包后的游戏一样按游戏文化断行；读不到数据时日志只说一次，改由引擎默认文化的迭代器顶替。
-- `PhraseWrap = CJKDictionary` 换行时用 ICU 的词典把 CJK 词语保持在一起（CSS 的
-  `word-break: auto-phrase`）。它只在 `VerticalOverflow` 时才有意义，且需要打包的 ICU 数据包含 CJK 词典；否则会悄悄退回逐字断行。
+- `PhraseWrap = CJKDictionary` 换行时用 ICU 的词典把 CJK 词语保持在一起（CSS 的 `word-break: auto-phrase`）。它只在 `VerticalOverflow` 时才有意义，且需要打包的 ICU 数据包含 CJK 词典；否则会悄悄退回逐字断行。
 - `Language` 是文本书写所用的语言（`"ja"`、`"zh-Hans"`、`"en-US"`）：优先使用为它准备的回退字体，HarfBuzz 也按语言选脚本的字形（`locl`）。留空表示游戏当前语言；富文本的 `<lang=xx>` 覆盖它。断行**始终**跟随游戏文化，不管这里写什么。
 
 <a id="incremental-layout"></a>

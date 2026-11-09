@@ -3,12 +3,11 @@ title: 属性的 meta 标签
 description: 决定属性在 DreamGUI 细节面板里放在哪、是否隐藏、用什么控件、是否作为效果开关的 DreamGUI_ meta 标签——没写标签的属性永远不会被丢掉——以及扩展的类和定制怎么用它们。
 ---
 
-DreamGUI 的细节面板按所显示属性上的 meta 标签来排版。标签都以 `DreamGUI_` 开头，而且一个都不是必需的：
-**没写标签的属性，照引擎的做法显示在它自己的 `Category` 下。** 只有标了 `DreamGUI_Hidden` 的属性不显示。
-DreamGUI 的面板不会整类隐藏分类，所以给类新加的属性，不会因为分类起错了就在编辑器里消失。
+DreamGUI 的细节面板按所显示属性上的 meta 标签来排版。标签都以 `DreamGUI_` 开头，而且一个都不是必需的：**没写标签的属性，照引擎的做法显示在它自己的 `Category` 下。** 只有标了 `DreamGUI_Hidden` 的属性不显示。 DreamGUI 的面板不会整类隐藏分类，所以给类新加的属性，不会因为分类起错了就在编辑器里消失。
 
-扩展作者自己的类也能用：一个类有标签、却没有细节定制，就会自动得到一个按标签摆放的定制；自己写的定制只要调用
-`FDreamDetailsLayout::PlaceTagged` 就会摆放它们（见下文）。
+扩展作者自己的类也能用：一个类有标签、却没有细节定制，就会自动得到一个按标签摆放的定制；自己写的定制只要调用 `FDreamDetailsLayout::PlaceTagged` 就会摆放它们（见下文）。
+
+<a id="the-tags"></a>
 
 ## 标签
 
@@ -25,23 +24,23 @@ DreamGUI 的面板不会整类隐藏分类，所以给类新加的属性，不�
 
 「只有另一个属性取某个值时才显示」继续用引擎的 `EditCondition` 和 `EditConditionHides`：行始终在，条件一满足就出现。
 
-子分类（`Category = "DreamGUI|Pointer Light"`）里的属性标了 `AdvancedDisplay`，在 DreamGUI 的面板里不会收进「高级」展开项：引擎画子分类时
-根本不画它的高级行，开不开「显示全部高级项」都一样。所以 DreamGUI 把这类属性作为子分类里的普通行，排在其它行后面。想把属性收起来，
-用 `DreamGUI_Advanced`，或者放进没有子分类的分类。
+子分类（`Category = "DreamGUI|Pointer Light"`）里的属性标了 `AdvancedDisplay`，在 DreamGUI 的面板里不会收进「高级」展开项：引擎画子分类时根本不画它的高级行，开不开「显示全部高级项」都一样。所以 DreamGUI 把这类属性作为子分类里的普通行，排在其它行后面。想把属性收起来，用 `DreamGUI_Advanced`，或者放进没有子分类的分类。
 
 ```cpp
-// 和控件的不透明度、遮罩一起放在图层区，排第二。
+// Shown with the widget's opacity and mask in the Layer section, second.
 UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (DreamGUI_Section = "Layer", DreamGUI_Order = 20))
 EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 
-// 层级里这个效果的眼睛开关的就是它。
+// The eye on this effect in the hierarchy turns this off and on.
 UPROPERTY(EditAnywhere, Category = "DreamGUI|Holo Foil", meta = (DreamGUI_LayerToggle))
 bool bEnabled = true;
 
-// 只对填充图有用，也只在那时显示。
+// Only for a filled image, and only then shown.
 UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "DrawType == EDreamUISpriteDrawType::Filled", EditConditionHides))
 float FillAmount = 1;
 ```
+
+<a id="sections"></a>
 
 ## 区
 
@@ -57,15 +56,13 @@ float FillAmount = 1;
 | `Behavior` | `DreamBehavior` | -50 |
 | `Advanced` | `DreamAdvanced` | 100，默认折叠 |
 
-视觉显示在所属控件的细节面板里，所以视觉的 `Layer` 属性由控件的图层区来画，不再出现在视觉自己的行里——视觉的混合模式就是这样
-和控件的不透明度排在一起的。
+视觉显示在所属控件的细节面板里，所以视觉的 `Layer` 属性由控件的图层区来画，不再出现在视觉自己的行里——视觉的混合模式就是这样和控件的不透明度排在一起的。
 
 <a id="viewport-handles"></a>
 
 ## 视口手柄
 
-`DreamGUI_Handle` 写的是一种手柄：选中控件时，设计器视口为这个属性画这种手柄。控件自己的属性、它的视觉的、它的行为的属性都算，
-普通结构体属性的成员往下看一层。每个打了标签的属性各有一个提供者，名字是 `种类.属性`（如 "Gradient.BodyGradient"）；冒号后的内容原样交给种类。
+`DreamGUI_Handle` 命名了一种手柄，设计器视口会针对该属性在所选控件上绘制这种手柄：包括控件自身的属性、其视觉对象和行为的属性，以及普通结构体属性向下一层的成员。每个打了标签的属性都有自己的提供者，名为 `Kind.Property`（“Gradient.BodyGradient”）；冒号后的内容会原样交给该种类。
 
 | 种类 | 标在哪儿 | 手柄 |
 |---|---|---|
@@ -80,10 +77,12 @@ float FillAmount = 1;
 ```cpp
 FDreamDesignerHandles::RegisterKind(TEXT("MyKind"), [](const FDreamDesignerHandleBinding& InBinding) -> TSharedPtr<IDreamDesignerHandleProvider>
 {
-	// InBinding.Owner 是对象，InBinding.Property 是打标签的属性，InBinding.Args 是冒号后的内容。
+	// InBinding.Owner is the object, InBinding.Property the tagged property, InBinding.Args what follows the colon.
 	return Cast<UMyVisual>(InBinding.Owner.Get()) ? MakeShared<FMyHandles>(InBinding.Property) : nullptr;
 });
 ```
+
+<a id="in-a-customization-of-your-own"></a>
 
 ## 在自己的定制里
 
@@ -91,22 +90,20 @@ FDreamDesignerHandles::RegisterKind(TEXT("MyKind"), [](const FDreamDesignerHandl
 void FMyCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	FDreamDetailsLayout Layout(DetailBuilder);
-	Layout.Section(DreamPropertyMeta::ESection::Behavior).AddCustomRow(...);   // 自己的行
-	// 只在对象处于某种状态时才适用、又没有属性能表达的（画布是不是根），行照样留着，适用时显示：
+	Layout.Section(DreamPropertyMeta::ESection::Behavior).AddCustomRow(...);   // rows of its own
+	// What applies only in some state of the object that no property says -- whether a canvas is a root -- keeps its row,
+	// shown while it applies:
 	Layout.ShowWhen(TEXT("ReferenceResolution"), TAttribute<bool>::CreateLambda([...] { return IsRoot(); }));
-	Layout.PlaceTagged();   // 放在最后：还没摆放的带标签属性都摆好
+	Layout.PlaceTagged();   // last: every tagged property not placed yet, placed
 }
 ```
 
-一个属性要么靠标签摆放，要么由定制自己的行摆放，不要两者都用：定制已经加过或藏过的属性，标签不会再挪它。定制为某个属性
-自己画的行（比如旁边带单位按钮的数值）要用 `HideProperty` 藏掉该属性的默认行，在这一行上顺带编辑的属性（单位）标
-`DreamGUI_Hidden`。
+一个属性要么靠标签摆放，要么由定制自己的行摆放，不要两者都用：定制已经加过或藏过的属性，标签不会再挪它。定制为某个属性自己画的行（比如旁边带单位按钮的数值）要用 `HideProperty` 藏掉该属性的默认行，在这一行上顺带编辑的属性（单位）标 `DreamGUI_Hidden`。
 
-读标签用 `DreamPropertyMeta`（`DetailCustomization/DreamPropertyMeta.h`），摆放用 `FDreamDetailsLayout`
-（`DetailCustomization/DreamDetailsLayout.h`）。
+读标签用 `DreamPropertyMeta`（`DetailCustomization/DreamPropertyMeta.h`），摆放用 `FDreamDetailsLayout` （`DetailCustomization/DreamDetailsLayout.h`）。
+
+<a id="the-test-that-holds-it"></a>
 
 ## 守住它的测试
 
-`DreamGUI.Editor.Details.EveryEditablePropertyHasARowUnlessTaggedHidden` 按编辑器的方式显示插件各模块的每个类——控件在
-自己的细节面板里，它的视觉、布局和导航在控件面板里，组件在自己的面板里，面板插槽放在每种面板下，其余按类默认值——以及每个
-结构体本身；任何可编辑属性没有行又没标 `DreamGUI_Hidden`，或者同一属性出现两行，测试就失败。
+`DreamGUI.Editor.Details.EveryEditablePropertyHasARowUnlessTaggedHidden` 按编辑器的方式显示插件各模块的每个类——控件在自己的细节面板里，它的视觉、布局和导航在控件面板里，组件在自己的面板里，面板插槽放在每种面板下，其余按类默认值——以及每个结构体本身；任何可编辑属性没有行又没标 `DreamGUI_Hidden`，或者同一属性出现两行，测试就失败。
