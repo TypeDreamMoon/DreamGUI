@@ -46,9 +46,9 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDr
 {
 	int DataOffset = 0;
 
-	// The last flag, spare until a layer style came: its record follows this block's own texels.
-	// A reveal highlight is the border's gradient, centred on the light that makes it (SetRevealHighlight).
-	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient || bRevealHighlight, bEnableInnerShadow, bEnableRadialFill, InStyle != nullptr);
+	// The last flag, spare until a layer style came: its record follows this block's own texels. A gradient's flag says
+	// its row is held (UpdateGradientRows); a reveal highlight is the border's gradient, centred on the light that makes it.
+	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, BodyGradientRow != INDEX_NONE, bEnableBorder, BorderGradientRow != INDEX_NONE, bEnableInnerShadow, bEnableRadialFill, InStyle != nullptr);
 	Fill8BytesToData(Data
 		, BoolAsByte
 		, static_cast<uint8>(BodyTextureScaleMode)
@@ -70,17 +70,15 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height, const FDr
 		, (BodyTextureMode == EDreamRectBlockTextureMode::Sprite && IsValid(BodySpriteTexture)) ? FVector2f(BodySpriteTexture->GetSpriteInfo().GetUVCenter()) : FVector2f(0.5f, 0.5f)
 		, DataOffset);
 
-	FillColorToData(Data, BodyGradientColor, DataOffset);
-	FillVector2ToData(Data, GetValueWithUnitMode(BodyGradientCenter, BodyGradientCenterUnitMode, width, height), DataOffset);
-	FillVector2ToData(Data, GetValueWithUnitMode(BodyGradientRadius, BodyGradientRadiusUnitMode, width, height), DataOffset);
-	FillFloatToData(Data, BodyGradientRotation, DataOffset);
+	// The gradients are rows of the world's paint rows (FDreamGradient, as a text paints with): the body's row here, the
+	// border's after its colour, -1 for none. The twenty bytes after each are spare.
+	FillFloatToData(Data, static_cast<float>(BodyGradientRow), DataOffset);
+	DataOffset += 20;
 
 	FillFloatToData(Data, GetValueWithUnitMode(BorderWidth, BorderWidthUnitMode, width, height, 0.5f), DataOffset);
 	FillColorToData(Data, BorderColor, DataOffset);
-	FillColorToData(Data, bRevealHighlight ? RevealColor : BorderGradientColor, DataOffset);
-	FillVector2ToData(Data, bRevealHighlight ? RevealCenter : GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, width, height), DataOffset);
-	FillVector2ToData(Data, bRevealHighlight ? FVector2f(RevealRadius, RevealRadius) : GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, width, height), DataOffset);
-	FillFloatToData(Data, bRevealHighlight ? 0.0f : BorderGradientRotation, DataOffset);
+	FillFloatToData(Data, static_cast<float>(BorderGradientRow), DataOffset);
+	DataOffset += 20;
 
 	FillColorToData(Data, InnerShadowColor, DataOffset);
 	FillFloatToData(Data, GetValueWithUnitMode(InnerShadowSize, InnerShadowSizeUnitMode, width, height, 0.5f), DataOffset);
@@ -195,19 +193,15 @@ constexpr int UDreamRectBlock::DataCountInBytes()
 		+ 8//body texture's uv's center point
 
 		//gradient
-		+ 4//color
-		+ 8//center
-		+ 8//radius
-		+ 4//rotation
+		+ 4//its row in the world's paint rows
+		+ 20//spare
 
 		//border
 		+ 4//width
 		+ 4//color
 		//border gradient
-		+ 4//color
-		+ 8//center
-		+ 8//radius
-		+ 4//rotation
+		+ 4//its row in the world's paint rows
+		+ 20//spare
 
 		//inner shadow
 		+ 4//color
@@ -423,6 +417,7 @@ void UDreamRectBlock::OnUnregister()
 	// is then still its as-declared 0 rather than INDEX_NONE -- so the row test alone would call
 	// UnregisterBuffer on nothing.
 	ReleaseShapeBlendRow();
+	ReleaseGradientRows();
 	if (DataRows != nullptr && DataStartPosition > INDEX_NONE)
 	{
 		DataRows->UnregisterBuffer(DataStartPosition);
@@ -462,12 +457,8 @@ void UDreamRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 		if (!this->GetName().StartsWith("Default__"))
 		{
 			SetUnitChange(CornerRadius)
-			else SetUnitChange(BodyGradientCenter)
-			else SetUnitChange(BodyGradientRadius)
 
 			else SetUnitChange(BorderWidth)
-			else SetUnitChange(BorderGradientCenter)
-			else SetUnitChange(BorderGradientRadius)
 
 			else SetUnitChange(InnerShadowSize)
 			else SetUnitChange(InnerShadowBlur)
@@ -497,6 +488,52 @@ void UDreamRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 			}
 		}
 	}
+}
+
+void UDreamRectBlock::PreEditChange(FEditPropertyChain& PropertyAboutToChange)
+{
+	Super::PreEditChange(PropertyAboutToChange);
+	// A field of a gradient that is still the two-colour one is about to be edited: what it draws now is kept, so that the
+	// edit lands on its two stops rather than on an empty gradient (PostEditChangeChainProperty).
+	const FEditPropertyChain::TDoubleLinkedListNode* MemberNode = PropertyAboutToChange.GetActiveMemberNode();
+	const FName Member = MemberNode != nullptr && MemberNode->GetValue() != nullptr ? MemberNode->GetValue()->GetFName() : NAME_None;
+	bBodyGradientEditFromTwoColour = Member == GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyGradient) && BodyGradient.Stops.IsEmpty();
+	bBorderGradientEditFromTwoColour = Member == GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BorderGradient) && BorderGradient.Stops.IsEmpty();
+	if (bBodyGradientEditFromTwoColour)
+	{
+		GradientBeforeEdit = GetEffectiveBodyGradient();
+	}
+	else if (bBorderGradientEditFromTwoColour)
+	{
+		GradientBeforeEdit = GetEffectiveBorderGradient();
+	}
+}
+
+void UDreamRectBlock::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+	// The first edit of a two-colour gradient's field: its two stops, with the field as it was set. An edit that wrote the
+	// whole gradient, or gave it stops, needs nothing.
+	auto Materialize = [this, &PropertyChangedEvent](FDreamGradient& InOutGradient, bool& bInOutFromTwoColour)
+	{
+		if (!bInOutFromTwoColour)
+		{
+			return;
+		}
+		bInOutFromTwoColour = false;
+		const FEditPropertyChain::TDoubleLinkedListNode* MemberNode = PropertyChangedEvent.PropertyChain.GetActiveMemberNode();
+		const FEditPropertyChain::TDoubleLinkedListNode* FieldNode = MemberNode != nullptr ? MemberNode->GetNextNode() : nullptr;
+		const FProperty* Field = FieldNode != nullptr ? FieldNode->GetValue() : nullptr;
+		if (!InOutGradient.Stops.IsEmpty() || Field == nullptr || Field->GetOwnerStruct() != FDreamGradient::StaticStruct())
+		{
+			return;
+		}
+		FDreamGradient Edited = GradientBeforeEdit;
+		Field->CopyCompleteValue_InContainer(&Edited, &InOutGradient);
+		InOutGradient = Edited;
+	};
+	Materialize(BodyGradient, bBodyGradientEditFromTwoColour);
+	Materialize(BorderGradient, bBorderGradientEditFromTwoColour);
+	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 }
 
 bool UDreamRectBlock::CanEditChange(const FProperty* InProperty) const
@@ -666,6 +703,190 @@ void UDreamRectBlock::SetRevealHighlight(bool bInOn, const FVector2f& InCenter, 
 	MarkNeedUpdateBlockData();
 }
 
+namespace DreamRectBlockGradientLocal
+{
+	/** InInner laid over InOuter, as the two-colour gradient laid its colour over the body's: in linear light, premultiplied. */
+	FColor Over(const FColor& InInner, const FColor& InOuter)
+	{
+		if (InInner.A == 255)
+		{
+			return InInner;
+		}
+		if (InInner.A == 0)
+		{
+			return InOuter;
+		}
+		const FLinearColor Inner = FLinearColor::FromSRGBColor(InInner);
+		const FLinearColor Outer = FLinearColor::FromSRGBColor(InOuter);
+		const float Under = Outer.A * (1.0f - Inner.A);
+		const float Alpha = Inner.A + Under;
+		return FLinearColor(
+			(Inner.R * Inner.A + Outer.R * Under) / Alpha,
+			(Inner.G * Inner.A + Outer.G * Under) / Alpha,
+			(Inner.B * Inner.A + Outer.B * Under) / Alpha,
+			Alpha).ToFColor(/*bSRGB*/ true);
+	}
+
+	/** A two-colour centre or radius (from the rect's bottom left, in units or fractions by its unit mode) as fractions, and back. */
+	FVector2f ToFractions(const FVector2f& InValue, EDreamRectBlockUnitMode InMode, float InWidth, float InHeight)
+	{
+		return InMode == EDreamRectBlockUnitMode::Value ? FVector2f(InValue.X / FMath::Max(InWidth, 1e-3f), InValue.Y / FMath::Max(InHeight, 1e-3f)) : InValue;
+	}
+
+	FVector2f FromFractions(const FVector2f& InFractions, EDreamRectBlockUnitMode InMode, float InWidth, float InHeight)
+	{
+		return InMode == EDreamRectBlockUnitMode::Value ? FVector2f(InFractions.X * InWidth, InFractions.Y * InHeight) : InFractions;
+	}
+
+	/**
+	 * InOutRow made to hold InWanted (null: no row) in InManager's paint rows, InOutHeld the gradient it holds. A different
+	 * gradient takes a row before the old one is given back, so a row the same pixels already fill is shared, not written.
+	 */
+	void HoldRow(UDreamUIManagerWorldSubsystem* InManager, const FDreamGradient* InWanted, int32& InOutRow, FDreamGradient& InOutHeld)
+	{
+		if (InWanted == nullptr || InManager == nullptr)
+		{
+			if (InOutRow != INDEX_NONE && InManager != nullptr)
+			{
+				InManager->ReleasePaintGradientRow(InOutRow);
+			}
+			InOutRow = INDEX_NONE;
+			return;
+		}
+		if (InOutRow != INDEX_NONE && InOutHeld == *InWanted)
+		{
+			return;
+		}
+		const int32 OldRow = InOutRow;
+		InOutRow = InManager->AcquirePaintGradientRow(*InWanted);
+		InOutHeld = *InWanted;
+		if (OldRow != INDEX_NONE)
+		{
+			InManager->ReleasePaintGradientRow(OldRow);
+		}
+	}
+}
+
+FDreamGradient UDreamRectBlock::MakeTwoColourGradient(const FColor& InInnerColor, const FColor& InOuterColor, const FVector2f& InCenter, const FVector2f& InRadius,
+	float InRotation, float InWidth, float InHeight)
+{
+	const float Width = FMath::Max(InWidth, 1e-3f);
+	const float Height = FMath::Max(InHeight, 1e-3f);
+	FDreamGradient Gradient;
+	Gradient.Type = EDreamPaintType::Radial;
+	Gradient.Shape = EDreamPaintRadialShape::Ellipse;
+	Gradient.Size = EDreamPaintRadialSize::Explicit;
+	Gradient.Interpolation = EDreamPaintInterpolation::Linear;
+	Gradient.Spread = EDreamPaintSpread::Pad;
+	// From the rect's bottom left, as the two-colour gradient measured it, to fractions from its top left.
+	Gradient.Center = FVector2f(InCenter.X / Width, 1.0f - InCenter.Y / Height);
+	Gradient.Radius = FVector2f(InRadius.X / Width, InRadius.Y / Height);
+	Gradient.Angle = InRotation;
+	Gradient.Stops = { FDreamGradientStop(0.0f, DreamRectBlockGradientLocal::Over(InInnerColor, InOuterColor)), FDreamGradientStop(1.0f, InOuterColor) };
+	return Gradient;
+}
+
+FDreamGradient UDreamRectBlock::ResolveBodyGradient(float InWidth, float InHeight) const
+{
+	if (!BodyGradient.Stops.IsEmpty())
+	{
+		return BodyGradient;
+	}
+	return MakeTwoColourGradient(BodyGradientColor, BodyColor, GetValueWithUnitMode(BodyGradientCenter, BodyGradientCenterUnitMode, InWidth, InHeight),
+		GetValueWithUnitMode(BodyGradientRadius, BodyGradientRadiusUnitMode, InWidth, InHeight), BodyGradientRotation, InWidth, InHeight);
+}
+
+FDreamGradient UDreamRectBlock::ResolveBorderGradient(float InWidth, float InHeight) const
+{
+	if (!BorderGradient.Stops.IsEmpty())
+	{
+		return BorderGradient;
+	}
+	return MakeTwoColourGradient(BorderGradientColor, BorderColor, GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, InWidth, InHeight),
+		GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, InWidth, InHeight), BorderGradientRotation, InWidth, InHeight);
+}
+
+FVector2f UDreamRectBlock::GetSizeForGradients() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return Widget != nullptr ? FVector2f(Widget->GetWidth(), Widget->GetHeight()) : FVector2f(100.0f, 100.0f);
+}
+
+FDreamGradient UDreamRectBlock::GetEffectiveBodyGradient() const
+{
+	const FVector2f Size = GetSizeForGradients();
+	return ResolveBodyGradient(Size.X, Size.Y);
+}
+
+FDreamGradient UDreamRectBlock::GetEffectiveBorderGradient() const
+{
+	const FVector2f Size = GetSizeForGradients();
+	return ResolveBorderGradient(Size.X, Size.Y);
+}
+
+void UDreamRectBlock::SetBodyGradient(const FDreamGradient& InGradient)
+{
+	if (BodyGradient != InGradient)
+	{
+		BodyGradient = InGradient;
+		MarkNeedUpdateBlockData();
+	}
+}
+
+void UDreamRectBlock::SetBorderGradient(const FDreamGradient& InGradient)
+{
+	if (BorderGradient != InGradient)
+	{
+		BorderGradient = InGradient;
+		MarkNeedUpdateBlockData();
+	}
+}
+
+void UDreamRectBlock::UpdateGradientRows(float InWidth, float InHeight)
+{
+	using namespace DreamRectBlockGradientLocal;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
+	if (GradientRowsOwner.IsValid() && GradientRowsOwner.Get() != Manager)
+	{
+		ReleaseGradientRows();
+	}
+	GradientRowsOwner = Manager;
+	// A member of a shape blend draws none of its own effects, and its leader draws the melted shape in its members' colours.
+	TOptional<FDreamGradient> Body;
+	TOptional<FDreamGradient> Border;
+	if (!IsMeltedIntoShapeBlend())
+	{
+		if (bEnableBody && bEnableBodyGradient)
+		{
+			Body = ResolveBodyGradient(InWidth, InHeight);
+		}
+		if (bEnableBorder && bRevealHighlight)
+		{
+			// The light's highlight on the border, in place of its own gradient: its colour at the light, the border's at its reach.
+			const FVector2f Reach(RevealRadius, RevealRadius);
+			Border = MakeTwoColourGradient(RevealColor, BorderColor, RevealCenter, Reach, 0.0f, InWidth, InHeight);
+		}
+		else if (bEnableBorder && bEnableBorderGradient)
+		{
+			Border = ResolveBorderGradient(InWidth, InHeight);
+		}
+	}
+	const FDreamGradient* WantedBody = Body.IsSet() && Body->IsPainting() ? &Body.GetValue() : nullptr;
+	const FDreamGradient* WantedBorder = Border.IsSet() && Border->IsPainting() ? &Border.GetValue() : nullptr;
+	HoldRow(Manager, WantedBody, BodyGradientRow, BodyGradientHeld);
+	HoldRow(Manager, WantedBorder, BorderGradientRow, BorderGradientHeld);
+}
+
+void UDreamRectBlock::ReleaseGradientRows()
+{
+	UDreamUIManagerWorldSubsystem* Manager = GradientRowsOwner.Get();
+	DreamRectBlockGradientLocal::HoldRow(Manager, nullptr, BodyGradientRow, BodyGradientHeld);
+	DreamRectBlockGradientLocal::HoldRow(Manager, nullptr, BorderGradientRow, BorderGradientHeld);
+	BodyGradientRow = INDEX_NONE;
+	BorderGradientRow = INDEX_NONE;
+	GradientRowsOwner.Reset();
+}
+
 void UDreamRectBlock::SetMaterialOverride(UMaterialInterface* InMaterial)
 {
 	if (MaterialOverride != InMaterial)
@@ -704,16 +925,96 @@ namespace DreamRectBlockStyleLocal
 		return static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(InOpacity, 0.0f, 1.0f) * 255.0f));
 	}
 
-	/** A rect block's radial gradient -- InCenter from its rect's bottom left, InRadius -- as a style's, its stops given. */
-	FDreamStyleGradientFill Radial(const FVector2f& InCenter, const FVector2f& InRadius, float InWidth, float InHeight)
+	/** An angle in (-180, 180]. */
+	float Signed(float InDegrees)
+	{
+		float Wrapped = FMath::Fmod(InDegrees, 360.0f);
+		Wrapped = Wrapped > 180.0f ? Wrapped - 360.0f : (Wrapped <= -180.0f ? Wrapped + 360.0f : Wrapped);
+		return Wrapped;
+	}
+
+	/**
+	 * A rect block's gradient as a style's fill: its type, its stops as colour and opacity stops, its centre as the offset,
+	 * its angle turned from CSS's (0 up, clockwise) to an image editor's (0 to the right, counter-clockwise). A style has no
+	 * four corners (they go as a linear) and measures its length its own way: the rest is near, not the same.
+	 */
+	FDreamStyleGradientFill ToStyleFill(const FDreamGradient& InGradient, float InAspect)
 	{
 		FDreamStyleGradientFill Fill;
-		Fill.Type = EDreamStyleGradientType::Radial;
-		Fill.Angle = 0.0f;
-		// The style's offset is a fraction of the size from the middle, +Y down; the rect block's centre is from the bottom left.
-		Fill.Offset = FVector2f(InCenter.X / FMath::Max(InWidth, 1e-3f) - 0.5f, 0.5f - InCenter.Y / FMath::Max(InHeight, 1e-3f));
-		Fill.Scale = FMath::Clamp(InRadius.X / FMath::Max(InWidth * 0.5f, 1e-3f), 0.1f, 1.5f);
+		bool bCentred = true;
+		switch (InGradient.Type)
+		{
+		case EDreamPaintType::Radial: Fill.Type = EDreamStyleGradientType::Radial; break;
+		case EDreamPaintType::Conic: Fill.Type = EDreamStyleGradientType::Angle; break;
+		case EDreamPaintType::Diamond: Fill.Type = EDreamStyleGradientType::Diamond; break;
+		case EDreamPaintType::Reflected: Fill.Type = EDreamStyleGradientType::Reflected; break;
+		default: Fill.Type = EDreamStyleGradientType::Linear; bCentred = false; break;
+		}
+		Fill.Angle = Signed(90.0f - InGradient.Angle);
+		// The style's offset is a fraction of the size from the middle, +Y down, as the gradient's centre is from the top left.
+		Fill.Offset = bCentred ? FVector2f(InGradient.Center.X - 0.5f, InGradient.Center.Y - 0.5f) : FVector2f::ZeroVector;
+		if (InGradient.Type == EDreamPaintType::Radial || InGradient.Type == EDreamPaintType::Diamond)
+		{
+			// The style's radius is its half size along the angle: the gradient's first radius as a share of it.
+			const FVector2f Radii = InGradient.GetEndingRadii(InAspect);
+			Fill.Scale = FMath::Clamp(Radii.X * InGradient.Scale / FMath::Max(InAspect * 0.5f, 1e-3f), 0.1f, 1.5f);
+		}
+		else
+		{
+			Fill.Scale = FMath::Clamp(InGradient.Scale, 0.1f, 1.5f);
+		}
+		// A style's gradient starts with stops of its own.
+		Fill.Gradient.ColorStops.Reset();
+		Fill.Gradient.OpacityStops.Reset();
+		for (const FDreamGradientStop& Stop : InGradient.Stops)
+		{
+			const float Location = FMath::Clamp(Stop.Position, 0.0f, 1.0f);
+			Fill.Gradient.ColorStops.Add(FDreamStyleGradientColorStop(Location, Opaque(Stop.Color)));
+			Fill.Gradient.OpacityStops.Add(FDreamStyleGradientOpacityStop(Location, Stop.Color.A / 255.0f));
+		}
 		return Fill;
+	}
+
+	/**
+	 * The reverse: a style's fill as a rect block's gradient, mixed in sRGB as an image editor mixes, a stop at every place
+	 * its colour or its opacity has one (as many as fit). Midpoints and the style's own length are not kept.
+	 */
+	FDreamGradient FromStyleFill(const FDreamStyleGradientFill& InFill, float InOpacity)
+	{
+		FDreamGradient Gradient;
+		switch (InFill.Type)
+		{
+		case EDreamStyleGradientType::Radial: Gradient.Type = EDreamPaintType::Radial; break;
+		case EDreamStyleGradientType::Angle: Gradient.Type = EDreamPaintType::Conic; break;
+		case EDreamStyleGradientType::Diamond: Gradient.Type = EDreamPaintType::Diamond; break;
+		case EDreamStyleGradientType::Reflected: Gradient.Type = EDreamPaintType::Reflected; break;
+		default: Gradient.Type = EDreamPaintType::Linear; break;
+		}
+		Gradient.Angle = FMath::Fmod(90.0f - InFill.Angle + 720.0f, 360.0f);
+		Gradient.Center = FVector2f(0.5f + InFill.Offset.X, 0.5f + InFill.Offset.Y);
+		Gradient.Interpolation = EDreamPaintInterpolation::SRGB;
+		TArray<float> Places;
+		for (const FDreamStyleGradientColorStop& Stop : InFill.Gradient.ColorStops)
+		{
+			Places.AddUnique(FMath::Clamp(Stop.Location, 0.0f, 1.0f));
+		}
+		for (const FDreamStyleGradientOpacityStop& Stop : InFill.Gradient.OpacityStops)
+		{
+			Places.AddUnique(FMath::Clamp(Stop.Location, 0.0f, 1.0f));
+		}
+		if (Places.IsEmpty())
+		{
+			Places = { 0.0f, 1.0f };
+		}
+		Places.Sort();
+		Places.SetNum(FMath::Min(Places.Num(), FDreamGradient::MaxStops));
+		for (const float Place : Places)
+		{
+			const float T = InFill.bReverse ? 1.0f - Place : Place;
+			const FVector4f Colour = InFill.Gradient.Evaluate(T);
+			Gradient.Stops.Add(FDreamGradientStop(Place, FLinearColor(Colour.X, Colour.Y, Colour.Z, Colour.W * InOpacity).ToFColor(false)));
+		}
+		return Gradient;
 	}
 }
 
@@ -760,25 +1061,20 @@ FDreamLayerEffects UDreamRectBlock::GetEffectsAsLayerStyle() const
 		Stroke.Size = FMath::Abs(GetValueWithUnitMode(BorderWidth, BorderWidthUnitMode, Width, Height, 0.5f));
 		Stroke.Color = Opaque(BorderColor);
 		Stroke.Opacity = BorderColor.A / 255.0f;
-		if (bEnableBorderGradient)
+		const FDreamGradient BorderPaint = ResolveBorderGradient(Width, Height);
+		if (bEnableBorderGradient && BorderPaint.IsPainting())
 		{
 			Stroke.Fill = EDreamStyleStrokeFill::Gradient;
 			Stroke.Opacity = 1.0f;
-			Stroke.Gradient = Radial(GetValueWithUnitMode(BorderGradientCenter, BorderGradientCenterUnitMode, Width, Height),
-				GetValueWithUnitMode(BorderGradientRadius, BorderGradientRadiusUnitMode, Width, Height), Width, Height);
-			FDreamStyleGradient& Gradient = Stroke.Gradient.Gradient;
-			Gradient.ColorStops = { FDreamStyleGradientColorStop(0.0f, Opaque(BorderGradientColor)), FDreamStyleGradientColorStop(1.0f, Opaque(BorderColor)) };
-			Gradient.OpacityStops = { FDreamStyleGradientOpacityStop(0.0f, BorderGradientColor.A / 255.0f), FDreamStyleGradientOpacityStop(1.0f, BorderColor.A / 255.0f) };
+			Stroke.Gradient = ToStyleFill(BorderPaint, Width / FMath::Max(Height, 1e-3f));
 		}
 	}
-	if (bEnableBody && bEnableBodyGradient)
+	const FDreamGradient BodyPaint = ResolveBodyGradient(Width, Height);
+	if (bEnableBody && bEnableBodyGradient && BodyPaint.IsPainting())
 	{
+		// Over the body's colour, all of it: the gradient takes the colour's place where it is opaque.
 		FDreamStyleGradientOverlay& Overlay = Out.GradientOverlays.AddDefaulted_GetRef();
-		Overlay.Fill = Radial(GetValueWithUnitMode(BodyGradientCenter, BodyGradientCenterUnitMode, Width, Height),
-			GetValueWithUnitMode(BodyGradientRadius, BodyGradientRadiusUnitMode, Width, Height), Width, Height);
-		FDreamStyleGradient& Gradient = Overlay.Fill.Gradient;
-		Gradient.ColorStops = { FDreamStyleGradientColorStop(0.0f, Opaque(BodyGradientColor)), FDreamStyleGradientColorStop(1.0f, Opaque(BodyGradientColor)) };
-		Gradient.OpacityStops = { FDreamStyleGradientOpacityStop(0.0f, BodyGradientColor.A / 255.0f), FDreamStyleGradientOpacityStop(1.0f, 0.0f) };
+		Overlay.Fill = ToStyleFill(BodyPaint, Width / FMath::Max(Height, 1e-3f));
 	}
 	return Out;
 }
@@ -824,10 +1120,7 @@ void UDreamRectBlock::SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle
 		bEnableBorderGradient = Stroke->Fill == EDreamStyleStrokeFill::Gradient;
 		if (bEnableBorderGradient)
 		{
-			const FVector4f Start = Stroke->Gradient.Gradient.Evaluate(0.0f);
-			const FVector4f End = Stroke->Gradient.Gradient.Evaluate(1.0f);
-			BorderGradientColor = FLinearColor(Start.X, Start.Y, Start.Z, Start.W).ToFColor(false);
-			BorderColor = FLinearColor(End.X, End.Y, End.Z, End.W * Stroke->Opacity).ToFColor(false);
+			BorderGradient = FromStyleFill(Stroke->Gradient, Stroke->Opacity);
 		}
 		else
 		{
@@ -839,8 +1132,7 @@ void UDreamRectBlock::SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle
 	bEnableBodyGradient = InStyle.bEnabled && Overlay != nullptr;
 	if (bEnableBodyGradient)
 	{
-		const FVector4f Start = Overlay->Fill.Gradient.Evaluate(0.0f);
-		BodyGradientColor = FLinearColor(Start.X, Start.Y, Start.Z, Start.W * Overlay->Opacity).ToFColor(false);
+		BodyGradient = FromStyleFill(Overlay->Fill, Overlay->Opacity);
 	}
 	MarkAllDirty();
 }
@@ -1086,6 +1378,7 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		check(PixelCount * 16 <= Align(DataRows->GetBlockSizeInByte(), 16));
 		TArray<uint8> BlockBuffer;
 		BlockBuffer.SetNumZeroed(PixelCount * 16);
+		UpdateGradientRows(Widget->GetWidth(), Widget->GetHeight());
 		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight(), Style);
 		DataRows->UpdateBlock(0, DataStartPosition, MoveTemp(BlockBuffer), PixelCount);
 		if (IsShapeBlendLeader() && ShapeBlendRow != INDEX_NONE && ShapeBlendShape.Texels.Num() > 0)
@@ -1250,25 +1543,111 @@ void UDreamRectBlock::SetEnableBodyGradient(bool value)
 	this->bEnableBodyGradient = value;
 	MarkNeedUpdateBlockData();
 }
+/*
+ * The two-colour gradient's setters and getters: its own properties while the gradient has no stops, else the gradient's
+ * -- the first stop's colour, its centre, its radius and its angle, in the unit modes the two-colour properties say.
+ */
+namespace DreamRectBlockTwoColourLocal
+{
+	using namespace DreamRectBlockGradientLocal;
+
+	void SetColor(FDreamGradient& InOutGradient, FColor& InOutTwoColour, const FColor& InValue)
+	{
+		(InOutGradient.Stops.IsEmpty() ? InOutTwoColour : InOutGradient.Stops[0].Color) = InValue;
+	}
+
+	FColor GetColor(const FDreamGradient& InGradient, const FColor& InTwoColour)
+	{
+		return InGradient.Stops.IsEmpty() ? InTwoColour : InGradient.Stops[0].Color;
+	}
+
+	void SetCenter(FDreamGradient& InOutGradient, FVector2f& InOutTwoColour, EDreamRectBlockUnitMode InMode, const FVector2f& InValue, const FVector2f& InSize)
+	{
+		if (InOutGradient.Stops.IsEmpty())
+		{
+			InOutTwoColour = InValue;
+			return;
+		}
+		// From the bottom left there, from the top left here.
+		const FVector2f Fractions = ToFractions(InValue, InMode, InSize.X, InSize.Y);
+		InOutGradient.Center = FVector2f(Fractions.X, 1.0f - Fractions.Y);
+	}
+
+	FVector2f GetCenter(const FDreamGradient& InGradient, const FVector2f& InTwoColour, EDreamRectBlockUnitMode InMode, const FVector2f& InSize)
+	{
+		return InGradient.Stops.IsEmpty() ? InTwoColour
+			: FromFractions(FVector2f(InGradient.Center.X, 1.0f - InGradient.Center.Y), InMode, InSize.X, InSize.Y);
+	}
+
+	void SetRadius(FDreamGradient& InOutGradient, FVector2f& InOutTwoColour, EDreamRectBlockUnitMode InMode, const FVector2f& InValue, const FVector2f& InSize)
+	{
+		if (InOutGradient.Stops.IsEmpty())
+		{
+			InOutTwoColour = InValue;
+			return;
+		}
+		InOutGradient.Size = EDreamPaintRadialSize::Explicit;
+		InOutGradient.Radius = ToFractions(InValue, InMode, InSize.X, InSize.Y);
+	}
+
+	FVector2f GetRadius(const FDreamGradient& InGradient, const FVector2f& InTwoColour, EDreamRectBlockUnitMode InMode, const FVector2f& InSize)
+	{
+		if (InGradient.Stops.IsEmpty())
+		{
+			return InTwoColour;
+		}
+		// The radii it draws with, in box heights, as fractions of the width and the height.
+		const float Height = FMath::Max(InSize.Y, 1e-3f);
+		const FVector2f Radii = InGradient.GetEndingRadii(InSize.X / Height);
+		return FromFractions(FVector2f(Radii.X * Height / FMath::Max(InSize.X, 1e-3f), Radii.Y), InMode, InSize.X, InSize.Y);
+	}
+
+	void SetRotation(FDreamGradient& InOutGradient, float& InOutTwoColour, float InValue)
+	{
+		(InOutGradient.Stops.IsEmpty() ? InOutTwoColour : InOutGradient.Angle) = InValue;
+	}
+
+	float GetRotation(const FDreamGradient& InGradient, float InTwoColour)
+	{
+		return InGradient.Stops.IsEmpty() ? InTwoColour : InGradient.Angle;
+	}
+}
+
 void UDreamRectBlock::SetBodyGradientColor(const FColor& value)
 {
-	this->BodyGradientColor = value;
+	DreamRectBlockTwoColourLocal::SetColor(BodyGradient, BodyGradientColor, value);
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBodyGradientCenter(const FVector2D& value)
 {
-	this->BodyGradientCenter = FVector2f(value);
+	DreamRectBlockTwoColourLocal::SetCenter(BodyGradient, BodyGradientCenter, BodyGradientCenterUnitMode, FVector2f(value), GetSizeForGradients());
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBodyGradientRadius(const FVector2D& value)
 {
-	this->BodyGradientRadius = FVector2f(value);
+	DreamRectBlockTwoColourLocal::SetRadius(BodyGradient, BodyGradientRadius, BodyGradientRadiusUnitMode, FVector2f(value), GetSizeForGradients());
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBodyGradientRotation(float value)
 {
-	this->BodyGradientRotation = value;
+	DreamRectBlockTwoColourLocal::SetRotation(BodyGradient, BodyGradientRotation, value);
 	MarkNeedUpdateBlockData();
+}
+FColor UDreamRectBlock::GetBodyGradientColor() const
+{
+	return DreamRectBlockTwoColourLocal::GetColor(BodyGradient, BodyGradientColor);
+}
+FVector2f UDreamRectBlock::GetBodyGradientCenter() const
+{
+	return DreamRectBlockTwoColourLocal::GetCenter(BodyGradient, BodyGradientCenter, BodyGradientCenterUnitMode, GetSizeForGradients());
+}
+FVector2f UDreamRectBlock::GetBodyGradientRadius() const
+{
+	return DreamRectBlockTwoColourLocal::GetRadius(BodyGradient, BodyGradientRadius, BodyGradientRadiusUnitMode, GetSizeForGradients());
+}
+float UDreamRectBlock::GetBodyGradientRotation() const
+{
+	return DreamRectBlockTwoColourLocal::GetRotation(BodyGradient, BodyGradientRotation);
 }
 
 void UDreamRectBlock::SetEnableBorder(bool value)
@@ -1294,23 +1673,39 @@ void UDreamRectBlock::SetEnableBorderGradient(bool value)
 }
 void UDreamRectBlock::SetBorderGradientColor(const FColor& value)
 {
-	this->BorderGradientColor = value;
+	DreamRectBlockTwoColourLocal::SetColor(BorderGradient, BorderGradientColor, value);
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBorderGradientCenter(const FVector2D& value)
 {
-	this->BorderGradientCenter = FVector2f(value);
+	DreamRectBlockTwoColourLocal::SetCenter(BorderGradient, BorderGradientCenter, BorderGradientCenterUnitMode, FVector2f(value), GetSizeForGradients());
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBorderGradientRadius(const FVector2D& value)
 {
-	this->BorderGradientRadius = FVector2f(value);
+	DreamRectBlockTwoColourLocal::SetRadius(BorderGradient, BorderGradientRadius, BorderGradientRadiusUnitMode, FVector2f(value), GetSizeForGradients());
 	MarkNeedUpdateBlockData();
 }
 void UDreamRectBlock::SetBorderGradientRotation(float value)
 {
-	this->BorderGradientRotation = value;
+	DreamRectBlockTwoColourLocal::SetRotation(BorderGradient, BorderGradientRotation, value);
 	MarkNeedUpdateBlockData();
+}
+FColor UDreamRectBlock::GetBorderGradientColor() const
+{
+	return DreamRectBlockTwoColourLocal::GetColor(BorderGradient, BorderGradientColor);
+}
+FVector2f UDreamRectBlock::GetBorderGradientCenter() const
+{
+	return DreamRectBlockTwoColourLocal::GetCenter(BorderGradient, BorderGradientCenter, BorderGradientCenterUnitMode, GetSizeForGradients());
+}
+FVector2f UDreamRectBlock::GetBorderGradientRadius() const
+{
+	return DreamRectBlockTwoColourLocal::GetRadius(BorderGradient, BorderGradientRadius, BorderGradientRadiusUnitMode, GetSizeForGradients());
+}
+float UDreamRectBlock::GetBorderGradientRotation() const
+{
+	return DreamRectBlockTwoColourLocal::GetRotation(BorderGradient, BorderGradientRotation);
 }
 
 void UDreamRectBlock::SetEnableInnerShadow(bool value)
@@ -1512,22 +1907,62 @@ UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration
 	return Tweener;\
 }
 
+// The gradients' tweens read and write through the two-colour getters and setters: the first stop's colour, the centre,
+// the radius and the angle of a gradient that has stops.
+#define FunctionGradientAnimation(Property, EndValueType, GetterAndSetterType)\
+UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float duration, float delay, EDreamTweenEase ease)\
+{\
+	auto Tweener =  UDreamTweenManager::To(this, FDreamTween##GetterAndSetterType##GetterFunction::CreateWeakLambda(this, [this] {\
+		return (EndValueType)this->Get##Property();\
+		}), FDreamTween##GetterAndSetterType##SetterFunction::CreateWeakLambda(this, [this](EndValueType value) {\
+			this->Set##Property(value);\
+			}), endValue, duration);\
+	if (Tweener)\
+	{\
+		Tweener->SetEase(ease)->SetDelay(delay);\
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
+	}\
+	return Tweener;\
+}
+
+#define FunctionGradientAlphaAnimation(Property, Function)\
+UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration, float delay, EDreamTweenEase ease)\
+{\
+	auto Tweener =  UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this, [this] {\
+		return FDreamUIUtils::ByteToFloat01(this->Get##Property().A);\
+		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {\
+			FColor PropertyValue = this->Get##Property();\
+			PropertyValue.A = DreamRectBlockAlphaTweenLocal::AlphaToByte(value);\
+			this->Set##Property(PropertyValue);\
+			}), endValue, duration);\
+	if (Tweener)\
+	{\
+		Tweener->SetEase(ease)->SetDelay(delay);\
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
+	}\
+	return Tweener;\
+}
+
 FunctionPropertyAnimation(CornerRadius, FVector4, Vector4);
 
-FunctionPropertyAnimation(BodyGradientColor, FColor, Color);
-FunctionAlphaAnimation(BodyGradientColor, BodyGradient);
-FunctionPropertyAnimation(BodyGradientCenter, FVector2D, Vector2D);
-FunctionPropertyAnimation(BodyGradientRadius, FVector2D, Vector2D);
-FunctionPropertyAnimation(BodyGradientRotation, float, Float);
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+FunctionGradientAnimation(BodyGradientColor, FColor, Color);
+FunctionGradientAlphaAnimation(BodyGradientColor, BodyGradient);
+FunctionGradientAnimation(BodyGradientCenter, FVector2D, Vector2D);
+FunctionGradientAnimation(BodyGradientRadius, FVector2D, Vector2D);
+FunctionGradientAnimation(BodyGradientRotation, float, Float);
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 FunctionPropertyAnimation(BorderWidth, float, Float);
 FunctionPropertyAnimation(BorderColor, FColor, Color);
 FunctionAlphaAnimation(BorderColor, Border);
-FunctionPropertyAnimation(BorderGradientColor, FColor, Color);
-FunctionAlphaAnimation(BorderGradientColor, BorderGradient);
-FunctionPropertyAnimation(BorderGradientCenter, FVector2D, Vector2D);
-FunctionPropertyAnimation(BorderGradientRadius, FVector2D, Vector2D);
-FunctionPropertyAnimation(BorderGradientRotation, float, Float);
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+FunctionGradientAnimation(BorderGradientColor, FColor, Color);
+FunctionGradientAlphaAnimation(BorderGradientColor, BorderGradient);
+FunctionGradientAnimation(BorderGradientCenter, FVector2D, Vector2D);
+FunctionGradientAnimation(BorderGradientRadius, FVector2D, Vector2D);
+FunctionGradientAnimation(BorderGradientRotation, float, Float);
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 FunctionPropertyAnimation(InnerShadowColor, FColor, Color);
 FunctionAlphaAnimation(InnerShadowColor, InnerShadow);

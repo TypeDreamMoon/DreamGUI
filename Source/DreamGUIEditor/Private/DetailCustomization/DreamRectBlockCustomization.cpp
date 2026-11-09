@@ -575,10 +575,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 				EnableBodyGradientHandle->GetValue(bEnable);
 				return bEnable && EnableBodyAttribute.Get();
 			});
-			AddPropertyRowToGroup(BodyGradientColor, Color, BodyGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, IsEnableGradientAttribute, false);
-			AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, IsEnableGradientAttribute, false);
-			AddPropertyRowToGroup(BodyGradientRotation, Rotation, BodyGradientGroup, IsEnableGradientAttribute);
+			// The gradient row (FDreamGradientCustomization): its strip, type and presets, its CSS, its stops and its fields.
+			AddPropertyRowToGroup(BodyGradient, Gradient, BodyGradientGroup, IsEnableGradientAttribute);
 		}
 	}
 
@@ -609,10 +607,9 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 				BorderGradientHandle->GetValue(bEnableGradient);
 				return bEnableGradient && IsEnableBorderAttribute.Get();
 			});
-			AddPropertyRowToGroup(BorderGradientColor, Color, BorderGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, IsEnableGradientAttribute, false);
-			AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, IsEnableGradientAttribute, false);
-			AddPropertyRowToGroup(BorderGradientRotation, Rotation, BorderGradientGroup, IsEnableGradientAttribute);
+			auto BorderGradientValueHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BorderGradient));
+			BorderGradientValueHandle->SetPropertyDisplayName(LOCTEXT("BorderGradient_DisplayName", "Gradient"));
+			BorderGradientGroup.AddPropertyRow(BorderGradientValueHandle).IsEnabled(IsEnableGradientAttribute);
 		}
 	}
 

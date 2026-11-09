@@ -1,10 +1,14 @@
 ﻿// A rect block's shape, from its row of rect block data (UDreamRectBlock::FillData). Included by the rect block
 // material's Custom node (MF_DreamUI_RectBlock), and by the built-in UI shader through DreamUIShade.ush, which draws
 // a rect block with whatever else its canvas batches it with (UDreamRectBlock::IsDrawnByBuiltInShader).
+//
+// Its body's and its border's gradients are gradient rows of the world's paint rows (FDreamGradient, as a text paints with),
+// evaluated by DreamUIPaint.ush across the rect: UV0 is (0, 0) at its top left and (1, 1) at its bottom right.
 #ifndef DREAMUI_RECT_BLOCK_USH
 #define DREAMUI_RECT_BLOCK_USH
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 #include "/Engine/Public/Platform.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIPaint.ush"
 
 // How the body texture is sampled: Common.ush's Texture2DSample in a material, and whatever the built-in shader, which
 // has no Common.ush, says before it includes this.
@@ -115,20 +119,23 @@ float DreamUI_sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowS
     return d;
 }
 
-float DreamUI_RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, float rotation)
+/**
+ * What a gradient row (a rect block's body's or border's) paints at UV0 across a quad QuadSize big: straight, linear light.
+ * InFallback where there is no row (below 0), no paint rows to read (bPaints false), or the row paints nothing.
+ */
+float4 DreamUIRectBlock_Gradient(Texture2D PaintDataTex, bool bPaints, float Row, float2 UV0, float2 QuadSize, float4 InFallback)
 {
-    float2 fragCoord = uv * quadSize;
-    rotation = radians(rotation);
-    float cosAngle = cos(rotation);
-    float sinAngle = sin(rotation);
-    float2x2 rotationMatrix = float2x2(cosAngle, sinAngle, -sinAngle, cosAngle);
-    fragCoord = mul(rotationMatrix, fragCoord - center) + center;
-
-    fragCoord.x = (fragCoord.x - center.x) * radius.y / radius.x + center.x;
-    float distToCenter = distance(fragCoord, center);
-    distToCenter /= radius.y;
-    distToCenter = saturate(distToCenter);
-    return distToCenter;
+    float4 Painted = InFallback;
+    if (bPaints && Row > -0.5f)
+    {
+        const float Aspect = QuadSize.y > 0.0f ? QuadSize.x / QuadSize.y : 1.0f;
+        float4 Gradient;
+        if (DreamUIPaint_Evaluate(PaintDataTex, Row, UV0, Aspect, 0.0f, 0.0f, float2(0.0f, 0.0f), 1.0f, Gradient))
+        {
+            Painted = Gradient;
+        }
+    }
+    return Painted;
 }
 
 /**
@@ -159,7 +166,12 @@ float DreamUI_NineSliceAxis(float InUV, float InLowUV, float InHighUV, float InL
     return InLowUV + MiddleT * (1.0f - InLowUV - InHighUV);
 }
 
-float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+/**
+ * The rect block at this pixel, its row of rect block data in DataTex at UV3.x. Its gradients are read from PaintDataTex, the
+ * world's paint rows, with bPaints; without, they draw as their body's and their border's plain colours.
+ */
+float DreamUI_CalculateRectBlockWith(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex,
+    Texture2D PaintDataTex, bool bPaints, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
     half _TextureDrawMode;
@@ -167,24 +179,18 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     float4 _SliceMarginPx;
     float4 _CornerRadius;
     float2 _QuadSize;
-    
+
     half _EnableBody;
     HALF4_TYPE _BodyColor;
     float2 _TextureUVCenter;
     half _EnableGradient;
-    HALF4_TYPE _GradientColor;
-    float2 _GradientCenter;
-    float2 _GradientRadius;
-    float _GradientRotation;
-    
+    float _BodyGradientRow;
+
     half _EnableBorder;
     float _BorderWidth;
     half _EnableBorderGradient;
     HALF4_TYPE _BorderColor;
-    HALF4_TYPE _BorderGradientColor;
-    float2 _BorderGradientCenter;
-    float2 _BorderGradientRadius;
-    float _BorderGradientRotation;
+    float _BorderGradientRow;
 
     half _EnableInnerShadow;
     HALF4_TYPE _InnerShadowColor;
@@ -239,23 +245,17 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         PixelData = DataTex.Load(Position);Position.x += 1;
         _BodyColor = DreamUI_ReadColor(PixelData.r);
         _TextureUVCenter = PixelData.gb;
-        
-        _GradientColor = DreamUI_ReadColor(PixelData.a);
+        // The body's and the border's gradient rows in the paint rows, below 0 for none (UDreamRectBlock::FillData). Texel 3,
+        // the first word of texel 4, texel 5 and the first word of texel 6 are spare.
+        _BodyGradientRow = PixelData.a;
+        Position.x += 1;
         PixelData = DataTex.Load(Position);Position.x += 1;
-        _GradientCenter = PixelData.xy;
-        _GradientRadius = PixelData.zw;
-        PixelData = DataTex.Load(Position);Position.x += 1;
-        _GradientRotation = PixelData.x;
-
         _BorderWidth = PixelData.y;
         _BorderColor = DreamUI_ReadColor(PixelData.z);
-        _BorderGradientColor = DreamUI_ReadColor(PixelData.w);
+        _BorderGradientRow = PixelData.w;
+        Position.x += 1;
         PixelData = DataTex.Load(Position);Position.x += 1;
-        _BorderGradientCenter = PixelData.xy;
-        _BorderGradientRadius = PixelData.zw;
-        PixelData = DataTex.Load(Position);Position.x += 1;
-        _BorderGradientRotation = PixelData.x;
-        
+
         _InnerShadowColor = DreamUI_ReadColor(PixelData.y);
         _InnerShadowSize = PixelData.z;
         _InnerShadowBlur = PixelData.w;
@@ -283,8 +283,6 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     }
     
     
-    _GradientCenter.y = _QuadSize.y - _GradientCenter.y;
-    _BorderGradientCenter.y = _QuadSize.y - _BorderGradientCenter.y;
     _InnerShadowOffset.y = -_InnerShadowOffset.y;
     _OuterShadowOffset.y = -_OuterShadowOffset.y;
     _RadialFillCenter.y = _QuadSize.y - _RadialFillCenter.y;
@@ -379,18 +377,13 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         // is drawn in its members' colours alone.
         MainTexColor.a *= SliceCentreFade;
         MainTexColor = bMelted ? float4(1.0f, 1.0f, 1.0f, 1.0f) : MainTexColor;
-        float4 bodyColor = MainTexColor * _BodyColor;
+        // The body's colour, or its gradient in place of it, times the texture.
+        const float4 BodyFill = _EnableGradient > 0.5f
+            ? DreamUIRectBlock_Gradient(PaintDataTex, bPaints, _BodyGradientRow, UV0, _QuadSize, float4(_BodyColor))
+            : float4(_BodyColor);
+        float4 bodyColor = MainTexColor * BodyFill;
         bodyColor.rgb *= bodyColor.a;
 
-        if (_EnableGradient)
-        {
-            float gradientLerpAlpha = 1 - DreamUI_RadialGradient(UV0, _QuadSize, _GradientCenter.xy, _GradientRadius.xy, _GradientRotation);
-            HALF4_TYPE gradientColor = _GradientColor * MainTexColor;
-            gradientColor.a *= gradientLerpAlpha;
-            gradientColor.rgb *= gradientColor.a;
-            bodyColor = bodyColor * (1 - gradientColor.a) + gradientColor;
-        }
-        
         bodyColor.a *= dOuter01;
         bodyColor.rgb *= dOuter01;
         
@@ -414,16 +407,11 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
 
     if (_EnableBorder * sign(abs(_BorderWidth)))
     {
-        HALF4_TYPE borderColor = _BorderColor;
+        // The border's colour, or its gradient in place of it.
+        float4 borderColor = _EnableBorderGradient > 0.5f
+            ? DreamUIRectBlock_Gradient(PaintDataTex, bPaints, _BorderGradientRow, UV0, _QuadSize, float4(_BorderColor))
+            : float4(_BorderColor);
         borderColor.rgb *= borderColor.a;
-        if (_EnableBorderGradient)
-        {
-            float borderGradientLerpAlpha = 1 - DreamUI_RadialGradient(UV0, _QuadSize, _BorderGradientCenter.xy, _BorderGradientRadius.xy, _BorderGradientRotation);
-            HALF4_TYPE borderGradientColor = _BorderGradientColor;
-            borderGradientColor.a *= borderGradientLerpAlpha;
-            borderGradientColor.rgb *= borderGradientColor.a;
-            borderColor = borderColor * (1 - borderGradientColor.a) + borderGradientColor;
-        }
         float dInner = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
         float dInnerSharp = dInner / fwidth(dInner);
         // Centred, as above. This boundary is interior -- the border ring surrounds it -- so unlike
@@ -513,8 +501,25 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     float unpremultiplyAlpha = (color.a > 0.0f) ? color.a : 0.0f;
     Color = (unpremultiplyAlpha > 0.0f) ? color.rgb / unpremultiplyAlpha : float3(0.0f, 0.0f, 0.0f);
     Alpha = unpremultiplyAlpha;
-    
+
     return 1;
+}
+
+/** The rect block with its gradients from the world's paint rows: what MF_DreamUI_RectBlock calls. */
+float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex,
+    Texture2D PaintDataTex, inout float3 Color, inout float Alpha)
+{
+    return DreamUI_CalculateRectBlockWith(MainTex, MainTexSampler, UV0, UV2, UV3, DataTex, PaintDataTex, true, Color, Alpha);
+}
+
+/**
+ * The rect block as a material that calls this itself with the arguments it always passed draws it: no paint rows, so its
+ * gradients are drawn as its body's and its border's plain colours. The data texture stands in for the paint rows, which
+ * are never read then.
+ */
+float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+{
+    return DreamUI_CalculateRectBlockWith(MainTex, MainTexSampler, UV0, UV2, UV3, DataTex, DataTex, false, Color, Alpha);
 }
 
 #endif // DREAMUI_RECT_BLOCK_USH

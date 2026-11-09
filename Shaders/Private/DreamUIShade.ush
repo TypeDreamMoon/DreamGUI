@@ -70,7 +70,7 @@ float4 DreamUIShade_ShadeUnclipped(float2 UV0, float2 UV1, float2 UV2, float2 UV
 		// colour, as its material draws it.
 		float3 BlockColor = float3(0, 0, 0);
 		float BlockAlpha = 0;
-		DreamUI_CalculateRectBlock(MainTex, MainSampler, UV0, UV2, UV3, RectBlockDataTex, BlockColor, BlockAlpha);
+		DreamUI_CalculateRectBlockWith(MainTex, MainSampler, UV0, UV2, UV3, RectBlockDataTex, PaintDataTex, bPaints, BlockColor, BlockAlpha);
 		Color = VertexColor * float4(BlockColor, BlockAlpha);
 	}
 	else

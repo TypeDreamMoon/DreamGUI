@@ -40,8 +40,9 @@ namespace DreamRectBlockAlphaAnimationTestLocal
 	{
 		const TCHAR* ColourName;
 		UDreamTweener* (UDreamRectBlock::*FadeTo)(float, float, float, EDreamTweenEase);
-		const FColor& (UDreamRectBlock::*GetColour)() const;
-		void (UDreamRectBlock::*SetColour)(const FColor&);
+		/** The colour the tween writes, read and set the way the rect block's own getter and setter do. */
+		TFunction<FColor(const UDreamRectBlock&)> GetColour;
+		TFunction<void(UDreamRectBlock&, const FColor&)> SetColour;
 	};
 }
 
@@ -70,11 +71,18 @@ bool FDreamRectBlockAlphaTweenStartTest::RunTest(const FString& Parameters)
 	// alpha, and has no other colour to be confused with, so it is not among them.
 	const FAlphaTweenCase Cases[] =
 	{
-		{ TEXT("body gradient"), &UDreamRectBlock::BodyGradientAlphaTo, &UDreamRectBlock::GetBodyGradientColor, &UDreamRectBlock::SetBodyGradientColor },
-		{ TEXT("border"), &UDreamRectBlock::BorderAlphaTo, &UDreamRectBlock::GetBorderColor, &UDreamRectBlock::SetBorderColor },
-		{ TEXT("border gradient"), &UDreamRectBlock::BorderGradientAlphaTo, &UDreamRectBlock::GetBorderGradientColor, &UDreamRectBlock::SetBorderGradientColor },
-		{ TEXT("inner shadow"), &UDreamRectBlock::InnerShadowAlphaTo, &UDreamRectBlock::GetInnerShadowColor, &UDreamRectBlock::SetInnerShadowColor },
-		{ TEXT("outer shadow"), &UDreamRectBlock::OuterShadowAlphaTo, &UDreamRectBlock::GetOuterShadowColor, &UDreamRectBlock::SetOuterShadowColor },
+		PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		{ TEXT("body gradient"), &UDreamRectBlock::BodyGradientAlphaTo,
+			[](const UDreamRectBlock& InRect) { return InRect.GetBodyGradientColor(); }, [](UDreamRectBlock& InRect, const FColor& InColour) { InRect.SetBodyGradientColor(InColour); } },
+		{ TEXT("border"), &UDreamRectBlock::BorderAlphaTo,
+			[](const UDreamRectBlock& InRect) { return InRect.GetBorderColor(); }, [](UDreamRectBlock& InRect, const FColor& InColour) { InRect.SetBorderColor(InColour); } },
+		{ TEXT("border gradient"), &UDreamRectBlock::BorderGradientAlphaTo,
+			[](const UDreamRectBlock& InRect) { return InRect.GetBorderGradientColor(); }, [](UDreamRectBlock& InRect, const FColor& InColour) { InRect.SetBorderGradientColor(InColour); } },
+		{ TEXT("inner shadow"), &UDreamRectBlock::InnerShadowAlphaTo,
+			[](const UDreamRectBlock& InRect) { return InRect.GetInnerShadowColor(); }, [](UDreamRectBlock& InRect, const FColor& InColour) { InRect.SetInnerShadowColor(InColour); } },
+		{ TEXT("outer shadow"), &UDreamRectBlock::OuterShadowAlphaTo,
+			[](const UDreamRectBlock& InRect) { return InRect.GetOuterShadowColor(); }, [](UDreamRectBlock& InRect, const FColor& InColour) { InRect.SetOuterShadowColor(InColour); } },
+		PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	};
 	for (const FAlphaTweenCase& Case : Cases)
 	{
@@ -88,11 +96,11 @@ bool FDreamRectBlockAlphaTweenStartTest::RunTest(const FString& Parameters)
 		// The body opaque and the faded colour transparent, so the two possible starts are the two ends
 		// of the range and cannot be mistaken for each other.
 		Rect->SetBodyColor(FColor(255, 255, 255, 255));
-		FColor Transparent = (Rect->*Case.GetColour)();
+		FColor Transparent = Case.GetColour(*Rect);
 		Transparent.A = 0;
-		(Rect->*Case.SetColour)(Transparent);
+		Case.SetColour(*Rect, Transparent);
 		if (!TestEqual(FString::Printf(TEXT("Before the fade the %s is transparent"), Case.ColourName),
-			static_cast<int32>((Rect->*Case.GetColour)().A), 0))
+			static_cast<int32>(Case.GetColour(*Rect).A), 0))
 		{
 			continue;
 		}
@@ -104,7 +112,7 @@ bool FDreamRectBlockAlphaTweenStartTest::RunTest(const FString& Parameters)
 		}
 
 		Rig.PumpFrames(FadeFrames / 2);
-		const int32 Halfway = (Rect->*Case.GetColour)().A;
+		const int32 Halfway = Case.GetColour(*Rect).A;
 		// Linear from 0 to 255 is 127 at the midpoint. The window is wide enough to forgive a frame
 		// either way and nowhere near 255, which is where a fade started from the body's alpha sits.
 		TestTrue(FString::Printf(TEXT("Halfway through, the %s's alpha is halfway up from its own zero (%d; a start taken from the body's alpha would make it 255)"),
@@ -116,7 +124,7 @@ bool FDreamRectBlockAlphaTweenStartTest::RunTest(const FString& Parameters)
 		// The rest of the fade, and two frames' grace.
 		Rig.PumpFrames(FadeFrames - FadeFrames / 2 + 2);
 		TestEqual(FString::Printf(TEXT("The %s arrives at full alpha"), Case.ColourName),
-			static_cast<int32>((Rect->*Case.GetColour)().A), 255);
+			static_cast<int32>(Case.GetColour(*Rect).A), 255);
 	}
 	return true;
 }
