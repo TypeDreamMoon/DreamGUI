@@ -7,6 +7,7 @@
 #include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamWidget.h"
 #include "HAL/PlatformApplicationMisc.h"
+#include "HAL/PlatformProcess.h"
 #include "InputCoreTypes.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UISelectable.h"
@@ -30,7 +31,10 @@
  * and choosing one runs it on the field the menu was opened on -- the field still counts as focused while its menu is up.
  *
  * Every key here goes in through the rig's key road (DreamUIKeyRouting::RouteKey), the chord carried with it. The
- * clipboard is the desktop's own, so each test puts back what it found there.
+ * clipboard is the desktop's own, so each test puts back what it found there. Another program can hold it open for a
+ * moment -- a clipboard history reading every new copy, another editor's test -- and a read then finds nothing, without
+ * a word: the tests read it patiently. They write it no more than they did, since a write to a clipboard held elsewhere
+ * can fail an engine check and stop the editor.
  */
 namespace DreamTextClipboardInteractionTestLocal
 {
@@ -51,10 +55,16 @@ namespace DreamTextClipboardInteractionTestLocal
 		}
 	};
 
+	/** The clipboard's text, asked again for a moment while it reads as nothing (as a held clipboard does). */
 	FString ReadClipboard()
 	{
 		FString Contents;
 		FPlatformApplicationMisc::ClipboardPaste(Contents);
+		for (int32 Attempt = 0; Contents.IsEmpty() && Attempt < 10; ++Attempt)
+		{
+			FPlatformProcess::Sleep(0.02f);
+			FPlatformApplicationMisc::ClipboardPaste(Contents);
+		}
 		return Contents;
 	}
 

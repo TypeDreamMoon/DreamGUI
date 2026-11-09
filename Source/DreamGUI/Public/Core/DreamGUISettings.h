@@ -104,6 +104,23 @@ enum class EDreamUIInputConsumePolicy : uint8
 	WhenHandled,
 };
 
+/** One colour of the project's palette (UDreamGUISettings::ProjectSwatches). */
+USTRUCT()
+struct DREAMGUI_API FDreamUISwatch
+{
+	GENERATED_BODY()
+
+	FDreamUISwatch() = default;
+	FDreamUISwatch(const FString& InName, const FColor& InColor) : Name(InName), Color(InColor) {}
+
+	/** What the palette calls it. */
+	UPROPERTY(EditAnywhere, Category = "Palette")
+	FString Name;
+	/** sRGB with straight alpha, as a `.dui` writes a colour. */
+	UPROPERTY(EditAnywhere, Category = "Palette")
+	FColor Color = FColor::White;
+};
+
 /**
  * Every asset and class DreamGUI reaches for by itself, in one place a project can edit.
  *
@@ -283,6 +300,29 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Editor")
 	FString PresetControlFolder;
+
+	/**
+	 * The project's palette: colours the designer offers beside a colour, a click away, and adds to from there or from its
+	 * eyedropper. Kept with the project so that every author picks the same colours.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Palette")
+	TArray<FDreamUISwatch> ProjectSwatches;
+
+	/**
+	 * Layer styles kept as text, by name: the lines of `.dui` a node's block takes -- a `+ DreamLayerStyle { ... }` line, and
+	 * BlendMode and RenderOpacity when the style keeps the layer's blending. The designer's preset library shelves them
+	 * beside the style preset assets (UDreamLayerStylePreset) and applies them as a pasted layer style.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Presets", meta = (MultiLine = true))
+	TMap<FName, FString> StylePresets;
+
+	/**
+	 * Effect settings kept as text, by name: an effect's node, `Glass { Refraction = 18  Frost = 0.25 }`, or a behaviour's
+	 * line, `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }`. Applied from the designer's preset library to a widget of
+	 * that effect (or, for a behaviour, any widget), they set the values they name and leave the others.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor|Presets", meta = (MultiLine = true))
+	TMap<FName, FString> EffectPresets;
 
 	// ---------------------------------------------------------------- Spawned actors
 

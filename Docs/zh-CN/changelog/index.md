@@ -52,23 +52,113 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   这些以前哪里都能加，加了之后什么都不做。粘贴、复制和拖到面板上的组件资产
   遵守同样的规则；被拒绝的拖放会说明原因。项目在自己的编辑器模块里为自己的组件加规则。
   见[组件](../tools/designer.md#components)。
+- **图层样式。** `UDreamLayerStyle` 给任何控件加图像编辑器式的图层样式（`FDreamLayerEffects`）：投影、外发光、内阴影、
+  内发光、斜面和浮雕（内斜面、外斜面、浮雕、枕状浮雕、描边浮雕；平滑或雕刻）、光泽、颜色/渐变/图案叠加和描边（外部、内部、
+  居中；颜色、渐变或图案），各有自己的混合模式、不透明度和对话框里的那些设置——等高线、杂色、扩展与阻塞、范围与抖动、全局光。
+  `UDreamLayerStylePreset` 存一份共用。RectBlock 在自己的像素里画样式，照旧合批；其它的——文字、图片、容器的子树、图层组——
+  单独绘制，按 alpha 做跳跃泛洪量距离，再逐层放下，每个外部效果按自己的模式。RectBlock 自己的阴影、描边和渐变可以按图层样式
+  读写（`GetEffectsAsLayerStyle`、`SetEffectsFromLayerStyle`）。见[图层样式、形状融合与光](../concepts/layer-styles.md)。
+- **形状融合。** `UDreamShapeBlendGroup` 用平滑最小值把容器子项里的 RectBlock 融成一个形状——各按 `ShapeBlendOperation`
+  并集、相减或相交——由第一个成员用一个四边形画出，颜色按成员混合，组上的图层样式围绕它绘制；点击按同一公式落在最近的成员上。
+- **指针光、倾斜卡和全息箔。** `UDreamPointerLight` 跟随指针，照亮它下面图层样式的斜面和 RectBlock 的描边（Reveal 高光）；
+  `UDreamTiltCard` 让控件带弹簧地朝指针倾斜；`UDreamHoloFoil` 给图片或 RectBlock 画上闪卡的全息箔，视角取指针或倾斜卡。
+- **融合形状里的玻璃。** `UDreamGlass` 的 `Shape` 设为 `ShapeBlend` 时取形状融合组把 RectBlock 融成的形状——`ShapeBlendGroup`
+  指定的控件上的，或它自己控件上的——画满整个形状，成员伸到哪里画到哪里，边缘沿融合后的轮廓折射背后画面；点击落在形状上即命中。
+  见[作用于背后画面的效果](../concepts/backdrop-effects.md)。
+- **Niagara 粒子。** 新模块 `DreamGUINiagara` 把 Niagara 系统画进 DreamGUI 画布：`NiagaraSystem` 视觉用一个不渲染、不受可伸缩性管理的组件模拟系统，tick 之后读取每个 CPU 发射器的 Sprite 和 Ribbon 渲染器，写成自己的网格段——各一个绘制调用——像任何元素一样被裁剪、遮罩、混合和编组。Sprite 保留图集帧和帧间混合、轴心、旋转、对齐和排序；Ribbon 保留 id、link order、两套 UV 和穿过各点的曲线。一个单位是控件平面（XZ 或 XY）上的一个像素；时间可以暂停、缩放、游戏暂停时照跑、固定步长推进和快进。内置着色器用粒子材质的贴图和混合方式画，或者用转换出的 UI 材质画：**Convert Particle Materials** 把粒子材质复制成 UI 材质，粒子输入改读顶点，不透明度经过 DreamGUI 的裁剪。系统里声明了 `User.DreamUI_WidgetSize`、`User.DreamUI_PointerPosition`、`User.DreamUI_PointerInside` 或 `User.DreamUI_TargetPosition` 的会被写入。`BurstAt` 在一点再生成一次系统，`BurstTo` 让飞行粒子（默认用插件的飞行模板）飞向另一个控件，`Niagara Trigger` 组件在点击、指针进出和进度填满时播放系统。GPU 发射器和 Mesh 渲染器会被报告，暂不绘制。插件现在依赖 Niagara。见 [Niagara 粒子](../concepts/niagara.md)。
+- **直绘网格段。** `UDreamVisualDirectMesh` 可以分多个网格段画、每段一个绘制调用，可以把着色交给画布——内置着色器或材质，像批处理元素一样拿到裁剪数据、遮罩纹理和混合模式——也可以在画布每帧发送网格段时写自己的顶点。
+- **导入分层文档。** `.psd` 或 `.psb` 导入为 DreamUI 控件：一个把图层排成控件的 `.dui`、它们的贴图，以及以这个 `.dui`
+  为源文件的控件蓝图——从文件夹的 DreamGUI 菜单、commandlet（`-run=DreamPsdImport`），或打开设置后从内容浏览器的 Import 导入。
+  像素图层变成裁过边的贴图图片，组变成容器（混合或淡出时挂图层组），实时矩形和圆变成 RectBlock，填充变成 body，文字经字体映射
+  变成文字；蒙版变成裁剪遮罩，剪贴变成 `bClipToBelow`，混合模式对应 27 种。图层名可写 `!skip`、`@Button`、`#9(l,t,r,b)`。
+  再次导入会编辑上次写的 `.dui`，保留作者加的每个节点和每一行，并列出被覆盖的内容。图层样式、调整图层和文字变形已读出并列出，
+  暂未导入。新编辑器模块为 `DreamGUIPsd`。见[导入分层文档](../guides/layered-document-import.md)。
+- **RectBlock 的多色标渐变。** RectBlock 的主体和描边改用 `BodyGradient`、`BorderGradient`，都是最多 16 个色标的 `FDreamGradient`——
+  线性、径向、角度（Conic）、菱形、对称或四角，和文字涂色是同一种渐变，从世界的同一组渐变行里画——代替原来的两色径向渐变，
+  内置着色器和 RectBlock 材质都支持。细节面板里显示成带类型和预设的色带；`.dui` 里写它的 CSS。以前的两色渐变自动迁移：
+  渐变没有色标时画成两个色标（每通道最多差一级），`.dui` 里的旧行在渐变被改动前原样保留，改动后由渐变的一行替换；
+  旧 setter 仍可用。见[渐变与视口手柄](../concepts/gradients.md)。
+- **设计器里的渐变手柄。** 选中的 RectBlock 的渐变像图像编辑器的渐变工具那样画在上面：可拖的端点和中心，连线旁的色标
+  （沿线拖动、拖离删除），双击连线加色标。Shift 让旋转按 15° 一档，Esc 还原；一次拖动一步撤销，松开鼠标时写回 `.dui`。
+- **通用视口手柄。** 用 `FDreamDesignerHandles::Register` 注册的 `IDreamDesignerHandleProvider` 给选中的控件提供可在设计器视口里拖的点；
+  命中、绘制、撤销、Esc、双击和写回 `.dui` 由视口统一处理。变形晶格点和路径点也改走这套。
+- **属性用标签要手柄。** 控件、视觉或行为的属性标上 `meta=(DreamGUI_Handle="Kind")`（或 `"Kind:Args"`），视口就为它画这种手柄，
+  提供者由该种类的工厂为它造（`FDreamDesignerHandles::RegisterKind`）。RectBlock 的 `BodyGradient`、`BorderGradient` 标的是 `Gradient`。
+  见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
+- **对称渐变。** `EDreamPaintType::Reflected`（`reflected-gradient(…)`）从过渐变中心的一条线向两边对称展开，文字和 RectBlock 都能用。
+- **遮罩、玻璃、阴影和光的视口手柄。** 设计器视口给裁剪 widget 的裁剪区和遮罩画手柄——裁剪矩形的四条边（它的边距）、矩形遮罩的圆角、多边形的圆角、星形或圆环的内径和羽化，轮廓按遮罩自己的距离函数描出；玻璃的圆角、边缘宽度和光；图层样式和 RectBlock 的每个阴影，拖到它落下的位置就同时改角度和距离（用全局光的样式阴影转的是全局光，用它的效果一起转）；指针光的位置和照射范围，以及画成圆盘的图层样式全局光。都随属性标签挂上（`DreamGUI_Handle`：`MaskShape`、`GlassShape`、`Shadow`、`Light`）。圆角和羽化默认一起动，Alt 只动一个；Shift 让角度按 15° 一档。见[视口手柄](../tools/designer.md#viewport-handles)。
+- **效果的光在一处读写。** `DreamLayerStyleLight`（`Core/DreamLayerStyleTypes.h`）在效果的角度和高度实际存放的地方读写它们——用全局光的效果是样式的全局光——并在阴影的角度、距离和偏移之间换算；渲染器打包阴影偏移也走它。
+- **复制和粘贴图层样式。** 设计器的 widget 菜单复制选中 widget 的图层样式（*Copy Includes* 勾上时连同混合模式、不透明度、
+  裁剪和遮罩），粘贴到每个选中的 widget 上，一步撤销，并写进 `.dui`。剪贴板里是 `.dui` 的几行，所以能贴到别的 Blueprint、
+  贴进文本编辑器，手写的几行也能粘贴。见[控件设计器](../tools/designer.md#copying-and-pasting-a-layer-style)。
+- **吸管和项目色板。** 设计器细节面板的每个颜色行都有吸管，读设计器视口自己的画面（效果、样式、混合之后的像素）或屏幕
+  上的像素；旁边是项目色板（`UDreamGUISettings::ProjectSwatches`），点一下就用，也能从这里加色。两者都是项目自己的编辑器
+  也能用的控件（`SDreamUIEyedropperButton`、`SDreamUIColorQuickPick`）。
+  见[控件设计器](../tools/designer.md#the-eyedropper-and-the-projects-palette)。
+- **预设库。** 设计器新增 Presets 标签页，分栏列出项目的渐变、图层样式和效果参数——项目设置里的文本预设（`GradientPresets`，
+  以及新增的 `StylePresets`、`EffectPresets`）和资产（`UDreamGradientAsset`、`UDreamLayerStylePreset`）——双击或拖到 widget
+  上套用到选择，可跟随也可复制，也能从选中的 widget 存成预设。样式预设资产可以带上图层的混合模式和不透明度
+  （`bIncludeBlending`）；`DreamUIStylePresets` 供项目自己的编辑器创建样式预设。见[控件设计器](../tools/designer.md#the-preset-library)。
+- **图层样式对话框。** 设计器可以在选中的 widget 上打开图像编辑器那样的图层样式对话框——widget 菜单里的 *Layer Style...*、
+  Layer 区图层样式旁的 *Edit...*，或在层级面板里双击样式标记：效果带勾选框列出，同类效果可加多个、可拖动排序，旁边是各自的参数；每次改动立刻在
+  widget 上预览，OK 一步撤销写进 `.dui`，Cancel 文件不变，New Style 存成预设。见[控件设计器](../tools/designer.md#the-layer-style-dialog)。
+- **结构体列表能写回 `.dui` 了。** 图层样式的投影、描边和叠加，调整图层的各项调整，以及其他没有简写的结构体列表、Set、Map，都按读入的写法写回——`Style.DropShadows = ["(Angle=120,Distance=6)"]`，只写与结构体默认值不同的字段；以前设计器能从文件读这种列表，却写不回去。见[写回](../language/write-back.md#what-the-designer-writes-back)。
+
+- **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
+  选了自动开启裁剪到边界）、添加或关闭图层样式和图层组的开关，以及控件上的每个效果——眼睛负责开关，点名字打开设置。层级面板在
+  名字后用小图标标出每个控件的效果（样式、组、遮罩、混合、效果、变形、粒子），悬停看详情，点击开关。调色板收齐了它们：Effects
+  里的 Glass、Adjustment Layer、Stylize，Components 里的 Layer Style、Layer Group、Shape Blend Group、Mask Transition、Holo Foil、
+  Pointer Light、Tilt Card，Modifiers 里的 Warp、Jelly、Text On Path，Shapes 里的 Path，拖进来就能看到；后处理蓝图按去掉 `BP_`
+  和 `_C` 的名字列出。见[控件设计器](../tools/designer.md)。
+- **图层效果的开关。** `UDreamLayerGroup`、`UDreamMaskTransition`、`UDreamHoloFoil`、`UDreamPointerLight`、`UDreamTiltCard`
+  和所有后处理视觉（`UDreamVisualPostProcess`：玻璃、调整图层、风格化、背景模糊……）都有 `bEnabled` 属性，默认开，只有关掉时才写进
+  `.dui`：关掉时效果如同不存在，设置都保留。
+- **不会丢属性的细节面板。** DreamGUI 的细节面板按属性上的 `DreamGUI_` meta 标签排版——区（`DreamGUI_Section="Layer"`）、
+  组、顺序、「高级」展开项、编辑控件、效果的开关——没写标签的属性显示在它自己的分类下。面板不再整类隐藏分类，属性不会因为
+  分类起错就从编辑器里消失；只有 `DreamGUI_Hidden` 会藏起属性。图层区和层级里的效果开关都按标签生成；只对某些取值适用的行
+  （填充、过渡的颜色、密码字符）随取值显示和隐藏，面板不用重建。扩展的类也用同一套标签。见[属性的 meta 标签](../guides/property-meta.md)。
+
+- **编辑控件。** 混合模式在行里和菜单里都是图片——按各自公式画出，27 种按图像编辑软件的顺序和分组排列——悬停在某种模式上，控件就
+  临时按它绘制，点下去之前不记撤销、不保存。标了 `DreamGUI_Editor = "AngleWheel"` 的角度（图层样式的、渐变叠加的、玻璃光照的、遮罩
+  转场旋转的、路径文字起点的）在数字旁边多一个圆盘；开着 Use Global Light 的效果在自己的行里改样式的全局光。等高线是曲线，可选
+  命名形状也可直接编辑；缓动显示曲线。`.dui` 里等高线写命名形状的名字或 `"custom(0 0, 0.5 1 corner, 1 0)"`。见[控件设计器](../tools/designer.md)。
 
 <a id="changed"></a>
 
 ### 变更
+
+- **视口同一时刻只显示一种手柄。** 设计器视口只显示选中内容的一种手柄——渐变的、遮罩的、阴影的……——选框下方写着它和按 Tab 会换成的那种；**Tab** 依次轮换，最后是「关」，只剩选框。`FDreamDesignerHandles::SetActive` 选一种，RectBlock 渐变下的 *Edit in Viewport* 按钮就是这么做的；RectBlock 的主体渐变和描边渐变是两种。
 
 - **只读取 FieldNotify 变量的绑定在它的 Blueprint 重新编译后不再每帧读取它们**：变量宣布变化时才更新。C++ 给这样的变量赋值却不广播——FieldNotify 从不允许这样做——不再被轮询掩盖；`DreamUI.Binding.ForcePoll 1` 能把它找出来。
 - **Create Dream Widget Of Class 不再出现在 Blueprint 菜单中**：Create Dream Widget 节点代表它，就像 UMG 的 Create Widget 节点代表 `UWidgetBlueprintLibrary::Create` 一样。已经调用它的图表照常编译。由于它是 BlueprintInternalUseOnly，在 Python 中也没有了。
 - **内容浏览器的添加菜单在最上面提供 DreamGUI Widget**，和引擎的 Blueprint Class 与 Material 并列，而不再只在一级子菜单里。子菜单本身现在叫 DreamGUI，分节——Basic（DreamGUI Widget、Widget Animation）、Fonts、Graphics、Rich Text——每项一个短标签和一行提示，而不是一整列按类型名排序、widget 排在最后、提示是类的代码注释的列表。不再开发的位图字体显示为 Legacy Bitmap Font，并指向距离场字体。资产的类型名——磁贴上、过滤器里的——不变。
 - **设计器的调色板按 UMG 的方式分组。** Basic、Panels、Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects、Components、Modifiers、Advanced、User Created，最后是默认折叠的 Legacy——以前是一个三十多行、无所不包的 Controls 分类，旁边是十来个只差一个词的小分类。条目按名字列出，面板去掉了 "UMG " 前缀，Tile View 和 Scroll Box 两个行为挪进 Legacy，和取代它们的控件放在一起。User Created 不再列插件自己的预设目录。层级面板的 Create 菜单用同样的分组。注册键没变，收藏都还在；拿 `FDreamUIControlDescriptor::Category` 去和 "Controls"、"Post Process"、"Extensions" 或旧分类名比较的项目扩展，改从 `DreamUIPaletteCategory` 读名字。见[调色板](../tools/designer.md#the-palette)。
 - **细节面板把 widget 是什么放在它放在哪的正下面。** Slot、Layout，然后 Visual、Panel、Self Layout，然后 Appearance 和 Behavior，然后 Render Transform 和默认折叠的 Perspective、Navigation、Accessibility、Localization；以前视觉排在 Behavior、Appearance、Panel、Self Layout 之后。Text 的行以 Text、Font、Size、Style、Color 和对齐开头，换行、排版、渲染设置放在默认折叠的组里；Sprite 和 Texture 的颜色在它的 sprite / 纹理下面。底部重复 Layout 行的 Transform 和锚点数据分类去掉了，Is Enabled 进了 Behavior。见[细节面板](../tools/designer.md#the-details-panel)。
+- **径向渐变的椭圆随 `Angle` 旋转**，和菱形一样。径向渐变的角度不是 0 或 180 的文字涂色（从线性切过来时留下的）现在会画成旋转后的椭圆；圆形不变。
+- **RectBlock 的两色渐变属性**不再显示在细节面板里，它们的 setter 标为 deprecated：渐变已有色标时，它们改第一个色标的颜色、中心、半径和角度。
+  按单位写的中心和半径只在渐变还是两色时按单位固定。半透明的主体纹理现在像被主体颜色那样被渐变染色。
+- **渐变行的行头多了类型下拉**，在色带和预设旁边。
 
 <a id="fixed"></a>
 
 ### 修复
 
+- **写进单行节点的行留在它的块里。** 一次写入往一个在同一行开闭的块（`Text Title { Text = "Hi" }`）里加两个属性时，整次写入会被拒绝；给这样的节点加一行 `+` 时，这一行会写到右括号后面，变成父节点的行为。两者现在都落在块里。
 - **创建一个抽象类的 widget 会记一条错误**，而不是停在 NewObject 的断言上。从列表里选的类不会是抽象的，但由变量喂给类引脚或 Create Dream Widget Of Class 调用的类可能是。
 - **DreamUI Widget Blueprint 的缩略图就是它编写的那个界面。** 内容浏览器的磁贴以前是编写时锚点矩形的线框，不知道布局把东西排到了哪里，所以大多数界面画出来是一个灰框加一两条线。缩略图现在像设计器的预览一样建出 widget，在设计画布上排好、画出来，和 UMG 画 widget 缩略图一样；没有编译出类的 Blueprint 仍然画线框。它在资产没有干净的缩略图时和保存时画，不会在指针停在上面的每一帧都画，所以大界面不会卡住浏览器。已经存进资产的缩略图会一直显示，直到资产下一次被修改并保存。见[内容浏览器](../tools/designer.md#the-content-browser)。
+- **开了 Substrate 的工程里，Additive 材质画得出来了。** 开 Substrate 时，引擎把旧式 Additive 材质转成「自发光乘不透明度、全透射」的无光照层，DreamGUI 的渲染器把它当成没有覆盖，材质什么都没画。现在画的和不开 Substrate 时一样：自发光，按不透明度。
+- **Niagara 的精灵粒子在 PIE 里画得出来了。** 内置着色器用一个裸 floor 从打包的颜色倍率里取帧混合。这个值到像素时已经过插值，PIE 的屏幕空间视图里一个整数步可能差一点点落到它下面，精灵就整个混合到「下一帧」——单帧精灵的下一帧在贴图外面，默认的柔和圆点在那里是透明的。所以精灵在设计器和渲染目标里画得出来，游戏视口里一个都不画；条带不受影响。现在内置着色器和转换出来的粒子材质都按混合在下一步之下留出的间隙的一半来取整数步。
+- **Niagara 效果示例排好了，火花也散开了。** 示例的行和卡片按标题文字量尺寸，五张卡只有一个词那么宽；现在分别要 1080×300 和 200×300。其中三个系统在同一个 Set Parameters 模块里读这个模块自己写的属性，Niagara 读到的是模块之前的值：点击火花和满条碎片的速度是零，边框火花全从一个角出发。现在每个系统都在更早的一组里写它要读的值。
+- **NiagaraSystem 视觉的系统不会再在世界里画一帧了。** 模拟它的组件关了渲染，但 Niagara 只在组件 tick 时才把这个开关交给它的场景代理，系统激活或爆发时新建的代理会先画一帧：整个系统，亮着，画在 UI 后面的世界里——PIE 里每次爆发闪一下，在不 tick 组件的世界里则一直画着。现在组件根本不给场景建代理。
+- **设计器里能看到指针光。** 跟随指针时，它在不在运行的世界里（没有指针）什么都不照；现在在那里停在 `LightPosition`。
+- **细节面板里缺的行补上了。** 用户控件的 *Wants Tick*、*Allow Event Bubble Up* 和 *Can Navigate Here*；控件的提示框
+  控件类；图片画刷的填充（数量、方式、起点、方向）和圆角框的圆角；矩形块九宫格的绘制方式和边距，以及它的形状融合方式；精灵
+  在还没有贴图时的内边距和边框。这些以前只能在 `.dui` 里写。
+- **打开序列帧播放器的细节面板不再让编辑器崩溃。** `UUISpriteSequencePlayer` 和 `UUISpriteSheetTexturePlayer` 的错误提示行
+  在控件的组件里找它们需要的视觉，再从空指针上读名字。
+- **子分类里的高级属性有行了。** 引擎画子分类（`DreamGUI|Pointer Light`）时不画它的高级行，开着「显示全部高级项」也一样，
+  所以全息箔、指针光、倾斜卡的 *User Index* 和 *Pointer Id* 在哪个面板里都看不到。DreamGUI 的面板把这类属性作为子分类里的普通行，
+  排在其它行后面。
 
 <a id="100"></a>
 

@@ -391,6 +391,40 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
+	 * One element of a container. A struct with no short form is written the way the builder reads one there -- a quoted
+	 * string it hands the engine's importer, `Style.DropShadows = ["(Angle=120,Distance=6)"]` -- with only the fields that
+	 * differ from the struct's defaults, so two equal values print alike and an untouched field is not spelled. Anything
+	 * else prints as a leaf does.
+	 */
+	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
+	{
+		if (PrintLiteral(InElement, InValuePtr, OutText, OutValueIsUnrepresentable))
+		{
+			return true;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InElement);
+		if (AsStruct == nullptr || AsStruct->Struct == nullptr || DreamUIValueFormat::HasShortForm(InElement)
+			|| (OutValueIsUnrepresentable != nullptr && *OutValueIsUnrepresentable))
+		{
+			return false;
+		}
+		const UScriptStruct* Struct = AsStruct->Struct;
+		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
+		Struct->InitializeStruct(Defaults);
+		FString Exported;
+		AsStruct->ExportTextItem_Direct(Exported, InValuePtr, Defaults, nullptr, PPF_None);
+		Struct->DestroyStruct(Defaults);
+		FMemory::Free(Defaults);
+		if (Exported.IsEmpty())
+		{
+			// Every field at its default: the importer reads an empty list of fields as that.
+			Exported = TEXT("()");
+		}
+		OutText = QuoteString(Exported);
+		return true;
+	}
+
+	/**
 	 * A container's entries as they print: a list's elements in order, a set's elements and a map's `key: value`s in
 	 * the order the container holds them, with each entry's identity (the element, the key) in OutKeys. False when an
 	 * entry has no spelling -- then neither has the container.
@@ -411,7 +445,7 @@ namespace DreamUIWriteBackLocal
 			for (int32 Index = 0; Index < Helper.Num(); ++Index)
 			{
 				FString Element;
-				if (!PrintLiteral(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
+				if (!PrintContainerElement(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
@@ -436,7 +470,7 @@ namespace DreamUIWriteBackLocal
 				}
 				--Left;
 				FString Element;
-				if (!PrintLiteral(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
+				if (!PrintContainerElement(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
@@ -462,7 +496,7 @@ namespace DreamUIWriteBackLocal
 				FString Key;
 				FString Value;
 				if (!PrintLiteral(AsMap->KeyProp, Helper.GetKeyPtr(Index), Key, OutValueIsUnrepresentable)
-					|| !PrintLiteral(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
+					|| !PrintContainerElement(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
 				{
 					return false;
 				}
@@ -1331,6 +1365,132 @@ namespace DreamUIWriteBackLocal
 			});
 		}
 		return Found;
+	}
+
+	/**
+	 * meta=(DreamGUI_Replaces="A,B"): the older properties a property replaced. Their lines go from a node when it is
+	 * written there, so that the file never says one thing two ways: a rect block's gradient, written once it has stops, takes
+	 * the place of its two-colour gradient's lines.
+	 */
+	const FName MetaReplaces(TEXT("DreamGUI_Replaces"));
+
+	/** The property a value edit's head names, on what its node makes (the widget, its visual, its panel) or its `+` block. */
+	const FProperty* FindEditedHead(const FDreamUINode& InNode, const FDreamUIPropertyEdit& InEdit, const TMap<FString, UDreamWidget*>& InLiveById)
+	{
+		FString Head = InEdit.PropertyName;
+		int32 Dot = INDEX_NONE;
+		if (Head.FindChar(TEXT('.'), Dot))
+		{
+			Head.LeftInline(Dot);
+		}
+		if (InEdit.Target == EDreamUIPatchTarget::Component)
+		{
+			const UClass* Class = InNode.Components.IsValidIndex(InEdit.ComponentIndex)
+				? FDreamUITextBuilder::ResolveComponentClass(InNode.Components[InEdit.ComponentIndex].ClassName) : nullptr;
+			return Class != nullptr ? FindFProperty<FProperty>(Class, *Head) : nullptr;
+		}
+		const UDreamWidget* Live = nullptr;
+		for (const TPair<FString, UDreamWidget*>& Entry : InLiveById)
+		{
+			if (Entry.Key.Equals(InEdit.NodeId, ESearchCase::IgnoreCase))
+			{
+				Live = Entry.Value;
+				break;
+			}
+		}
+		if (!IsValid(Live))
+		{
+			return nullptr;
+		}
+		const UObject* Candidates[] = { Live, Live->GetVisual(), Live->GetLayoutContainer() };
+		for (const UObject* Candidate : Candidates)
+		{
+			if (Candidate != nullptr)
+			{
+				if (const FProperty* Found = FindFProperty<FProperty>(Candidate->GetClass(), *Head))
+				{
+					return Found;
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The lines InEdits' values replace (MetaReplaces), as removals: for each edit whose property names properties it took
+	 * the place of, every line of its node -- or of its `+` block -- that writes one of them.
+	 */
+	void CollectReplacedLines(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree, const TArray<FDreamUIPropertyEdit>& InEdits,
+		TArray<FDreamUIStructuralEdit>& OutRemovals)
+	{
+		TMap<FString, UDreamWidget*> LiveById;
+		bool bMapped = false;
+		TSet<FString> Seen;
+		for (const FDreamUIPropertyEdit& Edit : InEdits)
+		{
+			if (Edit.Target == EDreamUIPatchTarget::Slot)
+			{
+				continue;
+			}
+			const FDreamUINode* Node = FindAstNode(InAst, Edit.NodeId);
+			if (Node == nullptr)
+			{
+				continue;
+			}
+			if (!bMapped)
+			{
+				MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveById);
+				bMapped = true;
+			}
+			const FProperty* Head = FindEditedHead(*Node, Edit, LiveById);
+			if (Head == nullptr || !Head->HasMetaData(MetaReplaces))
+			{
+				continue;
+			}
+			const bool bComponent = Edit.Target == EDreamUIPatchTarget::Component;
+			const TArray<FDreamUIProperty>* Lines = bComponent
+				? (Node->Components.IsValidIndex(Edit.ComponentIndex) ? &Node->Components[Edit.ComponentIndex].Properties : nullptr)
+				: &Node->Properties;
+			if (Lines == nullptr)
+			{
+				continue;
+			}
+			TArray<FString> Replaced;
+			Head->GetMetaData(MetaReplaces).ParseIntoArray(Replaced, TEXT(","));
+			for (FString& Name : Replaced)
+			{
+				Name.TrimStartAndEndInline();
+			}
+			for (const FDreamUIProperty& Line : *Lines)
+			{
+				if (Line.bSynthesized || Line.bRowCell)
+				{
+					continue;
+				}
+				FString LineHead = Line.Name;
+				int32 LineDot = INDEX_NONE;
+				if (LineHead.FindChar(TEXT('.'), LineDot))
+				{
+					LineHead.LeftInline(LineDot);
+				}
+				if (!Replaced.ContainsByPredicate([&LineHead](const FString& InName) { return InName.Equals(LineHead, ESearchCase::IgnoreCase); }))
+				{
+					continue;
+				}
+				const FString Signature = FString::Printf(TEXT("%s|%d|%d|%s"), *Node->Id, bComponent ? 1 : 0, Edit.ComponentIndex, *Line.Name);
+				if (Seen.Contains(Signature))
+				{
+					continue;
+				}
+				Seen.Add(Signature);
+				FDreamUIStructuralEdit& Remove = OutRemovals.AddDefaulted_GetRef();
+				Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+				Remove.NodeId = Node->Id;
+				Remove.PropertyName = Line.Name;
+				Remove.PropertyTarget = bComponent ? EDreamUIPatchTarget::Component : EDreamUIPatchTarget::Node;
+				Remove.ComponentIndex = bComponent ? Edit.ComponentIndex : INDEX_NONE;
+			}
+		}
 	}
 
 	const FDreamUINode* FindAstParentWithin(const FDreamUINode& InScope, const FDreamUINode* InChild)
@@ -2862,8 +3022,8 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// A value a node takes from its style's `+ Class` line has no line of its own to change. Asked of the value pass,
 	// such a change becomes a `+ Class { }` line on the node, written here, and the value pass below then writes the
 	// changed values into it: the node overrides the style for itself, and every other node wearing it is untouched.
+	TArray<FDreamUIPropertyEdit> Probe;
 	{
-		TArray<FDreamUIPropertyEdit> Probe;
 		FDreamUIDiagnosticBag ProbeDiagnostics;
 		TArray<FDreamUIStructuralEdit> Overrides;
 		CollectEdits(Ast, InLiveTree, TextTree.Get(), Probe, ProbeDiagnostics, /*bInUseDirtySet*/true,
@@ -2899,6 +3059,40 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 						WrittenIds.Add(Override.NodeId + TEXT("+") + Override.ComponentClassName);
 					}
 				}
+			}
+		}
+	}
+
+	// ---- and the lines a value replaces -------------------------------------------------------------
+	//
+	// A value whose property replaced older ones (meta=(DreamGUI_Replaces)) takes their lines out of its node as it is
+	// written -- a rect block's two-colour gradient's lines go when its gradient is first written with stops -- so the file
+	// never says one thing two ways. Planned from the probe above, which names properties rather than places, against the
+	// text as it now is, and read back before the value pass is planned against it.
+	{
+		TArray<FDreamUIStructuralEdit> Replaced;
+		DreamUIWriteBackLocal::CollectReplacedLines(Ast, InLiveTree, Probe, Replaced);
+		if (!Replaced.IsEmpty())
+		{
+			const FString BeforeRemovals = Working;
+			FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, Replaced, OutDiagnostics);
+			if (!Working.Equals(BeforeRemovals, ESearchCase::CaseSensitive))
+			{
+				FDreamUIAst Rebuilt;
+				FDreamUIDiagnosticBag ReadBack;
+				ReadBack.SourceName = OutDiagnostics.SourceName;
+				TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, ReadBack));
+				if (!RebuiltTree.IsValid())
+				{
+					for (FDreamUIDiagnostic& Diagnostic : ReadBack.Diagnostics)
+					{
+						OutDiagnostics.Add(MoveTemp(Diagnostic));
+					}
+					OutText = InText;
+					return false;
+				}
+				Ast = MoveTemp(Rebuilt);
+				TextTree = MoveTemp(RebuiltTree);
 			}
 		}
 	}

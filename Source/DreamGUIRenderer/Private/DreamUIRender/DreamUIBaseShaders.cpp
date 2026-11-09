@@ -18,6 +18,8 @@ FDreamUIBuiltInTextures FDreamUIBuiltInDrawParams::GetTexturesForRenderCommand()
 	Textures.RenderLayerTable = RenderLayerTable.Get();
 	Textures.RectBlockData = RectBlockData.Get();
 	Textures.PaintData = PaintData.Get();
+	Textures.MaskTexture0 = MaskTexture0.Get();
+	Textures.MaskTexture1 = MaskTexture1.Get();
 	return Textures;
 }
 
@@ -44,6 +46,10 @@ void FDreamUIBuiltInDrawParams::ResolveTextures_RenderThread(const FDreamUIBuilt
 	RenderLayerTableRHI = Reference(InTextures.RenderLayerTable);
 	RectBlockDataRHI = Reference(InTextures.RectBlockData);
 	PaintDataRHI = Reference(InTextures.PaintData);
+	MaskTexture0RHI = Reference(InTextures.MaskTexture0);
+	MaskSampler0RHI = Sampler(InTextures.MaskTexture0);
+	MaskTexture1RHI = Reference(InTextures.MaskTexture1);
+	MaskSampler1RHI = Sampler(InTextures.MaskTexture1);
 }
 
 IMPLEMENT_GLOBAL_SHADER(FDreamUIBaseVS, "/Plugin/DreamGUI/Private/DreamUIBase.usf", "MainVS", SF_Vertex);

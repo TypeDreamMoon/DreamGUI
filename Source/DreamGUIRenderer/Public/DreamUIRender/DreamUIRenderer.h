@@ -20,6 +20,19 @@ class FGlobalShaderMap;
 /** What a pass's built-in draws looked up and set last: see FDreamUIRenderer::DrawBuiltInBatch. */
 struct FDreamUIBuiltInDrawCache;
 
+/**
+ * What a built-in draw blends over, for a mode the blend hardware cannot do (DreamUIBlend::ReadsBackdrop): a copy of the
+ * part of the target it covers, made just before it. A draw of such a mode given none is drawn Normal.
+ */
+struct FDreamUIBuiltInBackdrop
+{
+	FRHITexture* Texture = nullptr;
+	/** The pixel of the target the copy's first texel was taken from. */
+	FIntPoint Origin = FIntPoint::ZeroValue;
+	/** What is behind is a viewport's picture, whose alpha says nothing: it counts as opaque. */
+	bool bOpaque = false;
+};
+
 class FDreamUIMeshElementCollector : public FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
 {
 public:
@@ -178,6 +191,11 @@ public:
 		, uint8 NumSamples
 		, FGlobalShaderMap* GlobalShaderMap
 	);
+	/**
+	 * The blend state one of DreamGUI's own blend modes maps to, for what the built-in shader and a group's composite give
+	 * it (DreamUIBlend_FixedOutput); Normal's for a mode drawn over a copy of what is behind.
+	 */
+	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
 private:
 	static void SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 		, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
@@ -186,13 +204,12 @@ private:
 	 * Draw one batch with the built-in UI shader (no material). Used for both screen-space and world-space
 	 * canvases; bBlendDepth selects the world-space depth blend / fade permutation.
 	 */
-	/** The blend state one of DreamGUI's own blend modes maps to, for the built-in (material-less) path. */
-	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
 	static void DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
 		, const FSceneView& View, const FIntRect& ViewRect, const struct FDreamUIMeshBatchContainer& Batch
 		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 		, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
 		, FDreamUIBuiltInDrawCache* InOutCache = nullptr
+		, const FDreamUIBuiltInBackdrop* InBackdrop = nullptr
 	);
 	struct FWorldSpaceRenderParameter
 	{
@@ -434,5 +451,7 @@ extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> G
 extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderPSParameter, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
+	/** The copy of what is behind a draw of a mode that reads it, for a pass of that draw alone; none otherwise. */
+	RDG_TEXTURE_ACCESS(BackdropTexture, ERHIAccess::SRVGraphics)
 	RENDER_TARGET_BINDING_SLOTS()
 END_SHADER_PARAMETER_STRUCT()

@@ -1,13 +1,77 @@
 #ifndef DREAMUI_CLIP_USH
 #define DREAMUI_CLIP_USH
 
-// The third slot of the last column is RESERVED and not read: FDreamUIClipData::UpdateData writes a
-// zero there and nothing has ever consumed it. It used to arrive here as an out parameter named
-// Softness, which made the layout look like it carried a soft-clip width that some branch honoured --
-// no branch did, and neither Slate's clipping nor UMG's has such a control to copy. The clip edge is
-// antialiased from the signed distance field's own derivative, which is what the two branches below
-// do. The slot stays in the layout because the matrix is uploaded whole; the parameter is gone
-// because a name in a signature is a promise.
+/*
+ * The clip chain: a row of the clip data texture per clipping widget, holding the widget's own clip level and the levels
+ * of every clipper above it, innermost first (FDreamUIClipData::UpdateData). Each level is
+ *
+ *   texels 0..3  canvas -> clipper matrix, column-major; its last column is (half width, half height, mask flag, is valid)
+ *   texel  4     corner radius
+ *   texels 5..8  the mask (M0..M3), present only when the mask flag is set
+ *
+ * so a level without a mask is the five texels it always was, read and uploaded exactly as before, and the next level
+ * starts right after it. The mask is the widget's FDreamClipMask, or the shape of the layer below a widget that clips to
+ * it (UDreamWidget::bClipToBelow).
+ *
+ * Every constant below is paired with one in DreamUIClipLayout (Core/DreamUIClipMask.h), and a test reads these lines
+ * and holds them to it. So is every formula: FDreamUIClipMaskMath evaluates a level on the CPU, step for step, for hit
+ * testing, and a picture test holds the two to each other pixel against hit.
+ */
+#define DREAMUI_CLIP_DEPTH 16
+#define DREAMUI_CLIP_BASE_TEXELS 5
+#define DREAMUI_CLIP_MASK_TEXELS 4
+
+// M0.w: the level's flags, a small integer written as an ordinary float value (as the widget record's numbers are).
+#define DREAMUI_CLIP_KIND_SHIFT 0
+#define DREAMUI_CLIP_SHAPE_SHIFT 2
+#define DREAMUI_CLIP_SOURCE_SHIFT 5
+#define DREAMUI_CLIP_CHANNEL_SHIFT 7
+#define DREAMUI_CLIP_SLOT_SHIFT 10
+#define DREAMUI_CLIP_PATTERN_SHIFT 11
+#define DREAMUI_CLIP_INVERT_SHIFT 14
+#define DREAMUI_CLIP_ADDRESS_SHIFT 15
+#define DREAMUI_CLIP_NO_CENTRE_SHIFT 17
+#define DREAMUI_CLIP_REVERSE_SHIFT 18
+
+// What a masked level is.
+#define DREAMUI_CLIP_KIND_MASK 0
+#define DREAMUI_CLIP_KIND_UNDERLAY_IMAGE 1
+#define DREAMUI_CLIP_KIND_UNDERLAY_SHAPE 2
+
+// EDreamClipMaskShape, EDreamClipMaskSource, EDreamClipMaskChannel and EDreamClipMaskPattern, value for value.
+#define DREAMUI_CLIP_SHAPE_RECT 0
+#define DREAMUI_CLIP_SHAPE_ELLIPSE 1
+#define DREAMUI_CLIP_SHAPE_POLYGON 2
+#define DREAMUI_CLIP_SHAPE_STAR 3
+#define DREAMUI_CLIP_SHAPE_RING 4
+#define DREAMUI_CLIP_SOURCE_NONE 0
+#define DREAMUI_CLIP_SOURCE_TEXTURE 1
+#define DREAMUI_CLIP_SOURCE_PROCEDURAL 2
+#define DREAMUI_CLIP_CHANNEL_ALPHA 0
+#define DREAMUI_CLIP_CHANNEL_RED 1
+#define DREAMUI_CLIP_CHANNEL_GREEN 2
+#define DREAMUI_CLIP_CHANNEL_BLUE 3
+#define DREAMUI_CLIP_CHANNEL_LUMINANCE 4
+#define DREAMUI_CLIP_PATTERN_LINEAR 0
+#define DREAMUI_CLIP_PATTERN_RADIAL 1
+#define DREAMUI_CLIP_PATTERN_ANGULAR 2
+#define DREAMUI_CLIP_PATTERN_DIAMOND 3
+#define DREAMUI_CLIP_PATTERN_BLINDS 4
+#define DREAMUI_CLIP_PATTERN_CHECKER 5
+#define DREAMUI_CLIP_PATTERN_NOISE 6
+// How a texture layer's coordinate is read: nothing outside the image, the image repeated, or as it is (an underlay's
+// atlas coordinate, which its own shape already bounds).
+#define DREAMUI_CLIP_ADDRESS_BOUNDED 0
+#define DREAMUI_CLIP_ADDRESS_REPEAT 1
+#define DREAMUI_CLIP_ADDRESS_RAW 2
+
+// The names this file had before; a custom shader may use them.
+#define DreamUI_Clip_Depth DREAMUI_CLIP_DEPTH
+#define DreamUI_Clip_Enable_Rounded 1
+
+// The third slot of the last column was RESERVED, always zero and read by nothing. It is the mask flag now: greater than
+// one half when the level's mask texels follow its corner radius. This reads the matrix alone and leaves the flag where
+// it is, in the matrix's last column, which the caller replaces with (0, 0, 0, 1).
 void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float IsValid)
 {
 	float4 Column0 = DataTex.Load(Position);Position.x += 1;
@@ -16,7 +80,6 @@ void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 C
 	float4 Column3 = DataTex.Load(Position);Position.x += 1;
 	HalfWidth = Column3.x;
 	HalfHeight = Column3.y;
-	//Column3.z is the reserved slot described above
 	IsValid = Column3.w;
 	Column3 = float4(0, 0, 0, 1);
 	CanvasToClipMatrix[0] = Column0;
@@ -34,43 +97,404 @@ float DreamUIClip_sdRoundRect(float2 p, float2 b, float4 r)
 	float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
 	return d;
 }
-#define DreamUI_Clip_Depth 16
-#define DreamUI_Clip_Enable_Rounded 1
-float DreamUI_CalculateClipData(Texture2D DataTex, float CoordinateInDataTex, float3 PixelLocalPosition)
+
+/** An ellipse of half axes b, by the first-order estimate of its distance: exact on the boundary, which is what an edge reads. */
+float DreamUIClip_sdEllipse(float2 p, float2 b)
 {
+	b = max(b, float2(0.0001, 0.0001));
+	float k0 = length(p / b);
+	float k1 = length(p / (b * b));
+	return k1 > 0.0 ? k0 * (k0 - 1.0) / k1 : -min(b.x, b.y);
+}
+
+/**
+ * A star of Points points in the unit frame (the clip rect is -1..1 on both axes), its points at radius R and its inner
+ * corners at Inner * R, a point straight up. A regular polygon is the star whose inner corners sit on its edges:
+ * Inner = cos(pi / Points). Folded into half a point's sector the boundary is the one segment from the point to the inner
+ * corner, and the inside the triangle it makes with the centre.
+ */
+float DreamUIClip_sdStar(float2 q, float Points, float R, float Inner)
+{
+	const float TwoPi = 6.28318530718;
+	float Sector = TwoPi / max(Points, 2.0);
+	float Theta = atan2(q.x, q.y);
+	float Phi = abs(Theta - Sector * round(Theta / Sector));
+	float Rho = length(q);
+	float2 P = Rho * float2(sin(Phi), cos(Phi));
+	float2 A = float2(0.0, R);
+	float2 B = Inner * R * float2(sin(0.5 * Sector), cos(0.5 * Sector));
+	float2 AB = B - A;
+	float2 AP = P - A;
+	float T = saturate(dot(AP, AB) / max(dot(AB, AB), 1e-8));
+	float Dist = length(AP - AB * T);
+	float Side = AB.x * AP.y - AB.y * AP.x;
+	float OriginSide = AB.x * (-A.y) - AB.y * (-A.x);
+	return Side * OriginSide >= 0.0 ? -Dist : Dist;
+}
+
+/** The distance to a mask's shape that is not the clip rect, in pixels of the clip's frame (b is the half size). */
+float DreamUIClip_ShapeDistance(uint Shape, float2 p, float2 b, float ParamA, float ParamB)
+{
+	float MinHalf = max(min(b.x, b.y), 0.0001);
+	if (Shape == DREAMUI_CLIP_SHAPE_ELLIPSE)
+	{
+		return DreamUIClip_sdEllipse(p, b);
+	}
+	if (Shape == DREAMUI_CLIP_SHAPE_RING)
+	{
+		// ParamA: the hole's size as a share of the ring's.
+		return max(DreamUIClip_sdEllipse(p, b), -DreamUIClip_sdEllipse(p, b * saturate(ParamA)));
+	}
+	float2 q = p / max(b, float2(0.0001, 0.0001));
+	if (Shape == DREAMUI_CLIP_SHAPE_POLYGON)
+	{
+		// ParamA: the sides, ParamB: the corners' rounding in pixels, which shrinks the polygon so that its edges still
+		// touch the rect once rounded.
+		float Sides = max(ParamA, 3.0);
+		float HalfSector = 3.14159265359 / Sides;
+		float Rounding = clamp(ParamB / MinHalf, 0.0, 1.0);
+		float R = max(1.0 - Rounding / cos(HalfSector), 0.0);
+		return (DreamUIClip_sdStar(q, Sides, R, cos(HalfSector)) - Rounding) * MinHalf;
+	}
+	// The star. ParamA: the points, ParamB: the inner corners' radius as a share of the points'.
+	return DreamUIClip_sdStar(q, max(ParamA, 2.0), 1.0, saturate(ParamB)) * MinHalf;
+}
+
+/** A small integer hash, the same bits on the CPU (FDreamUIClipMaskMath::Hash): the noise pattern is held to it. */
+uint DreamUIClip_Hash(uint X, uint Y, uint Seed)
+{
+	uint H = (X * 0x8DA6B343u) ^ (Y * 0xD8163841u) ^ (Seed * 0xCB1AB31Fu);
+	H ^= H >> 16;
+	H *= 0x7FEB352Du;
+	H ^= H >> 15;
+	H *= 0x846CA68Bu;
+	H ^= H >> 16;
+	return H;
+}
+float DreamUIClip_CellValue(int2 Cell, uint Seed)
+{
+	return (float)(DreamUIClip_Hash(asuint(Cell.x), asuint(Cell.y), Seed) & 0xFFFFFFu) / 16777215.0;
+}
+
+/** A procedural pattern's value at UV: 0..1 across the clip for the gradients, Frequency cells across for the rest. */
+float DreamUIClip_Pattern(uint Pattern, float2 UV, float Frequency, uint Seed)
+{
+	float2 Q = UV - 0.5;
+	if (Pattern == DREAMUI_CLIP_PATTERN_LINEAR)
+	{
+		return UV.x;
+	}
+	if (Pattern == DREAMUI_CLIP_PATTERN_RADIAL)
+	{
+		return length(Q) * 2.0;
+	}
+	if (Pattern == DREAMUI_CLIP_PATTERN_ANGULAR)
+	{
+		// Clockwise from twelve o'clock: UV runs down the screen.
+		return frac(atan2(Q.x, -Q.y) / 6.28318530718 + 1.0);
+	}
+	if (Pattern == DREAMUI_CLIP_PATTERN_DIAMOND)
+	{
+		return (abs(Q.x) + abs(Q.y)) * 2.0;
+	}
+	if (Pattern == DREAMUI_CLIP_PATTERN_BLINDS)
+	{
+		return frac(UV.x * Frequency);
+	}
+	if (Pattern == DREAMUI_CLIP_PATTERN_CHECKER)
+	{
+		float2 Cell = floor(UV * Frequency);
+		return frac((Cell.x + Cell.y) * 0.5) * 2.0;
+	}
+	// Value noise: a hashed value per cell, eased between the four around.
+	float2 Grid = UV * Frequency;
+	float2 Base = floor(Grid);
+	float2 F = Grid - Base;
+	F = F * F * (3.0 - 2.0 * F);
+	int2 C = int2(Base);
+	float V00 = DreamUIClip_CellValue(C, Seed);
+	float V10 = DreamUIClip_CellValue(C + int2(1, 0), Seed);
+	float V01 = DreamUIClip_CellValue(C + int2(0, 1), Seed);
+	float V11 = DreamUIClip_CellValue(C + int2(1, 1), Seed);
+	return lerp(lerp(V00, V10, F.x), lerp(V01, V11, F.x), F.y);
+}
+
+/** A source value to the mask: nothing below Threshold - Softness, all of it above Threshold + Softness, a ramp between. */
+float DreamUIClip_Remap(float Value, float Threshold, float Softness)
+{
+	return saturate((Value - Threshold + Softness) / max(2.0 * Softness, 0.00001));
+}
+
+/** One axis of an image's nine-slice: T across 0..Size, borders Low and High, coordinates U at the four lines. */
+float DreamUIClip_SliceAxis(float T, float Size, float Low, float High, float4 U)
+{
+	if (T < Low)
+	{
+		return lerp(U.x, U.y, T / max(Low, 0.00001));
+	}
+	if (T > Size - High)
+	{
+		return lerp(U.z, U.w, (T - (Size - High)) / max(High, 0.00001));
+	}
+	return lerp(U.y, U.z, (T - Low) / max(Size - Low - High, 0.00001));
+}
+
+/**
+ * A level whose mask reads a texture, waiting for the texture: the level's alpha so far (shape, feather, an underlay's
+ * opacity) and where to read. The textures are bound by whoever draws, two at most, the chain's first two texture layers
+ * from the outside in (the flags' slot); the level is finished in DreamUIClip_ResolveTextureLayer.
+ */
+struct FDreamUIClipTextureLayer
+{
+	float Active;
+	float Alpha;
+	float2 UV;
+	uint Flags;
+	float Threshold;
+	float Softness;
+};
+
+FDreamUIClipTextureLayer DreamUIClip_NoTextureLayer()
+{
+	FDreamUIClipTextureLayer Layer;
+	Layer.Active = 0.0;
+	Layer.Alpha = 1.0;
+	Layer.UV = float2(0.0, 0.0);
+	Layer.Flags = 0u;
+	Layer.Threshold = 0.5;
+	Layer.Softness = 0.5;
+	return Layer;
+}
+
+/** Where a texture layer reads: its coordinate repeated, or as it is. */
+float2 DreamUIClip_TextureLayerUV(FDreamUIClipTextureLayer Layer)
+{
+	uint Address = (Layer.Flags >> DREAMUI_CLIP_ADDRESS_SHIFT) & 3u;
+	return Address == DREAMUI_CLIP_ADDRESS_REPEAT ? frac(Layer.UV) : Layer.UV;
+}
+
+/** The texture layer's alpha, from the texel it read; 1 for no layer. */
+float DreamUIClip_ResolveTextureLayer(FDreamUIClipTextureLayer Layer, float4 Texel)
+{
+	if (Layer.Active < 0.5)
+	{
+		return 1.0;
+	}
+	uint Channel = (Layer.Flags >> DREAMUI_CLIP_CHANNEL_SHIFT) & 7u;
+	float Value = Texel.a;
+	if (Channel == DREAMUI_CLIP_CHANNEL_RED) Value = Texel.r;
+	else if (Channel == DREAMUI_CLIP_CHANNEL_GREEN) Value = Texel.g;
+	else if (Channel == DREAMUI_CLIP_CHANNEL_BLUE) Value = Texel.b;
+	else if (Channel == DREAMUI_CLIP_CHANNEL_LUMINANCE) Value = dot(Texel.rgb, float3(0.2126, 0.7152, 0.0722));
+	if (((Layer.Flags >> DREAMUI_CLIP_REVERSE_SHIFT) & 1u) != 0u)
+	{
+		Value = 1.0 - Value;
+	}
+	uint Address = (Layer.Flags >> DREAMUI_CLIP_ADDRESS_SHIFT) & 3u;
+	if (Address == DREAMUI_CLIP_ADDRESS_BOUNDED && (any(Layer.UV < 0.0) || any(Layer.UV > 1.0)))
+	{
+		Value = 0.0;
+	}
+	float Alpha = Layer.Alpha * DreamUIClip_Remap(Value, Layer.Threshold, Layer.Softness);
+	return ((Layer.Flags >> DREAMUI_CLIP_INVERT_SHIFT) & 1u) != 0u ? 1.0 - Alpha : Alpha;
+}
+
+/** The edge of a distance field over InWidth pixels, centred on it: the clip rect's antialiasing, and a mask's feather. */
+float DreamUIClip_Edge(float Distance, float InWidth)
+{
+	return saturate(0.5 - Distance / max(InWidth, 0.000001));
+}
+
+/**
+ * A masked level's alpha, without the texture its mask may read: the texture layer goes to OutTexture instead, its slot
+ * the flags'. p is the pixel in the clip's frame (+x right, +y up), b the half size, CornerRadius the level's.
+ */
+float DreamUIClip_MaskedLevel(float2 p, float2 b, float4 CornerRadius, float4 M0, float4 M1, float4 M2, float4 M3,
+	inout FDreamUIClipTextureLayer OutTexture0, inout FDreamUIClipTextureLayer OutTexture1)
+{
+	uint Flags = (uint)(M0.w + 0.5);
+	uint Kind = (Flags >> DREAMUI_CLIP_KIND_SHIFT) & 3u;
+	uint Source = (Flags >> DREAMUI_CLIP_SOURCE_SHIFT) & 3u;
+	float RectDistance = DreamUIClip_sdRoundRect(p, b, CornerRadius);
+	float RectAlpha = DreamUIClip_Edge(RectDistance, fwidth(RectDistance));
+	FDreamUIClipTextureLayer Texture = DreamUIClip_NoTextureLayer();
+	float Alpha = 1.0;
+	if (Kind == DREAMUI_CLIP_KIND_UNDERLAY_SHAPE)
+	{
+		// The rect block below: its body's rounded rect (the level's own corner radius) at its opacity.
+		return RectAlpha * M0.x;
+	}
+	if (Kind == DREAMUI_CLIP_KIND_UNDERLAY_IMAGE)
+	{
+		// The image below, simple or nine-sliced: M1 its borders in pixels (left, right, bottom, top), M2 the texture's u
+		// and M3 its v at the four lines across and up. Its opacity is M0.x.
+		float2 Size = 2.0 * b;
+		float2 T = p + b;
+		Texture.UV = float2(
+			DreamUIClip_SliceAxis(T.x, Size.x, M1.x, M1.y, M2),
+			DreamUIClip_SliceAxis(T.y, Size.y, M1.z, M1.w, M3));
+		Alpha = RectAlpha * M0.x;
+		if (((Flags >> DREAMUI_CLIP_NO_CENTRE_SHIFT) & 1u) != 0u
+			&& T.x > M1.x && T.x < Size.x - M1.y && T.y > M1.z && T.y < Size.y - M1.w)
+		{
+			Alpha = 0.0;
+		}
+		Texture.Threshold = 0.5;
+		Texture.Softness = 0.5;
+	}
+	else
+	{
+		uint Shape = (Flags >> DREAMUI_CLIP_SHAPE_SHIFT) & 7u;
+		if (Shape == DREAMUI_CLIP_SHAPE_RECT)
+		{
+			// Each side fades in over its own feather, measured in from that side.
+			Alpha = RectAlpha;
+			float4 Inside = float4(p.x + b.x, b.x - p.x, p.y + b.y, b.y - p.y);
+			if (M1.x > 0.0) Alpha *= saturate(Inside.x / M1.x);
+			if (M1.y > 0.0) Alpha *= saturate(Inside.y / M1.y);
+			if (M1.z > 0.0) Alpha *= saturate(Inside.z / M1.z);
+			if (M1.w > 0.0) Alpha *= saturate(Inside.w / M1.w);
+		}
+		else
+		{
+			float Distance = DreamUIClip_ShapeDistance(Shape, p, b, M0.y, M0.z);
+			Alpha = DreamUIClip_Edge(Distance, max(fwidth(Distance), M1.x));
+		}
+		// The coordinate textures and patterns are read at: the pixel turned by M2.w about the clip's centre, in a frame
+		// that runs down the screen, scaled by M3.xy and moved by M3.zw.
+		float2 Pixel = float2(p.x, -p.y);
+		float S, C;
+		sincos(M2.w, S, C);
+		float2 Turned = float2(C * Pixel.x + S * Pixel.y, -S * Pixel.x + C * Pixel.y);
+		float2 UV = Turned * M3.xy + 0.5 + M3.zw;
+		if (Source == DREAMUI_CLIP_SOURCE_PROCEDURAL)
+		{
+			uint Pattern = (Flags >> DREAMUI_CLIP_PATTERN_SHIFT) & 7u;
+			float Value = DreamUIClip_Pattern(Pattern, UV, M2.z, (uint)(M0.x + 0.5));
+			if (((Flags >> DREAMUI_CLIP_REVERSE_SHIFT) & 1u) != 0u)
+			{
+				Value = 1.0 - Value;
+			}
+			Alpha *= DreamUIClip_Remap(Value, M2.x, M2.y);
+		}
+		Texture.UV = UV;
+		Texture.Threshold = M2.x;
+		Texture.Softness = M2.y;
+	}
+	if (Source != DREAMUI_CLIP_SOURCE_TEXTURE)
+	{
+		return ((Flags >> DREAMUI_CLIP_INVERT_SHIFT) & 1u) != 0u ? 1.0 - Alpha : Alpha;
+	}
+	Texture.Active = 1.0;
+	Texture.Alpha = Alpha;
+	Texture.Flags = Flags;
+	if (((Flags >> DREAMUI_CLIP_SLOT_SHIFT) & 1u) == 0u)
+	{
+		OutTexture0 = Texture;
+	}
+	else
+	{
+		OutTexture1 = Texture;
+	}
+	return 1.0;
+}
+
+/**
+ * The whole chain, but for the textures its masks read: what DreamUI_CalculateClipData and DreamUI_CalculateClipDataMasked
+ * both run. A level with a texture is handed back in its slot, to be finished by whoever has the texture.
+ */
+float DreamUI_CalculateClipLayers(Texture2D DataTex, float CoordinateInDataTex, float3 PixelLocalPosition,
+	out FDreamUIClipTextureLayer OutTexture0, out FDreamUIClipTextureLayer OutTexture1)
+{
+	OutTexture0 = DreamUIClip_NoTextureLayer();
+	OutTexture1 = DreamUIClip_NoTextureLayer();
 	int Coordinate = round(CoordinateInDataTex);
 	if (Coordinate == 0) return 1.0f;//0 position means no clip
 	float finalAlpha = 1.0f;
 	int3 Position = int3(0, Coordinate, 0);
-	for (int i = 0; i < DreamUI_Clip_Depth; i++)
+	for (int i = 0; i < DREAMUI_CLIP_DEPTH; i++)
 	{
+		float4 Column0 = DataTex.Load(Position);Position.x += 1;
+		float4 Column1 = DataTex.Load(Position);Position.x += 1;
+		float4 Column2 = DataTex.Load(Position);Position.x += 1;
+		float4 Column3 = DataTex.Load(Position);Position.x += 1;
+		if (!Column3.w)break;
+		float HalfWidth = Column3.x;
+		float HalfHeight = Column3.y;
+		float MaskFlag = Column3.z;
 		float4x4 CanvasToClipMatrix;
-		float HalfWidth, HalfHeight;
-		float IsValid = 1;
-		DreamUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, IsValid);
-		if (!IsValid)break;
+		CanvasToClipMatrix[0] = Column0;
+		CanvasToClipMatrix[1] = Column1;
+		CanvasToClipMatrix[2] = Column2;
+		CanvasToClipMatrix[3] = float4(0, 0, 0, 1);
 
 		float3 PixelPosition = mul(CanvasToClipMatrix, float4(PixelLocalPosition.xyz, 1.0)).xyz;
-		// The CPU writes matrix + corner radius for every clip level (FDreamUIClipData::SingleBlockSizeInBytes),
-		// so the read has to step past the corner radius whether or not this permutation uses it.
-		// Stepping only inside the rounded branch left every deeper level reading one texel early.
+		// The CPU writes the corner radius for every clip level (FDreamUIClipData::UpdateData), so the read steps past it
+		// whatever this level does with it.
 		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
-#if DreamUI_Clip_Enable_Rounded
-		float Alpha = DreamUIClip_sdRoundRect(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius);
-		Alpha = Alpha / fwidth(Alpha);
-		// Centred on the boundary; see the long note in DreamUIRectBlock.ush. Distance is negative
-		// inside, so the half pixel is subtracted. A clip rect needs no skirt of its own -- it ramps
-		// across whatever geometry is being clipped, which by definition extends past the edge.
-		Alpha = saturate(0.5f - Alpha);
-		finalAlpha *= Alpha;
-#else
-		float2 Alpha2 = abs(PixelPosition.yz) - float2(HalfWidth, HalfHeight);
-		Alpha2 = saturate(Alpha2);
-		float Alpha = 1.0 - saturate(Alpha2.x + Alpha2.y);
-		finalAlpha *= Alpha;
-#endif
+		BRANCH
+		if (MaskFlag > 0.5)
+		{
+			float4 M0 = DataTex.Load(Position);Position.x += 1;
+			float4 M1 = DataTex.Load(Position);Position.x += 1;
+			float4 M2 = DataTex.Load(Position);Position.x += 1;
+			float4 M3 = DataTex.Load(Position);Position.x += 1;
+			finalAlpha *= DreamUIClip_MaskedLevel(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius, M0, M1, M2, M3,
+				OutTexture0, OutTexture1);
+		}
+		else
+		{
+			float Alpha = DreamUIClip_sdRoundRect(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius);
+			Alpha = Alpha / fwidth(Alpha);
+			// Centred on the boundary; see the long note in DreamUIRectBlock.ush. Distance is negative
+			// inside, so the half pixel is subtracted. A clip rect needs no skirt of its own -- it ramps
+			// across whatever geometry is being clipped, which by definition extends past the edge.
+			Alpha = saturate(0.5f - Alpha);
+			finalAlpha *= Alpha;
+		}
 	}
 	return finalAlpha;
+}
+
+/**
+ * The clip, for a caller that binds no mask texture: a mask that reads one takes every texel to be white, so its shape,
+ * feather, threshold and inversion still hold and the texture alone is left out. What the material path called before
+ * masks, and what a custom material that calls it keeps; the built-in shader and MF_DreamUI_Shade call
+ * DreamUI_CalculateClipDataMasked.
+ */
+float DreamUI_CalculateClipData(Texture2D DataTex, float CoordinateInDataTex, float3 PixelLocalPosition)
+{
+	FDreamUIClipTextureLayer Texture0, Texture1;
+	float Alpha = DreamUI_CalculateClipLayers(DataTex, CoordinateInDataTex, PixelLocalPosition, Texture0, Texture1);
+	return Alpha
+		* DreamUIClip_ResolveTextureLayer(Texture0, float4(1.0, 1.0, 1.0, 1.0))
+		* DreamUIClip_ResolveTextureLayer(Texture1, float4(1.0, 1.0, 1.0, 1.0));
+}
+
+/**
+ * The clip with its mask textures: MaskTex0 and MaskTex1 are the two the draw binds (FDreamUIDrawCall::MaskTextures), each
+ * with its own sampler. Read with the gradient of the unrepeated coordinate, so a repeating mask has no seam.
+ */
+float DreamUI_CalculateClipDataMasked(Texture2D DataTex, Texture2D MaskTex0, SamplerState MaskSampler0, Texture2D MaskTex1, SamplerState MaskSampler1,
+	float CoordinateInDataTex, float3 PixelLocalPosition)
+{
+	FDreamUIClipTextureLayer Texture0, Texture1;
+	float Alpha = DreamUI_CalculateClipLayers(DataTex, CoordinateInDataTex, PixelLocalPosition, Texture0, Texture1);
+	float2 Dx0 = ddx(Texture0.UV);
+	float2 Dy0 = ddy(Texture0.UV);
+	float2 Dx1 = ddx(Texture1.UV);
+	float2 Dy1 = ddy(Texture1.UV);
+	BRANCH
+	if (Texture0.Active > 0.5)
+	{
+		Alpha *= DreamUIClip_ResolveTextureLayer(Texture0, MaskTex0.SampleGrad(MaskSampler0, DreamUIClip_TextureLayerUV(Texture0), Dx0, Dy0));
+	}
+	BRANCH
+	if (Texture1.Active > 0.5)
+	{
+		Alpha *= DreamUIClip_ResolveTextureLayer(Texture1, MaskTex1.SampleGrad(MaskSampler1, DreamUIClip_TextureLayerUV(Texture1), Dx1, Dy1));
+	}
+	return Alpha;
 }
 
 #endif // DREAMUI_CLIP_USH

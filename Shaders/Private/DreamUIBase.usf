@@ -12,6 +12,7 @@
 #define DREAMUI_RECT_BLOCK_SAMPLE(Tex, Sampler, UV) Tex.Sample(Sampler, UV)
 #include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIRenderLayer.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
 
 float4x4 DreamUI_MVP;
 /** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
@@ -31,6 +32,20 @@ Texture2D DreamUI_ClipDataTex;
 Texture2D DreamUI_RectBlockDataTex;
 /** The world's paint rows: the gradients painted text is filled with, and each painted text's table (DreamUIPaint.ush). */
 Texture2D DreamUI_PaintDataTex;
+/** The clip masks' textures, by slot: what the elements' clips read (DreamUI_CalculateClipDataMasked). */
+Texture2D DreamUI_MaskTex0;
+SamplerState DreamUI_MaskTexSampler0;
+Texture2D DreamUI_MaskTex1;
+SamplerState DreamUI_MaskTexSampler1;
+/**
+ * x: the draw's blend mode (EDreamUIBlendMode), y: 1 where what is behind is a viewport's, whose alpha says nothing, zw: the
+ * target pixel of the backdrop copy's first texel.
+ */
+float4 DreamUI_BlendParams;
+#if DREAMUI_BACKDROP
+/** What the draw covers of the target, copied before it: the modes the blend hardware cannot do blend over it. */
+Texture2D DreamUI_BackdropTex;
+#endif
 
 #if LEXUI_BLEND_DEPTH
 Texture2D DreamUI_SceneDepthTex;
@@ -115,6 +130,7 @@ void MainPS(
 	float4 Color = DreamUI_ShadePixelWith(In.UV0, In.UV1, In.UV2, In.UV3, In.UV4, In.Color, In.LocalPosition,
 		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
 		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo, DreamUI_PaintDataTex, true, bLinearTarget,
+		DreamUI_MaskTex0, DreamUI_MaskTexSampler0, DreamUI_MaskTex1, DreamUI_MaskTexSampler1,
 		DreamUI_RectBlockDataTex);
 #endif
 
@@ -147,6 +163,24 @@ void MainPS(
 #endif
 
 	Color.rgb = DreamUIBase_GammaCorrect(Color.rgb, DreamUI_GammaValues);
-	// Premultiplied: the blend state is One / InverseSourceAlpha.
-	OutColor = float4(Color.rgb * Color.a, Color.a);
+	const int BlendMode = (int)round(DreamUI_BlendParams.x);
+#if !DREAMUI_PLAIN_COLOR
+	BRANCH
+	if (BlendMode == DREAMUI_BLEND_DISSOLVE)
+	{
+		// The pattern is the widget's: cells of one unit, counted from its centre, so it moves with it.
+		const float2 Centre = float2(
+			DreamUI_WidgetDataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_CENTER, round(In.UV1.x), 0)).x,
+			DreamUI_WidgetDataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_CENTER + 1, round(In.UV1.x), 0)).x);
+		Color.a = DreamUIBlend_DissolveAlpha(Color.a, int2(floor(In.LocalPosition.yz - Centre)));
+	}
+#endif
+#if DREAMUI_BACKDROP
+	// Over what the target held here before the draw (DreamUIBlend_OverBackdrop); the blend state is One / InverseSourceAlpha.
+	const float4 Backdrop = DreamUI_BackdropTex.Load(int3(int2(In.Position.xy) - int2(DreamUI_BlendParams.zw), 0));
+	OutColor = DreamUIBlend_OverBackdrop(BlendMode, Color.rgb, Color.a, Backdrop, bLinearTarget, DreamUI_BlendParams.y > 0.5);
+#else
+	// Premultiplied, as the mode's blend state takes it (DreamUIBlend_FixedOutput): One / InverseSourceAlpha for most.
+	OutColor = DreamUIBlend_FixedOutput(BlendMode, Color.rgb * Color.a, Color.a);
+#endif
 }

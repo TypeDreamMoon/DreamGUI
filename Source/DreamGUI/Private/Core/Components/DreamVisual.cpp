@@ -172,6 +172,13 @@ bool UDreamVisual::CanEditChange(const FProperty* InProperty) const
 }
 #endif
 
+bool UDreamVisual::GetClipUnderlay(FDreamClipUnderlay& OutUnderlay) const
+{
+	OutUnderlay = FDreamClipUnderlay();
+	OutUnderlay.Unsupported = FString::Printf(TEXT("a %s draws no shape a clip level can follow"), *GetClass()->GetName());
+	return false;
+}
+
 int UDreamVisual::GetClipDataStartPosition() const
 {
 	if (auto ClipData = GetWidget()->GetClipData().Pin())

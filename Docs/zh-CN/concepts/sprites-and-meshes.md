@@ -56,6 +56,8 @@ description: "视觉表说\"画成什么\"，这一页说\"那些几何与图像
 
 **原地修补**（`TryPatchMeshSection`）与**认领池化段**（`ClaimPooledMeshSections`）都住在这。它也是 `DreamGUI.Memory` 报网格段字节数的来源。
 
+`DirectMesh` 元素可以分**多个网格段**画（`GetSegmentCount`），每段一个独立的段和绘制调用；可以把着色交给画布（`GetSegmentShading`：内置着色器或材质，像批处理元素一样拿到裁剪数据、遮罩纹理和混合模式）；也可以在画布每帧发送网格段之前写自己的顶点（`WantsFrameRefresh`、`RefreshMeshSegments`）。`NiagaraSystem` 视觉就建在这上面：见 [Niagara 粒子](niagara.md)。
+
 **`UDream2DLineRendererBase`**（`DreamGUIExtensions`，抽象）是 2D 线条那一族的公共底座（`Line2DRaw` / `Line2DChildren`）。它**继承 `UDreamImage`** —— **线也是用刷子画的**，只是它们的顶点不是矩形。
 
 | 属性 | 默认 | 说明 |

@@ -13,10 +13,12 @@
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamLayoutPassContext.h"
 #include "Core/DreamWidgetLifecycle.h"
+#include "Core/DreamUIClipMask.h"
 #include "DreamWidget.generated.h"
 
 class UDreamWidgetSubObjectBehaviour;
 class UDreamUIBehaviour;
+class UDreamLayerGroup;
 class UDreamUserWidget;
 class APlayerController;
 class ULocalPlayer;
@@ -392,7 +394,7 @@ private:
 	 * DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a
 	 * reflective sweep that also wrote this would author one position twice.
 	 */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta=(AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta=(AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	FVector RelativeLocation = FVector::ZeroVector;
 	/**
 	 * Local space rotation.
@@ -412,10 +414,12 @@ private:
 	 * property memory directly while writing through the setter, so this has to be a real stored
 	 * field kept in sync rather than a value derived on demand.
 	 */
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true))
+	// DreamGUI_Hidden: the Layout section's rotation row edits it.
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, DreamGUI_Hidden))
 	FRotator RelativeRotationEuler = FRotator::ZeroRotator;
 	/** Local space scale */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	// DreamGUI_Hidden on this and RelativeLocation: the Layout section's position and scale rows edit them (Interp makes them editable).
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, AllowPreserveRatio, DreamGUI_Hidden))
 	FVector RelativeScale = FVector::OneVector;
 
 	/*
@@ -1361,7 +1365,8 @@ protected:
 	void EnsureUIChildrenSorted()const;
 
 	/** AnchorData contains rect transform and color */
-	UPROPERTY(EditAnywhere, Getter, Setter, Category = "DreamGUI-AnchorData")
+	// DreamGUI_Hidden: the Layout section's anchor, position and size rows edit it.
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = "DreamGUI-AnchorData", meta = (DreamGUI_Hidden))
 	FDreamUIAnchorData AnchorData;
 
 	/**
@@ -1373,18 +1378,19 @@ protected:
 	 */
 	// DuiHidden on all six: they are Interp mirrors of AnchorData for Sequencer, and their setters
 	// write through to it -- which is exactly what exempts them from the transient refusal and
-	// exactly why a reflective sweep must not spell them: AnchorData already carries the value.
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetWidth", Setter = "SetWidth", Category = "DreamGUI-AnchorData", DisplayName = "Width", meta = (AllowPrivateAccess = true, DuiHidden))
+	// exactly why a reflective sweep must not spell them: AnchorData already carries the value. DreamGUI_Hidden for the
+	// same reason: the Layout section's rows edit the value.
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetWidth", Setter = "SetWidth", Category = "DreamGUI-AnchorData", DisplayName = "Width", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableWidth = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetHeight", Setter = "SetHeight", Category = "DreamGUI-AnchorData", DisplayName = "Height", meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetHeight", Setter = "SetHeight", Category = "DreamGUI-AnchorData", DisplayName = "Height", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableHeight = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetLeft", Setter = "SetAnchorOffsetLeft", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Left", meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetLeft", Setter = "SetAnchorOffsetLeft", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Left", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableAnchorLeft = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetRight", Setter = "SetAnchorOffsetRight", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Right", meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetRight", Setter = "SetAnchorOffsetRight", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Right", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableAnchorRight = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetTop", Setter = "SetAnchorOffsetTop", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Top", meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetTop", Setter = "SetAnchorOffsetTop", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Top", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableAnchorTop = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetBottom", Setter = "SetAnchorOffsetBottom", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Bottom", meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetBottom", Setter = "SetAnchorOffsetBottom", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Bottom", meta = (AllowPrivateAccess = true, DuiHidden, DreamGUI_Hidden))
 	float AnimatableAnchorBottom = 0;
 	void SyncAnimatableGeometryMirrors() const;
 
@@ -1556,7 +1562,7 @@ private:
 	uint8 bIsAttaching : 1 = false;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1", DreamGUI_Section = "Layer", DreamGUI_Order = 10))
 	float RenderOpacity = 1.0f;
 	/** See SetContentTint. Runtime state, not saved: what exposes a content colour (a border) sets it from its own property. */
 	FLinearColor ContentTint = FLinearColor::White;
@@ -1573,8 +1579,25 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=EDreamWidgetClipping::Disabled&&Clipping!=EDreamWidgetClipping::Inherit"))
 	FMargin ClippingMargin = FMargin(0);
+	/**
+	 * A mask on this widget's clip, when it clips to its bounds: a shape, a feathered edge, a texture or a procedural
+	 * pattern, inverted if asked. It clips the whole subtree, as the clip rect does. At its defaults it is no mask.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping==EDreamWidgetClipping::ClipToBounds||Clipping==EDreamWidgetClipping::ClipToBoundsWithoutIntersecting",
+		DreamGUI_Section = "Layer", DreamGUI_Group = "Mask", DreamGUI_Order = 40, DreamGUI_Handle = "MaskShape"))
+	FDreamClipMask ClipMask;
+	/**
+	 * Shows this widget and everything under it only where the layer below it is drawn, and through that layer's opacity:
+	 * a clipping mask. The layer below is the sibling drawn before this one that does not clip to the layer below itself,
+	 * so siblings that clip to the layer below in a row share one. It can be a simple or nine-sliced image or texture, or
+	 * a rect block; anything else is not clipped to, with a warning. A hidden layer below hides this too.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetClipToBelow", Setter = "SetClipToBelow", meta = (AllowPrivateAccess = true, DisplayName = "Clip To Layer Below",
+		DreamGUI_Section = "Layer", DreamGUI_Order = 30))
+	bool bClipToBelow = false;
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	// DreamGUI_Hidden: the lock on the Corner Radius row of the Clipping group.
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 	bool bUniformSetClippingCornerRadius = true;
 #endif
 	/**
@@ -1648,7 +1671,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSelf", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<UDreamLayoutSelf> LayoutSelf = nullptr;
 	/** Parent-panel-owned layout data. This is separate from LayoutSelf so legacy Flex/Grid assets remain valid. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "PanelSlot", Getter, meta = (AllowPrivateAccess = true))
+	// DreamGUI_Hidden: the slot's own properties are the Slot section's, for the panel the widget is in.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "PanelSlot", Getter, meta = (AllowPrivateAccess = true, DreamGUI_Hidden))
 	TObjectPtr<UDreamPanelSlot> PanelSlot = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter = "GetIsFocusable", Setter = "SetIsFocusable", meta = (AllowPrivateAccess = true))
@@ -1680,7 +1704,7 @@ protected:
 	 * few minutes would be paying rent for nothing. IDreamUITooltipSourceInterface remains the way to
 	 * choose the class at runtime; this is the authored answer for the common case.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true, DreamGUI_Section = "Behavior"))
 	TSubclassOf<UDreamUserWidget> ToolTipWidgetClass;
 	/**
 	 * Which way this widget's layout flows. Inherit -- the default, and what every asset authored
@@ -1730,6 +1754,49 @@ public:
 	void SetClippingCornerRadius(FVector4f Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetClippingMargin(FMargin Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	const FDreamClipMask& GetClipMask()const { return ClipMask; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetClipMask(const FDreamClipMask& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool GetClipToBelow()const { return bClipToBelow; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetClipToBelow(bool Value);
+	/**
+	 * The layer this widget clips to while it clips to the layer below (bClipToBelow): the sibling drawn before it that
+	 * does not clip to the layer below itself. Null when it does not, or when nothing is drawn before it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UDreamWidget* FindClipToBelowUnderlay()const;
+	/**
+	 * The textures the clips around this widget read changed: everything drawn through them, this widget and what is under
+	 * it, is batched again, since a draw call binds them.
+	 */
+	void MarkClipMaskTexturesChanged()const;
+	/** The layer group on this widget, while one is registered with it (UDreamLayerGroup). */
+	UDreamLayerGroup* GetLayerGroup()const;
+	/** Set by the layer group as it registers with this widget, and cleared as it unregisters. */
+	void SetLayerGroup(UDreamLayerGroup* InGroup);
+	/**
+	 * The mask this widget's clip is drawn and hit-tested with: the one a behaviour drives on it (SetDrivenClipMask), or
+	 * Clip Mask. While a mask is driven, a widget that does not clip to its bounds does -- Inherit as Clip To Bounds,
+	 * Disabled as Clip To Bounds Without Intersecting -- so that there is a clip for the mask to cut.
+	 */
+	const FDreamClipMask& GetEffectiveClipMask()const;
+	/**
+	 * For a behaviour that drives this widget's clip mask in place of Clip Mask while it runs (UDreamMaskTransition). InMask
+	 * is read on every update of the clip, and must stay where it is for as long as InDriver drives it; nothing of it is
+	 * saved, shown or written into Clip Mask. A null InMask stops InDriver's driving, and leaves another driver's alone.
+	 */
+	void SetDrivenClipMask(const UObject* InDriver, const FDreamClipMask* InMask);
+	/** The driven mask changed, and with bInTextureChanged the texture it reads: the clip takes it on its next update. */
+	void MarkDrivenClipMaskChanged(bool bInTextureChanged);
+	bool IsClipMaskDriven()const;
+private:
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	TWeakObjectPtr<const UObject> ClipMaskDriver;
+	const FDreamClipMask* DrivenClipMask = nullptr;
+public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }
@@ -2342,6 +2409,7 @@ private:
 private:
 	friend class FDreamWidgetCustomization;
 	friend class UDreamCanvas;
+	friend class FDreamUIClipData;
 	friend class FDreamCanvasHierarchyOrderTest;
 	/** Swaps arranged geometry out of AnchorData around prefab serialization; raw access, no side effects. */
 	friend class FDreamUIAuthoredGeometrySaveScope;
@@ -2373,6 +2441,8 @@ private:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
+	/** The children that clip to the layer below have their clips made again: which sibling is below one may have changed. */
+	void MarkChildrenClipToBelowDirty()const;
 	void MarkWidgetLayoutDirty();
 	
 	/** find root UIItem of hierarchy */

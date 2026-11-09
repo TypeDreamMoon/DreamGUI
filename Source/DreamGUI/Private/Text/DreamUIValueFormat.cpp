@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIValueFormat.h"
+#include "Core/DreamLayerStyleTypes.h"
 #include "DreamGUI.h"
 
 #include "Core/Text/DreamTextPaint.h"
@@ -60,6 +61,8 @@ namespace DreamUIValueFormatLocal
 		Margin,
 		/** FDreamGradient, written as its CSS in a string: its stops are an array, which nothing else could carry. */
 		Gradient,
+		/** FDreamStyleContour: a named shape as a bare word, a custom one as its points in a string (FDreamStyleContour::ToText). */
+		Contour,
 	};
 
 	/**
@@ -114,6 +117,10 @@ namespace DreamUIValueFormatLocal
 		if (Struct == FDreamGradient::StaticStruct())
 		{
 			return EShortForm::Gradient;
+		}
+		if (Struct == FDreamStyleContour::StaticStruct())
+		{
+			return EShortForm::Contour;
 		}
 		return EShortForm::None;
 	}
@@ -444,6 +451,7 @@ EDreamUIValueKind DreamUIValueFormat::GetShortFormLiteralKind(const FProperty* I
 	case EShortForm::Color:
 		return EDreamUIValueKind::HexColor;
 	case EShortForm::Gradient:
+	case EShortForm::Contour:
 		return EDreamUIValueKind::String;
 	default:
 		return EDreamUIValueKind::Identifier;
@@ -632,6 +640,24 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 		OutText = QuoteGradientText(Value.ToCss());
 		return true;
 	}
+	case EShortForm::Contour:
+	{
+		// A named shape is a word, as an enum value is; the points of a custom one need a string.
+		const FDreamStyleContour& Value = *static_cast<const FDreamStyleContour*>(InValuePtr);
+		for (const FDreamStyleContourPoint& Point : Value.Points)
+		{
+			if (Value.Shape == EDreamStyleContourShape::Custom && (!FMath::IsFinite(Point.Input) || !FMath::IsFinite(Point.Output)))
+			{
+				if (OutValueIsUnrepresentable != nullptr)
+				{
+					*OutValueIsUnrepresentable = true;
+				}
+				return false;
+			}
+		}
+		OutText = Value.Shape == EDreamStyleContourShape::Custom ? QuoteGradientText(Value.ToText()) : Value.ToText();
+		return true;
+	}
 	default:
 		return false;
 	}
@@ -748,6 +774,15 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 			return false;
 		}
 		return FDreamGradient::ParseCss(InValue.Raw, *static_cast<FDreamGradient*>(OutValuePtr));
+	}
+	case EShortForm::Contour:
+	{
+		// A word (a named shape) or a string (either spelling); ParseText leaves the destination alone when it refuses.
+		if (InValue.Kind != EDreamUIValueKind::String && InValue.Kind != EDreamUIValueKind::Identifier)
+		{
+			return false;
+		}
+		return FDreamStyleContour::ParseText(InValue.Raw, *static_cast<FDreamStyleContour*>(OutValuePtr));
 	}
 	default:
 		return false;

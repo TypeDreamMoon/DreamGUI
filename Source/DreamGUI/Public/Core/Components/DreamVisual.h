@@ -17,6 +17,10 @@ class UTexture;
 class UDreamCanvas;
 class UDreamVisualCustomRaycast;
 class UDreamVisual;
+struct FDreamUICompositeDesc;
+class FDreamUIImageEffect;
+/** Repeated from DreamUIBackdropEffects.h rather than included, as FDreamVisualPostProcessRenderProxyPtr is: the same type. */
+using FDreamUIImageEffectRef = TSharedPtr<const FDreamUIImageEffect, ESPMode::ThreadSafe>;
 
 /**
  * This component is only used when DreamVisual's RaycastType = Custom
@@ -186,6 +190,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		float GetFinalAlpha01()const;
 	/**
+	 * Whether the canvas draws this element as a group drawn already rather than as its geometry -- a texture put over the
+	 * element's rect through a group's composite (FDreamUICompositeDesc::bExternal) -- and what goes into that composite.
+	 * Asked as the canvas makes its draw calls and every frame after, while DrawsThroughComposite says so, and only on a
+	 * canvas that draws groups apart. False draws the element as it is.
+	 */
+	virtual bool GetCompositeSource(FDreamUICompositeDesc& OutDesc)const { return false; }
+	bool DrawsThroughComposite()const { return bDrawsThroughComposite; }
+	/**
+	 * An effect on the subtree of the widget this visual is on: the widget and its children are drawn as a group, and the
+	 * group's picture goes through the effect before it is put down (FDreamUICompositeDesc::Effect) -- an adjustment layer
+	 * or a stylize effect whose target is its own children. Asked as the canvas makes its draw calls and every frame after,
+	 * while DrawsChildrenThroughEffect says so, and only on a canvas that draws groups apart. The same effect, asked again,
+	 * until it changes. Null for none.
+	 */
+	virtual FDreamUIImageEffectRef GetChildrenEffect()const { return nullptr; }
+	bool DrawsChildrenThroughEffect()const { return bDrawsChildrenThroughEffect; }
+protected:
+	/** See GetCompositeSource: a subclass sets it while it has a composite to give. */
+	bool bDrawsThroughComposite = false;
+	/** See GetChildrenEffect: a subclass sets it while it has an effect for its children, and asks its canvas to rebuild. */
+	bool bDrawsChildrenThroughEffect = false;
+public:
+	/**
 	 * The colour this visual is drawn with: Color, times the content tint of every widget above it
 	 * (UDreamWidget::GetInheritedContentTint) and ColorMultiplier, in linear space, with the alpha then scaled by the
 	 * hierarchy's render opacity. Exactly Color with that alpha while both tints are white.
@@ -222,6 +249,13 @@ public:
 	 * cost of answering false is only that the exact test runs, so a subclass in doubt should not.
 	 */
 	virtual bool GetHitGeometryFitsWidgetRect()const;
+
+	/**
+	 * This element as the layer below a widget that clips to it (UDreamWidget::bClipToBelow): the shape it draws, in its
+	 * own frame, and the texture an image draws it from. False, with OutUnderlay.Unsupported saying why, for an element
+	 * whose shape a clip level cannot follow -- text, a tiled or filled image, a custom mesh -- which then clips nothing.
+	 */
+	virtual bool GetClipUnderlay(struct FDreamClipUnderlay& OutUnderlay) const;
 
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;

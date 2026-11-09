@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamUIBehaviour.h"
+#include "DreamUIRender/DreamUIBlendMode.h"
 #include "DreamRetainerBox.generated.h"
 
 class UDreamCanvas;
@@ -34,6 +35,11 @@ class UMaterialInterface;
  *   through each other on the way out. Retained, the subtree is composited first and the group alpha
  *   is applied once to the result -- exactly why UMG tells you to reach for a RetainerBox to fade a
  *   group.
+ *
+ * - The retained texture is put down through the composite a layer group's goes through
+ *   (UDreamLayerGroup, FDreamUICompositeDesc::bExternal): by GroupBlendMode, at GroupRenderOpacity,
+ *   through the clip DisplayVisual's widget is drawn with -- its own mask included. With an effect
+ *   material it is drawn through that material instead, as a textured quad, as it always was.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent), DisplayName = "Dream Retainer Box")
 class DREAMGUIEXTENSIONS_API UDreamRetainerBox : public UDreamUIBehaviour
@@ -78,6 +84,12 @@ public:
 		void SetGroupRenderOpacity(float Value);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		EDreamUIBlendMode GetGroupBlendMode()const { return GroupBlendMode; }
+	/** How the retained texture blends with what is behind it. Changing it redraws nothing but the composite. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetGroupBlendMode(EDreamUIBlendMode Value);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		UMaterialInterface* GetEffectMaterial()const { return EffectMaterial; }
 	/** Material the retained texture is drawn through; the texture arrives in TextureParameterName. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -103,6 +115,9 @@ protected:
 	/** Applied once to the composited subtree. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float GroupRenderOpacity = 1.0f;
+	/** How the retained texture blends with what is behind it (EDreamUIBlendMode). */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	EDreamUIBlendMode GroupBlendMode = EDreamUIBlendMode::Alpha;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TObjectPtr<UMaterialInterface> EffectMaterial = nullptr;
 	/** Texture parameter on EffectMaterial the retained texture is bound to. UMG calls this the same thing. */

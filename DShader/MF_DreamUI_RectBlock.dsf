@@ -17,19 +17,28 @@
 // artifact directory. Cleaning Intermediate, a hash change racing asset load, or simply not having
 // DreamShader installed all leave the include unresolvable, and UE drops it with only a warning, so
 // the material still "compiles" while the Custom node calls a function nothing declares.
+//
+// PaintDataTex is the world's paint rows (DreamUIShadeMaterial::PaintDataTextureParameter), which the canvas sets on every
+// UI material instance: the rect block's gradients are rows of it.
 Function SelfContained DreamUIRectBlock(in Texture2D MainTex, in float2 UV0, in float2 UV2, in float2 UV3,
-	in Texture2D DataTex, out float3 Color, out float Alpha)
+	in Texture2D DataTex, in Texture2D PaintDataTex, out float3 Color, out float Alpha)
 {
 	#include "/Plugin/DreamGUI/Private/DreamUIRectBlock.ush"
 	Color = float3(0, 0, 0);
 	Alpha = 0;
-	DreamUI_CalculateRectBlock(MainTex, MainTexSampler, UV0, UV2, UV3, DataTex, Color, Alpha);
+	DreamUI_CalculateRectBlock(MainTex, MainTexSampler, UV0, UV2, UV3, DataTex, PaintDataTex, Color, Alpha);
 }
 
 ShaderFunction(Name="Materials/MF_DreamUI_RectBlock", Root="Plugin.DreamGUI")
 {
 	Properties = {
 		TextureObjectParameter DreamUI_RectBlockDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		// The world's paint rows. Black until the canvas sets them: it reads as no gradient, so a gradient draws as the plain
+		// colour rather than from garbage.
+		TextureObjectParameter DreamUI_PaintDataTexture = Path(Engine, "EngineResources/Black") [
 			Group="DreamUI";
 			SamplerType="SAMPLERTYPE_Color";
 		];
@@ -51,7 +60,7 @@ ShaderFunction(Name="Materials/MF_DreamUI_RectBlock", Root="Plugin.DreamGUI")
 
 		float3 OutColor;
 		float OutAlpha;
-		DreamUIRectBlock(MainTexture, UV0, UV2, UV3, DreamUI_RectBlockDataTexture, OutColor, OutAlpha);
+		DreamUIRectBlock(MainTexture, UV0, UV2, UV3, DreamUI_RectBlockDataTexture, DreamUI_PaintDataTexture, OutColor, OutAlpha);
 
 		Color = OutColor;
 		Alpha = OutAlpha;
@@ -60,6 +69,7 @@ ShaderFunction(Name="Materials/MF_DreamUI_RectBlock", Root="Plugin.DreamGUI")
 	Layout = {
 		Node(Var="MainTexture", X=-512, Y=224);
 		Node(Var="DreamUI_RectBlockDataTexture", X=-512, Y=704);
+		Node(Var="DreamUI_PaintDataTexture", X=-512, Y=832);
 		Node(Var="UV0", X=-512, Y=352);
 		Node(Var="UV2", X=-512, Y=448);
 		Node(Var="UV3", X=-512, Y=544);

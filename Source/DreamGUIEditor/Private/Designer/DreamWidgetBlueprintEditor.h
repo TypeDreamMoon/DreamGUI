@@ -83,6 +83,9 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowSafeZone = false;
+	/** Outline the clip mask of each selected widget that has one: its shape where it cuts, in the clip's own frame. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowClipMasks = true;
 	/**
 	 * Shrink the design canvas by the project's DPI curve, the way UMG's designer does.
 	 *
@@ -340,6 +343,9 @@ public:
 	/** The title-safe overlay, on its own switch rather than riding the resolution guides. */
 	bool GetShowSafeZone() const;
 	void ToggleShowSafeZone();
+	/** The selected widgets' clip mask outlines. */
+	bool GetShowClipMasks() const;
+	void ToggleShowClipMasks();
 	/** Preview the project's DPI curve on the design canvas, the way UMG's designer surface does. */
 	bool GetPreviewDPIScale() const;
 	void TogglePreviewDPIScale();

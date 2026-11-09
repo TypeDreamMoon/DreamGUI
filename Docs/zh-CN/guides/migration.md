@@ -84,6 +84,8 @@ description: "将项目迁移到 DreamGUI 1.0"
 - **当操作栏条目的条目类带有按钮时，提示就是一个按钮。** 条目类是 `UDreamButton`，或预置件中包含 `UUIButton` 时，现在点击、轻触或确认会运行其操作。一个自己接线了点击处理器来运行操作的项目会执行两次；它应移除自己的处理器。
 - **在关卡中面板上打开的菜单和下拉列表会留在面板上。** 从世界空间面板打开的弹出窗口，或从被网格显示的渲染目标中绘制的画布打开的弹出窗口，会出现在该面板自身根画布之上，而不是玩家的屏幕上，就像 UMG 控件组件的菜单留在它的窗口中一样。它会被面板裁剪并按面板的透视绘制，并且在任何外部按下（包括屏幕）时关闭。一个依赖此类列表平铺绘制在 HUD 上的游戏应从它自己的屏幕空间控件显示它。在屏幕根下查找已打开弹出窗口的代码（`UDreamScreenUISubsystem`）会找到在面板根控件下打开的那个；`UDreamUIPopupLayer::IsOpen` 和 `GetOpenPopups` 对两者都作出回答。根控件会布局其子项的面板（如盒子、网格）也会布局放在它上面的弹出窗口；这样的面板会把布局保留在根的子项上。
 - **`UDreamUIActionTrigger::SetAction` 会在活动控件上立即绑定。** 一个在控件已存在后才给触发器的操作命名的界面，并通过隐藏和显示控件让按键生效，可以去掉这一步；其他什么都不变。一个提前在活动按钮上命名操作、意味着按键只在之后生效的界面，应在按键该开始生效时设置该操作。
+- **RectBlock 的渐变有了色标。** `BodyGradient` 和 `BorderGradient`（`FDreamGradient`）代替两色渐变的属性；两色属性照样从资产和 `.dui` 里读入，渐变没有色标时画成两个色标：项目什么都不用做，画面每通道最多差一级。在设计器里第一次改动这样的渐变，会写入色标，并把 `.dui` 里的两色行换成渐变的一行。C++ 和蓝图里的 `SetBodyGradientColor`、`…Center`、`…Radius`、`…Rotation`、两个单位模式的 setter 和描边的同名函数标为 deprecated（仍然可用，有色标后改的是第一个色标、中心、半径和角度）；改用 `SetBodyGradient` / `SetBorderGradient`。这些 getter 现在按值返回（`FColor GetBodyGradientColor() const`），只影响取了它们地址的代码；`GetBorderGradientCenterUnitMode` 现在返回描边渐变中心的单位模式，而不是圆角半径的。自己用旧参数调用 `DreamUI_CalculateRectBlock` 的材质会把渐变画成纯色；在数据纹理之后传入渐变行（`DreamUI_PaintDataTexture`）即可画出渐变。见[渐变与视口手柄](../concepts/gradients.md)。
+- **径向渐变的椭圆随 `Angle` 旋转。** 径向渐变的角度不是 0 或 180 的文字涂色会画成旋转后的椭圆；把角度设回 180 就是原来的样子。
 
 `UDreamSpinBox` 或列表族的 C++ 子类若重写 `NativeOnKeyDown`，应调用 `Super` 来保留这些按键，就像基类对任何按键作出回答一样。
 

@@ -3,6 +3,10 @@
 
 #include "DreamWidgetEditorHierarchyViewItem.h"
 #include "DreamWidgetBlueprint.h"
+#include "Designer/DreamUILayerEffects.h"
+#include "TimerManager.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SButton.h"
 
 #include "ClassIconFinder.h"
 #include "DetailLayoutBuilder.h"
@@ -26,9 +30,28 @@
 #include "Core/Components/DreamVisual.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp
+#include "Workflow/DreamUIPresetLibrary.h"//FDreamUIPresetDragDropOp
+#include "Workflow/DreamUILayerStyleDialog.h"
+#include "Widgets/Layout/SBorder.h"
+#if PLATFORM_WINDOWS
+#include "Windows/WindowsHWrapper.h"
+#endif
 #include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetEditorHierarchyViewItem"
+
+namespace DreamWidgetEditorHierarchyViewItemLocal
+{
+	/** How long a second click may follow a first and make a double-click: the desktop's setting where it has one. */
+	float DoubleClickSeconds()
+	{
+#if PLATFORM_WINDOWS
+		return static_cast<float>(::GetDoubleClickTime()) / 1000.0f;
+#else
+		return 0.5f;
+#endif
+	}
+}
 
 
 TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New(const TArray<UDreamWidget*>& InWidgets)
@@ -512,6 +535,15 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 				.IsSelected(this, &SDreamWidgetEditorHierarchyViewItem::IsSelectedExclusively)
 			]
 
+			// What makes it a layer: a mark for each kind of effect on it.
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4, 0, 0, 0)
+			[
+				MakeLayerMarks()
+			]
+
 			// What the widget is made of. Every row here is a UDreamWidget, so the name is the only
 			// thing telling a text block from a horizontal box unless the type is printed as well.
 			+SHorizontalBox::Slot()
@@ -570,6 +602,161 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 		InOwnerTableView);
 }
 
+TSharedRef<SWidget> SDreamWidgetEditorHierarchyViewItem::MakeLayerMarks()
+{
+	TSharedRef<SHorizontalBox> Marks = SNew(SHorizontalBox);
+	for (uint8 Kind = 0; Kind < static_cast<uint8>(EDreamUILayerEffectKind::Count); ++Kind)
+	{
+		Marks->AddSlot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SButton)
+			.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
+			.ContentPadding(FMargin(1, 0))
+			.Visibility(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkVisibility, Kind)
+			.ToolTipText(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip, Kind)
+			.OnClicked(this, &SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked, Kind)
+			[
+				// The image's border takes the double-click before the button does, which would read it as a click.
+				SNew(SBorder)
+				.BorderImage(FAppStyle::GetNoBrush())
+				.Padding(0.0f)
+				.OnMouseDoubleClick_Lambda([this, Kind](const FGeometry&, const FPointerEvent&) { return OnLayerMarkDoubleClicked(Kind); })
+				[
+					SNew(SImage)
+					.Image(DreamUILayerEffects::KindIcon(static_cast<EDreamUILayerEffectKind>(Kind)))
+					.ColorAndOpacity(this, &SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor, Kind)
+				]
+			]
+		];
+	}
+	return Marks;
+}
+
+const TArray<FDreamUILayerEffect>& SDreamWidgetEditorHierarchyViewItem::GetLayerEffects() const
+{
+	if (CachedLayerEffectsFrame != GFrameCounter)
+	{
+		CachedLayerEffectsFrame = GFrameCounter;
+		CachedLayerEffects.Reset();
+		DreamUILayerEffects::Collect(Widget.Get(), CachedLayerEffects);
+	}
+	return CachedLayerEffects;
+}
+
+EVisibility SDreamWidgetEditorHierarchyViewItem::GetLayerMarkVisibility(uint8 InKind) const
+{
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) == InKind)
+		{
+			return EVisibility::Visible;
+		}
+	}
+	return EVisibility::Collapsed;
+}
+
+FSlateColor SDreamWidgetEditorHierarchyViewItem::GetLayerMarkColor(uint8 InKind) const
+{
+	// Dimmed while everything of the kind that can be turned off is off.
+	bool bAnySwitch = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) != InKind || !DreamUILayerEffects::HasSwitch(Effect))
+		{
+			continue;
+		}
+		bAnySwitch = true;
+		if (DreamUILayerEffects::IsOn(Effect))
+		{
+			return FSlateColor::UseForeground();
+		}
+	}
+	return bAnySwitch ? FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 0.3f)) : FSlateColor::UseForeground();
+}
+
+FText SDreamWidgetEditorHierarchyViewItem::GetLayerMarkToolTip(uint8 InKind) const
+{
+	TArray<FString> Lines;
+	bool bAnySwitch = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) != InKind)
+		{
+			continue;
+		}
+		const bool bSwitch = DreamUILayerEffects::HasSwitch(Effect) && Effect.SwitchUnavailable.IsEmpty();
+		bAnySwitch |= bSwitch;
+		Lines.Add(FString::Printf(TEXT("%s%s: %s"), *Effect.Name.ToString(),
+			bSwitch && !DreamUILayerEffects::IsOn(Effect) ? *LOCTEXT("LayerMarkOff", " (off)").ToString() : TEXT(""), *Effect.Detail.ToString()));
+	}
+	if (bAnySwitch)
+	{
+		Lines.Add(LOCTEXT("LayerMarkClick", "Click to turn these off or on, to compare with and without them.").ToString());
+	}
+	if (InKind == static_cast<uint8>(EDreamUILayerEffectKind::Style))
+	{
+		Lines.Add(LOCTEXT("LayerMarkDoubleClick", "Double-click to open the Layer Style dialog.").ToString());
+	}
+	return FText::FromString(FString::Join(Lines, TEXT("\n")));
+}
+
+FReply SDreamWidgetEditorHierarchyViewItem::OnLayerMarkClicked(uint8 InKind)
+{
+	TArray<FDreamUILayerEffect> Switchable;
+	bool bAnyOn = false;
+	for (const FDreamUILayerEffect& Effect : GetLayerEffects())
+	{
+		if (static_cast<uint8>(Effect.Kind) == InKind && DreamUILayerEffects::HasSwitch(Effect) && Effect.SwitchUnavailable.IsEmpty())
+		{
+			Switchable.Add(Effect);
+			bAnyOn |= DreamUILayerEffects::IsOn(Effect);
+		}
+	}
+	if (Switchable.Num() == 0)
+	{
+		return FReply::Unhandled();
+	}
+	// After the click has returned: carrying the edit to the template can rebuild the preview, and with it this row.
+	if (GEditor != nullptr)
+	{
+		const auto Switch = [Switchable, bOn = !bAnyOn]()
+		{
+			const FScopedTransaction Transaction(bOn ? LOCTEXT("LayerMarkOn", "Turn Layer Effects On") : LOCTEXT("LayerMarkOffTransaction", "Turn Layer Effects Off"));
+			for (const FDreamUILayerEffect& Effect : Switchable)
+			{
+				DreamUILayerEffects::SetOn(Effect, bOn);
+			}
+		};
+		if (InKind == static_cast<uint8>(EDreamUILayerEffectKind::Style))
+		{
+			// The layer style's mark opens the Layer Style dialog on a double-click: its click waits to be no double-click's first.
+			GEditor->GetTimerManager()->SetTimer(PendingStyleSwitch, FTimerDelegate::CreateLambda(Switch),
+				DreamWidgetEditorHierarchyViewItemLocal::DoubleClickSeconds(), /*bLoop*/false);
+		}
+		else
+		{
+			GEditor->GetTimerManager()->SetTimerForNextTick(Switch);
+		}
+	}
+	return FReply::Handled();
+}
+
+FReply SDreamWidgetEditorHierarchyViewItem::OnLayerMarkDoubleClicked(uint8 InKind)
+{
+	if (InKind != static_cast<uint8>(EDreamUILayerEffectKind::Style))
+	{
+		return FReply::Unhandled();
+	}
+	if (GEditor != nullptr)
+	{
+		GEditor->GetTimerManager()->ClearTimer(PendingStyleSwitch);
+	}
+	DreamUILayerStyleDialog::OpenFrom(Widget.Get());
+	return FReply::Handled();
+}
+
 void SDreamWidgetEditorHierarchyViewItem::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	MouseEnter.ExecuteIfBound();
@@ -596,6 +783,11 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 	const UDreamWidget* LockOwner = DreamWidgetHierarchyDrop::GetLockOwnerForDropZone(Widget.Get(), DropZone);
 	if (LockOwner != nullptr && Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(LockOwner))return TOptional<EItemDropZone>();
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
+	// A preset from the preset library is applied to the row's widget: always onto it, never above or below.
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid())
+	{
+		return FDreamUIPresetDragDropOp::CanDropOnto(DragDropEvent, Widget.Get()) ? TOptional<EItemDropZone>(EItemDropZone::OntoItem) : TOptional<EItemDropZone>();
+	}
 	// Dropping an ASSET onto a hierarchy row used to nest a prefab under it, and the only check worth
 	// making was "not into itself". Nothing is placed from the content browser this way any more.
 	if (DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>().IsValid())
@@ -643,6 +835,12 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 }
 FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<UDreamWidget> TargetItem)
 {
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid())
+	{
+		const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = Manager.Pin();
+		return Designer.IsValid() && FDreamUIPresetDragDropOp::DropOnto(DragDropEvent, *Designer, Widget.Get())
+			? FReply::Handled() : FReply::Unhandled();
+	}
 	const bool bIsDrop = true;
 	TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 	if (Zone.IsSet())

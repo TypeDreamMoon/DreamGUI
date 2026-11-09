@@ -142,8 +142,10 @@ A text's face, its outline and an overlay over its face can each be painted with
 `FDreamTextStyle` — `FacePaint`, `OutlinePaint`, `OverlayPaint` — each an `FDreamTextPaint` (`bEnabled`, a shared
 `Preset`, or a `Gradient` of its own).
 
-- **Kinds**: `Linear`, `Radial`, `Conic`, `Diamond` and `Corners` (four-corner, as TextMeshPro has it), up to 16 stops;
-  `Pad`, `Repeat` or `Reflect` beyond the ends; mixed in sRGB, linear light or Oklab.
+- **Kinds**: `Linear`, `Radial` (its ellipse turned by `Angle`), `Conic`, `Diamond`, `Reflected` (out from a line through
+  the centre, both ways alike) and `Corners` (four-corner, as TextMeshPro has it), up to 16 stops; `Pad`, `Repeat` or
+  `Reflect` beyond the ends; mixed in sRGB, linear light or Oklab. A rect block's body and border paint with the same
+  gradients (see [Gradients and viewport handles](gradients.md)).
 - **Written as CSS writes them**: `linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)`, in the details panel, in a
   `.dui`, or as a rich-text run. It is read as Chrome reads it but for two things: `to <corner>` takes a square's angle
   whatever the box's shape, and colour names are CSS's (`green` is #008000, where `<color=green>` is #00FF00).

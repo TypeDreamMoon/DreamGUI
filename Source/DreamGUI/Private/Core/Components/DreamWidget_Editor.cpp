@@ -85,6 +85,21 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		{
 			MarkClipDirty(true);
 		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, ClipMask))
+		{
+			// Read again on the next update, as the rect is; a texture is bound by the draw calls, made again now.
+			MarkClipDirty(false);
+			MarkClipMaskTexturesChanged();
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, bClipToBelow))
+		{
+			MarkClipDirty(true);
+			if (Parent.IsValid())
+			{
+				Parent->MarkChildrenClipToBelowDirty();
+			}
+			MarkClipMaskTexturesChanged();
+		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, SiblingIndex))
 		{
 			// Same order as SetSiblingIndex: settle the value first, then broadcast it.

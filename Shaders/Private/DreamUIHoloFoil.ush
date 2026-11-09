@@ -1,0 +1,43 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A holo foil over an element (UDreamHoloFoil, through the DreamUI_HoloFoil materials): rainbow bands that slide as the angle
+// of view changes, a glare across the card, and sparkles that twinkle as it turns -- all where the foil's mask says, added to
+// the element's own colour and kept within its alpha.
+
+#ifndef DREAMUI_HOLO_FOIL_USH
+#define DREAMUI_HOLO_FOIL_USH
+
+/** A cell's two values, 0..1, the same for every pixel of it. */
+float2 DreamUIHoloFoil_Hash(float2 Cell)
+{
+	return frac(sin(float2(dot(Cell, float2(12.9898, 78.233)), dot(Cell, float2(39.3468, 11.135)))) * float2(43758.5453, 24634.6345));
+}
+
+/**
+ * BaseColor and BaseAlpha the element's pixel (straight, linear), UV across the element. View: xy the angle of view (-1..1 across
+ * and up, the pointer's offset from the centre or the card's tilt), z the foil's strength, w the sparkles'. Pattern: x the bands
+ * across the element, y their angle (radians), z the sparkles' cells across, w the share of cells that sparkle.
+ */
+float3 DreamUIHoloFoil_Shade(float3 BaseColor, float BaseAlpha, float2 UV, Texture2D MaskTex, SamplerState MaskSampler,
+	Texture2D RainbowTex, SamplerState RainbowSampler, float4 View, float4 Pattern)
+{
+	const float2 Q = UV - 0.5;
+	const float2 Dir = float2(cos(Pattern.y), sin(Pattern.y));
+	const float2 Across = float2(-Dir.y, Dir.x);
+	// The bands slide along themselves as the view moves.
+	const float Band = dot(Q, Dir) * Pattern.x + dot(View.xy, float2(0.45, 0.3));
+	const float3 Rainbow = RainbowTex.SampleLevel(RainbowSampler, float2(frac(Band), 0.5), 0).rgb;
+	const float Mask = MaskTex.SampleLevel(MaskSampler, UV, 0).r;
+	// A glare along the bands, crossing the card the other way as the view moves.
+	const float Glare = pow(saturate(1.0 - abs(dot(Q - View.xy * 0.35, Across)) * 2.2), 3.0);
+	// A few cells sparkle, each at its own moment of the turn.
+	const float2 CellPosition = UV * max(Pattern.z, 1.0);
+	const float2 Hash = DreamUIHoloFoil_Hash(floor(CellPosition));
+	const float Twinkle = saturate(sin((View.x * 3.1 + View.y * 2.3 + Hash.y * 6.2831853) * 2.0) * 0.5 + 0.5);
+	const float Dot = saturate(1.0 - length(frac(CellPosition) - 0.5) * 3.0);
+	const float Sparkle = (Hash.x < Pattern.w ? 1.0 : 0.0) * Twinkle * Dot * Dot;
+	const float3 Foil = Rainbow * Mask * View.z * (0.35 + 0.65 * Glare) + Sparkle * View.w * Mask;
+	return BaseColor + Foil * BaseAlpha;
+}
+
+#endif // DREAMUI_HOLO_FOIL_USH

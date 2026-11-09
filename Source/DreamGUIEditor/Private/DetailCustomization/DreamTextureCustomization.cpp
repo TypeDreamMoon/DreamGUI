@@ -49,10 +49,6 @@ void FDreamTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureCustomization::ForceRefresh, WeakUtilities));
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		EDreamUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillOrigin));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial90));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial180));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial360));
 		// The three radial rows are transient editor-only mirrors of the one stored FillOrigin, which
 		// PostEditChangeProperty folds back whenever the user picks one; they come out of load at zero,
 		// so the row about to be added has to be refreshed from FillOrigin first - on every object the
@@ -98,22 +94,8 @@ void FDreamTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillAmount)));
 	}
 
-	if (DrawType != EDreamUISpriteDrawType::Sliced && DrawType != EDreamUISpriteDrawType::SlicedFrame)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, PixelsPerUnitMultiplier));
-	}
-
-	if (DrawType != EDreamUISpriteDrawType::Filled)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillMethod));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillOrigin));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillDirectionFlip));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillAmount));
-
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial90));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial180));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial360));
-	}
+	// The rest applies to one draw type only and shows for it by its EditCondition: the fill rows for Filled (drawn above,
+	// indented under the fill method, while they apply), the pixels per unit for the sliced ones.
 }
 void FDreamTextureCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {

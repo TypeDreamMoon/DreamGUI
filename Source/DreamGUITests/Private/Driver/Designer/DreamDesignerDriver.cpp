@@ -608,6 +608,23 @@ namespace DreamTests
 		return true;
 	}
 
+	bool FDreamDesignerDriver::DoubleClickAt(FIntPoint InPixel, const FKey& InButton)
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!ClickAt(InPixel, InButton) || !Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			return false;
+		}
+		// The second press comes as a double click, as Slate sends one, and its release as a plain release.
+		PressedButtons.Add(InButton);
+		const bool bHandled = Viewport->OnMouseButtonDoubleClick(Geometry, MakePointerEvent(LastScreenPosition, InButton)).IsEventHandled();
+		PumpFrame();
+		Release(InButton);
+		PumpFrame();
+		return bHandled;
+	}
+
 	bool FDreamDesignerDriver::DragFromTo(FIntPoint InFrom, FIntPoint InTo, int32 InSteps)
 	{
 		if (!CanTakePointerInput())

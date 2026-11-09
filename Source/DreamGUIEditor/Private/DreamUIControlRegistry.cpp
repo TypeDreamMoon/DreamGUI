@@ -79,6 +79,23 @@
 #include "MeshModifier/DreamMeshModifierPositionAsUV.h"
 #include "MeshModifier/DreamMeshModifierShadow.h"
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
+#include "Core/Components/DreamLayerGroup.h"
+#include "Core/Components/DreamLayerStyle.h"
+#include "Core/Components/DreamRectBlock.h"
+#include "Core/Components/DreamShapeBlendGroup.h"
+#include "Core/DreamUIAdjustment.h"
+#include "Core/DreamUIStylize.h"
+#include "Extensions/DreamMaskTransition.h"
+#include "Extensions/DreamPath.h"
+#include "Extensions/Effects/DreamAdjustmentLayer.h"
+#include "Extensions/Effects/DreamGlass.h"
+#include "Extensions/Effects/DreamHoloFoil.h"
+#include "Extensions/Effects/DreamPointerLight.h"
+#include "Extensions/Effects/DreamStylizeEffect.h"
+#include "Extensions/Effects/DreamTiltCard.h"
+#include "MeshModifier/DreamMeshModifierJelly.h"
+#include "MeshModifier/DreamMeshModifierTextOnPath.h"
+#include "MeshModifier/DreamMeshModifierWarp.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "DreamGUIEditorModule.h"
 #include "Editor.h"
@@ -273,6 +290,189 @@ namespace DreamUIControlRegistryLocal
 		{
 			Image->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultFrameRect());
 		}
+	}
+
+	// WHAT A LAYER EFFECT ARRIVES WITH.
+	//
+	// An effect at its class defaults often draws nothing at all -- an adjustment layer with no adjustments, a style with
+	// no effects in it, a group with nothing to group -- and a drop that shows nothing reads as a broken entry. Each of
+	// these puts down enough for the effect to be seen at once; every value is an ordinary authored one, edited and
+	// written back like any other.
+	static const FColor SampleColour(232, 150, 90);
+
+	static void SizeTo(UDreamWidget* InWidget, float InWidth, float InHeight)
+	{
+		InWidget->SetWidth(InWidth);
+		InWidget->SetHeight(InHeight);
+	}
+
+	static UDreamRectBlock* ConfigureSampleBlock(UDreamWidget* Root)
+	{
+		SizeTo(Root, 220.0f, 130.0f);
+		UDreamRectBlock* Block = Cast<UDreamRectBlock>(Root->GetVisual());
+		if (Block)
+		{
+			Block->SetBodyColor(SampleColour);
+			Block->SetCornerRadius(FVector4(16.0, 16.0, 16.0, 16.0));
+		}
+		return Block;
+	}
+
+	static UDreamRectBlock* CreateSampleBlockChild(UDreamWidget* Parent, const TCHAR* Name, FVector2D InSize, FVector2D InCentre, FColor InColour, float InCorner)
+	{
+		UDreamWidget* Child = NewObject<UDreamWidget>(Parent->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
+		Child->AssignNewWidgetGuid();
+		Child->SetDisplayName(Name);
+		Child->OnRegister();
+		Child->SetParent(Parent, false);
+		SizeTo(Child, InSize.X, InSize.Y);
+		Child->SetAnchoredPosition(InCentre);
+		UDreamRectBlock* Block = Cast<UDreamRectBlock>(Child->CreateNewVisual(UDreamRectBlock::StaticClass()));
+		if (Block)
+		{
+			Block->SetBodyColor(InColour);
+			Block->SetCornerRadius(FVector4(InCorner, InCorner, InCorner, InCorner));
+		}
+		return Block;
+	}
+
+	static void ConfigureLayerStyle(UDreamWidget* Root)
+	{
+		ConfigureSampleBlock(Root);
+		if (UDreamLayerStyle* Style = Root->GetComponent<UDreamLayerStyle>())
+		{
+			// A shadow alone is lost on a dark canvas, so a light stroke goes with it.
+			FDreamLayerEffects Effects;
+			FDreamStyleDropShadow& Shadow = Effects.DropShadows.AddDefaulted_GetRef();
+			Shadow.Distance = 10.0f;
+			Shadow.Size = 14.0f;
+			Shadow.Opacity = 0.6f;
+			FDreamStyleStroke& Stroke = Effects.Strokes.AddDefaulted_GetRef();
+			Stroke.Size = 3.0f;
+			Stroke.Color = FColor(250, 240, 220);
+			Style->SetStyle(Effects);
+		}
+	}
+
+	static void ConfigureLayerGroup(UDreamWidget* Root)
+	{
+		SizeTo(Root, 260.0f, 180.0f);
+		CreateSampleBlockChild(Root, TEXT("Back"), FVector2D(150.0, 100.0), FVector2D(-35.0, -20.0), SampleColour, 12.0f);
+		CreateSampleBlockChild(Root, TEXT("Front"), FVector2D(150.0, 100.0), FVector2D(35.0, 20.0), FColor(90, 130, 230), 12.0f);
+		if (UDreamLayerGroup* Group = Root->GetComponent<UDreamLayerGroup>())
+		{
+			// Faded as one: where the two overlap the back one does not show through, as it would with each faded.
+			Group->SetIsolation(EDreamLayerGroupIsolation::Isolated);
+			Group->SetGroupOpacity(0.6f);
+		}
+	}
+
+	static void ConfigureShapeBlendGroup(UDreamWidget* Root)
+	{
+		SizeTo(Root, 260.0f, 160.0f);
+		CreateSampleBlockChild(Root, TEXT("Left"), FVector2D(110.0, 110.0), FVector2D(-48.0, 0.0), SampleColour, 55.0f);
+		CreateSampleBlockChild(Root, TEXT("Right"), FVector2D(110.0, 110.0), FVector2D(48.0, 0.0), SampleColour, 55.0f);
+		if (UDreamShapeBlendGroup* Blend = Root->GetComponent<UDreamShapeBlendGroup>())
+		{
+			Blend->SetSmoothness(32.0f);
+		}
+	}
+
+	static void ConfigureMaskTransition(UDreamWidget* Root)
+	{
+		ConfigureSampleBlock(Root);
+		if (UDreamMaskTransition* Transition = Root->GetComponent<UDreamMaskTransition>())
+		{
+			// Part way through, so that what it hides shows.
+			Transition->SetProgress(0.6f);
+		}
+	}
+
+	static void ConfigureSampleBlockOnly(UDreamWidget* Root)
+	{
+		ConfigureSampleBlock(Root);
+	}
+
+	static UDreamText* ConfigureSampleText(UDreamWidget* Root, const TCHAR* InText)
+	{
+		SizeTo(Root, 320.0f, 60.0f);
+		UDreamText* Text = Cast<UDreamText>(Root->GetVisual());
+		if (Text)
+		{
+			Text->SetText(FText::FromString(InText));
+			Text->SetFontSize(36.0f);
+		}
+		return Text;
+	}
+
+	static void ConfigureWarp(UDreamWidget* Root)
+	{
+		ConfigureSampleText(Root, TEXT("Warped Text"));
+		if (UDreamMeshModifierWarp* Warp = Root->GetComponent<UDreamMeshModifierWarp>())
+		{
+			Warp->SetStyle(EDreamWarpStyle::Arc);
+			Warp->SetBend(50.0f);
+		}
+	}
+
+	static void ConfigureTextOnPath(UDreamWidget* Root)
+	{
+		ConfigureSampleText(Root, TEXT("Text on a path"));
+	}
+
+	static void ConfigureGlass(UDreamWidget* Root)
+	{
+		SizeTo(Root, 300.0f, 180.0f);
+		// Clear glass bends only its edge, which over a plain canvas is next to invisible; a little frost shows it at once.
+		if (UDreamGlass* Glass = Cast<UDreamGlass>(Root->GetVisual()))
+		{
+			Glass->SetFrost(0.35f);
+		}
+	}
+
+	static void ConfigureAdjustmentLayer(UDreamWidget* Root)
+	{
+		SizeTo(Root, 300.0f, 180.0f);
+		if (UDreamAdjustmentLayer* Layer = Cast<UDreamAdjustmentLayer>(Root->GetVisual()))
+		{
+			FDreamAdjustment BlackAndWhite;
+			BlackAndWhite.Type = EDreamAdjustmentType::BlackAndWhite;
+			Layer->SetAdjustments({ BlackAndWhite });
+		}
+	}
+
+	static void ConfigureStylize(UDreamWidget* Root)
+	{
+		SizeTo(Root, 300.0f, 180.0f);
+		if (UDreamStylizeEffect* Effect = Cast<UDreamStylizeEffect>(Root->GetVisual()))
+		{
+			FDreamStylizeLayer Crt;
+			Crt.Type = EDreamStylizeType::CRT;
+			Effect->SetLayers({ Crt });
+		}
+	}
+
+	static void ConfigurePath(UDreamWidget* Root)
+	{
+		SizeTo(Root, 260.0f, 120.0f);
+	}
+
+	/**
+	 * What an author calls a post-process Blueprint: "BP_FrostedPanel_C" is "Frosted Panel". The class's own display
+	 * name keeps both affixes ("BP Frosted Panel C"), and every Blueprint in a project carries the same two.
+	 */
+	static FString FriendlyBlueprintClassName(const UClass* InClass)
+	{
+		FString Name = InClass->GetName();
+		Name.RemoveFromEnd(TEXT("_C"));
+		for (const TCHAR* Prefix : { TEXT("BP_"), TEXT("WBP_"), TEXT("B_") })
+		{
+			if (Name.RemoveFromStart(Prefix, ESearchCase::CaseSensitive))
+			{
+				break;
+			}
+		}
+		return FName::NameToDisplayString(Name, /*bIsBool*/false);
 	}
 
 	/**
@@ -555,7 +755,7 @@ void FDreamUIControlRegistry::RefreshDynamicClasses()
 		if (UClass* Class = Pair.Value.Get())
 		{
 			FDreamUIControlDescriptor Descriptor = DreamUIControlRegistryLocal::MakeVisual(
-				*Pair.Key.ToString(), *Class->GetDisplayNameText().ToString(), DreamUIPaletteCategory::Effects, Class);
+				*Pair.Key.ToString(), *DreamUIControlRegistryLocal::FriendlyBlueprintClassName(Class), DreamUIPaletteCategory::Effects, Class);
 			Descriptors.Add(MoveTemp(Descriptor));
 		}
 	}
@@ -1005,10 +1205,20 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeVisual(TEXT("Ring"), TEXT("Ring"), DreamUIPaletteCategory::Shapes, UDreamRing::StaticClass()));
 	Register(MakeVisual(TEXT("Line2DRaw"), TEXT("2D Line"), DreamUIPaletteCategory::Shapes, UDream2DLineRaw::StaticClass()));
 	Register(MakeVisual(TEXT("Line2DChildren"), TEXT("2D Line (Children as Points)"), DreamUIPaletteCategory::Shapes, UDream2DLineChildrenAsPoints::StaticClass()));
+	auto WithConfigure = [](FDreamUIControlDescriptor InDescriptor, TFunction<void(UDreamWidget*)> InConfigure)
+	{
+		InDescriptor.NativeConfigure = MoveTemp(InConfigure);
+		return InDescriptor;
+	};
+	Register(WithConfigure(MakeVisual(TEXT("Path"), TEXT("Path"), DreamUIPaletteCategory::Shapes, UDreamPath::StaticClass()), ConfigurePath));
 
 	Register(MakeVisual(TEXT("BackgroundBlur"), TEXT("Background Blur"), DreamUIPaletteCategory::Effects, UDreamBackgroundBlur::StaticClass()));
 	Register(MakeVisual(TEXT("BackgroundPixelate"), TEXT("Background Pixelate"), DreamUIPaletteCategory::Effects, UDreamBackgroundPixelate::StaticClass()));
 	Register(MakeVisual(TEXT("PixelSort"), TEXT("Pixel Sort"), DreamUIPaletteCategory::Effects, UDreamPixelSort::StaticClass()));
+	// The effects that read what is drawn behind them. Each is a widget of its own, laid over what it changes.
+	Register(WithConfigure(MakeVisual(TEXT("Glass"), TEXT("Glass"), DreamUIPaletteCategory::Effects, UDreamGlass::StaticClass()), ConfigureGlass));
+	Register(WithConfigure(MakeVisual(TEXT("AdjustmentLayer"), TEXT("Adjustment Layer"), DreamUIPaletteCategory::Effects, UDreamAdjustmentLayer::StaticClass()), ConfigureAdjustmentLayer));
+	Register(WithConfigure(MakeVisual(TEXT("Stylize"), TEXT("Stylize"), DreamUIPaletteCategory::Effects, UDreamStylizeEffect::StaticClass()), ConfigureStylize));
 
 	Register(MakeVisual(TEXT("VisualEmpty"), TEXT("Empty Visual"), DreamUIPaletteCategory::Advanced, UDreamVisualEmpty::StaticClass()));
 	Register(MakeVisual(TEXT("Texture"), TEXT("Texture"), DreamUIPaletteCategory::Advanced, UDreamTexture::StaticClass()));
@@ -1028,6 +1238,14 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeComponent(TEXT("SpriteSequencePlayer"), TEXT("Sprite Sequence Player"), UUISpriteSequencePlayer::StaticClass(), UDreamSprite::StaticClass()));
 	Register(MakeComponent(TEXT("SpriteSheetTexturePlayer"), TEXT("Sprite Sheet Texture Player"), UUISpriteSheetTexturePlayer::StaticClass(), UDreamTexture::StaticClass()));
 	Register(MakeComponent(TEXT("UMGWidgetInteraction"), TEXT("UMG Widget Interaction"), UDreamUMGWidgetInteraction::StaticClass(), UDreamUMGWidget::StaticClass()));
+	// The layer effects that go on a widget rather than being one. Dropped, each comes on something it changes.
+	Register(WithConfigure(MakeComponent(TEXT("LayerStyle"), TEXT("Layer Style"), UDreamLayerStyle::StaticClass(), UDreamRectBlock::StaticClass()), ConfigureLayerStyle));
+	Register(WithConfigure(MakeComponent(TEXT("LayerGroup"), TEXT("Layer Group"), UDreamLayerGroup::StaticClass()), ConfigureLayerGroup));
+	Register(WithConfigure(MakeComponent(TEXT("ShapeBlendGroup"), TEXT("Shape Blend Group"), UDreamShapeBlendGroup::StaticClass()), ConfigureShapeBlendGroup));
+	Register(WithConfigure(MakeComponent(TEXT("MaskTransition"), TEXT("Mask Transition"), UDreamMaskTransition::StaticClass(), UDreamRectBlock::StaticClass()), ConfigureMaskTransition));
+	Register(WithConfigure(MakeComponent(TEXT("HoloFoil"), TEXT("Holo Foil"), UDreamHoloFoil::StaticClass(), UDreamRectBlock::StaticClass()), ConfigureSampleBlockOnly));
+	Register(WithConfigure(MakeComponent(TEXT("PointerLight"), TEXT("Pointer Light"), UDreamPointerLight::StaticClass(), UDreamRectBlock::StaticClass()), ConfigureSampleBlockOnly));
+	Register(WithConfigure(MakeComponent(TEXT("TiltCard"), TEXT("Tilt Card"), UDreamTiltCard::StaticClass(), UDreamRectBlock::StaticClass()), ConfigureSampleBlockOnly));
 
 	Register(MakeLayoutSelf(TEXT("AspectRatioLayout"), TEXT("Aspect Ratio"), UDreamLayoutSelfAspectRatio::StaticClass()));
 
@@ -1037,6 +1255,10 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeMeshModifier(TEXT("PositionAsUVModifier"), TEXT("Position as UV"), UDreamMeshModifierPositionAsUV::StaticClass(), UDreamImage::StaticClass(), ConfigureImage));
 	Register(MakeMeshModifier(TEXT("ShadowModifier"), TEXT("Shadow"), UDreamMeshModifierShadow::StaticClass(), UDreamImage::StaticClass(), ConfigureImage));
 	Register(MakeMeshModifier(TEXT("TextAnimationModifier"), TEXT("Text Animation"), UDreamMeshModifierTextAnimation::StaticClass(), UDreamText::StaticClass()));
+	// The mesh modifiers that bend what a widget draws: beside the other modifiers, each on something it bends.
+	Register(MakeMeshModifier(TEXT("WarpModifier"), TEXT("Warp"), UDreamMeshModifierWarp::StaticClass(), UDreamText::StaticClass(), ConfigureWarp));
+	Register(MakeMeshModifier(TEXT("JellyModifier"), TEXT("Jelly"), UDreamMeshModifierJelly::StaticClass(), UDreamRectBlock::StaticClass(), ConfigureSampleBlockOnly));
+	Register(MakeMeshModifier(TEXT("TextOnPathModifier"), TEXT("Text On Path"), UDreamMeshModifierTextOnPath::StaticClass(), UDreamText::StaticClass(), ConfigureTextOnPath));
 
 	// THE TWELVE BLUEPRINT PRESETS, retired into the legacy category.
 	//

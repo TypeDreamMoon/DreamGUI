@@ -43,6 +43,8 @@
 #include "Camera/CameraComponent.h"
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIClipData.h"
+#include "Core/Components/DreamLayerGroup.h"
+#include "Core/Components/DreamLayerStyle.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIRenderLayerTable.h"
 #include "Async/ParallelFor.h"
@@ -1693,9 +1695,17 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 		switch (DrawCall.Type)
 		{
 		case EDreamUIDrawCallType::ChildCanvas:
-			// Only a place in the order: the child canvas's own elements are its own canvas's business.
+		case EDreamUIDrawCallType::GroupBegin:
+		case EDreamUIDrawCallType::GroupEnd:
+			// Only a place in the order: the child canvas's own elements are its own canvas's business, and a group's box is
+			// worked out again every frame (UpdateCompositeBounds).
 			break;
 		case EDreamUIDrawCallType::BatchMesh:
+			// Elements of a mode that reads what is behind share a draw only while they do not overlap: one that moves may.
+			if (DreamUIBlend::ReadsBackdrop(DrawCall.BlendMode) && DrawCall.BatchMeshGeometryArray.Num() > 1)
+			{
+				return false;
+			}
 			for (int32 Index = 0; Index < DrawCall.BatchMeshGeometryArray.Num(); ++Index)
 			{
 				const FDreamUIGeometry* Batched = DrawCall.BatchMeshGeometryArray[Index].Get();
@@ -2486,6 +2496,7 @@ void UDreamCanvas::AppendRenderDataOf(UDreamWidget* Widget, TArray<FDreamUIRende
 			if (!DreamVisualDirectMesh->HaveValidData())return;
 			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
 			RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
+			RenderData.DirectMeshSegmentCount = FMath::Max(1, DreamVisualDirectMesh->GetSegmentCount());
 			RenderData.Widget = Widget;
 			OutRenderDataArray.Add(MoveTemp(RenderData));
 		}
@@ -2511,6 +2522,7 @@ void UDreamCanvas::VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrep
 			&& A.PostProcessBoundsMin2DInCanvasSpace == B.PostProcessBoundsMin2DInCanvasSpace
 			&& A.PostProcessBoundsMax2DInCanvasSpace == B.PostProcessBoundsMax2DInCanvasSpace
 			&& A.DirectMeshVisualObject == B.DirectMeshVisualObject
+			&& A.DirectMeshSegmentCount == B.DirectMeshSegmentCount
 			&& A.ChildCanvas == B.ChildCanvas;
 	};
 	int32 First = INDEX_NONE;
@@ -2631,6 +2643,12 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 	int32 Last3DDrawCall = INDEX_NONE;
 	auto CanFitInDrawCall = [&](const FDreamUIGeometry& InGeo, bool InIs2DUI, int32& OutDrawCallIndexToFitin){
 		const auto LastDrawCallIndex = InOutUIDrawCallList.Num() - 1;
+		/**
+		 * A mode that reads what is behind blends over a copy made before its draw: an element of one that overlaps another
+		 * in the draw would not see it. So such an element joins a draw of its mode only where it overlaps none of the
+		 * draw's elements; one it overlaps is drawn after, in a draw of its own.
+		 */
+		const bool bReadsBackdrop = DreamUIBlend::ReadsBackdrop(InGeo.BlendMode);
 		if (LastDrawCallIndex < 0)
 		{
 			return false;
@@ -2647,7 +2665,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			 * CanConsumeUIGeometryForBatchMesh rejects every draw-call that is not a BatchMesh.
 			 */
 			const auto& LastDrawCall = InOutUIDrawCallList[LastDrawCallIndex];
-			if (LastDrawCall.CanConsumeUIGeometryForBatchMesh(InGeo))
+			if (LastDrawCall.CanConsumeUIGeometryForBatchMesh(InGeo)
+				&& !(bReadsBackdrop && LastDrawCall.BatchMeshTreeNode->Overlap(DreamUIQuadTree::Rectangle(InGeo.BoundsMin2DInCanvasSpace, InGeo.BoundsMax2DInCanvasSpace))))
 			{
 				OutDrawCallIndexToFitin = LastDrawCallIndex;
 				return true;
@@ -2695,6 +2714,16 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			//can fit-in this drawcall but also overlap with it, then no need to go deeper because it must not batch in other deeper drawcall
 			if (OtherDrawCall.BatchMeshTreeNode->Overlap(DreamUIQuadTree::Rectangle(InGeo.BoundsMin2DInCanvasSpace, InGeo.BoundsMax2DInCanvasSpace)))
 			{
+				if (bReadsBackdrop)
+				{
+					// Drawn after this draw: in one of its mode further on that it overlaps nothing of, or in one of its own.
+					if (DeepestFit != INDEX_NONE)
+					{
+						OutDrawCallIndexToFitin = DeepestFit;
+						return true;
+					}
+					return false;
+				}
 				OutDrawCallIndexToFitin = i;
 				return true;
 			}
@@ -2757,6 +2786,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
 				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
+				DrawCallItem.MaskTextures = InItemGeo.MaskTextures;
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
@@ -2873,6 +2903,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 							DrawCallItem.Texture = ItemGeo.Texture;
 						}
 					}
+					//what it reads from the mask slots, the draw-call binds
+					DrawCallItem.MaskTextures.Take(ItemGeo.MaskTextures);
 					//add to this draw-call
 					DrawCallItem.BatchMeshVisualArray.Add(RenderData.BatchMeshVisualObject);
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
@@ -2893,9 +2925,13 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			break;
 		case EDreamUIDrawCallType::DirectMesh:
 			{
-				//every direct mesh is a draw-call
+				//every segment of a direct mesh is a draw-call, in segment order
 				bool is2DUIItem = true;//post process just use true because it not matter
-				PushSingleDrawCall(RenderData, EDreamUIDrawCallType::DirectMesh, is2DUIItem);
+				for (int32 Segment = 0; Segment < FMath::Max(1, RenderData.DirectMeshSegmentCount); ++Segment)
+				{
+					PushSingleDrawCall(RenderData, EDreamUIDrawCallType::DirectMesh, is2DUIItem);
+					InOutUIDrawCallList.Last().DirectMeshSegment = Segment;
+				}
 				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
 			}
 			break;
@@ -2904,6 +2940,33 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				//every postprocess is a draw-call
 				bool is2DUIItem = true;//post process just use true because it not matter
 				PushSingleDrawCall(RenderData, EDreamUIDrawCallType::PostProcess, is2DUIItem);
+				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
+			}
+			break;
+		case EDreamUIDrawCallType::GroupBegin:
+		case EDreamUIDrawCallType::GroupEnd:
+			{
+				// A group all of whose elements were culled holds nothing: it is left out. One drawn already holds nothing by design.
+				if (RenderData.Type == EDreamUIDrawCallType::GroupEnd && InOutUIDrawCallList.Num() > 0)
+				{
+					const FDreamUIDrawCall& Last = InOutUIDrawCallList.Last();
+					if (Last.Type == EDreamUIDrawCallType::GroupBegin && Last.Composite == RenderData.Composite
+						&& RenderData.Composite.IsValid() && !RenderData.Composite->bExternal)
+					{
+						InOutUIDrawCallList.Pop();
+						FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
+						break;
+					}
+				}
+				// A group's draws go into a texture of their own: nothing batches across where it opens or closes.
+				auto MarkerDrawCall = FDreamUIDrawCall(RenderData.Type);
+				MarkerDrawCall.Composite = RenderData.Composite;
+				MarkerDrawCall.LayerGroup = RenderData.LayerGroup;
+				MarkerDrawCall.CompositeVisual = RenderData.CompositeVisual;
+				MarkerDrawCall.EffectVisual = RenderData.EffectVisual;
+				MarkerDrawCall.LayerStyle = RenderData.LayerStyle;
+				MarkerDrawCall.bCompositeBegin = RenderData.Type == EDreamUIDrawCallType::GroupBegin;
+				InOutUIDrawCallList.Add(MoveTemp(MarkerDrawCall));
 				FitInDrawCallMinIndex = InOutUIDrawCallList.Num();
 			}
 			break;
@@ -3178,6 +3241,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.FrameNumber = GFrameCounter;
 				PreparedDrawCallData.bCullElementsOutsideCanvasRect = CullsElementsOutsideItsRect();
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
+				InsertCompositeMarkers(PreparedDrawCallData.DataArray);
 				PreparedDrawCallData.GeometryListsOnSections = UIMesh->GetMeshSectionGeometryLists();
 				//push to async thread
 				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
@@ -3355,12 +3419,22 @@ void UDreamCanvas::FinishDrawCallBatchData()
 		}
 	}
 	DrawCallsLeftToUpdate.Reset();
+	// The direct meshes whose vertices change every frame write them now, after this frame's simulation and before the frame's
+	// section updates go: what they send goes with the rest, and the groups' boxes below take their segments' boxes.
+	for (int32 Index = 0; Index < FrameRefreshDirectMeshes.Num(); ++Index)
+	{
+		if (UDreamVisualDirectMesh* DirectMesh = FrameRefreshDirectMeshes[Index].Get())
+		{
+			bRefreshMovedBounds |= DirectMesh->RefreshMeshSegments();
+		}
+	}
 	if (bRefreshMovedBounds)
 	{
 		DREAMUI_DETAIL_SCOPE(DreamUI_UpdateMeshBounds);
 		bRefreshMovedBounds = false;
 		UIMesh->UpdateLocalBounds();
 	}
+	UpdateCompositeBounds();
 	UIMesh->FlushRenderCommand();
 }
 
@@ -3404,6 +3478,8 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	UIMesh->PoolAllRenderSection();
 	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
 	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
+	// The direct meshes that write their segments every frame, as this build finds them (FinishDrawCallBatchData).
+	FrameRefreshDirectMeshes.Reset();
 	bool bNeedToUpdateBounds = false;
 	bool bAnySectionCreated = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
@@ -3417,6 +3493,28 @@ void UDreamCanvas::UpdateDrawCallMesh()
 				{
 					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Invalid DirectMesh draw-call, will ignore it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 					continue;
+				}
+				// How the canvas shades the segment, when the element leaves that to it: asked before the section is supplied, so
+				// that the element writes its vertices knowing it. The clip masks' textures are its widget's, as a batched
+				// element's are.
+				UDreamVisualDirectMesh* const DirectMesh = DrawCallItem.DirectMeshVisualObject.Get();
+				FDreamUIDirectMeshShading Shading;
+				DrawCallItem.bDirectMeshShaded = DirectMesh->GetSegmentShading(DrawCallItem.DirectMeshSegment, Shading);
+				if (DrawCallItem.bDirectMeshShaded)
+				{
+					DrawCallItem.bDirectMeshBuiltIn = Shading.bBuiltIn;
+					DrawCallItem.Texture = Shading.Texture;
+					DrawCallItem.Material = Shading.bBuiltIn ? nullptr : Shading.Material;
+					DrawCallItem.BlendMode = Shading.bBuiltIn ? Shading.BlendMode : EDreamUIBlendMode::Alpha;
+					const UDreamWidget* DirectMeshWidget = DirectMesh->GetWidget();
+					if (TSharedPtr<FDreamUIClipData> Clip = DirectMeshWidget != nullptr ? DirectMeshWidget->GetClipData().Pin() : nullptr)
+					{
+						Clip->GetMaskTextures(DrawCallItem.MaskTextures);
+					}
+				}
+				if (DrawCallItem.DirectMeshSegment == 0 && DirectMesh->WantsFrameRefresh())
+				{
+					FrameRefreshDirectMeshes.Add(DirectMesh);
 				}
 				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(EDreamUIRenderSectionType::DirectMesh, &DrawCallItem);
 				bAnySectionCreated = true;
@@ -3463,8 +3561,20 @@ void UDreamCanvas::UpdateDrawCallMesh()
 				bNeedToUpdateBounds = true;
 			}
 			break;
+		case EDreamUIDrawCallType::GroupBegin:
+		case EDreamUIDrawCallType::GroupEnd:
+			{
+				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(EDreamUIRenderSectionType::Group, &DrawCallItem);
+				bAnySectionCreated = true;
+			}
+			break;
 		}
 	}
+	bHasCompositeDrawCalls = CurrentDrawCallData.DrawCallArray.ContainsByPredicate([](const FDreamUIDrawCall& InDrawCall)
+	{
+		return InDrawCall.IsGroupMarker()
+			|| ((InDrawCall.Type == EDreamUIDrawCallType::BatchMesh || (InDrawCall.Type == EDreamUIDrawCallType::DirectMesh && InDrawCall.bDirectMeshBuiltIn)) && DreamUIBlend::ReadsBackdrop(InDrawCall.BlendMode));
+	});
 
 	if (bAnySectionCreated)
 	{
@@ -3643,6 +3753,8 @@ FName UDreamCanvas::DreamUI_MainTextureMaterialParameterName = FName(TEXT("Dream
 FName UDreamCanvas::DreamUI_FontTextureMaterialParameterName = FName(TEXT("DreamUI_FontTexture"));
 FName UDreamCanvas::DreamUI_FontAtlasInfoMaterialParameterName = FName(TEXT("DreamUI_FontAtlasInfo"));
 FName UDreamCanvas::DreamUI_ClipDataTexture_MaterialParameterName = FName(TEXT("DreamUI_ClipDataTexture"));
+FName UDreamCanvas::DreamUI_ClipMaskTexture0_MaterialParameterName = FName(TEXT("DreamUI_ClipMaskTexture0"));
+FName UDreamCanvas::DreamUI_ClipMaskTexture1_MaterialParameterName = FName(TEXT("DreamUI_ClipMaskTexture1"));
 FName UDreamCanvas::DreamUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("DreamUI_WidgetPropertyDataTexture"));
 FName UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName = FName(TEXT("DreamUI_IsRenderByDreamUIRenderer"));
 
@@ -3691,6 +3803,8 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 				|| Item.Name == DreamUI_ClipDataTexture_MaterialParameterName
 				|| Item.Name == DreamUI_WidgetPropertyDataTexture_MaterialParameterName
 				|| Item.Name == DreamUIShadeMaterial::PaintDataTextureParameter
+				|| Item.Name == DreamUI_ClipMaskTexture0_MaterialParameterName
+				|| Item.Name == DreamUI_ClipMaskTexture1_MaterialParameterName
 				;
 		});
 	if (bHasTexture)
@@ -3804,6 +3918,14 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		}
 		switch (DrawCallItem.Type)
 		{
+		case EDreamUIDrawCallType::DirectMesh:
+			// A segment the element left to the canvas is shaded as a batched draw call is; any other keeps the material the
+			// element set on its section.
+			if (!DrawCallItem.bDirectMeshShaded || !DrawCallItem.RenderSection.IsValid())
+			{
+				break;
+			}
+			[[fallthrough]];
 		case EDreamUIDrawCallType::BatchMesh:
 			if (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr))
 			{
@@ -3830,6 +3952,9 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				Parameters.SetTexture(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
 				// A world with no paint rows leaves the material its own default, which MF_DreamUI_Shade makes black: no paint.
 				Parameters.SetTexture(DreamUIShadeMaterial::PaintDataTextureParameter, PaintRowsTexture);
+				// The clip masks' textures, which MF_DreamUI_Shade and MF_DreamUI_Clip read; none leaves the material its white default.
+				Parameters.SetTexture(DreamUI_ClipMaskTexture0_MaterialParameterName, DrawCallItem.MaskTextures.Slots[0].Get());
+				Parameters.SetTexture(DreamUI_ClipMaskTexture1_MaterialParameterName, DrawCallItem.MaskTextures.Slots[1].Get());
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				Parameters.SetVector(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
 				for (const TWeakObjectPtr<UDreamVisualBatchMesh>& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
@@ -3862,6 +3987,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				BuiltIn.RenderLayerTable = LayerTableTexture;
 				BuiltIn.RectBlockData = RectBlockRowsTexture;
 				BuiltIn.PaintData = PaintRowsTexture;
+				BuiltIn.MaskTexture0 = DrawCallItem.MaskTextures.Slots[0].Get();
+				BuiltIn.MaskTexture1 = DrawCallItem.MaskTextures.Slots[1].Get();
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
@@ -3882,7 +4009,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 			break;
 		case EDreamUIDrawCallType::PostProcess:
 		case EDreamUIDrawCallType::ChildCanvas:
-		case EDreamUIDrawCallType::DirectMesh:
+		case EDreamUIDrawCallType::GroupBegin:
+		case EDreamUIDrawCallType::GroupEnd:
 			{
 
 			}
@@ -4736,11 +4864,530 @@ void UDreamCanvas::PushAsyncFunction_TransformVertices(TFunction<void()> InFunct
 
 void UDreamCanvas::RemoveClipData(const TSharedPtr<FDreamUIClipData>& InClipData)
 {
-	RootCanvas->ClipDataList.Remove(InClipData);
+	// A widget's levels: its own, and the one for the layer below it that its own sits in (FDreamUIClipData::EKind::Below).
+	const UDreamWidget* Owner = InClipData.IsValid() ? InClipData->GetWidget() : nullptr;
+	if (Owner == nullptr)
+	{
+		RootCanvas->ClipDataList.Remove(InClipData);
+		return;
+	}
+	for (TSharedPtr<FDreamUIClipData> Level = InClipData; Level.IsValid() && Level->GetWidget() == Owner; )
+	{
+		TSharedPtr<FDreamUIClipData> Outer = Level->GetParent();
+		RootCanvas->ClipDataList.Remove(Level);
+		Level = Outer;
+	}
 }
 UTexture* UDreamCanvas::GetClipDataTexture()const
 {
 	return IsValid(RootCanvas->ClipDataAsTexture) ? RootCanvas->ClipDataAsTexture->GetDataTexture() : nullptr;
+}
+
+const TArray<FDreamUIDrawCall>& UDreamCanvas::GetCurrentDrawCalls() const
+{
+	return CurrentDrawCallData.DrawCallArray;
+}
+
+TSharedPtr<FDreamUIClipData> UDreamCanvas::MakeGroupMaskClipData(UDreamWidget* InWidget)
+{
+	if (!CheckRootCanvas() || !IsValid(RootCanvas->ClipDataAsTexture) || InWidget == nullptr)
+	{
+		return nullptr;
+	}
+	TSharedPtr<FDreamUIClipData> Clip = MakeShared<FDreamUIClipData>(nullptr, RootCanvas->ClipDataAsTexture, InWidget, FDreamUIClipData::EKind::GroupMask);
+	RootCanvas->ClipDataList.Add(Clip);
+	return Clip;
+}
+
+bool UDreamCanvas::CanDrawGroupsApart()const
+{
+	// Whatever DreamGUI's own renderer draws: a screen-space canvas -- drawn into the world in an editor world (CheckUIMesh),
+	// as the designer draws its own -- a render-target one, and a world-space one drawn by it. A world-space canvas the
+	// engine's renderer draws, as a primitive of the scene, is the one that cannot.
+	return IsRenderByDreamUIRendererOrUERenderer();
+}
+
+namespace DreamCanvasCompositeLocal
+{
+	/** Whether a widget clipping to InUnderlay is clipped by a group: the layer below is something no clip level can follow. */
+	bool UnderlayIsComposited(const UDreamWidget* InUnderlay)
+	{
+		FDreamClipUnderlay Below;
+		return IsValid(InUnderlay) && !FDreamUIClipData::DescribeUnderlay(InUnderlay, Below) && !Below.bPending;
+	}
+
+	/** A widget's rect on the canvas, as a layer style's gradients and patterns are laid across it: xy its centre, zw its half size. */
+	FVector4f StyleRect(const FTransform& InCanvasTransform, const UDreamWidget* InWidget)
+	{
+		if (InWidget == nullptr)
+		{
+			return FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+		}
+		const FVector2D Pivot = InWidget->GetPivot();
+		const FVector LocalCentre(0.0, (0.5 - Pivot.X) * InWidget->GetWidth(), (0.5 - Pivot.Y) * InWidget->GetHeight());
+		const FVector OnCanvas = InCanvasTransform.InverseTransformPosition(InWidget->GetWorldMatrix().TransformPosition(LocalCentre));
+		const FVector Scale = InWidget->GetWorldTransform().GetScale3D() / InCanvasTransform.GetScale3D().ComponentMax(FVector(UE_KINDA_SMALL_NUMBER));
+		return FVector4f(static_cast<float>(OnCanvas.Y), static_cast<float>(OnCanvas.Z),
+			static_cast<float>(FMath::Abs(Scale.Y) * InWidget->GetWidth() * 0.5), static_cast<float>(FMath::Abs(Scale.Z) * InWidget->GetHeight() * 0.5));
+	}
+
+	/** Which of two composites over the same widgets is the outer: the layer below's, then a layer group's, then an element's. */
+	enum class EOrder : uint8
+	{
+		ClipBase,
+		ClipBody,
+		LayerGroup,
+		Element,
+	};
+}
+
+void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
+{
+	using namespace DreamCanvasCompositeLocal;
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_InsertCompositeMarkers);
+	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
+	// An element a material draws, by a mode the material cannot do: a group of one.
+	auto ElementNeedsGroup = [bUseBuiltInShader](const FDreamUIRenderData& InEntry)
+	{
+		if (InEntry.Type != EDreamUIDrawCallType::BatchMesh || !InEntry.BatchMeshGeometry.IsValid())
+		{
+			return false;
+		}
+		const FDreamUIGeometry& Geometry = *InEntry.BatchMeshGeometry;
+		return !DreamUIBlend::IsMaterialDecided(Geometry.BlendMode) && (Geometry.Material.IsValid() || !bUseBuiltInShader);
+	};
+	// A visual whose effect works on its own widget's subtree: that subtree is a group, through the effect.
+	auto ChildrenEffectVisualOf = [](const UDreamWidget* InWidget) -> UDreamVisual*
+	{
+		UDreamVisual* Visual = InWidget->GetVisual();
+		return Visual != nullptr && Visual->DrawsChildrenThroughEffect() ? Visual : nullptr;
+	};
+	// A widget whose layer style is drawn round what it draws apart (EDreamLayerStylePath::Group).
+	auto StyleApartOf = [](const UDreamWidget* InWidget) -> UDreamLayerStyle*
+	{
+		UDreamLayerStyle* Style = UDreamLayerStyle::Find(InWidget);
+		return Style != nullptr && Style->GetPath() == EDreamLayerStylePath::Group ? Style : nullptr;
+	};
+	bool bAnyWidget = false;
+	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
+	{
+		if (IsValid(Widget) && Widget->GetRenderCanvas() == this
+			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow()
+				|| ChildrenEffectVisualOf(Widget) != nullptr || StyleApartOf(Widget) != nullptr))
+		{
+			bAnyWidget = true;
+			break;
+		}
+	}
+	// An element drawn as a group drawn already (UDreamVisual::GetCompositeSource): its entry gives way to the group's markers.
+	auto CompositeVisualOf = [](const FDreamUIRenderData& InEntry) -> UDreamVisual*
+	{
+		UDreamVisualBatchMesh* Visual = InEntry.Type == EDreamUIDrawCallType::BatchMesh ? InEntry.BatchMeshVisualObject.Get() : nullptr;
+		return Visual != nullptr && Visual->DrawsThroughComposite() ? Visual : nullptr;
+	};
+	const bool bAnyElement = InOutData.ContainsByPredicate([&ElementNeedsGroup, &CompositeVisualOf](const FDreamUIRenderData& InEntry)
+	{
+		return ElementNeedsGroup(InEntry) || CompositeVisualOf(InEntry) != nullptr;
+	});
+	if (!CanDrawGroupsApart())
+	{
+		// The engine's renderer draws a canvas's elements through their materials, which blend as their own blend modes say.
+		if (!bWarnedBackdropNotRead && InOutData.ContainsByPredicate([](const FDreamUIRenderData& InEntry)
+			{
+				return InEntry.Type == EDreamUIDrawCallType::BatchMesh && InEntry.BatchMeshGeometry.IsValid() && DreamUIBlend::ReadsBackdrop(InEntry.BatchMeshGeometry->BlendMode);
+			}))
+		{
+			bWarnedBackdropNotRead = true;
+			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' is drawn by the engine's renderer (World Space - UE Renderer), where an element of a blend mode that reads what is behind it is drawn Normal. Those modes are drawn by DreamGUI's own renderer: on screen-space and render-target canvases, and on world-space ones in World Space - DreamUI Renderer.")
+				, GetWidget() != nullptr ? *GetWidget()->GetDisplayName() : TEXT("none"));
+		}
+	}
+	if (!bAnyWidget && !bAnyElement)
+	{
+		return;
+	}
+	if (!CanDrawGroupsApart())
+	{
+		if (!bWarnedGroupsNotApart && bAnyWidget)
+		{
+			bWarnedGroupsNotApart = true;
+			UE_LOG(DreamGUI, Warning, TEXT("Canvas '%s' is drawn by the engine's renderer (World Space - UE Renderer), where a layer group, and clipping to a layer below that is not an image or a rect block, are not drawn apart: they are drawn as if passed through. Groups are drawn apart by DreamGUI's own renderer: on screen-space and render-target canvases, and on world-space ones in World Space - DreamUI Renderer.")
+				, GetWidget() != nullptr ? *GetWidget()->GetDisplayName() : TEXT("none"));
+		}
+		return;
+	}
+	EnsureWidgetListIndex();
+
+	// Where each widget's subtree ends in the list, the list being in hierarchy order: one past its last descendant.
+	TArray<int32> SubtreeEnd;
+	SubtreeEnd.SetNumUninitialized(WidgetList.Num());
+	{
+		TArray<int32, TInlineAllocator<32>> Open;
+		for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+		{
+			const UDreamWidget* Widget = WidgetList[Index];
+			if (!IsValid(Widget))
+			{
+				SubtreeEnd[Index] = Index + 1;
+				continue;
+			}
+			const UDreamWidget* Parent = Widget->GetParent();
+			while (Open.Num() > 0 && WidgetList[Open.Last()] != Parent)
+			{
+				SubtreeEnd[Open.Pop(EAllowShrinking::No)] = Index;
+			}
+			Open.Add(Index);
+		}
+		while (Open.Num() > 0)
+		{
+			SubtreeEnd[Open.Pop(EAllowShrinking::No)] = WidgetList.Num();
+		}
+	}
+
+	struct FComposite
+	{
+		int32 First = 0;
+		int32 Last = 0;
+		EOrder Order = EOrder::LayerGroup;
+		TSharedPtr<FDreamUICompositeDesc> Desc;
+		TWeakObjectPtr<UDreamLayerGroup> Group;
+		TWeakObjectPtr<UDreamVisual> EffectVisual;
+		TWeakObjectPtr<UDreamLayerStyle> Style;
+		TObjectKey<UDreamWidget> Widget;
+	};
+	TArray<FComposite> Composites;
+	const uint32 IdBase = GetUniqueID() << 12;
+	auto AddComposite = [&Composites, IdBase](int32 InFirst, int32 InLast, EOrder InOrder, FDreamUICompositeDesc::ERole InRole, uint32 InId, const UDreamWidget* InWidget)
+		-> FComposite&
+	{
+		FComposite& Composite = Composites.AddDefaulted_GetRef();
+		Composite.First = InFirst;
+		Composite.Last = InLast;
+		Composite.Order = InOrder;
+		Composite.Desc = MakeShared<FDreamUICompositeDesc>();
+		Composite.Desc->Role = InRole;
+		Composite.Desc->Id = IdBase + InId;
+		Composite.Widget = InWidget;
+		return Composite;
+	};
+	uint32 NextId = 1;
+	if (bAnyWidget)
+	{
+		for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+		{
+			UDreamWidget* Widget = WidgetList[Index];
+			if (!IsValid(Widget) || Widget->GetRenderCanvas() != this)
+			{
+				continue;
+			}
+			// A layer group drawn apart, an effect on the widget's own subtree and a layer style round the subtree: one group, the
+			// effect run on its picture, which is then styled as it is put down (UDreamLayerStyle::StylesSubtree says when a style
+			// is round the subtree). A style round the widget's own element alone is a group of what the widget itself draws.
+			UDreamLayerGroup* Group = Widget->GetLayerGroup();
+			UDreamVisual* EffectVisual = ChildrenEffectVisualOf(Widget);
+			UDreamLayerStyle* Style = StyleApartOf(Widget);
+			const bool bIsolated = Group != nullptr && Group->IsIsolated();
+			const bool bSubtreeStyle = Style != nullptr && Style->StylesSubtree();
+			if (bIsolated || EffectVisual != nullptr || bSubtreeStyle)
+			{
+				FComposite& Composite = AddComposite(Index, SubtreeEnd[Index] - 1, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
+				if (bIsolated)
+				{
+					Composite.Group = Group;
+					Group->FillComposite(*Composite.Desc, this);
+				}
+				if (EffectVisual != nullptr)
+				{
+					Composite.EffectVisual = EffectVisual;
+					Composite.Desc->Effect = EffectVisual->GetChildrenEffect();
+				}
+				if (bSubtreeStyle)
+				{
+					Composite.Style = Style;
+					Composite.Desc->Style = Style->GetComposite();
+				}
+			}
+			else if (Style != nullptr)
+			{
+				FComposite& Composite = AddComposite(Index, Index, EOrder::LayerGroup, FDreamUICompositeDesc::ERole::Group, NextId++, Widget);
+				Composite.Style = Style;
+				Composite.Desc->Style = Style->GetComposite();
+			}
+			// The first of the widgets that clip to one layer below that no clip level follows: the layer and they make a
+			// group, the layer put down as it is and they only where it has alpha.
+			if (!Widget->GetClipToBelow())
+			{
+				continue;
+			}
+			UDreamWidget* Underlay = Widget->FindClipToBelowUnderlay();
+			const int32* UnderlayPlace = Underlay != nullptr ? WidgetListIndex.Find(TObjectKey<UDreamWidget>(Underlay)) : nullptr;
+			if (UnderlayPlace == nullptr || !UnderlayIsComposited(Underlay))
+			{
+				continue;
+			}
+			const bool bFirstClipped = !Composites.ContainsByPredicate([Underlay](const FComposite& InComposite)
+			{
+				return InComposite.Order == EOrder::ClipBody && InComposite.Widget == TObjectKey<UDreamWidget>(Underlay);
+			});
+			if (!bFirstClipped)
+			{
+				continue;
+			}
+			// What clips to it: this widget and the siblings after it that clip to the layer below too, with their subtrees.
+			int32 BodyLast = SubtreeEnd[Index] - 1;
+			for (int32 Next = SubtreeEnd[Index]; Next < WidgetList.Num(); Next = SubtreeEnd[Next])
+			{
+				const UDreamWidget* Sibling = WidgetList[Next];
+				if (!IsValid(Sibling) || Sibling->GetParent() != Widget->GetParent() || !Sibling->GetClipToBelow())
+				{
+					break;
+				}
+				BodyLast = SubtreeEnd[Next] - 1;
+			}
+			const uint32 ClipId = NextId++;
+			// The layer below: its own element, or its whole subtree when it is a layer group drawn apart or draws nothing of its
+			// own -- a container is the layer its children make.
+			const UDreamLayerGroup* UnderlayGroup = Underlay->GetLayerGroup();
+			const bool bSubtree = (UnderlayGroup != nullptr && UnderlayGroup->IsIsolated()) || Underlay->GetVisual() == nullptr;
+			const int32 BaseLast = bSubtree ? SubtreeEnd[*UnderlayPlace] - 1 : *UnderlayPlace;
+			AddComposite(*UnderlayPlace, BaseLast, EOrder::ClipBase, FDreamUICompositeDesc::ERole::ClipBase, ClipId, Underlay);
+			AddComposite(Index, BodyLast, EOrder::ClipBody, FDreamUICompositeDesc::ERole::ClipBody, ClipId, Underlay);
+		}
+	}
+
+	// Each entry's place in the list, which the composites are measured in: an entry of a widget no longer in the list keeps
+	// the place of the one before it.
+	TArray<int32> Places;
+	Places.SetNumUninitialized(InOutData.Num());
+	// The entries drawn as groups drawn already, with their composites.
+	TMap<int32, TSharedPtr<FDreamUICompositeDesc>> Drawn;
+	{
+		int32 LastPlace = 0;
+		for (int32 Index = 0; Index < InOutData.Num(); ++Index)
+		{
+			const int32* Place = WidgetListIndex.Find(InOutData[Index].Widget);
+			LastPlace = Place != nullptr ? *Place : LastPlace;
+			Places[Index] = LastPlace;
+			if (UDreamVisual* Visual = bAnyElement ? CompositeVisualOf(InOutData[Index]) : nullptr)
+			{
+				TSharedPtr<FDreamUICompositeDesc> Desc = MakeShared<FDreamUICompositeDesc>();
+				if (Visual->GetCompositeSource(*Desc))
+				{
+					Desc->Id = IdBase + NextId++;
+					Drawn.Add(Index, Desc);
+					continue;
+				}
+			}
+			if (bAnyElement && ElementNeedsGroup(InOutData[Index]))
+			{
+				FComposite& Composite = AddComposite(LastPlace, LastPlace, EOrder::Element, FDreamUICompositeDesc::ERole::Group, NextId++, nullptr);
+				Composite.Desc->BlendMode = InOutData[Index].BatchMeshGeometry->BlendMode;
+			}
+		}
+	}
+	if (Composites.Num() == 0 && Drawn.Num() == 0)
+	{
+		return;
+	}
+	// Outer first: earlier, then longer, then by kind.
+	Composites.StableSort([](const FComposite& A, const FComposite& B)
+	{
+		if (A.First != B.First)
+		{
+			return A.First < B.First;
+		}
+		if (A.Last != B.Last)
+		{
+			return A.Last > B.Last;
+		}
+		return A.Order < B.Order;
+	});
+
+	TArray<FDreamUIRenderData> Out;
+	Out.Reserve(InOutData.Num() + Composites.Num() * 2);
+	TArray<int32, TInlineAllocator<16>> Open;
+	auto Emit = [&Out, &Composites](int32 InComposite, bool bInBegin)
+	{
+		const FComposite& Composite = Composites[InComposite];
+		FDreamUIRenderData Marker(bInBegin ? EDreamUIDrawCallType::GroupBegin : EDreamUIDrawCallType::GroupEnd);
+		Marker.Composite = Composite.Desc;
+		Marker.LayerGroup = Composite.Group;
+		Marker.EffectVisual = Composite.EffectVisual;
+		Marker.LayerStyle = Composite.Style;
+		Marker.Widget = Composite.Widget;
+		Out.Add(MoveTemp(Marker));
+	};
+	int32 NextComposite = 0;
+	for (int32 Index = 0; Index < InOutData.Num(); ++Index)
+	{
+		const int32 Place = Places[Index];
+		while (Open.Num() > 0 && Composites[Open.Last()].Last < Place)
+		{
+			Emit(Open.Pop(EAllowShrinking::No), false);
+		}
+		for (; NextComposite < Composites.Num() && Composites[NextComposite].First <= Place; ++NextComposite)
+		{
+			// One that ended before this entry has nothing in it to draw, and is left out.
+			if (Composites[NextComposite].Last >= Place)
+			{
+				Emit(NextComposite, true);
+				Open.Add(NextComposite);
+			}
+		}
+		if (const TSharedPtr<FDreamUICompositeDesc>* Desc = Drawn.Find(Index))
+		{
+			// Its texture is put down where the element would have been drawn, and the element is not drawn.
+			for (const bool bBegin : { true, false })
+			{
+				FDreamUIRenderData Marker(bBegin ? EDreamUIDrawCallType::GroupBegin : EDreamUIDrawCallType::GroupEnd);
+				Marker.Composite = *Desc;
+				Marker.CompositeVisual = InOutData[Index].BatchMeshVisualObject.Get();
+				Marker.Widget = InOutData[Index].Widget;
+				Out.Add(MoveTemp(Marker));
+			}
+			continue;
+		}
+		// An element's own group holds that entry alone, whatever else its widget has.
+		Out.Add(MoveTemp(InOutData[Index]));
+		while (Open.Num() > 0 && Composites[Open.Last()].Order == EOrder::Element)
+		{
+			Emit(Open.Pop(EAllowShrinking::No), false);
+		}
+	}
+	while (Open.Num() > 0)
+	{
+		Emit(Open.Pop(EAllowShrinking::No), false);
+	}
+	InOutData = MoveTemp(Out);
+}
+
+void UDreamCanvas::UpdateCompositeBounds()
+{
+	if (!bHasCompositeDrawCalls || !IsValid(UIMesh))
+	{
+		return;
+	}
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateCompositeBounds);
+	const FTransform& MeshTransform = UIMesh->GetComponentTransform();
+	const FMatrix CanvasToWorld = MeshTransform.ToMatrixWithScale();
+	struct FOpen
+	{
+		int32 DrawCall = INDEX_NONE;
+		FBox Bounds = FBox(ForceInit);
+		/** It holds something whose box is not known: it covers the view. */
+		bool bWhole = false;
+	};
+	TArray<FOpen, TInlineAllocator<8>> Open;
+	auto Send = [this, &CanvasToWorld, &MeshTransform](const FOpen& InOpen)
+	{
+		FDreamUIDrawCall& Marker = CurrentDrawCallData.DrawCallArray[InOpen.DrawCall];
+		FDreamUICompositeDesc Desc = Marker.Composite.IsValid() ? *Marker.Composite : FDreamUICompositeDesc();
+		if (UDreamLayerGroup* Group = Marker.LayerGroup.Get())
+		{
+			Group->FillComposite(Desc, this);
+		}
+		if (const UDreamVisual* Visual = Marker.CompositeVisual.Get())
+		{
+			// Drawn already: the element says where, and with what, every frame; it holds nothing to box.
+			const uint32 Id = Desc.Id;
+			Desc = FDreamUICompositeDesc();
+			Desc.Id = Id;
+			if (!Visual->GetCompositeSource(Desc))
+			{
+				Desc.Textures = FDreamUIBuiltInDrawParams();
+				Desc.bExternal = true;
+			}
+		}
+		else
+		{
+			// Nothing of what it holds drew a box: a box of nothing, so that it takes no more than a pixel or two.
+			Desc.WorldBounds = InOpen.bWhole ? FBox(ForceInit) : (InOpen.Bounds.IsValid ? InOpen.Bounds : FBox(CanvasToWorld.GetOrigin(), CanvasToWorld.GetOrigin()));
+		}
+		if (const UDreamVisual* EffectVisual = Marker.EffectVisual.Get())
+		{
+			// The effect its picture goes through, and the room the effect reads beyond what the group draws.
+			Desc.Effect = EffectVisual->GetChildrenEffect();
+			if (Desc.Effect.IsValid() && Desc.WorldBounds.IsValid && Desc.Effect->GetReach() > 0.0f)
+			{
+				Desc.WorldBounds = Desc.WorldBounds.ExpandBy(Desc.Effect->GetReach() * CanvasToWorld.GetMaximumAxisScale());
+			}
+		}
+		if (const UDreamLayerStyle* Style = Marker.LayerStyle.Get())
+		{
+			// The style it is put down by, the room its effects reach out into, and the rect they are laid across.
+			Desc.Style = Style->GetComposite();
+			if (Desc.Style.IsValid() && Desc.WorldBounds.IsValid && Desc.Style->GetReach() > 0.0f)
+			{
+				Desc.WorldBounds = Desc.WorldBounds.ExpandBy(Desc.Style->GetReach() * CanvasToWorld.GetMaximumAxisScale());
+			}
+			Desc.StyleRect = DreamCanvasCompositeLocal::StyleRect(MeshTransform, Style->GetWidget());
+		}
+		Desc.CanvasToWorld = CanvasToWorld;
+		UIMesh->SetGroupSectionComposite(Marker.RenderSection, Desc);
+	};
+	for (int32 Index = 0; Index < CurrentDrawCallData.DrawCallArray.Num(); ++Index)
+	{
+		FDreamUIDrawCall& DrawCall = CurrentDrawCallData.DrawCallArray[Index];
+		FBox Box(ForceInit);
+		bool bUnknown = false;
+		switch (DrawCall.Type)
+		{
+		case EDreamUIDrawCallType::GroupBegin:
+			Open.AddDefaulted_GetRef().DrawCall = Index;
+			continue;
+		case EDreamUIDrawCallType::GroupEnd:
+			if (Open.Num() > 0)
+			{
+				const FOpen Closed = Open.Pop(EAllowShrinking::No);
+				Send(Closed);
+				if (Open.Num() > 0)
+				{
+					Open.Last().Bounds += Closed.Bounds;
+					Open.Last().bWhole |= Closed.bWhole;
+				}
+			}
+			continue;
+		case EDreamUIDrawCallType::BatchMesh:
+			if (DrawCall.CanvasBounds.IsValid)
+			{
+				Box = DrawCall.CanvasBounds.TransformBy(MeshTransform);
+			}
+			if (DreamUIBlend::ReadsBackdrop(DrawCall.BlendMode))
+			{
+				UIMesh->SetMeshSectionBackdropBounds(DrawCall.RenderSection, Box);
+			}
+			break;
+		case EDreamUIDrawCallType::PostProcess:
+			Box = FBox(FVector(0.0, DrawCall.PostProcessBoundsMin2DInCanvasSpace.X, DrawCall.PostProcessBoundsMin2DInCanvasSpace.Y)
+				, FVector(0.0, DrawCall.PostProcessBoundsMax2DInCanvasSpace.X, DrawCall.PostProcessBoundsMax2DInCanvasSpace.Y)).TransformBy(MeshTransform);
+			break;
+		default:
+			// A direct mesh and a child canvas are boxed by their sections, in the world already, once they have one.
+			if (DrawCall.RenderSection.IsValid() && DrawCall.RenderSection->BoundingBox.IsValid)
+			{
+				Box = DrawCall.RenderSection->BoundingBox;
+			}
+			else
+			{
+				bUnknown = true;
+			}
+			// A segment the built-in shader draws in a mode that reads what is behind it copies what its box covers, as a batch does.
+			if (DrawCall.Type == EDreamUIDrawCallType::DirectMesh && DrawCall.bDirectMeshBuiltIn && DreamUIBlend::ReadsBackdrop(DrawCall.BlendMode))
+			{
+				UIMesh->SetMeshSectionBackdropBounds(DrawCall.RenderSection, Box);
+			}
+			break;
+		}
+		if (Open.Num() > 0)
+		{
+			Open.Last().Bounds += Box;
+			Open.Last().bWhole |= bUnknown;
+		}
+	}
+	while (Open.Num() > 0)
+	{
+		Send(Open.Pop(EAllowShrinking::No));
+	}
 }
 
 FTransform2D UDreamCanvas::ConvertTo2DTransform(const FTransform& Transform)

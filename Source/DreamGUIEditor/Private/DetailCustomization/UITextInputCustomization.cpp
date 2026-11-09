@@ -36,43 +36,9 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		return;
 	}
 
-	// The layout builder is owned by the details view and is thrown away by the very refresh these
-	// delegates ask for, so a delegate must not capture it. IPropertyUtilities outlives a refresh; held
-	// weakly, since a delegate that is still registered must not keep the details view alive.
-	const TWeakPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
-
-	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI-Input");
-
-	auto InputTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, InputType));
-	InputTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
-	// Custom as the fallback because it is the value that hides NOTHING: a selection that disagrees
-	// still has objects using CustomValidation, and hiding it would hide a live property from them.
-	const auto InputType = (EUITextInputType)DreamDetailsMultiSelect::ValueOr<uint8>(
-		InputTypeHandle, (uint8)EUITextInputType::Custom);
-	if (InputType != EUITextInputType::Custom)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, CustomValidation));
-	}
-	auto DisplayTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, DisplayType));
-	DisplayTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
-	// Password for the same reason: it is the branch that hides nothing.
-	const auto DisplayType = (EUITextInputDisplayType)DreamDetailsMultiSelect::ValueOr<uint8>(
-		DisplayTypeHandle, (uint8)EUITextInputDisplayType::Password);
-	switch (DisplayType)
-	{
-	case EUITextInputDisplayType::Standard:
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, PasswordChar));
-		break;
-	case EUITextInputDisplayType::Password:
-		break;
-	}
-
-	auto AllowMultilineHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, bAllowMultiLine));
-	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
-	if (DreamDetailsMultiSelect::AllEqual(AllowMultilineHandle, false))
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, MultiLineSubmitFunctionKeys));
-	}
+	// The custom validation, the password character and the multi-line submit keys show by their EditConditions -- for a
+	// custom input type, a password display, a multi-line input -- so the panel needs no rebuilding when those change.
+	DetailBuilder.EditCategory("DreamGUI-Input");
 }
 void FUITextInputCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {

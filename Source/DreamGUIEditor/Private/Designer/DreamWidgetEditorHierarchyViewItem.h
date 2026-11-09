@@ -8,6 +8,8 @@
 #include "Widgets/Views/STreeView.h"
 #include "Widgets/Views/STableRow.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
+#include "Designer/DreamUILayerEffects.h"
+#include "Engine/TimerHandle.h"
 
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
@@ -121,7 +123,22 @@ private:
 
 	bool SupportDrop(UDreamWidget* Dragging, UDreamWidget* Current, EItemDropZone DropZone);
 
+	/** The marks after the name: one per kind of layer effect the widget has. */
+	TSharedRef<SWidget> MakeLayerMarks();
+	/** The widget's layer effects, gathered once per frame however many marks ask. */
+	const TArray<struct FDreamUILayerEffect>& GetLayerEffects() const;
+	EVisibility GetLayerMarkVisibility(uint8 InKind) const;
+	FSlateColor GetLayerMarkColor(uint8 InKind) const;
+	FText GetLayerMarkToolTip(uint8 InKind) const;
+	FReply OnLayerMarkClicked(uint8 InKind);
+	/** A double-click on the layer style's mark opens the Layer Style dialog, and the click before it switches nothing. */
+	FReply OnLayerMarkDoubleClicked(uint8 InKind);
+
 private:
+	mutable TArray<struct FDreamUILayerEffect> CachedLayerEffects;
+	mutable uint64 CachedLayerEffectsFrame = MAX_uint64;
+	/** A click on the layer style's mark, switching its effects once no double-click has followed it. */
+	FTimerHandle PendingStyleSwitch;
 	TWeakPtr<SDreamWidgetEditorHierarchyView> HierarchyView;
 	TWeakPtr<FDreamWidgetBlueprintEditor> Manager;
 	FSimpleDelegate MouseEnter;

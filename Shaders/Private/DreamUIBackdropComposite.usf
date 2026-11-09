@@ -1,0 +1,306 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// An effect that works on what is behind it, drawn back: the element's quad over the target, each pixel what was behind it
+// made over, as far as the element covers it -- its clips (their masks' textures too), its mask texture's red channel and,
+// in the world, the scene's depth. Drawn with no blend: the pixel is what was behind it (the copy made just before) mixed
+// with what the effect made of it, so an effect over a transparent target leaves it as transparent as it was.
+//
+// Permutations (DREAMUI_BACKDROP_EFFECT): 0 the effect's picture, made already, as it is (an adjustment, a stylize effect);
+// 1 a progressive blur, its strength map choosing a level of the blur pyramid at each pixel; 2 glass. Glass whose shape is a
+// shape blend's melted one (DREAMUI_GLASS_SHAPE_BLEND) has a permutation of its own, the only one that carries the shape.
+
+#include "/Engine/Public/Platform.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+#define DREAMUI_BACKDROP_PLAIN 0
+#define DREAMUI_BACKDROP_PROGRESSIVE_BLUR 1
+#define DREAMUI_BACKDROP_GLASS 2
+
+float4x4 LocalToClip;
+
+/** What was behind the element, copied just before: its first texel is the current target's pixel DreamUI_BackdropOrigin.xy. */
+Texture2D DreamUI_BackdropTex;
+/** xy: the current target's pixel of the copy's first texel, zw: the copy's size. */
+float4 DreamUI_BackdropOrigin;
+/** x: 1 for an alpha that says nothing (a viewport's picture), y: 1 for linear light, z: the element's width, w: its height. */
+float4 DreamUI_BackdropFlags;
+SamplerState DreamUI_LevelSampler;
+/** The effect's picture (plain), or the blur pyramid's levels, the first the copy itself and the rest at half its size. */
+Texture2D DreamUI_Level0;
+Texture2D DreamUI_Level1;
+Texture2D DreamUI_Level2;
+Texture2D DreamUI_Level3;
+Texture2D DreamUI_Level4;
+Texture2D DreamUI_Level5;
+
+Texture2D ClipDataTex;
+Texture2D DreamUI_MaskTex0;
+SamplerState DreamUI_MaskTexSampler0;
+Texture2D DreamUI_MaskTex1;
+SamplerState DreamUI_MaskTexSampler1;
+
+#if LEXUI_MASK
+Texture2D MaskTex;
+SamplerState MaskTexSampler;
+#endif
+
+#if LEXUI_BLEND_DEPTH
+Texture2D SceneDepthTex;
+SamplerState SceneDepthTexSampler;
+float4 SceneDepthTextureScaleOffset;
+float SceneDepthBlend;
+int SceneDepthFade;
+float2 ViewSizeInv;
+#endif
+
+/** Progressive blur: x the blur's strength, y the kind of map, z the most levels it reaches, w the texture's channel. */
+float4 DreamUI_StrengthParams;
+/** The map's points (linear: two ends; radial: centre and two radii) and, in DreamUI_StrengthRange, its two strengths and its pattern's frequency and seed. */
+float4 DreamUI_StrengthPoints;
+float4 DreamUI_StrengthRange;
+Texture2D DreamUI_StrengthTex;
+SamplerState DreamUI_StrengthSampler;
+
+/** Glass, as FDreamUIGlassParams: see FDreamUIBackdropGlassPS. */
+float4 DreamUI_GlassCorners;
+float4 DreamUI_GlassRefraction;
+float4 DreamUI_GlassTint;
+float4 DreamUI_GlassTone;
+float4 DreamUI_GlassHighlight;
+float4 DreamUI_GlassLight;
+
+#if DREAMUI_GLASS_SHAPE_BLEND
+/**
+ * The melted shape, as DreamUIShapeBlend.h lays it out (a header texel, four a member, at most 32), in the element's frame:
+ * units from its rect's centre, +Y down. DreamUIGlassShapeLayout::MaxTexels rows.
+ */
+#define DREAMUI_GLASS_SHAPE_ROWS 129
+float4 DreamUI_GlassShapeRows[DREAMUI_GLASS_SHAPE_ROWS];
+#define DREAMUI_SHAPE_BLEND_PARAMS
+#define DREAMUI_SHAPE_BLEND_ROW(i) DreamUI_GlassShapeRows[i]
+#include "/Plugin/DreamGUI/Private/DreamUIShapeBlend.ush"
+#if DREAMUI_GLASS_SHAPE_ROWS != DREAMUI_SHAPE_BLEND_HEADER_TEXELS + DREAMUI_SHAPE_BLEND_MAX_MEMBERS * DREAMUI_SHAPE_BLEND_MEMBER_TEXELS
+#error DREAMUI_GLASS_SHAPE_ROWS is not the size of a shape blend's record
+#endif
+#endif
+
+void MainVS(
+	in float3 Position : ATTRIBUTE0,
+	in float2 TextureCoord0 : ATTRIBUTE1,
+	in float2 TextureCoord1 : ATTRIBUTE2,
+	out float4 OutPosition : SV_POSITION,
+	out float2 OutUV : TEXCOORD0,
+	out float2 OutUV1 : TEXCOORD1,
+	out float3 OutLocal : TEXCOORD2,
+	out float4 OutClip : TEXCOORD3)
+{
+	OutPosition = mul(float4(Position, 1.0), LocalToClip);
+	OutClip = OutPosition;
+	OutUV = TextureCoord0;
+	OutUV1 = TextureCoord1;
+	OutLocal = Position;
+}
+
+/** What was behind the pixel, from the copy. */
+float4 DreamUIBackdrop_Behind(int2 Pixel)
+{
+	return DreamUI_BackdropTex.Load(int3(Pixel - int2(DreamUI_BackdropOrigin.xy), 0));
+}
+
+/** A level of the pyramid at the copy's UV. */
+float4 DreamUIBackdrop_Level(int Level, float2 UV)
+{
+	switch (Level)
+	{
+	case 0: return DreamUI_Level0.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	case 1: return DreamUI_Level1.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	case 2: return DreamUI_Level2.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	case 3: return DreamUI_Level3.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	case 4: return DreamUI_Level4.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	default: return DreamUI_Level5.SampleLevel(DreamUI_LevelSampler, UV, 0);
+	}
+}
+
+/** The pyramid between its levels, at a level that need not be whole. */
+float4 DreamUIBackdrop_Blurred(float Level, float2 UV)
+{
+	const float L = clamp(Level, 0.0, 5.0);
+	const int L0 = (int)floor(L);
+	const int L1 = min(L0 + 1, 5);
+	return lerp(DreamUIBackdrop_Level(L0, UV), DreamUIBackdrop_Level(L1, UV), L - L0);
+}
+
+/**
+ * The glass's shape, a signed distance in units from the element's centre, +Y down the element as a rect block measures it
+ * (DreamUIRectBlock.ush), so that the corners' radii are a rect block's in its order; or the shape a shape blend group melts
+ * its rect blocks into, measured in the same frame.
+ */
+float DreamUIGlass_Distance(float2 P, float2 HalfSize)
+{
+#if DREAMUI_GLASS_SHAPE_BLEND
+	float4 Colour;
+	return DreamUIShapeBlend_Distance(P, Colour);
+#else
+	return DreamUIClip_sdRoundRect(P, HalfSize, DreamUI_GlassCorners);
+#endif
+}
+
+/** The shape's outward normal at P, from the distance's slope; D is the distance at P. */
+float2 DreamUIGlass_Normal(float2 P, float2 HalfSize, float D)
+{
+	const float E = 0.5;
+#if DREAMUI_GLASS_SHAPE_BLEND
+	// One step ahead on each axis: three measures of the melted shape a pixel rather than five, each a pass over every member.
+	return normalize(float2(DreamUIGlass_Distance(P + float2(E, 0.0), HalfSize) - D, DreamUIGlass_Distance(P + float2(0.0, E), HalfSize) - D) + 1e-6);
+#else
+	return normalize(float2(DreamUIGlass_Distance(P + float2(E, 0.0), HalfSize) - DreamUIGlass_Distance(P - float2(E, 0.0), HalfSize),
+		DreamUIGlass_Distance(P + float2(0.0, E), HalfSize) - DreamUIGlass_Distance(P - float2(0.0, E), HalfSize)) + 1e-6);
+#endif
+}
+
+/** How high the glass stands at T, from 0 at its edge to 1 past the band: the profile its refraction follows. */
+float DreamUIGlass_Height(float T, float Profile)
+{
+	T = saturate(T);
+	if (Profile < 0.5)
+	{
+		// A squircle's quarter: steep at the edge, flat soon after.
+		const float U = 1.0 - T;
+		return sqrt(sqrt(1.0 - U * U * U * U));
+	}
+	if (Profile < 1.5)
+	{
+		const float U = 1.0 - T;
+		return sqrt(1.0 - U * U);
+	}
+	return T;
+}
+
+void MainPS(
+	float4 SvPosition : SV_POSITION,
+	float2 UV : TEXCOORD0,
+	float2 UV1 : TEXCOORD1,
+	float3 LocalPosition : TEXCOORD2,
+	float4 ClipPosition : TEXCOORD3,
+	out float4 OutColor : SV_Target0)
+{
+	const int2 Pixel = int2(SvPosition.xy);
+	const float4 Behind = DreamUIBackdrop_Behind(Pixel);
+	const float2 CopySize = DreamUI_BackdropOrigin.zw;
+	const float2 CopyUV = (SvPosition.xy - DreamUI_BackdropOrigin.xy) / CopySize;
+	float Coverage = DreamUI_CalculateClipDataMasked(ClipDataTex, DreamUI_MaskTex0, DreamUI_MaskTexSampler0, DreamUI_MaskTex1, DreamUI_MaskTexSampler1,
+		UV1.x, LocalPosition);
+#if LEXUI_MASK
+	Coverage *= MaskTex.Sample(MaskTexSampler, UV).r;
+#endif
+#if LEXUI_BLEND_DEPTH
+	{
+		const float PixelDepth = ClipPosition.z / ClipPosition.w;
+		float2 ScreenUV = ClipPosition.xy / ClipPosition.w * float2(0.5, -0.5) + 0.5;
+		ScreenUV = ScreenUV * SceneDepthTextureScaleOffset.xy + SceneDepthTextureScaleOffset.zw;
+		float Visible = 0.0;
+		int Count = 0;
+		for (int W = -SceneDepthFade; W <= SceneDepthFade; W++)
+		{
+			for (int H = -SceneDepthFade; H <= SceneDepthFade; H++)
+			{
+				Visible += step(SceneDepthTex.Sample(SceneDepthTexSampler, ScreenUV + float2(W, H) * ViewSizeInv).x, PixelDepth);
+				Count++;
+			}
+		}
+		Visible /= Count;
+		if (SceneDepthFade > 0)
+		{
+			Visible = smoothstep(0.0, 1.0, Visible);
+		}
+		Coverage = lerp(SceneDepthBlend * Coverage, Coverage, Visible);
+	}
+#endif
+
+#if DREAMUI_BACKDROP_EFFECT == DREAMUI_BACKDROP_PLAIN
+	const float4 Made = DreamUI_Level0.Load(int3(Pixel - int2(DreamUI_BackdropOrigin.xy), 0));
+	OutColor = lerp(Behind, Made, saturate(Coverage));
+
+#elif DREAMUI_BACKDROP_EFFECT == DREAMUI_BACKDROP_PROGRESSIVE_BLUR
+	// The map's strength at the element's point (UV 0..1, v down), times the blur's own, chooses the level.
+	float Map = 1.0;
+	const int Kind = (int)round(DreamUI_StrengthParams.y);
+	if (Kind == 1)
+	{
+		const float4 Texel = DreamUI_StrengthTex.Sample(DreamUI_StrengthSampler, UV);
+		const int Channel = (int)round(DreamUI_StrengthParams.w);
+		Map = Channel == 0 ? Texel.r : (Channel == 1 ? Texel.g : (Channel == 2 ? Texel.b : (Channel == 3 ? Texel.a : DreamUIBlend_Lum(Texel.rgb))));
+	}
+	else if (Kind == 2)
+	{
+		const float2 A = DreamUI_StrengthPoints.xy;
+		const float2 D = DreamUI_StrengthPoints.zw - A;
+		const float T = saturate(dot(UV - A, D) / max(dot(D, D), 1e-6));
+		Map = lerp(DreamUI_StrengthRange.x, DreamUI_StrengthRange.y, T);
+	}
+	else if (Kind == 3)
+	{
+		// Measured in the element's own units, so that a circle stays round on a wide element.
+		const float2 Aspect = float2(DreamUI_BackdropFlags.z / max(DreamUI_BackdropFlags.w, 1e-3), 1.0);
+		const float R = length((UV - DreamUI_StrengthPoints.xy) * Aspect);
+		const float T = saturate((R - DreamUI_StrengthPoints.z) / max(DreamUI_StrengthPoints.w - DreamUI_StrengthPoints.z, 1e-4));
+		Map = lerp(DreamUI_StrengthRange.x, DreamUI_StrengthRange.y, T);
+	}
+	else if (Kind == 4)
+	{
+		const float T = DreamUIClip_Pattern((uint)round(DreamUI_StrengthRange.z), UV, max(DreamUI_StrengthRange.w, 1e-3), asuint((int)round(DreamUI_StrengthPoints.x)));
+		Map = lerp(DreamUI_StrengthRange.x, DreamUI_StrengthRange.y, saturate(T));
+	}
+	const float Level = saturate(Map) * saturate(DreamUI_StrengthParams.x) * DreamUI_StrengthParams.z;
+	const float4 Made = DreamUIBackdrop_Blurred(Level, CopyUV);
+	OutColor = lerp(Behind, Made, saturate(Coverage));
+
+#elif DREAMUI_BACKDROP_EFFECT == DREAMUI_BACKDROP_GLASS
+	const float2 Size = DreamUI_BackdropFlags.zw;
+	const float2 P = (UV - 0.5) * Size;
+	const float D = DreamUIGlass_Distance(P, Size * 0.5);
+	const float Aa = max(fwidth(D), 1e-4);
+	Coverage *= saturate(0.5 - D / Aa);
+	// The outward normal, from the distance's slope; how far in from the edge; how high the glass stands there.
+	const float2 Normal = DreamUIGlass_Normal(P, Size * 0.5, D);
+	const float Inside = max(-D, 0.0);
+	const float Height = DreamUIGlass_Height(Inside / max(DreamUI_GlassRefraction.x, 1e-3), DreamUI_GlassRefraction.z);
+	// The edge bends the light in: a pixel there shows what is further in, as far as the glass is steep.
+	const float2 LocalOffset = -Normal * DreamUI_GlassRefraction.y * (1.0 - Height);
+	// Units to the target's pixels, through how the element's point moves from pixel to pixel (v runs down the screen).
+	const float2 Dx = ddx(P);
+	const float2 Dy = ddy(P);
+	const float Det = Dx.x * Dy.y - Dx.y * Dy.x;
+	float2 PixelOffset = 0.0;
+	if (abs(Det) > 1e-8)
+	{
+		PixelOffset = float2(LocalOffset.x * Dy.y - LocalOffset.y * Dy.x, LocalOffset.y * Dx.x - LocalOffset.x * Dx.y) / Det;
+	}
+	const float FrostLevel = saturate(DreamUI_GlassRefraction.w) * 5.0;
+	const float Spread = DreamUI_GlassTone.w;
+	const float4 Green = DreamUIBackdrop_Blurred(FrostLevel, CopyUV + PixelOffset / CopySize);
+	const float4 Red = DreamUIBackdrop_Blurred(FrostLevel, CopyUV + PixelOffset * (1.0 - Spread) / CopySize);
+	const float4 Blue = DreamUIBackdrop_Blurred(FrostLevel, CopyUV + PixelOffset * (1.0 + Spread) / CopySize);
+	const float4 Seen = float4(Red.r, Green.g, Blue.b, Green.a);
+	// Straight and encoded for the tint, the tone and the light.
+	const bool bOpaque = DreamUI_BackdropFlags.x > 0.5;
+	const float Alpha = bOpaque ? 1.0 : saturate(Seen.a);
+	float3 C = bOpaque ? Seen.rgb : (Seen.a > 1e-5 ? Seen.rgb / Seen.a : float3(0.0, 0.0, 0.0));
+	C = DreamUI_BackdropFlags.y > 0.5 ? DreamUIBlend_ToSrgb(saturate(C)) : saturate(C);
+	C = lerp(C, DreamUI_GlassTint.rgb, DreamUI_GlassTint.a);
+	const float L = DreamUIBlend_Lum(C);
+	C = saturate(L + (C - L) * DreamUI_GlassTone.x + DreamUI_GlassTone.y);
+	// The inner shadow, then the edge's highlight: strongest on the side facing the light, a little on the far side.
+	C *= 1.0 - DreamUI_GlassLight.w * (1.0 - saturate(Inside / max(DreamUI_GlassLight.z, 1e-3)));
+	// 0 degrees up the element (-Y here), clockwise.
+	const float Angle = DreamUI_GlassLight.y * 0.0174532925;
+	const float2 Light = float2(sin(Angle), -cos(Angle));
+	const float Facing = dot(Normal, Light);
+	const float Rim = 1.0 - saturate(Inside / max(DreamUI_GlassLight.x, 1e-3));
+	const float Shine = Rim * (saturate(Facing) + 0.35 * saturate(-Facing)) * DreamUI_GlassHighlight.a;
+	C = saturate(lerp(C, DreamUI_GlassHighlight.rgb, saturate(Shine)));
+	C = DreamUI_BackdropFlags.y > 0.5 ? DreamUIBlend_ToLinear(C) : C;
+	const float4 Made = bOpaque ? float4(C, Behind.a) : float4(C * Alpha, Alpha);
+	OutColor = lerp(Behind, Made, saturate(Coverage * DreamUI_GlassTone.z));
+#endif
+}

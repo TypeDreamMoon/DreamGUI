@@ -524,6 +524,15 @@ void SDreamWidgetDesignerDetails::OnComponentSelectionChanged(const TArray<TWeak
 	bIsSelectFromComponentList = false;
 }
 
+void SDreamWidgetDesignerDetails::ShowComponent(UDreamUIBehaviour* InComponent)
+{
+	if (ComponentEditor.IsValid() && IsValid(InComponent))
+	{
+		ComponentEditor->RefreshComponents();
+		ComponentEditor->SelectComponent(InComponent);
+	}
+}
+
 void SDreamWidgetDesignerDetails::Refresh()
 {
 	InvalidateReadOnlyCache();

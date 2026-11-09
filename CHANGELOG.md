@@ -13,6 +13,32 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
+  ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
+  a procedural pattern (linear, radial, angular, diamond, blinds, checker, noise), through a threshold and softness that
+  make wipes and dissolves, inverted if asked -- a spotlight. It clips the whole subtree on every path that draws it, and
+  can be hit-tested by the mask. A chain of clips with no mask costs and uploads exactly what it did. See
+  [Clip masks and clipping to the layer below](Docs/concepts/clip-masks.md).
+- **Clip to the layer below.** `bClipToBelow` shows a widget, and everything under it, only where the sibling drawn before
+  it is drawn and through that sibling's opacity: a clipping mask. The layer below can be a simple or nine-sliced image,
+  texture or sprite, or a rect block; anything else is not clipped to, with a warning.
+- **Blend modes.** `EDreamUIBlendMode` grows from three modes to 27: dissolve, darken, colour burn, linear burn, darker
+  colour, lighten, screen, colour dodge, lighter colour, overlay, soft light, hard light, vivid light, linear light, pin
+  light, hard mix, difference, exclusion, subtract, divide, hue, saturation, colour and luminosity, by the W3C compositing
+  formulas in encoded values. Screen, exclusion and dissolve are done by the blend hardware and batch as before; the rest
+  blend over a copy of what is behind, made per draw, and elements of one such mode share a draw while they do not
+  overlap. An element drawn through a material with one of the new modes is put down through a group of one. See
+  [Blend modes and layer groups](Docs/concepts/blend-modes-and-groups.md).
+- **Layer groups.** `UDreamLayerGroup` on a container draws its subtree into a texture of its own and puts it down as one:
+  `GroupOpacity` fades it without its children showing through each other, `GroupBlendMode` blends it as a whole,
+  `GroupMask` masks the composite. Inside an isolated group the children's modes blend with the group alone. Groups nest;
+  their textures come from the frame's pool. Clipping to a layer below that no clip level follows -- a text, a tiled image,
+  a container, a group -- is done through such a group, and `UDreamRetainerBox` puts its retained texture down through
+  the same composite (with a new `GroupBlendMode`). On every canvas DreamGUI's own renderer draws -- world-space
+  canvases in World Space - DreamUI Renderer and the designer's and the level editor's previews included, a group's
+  texture occluded by the scene as its elements are; a canvas the engine's renderer draws passes them through, with a
+  warning.
+
 - **View models.** A `.dui` file declares the view models its class holds in a `viewmodels { … }` block -- by class,
   with where each comes from: the host (a creation pin, `SetViewModel`, a host's `.dui` line), `= new`, `= global` /
   `= global "Name"` from the new `UDreamViewModelSubsystem`, or `= parent` from the nearest enclosing widget. Bindings,
@@ -74,8 +100,188 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   number of 15 degrees, and grid snapping leaves angles alone. The angle is written to `RelativeRotationEuler`, in the
   asset and in the `.dui` the class names, as one undo step; Esc during the drag puts the angle back. The pointer is a
   hand over the handle. Two widgets selected have no handle, and the 3D view keeps the engine's transform gizmo.
+- **Adjustment layers.** `UDreamAdjustmentLayer` works on what is behind it, as far as its rect, clips and masks reach: up
+  to eight operations in order -- brightness and contrast, levels, curves, exposure, hue and saturation (or colorize),
+  vibrance, colour balance, black and white, photo filter, channel mixer, invert, posterize, threshold, gradient map and a
+  lookup table -- mixed with what they were made from by any of the 27 blend modes and an opacity. With `Target` set to
+  `Children` it works on its own widget's subtree instead, drawn as a group. See
+  [Effects on what is behind](Docs/concepts/backdrop-effects.md).
+- **Progressive blur.** `UDreamBackgroundBlur` takes a `StrengthMap` -- a texture's channel, a linear or radial ramp, or
+  a clip mask's pattern -- and blurs each pixel as strongly as the map says there, from a blur pyramid over what is
+  behind. With no map it is the uniform blur it was.
+- **Glass.** `UDreamGlass` is a rounded rect of glass whose edge bends what is behind it, red and blue a little apart,
+  optionally frosted, tinted and lit along the edge; its corners are a rect block's, and a click outside them misses it.
+- **Stylize effects.** `UDreamStylizeEffect` lays up to eight layers over what is behind it or over its own children: a
+  CRT screen, a glitch (`TriggerBurst` flares it), chromatic aberration, a halftone screen of one ink or four, ordered
+  dithering, film grain, a vignette, posterization.
+- **Layer styles.** `UDreamLayerStyle` puts an image editor's layer style on any widget (`FDreamLayerEffects`): drop
+  shadows, an outer glow, inner shadows, an inner glow, a bevel and emboss (inner, outer, emboss, pillow, stroke; smooth or
+  chiselled), a satin, colour, gradient and pattern overlays and strokes (outside, inside, centred; colour, gradient or
+  pattern), each with its own blend mode, opacity and the dialog's own settings -- contours, noise, spread and choke,
+  range and jitter, global light. `UDreamLayerStylePreset` keeps one to share. A rect block draws its style in its own
+  pixels, batched as before; anything else -- a text, an image, a container's subtree, a layer group -- is drawn apart,
+  measured by a jump flood of its alpha, and put down layer by layer, each outer effect by its own mode. A rect block's own
+  shadows, border and gradient read and write as a layer style (`GetEffectsAsLayerStyle`, `SetEffectsFromLayerStyle`). See
+  [Layer styles, shape blends and light](Docs/concepts/layer-styles.md).
+- **Shape blends.** `UDreamShapeBlendGroup` melts the rect blocks among a container's children into one shape by a smooth
+  minimum -- a union, a cut or an intersection each, by `ShapeBlendOperation` -- drawn by the first of them in one quad, in
+  the members' blended colours, with the group's layer style round it; a click lands on the nearest member, by the same
+  formula.
+- **Pointer light, tilt card and holo foil.** `UDreamPointerLight` follows the pointer and lights the bevels of the layer
+  styles under it and the borders of the rect blocks under it (a reveal highlight); `UDreamTiltCard` tilts a widget towards
+  the pointer on a spring; `UDreamHoloFoil` draws an image or a rect block with a trading card's foil, its angle of view
+  the pointer's or a tilt card's.
+- **Glass in a melted shape.** `UDreamGlass` with `Shape` set to `ShapeBlend` takes the shape a shape blend group melts its
+  rect blocks into -- the group on the widget `ShapeBlendGroup` names, or on its own -- and is drawn over the whole of it,
+  wherever the members reach, its edge bending what is behind along the melted outline; a click lands on it wherever the
+  shape is. See [Effects on what is behind](Docs/concepts/backdrop-effects.md#glass).
+- **Mesh warps.** `UDreamMeshModifierWarp` bends what any batch-mesh visual draws -- an image, a rect block, a text
+  glyph by glyph -- by one of fifteen styles named as an image editor's text warp names them (arc, arc lower and upper,
+  arch, bulge, shell lower and upper, flag, wave, fish, rise, fisheye, inflate, squeeze, twist), with a bend and a
+  horizontal and vertical distortion, or by a Bezier lattice of 2 to 5 points each way, dragged in the designer's
+  viewport. The mesh is cut finer first along one grid shared by the whole mesh, every attribute interpolated, so rounded
+  corners, glyph distance fields and pixels bend with it; at rest it costs nothing. See
+  [Warps, jellies and text on a path](Docs/concepts/warp-and-text-on-path.md).
+- **Jellies.** `UDreamMeshModifierJelly` holds the mesh on a lattice of damped springs that lag behind the widget's
+  moves, squash while it is pressed, bounce when it is let go and stretch after a drag, stepped in fixed steps so that
+  the same frames give the same wobble; presses and drags pass on to the widget's button or scroll view.
+- **Text on a path.** `UDreamMeshModifierTextOnPath` lays a text's glyphs along a circle, an arc or the path a
+  `UDreamPath` widget draws (a new line visual through editable points, straight or smooth, open or closed, drawn or
+  not): aligned to its start, middle or end, spaced, lifted off it, flipped to its other side, scrolled along it, each
+  glyph turned whole or bent; a text animation's moves are kept.
+- **Modifier stages.** Mesh modifiers run in stages (`GetStage`): those that work on characters, text on a path, the
+  warps that cut the mesh, then the copies (shadow, outline, long shadow) -- which now copy a bent mesh whichever
+  component was added first.
+- **Mask transitions.** `UDreamMaskTransition` reveals or hides a widget's subtree through a moving clip mask -- wipe,
+  clock, iris, diamond, blinds, checker, dissolve, ink, shatter or a texture's order -- with softness, reverse, invert
+  and a centre; its `Progress` takes tweens and property tracks. `CrossFade` swaps two widgets through one shape, each
+  pixel shown by one of them, and `PlayScreenTransition` covers and uncovers the screen. Ink, shatter and checker read
+  textures made in code. It drives the widget's clip (`UDreamWidget::SetDrivenClipMask`, new) without touching its
+  `ClipMask`, and fully shown it costs nothing. See [Mask transitions](Docs/concepts/mask-transitions.md).
+- **Reversed clip masks.** `FDreamClipMask::bReverse` runs a texture's or pattern's value the other way before the
+  threshold: a gradient from right to left, a radial one from the edge in.
+- **Niagara particles.** A new module, `DreamGUINiagara`, draws Niagara systems on DreamGUI canvases: the `NiagaraSystem`
+  visual simulates a system with a component that renders nothing and is out of the scalability's reach, reads each CPU
+  emitter's sprite and ribbon renderers after the tick, and writes them as segments of its own -- one draw call each --
+  clipped, masked, blended and grouped like any element. Sprites keep their sheet frames and the blend between them, pivot,
+  rotation, alignment and sort; ribbons their ids, link order, both UV sets and a curve through their points. One unit is a
+  pixel on the widget's plane (XZ or XY); time can be paused, dilated, run while the game is paused, stepped at a fixed rate
+  and advanced. The built-in shader draws them with the particle material's texture and blend, or a converted UI material
+  does: **Convert Particle Materials** copies a particle material as a UI one, its particle inputs read from the vertex and
+  its opacity through DreamGUI's clip. A system that declares `User.DreamUI_WidgetSize`, `User.DreamUI_PointerPosition`,
+  `User.DreamUI_PointerInside` or `User.DreamUI_TargetPosition` is given it. `BurstAt` spawns the system again at a point,
+  `BurstTo` sends a flight -- the plugin's fly-to template by default -- to another widget, and the `Niagara Trigger`
+  component plays a system on clicks, the pointer coming and going, and a progress filling. GPU emitters and mesh renderers
+  are reported and not drawn yet. The plugin now depends on Niagara. See [Niagara particles](Docs/concepts/niagara.md).
+- **Direct-mesh segments.** A `UDreamVisualDirectMesh` can draw in several segments, a draw call each, can leave its
+  shading to the canvas -- the built-in shader or a material, with the clip, the clip masks' textures and the blend mode, as
+  a batched element is -- and can write its vertices every frame the canvas sends its sections.
+- **Layered document import.** A `.psd` or `.psb` imports as a DreamUI widget: a `.dui` laying its layers out as widgets,
+  their textures, and a widget Blueprint whose source the `.dui` is -- from a folder's DreamGUI menu, a commandlet
+  (`-run=DreamPsdImport`), or the Content Browser's Import once a setting says so. Pixel layers become images of trimmed
+  textures, groups containers (a layer group where they blend or fade), live rectangles and circles rect blocks, fills a
+  block's body, texts texts through a font map; masks become clip masks, clipping `bClipToBelow`, blend modes the 27
+  modes. Layer names can say `!skip`, `@Button` and `#9(l,t,r,b)`. Importing again edits the `.dui` the last import
+  wrote, keeping every node and line an author added and listing what it overwrote. Layer effects, adjustment layers and
+  text warps are read and listed, not imported yet. The new editor module is `DreamGUIPsd`. See
+  [Importing layered documents](Docs/guides/layered-document-import.md).
+- **Multi-stop gradients on rect blocks.** A rect block fills its body and draws its border with `BodyGradient` and
+  `BorderGradient`, each an `FDreamGradient` of up to 16 stops -- linear, radial, angle (conic), diamond, reflected or four
+  corners, the gradients a text paints with, from the same rows of the world's paint rows -- in place of the two-colour
+  radial gradient, by the built-in shader and through the rect block's material (`MF_DreamUI_RectBlock` reads the paint
+  rows). The details panel shows each as a strip with its type and the presets; a `.dui` writes its CSS. A two-colour
+  gradient from before carries over: drawn as two stops (to a level per channel) while the gradient has none, its `.dui`
+  lines kept until the gradient is edited, then replaced by the gradient's line (`meta=(DreamGUI_Replaces)`); the
+  old setters still work. `GetEffectsAsLayerStyle` and `SetEffectsFromLayerStyle` carry the stops. See
+  [Gradients and viewport handles](Docs/concepts/gradients.md).
+- **Gradient handles in the designer.** A selected rect block's gradient is drawn over it as an image editor's gradient
+  tool draws one: a linear's or a reflected's start and end, a radial's, an angle's or a diamond's centre and end (and a
+  radial ellipse's second radius) to drag; its stops beside the line, dragged along it or off it to take one out; a double
+  click on the line adds a stop of the colour there. Shift keeps a turn to 15 degrees, Esc puts a drag back; a drag is one
+  undo step and is written to the `.dui` when the button comes up.
+- **Viewport handles for anything.** `IDreamDesignerHandleProvider`, registered with `FDreamDesignerHandles::Register`
+  (DreamGUIEditor, `Designer/DreamDesignerHandles.h`), gives the selected widget points to drag in the designer's viewport;
+  the viewport does the hit testing, drawing, the one transaction per drag, Esc, double clicks and the write to the asset
+  and the `.dui`. A warp's lattice points and a path's points now go through it.
+- **Handles a property asks for by its tag.** `meta=(DreamGUI_Handle="Kind")` (or `"Kind:Args"`) on a property of a widget,
+  its visual or a behaviour gives it the handles of that kind in the viewport, from a provider the kind's factory makes for
+  it (`FDreamDesignerHandles::RegisterKind`). A rect block's `BodyGradient` and `BorderGradient` are tagged `Gradient`. See
+  [Property meta tags](Docs/guides/property-meta.md#viewport-handles).
+- **Reflected gradients.** `EDreamPaintType::Reflected` (`reflected-gradient(…)`) runs both ways from a line through the
+  gradient's centre, for texts as for rect blocks.
+- **Handles for masks, glass, shadows and lights.** The designer's viewport draws handles for a clipping widget's clip and
+  mask -- the clip rect's sides (its margins), a rect mask's corners, a polygon's roundness, a star's or a ring's inner size
+  and the feather, along the outline the mask's own distance function cuts; a glass's corners, its edge's width and its
+  light; each shadow of a layer style or a rect block, dragged where it falls to set its angle and distance together (a
+  style's shadow on the global light turns the global light, and every effect on it with it); a pointer light's place and
+  reach, and a layer style's global light as a disc. Each comes with its property's tag (`DreamGUI_Handle`: `MaskShape`,
+  `GlassShape`, `Shadow`, `Light`). Corners and feathers move together, Alt one alone; Shift snaps an angle to 15 degrees.
+  See [Viewport handles](Docs/tools/designer.md#viewport-handles).
+- **An effect's light, read and written in one place.** `DreamLayerStyleLight` (`Core/DreamLayerStyleTypes.h`) answers and
+  sets an effect's angle and altitude where they are kept -- the style's global light for an effect that uses it -- and turns
+  a shadow's angle and distance into its offset and back; the renderer packs its shadows' offsets through it.
+- **Copy and paste layer styles.** The designer's widget menu copies the selected widget's layer style -- and its blend mode,
+  opacity, clip and mask when *Copy Includes* says so -- and pastes it onto every selected widget, in one undo step, written
+  into the `.dui`. The clipboard holds lines of `.dui`, so a copy pastes into another Blueprint and into a text editor, and
+  lines written by hand paste too. See [The widget designer](Docs/tools/designer.md#copying-and-pasting-a-layer-style).
+- **An eyedropper and the project's palette.** Every colour row of the designer's details panel has an eyedropper that
+  reads the designer viewport's own picture -- the pixel after its effects, style and blend mode -- or the screen's, and the
+  project's palette (`UDreamGUISettings::ProjectSwatches`), a click away and added to from there. Both are widgets an
+  editor of a project's own can use (`SDreamUIEyedropperButton`, `SDreamUIColorQuickPick`). See
+  [The widget designer](Docs/tools/designer.md#the-eyedropper-and-the-projects-palette).
+- **The preset library.** A Presets tab in the designer shelves the project's gradients, layer styles and effect settings
+  -- text in the project settings (`GradientPresets`, and the new `StylePresets` and `EffectPresets`) and assets
+  (`UDreamGradientAsset`, `UDreamLayerStylePreset`) -- applied to the selection with a double-click or by a drag onto a
+  widget, followed or copied, and kept from a selection. A style preset asset can keep the layer's blend mode and opacity
+  (`bIncludeBlending`); `DreamUIStylePresets` makes style presets for an editor of a project's own. See
+  [The widget designer](Docs/tools/designer.md#the-preset-library).
+- **A Layer Style dialog.** The designer opens an image editor's Layer Style dialog on the selected widgets -- *Layer
+  Style...* in the widget menu, *Edit...* beside the layer style in the Layer section, or a double-click on a style mark
+  in the hierarchy: the effects listed with their ticks, more than one of a kind added and reordered, each one's
+  parameters beside them, every change previewed on the widgets at once, OK written into the `.dui` as one undo step,
+  Cancel leaving the file as it was, and New Style keeping the style as a preset. See
+  [The widget designer](Docs/tools/designer.md#the-layer-style-dialog).
+- **Lists of structs are written back to a `.dui`.** A layer style's drop shadows, strokes and overlays, an adjustment
+  layer's adjustments and every other list, set or map of structs with no short form is written the way it is read --
+  `Style.DropShadows = ["(Angle=120,Distance=6)"]`, the fields that differ from the struct's defaults -- where the
+  designer could read such a list from a file and never write one. See
+  [Write-back](Docs/language/write-back.md#what-the-designer-writes-back).
+
+- **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
+  mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
+  turn off a layer style and a layer group, and every effect on the widget with an eye to turn it off and its name to open
+  its settings. The hierarchy marks each widget's effects after its name -- style, group, mask, blend, effect, warp,
+  particles -- with what they are in the tooltip and a click to turn them off and on. The palette has them all: Glass,
+  Adjustment Layer and Stylize under Effects, Layer Style, Layer Group, Shape Blend Group, Mask Transition, Holo Foil,
+  Pointer Light and Tilt Card under Components, Warp, Jelly and Text On Path under Modifiers, Path under Shapes, each
+  arriving set up to be seen; a post-process Blueprint is listed by its name without `BP_` and `_C`. See
+  [The widget designer](Docs/tools/designer.md).
+- **Off switches on the layer effects.** `UDreamLayerGroup`, `UDreamMaskTransition`, `UDreamHoloFoil`,
+  `UDreamPointerLight`, `UDreamTiltCard` and every post-process visual (`UDreamVisualPostProcess`: glass, adjustment layer,
+  stylize, background blur...) have a `bEnabled` property, on by default and written to a `.dui` only when off: off, the
+  effect is drawn as if it were not there and keeps its settings.
+- **Details panels that cannot lose a property.** DreamGUI's details panels are laid out from `DreamGUI_` meta tags on
+  the properties -- a section (`DreamGUI_Section="Layer"`), a group, an order, the advanced expander, a control, the
+  switch of an effect -- and a property without them is shown under its own category. No panel hides a category whole any
+  more, so a property cannot drop out of the editor for the category it was given; only `DreamGUI_Hidden` hides one. The
+  Layer section and the effect switches in the hierarchy are built from the tags, and rows that apply only to some values
+  (a fill, a transition's colours, a password character) show and hide with the value without the panel rebuilding. An
+  extension's classes use the same tags. See [Property meta tags](Docs/guides/property-meta.md).
+
+- **Editing controls.** Blend modes are pictures in their row and menu -- each drawn by the mode's own formula, all 27 in an
+  image editor's order and groups -- and hovering one shows the widget drawn in it, recording and saving nothing until it
+  is clicked. Angles tagged `DreamGUI_Editor = "AngleWheel"` (the layer style's, the gradient overlay's, the glass's light, a
+  mask transition's rotation, a text path's start) are a dial beside the number, and an effect with Use Global Light on
+  turns the style's global light from its own row. Contours are curves with the named shapes to pick and the curve to
+  edit, and eases show their curves. In a `.dui` a contour is a named shape's word or `"custom(0 0, 0.5 1 corner, 1 0)"`.
+  See [The widget designer](Docs/tools/designer.md).
 
 ### Changed
+
+- **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
+  gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
+  them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*
+  button under a rect block's gradient among others; a rect block's body and border gradients are two kinds.
 
 - **A binding that reads only FieldNotify variables no longer reads them every frame** once its Blueprint is
   recompiled: it updates when they announce a change. C++ that assigns such a variable without broadcasting it -- which
@@ -189,8 +395,28 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
   not hold, so such a layer lost its effect when scaled ([#9]). It now draws at full resolution, as one with a post
   process already did.
+- **A radial gradient's ellipse turns with its `Angle`**, as a diamond does (`radial-gradient(30deg …)` in CSS). A text
+  paint whose radial gradient kept an angle other than 0 or 180 -- left from a linear it was switched from -- now draws
+  its ellipse turned; a circle draws as before.
+- **A rect block's two-colour gradient properties** (`BodyGradientColor`, `…Center`, `…Radius`, `…Rotation`, their unit
+  modes, and the border's) are no longer in the details panel, and their setters are deprecated: on a gradient that has
+  stops they set its first stop's colour, its centre, its radius and its angle, and the tweens follow. A centre or radius
+  written in units keeps to units only while the gradient is two-colour. A body texture that is itself partly see-through
+  is tinted by the gradient as by the body colour; it used to have the gradient colour laid over its alpha a second time.
+- **The gradient row's header has a type picker** beside its strip and presets, for every `FDreamGradient` (text paints,
+  gradient assets, rect blocks).
 
 ### Fixed
+
+- **Lines added to a node written on one line stay in its block.** Two properties written into a block that opens and
+  closes on one line (`Text Title { Text = "Hi" }`) in one write had the whole write refused, and a `+` line added to
+  such a node was written after its brace -- a behaviour of the parent. Both now land inside the block.
+- **A built-in element in Multiply is exact when it is partly transparent.** Its transparent pixels darkened what was behind
+  them to black; it now darkens by its colour as far as its alpha says, as the composite does.
+- **A clip whose pivot is off its centre stays on its widget under a scaled or turned parent.** Its centre was moved by
+  the pivot's offset in world units rather than through the clipper's own scale and rotation, so under a canvas scale or
+  a rotated parent the drawn clip rect slid off the rect the hit test used. Both now place it through the clipper's
+  transform.
 
 - **A text field's edit menu answers the pointer.** No entry -- Copy, Paste and the rest -- could be chosen with a mouse
   or a finger. The menu and the sheet behind it were built but never brought to life, so neither took its place above
@@ -309,6 +535,27 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   editor (LNK1104); the nightly and the bench launcher stopped on the error, and matched any project of the same file
   name. All three now fall back to editors holding a DLL from inside the project. See
   [Running the DreamGUI tests](Tools/Tests/README.md).
+- **A post-process visual under a clip mask's texture is clipped by the texture.** A background blur, a pixelate or a pixel
+  sort inside a clip whose mask reads a texture took every texel of it as white.
+- **Additive materials draw under Substrate.** With Substrate on, the engine makes a legacy additive material an unlit
+  slab of its emissive times its opacity and full transmittance, which DreamGUI's renderer took for no coverage: the
+  material drew nothing. It now draws what it draws without Substrate, the emissive by its opacity.
+- **Niagara sprites draw in a play session.** The built-in shader read a particle's frame blend off its packed colour
+  scale with a bare floor. The value reaches the pixel interpolated, and in a play session's screen-space view a whole
+  step could arrive a hair under itself: the sprite then blended wholly into its next frame, which for a sprite of one
+  frame lies past the texture, where the soft default disc is transparent. Sprites drew in the designer and in render
+  targets and not at all in a game's viewport; ribbons were not affected. The step is now read half the gap the blend
+  leaves below the next one, in the built-in shader and in converted particle materials alike.
+- **The Niagara effects sample is laid out, and its sparks spread.** Its row and cards measured by their captions, so
+  the five cards came out a word wide; they now ask for 1080 by 300 and 200 by 300. Three of its systems read, in one
+  Set Parameters module, attributes that module wrote, which Niagara reads as they were before it: the click sparks and
+  the full bar's shards were thrown at no speed, and the border sparks all began at one corner. Each now writes what it
+  reads in an earlier group.
+- **A NiagaraSystem visual's system is no longer drawn in the world for a frame.** The component that simulates it had its
+  rendering turned off, but Niagara hands that flag to a component's scene proxy only as the component ticks, and the
+  proxy made when a system was activated or burst drew the frame before: the whole system, lit, in the world behind the
+  UI -- a flash at every burst in a play session, and a system drawn all along in a world that does not tick its
+  components. The component now gives the scene no proxy at all.
 
 [#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
 [#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
@@ -365,6 +612,20 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 [#54]: https://github.com/TypeDreamMoon/DreamGUI/issues/54
 [#55]: https://github.com/TypeDreamMoon/DreamGUI/issues/55
 [#56]: https://github.com/TypeDreamMoon/DreamGUI/issues/56
+
+- **A pointer light shows in the designer.** Following the pointer, it lit nothing in a world that is not playing, where
+  there is no pointer; there it now stands at its `LightPosition`.
+- **Rows missing from the details panels.** A user widget's *Wants Tick*, *Allow Event Bubble Up* and *Can Navigate
+  Here*; a widget's tooltip widget class; an image brush's fill (amount, method, origin, direction) and its rounded box's
+  corners; a rect block's nine-slice draw mode and margins and its shape blend operation; a sprite's padding and border
+  before it has a texture. Each could only be written in a `.dui`.
+- **A sequence player's details no longer crash the editor.** The error row of `UUISpriteSequencePlayer` and
+  `UUISpriteSheetTexturePlayer` looked for the visual they need among the widget's components and read its name off
+  nothing.
+- **Advanced properties of a sub-category have rows.** The engine draws a sub-category (`DreamGUI|Pointer Light`)
+  without its advanced rows, with "show all advanced" on as well, so a holo foil's, a pointer light's and a tilt card's
+  *User Index* and *Pointer Id* were in no panel. DreamGUI's panels give such a property an ordinary row of its
+  sub-category, after the others.
 
 ## 1.0.0
 

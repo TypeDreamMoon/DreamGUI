@@ -1,0 +1,253 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// The blend modes (EDreamUIBlendMode), for every pass that blends: the built-in UI shader drawing an element, and the
+// composite that puts a group's texture over what is behind it. One function each for what a mode makes of two colours,
+// and two for how that reaches the target -- through the blend hardware, or over a copy of what is behind.
+//
+// The CPU says the same in FDreamUIBlendMath (DreamUIBlendMath.h), function for function, and a test holds the two to
+// each other and to the W3C Compositing and Blending definitions. The mode numbers are the enum's.
+
+#ifndef DREAMUI_BLEND_USH
+#define DREAMUI_BLEND_USH
+
+#include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
+
+#define DREAMUI_BLEND_ALPHA 0
+#define DREAMUI_BLEND_ADDITIVE 1
+#define DREAMUI_BLEND_MULTIPLY 2
+#define DREAMUI_BLEND_DISSOLVE 3
+#define DREAMUI_BLEND_DARKEN 4
+#define DREAMUI_BLEND_COLOR_BURN 5
+#define DREAMUI_BLEND_LINEAR_BURN 6
+#define DREAMUI_BLEND_DARKER_COLOR 7
+#define DREAMUI_BLEND_LIGHTEN 8
+#define DREAMUI_BLEND_SCREEN 9
+#define DREAMUI_BLEND_COLOR_DODGE 10
+#define DREAMUI_BLEND_LIGHTER_COLOR 11
+#define DREAMUI_BLEND_OVERLAY 12
+#define DREAMUI_BLEND_SOFT_LIGHT 13
+#define DREAMUI_BLEND_HARD_LIGHT 14
+#define DREAMUI_BLEND_VIVID_LIGHT 15
+#define DREAMUI_BLEND_LINEAR_LIGHT 16
+#define DREAMUI_BLEND_PIN_LIGHT 17
+#define DREAMUI_BLEND_HARD_MIX 18
+#define DREAMUI_BLEND_DIFFERENCE 19
+#define DREAMUI_BLEND_EXCLUSION 20
+#define DREAMUI_BLEND_SUBTRACT 21
+#define DREAMUI_BLEND_DIVIDE 22
+#define DREAMUI_BLEND_HUE 23
+#define DREAMUI_BLEND_SATURATION 24
+#define DREAMUI_BLEND_COLOR 25
+#define DREAMUI_BLEND_LUMINOSITY 26
+
+/** The seed of the dissolve pattern's hash: any constant, the same on the CPU (FDreamUIBlendMath::DissolveSeed). */
+#define DREAMUI_BLEND_DISSOLVE_SEED 0x2545F491u
+
+/** The sRGB curve, exactly, both ways: the modes blend encoded values. */
+float DreamUIBlend_ToSrgbChannel(float X)
+{
+	X = saturate(X);
+	return X <= 0.0031308 ? 12.92 * X : 1.055 * pow(X, 1.0 / 2.4) - 0.055;
+}
+float DreamUIBlend_ToLinearChannel(float X)
+{
+	X = saturate(X);
+	return X <= 0.04045 ? X / 12.92 : pow((X + 0.055) / 1.055, 2.4);
+}
+float3 DreamUIBlend_ToSrgb(float3 C)
+{
+	return float3(DreamUIBlend_ToSrgbChannel(C.r), DreamUIBlend_ToSrgbChannel(C.g), DreamUIBlend_ToSrgbChannel(C.b));
+}
+float3 DreamUIBlend_ToLinear(float3 C)
+{
+	return float3(DreamUIBlend_ToLinearChannel(C.r), DreamUIBlend_ToLinearChannel(C.g), DreamUIBlend_ToLinearChannel(C.b));
+}
+
+// The non-separable modes' helpers, as W3C Compositing and Blending Level 1 defines them.
+float DreamUIBlend_Lum(float3 C)
+{
+	return dot(C, float3(0.3, 0.59, 0.11));
+}
+float3 DreamUIBlend_ClipColor(float3 C)
+{
+	const float L = DreamUIBlend_Lum(C);
+	const float N = min(C.r, min(C.g, C.b));
+	const float X = max(C.r, max(C.g, C.b));
+	if (N < 0.0)
+	{
+		C = L + (C - L) * L / max(L - N, 1e-6);
+	}
+	if (X > 1.0)
+	{
+		C = L + (C - L) * (1.0 - L) / max(X - L, 1e-6);
+	}
+	return C;
+}
+float3 DreamUIBlend_SetLum(float3 C, float L)
+{
+	return DreamUIBlend_ClipColor(C + (L - DreamUIBlend_Lum(C)));
+}
+float DreamUIBlend_Sat(float3 C)
+{
+	return max(C.r, max(C.g, C.b)) - min(C.r, min(C.g, C.b));
+}
+/** The middle channel scaled into place, the largest made S and the smallest 0; grey stays black. */
+float3 DreamUIBlend_SetSat(float3 C, float S)
+{
+	const float N = min(C.r, min(C.g, C.b));
+	const float X = max(C.r, max(C.g, C.b));
+	return X > N ? (C - N) * S / (X - N) : float3(0.0, 0.0, 0.0);
+}
+
+// The separable modes, one channel: B is what is behind, S the element.
+float DreamUIBlend_Screen(float B, float S)
+{
+	return B + S - B * S;
+}
+float DreamUIBlend_ColorDodge(float B, float S)
+{
+	if (B <= 0.0)
+	{
+		return 0.0;
+	}
+	if (S >= 1.0)
+	{
+		return 1.0;
+	}
+	return min(1.0, B / (1.0 - S));
+}
+float DreamUIBlend_ColorBurn(float B, float S)
+{
+	if (B >= 1.0)
+	{
+		return 1.0;
+	}
+	if (S <= 0.0)
+	{
+		return 0.0;
+	}
+	return 1.0 - min(1.0, (1.0 - B) / S);
+}
+float DreamUIBlend_HardLight(float B, float S)
+{
+	return S <= 0.5 ? B * 2.0 * S : DreamUIBlend_Screen(B, 2.0 * S - 1.0);
+}
+float DreamUIBlend_SoftLight(float B, float S)
+{
+	if (S <= 0.5)
+	{
+		return B - (1.0 - 2.0 * S) * B * (1.0 - B);
+	}
+	const float D = B <= 0.25 ? ((16.0 * B - 12.0) * B + 4.0) * B : sqrt(B);
+	return B + (2.0 * S - 1.0) * (D - B);
+}
+float DreamUIBlend_VividLight(float B, float S)
+{
+	return S <= 0.5 ? DreamUIBlend_ColorBurn(B, 2.0 * S) : DreamUIBlend_ColorDodge(B, 2.0 * (S - 0.5));
+}
+float DreamUIBlend_PinLight(float B, float S)
+{
+	return S <= 0.5 ? min(B, 2.0 * S) : max(B, 2.0 * S - 1.0);
+}
+float DreamUIBlend_Divide(float B, float S)
+{
+	if (S <= 0.0)
+	{
+		return B > 0.0 ? 1.0 : 0.0;
+	}
+	return min(1.0, B / S);
+}
+float DreamUIBlend_Separable(int Mode, float B, float S)
+{
+	switch (Mode)
+	{
+	case DREAMUI_BLEND_ADDITIVE: return min(1.0, B + S);
+	case DREAMUI_BLEND_MULTIPLY: return B * S;
+	case DREAMUI_BLEND_DARKEN: return min(B, S);
+	case DREAMUI_BLEND_COLOR_BURN: return DreamUIBlend_ColorBurn(B, S);
+	case DREAMUI_BLEND_LINEAR_BURN: return max(0.0, B + S - 1.0);
+	case DREAMUI_BLEND_LIGHTEN: return max(B, S);
+	case DREAMUI_BLEND_SCREEN: return DreamUIBlend_Screen(B, S);
+	case DREAMUI_BLEND_COLOR_DODGE: return DreamUIBlend_ColorDodge(B, S);
+	case DREAMUI_BLEND_OVERLAY: return DreamUIBlend_HardLight(S, B);
+	case DREAMUI_BLEND_SOFT_LIGHT: return DreamUIBlend_SoftLight(B, S);
+	case DREAMUI_BLEND_HARD_LIGHT: return DreamUIBlend_HardLight(B, S);
+	case DREAMUI_BLEND_VIVID_LIGHT: return DreamUIBlend_VividLight(B, S);
+	case DREAMUI_BLEND_LINEAR_LIGHT: return saturate(B + 2.0 * S - 1.0);
+	case DREAMUI_BLEND_PIN_LIGHT: return DreamUIBlend_PinLight(B, S);
+	case DREAMUI_BLEND_HARD_MIX: return B + S >= 1.0 ? 1.0 : 0.0;
+	case DREAMUI_BLEND_DIFFERENCE: return abs(B - S);
+	case DREAMUI_BLEND_EXCLUSION: return B + S - 2.0 * B * S;
+	case DREAMUI_BLEND_SUBTRACT: return max(0.0, B - S);
+	case DREAMUI_BLEND_DIVIDE: return DreamUIBlend_Divide(B, S);
+	default: return S;
+	}
+}
+
+/** What InMode makes of Cb, what is behind, and Cs, the element: both straight colours in the blend's (encoded) space. */
+float3 DreamUIBlend_Function(int Mode, float3 Cb, float3 Cs)
+{
+	switch (Mode)
+	{
+	case DREAMUI_BLEND_DARKER_COLOR:
+		return Cs.r + Cs.g + Cs.b < Cb.r + Cb.g + Cb.b ? Cs : Cb;
+	case DREAMUI_BLEND_LIGHTER_COLOR:
+		return Cs.r + Cs.g + Cs.b > Cb.r + Cb.g + Cb.b ? Cs : Cb;
+	case DREAMUI_BLEND_HUE:
+		return DreamUIBlend_SetLum(DreamUIBlend_SetSat(Cs, DreamUIBlend_Sat(Cb)), DreamUIBlend_Lum(Cb));
+	case DREAMUI_BLEND_SATURATION:
+		return DreamUIBlend_SetLum(DreamUIBlend_SetSat(Cb, DreamUIBlend_Sat(Cs)), DreamUIBlend_Lum(Cb));
+	case DREAMUI_BLEND_COLOR:
+		return DreamUIBlend_SetLum(Cs, DreamUIBlend_Lum(Cb));
+	case DREAMUI_BLEND_LUMINOSITY:
+		return DreamUIBlend_SetLum(Cb, DreamUIBlend_Lum(Cs));
+	default:
+		return float3(DreamUIBlend_Separable(Mode, Cb.r, Cs.r), DreamUIBlend_Separable(Mode, Cb.g, Cs.g), DreamUIBlend_Separable(Mode, Cb.b, Cs.b));
+	}
+}
+
+/**
+ * An element of Mode over what is behind it, for the One / InverseSourceAlpha blend state: Cs the element's straight colour
+ * and Sa its alpha, Backdrop what the target held there, premultiplied, both in the target's space (linear light for a
+ * linear target, encoded otherwise). The W3C composite, Cs' = (1 - Da) * Cs + Da * B(Cb, Cs), premultiplied by Sa. An
+ * opaque backdrop is a viewport's, whose alpha says nothing: it counts as 1.
+ */
+float4 DreamUIBlend_OverBackdrop(int Mode, float3 Cs, float Sa, float4 Backdrop, bool bLinearTarget, bool bOpaqueBackdrop)
+{
+	const float Da = bOpaqueBackdrop ? 1.0 : saturate(Backdrop.a);
+	const float3 Cb = bOpaqueBackdrop ? Backdrop.rgb : (Backdrop.a > 1e-5 ? Backdrop.rgb / Backdrop.a : float3(0.0, 0.0, 0.0));
+	float3 Blended;
+	if (bLinearTarget)
+	{
+		Blended = DreamUIBlend_ToLinear(DreamUIBlend_Function(Mode, DreamUIBlend_ToSrgb(Cb), DreamUIBlend_ToSrgb(Cs)));
+	}
+	else
+	{
+		Blended = DreamUIBlend_Function(Mode, saturate(Cb), saturate(Cs));
+	}
+	const float3 Mixed = (1.0 - Da) * Cs + Da * Blended;
+	return float4(Mixed * Sa, Sa);
+}
+
+/**
+ * What a mode the blend hardware does is given (FDreamUIRenderer::GetBuiltInBlendState): Premultiplied the element's colour
+ * times its alpha Sa. Multiply is given 1 - Sa + Sa * Cs, so that DestColor * that is the composite at any alpha; the rest
+ * take the premultiplied colour as it is.
+ */
+float4 DreamUIBlend_FixedOutput(int Mode, float3 Premultiplied, float Sa)
+{
+	if (Mode == DREAMUI_BLEND_MULTIPLY)
+	{
+		return float4(1.0 - Sa + Premultiplied, Sa);
+	}
+	return float4(Premultiplied, Sa);
+}
+
+/** Dissolve: the alpha of a pixel in Cell, either 1 or 0, as often 1 as Alpha says. */
+float DreamUIBlend_DissolveAlpha(float Alpha, int2 Cell)
+{
+	const float Value = (float)(DreamUIClip_Hash(asuint(Cell.x), asuint(Cell.y), DREAMUI_BLEND_DISSOLVE_SEED) & 0xFFFFFFu) / 16777216.0;
+	return Value < Alpha ? 1.0 : 0.0;
+}
+
+#endif // DREAMUI_BLEND_USH
