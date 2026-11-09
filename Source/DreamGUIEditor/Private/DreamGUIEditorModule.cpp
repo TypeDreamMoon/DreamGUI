@@ -65,6 +65,7 @@
 #include "Designer/DreamDesignerGradientHandles.h"
 #include "Designer/DreamDesignerHandles.h"
 #include "Designer/DreamDesignerPointHandleProviders.h"
+#include "DetailCustomization/PropertyType/DreamBlendModeCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
@@ -317,6 +318,8 @@ void FDreamGUIEditorModule::StartupModule()
 		{
 			FDreamDesignerHandles::RegisterKind(Kind.Key, MoveTemp(Kind.Value));
 		}
+		// Every blend mode row -- an element's, a group's, a layer effect's -- shows the modes as pictures, and the hovered one on the widget.
+		PropertyModule.RegisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamBlendModeCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance)));
@@ -549,6 +552,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// The component clipboard parks a UObject in a static. Releasing it at static-teardown time
 	// touches an object system that is already gone, so it is released here instead.
 	DreamUIWidgetComponentClipboard_Reset();
+	// The blend modes' pictures are textures held in a static, for the same reason.
+	FDreamBlendModeThumbnails::Shutdown();
 
 	FDreamUIEditorCommands::Unregister();
 	// Registered lazily by the designer toolkit (DreamWidgetBlueprintEditor). A module only unloads
@@ -601,6 +606,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		{
 			FDreamDesignerHandles::UnregisterKind(Kind.Key);
 		}
+		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
