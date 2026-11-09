@@ -1,5 +1,6 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
+#include "DetailCustomization/DreamDetailsLayout.h"
 #include "DreamNiagaraSystem.h"
 #include "DreamNiagaraSystemCustomization.h"
 #include "DreamNiagaraTrigger.h"
@@ -24,7 +25,7 @@ public:
 	{
 		using namespace DreamGUINiagaraEditorLocal;
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
-		PropertyModule.RegisterCustomClassLayout(UDreamNiagaraSystem::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamNiagaraSystemCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamNiagaraSystem::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamNiagaraSystemCustomization::MakeInstance)));
 
 		// The palette: the visual under Effects with Niagara's own icon, the trigger under Components.
 		FDreamUIControlDescriptor System;
