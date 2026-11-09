@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/concepts/niagara.md	rev=a25dbbe64733	page=9471523042bb
+#dreamdocs-align 1	source=Docs/concepts/niagara.md	rev=8f976bed5d73	model=deepseek-v4.1-flash	page=9471523042bb
 meta:title	02c6857a3793	dccfd031	h
 meta:description	adb64b8527eb	59f8b558	h
 p	d534c8a5c23c	0bc5a187	h
@@ -30,7 +30,7 @@ p	a379b31c01c8	902ebb68	h
 h2	4ae52ebe0305	72feb442	h
 p	c6f793d3e23a	7cb0c9f3	h
 li	3a150572c03e	91e36776	h
-li	-	2cc6446d	h
+li	53b116031a7b	3cdd0423	m
 row2	133434e8d3e1	5763b682	h
 row2	30e2c6868914	898d359e	h
 row2	081b2b3d4991	6849b0c1	h
@@ -48,8 +48,8 @@ row3	eb09e8cb09df	625a0acd	h
 row3	8351ad1745b9	54304602	h
 p	904b88af0dc6	4daf40db	h
 h2	afb841e888eb	7b4a9641	h
-li	-	acfa3200	h
-li	-	cb5fa7b5	h
+li	b2b61670c8c7	3c0a9ed9	m
+li	3c9a38ae7192	b7138c86	m
 li	d9e60f7897db	65c91c9e	h
 p	f366694747ed	5e8cf047	h
 h2	de2bfb2a552a	5b862a86	h

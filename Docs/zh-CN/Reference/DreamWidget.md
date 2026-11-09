@@ -40,6 +40,8 @@
 | `Clipping` | `EDreamWidgetClipping` | DreamGUI | yes | read only |  |
 | `ClippingCornerRadius` | `FVector4f` | DreamGUI | yes | read only | X- 右下，Y- 右上，Z- 左上，W- 左下 |
 | `ClippingMargin` | `FMargin` | DreamGUI | yes | read only | 向外扩展裁剪区域。 |
+| `ClipMask` | `FDreamClipMask` | DreamGUI | 是 | 只读 | 当此控件裁剪到自身边界时，作用于其裁剪的遮罩：可以是形状、羽化边缘、纹理或程序化图案，并可按需反转。它像裁剪矩形一样裁剪整个子树。在其默认值下不产生任何遮罩。 |
+| `bClipToBelow` | `bool` | DreamGUI | 是 | 只读 | 仅在其下一层被绘制的位置、并按该层的不透明度显示此控件及其下所有内容：一种裁剪遮罩。下一层是在此控件之前绘制、且自身不裁剪到其下一层的同级控件，因此连续裁剪到下一层的同级控件会共用同一个。它可以是普通图像或纹理，也可以是九宫格图像或纹理，或矩形块；其他任何内容都不会被裁剪到，并给出警告。隐藏的下一层也会隐藏此控件。 |
 | `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - |  |
 | `bWidgetActive` | `bool` | DreamGUI | yes | read only | 如果不是 WidgetActive，则不可见、不占用布局空间、不可交互、不可命中测试 |
 | `Visibility` | `EDreamWidgetVisibility` | DreamGUI | yes | read only | 独立于 WidgetActive 控制布局、绘制和命中测试。 |
@@ -94,6 +96,7 @@
 | `void DestroyWidget()` | callable | 拆除此控件及其整个子树：取消注册、从父级分离、结束播放，并将其中的每个控件标记为垃圾。 |
 | `TArray<UDreamWidget*> FindChildArrayByDisplayName(FString InName, bool IncludeChildren)` | pure | 类似 "FindChildByDisplayName"，但返回所有匹配该名称的子级。@param InName        需要查找的子级名称，区分大小写 @param IncludeChildren       同时在子级中搜索 |
 | `UDreamWidget* FindChildByDisplayName(FString InName, bool IncludeChildren)` | pure | 在子级中搜索并返回第一个 displayName 与输入名称匹配的 UIItem。支持层级嵌套搜索，例如：InName = "Content/ListItem/NameLabel"。@param InName        需要查找的子级名称，区分大小写 @param IncludeChildren       同时在子级中搜索 |
+| `UDreamWidget* FindClipToBelowUnderlay()` | 纯函数 | 当此控件裁剪到下一层（bClipToBelow）时，它所裁剪到的层：即在其之前绘制、且自身不裁剪到其下一层的同级控件。当它不裁剪到下一层，或之前没有绘制任何内容时，为 null。 |
 | `void ForceLayoutPrepass()` | callable | 立即对此控件的树进行布局，而不是在下一轮进行——UMG 的 ForceLayoutPrepass。 |
 | `EDreamAccessibleBehavior GetAccessibleBehavior()` | pure | 获取无障碍行为 |
 | `FText GetAccessibleSummaryText()` | pure | 获取无障碍摘要文本 |
@@ -114,9 +117,11 @@
 | `TArray<UDreamWidget*> GetChildren()` | pure | 获取子级 |
 | `int32 GetChildrenCount()` | pure | 获取子级数量 |
 | `bool GetChildrenHitTestVisibleInHierarchy()` | pure | 获取层级中可见命中测试的子级 |
+| `FDreamClipMask GetClipMask()` | 纯函数 | 获取裁剪遮罩 |
 | `EDreamWidgetClipping GetClipping()` | pure | 获取裁剪 |
 | `FVector4f GetClippingCornerRadius()` | pure | 获取裁剪圆角半径 |
 | `FMargin GetClippingMargin()` | pure | 获取裁剪边距 |
+| `bool GetClipToBelow()` | 纯函数 | 获取裁剪到下一层 |
 | `UDreamUIBehaviour* GetComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | 获取组件 |
 | `UDreamUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)` | pure | 按接口获取组件 |
 | `TArray<UDreamUIBehaviour*> GetComponents(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | 获取组件 |
@@ -277,9 +282,11 @@
 | `void SetAnchorOffsetTop(float Value)` | callable | 此函数仅在 UIItem 有父级时有效 |
 | `void SetAsFirstSibling()` | callable | 设为第一个同级 |
 | `void SetAsLastSibling()` | callable | 设为最后一个同级 |
+| `void SetClipMask(FDreamClipMask Value)` | 可调用 | 设置裁剪遮罩 |
 | `void SetClipping(EDreamWidgetClipping Value)` | callable | 设置裁剪 |
 | `void SetClippingCornerRadius(FVector4f Value)` | callable | 设置裁剪圆角半径 |
 | `void SetClippingMargin(FMargin Value)` | callable | 设置裁剪边距 |
+| `void SetClipToBelow(bool Value)` | 可调用 | 设置裁剪到下一层 |
 | `void SetContentTint(FLinearColor Value)` | callable | 为此控件下方绘制的所有内容着色——即其后代的视觉，从不作用于自身——正如 UMG 的内容颜色所做的那样（边框的 ContentColorAndOpacity 会传递给其子级，SCompoundWidget 的 ColorAndOpacity）。在线性空间中，与每个祖先的颜色一起，相乘到每个后代视觉的 UDreamVisual::GetFinalColor 中；将其颜色标记为脏。白色不改变任何内容。 |
 | `void SetCursor(TEnumAsByte<EMouseCursor::Type> Value)` | callable | 当指针悬停在此控件上时要显示的光标。Default 表示“无意见”，让下方的任何对象来认领它，这就是为什么这里没有 UMG 中那样的单独覆盖标志——DreamPointerPolicy::ResolveCursor 会按最内层优先遍历悬停栈，并取第一个有意见的控件。 |
 | `void SetDisplayName(FString InName)` | callable | 设置显示名称 |
