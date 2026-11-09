@@ -68,30 +68,30 @@ protected:
 #endif
 protected:
 	friend class FUIToggleCustomization;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::Color || ToggleTransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 	TWeakObjectPtr<UDreamVisual> ToggleTransitionTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Toggle")
 	EUISelectableTransitionType ToggleTransitionType = EUISelectableTransitionType::Color;
-	UPROPERTY(EditAnywhere, Category="DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType==EUISelectableTransitionType::Custom"))
+	UPROPERTY(EditAnywhere, Category="DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::Custom", EditConditionHides))
 	TWeakObjectPtr<UUIToggleTransition> CustomToggleTransition = nullptr;
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class UDreamTweener> ToggleTransitionTweener = nullptr;
 
 	/** Appearance when this is checked */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 	FColor OnColor;
 	/** Appearance when this is unchecked */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 	FColor OffColor;
 	
 	/** Appearance when this is checked */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 	FDreamUIImageBrush OnImageBrush;
 	/** Appearance when this is unchecked */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 	FDreamUIImageBrush OffImageBrush;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Toggle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Toggle", meta = (EditCondition = "ToggleTransitionType == EUISelectableTransitionType::Color || ToggleTransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		float ToggleDuration = 0.2f;
 
 #pragma endregion

@@ -2167,6 +2167,18 @@ void FDreamWidgetBlueprintEditor::ToggleShowSafeZone()
 	Settings->SaveConfig();
 }
 
+bool FDreamWidgetBlueprintEditor::GetShowClipMasks() const
+{
+	return GetShowDesignerChrome() && GetDefault<UDreamUIDesignerSettings>()->bShowClipMasks;
+}
+
+void FDreamWidgetBlueprintEditor::ToggleShowClipMasks()
+{
+	UDreamUIDesignerSettings* Settings = GetMutableDefault<UDreamUIDesignerSettings>();
+	Settings->bShowClipMasks = !Settings->bShowClipMasks;
+	Settings->SaveConfig();
+}
+
 bool FDreamWidgetBlueprintEditor::GetPreviewDPIScale() const
 {
 	return GetDefault<UDreamUIDesignerSettings>()->bPreviewDPIScale;

@@ -7,6 +7,7 @@
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "DreamUIRender/DreamUIMeshVertex.h"
 #include "DreamUIRender/DreamUIBaseShaders.h"
+#include "DreamUIRender/DreamUICompositor.h"
 #include "DreamUIMeshComponent.generated.h"
 
 class FDreamUIDrawCall;
@@ -22,6 +23,8 @@ struct FDreamUIRenderSectionProxy_ChildCanvas;
 enum class EDreamUIRenderSectionType :uint8
 {
 	Mesh, DirectMesh, PostProcess, ChildCanvas,
+	/** A group opened or closed: what is drawn between the two goes into a texture of its own (FDreamUICompositeDesc). */
+	Group,
 };
 struct FDreamUIRenderSection
 {
@@ -63,6 +66,11 @@ struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	 */
 	TArray<TSharedPtr<const FDreamUIGeometry>> SourceGeometries;
 	bool bSourceNormalAndTangent = false;
+	/**
+	 * In world space, what the section covers, as sent to the render thread for a draw of a mode that reads what is behind
+	 * it (DreamUIBlend::ReadsBackdrop), which copies that much of the target before it draws. Invalid for any other.
+	 */
+	FBox BackdropBounds = FBox(ForceInit);
 
 	void Reset()
 	{
@@ -80,6 +88,8 @@ struct FDreamUIRenderSection_DirectMesh : public FDreamUIRenderSection_Mesh
 	virtual ~FDreamUIRenderSection_DirectMesh()override{}
 
 	TWeakObjectPtr<class UDreamVisualDirectMesh> DirectMeshVisualObject = nullptr;
+	/** Which of the element's segments this is (UDreamVisualDirectMesh::GetSegmentCount): a pooled section goes back to the same one. */
+	int32 Segment = 0;
 };
 struct FDreamUIRenderSection_PostProcess : public FDreamUIRenderSection
 {
@@ -92,6 +102,21 @@ struct FDreamUIRenderSection_PostProcess : public FDreamUIRenderSection
 	TWeakObjectPtr<class UDreamVisualPostProcess> PostProcessVisualObject = nullptr;
 
 	virtual void ClearBeforePool() override;
+};
+/** A group's marker: the opening one carries the group's composite, the closing one its id alone. */
+struct FDreamUIRenderSection_Group : public FDreamUIRenderSection
+{
+	FDreamUIRenderSection_Group()
+	{
+		Type = EDreamUIRenderSectionType::Group;
+	}
+	virtual ~FDreamUIRenderSection_Group()override{}
+
+	bool bBegin = true;
+	/** As last sent to the render thread. */
+	FDreamUICompositeDesc Desc;
+
+	virtual void ClearBeforePool() override { Desc = FDreamUICompositeDesc(); }
 };
 struct FDreamUIRenderSection_ChildCanvas : public FDreamUIRenderSection
 {
@@ -198,12 +223,26 @@ public:
 	bool CanDrawRenderLayers() const;
 	void SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
 	void SetDirectMeshRenderSectionMaterial(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
+	/**
+	 * What SetupDirectMeshRenderSection does but the material: the section's vertices and indices, and its box (canvas space,
+	 * taken to the world here), sent to the render thread. For a segment the canvas shades (UDreamVisualDirectMesh::GetSegmentShading),
+	 * whose material or built-in parameters are the canvas's to set. bNeedExpandMeshSection: the arrays grew past what the
+	 * section's buffers were made for.
+	 */
+	void UpdateDirectMeshSectionGeometry(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection);
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, int32 InSortPriority);
 	/** InMaterialProxy, when given, is what the section draws through, InMaterial its source (FDreamUIRenderSection_Mesh::MaterialProxy). */
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial, const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& InMaterialProxy = nullptr);
 	/** Draw the section with the built-in UI shader (no material). Pass a disabled params struct to go back to the material. */
 	void SetMeshSectionBuiltIn(int32 InSectionIndex, const FDreamUIBuiltInDrawParams& InParams);
+	/**
+	 * A group marker's composite, sent to the render thread when it differs from what was sent last: the bounds and the canvas
+	 * transform follow what the group holds every frame, and the opacity and mode a layer group's own.
+	 */
+	void SetGroupSectionComposite(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUICompositeDesc& InDesc);
+	/** A mesh section's BackdropBounds, sent when it changed: see FDreamUIRenderSection_Mesh::BackdropBounds. */
+	void SetMeshSectionBackdropBounds(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FBox& InWorldBounds);
 	bool IsMeshSectionBuiltIn(int32 InSectionIndex) const;
 
 	void Init(UDreamCanvas* InCanvas);
@@ -325,6 +364,12 @@ private:
 		FDreamUIBuiltInTextures Textures;
 	};
 	TArray<UpdateMeshSectionBuiltInDataStruct> PendingUpdateMeshSectionBuiltInDataArray;
+	struct UpdateSectionBackdropBoundsStruct
+	{
+		FDreamUIRenderSectionProxy* SectionProxy;
+		FBox Bounds;
+	};
+	TArray<UpdateSectionBackdropBoundsStruct> PendingUpdateSectionBackdropBoundsArray;
 	/** The box of the section InDrawCallData is drawn with, in world space: its CanvasBounds, through this mesh's transform. */
 	FBox GetMeshSectionBounds(const FDreamUIDrawCall& InDrawCallData) const;
 

@@ -236,8 +236,13 @@ Each switch decides one thing; do not use one for another:
 | `SetContentTint` | Tints the visuals of the **descendants** (not its own), as UMG's content colour does |
 
 `Shown` never undoes hidden or hit-test-invisible: a `Hidden` widget set to shown stays `Hidden`. Clipping is
-`Clipping` (`Inherit`, `ClipToBounds`, `ClipToBoundsWithoutIntersecting`, `Disabled`), with `ClippingCornerRadius` and
-`ClippingMargin`. `OnVisibilityChanged`, `OnFocusReceived` and `OnFocusLost` are the three events a widget offers for
+`Clipping` (`Inherit`, `ClipToBounds`, `ClipToBoundsWithoutIntersecting`, `Disabled`), with `ClippingCornerRadius`,
+`ClippingMargin` and a mask, `ClipMask`; `bClipToBelow` shows a widget only where the layer below it is drawn (see
+[Clip masks and clipping to the layer below](clip-masks.md)). A visual's `BlendMode` and a `UDreamLayerGroup` on a container
+decide how what it draws composites (see [Blend modes and layer groups](blend-modes-and-groups.md)); an adjustment layer,
+a progressive blur, glass or a stylize effect works on what is behind it (see [Effects on what is behind](backdrop-effects.md)). A `UDreamLayerStyle` puts an image editor's layer style on it, and a `UDreamShapeBlendGroup` melts the rect blocks among a container's children into one shape (see [Layer styles, shape blends and light](layer-styles.md)). Mesh modifiers bend what it
+draws ([Warps, jellies and text on a path](warp-and-text-on-path.md)), and a `UDreamMaskTransition` reveals a widget
+through a moving mask ([Mask transitions](mask-transitions.md)). `OnVisibilityChanged`, `OnFocusReceived` and `OnFocusLost` are the three events a widget offers for
 binding.
 
 ## Making widgets in code

@@ -1,0 +1,102 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// A group put down (FDreamUICompositeStack): what the group drew into its texture, over what is behind it, by the group's
+// blend mode, at its opacity, through its mask -- and, for what clips to a layer below drawn as a group, only where that
+// layer has alpha. The blend is DreamUIBlend.ush's, as the built-in UI shader's is for an element.
+//
+// Drawn as one triangle over the group's rect of the target; every texture read here is on the target's pixel grid, each
+// with the target pixel of its first texel.
+
+#include "/Engine/Public/Platform.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+/** What the group drew, premultiplied, in the target's space. */
+Texture2D DreamUI_GroupTex;
+/** A group drawn already (DREAMUI_COMPOSITE_EXTERNAL): its texture is sampled across a rect of the canvas. */
+SamplerState DreamUI_GroupTexSampler;
+float4x4 DreamUI_CanvasToUV;
+/** The layer below a ClipBody's texture: its alpha says where the group shows. */
+Texture2D DreamUI_UnderlayTex;
+/** xy: the target pixel of the group texture's first texel; zw: the underlay texture's. */
+float4 DreamUI_CompositeOrigins;
+/** x: the blend mode (EDreamUIBlendMode), y: the group's opacity, z: 1 for a linear target, w: 1 for an opaque backdrop. */
+float4 DreamUI_CompositeParams;
+/** x: 1 when the underlay texture masks the group, yz: the target pixel of the backdrop copy's first texel. */
+float4 DreamUI_CompositeFlags;
+#if DREAMUI_COMPOSITE_BACKDROP
+/** What the target held under the group's rect, copied before the group was put down. */
+Texture2D DreamUI_BackdropTex;
+#endif
+#if DREAMUI_COMPOSITE_MASK
+/** The group's mask: its row of the clip data texture, and the textures its levels read. */
+Texture2D DreamUI_ClipDataTex;
+Texture2D DreamUI_MaskTex0;
+SamplerState DreamUI_MaskTexSampler0;
+Texture2D DreamUI_MaskTex1;
+SamplerState DreamUI_MaskTexSampler1;
+float DreamUI_MaskClipCoordinate;
+#endif
+/** From clip space back onto the group's canvas, where its mask and its dissolve are measured. */
+float4x4 DreamUI_ClipToCanvas;
+/** The view's rect on this target: xy its first pixel, zw its size. */
+float4 DreamUI_ViewportRect;
+
+void MainVS(uint Id : SV_VertexID, out float4 OutPosition : SV_POSITION)
+{
+	const int X = Id & 1;
+	const int Y = Id >> 1;
+	OutPosition = float4(X * 4 - 1, Y * 4 - 1, 0, 1);
+}
+
+/** The canvas point under a pixel: where the eye's ray through it meets the canvas plane (x = 0 on the canvas). */
+float3 DreamUIComposite_CanvasPosition(float2 PixelCentre)
+{
+	const float2 Ndc = float2((PixelCentre.x - DreamUI_ViewportRect.x) / DreamUI_ViewportRect.z * 2.0 - 1.0,
+		1.0 - (PixelCentre.y - DreamUI_ViewportRect.y) / DreamUI_ViewportRect.w * 2.0);
+	float4 Near = mul(float4(Ndc, 0.75, 1.0), DreamUI_ClipToCanvas);
+	float4 Far = mul(float4(Ndc, 0.25, 1.0), DreamUI_ClipToCanvas);
+	const float3 A = Near.xyz / Near.w;
+	const float3 B = Far.xyz / Far.w;
+	const float Run = B.x - A.x;
+	return abs(Run) > 1e-6 ? A + (B - A) * (-A.x / Run) : A;
+}
+
+void MainPS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0)
+{
+	const int2 Pixel = int2(SvPosition.xy);
+	const float3 CanvasPosition = DreamUIComposite_CanvasPosition(SvPosition.xy);
+#if DREAMUI_COMPOSITE_EXTERNAL
+	const float2 UV = mul(float4(CanvasPosition, 1.0), DreamUI_CanvasToUV).xy;
+	const bool bInside = all(UV >= 0.0) && all(UV <= 1.0);
+	const float4 Group = bInside ? DreamUI_GroupTex.SampleLevel(DreamUI_GroupTexSampler, UV, 0) : float4(0.0, 0.0, 0.0, 0.0);
+#else
+	const float4 Group = DreamUI_GroupTex.Load(int3(Pixel - int2(DreamUI_CompositeOrigins.xy), 0));
+#endif
+	float Coverage = DreamUI_CompositeParams.y;
+	BRANCH
+	if (DreamUI_CompositeFlags.x > 0.5)
+	{
+		Coverage *= DreamUI_UnderlayTex.Load(int3(Pixel - int2(DreamUI_CompositeOrigins.zw), 0)).a;
+	}
+#if DREAMUI_COMPOSITE_MASK
+	Coverage *= DreamUI_CalculateClipDataMasked(DreamUI_ClipDataTex, DreamUI_MaskTex0, DreamUI_MaskTexSampler0, DreamUI_MaskTex1, DreamUI_MaskTexSampler1,
+		DreamUI_MaskClipCoordinate, CanvasPosition);
+#endif
+	float Sa = Group.a * Coverage;
+	float3 Premultiplied = Group.rgb * Coverage;
+	const int Mode = (int)round(DreamUI_CompositeParams.x);
+	BRANCH
+	if (Mode == DREAMUI_BLEND_DISSOLVE)
+	{
+		const float Dissolved = DreamUIBlend_DissolveAlpha(Sa, int2(floor(CanvasPosition.yz)));
+		Premultiplied = Sa > 1e-5 ? Premultiplied * (Dissolved / Sa) : float3(0.0, 0.0, 0.0);
+		Sa = Dissolved;
+	}
+#if DREAMUI_COMPOSITE_BACKDROP
+	const float4 Backdrop = DreamUI_BackdropTex.Load(int3(Pixel - int2(DreamUI_CompositeFlags.yz), 0));
+	const float3 Straight = Sa > 1e-5 ? Premultiplied / Sa : float3(0.0, 0.0, 0.0);
+	OutColor = DreamUIBlend_OverBackdrop(Mode, Straight, Sa, Backdrop, DreamUI_CompositeParams.z > 0.5, DreamUI_CompositeParams.w > 0.5);
+#else
+	OutColor = DreamUIBlend_FixedOutput(Mode, Premultiplied, Sa);
+#endif
+}

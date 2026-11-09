@@ -53,16 +53,17 @@ private:
 	 * Use a StaticSpriteAtlasData to pack multiple sprites into single atlas texture. The packing process is in editor and cook time, no performance impact at runtime.
 	 * Support mipmaps.
 	 */
-	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Static"))
+	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Static", EditConditionHides))
 		TObjectPtr<UDreamUIStaticSpriteAtlasData> PackingAtlas = nullptr;
 	/** Texture index in atlas texture array */
-	UPROPERTY(VisibleAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Static"))
+	UPROPERTY(VisibleAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Static", EditConditionHides))
 	int32 AtlasTextureIndex = 0;
 	/**
 	 * Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the DreamSprite which render this DreamUISpriteData will be treated as a DreamTexture.
 	 * Not support mipmaps.
 	 */
-	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Dynamic"))
+	// DreamGUI_Hidden: the Packing Tag row, a list of the tags the atlases use, edits it.
+	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==EDreamUISpritePackingType::Dynamic", DreamGUI_Hidden))
 		FName PackingTag = TEXT("Main");
 	
 	/** Repeat edge pixel fill spaced between other sprites in atlas texture */

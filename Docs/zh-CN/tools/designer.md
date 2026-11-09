@@ -22,6 +22,8 @@ description: "对照 UMG 设计器重建的 DreamUI Designer：按矩形拾取�
   射线永远打不中，上游里面板因此点不中、也放不进东西——按矩形拾取解决的就是这个。
 - **悬停反馈**：指针下的 widget 会被描出来。
 - **按轴的缩放手柄**，以及**锚点徽章**（anchor medallion），在画布上显示选中 widget 的锚点。
+- **选中内容自带的手柄**：变形晶格点、路径点、RectBlock 的渐变、裁剪遮罩、玻璃、阴影和光，同一时刻显示一种（见[视口手柄](#viewport-handles)）。
+  一次拖动一步撤销，Esc 还原；以 `.dui` 为源的类在松开鼠标时把改动写进文件。
 - **框选**：在空白处拖出一个框，选中框里的 widget。
 - **在画布上拖动重挂**：把 widget 拖到另一个容器里。
 - **从内容浏览器拖放**：把资产直接拖到设计画布上。
@@ -34,6 +36,41 @@ description: "对照 UMG 设计器重建的 DreamUI Designer：按矩形拾取�
 原来的布局）、*Unwrap*（把一个 widget 从父子之间拿掉，子节点按原顺序落在它的位置）、*Replace With...*（换掉排列子节点的面板——和 UMG 不同，widget 本身的名字、位置、槽、组件和子节点都不动，只换布局容器）、
 *Show / Hide in Designer*、*Lock / Unlock*、*Find References*、*Focus Selection*（等同于 F 键），以及
 *Reveal in VS Code*。
+
+层级面板在 widget 名字后面用小图标标出它作为图层带了什么，每类一个：**样式**（图层样式）、**组**（图层组或形状融合组）、
+**遮罩**（裁剪上的遮罩、剪贴到下一层、遮罩转场）、非正常的**混合**模式、**效果**（玻璃、调整图层这类后处理视觉，全息箔、
+指针光、倾斜卡，网格修改器）、**变形**（变形、果冻、路径文字）和**粒子**。悬停在标记上会列出它代表什么、各自怎么设的。
+点一下，用效果自己的开关把这一类关掉，再点打开——方便对比前后；关掉时标记变暗。这是普通的编辑：一步撤销，会保存，
+由 .dui 支撑的类还会写回 .dui。双击样式标记会打开[图层样式对话框](#the-layer-style-dialog)，所以点这个标记时会先等过
+双击的时间再切换。
+
+<a id="viewport-handles"></a>
+
+### 视口手柄
+
+单选一个 widget（未锁定、是资产自己的）时，视口会给它有的东西画手柄。一个 widget 可能有好几种手柄，同一时刻只显示一种，
+种类名写在选框下方，后面跟着按 **Tab** 会换成哪一种。Tab 在选中内容有的种类之间轮换，最后一种之后是「关」——只剩选框，
+比如手柄正好压在选框角上、想从那个角缩放时——再按回到第一种。Tab 只在视口拿着键盘焦点时归视口；在细节面板、层级或任何文本框里，
+它照常切换焦点。
+
+选中一个控件时显示哪种：最近一次选过的种类（用 Tab，或细节面板里的 *Edit in Viewport* 按钮），只要选中内容有它；否则是它有的第一种：
+先是变形的晶格点和路径点，再是它的属性标签（`DreamGUI_Handle`，见[属性 meta 标签](../guides/property-meta.md#viewport-handles)）要的种类——
+视觉的、各个行为的、控件自己的——按声明顺序。用 Tab 切到「关」之后，选什么都不显示手柄，直到再按 Tab。
+
+| 种类 | 显示什么，拖动改什么 |
+|---|---|
+| Warp Lattice、Path Points | 变形的晶格点；路径的点 |
+| Body Gradient、Border Gradient | RectBlock 的渐变：端点、中心和色标（见[渐变](../concepts/gradients.md#视口手柄)） |
+| Shadows | RectBlock 自带的外阴影和内阴影，画在阴影落下的位置：拖一个同时改它的角度和距离 |
+| Glass | 玻璃的轮廓和折射边缘伸进来的那条线：圆角（`CornerRadius`，按它自己的单位模式）、`EdgeWidth`，以及高光的光从哪边来（`LightAngle`） |
+| Style Shadows | 图层样式的每个阴影（投影是圆、内阴影是菱形），画在阴影落下的位置，同时改角度和距离。用全局光的阴影改的是全局光，所有用全局光的效果一起转 |
+| Global Light | 图层样式有效果用全局光时，全局光画成一个圆盘——绕圆盘的方向是角度，离边缘往里的距离是高度 |
+| Pointer Light | 指针光站的位置（在设计器里它停在 `LightPosition`）和它照到的圆 |
+| Mask | 裁剪 widget 的裁剪区和上面的遮罩（见[裁剪遮罩](../concepts/clip-masks.md)）：遮罩切出的轮廓和羽化带；裁剪矩形的四条边（`ClippingMargin`，遮罩形状按它适配）、矩形遮罩的圆角（`ClippingCornerRadius`）、多边形的 `Roundness`、星形的内角或圆环的孔（`InnerRatio`），以及 `Feather` |
+
+圆角和羽化默认四个一起动——裁剪区在 widget 设为统一圆角时也一样——按住 **Alt** 只动拖的那一个。**Shift** 让角度按 15° 一档；
+拖裁剪区的边时，Shift 让对边同时往外扩。拖动中按 **Esc** 全部还原。一次拖动是一步撤销，松开鼠标时写回 `.dui`。
+不归这个 widget 自己改的东西没有手柄：跟随预设的图层样式、由行为驱动的遮罩、形状来自形状融合的玻璃，以及关掉的效果。
 
 <a id="the-palette"></a>
 
@@ -51,6 +88,24 @@ Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects�
 - **收藏**：常用的条目可以收藏，收藏组排在最前面。注册键没变，所以以前的收藏都还在。
 - **搜索**：搜索框过滤条目，过滤时所有分组展开。
 
+图层效果都在调色板里，而且拖进来就能看到东西——有几个效果在类默认值下什么都不画：
+
+| 分组 | 条目 | 拖进来是什么 |
+| --- | --- | --- |
+| Effects | Glass | 带一点磨砂的玻璃，放在纯色上也看得出 |
+| Effects | Adjustment Layer | 把背后变成黑白的调整图层 |
+| Effects | Stylize | CRT 效果 |
+| Components | Layer Style | 带投影和浅色描边的 RectBlock |
+| Components | Layer Group | 透明度 60% 的独立组，里面两个重叠的块 |
+| Components | Shape Blend Group | 融成一体的两个圆 |
+| Components | Mask Transition | 擦除到一半的块 |
+| Components | Holo Foil、Pointer Light、Tilt Card | 一个用来看效果的块 |
+| Modifiers | Warp、Text On Path | 弯成弧形的文字、绕圆排列的文字 |
+| Modifiers | Jelly | 一个块 |
+| Shapes | Path | 一条曲线 |
+
+它们设的都是普通的作者值。后处理蓝图在 Effects 里按去掉 `BP_` 和 `_C` 的名字列出。
+
 项目自己注册的控件，分类在 DreamGUI 的分类之后、按注册顺序排列。分类名来自 `DreamUIPaletteCategory`
 （`DreamUIControlRegistry.h`）；以前拿 `FDreamUIControlDescriptor::Category` 去和 "Controls"、"Post Process"、"Extensions" 或
 某个旧分类名比较的扩展代码，要改用那里的名字。
@@ -59,16 +114,49 @@ Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects�
 
 ## 细节面板
 
-选中一个 widget 时，分类按一个 widget 的构成排列：先是它放在哪（Slot、Canvas、Layout），再是它是什么
-（Visual、Panel、Self Layout），然后是它怎么表现（Appearance、Behavior），最后是 Render Transform，以及
+选中一个 widget 时，分类按一个 widget 的构成排列：先是它作为图层的样子（Layer），再是它放在哪（Slot、Canvas、
+Layout），然后是它是什么（Visual、Panel、Self Layout）、它怎么表现（Appearance、Behavior），最后是 Render Transform，以及
 默认折叠的 Perspective、Navigation、Accessibility 和 Localization。Is Enabled 在 Behavior 里。以前排在最
 下面、把 Layout 的行原样重复一遍的 Transform 和锚点数据分类已经去掉了。
+
+属性放在哪，由它身上的 `DreamGUI_` 标签决定；没写标签的属性显示在它自己的分类下，所以 widget、视觉或组件能设的东西不会在面板
+里缺席；只对某些取值适用的行（填充、过渡的颜色）随取值出现。这些标签以及扩展的类怎么用它们，见[属性的 meta 标签](../guides/property-meta.md)。
+
+**Layer** 分类把让 widget 成为图层的东西集中到一处，不管它们原本在哪个对象上：
+
+| 行 | 编辑什么 |
+| --- | --- |
+| Opacity | widget 的 `RenderOpacity` |
+| Blend Mode | 视觉的混合模式，视觉是元素（图片、文字、RectBlock……）时才有 |
+| Clip To Layer Below | `bClipToBelow` |
+| Mask | 快速选一个形状——选了就让 widget 裁剪到自身边界，遮罩需要这个——下面是完整的遮罩（`ClipMask`） |
+| Layer Style、Layer Group | 各一个开关：打开时给没有的 widget 加一个，和 *Add Component* 一样；关掉时关闭它但保留设置。*Edit...*：图层样式的打开[图层样式对话框](#the-layer-style-dialog)，图层组的打开它自己的属性 |
+| Group Mode | 图层组的隔离方式，所有选中 widget 都有图层组时显示 |
+| Effects | widget 上的每个图层效果：一只眼睛负责开关，点名字打开它的属性 |
+
+这些行都不会在别处重复出现：不透明度以前在 Appearance，遮罩和剪贴到下一层在 Appearance > Clipping，混合模式在视觉自己的行里。
+
+### 编辑控件
+
+- **混合模式**用图片显示：每种模式的图片是一个圆按该模式自己的公式混合在色相和灰阶上，菜单按图像编辑软件的顺序和分组列出全部
+  27 种（Normal 即 `Alpha`，Linear Dodge (Add) 即 `Additive`）。悬停在某种模式上，正在编辑的控件就临时按它绘制，指针移开或菜单
+  关闭就恢复；点下去之前不记撤销、不保存。
+- 标了 `DreamGUI_Editor = "AngleWheel"` 的**角度**在数字旁边多一个圆盘：拖动（按住 Shift 以 15 度吸附）或直接输入。冒号后的值说明
+  角度怎么走：不写是图像编辑软件的约定（0 在三点钟方向，逆时针），`AngleWheel:CW`，或 `AngleWheel:TopCW`（时钟的约定）。图层样式里开着 *Use Global
+  Light* 的效果，在自己的行里改的是样式的全局光角度，共用全局光的效果一起转；行上会标出 *Global*。一次拖动是一步撤销。图层样式
+  的各个角度、渐变叠加的角度、玻璃的光照角度、遮罩转场的旋转和路径文字圆弧的起点都是圆盘。
+- **等高线**用曲线显示：行里是曲线；弹出框里有各种命名形状的图片可选，下面是可编辑的曲线——点空白加点，把点拖出框外删除，
+  Alt+点击或双击切换角点。编辑命名形状会从它开始生成一条自定义曲线。
+- **缓动**（`EDreamTweenEase`）在行里和菜单里都显示曲线。
+
+这些控件是给整个编辑器注册的，不只用在设计器的面板里：任何细节面板（数据资产的、对话框的、单独显示的结构体）里出现这类属性，
+都用同样的控件编辑。
 
 视觉自己的行也按用途排：
 
 - **Text** 以 Text、Font、Font Size、Font Style、Color、对齐、Overflow Type、Auto Wrap Text 和 Rich Text
   开头；其余的——Wrapping、Typography（包括语言选择）、Text Style / Paint、Rendering（覆盖材质、预设材质、
-  混合模式、网格尺寸、小字栅格化等）——放在默认折叠的组里。
+  网格尺寸、小字栅格化等）——放在默认折叠的组里。
 - **Image** 的刷子排在最前，射线检测的行排在最后。
 - **Sprite** 和 **Texture** 的颜色在 sprite / 纹理的下面。
 
@@ -95,6 +183,116 @@ Common、Input、Lists、Scrolling、Containers、Primitive、Shapes、Effects�
 `FDreamUIComponentSupport`（`DreamGUIEditor` 模块）里：为一个类注册的规则对它的每个子类都成立，包括
 Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `RequireVisual`、
 `RequireComponent`、`OnePerWidget` 或 `AddRule` 为自己的组件加规则。
+
+<a id="layer-styles-colours-and-presets"></a>
+
+## 图层样式、颜色与预设
+
+<a id="the-layer-style-dialog"></a>
+
+### 图层样式对话框
+
+widget 菜单 Layer Style 一节最上面的 **Layer Style...**、细节面板 Layer 区里图层样式开关旁的 **Edit...**，以及在层级面板
+里双击 widget 的样式标记，都会在选中的 widget 上打开图像编辑器那样的图层样式对话框（从 Layer 区或标记打开时，那个 widget
+不在选择里就只对它自己）。窗口不是模态的，开在设计器旁边，每个设计器同时只开一个。
+
+- 左边是**混合选项**——图层的混合模式和不透明度、填充不透明度、所有尺寸的缩放、全局光——以及图层样式有的各种效果，
+  顺序和图像编辑器一样：斜面和浮雕（下挂等高线、纹理）、描边、内阴影、内发光、光泽、颜色叠加、渐变叠加、图案叠加、
+  外发光、投影。勾选框开关效果；勾上一种还没有的效果就加一个。
+- 描边、内阴影、颜色叠加、渐变叠加和投影可以有多个：**+** 在这一行后面加一个（复制这一行），垃圾桶删掉它；把一行
+  拖到同类的另一行上可以调整绘制顺序，后面的画在前面的上面。
+- 右边是选中那一行的参数。它们就是样式自己的字段，所以项目或 DreamGUI 按字段类型或元数据注册的编辑控件，在这里和
+  细节面板里一样会用上。
+- 每次改动都立刻显示在 widget 上，只在设计器的预览里；取消勾选 *Preview* 就不显示。按 **OK** 之前什么都不写；OK 把
+  样式写到每个 widget 上，一步撤销，并写进 `.dui`。**Cancel**（或直接关窗口）把预览恢复原样，文件逐字节不变。
+- **New Style...** 把正在编辑的样式连同图层的混合存成预设，用的是[预设库](#the-preset-library)的新建样式窗口。
+- 对话框开着时，在视口里拖 widget 的样式阴影或全局光，改的是对话框里的样式：立刻显示，松手算一次修改、OK 时写入，Esc 放回；
+  视口自己不写任何东西。
+
+多选时，对话框从第一个 widget 的样式和混合开始，写到所有 widget 上。什么都没改就按 OK，不写任何东西。混合模式和
+不透明度只有在混合选项里改过才写，否则多个 widget 各自保留自己的混合。原来跟随预设的样式会变成 widget 自己的样式。
+`DreamUILayerStyleDialog::Open` 和 `OpenFrom`（`DreamGUIEditor` 模块）供项目自己的编辑器打开这个对话框，`FDreamUILayerStyleSession`
+是不带窗口的编辑过程。
+
+<a id="copying-and-pasting-a-layer-style"></a>
+
+### 复制和粘贴图层样式
+
+widget 菜单（层级面板的菜单，视口里右键打开的也是它）里有一节 **Layer Style**，就是图像编辑器里那一对：
+
+- **Copy Layer Style** 把选中 widget 的[图层样式](../concepts/layer-styles.md)放到剪贴板上；*Copy Includes*
+  勾了的话，连同它的混合模式和不透明度、它的裁剪和遮罩一起（这个选择会记住）。
+- **Paste Layer Style** 把它写到每个选中的 widget 上：写进各自的图层样式，没有的就加一个；剪贴板里带了混合模式和
+  遮罩的，也写到元素的混合模式和 widget 的裁剪上。菜单项的文字会说剪贴板里带了哪几样。整次粘贴是一步撤销；
+  `.dui` 驱动的 Blueprint 上会写进文件。
+
+剪贴板里放的是 `.dui` 的几行，也就是一个节点块里能写的那些行，所以复制的样式能贴到另一个 Blueprint、另一次编辑器
+会话里，也能直接贴进文本编辑器打开的 `.dui`；手写的几行同样能粘贴：
+
+```
+// DreamGUI layer style
+BlendMode = Multiply
+RenderOpacity = 0.8
+Clipping = ClipToBounds
+ClipMask.Shape = Ellipse
++ DreamLayerStyle {
+    Style.DropShadows = ["(Angle=120,Distance=6,Size=10,Opacity=0.6)"]
+    Style.BevelEmboss.bEnabled = true
+}
+```
+
+只写和默认值不同的值；粘贴会整块替换它带的那几样：样式贴到已有样式的 widget 上，旧样式的效果一个也不留。widget
+的样式来自 `.dui` 的 style（`: Card`）时，不会去改那个 style，而是在 widget 自己的节点上写一个覆盖。
+
+<a id="the-eyedropper-and-the-projects-palette"></a>
+
+### 吸管和项目色板
+
+细节面板里每一个颜色行——`FLinearColor` 和 `FColor` 都算，图层样式里的颜色也算——旁边有两个按钮：
+
+- **吸管。** 点它，移到设计器视口上，再点一下取色。在视口上读的是视口自己的画面：画出来的那个像素，背后和自身的
+  每个效果、图层样式、混合模式都已算进去，设计器盖在视口上的东西不算。在屏幕别处读的是屏幕上的像素。Esc 或右键
+  放下吸管。取色保留该行原来的 alpha，是一步撤销。
+- **色板。** 项目的色块，点一下就用；*Add This Colour to the Palette* 把这一行的颜色加进去，在色块上右键可以去掉
+  它。色板是项目设置（Project Settings > Plugins > Dream GUI > Editor > Palette，
+  `UDreamGUISettings::ProjectSwatches`，存在 `DefaultDreamGUI.ini`），项目里每个人看到的是同一套颜色。
+
+渐变的 **Stops** 行也给每个色标配了吸管，在色标下方、色块旁边：取到的颜色就是那个色标的颜色，保留它的 alpha。
+
+两者都是 `DreamGUIEditor` 模块的控件，项目自己的编辑器也能用：`SDreamUIEyedropperButton`（只要读色用
+`FDreamUIEyedropper::Sample`）、`SDreamUIColorQuickPick` 和 `SDreamUISwatchGrid`。它们都不写值：调用方拿到颜色后
+在自己的事务里写。
+
+<a id="the-preset-library"></a>
+
+### 预设库
+
+**Presets** 标签页（在调色板旁边，Window 菜单里也有）把项目的预设分成三栏：**Gradients**（渐变）、**Styles**
+（样式）和 **Effects**（效果参数）。每一栏列出项目设置里的文本预设和预设资产：
+
+| 栏 | 文本预设（Project Settings > Plugins > Dream GUI） | 资产 |
+| --- | --- | --- |
+| Gradients | `GradientPresets`：CSS，`linear-gradient(90deg, #FF8A5B, #2B5FD9)` | `UDreamGradientAsset` |
+| Styles | `StylePresets`：就是上面粘贴图层样式用的那几行 | `UDreamLayerStylePreset` |
+| Effects | `EffectPresets`：一个效果节点 `Glass { Refraction = 18  Frost = 0.25 }`，或一个行为的一行 `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }` | —— |
+
+双击一个预设，或点 *Apply to Selection*，套用到选中的 widget 上；拖到视口或层级里的某个 widget 上，就套用到那个
+widget（拖到选中的某一个上时，套用到整个选择）。每次都是一步撤销，并写进 `.dui`：
+
+- **渐变**写到 widget 的第一个 paint 上——文字的字面（`TextStyle.FacePaint`，并打开它）——没有的话写到第一个渐变属性，
+  并打开它靠来显示的开关（它的 `EditCondition`，比如 RectBlock 的 `bEnableBodyGradient`）；把渐变预设拖到细节面板里
+  某个渐变行上，就用它画那个渐变；
+- **样式**写到 widget 的图层样式上，和粘贴一样；预设带了混合选项的，连同混合一起写；
+- **效果参数**在同一种效果的 widget 上设它写到的那些值，其余不动；行为的参数会在 widget 没有该行为时把它加上。
+
+资产是被跟随的：文字的 paint 把渐变资产记作自己的 Preset，图层样式把样式预设记作自己的 Preset，资产改了它们也跟着改。
+右键菜单里的 *Apply as a Copy* 改为把资产的值写进去。右键菜单还能把预设换一种方式保存——文本预设存成资产，资产存成
+文本预设——以及删除文本预设。*Save Selection* 把选中 widget 的渐变、图层样式或效果参数存成一个新预设。
+
+样式预设资产也可以带上图层的混合选项（*Include Layer Blending Options*，`bIncludeBlending`）：套用时顺带设一次
+widget 的混合模式和不透明度；跟随这个资产的图层样式只画它的效果。`DreamUIStylePresets`（`DreamGUIEditor` 模块）
+供项目自己的编辑器创建样式预设：`CreatePresetAsset`、`SaveTextPreset`，以及图像编辑器式的「新建样式」窗口
+`PromptNewStyle`。
 
 <a id="the-viewport-toolbar"></a>
 

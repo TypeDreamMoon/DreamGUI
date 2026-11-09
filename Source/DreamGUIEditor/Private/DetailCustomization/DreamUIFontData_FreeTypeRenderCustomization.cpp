@@ -135,8 +135,8 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bUseRelativeFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, EngineFont));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontFace));
+		// The engine font shows for an engine font by its EditCondition.
 
 		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontFilePath));
 		auto useRelativeFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bUseRelativeFilePath));

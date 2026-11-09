@@ -133,12 +133,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		EUITextInputType InputType;
 	/** Use this to do custom validation. Only valid when InputType = Custom */
-	UPROPERTY(EditAnywhere, Instanced, Category = "DreamGUI-Input", meta = (EditCondition = "InputType==EUITextInputType::Custom"))
+	UPROPERTY(EditAnywhere, Instanced, Category = "DreamGUI-Input", meta = (EditCondition = "InputType==EUITextInputType::Custom", EditConditionHides))
 		TObjectPtr<UDreamTextInputCustomValidation> CustomValidation = nullptr;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		EUITextInputDisplayType DisplayType = EUITextInputDisplayType::Standard;
 	//password display character
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition = "DisplayType == EUITextInputDisplayType::Password", EditConditionHides))
 		FString PasswordChar = TEXT("*");
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		bool bAllowMultiLine = false;
@@ -147,7 +147,7 @@ protected:
 	 * Commonly only use control/shift/alt key.
 	 * Not allow "Enter" key.
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition="bAllowMultiLine"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition="bAllowMultiLine", EditConditionHides))
 		TArray<FKey> MultiLineSubmitFunctionKeys;
 	/**
 	 * Tab types a tab character -- Shift+Tab too, which a keyboard sends as the same character -- and Ctrl+Tab

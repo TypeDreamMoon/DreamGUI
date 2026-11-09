@@ -9,6 +9,7 @@
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyUtilities.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
+#include "DetailCustomization/DreamPropertyMeta.h"
 
 #define LOCTEXT_NAMESPACE "DreamImageBrushStructCustomization"
 
@@ -315,6 +316,21 @@ void FDreamImageBrushStructCustomization::CustomizeChildren( TSharedRef<IPropert
 	.Visibility( TAttribute<EVisibility>::CreateSP(this, &FDreamImageBrushStructCustomization::GetUVRegionPropertyVisibility ) );
 	StructBuilder.AddProperty(PixelsPerUnitMultiplierProperty.ToSharedRef())
 	.Visibility(TAttribute<EVisibility>::CreateSP(this, &FDreamImageBrushStructCustomization::GetPixelsPerUnitMultiplierPropertyVisibility));
+
+	// Every other field, in the order the brush declares them: the fill and the rounded box's corners, each showing for its
+	// draw type by its EditCondition. Taken from the struct rather than named, so that a field added to the brush has a row.
+	const TSet<FName> Placed = { TEXT("ResourceObject"), TEXT("ImageSize"), TEXT("TintColor"), TEXT("DrawAs"), TEXT("Margin"), TEXT("UVRegion"), TEXT("PixelsPerUnitMultiplier") };
+	uint32 NumChildren = 0;
+	StructPropertyHandle->GetNumChildren(NumChildren);
+	for (uint32 Index = 0; Index < NumChildren; ++Index)
+	{
+		const TSharedPtr<IPropertyHandle> Child = StructPropertyHandle->GetChildHandle(Index);
+		const FProperty* Field = Child.IsValid() ? Child->GetProperty() : nullptr;
+		if (Field != nullptr && !Placed.Contains(Field->GetFName()) && Field->HasAnyPropertyFlags(CPF_Edit) && !DreamPropertyMeta::IsHidden(Field))
+		{
+			StructBuilder.AddProperty(Child.ToSharedRef());
+		}
+	}
 }
 
 EVisibility FDreamImageBrushStructCustomization::GetMarginPropertyVisibility() const

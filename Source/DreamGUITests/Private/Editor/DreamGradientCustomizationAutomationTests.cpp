@@ -428,13 +428,17 @@ bool FDreamGradientFieldsFollowTypeTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("nor a size"), IsFieldUsed(Size, EDreamPaintType::Linear, Corner));
 	TestTrue(TEXT("a radial gradient has a centre"), IsFieldUsed(Center, EDreamPaintType::Radial, Corner));
 	TestTrue(TEXT("and a shape"), IsFieldUsed(Shape, EDreamPaintType::Radial, Corner));
-	TestFalse(TEXT("but no angle"), IsFieldUsed(Angle, EDreamPaintType::Radial, Corner));
+	TestTrue(TEXT("and an angle, which turns its ellipse"), IsFieldUsed(Angle, EDreamPaintType::Radial, Corner));
 	TestFalse(TEXT("its radius only with an explicit size"), IsFieldUsed(Radius, EDreamPaintType::Radial, Corner));
 	TestTrue(TEXT("which shows it"), IsFieldUsed(Radius, EDreamPaintType::Radial, Explicit));
 	TestTrue(TEXT("a conic gradient starts at an angle"), IsFieldUsed(Angle, EDreamPaintType::Conic, Corner));
 	TestFalse(TEXT("and has no size"), IsFieldUsed(Size, EDreamPaintType::Conic, Corner));
 	TestTrue(TEXT("a diamond turns"), IsFieldUsed(Angle, EDreamPaintType::Diamond, Corner));
 	TestFalse(TEXT("and takes the ellipse's radii whatever the shape"), IsFieldUsed(Shape, EDreamPaintType::Diamond, Corner));
+	TestTrue(TEXT("a reflected gradient has a direction"), IsFieldUsed(Angle, EDreamPaintType::Reflected, Corner));
+	TestTrue(TEXT("and a centre its line goes through"), IsFieldUsed(Center, EDreamPaintType::Reflected, Corner));
+	TestFalse(TEXT("but no size"), IsFieldUsed(Size, EDreamPaintType::Reflected, Corner));
+	TestTrue(TEXT("and spreads along it"), IsFieldUsed(Spread, EDreamPaintType::Reflected, Corner));
 	TestFalse(TEXT("four corners have no line to spread along"), IsFieldUsed(Spread, EDreamPaintType::Corners, Corner));
 	TestTrue(TEXT("but still mix in a colour space"), IsFieldUsed(Interpolation, EDreamPaintType::Corners, Corner));
 	TestFalse(TEXT("nothing to paint, no colour space"), IsFieldUsed(Interpolation, EDreamPaintType::None, Corner));

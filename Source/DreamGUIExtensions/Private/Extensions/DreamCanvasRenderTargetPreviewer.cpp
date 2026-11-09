@@ -9,6 +9,8 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Materials/MaterialInterface.h"
+#include "Core/DreamUIClipData.h"
+#include "DreamUIRender/DreamUICompositor.h"
 
 void UDreamCanvasRenderTargetPreviewer::BeginPlay()
 {
@@ -205,7 +207,93 @@ void UDreamCanvasRenderTargetPreviewer::SetPreviewMaterial(UMaterialInterface* V
 	{
 		Material = Value;
 		MarkMaterialDirty();
+		UpdateDrawsThroughComposite();
 	}
+}
+
+void UDreamCanvasRenderTargetPreviewer::SetComposite(bool bInComposite, EDreamUIBlendMode InBlendMode, float InOpacity)
+{
+	InOpacity = FMath::Clamp(InOpacity, 0.0f, 1.0f);
+	const bool bBlendChanged = CompositeBlendMode != InBlendMode || CompositeOpacity != InOpacity;
+	bComposite = bInComposite;
+	CompositeBlendMode = InBlendMode;
+	CompositeOpacity = InOpacity;
+	const bool bWas = bDrawsThroughComposite;
+	UpdateDrawsThroughComposite();
+	if (bWas == bDrawsThroughComposite && bBlendChanged)
+	{
+		// Read again by the canvas every frame: only drawn again.
+		if (UDreamWidget* Widget = GetWidget())
+		{
+			if (UDreamCanvas* RenderCanvas = Widget->GetRenderCanvas())
+			{
+				RenderCanvas->MarkCanvasUpdate(false);
+			}
+		}
+	}
+}
+
+void UDreamCanvasRenderTargetPreviewer::UpdateDrawsThroughComposite()
+{
+	const bool bNow = bComposite && Material == nullptr;
+	if (bDrawsThroughComposite != bNow)
+	{
+		bDrawsThroughComposite = bNow;
+		// The canvas's draw calls are made again: this element's entry gives way to a group's markers, or takes its place back.
+		MarkMaterialDirty();
+	}
+}
+
+bool UDreamCanvasRenderTargetPreviewer::GetCompositeSource(FDreamUICompositeDesc& OutDesc) const
+{
+	const UDreamWidget* Widget = GetWidget();
+	const UDreamCanvas* RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	UTexture* Target = Canvas.IsValid() && Canvas->GetActualRenderMode() == EDreamRenderMode::RenderTarget ? Canvas->GetRenderTarget() : nullptr;
+	if (!bDrawsThroughComposite || Target == nullptr || RenderCanvas == nullptr || RenderCanvas->GetWidget() == nullptr
+		|| Widget->GetWidth() <= 0.0f || Widget->GetHeight() <= 0.0f)
+	{
+		return false;
+	}
+	OutDesc.bExternal = true;
+	OutDesc.BlendMode = CompositeBlendMode;
+	OutDesc.Opacity = CompositeOpacity * GetFinalAlpha01();
+	OutDesc.Textures = FDreamUIBuiltInDrawParams();
+	OutDesc.Textures.MainTexture = Target;
+	// The widget's rect, its first texel at its top left: from the canvas onto the widget, then across its rect.
+	const FMatrix WidgetToWorld = Widget->GetWorldTransform().ToMatrixWithScale();
+	const FMatrix CanvasToWorld = RenderCanvas->GetWidget()->GetWorldTransform().ToMatrixWithScale();
+	const double Left = Widget->GetLocalSpaceLeft();
+	const double Right = Widget->GetLocalSpaceRight();
+	const double Bottom = Widget->GetLocalSpaceBottom();
+	const double Top = Widget->GetLocalSpaceTop();
+	const double Width = Right - Left;
+	const double Height = Top - Bottom;
+	// u = (y - Left) / Width and v = (Top - z) / Height, for a point (x, y, z) of the widget.
+	const FMatrix LocalToUV(
+		FPlane(0.0, 0.0, 0.0, 0.0),
+		FPlane(1.0 / Width, 0.0, 0.0, 0.0),
+		FPlane(0.0, -1.0 / Height, 0.0, 0.0),
+		FPlane(-Left / Width, Top / Height, 0.0, 1.0));
+	OutDesc.CanvasToUV = FMatrix44f(CanvasToWorld * WidgetToWorld.Inverse() * LocalToUV);
+	OutDesc.CanvasToWorld = CanvasToWorld;
+	FBox Rect(ForceInit);
+	Rect += WidgetToWorld.TransformPosition(FVector(0.0, Left, Bottom));
+	Rect += WidgetToWorld.TransformPosition(FVector(0.0, Right, Bottom));
+	Rect += WidgetToWorld.TransformPosition(FVector(0.0, Left, Top));
+	Rect += WidgetToWorld.TransformPosition(FVector(0.0, Right, Top));
+	OutDesc.WorldBounds = Rect;
+	// The clip this widget is drawn with, as its element would have been.
+	OutDesc.MaskClipCoordinate = 0.0f;
+	if (const TSharedPtr<FDreamUIClipData> Clip = Widget->GetClipData().Pin())
+	{
+		OutDesc.MaskClipCoordinate = static_cast<float>(Clip->GetBufferStartPos());
+		OutDesc.Textures.ClipDataTexture = RenderCanvas->GetClipDataTexture();
+		FDreamUIMaskTextures Textures;
+		Clip->GetMaskTextures(Textures);
+		OutDesc.Textures.MaskTexture0 = Textures.Slots[0].Get();
+		OutDesc.Textures.MaskTexture1 = Textures.Slots[1].Get();
+	}
+	return true;
 }
 
 void UDreamCanvasRenderTargetPreviewer::OnBeforeCreateOrUpdateGeometry()

@@ -42,12 +42,10 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto spriteTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, DrawType));
 	category.AddProperty(spriteTypeHandle);
 	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, WeakUtilities));
+	// What applies to one draw type only shows for it by its EditCondition: the fill rows for Filled, the pixels per unit for
+	// the sliced and tiled ones. The fill rows are drawn here, indented under the fill method, while they apply.
 	auto DrawType = TargetScriptPtr->DrawType;
-	if (DrawType == EDreamUISpriteDrawType::Normal)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, PixelsPerUnitMultiplier));
-	}
-	else if (DrawType == EDreamUISpriteDrawType::Sliced || DrawType == EDreamUISpriteDrawType::SlicedFrame)
+	if (DrawType == EDreamUISpriteDrawType::Sliced || DrawType == EDreamUISpriteDrawType::SlicedFrame)
 	{
 		if (TargetScriptPtr->Sprite != nullptr)
 		{
@@ -72,11 +70,6 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, WeakUtilities));
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		EDreamUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, PixelsPerUnitMultiplier));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOrigin));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial90));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial180));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial360));
 		// The three radial rows are transient editor-only mirrors of the one stored FillOrigin, which
 		// PostEditChangeProperty folds back whenever the user picks one; they come out of load at zero,
 		// so the row about to be added has to be refreshed from FillOrigin first - on every object the
@@ -120,22 +113,6 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillDirectionFlip)));
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillAmount)));
-	}
-	else if (DrawType == EDreamUISpriteDrawType::Filled)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, PixelsPerUnitMultiplier));
-	}
-
-	if (DrawType != EDreamUISpriteDrawType::Filled)
-	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillMethod));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOrigin));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillDirectionFlip));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillAmount));
-
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial90));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial180));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial360));
 	}
 }
 void FDreamSpriteCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)

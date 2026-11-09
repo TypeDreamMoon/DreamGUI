@@ -25,6 +25,7 @@ bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared)
 		&& bIsFont == InPrepared.bIsFont
 		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
 		&& BlendMode == InPrepared.BlendMode
+		&& MaskTextures.IsSameAs(InPrepared.MaskTextures)
 		&& RenderLayer == InPrepared.RenderLayer
 		&& RenderLayerRow == InPrepared.RenderLayerRow
 		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace
@@ -186,6 +187,7 @@ void FDreamUIGeometry::UpdateUIRectSimpleVertex(FDreamUIGeometry* uiGeo,
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	DreamUIGeometrySetArrayNum(vertices, 4);
+	uiGeo->DrawnQuad = EDrawnQuad::Simple;
 	DreamUIGeometrySetArrayNum(originVertices, 4);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 	{
@@ -242,7 +244,9 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 	float width, float height, const FVector2f& pivot, 
 	const FDreamUISpriteInfo& uniformSpriteInfo, const FDreamUISpriteInfo& spriteInfo,
 	UDreamCanvas* renderCanvas, UDreamVisual* uiComp, FColor color,
-	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
+	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged,
+	float styleReach,
+	const FBox2f* extraBounds
 )
 {
 	auto& triangles = uiGeo->Triangles;
@@ -290,6 +294,20 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 				float PosMaxX = FMath::Max(maxX, shadowMaxX);
 				float PosMinY = FMath::Min(minY, shadowMinY);
 				float PosMaxY = FMath::Max(maxY, shadowMaxY);
+				if (styleReach > 0.0f)
+				{
+					PosMinX = FMath::Min(PosMinX, minX - styleReach);
+					PosMaxX = FMath::Max(PosMaxX, maxX + styleReach);
+					PosMinY = FMath::Min(PosMinY, minY - styleReach);
+					PosMaxY = FMath::Max(PosMaxY, maxY + styleReach);
+				}
+				if (extraBounds != nullptr && extraBounds->bIsValid)
+				{
+					PosMinX = FMath::Min(PosMinX, extraBounds->Min.X);
+					PosMaxX = FMath::Max(PosMaxX, extraBounds->Max.X);
+					PosMinY = FMath::Min(PosMinY, extraBounds->Min.Y);
+					PosMaxY = FMath::Max(PosMaxY, extraBounds->Max.Y);
+				}
 				if (bSoftEdge)//offset 1 pixel to make edge smooth
 				{
 					PosMinX -= 1;
@@ -308,6 +326,20 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 				float PosMaxX = maxX;
 				float PosMinY = minY;
 				float PosMaxY = maxY;
+				if (styleReach > 0.0f)
+				{
+					PosMinX -= styleReach;
+					PosMaxX += styleReach;
+					PosMinY -= styleReach;
+					PosMaxY += styleReach;
+				}
+				if (extraBounds != nullptr && extraBounds->bIsValid)
+				{
+					PosMinX = FMath::Min(PosMinX, extraBounds->Min.X);
+					PosMaxX = FMath::Max(PosMaxX, extraBounds->Max.X);
+					PosMinY = FMath::Min(PosMinY, extraBounds->Min.Y);
+					PosMaxY = FMath::Max(PosMaxY, extraBounds->Max.Y);
+				}
 				if (bSoftEdge)//offset 1 pixel to make edge smooth
 				{
 					PosMinX -= 1;
@@ -417,6 +449,7 @@ void FDreamUIGeometry::UpdateUIRectBorderVertex(FDreamUIGeometry* uiGeo, bool fi
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 16;
+	uiGeo->DrawnQuad = fillCenter ? EDrawnQuad::Sliced : EDrawnQuad::SlicedFrame;
 	DreamUIGeometrySetArrayNum(vertices, verticesCount);
 	DreamUIGeometrySetArrayNum(originVertices, verticesCount);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)

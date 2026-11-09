@@ -12,11 +12,81 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Styling/SlateIconFinder.h"
+#include "Widget/SDreamUISwatches.h"
+#include "ScopedTransaction.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/SBoxPanel.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetDetailPropertyExtensionHandler"
+
+namespace DreamWidgetDetailPropertyExtensionLocal
+{
+	/** The row's colour in linear light, an FColor read as sRGB. */
+	bool ReadColor(const TSharedPtr<IPropertyHandle>& InHandle, FLinearColor& OutColor)
+	{
+		void* Data = nullptr;
+		if (!InHandle.IsValid() || InHandle->GetValueData(Data) != FPropertyAccess::Success || Data == nullptr)
+		{
+			return false;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InHandle->GetProperty());
+		OutColor = AsStruct->Struct == TBaseStructure<FColor>::Get()
+			? FLinearColor::FromSRGBColor(*static_cast<const FColor*>(Data))
+			: *static_cast<const FLinearColor*>(Data);
+		return true;
+	}
+
+	/** The eyedropper and the project's palette beside a colour row, writing through the row's handle. */
+	TSharedRef<SWidget> MakeColorQuickPick(const TSharedPtr<IPropertyHandle>& InHandle)
+	{
+		return SNew(SDreamUIColorQuickPick)
+			.Color_Lambda([InHandle]()
+			{
+				FLinearColor Color = FLinearColor::White;
+				ReadColor(InHandle, Color);
+				return Color;
+			})
+			.OnColorCommitted_Lambda([InHandle](const FLinearColor& InColor)
+			{
+				FDreamWidgetDetailPropertyExtensionHandler::WritePickedColor(InHandle, InColor);
+			});
+	}
+}
+
+bool FDreamWidgetDetailPropertyExtensionHandler::IsColorProperty(const FProperty* InProperty)
+{
+	const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
+	return AsStruct != nullptr && InProperty->ArrayDim == 1
+		&& (AsStruct->Struct == TBaseStructure<FLinearColor>::Get() || AsStruct->Struct == TBaseStructure<FColor>::Get());
+}
+
+bool FDreamWidgetDetailPropertyExtensionHandler::WritePickedColor(const TSharedPtr<IPropertyHandle>& InHandle, const FLinearColor& InColor)
+{
+	FLinearColor Current = FLinearColor::White;
+	if (!InHandle.IsValid() || !IsColorProperty(InHandle->GetProperty())
+		|| !DreamWidgetDetailPropertyExtensionLocal::ReadColor(InHandle, Current))
+	{
+		return false;
+	}
+	const FScopedTransaction Transaction(LOCTEXT("PickColour", "Pick Colour"));
+	const FStructProperty* AsStruct = CastField<FStructProperty>(InHandle->GetProperty());
+	FPropertyAccess::Result Result = FPropertyAccess::Fail;
+	if (AsStruct->Struct == TBaseStructure<FColor>::Get())
+	{
+		FColor Picked = InColor.ToFColorSRGB();
+		Picked.A = Current.ToFColorSRGB().A;
+		Result = InHandle->SetValueFromFormattedString(FString::Printf(TEXT("(B=%d,G=%d,R=%d,A=%d)"), Picked.B, Picked.G, Picked.R, Picked.A));
+	}
+	else
+	{
+		FLinearColor Picked = InColor;
+		Picked.A = Current.A;
+		Result = InHandle->SetValueFromFormattedString(Picked.ToString());
+	}
+	return Result == FPropertyAccess::Success;
+}
 
 FDreamWidgetDetailPropertyExtensionHandler::FDreamWidgetDetailPropertyExtensionHandler(UWorld* InWorld)
 {
@@ -41,7 +111,8 @@ bool FDreamWidgetDetailPropertyExtensionHandler::IsWidgetReferenceProperty(const
 
 bool FDreamWidgetDetailPropertyExtensionHandler::IsPropertyExtendable(const UClass* ObjectClass, const IPropertyHandle& PropertyHandle) const
 {
-	if (IsWidgetReferenceProperty(PropertyHandle.GetProperty()))
+	if (IsWidgetReferenceProperty(PropertyHandle.GetProperty())
+		|| IsColorProperty(PropertyHandle.GetProperty()))
 	{
 		return true;
 	}
@@ -72,16 +143,37 @@ void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRo
 	if (!IsWidgetReferenceProperty(InPropertyHandle->GetProperty()))
 	{
 		// The binding row draws its own control; the picker below is only for reference properties.
+		TSharedPtr<SWidget> BindingWidget;
 		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get()).Pin())
 		{
-			if (TSharedPtr<SWidget> BindingWidget = DreamWidgetPropertyBindingExtension::MakeBindingWidget(
-				Designer.Get(), Owner, InPropertyHandle))
+			BindingWidget = DreamWidgetPropertyBindingExtension::MakeBindingWidget(Designer.Get(), Owner, InPropertyHandle);
+		}
+		// A colour row shares the slot: the eyedropper and the palette first, the Bind control after them.
+		if (IsColorProperty(InPropertyHandle->GetProperty()))
+		{
+			TSharedRef<SHorizontalBox> Box = SNew(SHorizontalBox);
+			Box->AddSlot().AutoWidth().VAlign(VAlign_Center)
+			[
+				DreamWidgetDetailPropertyExtensionLocal::MakeColorQuickPick(InPropertyHandle)
+			];
+			if (BindingWidget.IsValid())
 			{
-				InWidgetRow.ExtensionContent()
+				Box->AddSlot().AutoWidth().VAlign(VAlign_Center)
 				[
 					BindingWidget.ToSharedRef()
 				];
 			}
+			InWidgetRow.ExtensionContent()
+			[
+				Box
+			];
+		}
+		else if (BindingWidget.IsValid())
+		{
+			InWidgetRow.ExtensionContent()
+			[
+				BindingWidget.ToSharedRef()
+			];
 		}
 		return;
 	}

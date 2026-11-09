@@ -1,0 +1,73 @@
+// A bar filling up: a flash and a ring of shards from its centre, once. The sample's trigger bursts it when the bar it watches
+// reaches full (OnProgressFull).
+System(Name="Samples/Niagara/NS_Sample_FullBurst", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        Color Tint = (1.0, 0.92, 0.55, 1) [ Group="Look" ];
+    }
+
+    Emitter Flash
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = true;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 0.1);
+            SpawnBurst_Instantaneous(SpawnCount = 1, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 0.45);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            Vector2 Particles.SpriteSize = hlsl { float2(360.0, 90.0) * (0.6 + 0.6 * Particles.NormalizedAge) };
+            Color   Particles.Color      = hlsl { float4(User.Tint.rgb * 1.5, 1.0 - Particles.NormalizedAge) };
+        }
+
+        SpriteRenderer Flash
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+
+    Emitter Shards
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = true;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 0.1);
+            SpawnBurst_Instantaneous(SpawnCount = 36, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            // The angle and the speed in a group of their own, before the velocity that reads them: the entries of one Set
+            // Parameters module read the attributes as they were before it, so a velocity beside them would read zero.
+            float   Particles.DreamUI.Angle = hlsl { ExecIndex() * 0.1745329 };
+            float   Particles.DreamUI.Speed = RandomRangeFloat(Minimum = 180.0, Maximum = 420.0);
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.5, LifetimeMax = 0.9);
+            Vector  Particles.Velocity      = hlsl { float3(cos(Particles.DreamUI.Angle) * 1.6, 0.0, sin(Particles.DreamUI.Angle) * 0.5) * Particles.DreamUI.Speed };
+            Vector2 Particles.SpriteSize    = (4, 16);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            Drag(Drag = 3.0);
+            SolveForcesAndVelocity();
+            Color Particles.Color = hlsl { float4(User.Tint.rgb * 1.3, saturate(1.0 - Particles.NormalizedAge)) };
+        }
+
+        SpriteRenderer Shards
+        {
+            Alignment  = VelocityAligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}

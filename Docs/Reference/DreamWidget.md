@@ -36,6 +36,8 @@ Base class for almost all UI related things.
 | `Clipping` | `EDreamWidgetClipping` | DreamGUI | yes | read only |  |
 | `ClippingCornerRadius` | `FVector4f` | DreamGUI | yes | read only | X- RightBottom, Y- RightTop, Z- LeftTop, W- LeftBottom |
 | `ClippingMargin` | `FMargin` | DreamGUI | yes | read only | Expand clip area outward. |
+| `ClipMask` | `FDreamClipMask` | DreamGUI | yes | read only | A mask on this widget's clip, when it clips to its bounds: a shape, a feathered edge, a texture or a procedural pattern, inverted if asked. It clips the whole subtree, as the clip rect does. At its defaults it is no mask. |
+| `bClipToBelow` | `bool` | DreamGUI | yes | read only | Shows this widget and everything under it only where the layer below it is drawn, and through that layer's opacity: a clipping mask. The layer below is the sibling drawn before this one that does not clip to the layer below itself, so siblings that clip to the layer below in a row share one. It can be a simple or nine-sliced image or texture, or a rect block; anything else is not clipped to, with a warning. A hidden layer below hides this too. |
 | `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - |  |
 | `bWidgetActive` | `bool` | DreamGUI | yes | read only | If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable |
 | `Visibility` | `EDreamWidgetVisibility` | DreamGUI | yes | read only | Controls layout, painting and hit testing independently from WidgetActive. |
@@ -88,6 +90,7 @@ Base class for almost all UI related things.
 | `void DestroyWidget()` | callable | Tear this widget and its whole subtree down: unregister, detach from the parent, end play, and mark every widget in it as garbage. |
 | `TArray<UDreamWidget*> FindChildArrayByDisplayName(FString InName, bool IncludeChildren)` | pure | Like "FindChildByDisplayName", but return all children that match the case. @param InName        The child's name that need to find, case sensitive @param IncludeChildren       Also search in children |
 | `UDreamWidget* FindChildByDisplayName(FString InName, bool IncludeChildren)` | pure | Search in children and return the first UIItem that the displayName match input name. Support hierarchy nested search, eg: InName = "Content/ListItem/NameLabel". @param InName        The child's name that need to find, case sensitive @param IncludeChildren       Also search in children |
+| `UDreamWidget* FindClipToBelowUnderlay()` | pure | The layer this widget clips to while it clips to the layer below (bClipToBelow): the sibling drawn before it that does not clip to the layer below itself. Null when it does not, or when nothing is drawn before it. |
 | `void ForceLayoutPrepass()` | callable | Lay this widget's tree out NOW rather than on the next pass -- UMG's ForceLayoutPrepass. |
 | `EDreamAccessibleBehavior GetAccessibleBehavior()` | pure | Get Accessible Behavior |
 | `FText GetAccessibleSummaryText()` | pure | Get Accessible Summary Text |
@@ -108,9 +111,11 @@ Base class for almost all UI related things.
 | `TArray<UDreamWidget*> GetChildren()` | pure | Get Children |
 | `int32 GetChildrenCount()` | pure | Get Children Count |
 | `bool GetChildrenHitTestVisibleInHierarchy()` | pure | Get Children Hit Test Visible in Hierarchy |
+| `FDreamClipMask GetClipMask()` | pure | Get Clip Mask |
 | `EDreamWidgetClipping GetClipping()` | pure | Get Clipping |
 | `FVector4f GetClippingCornerRadius()` | pure | Get Clipping Corner Radius |
 | `FMargin GetClippingMargin()` | pure | Get Clipping Margin |
+| `bool GetClipToBelow()` | pure | Get Clip to Below |
 | `UDreamUIBehaviour* GetComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | Get Component |
 | `UDreamUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)` | pure | Get Component by Interface |
 | `TArray<UDreamUIBehaviour*> GetComponents(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | Get Components |
@@ -271,9 +276,11 @@ Base class for almost all UI related things.
 | `void SetAnchorOffsetTop(float Value)` | callable | This function only valid if UIItem have parent |
 | `void SetAsFirstSibling()` | callable | Set as First Sibling |
 | `void SetAsLastSibling()` | callable | Set as Last Sibling |
+| `void SetClipMask(FDreamClipMask Value)` | callable | Set Clip Mask |
 | `void SetClipping(EDreamWidgetClipping Value)` | callable | Set Clipping |
 | `void SetClippingCornerRadius(FVector4f Value)` | callable | Set Clipping Corner Radius |
 | `void SetClippingMargin(FMargin Value)` | callable | Set Clipping Margin |
+| `void SetClipToBelow(bool Value)` | callable | Set Clip to Below |
 | `void SetContentTint(FLinearColor Value)` | callable | Tint everything drawn below this widget -- its descendants' visuals, never its own -- as UMG's content colour does (a border's ContentColorAndOpacity reaching its child, SCompoundWidget's ColorAndOpacity). Multiplied in linear space, with every ancestor's, into each descendant visual's UDreamVisual::GetFinalColor; marks their colours dirty. White changes nothing. |
 | `void SetCursor(TEnumAsByte<EMouseCursor::Type> Value)` | callable | The cursor to show while the pointer is over this widget. Default means "no opinion" and lets whatever is underneath claim it, which is why there is no separate override flag here as there is in UMG -- DreamPointerPolicy::ResolveCursor walks the hover stack innermost first and takes the first widget with an opinion. |
 | `void SetDisplayName(FString InName)` | callable | Set Display Name |

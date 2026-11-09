@@ -23,15 +23,21 @@
 //
 // SelfContained: the body is embedded in the Custom node and the #include is attached to that node
 // directly (see MF_DreamUI_Clip.dsf for why the Inline form would cache a build-artifact path).
-// FontTexSampler / MainTexSampler are the samplers DreamShader adds after every texture input.
+// FontTexSampler / MainTexSampler / MaskTex0Sampler / MaskTex1Sampler are the samplers DreamShader adds after every
+// texture input.
+//
+// The clip masks' textures are DreamUI_ClipMaskTexture0 and 1, which the canvas sets on every UI material instance
+// (UDreamCanvas::DreamUI_ClipMaskTexture0_MaterialParameterName), white by default: a clip without a texture mask never
+// reads them.
 Function SelfContained float4 DreamUIShade(in float2 UV0, in float2 UV1, in float2 UV2, in float2 UV3, in float2 UV4,
 	in float4 RawVertexColor, in float3 LocalPosition,
 	in Texture2D MainTex, in Texture2DArray FontTex, in Texture2D WidgetDataTex, in Texture2D ClipDataTex,
-	in float4 FontAtlasInfo, in Texture2D PaintDataTex, in float ShadeMarker)
+	in float4 FontAtlasInfo, in Texture2D PaintDataTex, in float ShadeMarker, in Texture2D MaskTex0, in Texture2D MaskTex1)
 {
 	#include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
 	return DreamUI_ShadePixel(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
-		MainTex, MainTexSampler, FontTex, FontTexSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, PaintDataTex);
+		MainTex, MainTexSampler, FontTex, FontTexSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, PaintDataTex,
+		MaskTex0, MaskTex0Sampler, MaskTex1, MaskTex1Sampler);
 }
 
 ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
@@ -69,6 +75,15 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		ScalarParameter DreamUI_ShadeMarker = 1.0 [
 			Group="DreamUI";
 		];
+		// The clip masks' textures, by slot. White until the canvas sets them, which nothing reads then.
+		TextureObjectParameter DreamUI_ClipMaskTexture0 = Path(Engine, "EngineResources/WhiteSquareTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_ClipMaskTexture1 = Path(Engine, "EngineResources/WhiteSquareTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
 	}
 
 	Inputs = {
@@ -94,7 +109,7 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		float3 LocalPosition = UE.Expression(Class="LocalPosition", OutputType="float3");
 		float4 Shaded = DreamUIShade(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
 			DreamUI_MainTexture, DreamUI_FontTexture, DreamUI_WidgetPropertyDataTexture, DreamUI_ClipDataTexture,
-			DreamUI_FontAtlasInfo, DreamUI_PaintDataTexture, DreamUI_ShadeMarker);
+			DreamUI_FontAtlasInfo, DreamUI_PaintDataTexture, DreamUI_ShadeMarker, DreamUI_ClipMaskTexture0, DreamUI_ClipMaskTexture1);
 
 		Result = (Shaded * Tint);
 	}
@@ -115,6 +130,8 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		Node(Var="DreamUI_FontAtlasInfo", X=-1104, Y=1200);
 		Node(Var="DreamUI_PaintDataTexture", X=-1104, Y=1312);
 		Node(Var="DreamUI_ShadeMarker", X=-1104, Y=1488);
+		Node(Var="DreamUI_ClipMaskTexture0", X=-1104, Y=1600);
+		Node(Var="DreamUI_ClipMaskTexture1", X=-1104, Y=1776);
 		Node(Var="Shaded", X=-560, Y=160);
 		Node(Var="Tint", X=-560, Y=480);
 		Node(Var="Result", X=-128, Y=208);

@@ -71,6 +71,8 @@ the viewport or drag into a level — step by step in [Your first screen](gettin
   - [Tools](tools/designer.md) — The designer, the VS Code extension, debugging commands, the test suite, benchmarks, scripting.
   - [Migration and upgrades](guides/migration.md) — Coming from LGUI, LexUI or an early build, and upgrading between development builds.
   - [Packaging and platforms](guides/fonts-and-packaging.md) — Shipping fonts, colour emoji and ICU data with a game; which platforms have actually run.
+  - [Importing layered documents](guides/layered-document-import.md) — A .psd or .psb as a DreamUI widget: what each layer becomes, naming conventions, fonts, importing again.
+  - [Property meta tags](guides/property-meta.md) — The `DreamGUI_` tags that place a property in the details panels, hide it or pick its control; how an extension's classes use them.
   - [Diagnostics](diagnostics/index.md) — Every .dui diagnostic is a DUInnnn code, in seven families by compile stage.
   - [API reference](Reference/index.md) — Per-class property and function reference printed from reflection, each page ending with its UMG comparison.
   - [Changelog](changelog/index.md) — What changed in each version.

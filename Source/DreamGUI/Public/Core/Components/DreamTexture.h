@@ -24,7 +24,8 @@ protected:
 	friend class FDreamTextureCustomization;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamUISpriteDrawType DrawType = EDreamUISpriteDrawType::Normal;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
+	// Beside the draw type it applies to, rather than in a category of its own that is empty for the other draw types.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI", meta = (EditCondition = "DrawType == EDreamUISpriteDrawType::Sliced || DrawType == EDreamUISpriteDrawType::SlicedFrame", EditConditionHides))
 	float PixelsPerUnitMultiplier = 1;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		FDreamUISpriteInfo SpriteInfo;
@@ -32,18 +33,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		FVector4f UVRect = FVector4f(0, 0, 1, 1);
 
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "DrawType == EDreamUISpriteDrawType::Filled", EditConditionHides))
 		EDreamUISpriteFillMethod FillMethod = EDreamUISpriteFillMethod::Horizontal;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	// DreamGUI_Hidden: edited through the Fill Origin row of the fill method, one of the three below.
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		uint8 FillOrigin = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "DrawType == EDreamUISpriteDrawType::Filled", EditConditionHides))
 		bool FillDirectionFlip = false;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "DrawType == EDreamUISpriteDrawType::Filled", EditConditionHides))
 		float FillAmount = 1;
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI")EDreamUISpriteFillOriginType_Radial90 fillOriginType_Radial90;
-	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI")EDreamUISpriteFillOriginType_Radial180 fillOriginType_Radial180;
-	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI")EDreamUISpriteFillOriginType_Radial360 fillOriginType_Radial360;
+	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI", meta = (DisplayName = "Fill Origin", EditCondition = "DrawType == EDreamUISpriteDrawType::Filled && FillMethod == EDreamUISpriteFillMethod::Radial90", EditConditionHides))
+	EDreamUISpriteFillOriginType_Radial90 fillOriginType_Radial90;
+	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI", meta = (DisplayName = "Fill Origin", EditCondition = "DrawType == EDreamUISpriteDrawType::Filled && FillMethod == EDreamUISpriteFillMethod::Radial180", EditConditionHides))
+	EDreamUISpriteFillOriginType_Radial180 fillOriginType_Radial180;
+	UPROPERTY(Transient, EditAnywhere, Category = "DreamGUI", meta = (DisplayName = "Fill Origin", EditCondition = "DrawType == EDreamUISpriteDrawType::Filled && FillMethod == EDreamUISpriteFillMethod::Radial360", EditConditionHides))
+	EDreamUISpriteFillOriginType_Radial360 fillOriginType_Radial360;
 #endif
 
 	void CheckSpriteData();

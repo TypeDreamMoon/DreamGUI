@@ -13,6 +13,7 @@ const FName FDreamWidgetDesignerTabs::HierarchyID(TEXT("DreamWidgetDesigner_Hier
 const FName FDreamWidgetDesignerTabs::PaletteID(TEXT("DreamWidgetDesigner_Palette"));
 const FName FDreamWidgetDesignerTabs::DetailsID(TEXT("DreamWidgetDesigner_Details"));
 const FName FDreamWidgetDesignerTabs::AnimationsID(TEXT("DreamWidgetDesigner_Animations"));
+const FName FDreamWidgetDesignerTabs::PresetsID(TEXT("DreamWidgetDesigner_Presets"));
 // Not ours to name: the sequencer invokes this id itself.
 const FName FDreamWidgetDesignerTabs::SequencerCurvesID(TEXT("SequencerGraphEditor"));
 

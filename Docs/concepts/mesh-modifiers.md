@@ -139,7 +139,9 @@ When `SetProperties` / `SetProperty` swap properties while **registered**, the o
   [Rendering](rendering.md#indices-are-16-bit)), the source **reports an error once per modifier and does
   not draw that copy** — when "the shadow suddenly went away", look at the vertex budget first.
 - **The order is not yours to choose**: modifiers whose `GetDuplicatesMesh` is true **always run after the in-place
-  ones**.
+  ones**. More precisely, modifiers run in stages (`GetStage`): those that work on characters, then text on a path, then
+  the warps and jellies that cut and bend the mesh, then the copies -- see
+  [Warps, jellies and text on a path](warp-and-text-on-path.md).
 - **`PositionAsUV` cannot write `UV1`**; writing `UV0` **replaces the image**; whether `UV2`/`UV3` are free depends on
   **the specific visual**.
 - **A modifier that moves vertices takes text off the small-text coverage glyph path** (back to the distance field);

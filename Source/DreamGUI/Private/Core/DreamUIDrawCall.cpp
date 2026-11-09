@@ -299,6 +299,8 @@ bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& 
 	//the blend state is chosen once for the whole draw-call, so elements that composite differently
 	//cannot share one however identical everything else is
 	if (this->BlendMode != geo.BlendMode)return false;
+	//one texture per mask slot for the whole draw-call: an element reading another there cannot join it
+	if (!this->MaskTextures.CanDraw(geo.MaskTextures))return false;
 	if (geo.bIsFont)
 	{
 		if (!this->FontTexture.IsExplicitlyNull() && !this->FontTexture.HasSameIndexAndSerialNumber(geo.Texture))//draw-call also contains font but different of geo's

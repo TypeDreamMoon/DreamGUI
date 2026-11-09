@@ -6,6 +6,8 @@
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
 #include "DreamUIRender/DreamUIPostProcessEffects.h"
+#include "DreamUIRender/DreamUIBackdropEffects.h"
+#include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIWidgetRegistry.h"
 
 
@@ -37,6 +39,55 @@ void UDreamBackgroundBlur::MarkAllDirty()
 	SendRegionVertexDataToRenderProxy();
 	SendMaskTextureToRenderProxy();
 	SendOthersDataToRenderProxy();
+	SendStrengthMapToRenderProxy();
+}
+
+void UDreamBackgroundBlur::SetStrengthMap(const FDreamBlurStrengthMap& Value)
+{
+	StrengthMap = Value;
+	SendStrengthMapToRenderProxy();
+}
+
+void UDreamBackgroundBlur::SendStrengthMapToRenderProxy()
+{
+	if (!RenderProxy.IsValid())
+	{
+		return;
+	}
+	FDreamUIBlurStrengthMap Map;
+	Map.Kind = static_cast<int32>(StrengthMap.Kind);
+	switch (StrengthMap.Kind)
+	{
+	case EDreamBlurStrengthMapKind::Linear:
+		Map.Points = FVector4f(StrengthMap.Start.X, StrengthMap.Start.Y, StrengthMap.End.X, StrengthMap.End.Y);
+		break;
+	case EDreamBlurStrengthMapKind::Radial:
+		Map.Points = FVector4f(StrengthMap.Start.X, StrengthMap.Start.Y, StrengthMap.InnerRadius, FMath::Max(StrengthMap.OuterRadius, StrengthMap.InnerRadius));
+		break;
+	default:
+		break;
+	}
+	Map.Strengths = FVector2f(StrengthMap.StartStrength, StrengthMap.EndStrength);
+	// The shader's channels: red, green, blue, alpha, luminosity.
+	switch (StrengthMap.Channel)
+	{
+	case EDreamClipMaskChannel::Red: Map.Channel = 0; break;
+	case EDreamClipMaskChannel::Green: Map.Channel = 1; break;
+	case EDreamClipMaskChannel::Blue: Map.Channel = 2; break;
+	case EDreamClipMaskChannel::Luminance: Map.Channel = 4; break;
+	default: Map.Channel = 3; break;
+	}
+	Map.Pattern = static_cast<int32>(StrengthMap.Pattern);
+	Map.Frequency = FMath::Max(StrengthMap.Frequency, 0.01f);
+	Map.Seed = static_cast<float>(StrengthMap.Seed);
+	Map.Texture = StrengthMap.Kind == EDreamBlurStrengthMapKind::Texture ? StrengthMap.Texture.Get() : nullptr;
+	Map.MaxLevel = FMath::Clamp(StrengthMap.MaxLevel, 1, 5);
+	DreamUIPostProcessEffects::SetBackgroundBlurStrengthMap_GameThread(RenderProxy, Map);
+	// A map draws the blur over its own copy of what is behind, which is more of it than the region the uniform blur copies.
+	if (UDreamWidget* Widget = GetWidget())
+	{
+		Widget->MarkCanvasUpdate(false);
+	}
 }
 
 
@@ -94,6 +145,7 @@ FDreamVisualPostProcessRenderProxyPtr UDreamBackgroundBlur::GetRenderProxy()
 		SendMaskTextureToRenderProxy();
 		SendRenderTargetToRenderProxy();
 		SendOthersDataToRenderProxy();
+		SendStrengthMapToRenderProxy();
 	}
 	return RenderProxy;
 }

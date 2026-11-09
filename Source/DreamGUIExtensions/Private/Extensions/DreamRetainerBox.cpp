@@ -61,6 +61,10 @@ void UDreamRetainerBox::OnRegister()
 void UDreamRetainerBox::OnUnregister()
 {
 	RestoreCanvasConfiguration();
+	if (auto Display = DisplayVisual.Get())
+	{
+		Display->SetComposite(false, EDreamUIBlendMode::Alpha, 1.0f);
+	}
 	Super::OnUnregister();
 }
 
@@ -140,9 +144,23 @@ void UDreamRetainerBox::ApplyGroupCompositing()
 	/**
 	 * The group alpha, applied once to the composited texture. This is the whole difference from
 	 * per-widget RenderOpacity: the subtree is already flattened into the texture by the time this
-	 * multiplies it, so overlapping children fade together instead of through each other.
+	 * multiplies it, so overlapping children fade together instead of through each other. Through the
+	 * composite, with the mode; through the effect material, as the display's alpha.
 	 */
-	Display->SetAlpha(GroupRenderOpacity);
+	Display->SetComposite(true, GroupBlendMode, GroupRenderOpacity);
+	if (EffectMaterial != nullptr)
+	{
+		Display->SetAlpha(GroupRenderOpacity);
+	}
+}
+
+void UDreamRetainerBox::SetGroupBlendMode(EDreamUIBlendMode Value)
+{
+	if (GroupBlendMode != Value)
+	{
+		GroupBlendMode = Value;
+		ApplyGroupCompositing();
+	}
 }
 
 void UDreamRetainerBox::Tick(float DeltaTime)

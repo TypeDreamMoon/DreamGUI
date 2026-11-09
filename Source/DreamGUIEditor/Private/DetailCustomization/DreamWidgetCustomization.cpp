@@ -31,6 +31,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
+#include "DetailCustomization/DreamWidgetLayerSection.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "ScopedTransaction.h"
@@ -364,18 +365,10 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	// handle, and this is how they reach the details view's FNotifyHook afterwards.
 	PropertyUtilities = DetailBuilder.GetPropertyUtilities();
 
-	DetailBuilder.HideCategory("DreamGUI");
-	DetailBuilder.HideCategory("Interaction");
-	DetailBuilder.HideCategory("Accessibility");
-	DetailBuilder.HideCategory("TransformCommon");
-	// Marking a property Interp so Sequencer can animate it also implies Edit, which drops the
-	// transform properties into categories of their own: "Transform" (the relative location, rotation
-	// and scale the Layout category already presents) and "DreamGUI-AnchorData" (the anchor offsets
-	// Sequencer keys, greyed out and transient). Each was a second, raw copy of the Layout rows at the
-	// bottom of the panel. "DreamWidget" is the auto-named category the same properties used to land in.
-	DetailBuilder.HideCategory("DreamWidget");
-	DetailBuilder.HideCategory("Transform");
-	DetailBuilder.HideCategory("DreamGUI-AnchorData");
+	// No category is hidden whole. The rows below place what they draw; a property they do not place says where it goes
+	// with DreamGUI_ tags (FDreamDetailsLayout places those after this), or else stays in its own category -- so a
+	// property added to the widget can never be dropped from the panel the way hiding "DreamGUI" once dropped a user
+	// widget's Wants Tick. The Sequencer mirrors of the transform (Interp implies Edit) are tagged DreamGUI_Hidden.
 	IDetailCategoryBuilder& TransformCategory = DetailBuilder.EditCategory(
 		"DreamLayout", LOCTEXT("LayoutCategory", "Layout"), ECategoryPriority::Important);
 	IDetailCategoryBuilder& BehaviorCategory = DetailBuilder.EditCategory(
@@ -435,14 +428,13 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto NavigationBoundaryRule_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, NavigationBoundaryRule));
 	auto Cursor_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Cursor));
 	auto ToolTip_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, ToolTipText));
-	auto RenderOpacity_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderOpacity));
 	auto PixelSnapping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, PixelSnapping));
 	auto AccessibleBehavior_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleBehavior));
 	auto AccessibleText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleText));
 	auto AccessibleSummaryText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleSummaryText));
 	for (const TSharedPtr<IPropertyHandle>& Property : {
 		DisplayName_PH, WidgetActive_PH, IsEnabled_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
-		Focusable_PH, TabStop_PH, TabIndex_PH, TabNavigation_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
+		Focusable_PH, TabStop_PH, TabIndex_PH, TabNavigation_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH,
 		PixelSnapping_PH, AccessibleBehavior_PH, AccessibleText_PH, AccessibleSummaryText_PH })
 	{
 		DetailBuilder.HideProperty(Property);
@@ -464,7 +456,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	BehaviorCategory.AddProperty(NavigationBoundaryRule_PH, EPropertyLocation::Advanced);
 	BehaviorCategory.AddProperty(DisplayName_PH, EPropertyLocation::Advanced);
 
-	AppearanceCategory.AddProperty(RenderOpacity_PH).DisplayName(LOCTEXT("RenderOpacity", "Opacity"));
+	// Opacity is the Layer category's, with the blend mode, the mask and the rest of what makes the widget a layer.
 	AppearanceCategory.AddProperty(PixelSnapping_PH);
 	AccessibilityCategory.AddProperty(AccessibleBehavior_PH).DisplayName(LOCTEXT("AccessibleBehavior", "Behavior"));
 	AccessibilityCategory.AddProperty(AccessibleText_PH);
@@ -472,8 +464,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	auto Clipping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Clipping));
 	DetailBuilder.HideProperty(Clipping_PH);
+	// Named after its header property, as a group with a header property is found by.
 	auto& ClippingGroup = AppearanceCategory.AddGroup(
-		TEXT("ClippingGroup"), LOCTEXT("ClippingGroup", "Clipping"), false, false);
+		TEXT("Clipping"), LOCTEXT("ClippingGroup", "Clipping"), false, false);
 	ClippingGroup.HeaderProperty(Clipping_PH);
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bUniformSetClippingCornerRadius));
@@ -599,6 +592,8 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, ClippingMargin));
 	ClippingGroup.AddPropertyRow(ClippingMargin_PH);
+	// The mask on the clip and clipping to the layer below are in the Layer category, at the top.
+	DreamWidgetLayerSection::Build(DetailBuilder, TargetScriptArray, PropertyUtilities);
 
 	//anchor, width, height
 	{

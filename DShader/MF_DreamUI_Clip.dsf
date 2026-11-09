@@ -12,16 +12,29 @@
 // artifact directory. Cleaning Intermediate, a hash change racing asset load, or simply not having
 // DreamShader installed all leave the include unresolvable, and UE drops it with only a warning, so
 // the material still "compiles" while the Custom node calls a function nothing declares.
-Function SelfContained float DreamUIClip(in Texture2D DataTex, in float CoordinateInDataTex, in float3 PixelLocalPosition)
+//
+// The clip masks' textures come in as two more texture inputs, each with the sampler DreamShader adds after it
+// (MaskTex0Sampler, MaskTex1Sampler): the canvas sets them on every UI material instance as DreamUI_ClipMaskTexture0
+// and 1 (UDreamCanvas::DreamUI_ClipMaskTexture0_MaterialParameterName), white by default, which no clip without a
+// texture mask reads.
+Function SelfContained float DreamUIClip(in Texture2D DataTex, in Texture2D MaskTex0, in Texture2D MaskTex1, in float CoordinateInDataTex, in float3 PixelLocalPosition)
 {
     #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
-    return DreamUI_CalculateClipData(DataTex, CoordinateInDataTex, PixelLocalPosition);
+    return DreamUI_CalculateClipDataMasked(DataTex, MaskTex0, MaskTex0Sampler, MaskTex1, MaskTex1Sampler, CoordinateInDataTex, PixelLocalPosition);
 }
 
 ShaderFunction(Name="Materials/MF_DreamUI_Clip", Root="Plugin.DreamGUI")
 {
 	Properties = {
 		TextureObjectParameter DreamUI_ClipDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_ClipMaskTexture0 = Path(Engine, "EngineResources/WhiteSquareTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_ClipMaskTexture1 = Path(Engine, "EngineResources/WhiteSquareTexture") [
 			Group="DreamUI";
 			SamplerType="SAMPLERTYPE_Color";
 		];
@@ -40,7 +53,7 @@ ShaderFunction(Name="Materials/MF_DreamUI_Clip", Root="Plugin.DreamGUI")
 
 	Graph = {
 		float3 LocalPosition = UE.Expression(Class="LocalPosition", OutputType="float3");
-		float Calculate = DreamUIClip(DreamUI_ClipDataTexture, CoordinateInDataTex, LocalPosition);
+		float Calculate = DreamUIClip(DreamUI_ClipDataTexture, DreamUI_ClipMaskTexture0, DreamUI_ClipMaskTexture1, CoordinateInDataTex, LocalPosition);
 		float Multiply = (Opacity * Calculate);
 
 		Result = Multiply;
@@ -48,6 +61,8 @@ ShaderFunction(Name="Materials/MF_DreamUI_Clip", Root="Plugin.DreamGUI")
 
 	Layout = {
 		Node(Var="DreamUI_ClipDataTexture", X=-816, Y=272);
+		Node(Var="DreamUI_ClipMaskTexture0", X=-1104, Y=272);
+		Node(Var="DreamUI_ClipMaskTexture1", X=-1104, Y=448);
 		Node(Var="CoordinateInDataTex", X=-816, Y=480);
 		Node(Var="LocalPosition", X=-688, Y=656);
 		Node(Var="Calculate", X=-368, Y=336);

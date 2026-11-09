@@ -555,6 +555,11 @@ namespace DreamUI_Private
 				FSlateIcon(AppStyle, "Icons.Alert"),
 				&FDreamWidgetBlueprintEditor::GetShowSafeZone, &FDreamWidgetBlueprintEditor::ToggleShowSafeZone,
 				&FDreamWidgetBlueprintEditor::GetShowDesignerChrome));
+			InSection.AddEntry(MakeDesignerToggle("ClipMasks", WeakEditor, FText::GetEmpty(),
+				LOCTEXT("ClipMasksTooltip", "Outline the clip mask of each selected widget that has one: the shape it cuts, a texture or pattern mask's rect, the layer below a widget that clips to it. Needs the designer overlay switched on."),
+				FSlateIcon(AppStyle, "Icons.Filter"),
+				&FDreamWidgetBlueprintEditor::GetShowClipMasks, &FDreamWidgetBlueprintEditor::ToggleShowClipMasks,
+				&FDreamWidgetBlueprintEditor::GetShowDesignerChrome));
 			InSection.AddEntry(MakeDesignerToggle("DesignerChrome", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("DesignerChromeTooltip", "Draw everything the editor puts over the prefab: the canvas boundary, selection outlines, handles, guides, layout diagnostics and readouts. Switch it off to see the prefab on its own; the gestures all still work."),
 				FSlateIcon(AppStyle, "Icons.Visibility"),

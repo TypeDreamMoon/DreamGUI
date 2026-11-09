@@ -67,112 +67,42 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&TargetTweenComp);
 
-	uint8 TransitionType = (uint8)(EUISelectableTransitionType::None);
-	//a selection that mixes transition types has no rows to agree on, so it falls into the branch that leaves only the header
-	bool bIsSingleTransitionType = Transition_PH->GetValue(TransitionType) == FPropertyAccess::Success;
-	TArray<FName> NeedToHidePropertyNamesForTransition;
-	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), Transition_PH->GetPropertyDisplayName());
+	// Every row of every transition is in the group, in this order; each shows for the transitions it applies to by its
+	// EditCondition, so the panel need not be rebuilt to show another transition's rows.
+	// Named after its header property, as a group with a header property is found by.
+	IDetailGroup& TransitionGroup = category.AddGroup(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionType), Transition_PH->GetPropertyDisplayName());
 	TransitionGroup.HeaderProperty(Transition_PH);
-	if (!bIsSingleTransitionType || TransitionType == (uint8)(EUISelectableTransitionType::None))
+	TransitionGroup.AddPropertyRow(TransitionTarget_PH);
+	uint8 TransitionType = (uint8)(EUISelectableTransitionType::None);
+	if (Transition_PH->GetValue(TransitionType) == FPropertyAccess::Success && TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush)
+		&& TransitionTarget_Visual && !TransitionTarget_Visual->IsA<UDreamImage>())
 	{
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionTarget));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, AnimDuration));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledImageBrush));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, bUseFocusedVisuals));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedImageBrush));
-		
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
+		TransitionGroup.AddWidgetRow()
+			.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
+			.ValueContent()
+			.MinDesiredWidth(500)
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
+				.ColorAndOpacity(FLinearColor(FColor::Red))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			];
 	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
+	// Focus sits after the four states it is an alternative to, behind the switch that turns it on: most controls never want
+	// a look of their own for it. The switch still matters with a custom transition: it decides between OnFocused and
+	// OnHovered, and a transition written before focus existed only implements the latter.
+	for (const FName Name : {
+		GET_MEMBER_NAME_CHECKED(UUISelectable, NormalColor), GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredColor),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, PressedColor), GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledColor),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush), GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush), GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledImageBrush),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition), GET_MEMBER_NAME_CHECKED(UUISelectable, bUseFocusedVisuals),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedColor), GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedImageBrush),
+		GET_MEMBER_NAME_CHECKED(UUISelectable, AnimDuration) })
 	{
-		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedImageBrush));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
-
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledColor)));
-		// Focus sits after the four states it is an alternative to, behind the switch that turns it on:
-		// most controls never want a look of their own for it, and an always-visible colour row invites
-		// a designer to set one that then does nothing.
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, bUseFocusedVisuals)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, AnimDuration)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(Name));
 	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
-	{
-		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
-		if (TransitionTarget_Visual && !TransitionTarget_Visual->IsA<UDreamImage>())
-		{
-			TransitionGroup.AddWidgetRow()
-				.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, AnimDuration));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
-		
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, bUseFocusedVisuals)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedImageBrush)));
-	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::Custom))
-	{
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionTarget));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, AnimDuration));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, DisabledImageBrush));
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, FocusedImageBrush));
-
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition)));
-		// The switch still matters with a custom transition: it is what decides between OnFocused and
-		// OnHovered, and a transition written before focus existed only implements the latter.
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, bUseFocusedVisuals)));
-	}
-
 	IDetailCategoryBuilder& NavigationCategory = DetailBuilder.EditCategory("DreamGUI-Selectable-Navigation");
 	NavigationCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, bCanNavigateHere));
 	
@@ -251,35 +181,8 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		]
 	;
 	
-	if (navigationLeftValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationLeftSpecific)));
-	}
-	if (navigationRightValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationRightSpecific)));
-	}
-	if (navigationUpValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationUpSpecific)));
-	}
-	if (navigationDownValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationDownSpecific)));
-	}
-	if (navigationNextValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationNextSpecific)));
-	}
-	if (navigationPrevValue != EUISelectableNavigationMode::Explicit)
-	{
-		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationPrevSpecific)));
-	}
-	
-	for (auto item : NeedToHidePropertyNamesForTransition)
-	{
-		DetailBuilder.HideProperty(item);
-	}
+	// A direction's explicit target shows, indented under it, while the direction is Explicit; its EditCondition hides it
+	// otherwise.
 }
 void FUISelectableCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {

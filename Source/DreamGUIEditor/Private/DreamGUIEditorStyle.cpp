@@ -153,6 +153,32 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamLayoutSelfGrid", new UMG_ICON(TEXT("GridPanel"), Icon16x16));
 	Style->Set("ClassIcon.DreamMeshModifierBase", new UMG_ICON(TEXT("Border"), Icon16x16));
 
+	// The layer effects: one picture per effect, the same in the palette, the component list and the hierarchy's marks.
+	Style->Set("ClassIcon.DreamLayerStyle", new STARSHIP_ICON(TEXT("Layers"), Icon16x16));
+	Style->Set("ClassIcon.DreamLayerGroup", new STARSHIP_ICON(TEXT("GroupActors"), Icon16x16));
+	Style->Set("ClassIcon.DreamShapeBlendGroup", new STARSHIP_ICON(TEXT("Shapes"), Icon16x16));
+	Style->Set("ClassIcon.DreamMaskTransition", new STARSHIP_ICON(TEXT("ColorChannelAlpha"), Icon16x16));
+	Style->Set("ClassIcon.DreamHoloFoil", new STARSHIP_ICON(TEXT("color"), Icon16x16));
+	Style->Set("ClassIcon.DreamPointerLight", new STARSHIP_ICON(TEXT("LightBulb"), Icon16x16));
+	Style->Set("ClassIcon.DreamTiltCard", new STARSHIP_ICON(TEXT("TransformRotate_16"), Icon16x16));
+	Style->Set("ClassIcon.DreamMeshModifierWarp", new STARSHIP_ICON(TEXT("BrushWireframe"), Icon16x16));
+	Style->Set("ClassIcon.DreamMeshModifierJelly", new STARSHIP_ICON(TEXT("TransformScale_16"), Icon16x16));
+	Style->Set("ClassIcon.DreamMeshModifierTextOnPath", new STARSHIP_ICON(TEXT("TextEditor_16"), Icon16x16));
+	Style->Set("ClassIcon.DreamGlass", new STARSHIP_ICON(TEXT("PostProcessing"), Icon16x16));
+	Style->Set("ClassIcon.DreamAdjustmentLayer", new STARSHIP_ICON(TEXT("Adjust"), Icon16x16));
+	Style->Set("ClassIcon.DreamStylizeEffect", new STARSHIP_ICON(TEXT("Paintbrush"), Icon16x16));
+	Style->Set("ClassIcon.DreamPath", new STARSHIP_ICON(TEXT("Curves"), Icon16x16));
+	Style->Set("ClassIcon.DreamNiagaraSystem", new STARSHIP_ICON(TEXT("ParticleSprites"), Icon16x16));
+	Style->Set("ClassIcon.DreamNiagaraTrigger", new STARSHIP_ICON(TEXT("ParticleSprites"), Icon16x16));
+	// The marks after a hierarchy row's name, one per kind of effect on the widget.
+	Style->Set("DreamGUIEditor.LayerMark.Style", new STARSHIP_ICON(TEXT("Layers"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Group", new STARSHIP_ICON(TEXT("GroupActors"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Mask", new STARSHIP_ICON(TEXT("ColorChannelAlpha"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Blend", new STARSHIP_ICON(TEXT("color"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Effect", new STARSHIP_ICON(TEXT("VisualEffects"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Warp", new STARSHIP_ICON(TEXT("BrushWireframe"), FVector2D(12.0f, 12.0f)));
+	Style->Set("DreamGUIEditor.LayerMark.Particles", new STARSHIP_ICON(TEXT("ParticleSprites"), FVector2D(12.0f, 12.0f)));
+
 	// Behaviour classes that previously fell through to the DreamUIBehaviour icon. Subclasses
 	// (UISelectableTransition, UISpriteSequencePlayer, ...) inherit through FSlateIconFinder's
 	// parent-class walk, so only the family roots are listed.

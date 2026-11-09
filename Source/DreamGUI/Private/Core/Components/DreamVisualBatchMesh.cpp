@@ -11,6 +11,7 @@
 #include "Core/DreamUIDrawCall.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIClipData.h"
 #include "Event/DreamPointerEventData.h"
 #include "HAL/IConsoleManager.h"
 
@@ -182,11 +183,14 @@ void UDreamVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvC
 			// modifiers before it produced, and its copies lie outside every char vertex range a text
 			// animation addresses. Running those last makes the result independent of which component
 			// was added first, instead of an outline that silently stops following an animated
-			// character when the two components happen to be in the other order.
-			const bool bADuplicates = A->GetDuplicatesMesh();
-			if (bADuplicates != B->GetDuplicatesMesh())
+			// character when the two components happen to be in the other order. The same holds one
+			// stage earlier: a deform cuts the mesh finer, and what reads characters by their ranges
+			// has to have run before it.
+			const EDreamMeshModifierStage AStage = A->GetStage();
+			const EDreamMeshModifierStage BStage = B->GetStage();
+			if (AStage != BStage)
 			{
-				return !bADuplicates;
+				return AStage < BStage;
 			}
 			return A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
 		});
@@ -226,11 +230,20 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		if (bMaterialChanged)
 		{
 			bMaterialChanged = false;
-			UIGeometry->Material = GetMaterialToCreateGeometry();
+			UIGeometry->Material = MaterialOverride != nullptr ? MaterialOverride.Get() : GetMaterialToCreateGeometry();
 		}
 		//cheap, and unconditional so that it cannot go stale: the geometry is what the batcher sees,
 		//and the blend mode is part of a draw-call's identity there
 		UIGeometry->BlendMode = BlendMode;
+		//the same for the mask textures the clips around read, which a draw-call binds
+		if (TSharedPtr<FDreamUIClipData> Clip = Widget->GetClipData().Pin())
+		{
+			Clip->GetMaskTextures(UIGeometry->MaskTextures);
+		}
+		else
+		{
+			UIGeometry->MaskTextures = FDreamUIMaskTextures();
+		}
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
@@ -371,6 +384,74 @@ bool UDreamVisualBatchMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVector
 		return LineTraceUICustom(OutHit, Start, End);
 		break;
 	}
+}
+
+bool UDreamVisualBatchMesh::GetClipUnderlay(FDreamClipUnderlay& OutUnderlay) const
+{
+	OutUnderlay = FDreamClipUnderlay();
+	const FDreamUIGeometry* Geometry = UIGeometry.Get();
+	using EDrawnQuad = FDreamUIGeometry::EDrawnQuad;
+	if (Geometry == nullptr || Geometry->Vertices.Num() == 0)
+	{
+		OutUnderlay.Unsupported = TEXT("the element under it has not drawn yet");
+		OutUnderlay.bPending = true;
+		return false;
+	}
+	if (Geometry->DrawnQuad == EDrawnQuad::None)
+	{
+		OutUnderlay.Unsupported = FString::Printf(TEXT("a %s that draws no simple or nine-sliced quad is under it"), *GetClass()->GetName());
+		return false;
+	}
+	for (const TWeakObjectPtr<UDreamMeshModifierBase>& Modifier : MeshModifierArray)
+	{
+		if (Modifier.IsValid() && Modifier->GetEnable())
+		{
+			OutUnderlay.Unsupported = TEXT("the mesh modifiers of the element under it reshape what it draws");
+			return false;
+		}
+	}
+	const TArray<FDreamUIOriginVertexData>& Positions = Geometry->OriginVertices;
+	const TArray<FDreamUIMeshVertex>& Vertices = Geometry->Vertices;
+	const bool bSimple = Geometry->DrawnQuad == EDrawnQuad::Simple;
+	const int32 Expected = bSimple ? 4 : 16;
+	if (Positions.Num() < Expected || Vertices.Num() < Expected)
+	{
+		OutUnderlay.Unsupported = TEXT("the element under it has not drawn yet");
+		OutUnderlay.bPending = true;
+		return false;
+	}
+	// Across: the four columns' x and u; up: the four rows' y and v. A simple quad's inner lines sit on its edges.
+	float X[4], Y[4], U[4], V[4];
+	if (bSimple)
+	{
+		X[0] = X[1] = Positions[0].Position.Y;
+		X[2] = X[3] = Positions[1].Position.Y;
+		Y[0] = Y[1] = Positions[0].Position.Z;
+		Y[2] = Y[3] = Positions[2].Position.Z;
+		U[0] = U[1] = Vertices[0].TextureCoordinate[0].X;
+		U[2] = U[3] = Vertices[1].TextureCoordinate[0].X;
+		V[0] = V[1] = Vertices[0].TextureCoordinate[0].Y;
+		V[2] = V[3] = Vertices[2].TextureCoordinate[0].Y;
+	}
+	else
+	{
+		for (int32 Line = 0; Line < 4; ++Line)
+		{
+			X[Line] = Positions[Line].Position.Y;
+			Y[Line] = Positions[Line * 4].Position.Z;
+			U[Line] = Vertices[Line].TextureCoordinate[0].X;
+			V[Line] = Vertices[Line * 4].TextureCoordinate[0].Y;
+		}
+	}
+	OutUnderlay.Kind = FDreamClipUnderlay::EKind::Image;
+	OutUnderlay.Center = FVector2f((X[0] + X[3]) * 0.5f, (Y[0] + Y[3]) * 0.5f);
+	OutUnderlay.HalfSize = FVector2f(FMath::Abs(X[3] - X[0]) * 0.5f, FMath::Abs(Y[3] - Y[0]) * 0.5f);
+	OutUnderlay.Border = FVector4f(X[1] - X[0], X[3] - X[2], Y[1] - Y[0], Y[3] - Y[2]);
+	OutUnderlay.U = FVector4f(U[0], U[1], U[2], U[3]);
+	OutUnderlay.V = FVector4f(V[0], V[1], V[2], V[3]);
+	OutUnderlay.bFillCentre = Geometry->DrawnQuad != EDrawnQuad::SlicedFrame;
+	OutUnderlay.Texture = Geometry->Texture;
+	return true;
 }
 
 TSharedPtr<const FDreamUIGeometry> UDreamVisualBatchMesh::GetGeometryForBatching()
@@ -578,6 +659,15 @@ UMaterialInterface* UDreamVisualBatchMesh::GetMaterialToCreateGeometry()
 		return ReceiveGetMaterialToCreateGeometry();
 	}
 	return nullptr;
+}
+
+void UDreamVisualBatchMesh::SetMaterialOverride(UMaterialInterface* InMaterial)
+{
+	if (MaterialOverride != InMaterial)
+	{
+		MaterialOverride = InMaterial;
+		MarkMaterialDirty();
+	}
 }
 
 void UDreamVisualBatchMesh::OnBeforeCreateOrUpdateGeometry()

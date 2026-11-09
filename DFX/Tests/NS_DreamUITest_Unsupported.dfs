@@ -1,0 +1,71 @@
+// What DreamGUI does not draw, for the compatibility report's test: an emitter simulated on the GPU, and a CPU emitter whose
+// renderers are a mesh and a light beside the sprite that is drawn.
+System(Name="Tests/Niagara/NS_DreamUITest_Unsupported", Root="Plugin.DreamGUI")
+{
+    Settings = {
+        FixedBounds = box(-200, -200, -200, 200, 200, 200);
+    }
+
+    Emitter OnTheGPU
+    {
+        Settings = {
+            SimTarget  = GPU;
+            LocalSpace = true;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 1.0);
+            SpawnBurst_Instantaneous(SpawnCount = 4, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 1.0);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+        }
+
+        SpriteRenderer Gpu
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+
+    Emitter Mixed
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = true;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 1.0);
+            SpawnBurst_Instantaneous(SpawnCount = 4, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 1.0);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+        }
+
+        SpriteRenderer Drawn
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+
+        MeshRenderer Body
+        {
+            Meshes = ["/Engine/BasicShapes/Cube"];
+        }
+
+        LightRenderer Glow
+        {
+        }
+    }
+}

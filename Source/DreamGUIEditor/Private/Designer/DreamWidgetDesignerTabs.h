@@ -15,6 +15,8 @@ struct DREAMGUIEDITOR_API FDreamWidgetDesignerTabs
 	static const FName PaletteID;
 	static const FName DetailsID;
 	static const FName AnimationsID;
+	/** The preset library: the project's gradients, layer styles and effect settings (SDreamUIPresetLibrary). */
+	static const FName PresetsID;
 	/** The sequencer invokes this by its engine-wide id and fills it with the curve editor. */
 	static const FName SequencerCurvesID;
 };

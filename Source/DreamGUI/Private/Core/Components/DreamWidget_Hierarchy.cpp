@@ -175,6 +175,8 @@ void UDreamWidget::ApplySiblingIndex()
 			if (anythingChange)
 			{
 				MarkFlattenHierarchyIndexDirty();
+				// The order is what says which sibling is below one that clips to the layer below.
+				Parent->MarkChildrenClipToBelowDirty();
 			}
 		}
 	}
@@ -739,6 +741,8 @@ void UDreamWidget::OnChildAttached(UDreamWidget* ChildWidget)
 	{
 		if (IsValid(Component)) Component->OnWidgetChildAttached(ChildWidget);
 	}
+	// A child that clips to the layer below may have a new one under it now.
+	MarkChildrenClipToBelowDirty();
 
 	MarkCanvasUpdate(false);
 }
@@ -933,6 +937,8 @@ void UDreamWidget::OnChildDetached(UDreamWidget* ChildWidget)
 	{
 		if (IsValid(Component)) Component->OnWidgetChildDetached(ChildWidget);
 	}
+	// The child that went may have been the layer below one that clips to it.
+	MarkChildrenClipToBelowDirty();
 	/**
 	 * A child going leaves its siblings where they were unless something lays them out: a layout on this widget, or on
 	 * one above it whose size follows this one's content -- the chain MarkLayoutForRebuild walks. With none on it, the

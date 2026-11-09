@@ -8,6 +8,7 @@
 #include "EditorViewportClient.h"
 #include "Animation/AnimInstance.h"
 #include "LevelEditorViewport.h"
+#include "Designer/DreamDesignerHandles.h"
 
 class UDreamVisual;
 class UDreamWidget;
@@ -462,6 +463,53 @@ private:
 	 * that ships where it was laid out, which is most things.
 	 */
 	void DrawShippedImageOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
+	/** InWidget's own clip mask and the layer below it, outlined where they cut (UDreamUIDesignerSettings::bShowClipMasks). */
+	void DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
+
+	/*
+	 * The viewport handles of the selection (Designer/DreamDesignerHandles.h; DreamWidgetDesignerHandles.cpp): the points
+	 * one registered provider gives the single selected widget -- a warp's lattice, a path, a gradient, a mask, a shadow --
+	 * drawn, grabbed, dragged as one undo step and written to the .dui when the button comes up; Tab shows the next.
+	 */
+	/** One provider's handles and guide lines for the selection, as collected this frame. */
+	struct FDesignerHandleSet
+	{
+		TSharedPtr<class IDreamDesignerHandleProvider> Provider;
+		FDreamDesignerHandleSet Set;
+	};
+	/** A handle under the pointer, and whose it is. */
+	struct FDesignerHandleHit
+	{
+		TSharedPtr<class IDreamDesignerHandleProvider> Provider;
+		FDreamDesignerHandle Handle;
+	};
+	/** A held handle: what it writes, the preview's values before (Esc), the drag as it stands, and its transaction. */
+	struct FDesignerHandleGesture;
+	/** The single selected widget the providers are asked about: the preview's, unlocked, the asset's own; else null. */
+	UDreamWidget* GetHandleWidget() const;
+	/** The shown provider's handles for InWidget (none or one set), and every provider that has some, in registration order. */
+	void CollectDesignerHandles(UDreamWidget* InWidget, const FSceneView& InView, TArray<FDesignerHandleSet>& OutSets,
+		TArray<TSharedRef<class IDreamDesignerHandleProvider>>* OutAvailable = nullptr) const;
+	/** Tab: the next provider's handles shown, or none after the last. False when the selection has no handles to switch. */
+	bool CycleDesignerHandles();
+	bool HitTestDesignerHandles(const FVector2D& InPixel, FDesignerHandleHit& OutHit) const;
+	bool BeginDesignerHandleDrag(const FDesignerHandleHit& InHit, const FVector2D& InPixel);
+	void UpdateDesignerHandleDrag();
+	void FinishDesignerHandleDrag(bool bCancel);
+	/** A double click handed to the providers; true when one of them took it. */
+	bool HandleDesignerDoubleClick(const FVector2D& InPixel);
+	void DrawDesignerHandles(FSceneView& View, FCanvas& Canvas) const;
+	/** Under the selection: whose handles are shown, and what Tab shows next. */
+	void DrawDesignerHandleCaption(UDreamWidget* InWidget, const FSceneView& View, FCanvas& Canvas,
+		const TSharedPtr<class IDreamDesignerHandleProvider>& InShown, TConstArrayView<TSharedRef<class IDreamDesignerHandleProvider>> InAvailable) const;
+	/** Where a viewport pixel lands on InWidget's plane, in its local space. */
+	bool PixelToWidgetLocal(const FVector2D& InPixel, const UDreamWidget* InWidget, FVector2D& OutLocal) const;
+	/** Screen pixels per unit of InWidget's local space, as InView draws it. */
+	double MeasurePixelsPerUnit(const FSceneView& InView, const UDreamWidget* InWidget) const;
+	bool IsDraggingDesignerHandle() const { return HandleGesture.IsValid(); }
+	TSharedPtr<FDesignerHandleGesture> HandleGesture;
+	/** A double click a provider took: the release that follows it is the click's, not the designer's. */
+	bool bSwallowNextLeftRelease = false;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	/** The title-safe rect of the design canvas. Silent on platforms that declare no safe area. */
