@@ -15,10 +15,20 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "Text/DreamUIAst.h"
 #include "Text/DreamUIBridgeService.h"
+#include "Text/DreamUIDocument.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
+#include "Text/DreamUISourceFile.h"
+#include "Text/DreamUISourceWatcher.h"
+#include "Text/DreamUITextBuilder.h"
+#include "Text/DreamUITextPatcher.h"
+#include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIValueFormat.h"
+#include "Core/DreamWidgetTree.h"
+#include "Misc/FileHelper.h"
+#include "UObject/StrongObjectPtr.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -343,6 +353,11 @@ namespace DreamUITextAuthoring
 				// The design canvas. Not part of the hierarchy at all: it is designer state on the asset,
 				// so the text has nothing to say about it and greying it out would be a bug of our own.
 				FName(TEXT("DreamCanvasSize")),
+				// The class pickers of the visual, the panel and the self layout: a new one is written as the node's
+				// type or its `+` line (FDreamUITextWriteBack::CollectStructuralEdits).
+				FName(TEXT("Visual")),
+				FName(TEXT("LayoutContainer")),
+				FName(TEXT("LayoutSelf")),
 			};
 			for (const FName Writable : WritableCategories)
 			{
@@ -561,6 +576,15 @@ namespace DreamUITextAuthoring
 			return EPropertyEditVerdict::ExpandedFromALoop;
 		}
 
+		// The three class pickers -- the visual, the panel, the self layout. Not values: choosing one replaces an object,
+		// which the write-back writes as the node's type or as its `+` line. Asked before the spelling probe, which would
+		// otherwise judge the subobject reference unspellable and grey the picker.
+		if (InOwner == Widget && Local::GetChainRootName(InLeafProperty, InParentProperties) == InLeafProperty->GetFName()
+			&& (InLeafProperty->GetFName() == FName(TEXT("Visual")) || InLeafProperty->GetFName() == FName(TEXT("LayoutContainer"))
+				|| InLeafProperty->GetFName() == FName(TEXT("LayoutSelf"))))
+		{
+			return EPropertyEditVerdict::Writable;
+		}
 		const bool bInWritableSet = InOwner == Widget
 			? Local::IsWritableWidgetPropertyRoot(Widget, Local::GetChainRootName(InLeafProperty, InParentProperties))
 			// Every other object the panel can be showing is one the language addresses as a whole --
@@ -582,6 +606,22 @@ namespace DreamUITextAuthoring
 		// dotted path at a time, AnchorData.SizeDelta and the rest. Asking the printer about the struct
 		// itself always fails, and greyed the anchor block over five fields that are all live; each
 		// field is judged on its own when the panel asks about it.
+		// A node reference -- an explicit navigation target, a toggle's group -- is written as the bare id of the node it
+		// points at, which only a node of this same hierarchy has. The probe has no tree to ask, so it is answered here:
+		// nothing, or a node of this Blueprint, is writable; one inside another asset's component is not.
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeafProperty);
+			AsObject != nullptr && FDreamUITextBuilder::IsNodeReferenceProperty(AsObject))
+		{
+			const void* ValuePtr = Local::ResolveValuePtr(InOwner, InLeafProperty, InParentProperties);
+			const UObject* Referenced = ValuePtr != nullptr ? AsObject->GetObjectPropertyValue(ValuePtr) : nullptr;
+			if (Referenced == nullptr)
+			{
+				return EPropertyEditVerdict::Writable;
+			}
+			const UDreamWidget* Node = Local::FindOwningWidget(Referenced);
+			return Node != nullptr && FindOwningBlueprint(Node) == FindOwningBlueprint(Widget)
+				? EPropertyEditVerdict::Writable : EPropertyEditVerdict::HasNoTextSpelling;
+		}
 		const FLiteralSpellingProbe& Probe = Local::GetLiteralSpellingProbe();
 		const bool bIsStructTheSweepRecursesInto = CastField<FStructProperty>(InLeafProperty) != nullptr
 			&& !DreamUIValueFormat::HasShortForm(InLeafProperty);
@@ -678,7 +718,551 @@ namespace DreamUITextAuthoring
 			return true;
 		}
 		const UDreamWidget* Widget = Local::FindOwningWidget(InOwner);
-		return !IsTextAuthored(FindOwningBlueprint(Widget));
+		const UDreamWidgetBlueprint* Blueprint = FindOwningBlueprint(Widget);
+		if (!IsTextAuthored(Blueprint))
+		{
+			return true;
+		}
+		// A widget of a nested instance has no node in this file, so no line of it can be written here.
+		return IsValid(Blueprint->WidgetTree) && IsValid(Widget)
+			&& Blueprint->WidgetTree->FindWidgetByVariableName(UDreamWidgetTree::MakeWidgetVariableName(Widget)) != nullptr;
+	}
+
+	namespace StructureLocal
+	{
+		/** The `.dui` this Blueprint names, resolved to the file on disk. Empty when it names none. */
+		FString ResolveAuthoredFile(const UDreamWidgetBlueprint* InBlueprint)
+		{
+			const FString Authored = GetAuthoredSourcePath(InBlueprint);
+			return Authored.IsEmpty() ? FString() : UDreamTextUserWidget::ResolveDuiFilePath(Authored);
+		}
+
+		/**
+		 * The text the next write would start from: the open document's when there is one -- memory is
+		 * authoritative and the disk may lag a refused write -- and the file's otherwise.
+		 */
+		bool ReadAuthoredText(const UDreamWidgetBlueprint* InBlueprint, FString& OutText, FText& OutReason)
+		{
+			const FString Path = ResolveAuthoredFile(InBlueprint);
+			if (Path.IsEmpty())
+			{
+				OutReason = LOCTEXT("Structure_NoFile", "the class names no .dui to write into");
+				return false;
+			}
+			if (const UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(Path))
+			{
+				OutText = Document->GetContent();
+				return true;
+			}
+			if (!FFileHelper::LoadFileToString(OutText, *Path))
+			{
+				OutReason = FText::Format(LOCTEXT("Structure_Unreadable", "'{0}' could not be read"),
+					FText::FromString(FPaths::GetCleanFilename(Path)));
+				return false;
+			}
+			return true;
+		}
+
+		/** The first error a bag holds, as the pipeline prints it: `File.dui(12,9): error DUI7001: …`. */
+		FString FirstError(const FDreamUIDiagnosticBag& InDiagnostics)
+		{
+			for (const FDreamUIDiagnostic& Diagnostic : InDiagnostics.Diagnostics)
+			{
+				if (Diagnostic.IsError())
+				{
+					return Diagnostic.ToString();
+				}
+			}
+			return FString();
+		}
+
+		/**
+		 * An error's identity across an edit: its code and its words with the numbers taken out. A removal
+		 * moves every line after it, and an error that was already there must not read as a new one only
+		 * because the line it names went from 14 to 11.
+		 */
+		FString ErrorKey(const FDreamUIDiagnostic& InDiagnostic)
+		{
+			FString Words;
+			Words.Reserve(InDiagnostic.Message.Len());
+			for (const TCHAR Character : InDiagnostic.Message)
+			{
+				if (!FChar::IsDigit(Character))
+				{
+					Words.AppendChar(Character);
+				}
+			}
+			return FString::Printf(TEXT("%d:%s"), static_cast<int32>(InDiagnostic.Code), *Words);
+		}
+
+		const FDreamUINode* FindNode(const FDreamUIAst& InAst, const FString& InId)
+		{
+			const FDreamUINode* Found = nullptr;
+			InAst.ForEachNode([&Found, &InId](const FDreamUINode& InNode)
+			{
+				if (Found == nullptr && !InNode.Id.IsEmpty() && InNode.Id.Equals(InId, ESearchCase::IgnoreCase))
+				{
+					Found = &InNode;
+				}
+			});
+			return Found;
+		}
+	}
+
+	bool CheckStructuralEdit(const UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit,
+		bool bInVerifyBuild, FText& OutReason, const UDreamWidget* InWidgetForType)
+	{
+		OutReason = FText::GetEmpty();
+		if (!IsTextAuthored(InBlueprint))
+		{
+			return true;
+		}
+
+		FString Text;
+		if (!StructureLocal::ReadAuthoredText(InBlueprint, Text, OutReason))
+		{
+			return false;
+		}
+		const FString FileName = GetAuthoredSourceFileName(InBlueprint);
+
+		// The file as the write-back will read it: with the import reader, so a file that `use`s another
+		// is not refused for an import it cannot resolve. Built as well when asked, because a file that
+		// parses and does not build is one the flush refuses to touch -- and then the edit is lost to the
+		// compile with nothing written.
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Before;
+		Before.SourceName = FileName;
+		TStrongObjectPtr<UDreamWidgetTree> BeforeTree;
+		bool bRead = false;
+		if (bInVerifyBuild)
+		{
+			BeforeTree.Reset(FDreamUITextWriteBack::BuildReferenceTree(Text, Ast, Before));
+			bRead = BeforeTree.IsValid();
+		}
+		else
+		{
+			bRead = FDreamUISourceFile::Parse(Text, FileName, Ast, Before, FDreamUISourceFile::MakeFileImportReader());
+		}
+		if (!bRead || !Ast.bHasRoot)
+		{
+			OutReason = FText::Format(LOCTEXT("Structure_FileBroken",
+				"'{0}' does not currently build, so nothing can be written into it -- fix the file first: {1}"),
+				FText::FromString(FileName), FText::FromString(StructureLocal::FirstError(Before)));
+			return false;
+		}
+
+		FDreamUIStructuralEdit Edit = InEdit;
+		if (Edit.Kind == EDreamUIStructuralEditKind::InsertNode)
+		{
+			if (Edit.TypeName.IsEmpty())
+			{
+				Edit.TypeName = FDreamUITextWriteBack::DescribeWidgetForText(InWidgetForType, Ast);
+			}
+			if (Edit.TypeName.IsEmpty())
+			{
+				Edit.TypeName = TEXT("Widget");
+			}
+		}
+		// The write-back only ever places a node under one the text declares; anything else -- the content holder
+		// an `each` builds, a nested widget blueprint's own insides -- is the builder's, and a widget placed there is
+		// dropped by the next compile. Said here, where it can still be refused.
+		if ((Edit.Kind == EDreamUIStructuralEditKind::InsertNode || Edit.Kind == EDreamUIStructuralEditKind::MoveNode)
+			&& !Edit.ParentId.IsEmpty() && StructureLocal::FindNode(Ast, Edit.ParentId) == nullptr)
+		{
+			OutReason = FText::Format(LOCTEXT("Structure_ParentNotAuthored",
+				"'{0}' is made by '{1}' rather than written in it (the content an 'each' builds, or another asset's own widgets), so nothing can be placed inside it from here"),
+				FText::FromString(Edit.ParentId), FText::FromString(FileName));
+			return false;
+		}
+		if (Edit.Kind == EDreamUIStructuralEditKind::RenameNode)
+		{
+			// A `timeline` track names its widget by id, and `(was:)` carries graph references, bindings and the
+			// animation editor's own animations across a rename -- not a path written in the file. Renamed from here,
+			// the track would point at a name the file no longer has.
+			for (const FDreamUITimeline& Timeline : Ast.Timelines)
+			{
+				for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+				{
+					TArray<FString> Segments;
+					Track.NodePath.ParseIntoArray(Segments, TEXT("/"));
+					if (Segments.ContainsByPredicate([&Edit](const FString& InSegment) { return InSegment.Equals(Edit.NodeId, ESearchCase::IgnoreCase); }))
+					{
+						OutReason = FText::Format(LOCTEXT("Structure_RenameTimeline",
+							"the timeline '{0}' (line {1}) drives '{2}' by name, and a rename here would leave its track pointing at nothing; rename it in the text, track and all"),
+							FText::FromString(Timeline.Name), FText::AsNumber(Track.Location.Line), FText::FromString(Edit.NodeId));
+						return false;
+					}
+				}
+			}
+		}
+
+		FString Patched = Text;
+		FDreamUIDiagnosticBag PatchDiagnostics;
+		PatchDiagnostics.SourceName = FileName;
+		const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Patched, Ast, MakeArrayView(&Edit, 1), PatchDiagnostics);
+		// A move to where the node already stands, or a statement the file already says, plans and changes nothing, and
+		// is no refusal: there is nothing to write.
+		if (bPlanned && (Edit.Kind == EDreamUIStructuralEditKind::MoveNode || Edit.Kind == EDreamUIStructuralEditKind::SetStatement)
+			&& Patched.Equals(Text, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+		if (!bPlanned || Patched.Equals(Text, ESearchCase::CaseSensitive))
+		{
+			const FString Error = StructureLocal::FirstError(PatchDiagnostics);
+			OutReason = Error.IsEmpty()
+				? FText::Format(LOCTEXT("Structure_NothingWritten", "'{0}' has no line this change could be written into"),
+					FText::FromString(FileName))
+				: FText::FromString(Error);
+			return false;
+		}
+
+		if (bInVerifyBuild)
+		{
+			TSet<FString> Known;
+			for (const FDreamUIDiagnostic& Diagnostic : Before.Diagnostics)
+			{
+				if (Diagnostic.IsError())
+				{
+					Known.Add(StructureLocal::ErrorKey(Diagnostic));
+				}
+			}
+			FDreamUIAst AfterAst;
+			FDreamUIDiagnosticBag After;
+			After.SourceName = FileName;
+			TStrongObjectPtr<UDreamWidgetTree> AfterTree(FDreamUITextWriteBack::BuildReferenceTree(Patched, AfterAst, After));
+			for (const FDreamUIDiagnostic& Diagnostic : After.Diagnostics)
+			{
+				if (Diagnostic.IsError() && !Known.Contains(StructureLocal::ErrorKey(Diagnostic)))
+				{
+					OutReason = FText::Format(LOCTEXT("Structure_WouldBreak",
+						"'{0}' would stop building: {1}"),
+						FText::FromString(FileName), FText::FromString(Diagnostic.ToString()));
+					return false;
+				}
+			}
+			if (!AfterTree.IsValid())
+			{
+				OutReason = FText::Format(LOCTEXT("Structure_WouldNotBuild", "'{0}' would stop building"),
+					FText::FromString(FileName));
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void CollectAuthoredNodeIds(const UDreamWidgetBlueprint* InBlueprint, TSet<FString>& OutIds)
+	{
+		OutIds.Reset();
+		if (!IsTextAuthored(InBlueprint))
+		{
+			return;
+		}
+		FString Text;
+		FText Unused;
+		if (!StructureLocal::ReadAuthoredText(InBlueprint, Text, Unused))
+		{
+			return;
+		}
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		Diagnostics.SourceName = GetAuthoredSourceFileName(InBlueprint);
+		if (!FDreamUISourceFile::Parse(Text, Diagnostics.SourceName, Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			return;
+		}
+		Ast.ForEachNode([&OutIds](const FDreamUINode& InNode)
+		{
+			if (!InNode.Id.IsEmpty())
+			{
+				OutIds.Add(InNode.Id);
+			}
+			if (!InNode.WasId.IsEmpty())
+			{
+				OutIds.Add(InNode.WasId);
+			}
+		});
+	}
+
+	void ReportStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint,
+		const TCHAR* InFunction, const int32 InLine, const FString& InOperation, const FText& InReason)
+	{
+		const FText Message = FText::Format(
+			LOCTEXT("StructuralCheckRefusal", "Refusing to {0} in '{1}': {2} (its hierarchy is authored in '{3}')."),
+			FText::FromString(InOperation),
+			FText::FromString(GetNameSafe(InBlueprint)),
+			InReason,
+			FText::FromString(GetAuthoredSourceFileName(InBlueprint)));
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d %s"), InFunction, InLine, *Message.ToString());
+		Local::NotifyRefusal(Message, InBlueprint);
+	}
+
+	bool WriteStructureToText(UDreamWidgetBlueprint* InBlueprint)
+	{
+		// The same two skips the compile's own flush makes, for the same reasons: an undo is restoring the
+		// document, not editing it, and a compile answering an outside change to the file must let the file
+		// win -- diffing the old tree against the new text would write the outside edit back out.
+		if (!IsTextAuthored(InBlueprint) || GIsTransacting || FDreamUISourceWatcher::IsCompilingFromExternalChange()
+			|| !IsValid(InBlueprint->WidgetTree))
+		{
+			return true;
+		}
+
+		FString Error;
+		TSharedPtr<FDreamUITextWriteBack> WriteBack;
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(InBlueprint))
+		{
+			WriteBack = Designer->GetTextWriteBack();
+		}
+		if (!WriteBack.IsValid())
+		{
+			// No designer, or one whose write-back could not open the file. A write-back of our own joins
+			// the one document the registry keeps for the file, so it cannot disagree with an editor that
+			// opens a moment later.
+			WriteBack = FDreamUITextWriteBack::Create(StructureLocal::ResolveAuthoredFile(InBlueprint), nullptr, Error);
+		}
+
+		bool bWritten = false;
+		if (WriteBack.IsValid())
+		{
+			const UObject* Defaults = InBlueprint->GeneratedClass != nullptr
+				? InBlueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/false) : nullptr;
+			bWritten = WriteBack->FlushTree(InBlueprint->WidgetTree, Error, Defaults);
+		}
+		const FDreamUIStructuralResidue NoResidue;
+		const FDreamUIStructuralResidue& Residue = WriteBack.IsValid() ? WriteBack->GetLastStructuralResidue() : NoResidue;
+		if (!Residue.Dropped.IsEmpty())
+		{
+			// Not a failure: the change landed, and these lines were its price -- values the new type or panel has no
+			// property for. Said once, as a warning, so the author can put back by hand what they still want.
+			const FText DroppedMessage = FText::Format(
+				LOCTEXT("StructureDropped", "'{0}' no longer holds these lines, which the new type or panel has no property for: {1}"),
+				FText::FromString(GetAuthoredSourceFileName(InBlueprint)),
+				FText::FromString(FString::Join(Residue.Dropped, TEXT("; "))));
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *DroppedMessage.ToString());
+			Local::NotifyRefusal(DroppedMessage, InBlueprint);
+		}
+		if (bWritten && Residue.IsEmpty())
+		{
+			return true;
+		}
+
+		TArray<FString> Parts;
+		if (!Residue.Unwritten.IsEmpty())
+		{
+			Parts.Add(FString::Printf(TEXT("not written: %s"), *FString::Join(Residue.Unwritten, TEXT(", "))));
+		}
+		if (!Residue.Unremoved.IsEmpty())
+		{
+			Parts.Add(FString::Printf(TEXT("not removed: %s"), *FString::Join(Residue.Unremoved, TEXT(", "))));
+		}
+		if (!Residue.Unmoved.IsEmpty())
+		{
+			Parts.Add(FString::Printf(TEXT("not moved: %s"), *FString::Join(Residue.Unmoved, TEXT(", "))));
+		}
+		if (!Residue.Unsettled.IsEmpty())
+		{
+			Parts.Add(FString::Printf(TEXT("not taken out, because the node's style or type gives it: %s"),
+				*FString::Join(Residue.Unsettled, TEXT(", "))));
+		}
+		if (WriteBack.IsValid())
+		{
+			// The patcher's reason, which is what the author can act on; the 7xxx band only, as the flush logs.
+			for (const FDreamUIDiagnostic& Diagnostic : WriteBack->GetLastDiagnostics().Diagnostics)
+			{
+				if (Diagnostic.IsError() && static_cast<int32>(Diagnostic.Code) >= 7000)
+				{
+					Parts.Add(Diagnostic.ToString());
+					break;
+				}
+			}
+		}
+		if (!Error.IsEmpty())
+		{
+			Parts.Add(Error);
+		}
+		const FText Message = FText::Format(
+			LOCTEXT("StructureNotWritten", "Could not write every change to the hierarchy of '{0}' into '{1}', so the compile that follows undoes it -- {2}"),
+			FText::FromString(GetNameSafe(InBlueprint)),
+			FText::FromString(GetAuthoredSourceFileName(InBlueprint)),
+			FText::FromString(FString::Join(Parts, TEXT("; "))));
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message.ToString());
+		Local::NotifyRefusal(Message, InBlueprint);
+		return false;
+	}
+
+	bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId)
+	{
+		if (!IsTextAuthored(InBlueprint))
+		{
+			return false;
+		}
+		FString Text;
+		FText Unused;
+		if (!StructureLocal::ReadAuthoredText(InBlueprint, Text, Unused))
+		{
+			return false;
+		}
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		Diagnostics.SourceName = GetAuthoredSourceFileName(InBlueprint);
+		if (!FDreamUISourceFile::Parse(Text, Diagnostics.SourceName, Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			return false;
+		}
+		const FDreamUINode* Node = StructureLocal::FindNode(Ast, InNodeId);
+		return Node != nullptr && !Node->RowKey.IsEmpty();
+	}
+
+	bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget, const UObject* InComponent,
+		int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason)
+	{
+		OutLine = INDEX_NONE;
+		bOutTypeIsContainer = false;
+		if (!IsTextAuthored(InBlueprint) || !IsValid(InWidget))
+		{
+			return false;
+		}
+		FString Text;
+		if (!StructureLocal::ReadAuthoredText(InBlueprint, Text, OutReason))
+		{
+			return false;
+		}
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		Diagnostics.SourceName = GetAuthoredSourceFileName(InBlueprint);
+		if (!FDreamUISourceFile::Parse(Text, Diagnostics.SourceName, Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			OutReason = FText::Format(LOCTEXT("Structure_FileBrokenComponent",
+				"'{0}' does not currently parse, so nothing can be written into it -- fix the file first: {1}"),
+				FText::FromString(Diagnostics.SourceName), FText::FromString(StructureLocal::FirstError(Diagnostics)));
+			return false;
+		}
+		const FDreamUINode* Node = StructureLocal::FindNode(Ast, InWidget->GetDisplayName());
+		if (Node == nullptr)
+		{
+			OutReason = FText::Format(LOCTEXT("Structure_NodeNotAuthored", "'{0}' is not a node '{1}' writes"),
+				FText::FromString(InWidget->GetDisplayName()), FText::FromString(Diagnostics.SourceName));
+			return false;
+		}
+		bOutTypeIsContainer = FDreamUITextBuilder::FindContainerClassForType(Node->TypeName) != nullptr;
+		OutLine = FDreamUITextWriteBack::FindComponentLine(*Node, InWidget, InComponent);
+		return true;
+	}
+
+	bool ResolveStatementSite(const UDreamWidgetBlueprint* InBlueprint, const UObject* InTemplateOwner, FName InName,
+		FDreamUIStructuralEdit& OutEdit, FText& OutReason)
+	{
+		const UDreamWidget* Widget = Local::FindOwningWidget(InTemplateOwner);
+		if (!IsTextAuthored(InBlueprint) || !IsValid(Widget) || InName.IsNone())
+		{
+			OutReason = LOCTEXT("Statement_NoSite", "only a widget of this text-authored hierarchy, its visual or one of its behaviours takes a binding or a route");
+			return false;
+		}
+		OutEdit.NodeId = Widget->GetDisplayName();
+		OutEdit.PropertyName = InName.ToString();
+		OutEdit.PropertyTarget = EDreamUIPatchTarget::Node;
+		OutEdit.ComponentIndex = INDEX_NONE;
+		if (InTemplateOwner == Widget)
+		{
+			return true;
+		}
+
+		bool bTypeIsContainer = false;
+		if (Cast<UDreamUIBehaviour>(InTemplateOwner) != nullptr)
+		{
+			int32 Line = INDEX_NONE;
+			if (!ResolveComponentSource(InBlueprint, Widget, InTemplateOwner, Line, bTypeIsContainer, OutReason))
+			{
+				return false;
+			}
+			if (Line != INDEX_NONE)
+			{
+				// The node writes this behaviour as a `+` line: its block is where its lines are.
+				OutEdit.PropertyTarget = EDreamUIPatchTarget::Component;
+				OutEdit.ComponentIndex = Line;
+				return true;
+			}
+		}
+		else if (Cast<UDreamVisual>(InTemplateOwner) == nullptr || Widget->GetVisual() != InTemplateOwner)
+		{
+			OutReason = LOCTEXT("Statement_NotAnObject", "only the widget, its visual and its behaviours take a binding or a route");
+			return false;
+		}
+
+		// On the node's own line, which reaches the first of these that has the name -- the order the builder offers a
+		// bare name in. It has to be this object, or the line would bind something else.
+		TArray<const UObject*> Reached;
+		Reached.Add(Widget);
+		if (const UDreamVisual* Visual = Widget->GetVisual())
+		{
+			Reached.Add(Visual);
+		}
+		if (bTypeIsContainer && IsValid(Widget->GetLayoutContainer()))
+		{
+			Reached.Add(Widget->GetLayoutContainer());
+		}
+		for (const UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+		{
+			if (IsValid(Behaviour))
+			{
+				Reached.Add(Behaviour);
+			}
+		}
+		const UObject* const* First = Reached.FindByPredicate([InName](const UObject* InCandidate)
+		{
+			return InCandidate->GetClass()->FindPropertyByName(InName) != nullptr;
+		});
+		if (First != nullptr && *First == InTemplateOwner)
+		{
+			return true;
+		}
+		OutReason = FText::Format(LOCTEXT("Statement_LineReachesAnother",
+			"a '{0}' line on '{1}' would reach its {2} first, and this {3} comes from the node's style or type; write the {3} as a '+' line on the node in the text, and the line goes in its block"),
+			FText::FromName(InName), FText::FromString(Widget->GetDisplayName()),
+			FText::FromString(First != nullptr ? DescribeClassForAuthor((*First)->GetClass()) : FString(TEXT("nothing"))),
+			FText::FromString(DescribeClassForAuthor(InTemplateOwner->GetClass())));
+		return false;
+	}
+
+	bool WriteStatementToText(UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit, FText& OutReason)
+	{
+		if (!IsTextAuthored(InBlueprint))
+		{
+			OutReason = LOCTEXT("Statement_NotText", "this Blueprint authors its own hierarchy, and has no .dui to write into");
+			return false;
+		}
+		if (InEdit.Kind != EDreamUIStructuralEditKind::SetStatement && InEdit.Kind != EDreamUIStructuralEditKind::RemoveProperty)
+		{
+			OutReason = LOCTEXT("Statement_NotAStatement", "only a statement -- a binding, a route, or a value -- is written this way");
+			return false;
+		}
+		if (!CheckStructuralEdit(InBlueprint, InEdit, /*bInVerifyBuild*/true, OutReason))
+		{
+			return false;
+		}
+		FString Error;
+		TSharedPtr<FDreamUITextWriteBack> WriteBack;
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(InBlueprint))
+		{
+			WriteBack = Designer->GetTextWriteBack();
+		}
+		if (!WriteBack.IsValid())
+		{
+			// The registry's one document for the file, as WriteStructureToText joins it with no designer open.
+			WriteBack = FDreamUITextWriteBack::Create(StructureLocal::ResolveAuthoredFile(InBlueprint), nullptr, Error);
+		}
+		if (!WriteBack.IsValid())
+		{
+			OutReason = FText::FromString(Error);
+			return false;
+		}
+		if (!WriteBack->ApplyStatementEdit(InEdit, Error))
+		{
+			OutReason = FText::FromString(Error);
+			return false;
+		}
+		return true;
 	}
 }
 

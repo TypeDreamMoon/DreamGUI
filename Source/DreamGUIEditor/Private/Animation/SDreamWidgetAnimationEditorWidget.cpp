@@ -22,6 +22,9 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetBlueprint.h"
+#include "Text/DreamUITimelineWriteBack.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/Package.h"
@@ -361,7 +364,7 @@ public:
 		// stayed locked. A change of editability gets a Sequencer of its own.
 		if (Sequencer.IsValid() && NewSequence)
 		{
-			if (bSequencerReadOnly == !NewSequence->IsEditable())
+			if (bSequencerReadOnly == !IsSequenceEditable(NewSequence))
 			{
 				if (Sequencer->GetRootMovieSceneSequence() != NewSequence)
 				{
@@ -399,10 +402,10 @@ public:
 				FMenuExtensionDelegate::CreateRaw(this, &SDreamWidgetAnimationEditorWidgetImpl::AddPossessMenuExtensions)
 			);
 
-			// False for a `timeline` block's sequence, which the .dui owns and every compile rebuilds
-			// -- see UDreamWidgetAnimation::IsEditable. Said out loud as well as enforced: a
-			// read-only Sequencer with no explanation reads as a broken editor.
-			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
+			// False for a `timeline` block's sequence the editor cannot write back into its .dui (see
+			// IsSequenceEditable) -- the .dui owns it and every compile rebuilds it. Said out loud as well as
+			// enforced: a read-only Sequencer with no explanation reads as a broken editor.
+			SequencerInitParams.ViewParams.bReadOnly = !IsSequenceEditable(NewSequence);
 			if (SequencerInitParams.ViewParams.bReadOnly && NewSequence->IsLanguageOwned())
 			{
 				UE_LOG(DreamGUIEditor, Display,
@@ -976,6 +979,23 @@ public:
 		}
 		MarkedSignature = Signature;
 		UDreamWidgetBlueprint* Blueprint = Sequence != nullptr ? Sequence->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+		// A `timeline` block's animation: the edit is written into the block, or said to be one the file cannot hold --
+		// the next compile rebuilds the animation from the file either way.
+		if (Sequence != nullptr && !bWritingTimeline && FDreamUITimelineWriteBack::CanWriteBack(Sequence))
+		{
+			TGuardValue<bool> Writing(bWritingTimeline, true);
+			FText Reason;
+			if (!FDreamUITimelineWriteBack::WriteAnimation(Blueprint, Sequence, Reason))
+			{
+				const FText Message = FText::Format(LOCTEXT("TimelineNotWritten",
+					"This edit of '{0}' could not be written into its timeline block, and the next compile will undo it: {1}"),
+					FText::FromString(Sequence->GetDisplayNameString()), Reason);
+				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message.ToString());
+				FNotificationInfo Info(Message);
+				Info.ExpireDuration = 6.0f;
+				FSlateNotificationManager::Get().AddNotification(Info);
+			}
+		}
 		// A clean package as well: an edit made here has already dirtied it through Modify, and
 		// Sequencer also notifies when it merely re-reads its data -- it hears every undo that touches
 		// any sequence in the editor, this asset's or not.
@@ -1197,6 +1217,17 @@ private:
 	TWeakObjectPtr<UDreamWidgetAnimation> WeakSequence;
 	/** The animation's signature when its Blueprint was last marked for it (or when it was shown); see HandleMovieSceneDataChanged. */
 	FGuid MarkedSignature;
+	/** A write-back in progress: reading the sequence can straighten a key, and that is not another edit to write. */
+	bool bWritingTimeline = false;
+
+	/**
+	 * Whether Sequencer may edit this animation: one the animation editor made, or a `timeline` block's whose .dui the
+	 * editor can write the edit back into (FDreamUITimelineWriteBack).
+	 */
+	static bool IsSequenceEditable(const UDreamWidgetAnimation* InSequence)
+	{
+		return InSequence != nullptr && (InSequence->IsEditable() || FDreamUITimelineWriteBack::CanWriteBack(InSequence));
+	}
 	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
 	FDelegateHandle WidgetSelectionChangedHandle;
 	/** Weak, because the host outlives nothing here and this panel must not keep a designer alive. */

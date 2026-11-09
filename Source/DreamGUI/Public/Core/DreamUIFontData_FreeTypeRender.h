@@ -129,15 +129,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamUIDynamicFontDataType FontType = EDreamUIDynamicFontDataType::CustomFontFile;
 	/** Font file path, absolute path or relative to ProjectDir */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	// DreamGUI_Hidden on this and the next: the font file row (a file picker with the relative-path switch) edits them.
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		FString FontFilePath;
 	/** Font file use relative path(relative to ProjectDir) or absolute path. After build your game, remember to copy your font file to target path, unless "useExternalFileOrEmbedInToUAsset" is false */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		bool bUseRelativeFilePath = true;
 	/** When in build, use external file or embed into uasset. But in editor, will always load from fontFilePath. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bUseExternalFileOrEmbedInToUAsset = false;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "FontType == EDreamUIDynamicFontDataType::EngineFont", EditConditionHides))
 		TObjectPtr<class UFontFace> EngineFont;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
@@ -148,7 +149,8 @@ protected:
 	FDelegateHandle OnCultureChangedDelegateHandle;
 
 	/** Which face of a font collection (.ttc) to open. Kept across reloads; a file with fewer faces opens its last one. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	// DreamGUI_Hidden: the face picker beside the font file edits it.
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		int FontFace = 0;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamUIDynamicFontLineHeightType LineHeightType = EDreamUIDynamicFontLineHeightType::FromFontFace;

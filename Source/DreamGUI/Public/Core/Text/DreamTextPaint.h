@@ -32,9 +32,9 @@ enum class EDreamPaintType : uint8
 	None,
 	/** Along a line through the box's centre at Angle: CSS linear-gradient. */
 	Linear,
-	/** Outward from Center to the ending shape Shape and Size give: CSS radial-gradient. */
+	/** Outward from Center to the ending shape Shape and Size give, an ellipse turned by Angle: CSS radial-gradient. */
 	Radial,
-	/** Around Center, clockwise from Angle: CSS conic-gradient. */
+	/** Around Center, clockwise from Angle: CSS conic-gradient, an image editor's angle gradient. */
 	Conic,
 	/** Outward from Center in a diamond, |x| / Rx + |y| / Ry, the radii as a Radial's, turned by Angle. Not in CSS. */
 	Diamond,
@@ -43,6 +43,11 @@ enum class EDreamPaintType : uint8
 	 * it: TextMeshPro's four-corner gradient. Positions, Spread, Scale, Offset and the phase do not apply.
 	 */
 	Corners,
+	/**
+	 * Away from a line through Center across Angle, both ways alike: 0 on the line, 1 as far from it as a Linear's ends are
+	 * from its middle -- an image editor's reflected gradient. Not in CSS.
+	 */
+	Reflected,
 };
 
 /** What a gradient does beyond its first and last stop. */
@@ -176,17 +181,19 @@ struct FDreamPaintAnimation
  *       (distances, so a centre outside the box measures to its sides as CSS does), the smaller of each pair for Closest*,
  *       the larger for Farthest*. Ellipse: radii (sx, sy) for *Side and sqrt(2) * (sx, sy) for *Corner (CSS: the corner's
  *       ellipse keeps the side's aspect); Explicit (Radius.X * A, Radius.Y). Circle: the smaller (Closest*) or larger
- *       (Farthest*) of sx and sy for *Side, sqrt(sx^2 + sy^2) for *Corner, Radius.X * A for Explicit. t = length(p / R),
- *       each radius at least 1e-6.
+ *       (Farthest*) of sx and sy for *Side, sqrt(sx^2 + sy^2) for *Corner, Radius.X * A for Explicit. p turned as a
+ *       Diamond's is, q below, and t = length(q / R), each radius at least 1e-6: an ellipse turned by Angle (a circle, and
+ *       an ellipse at the default 180 degrees, as CSS draws them).
  *     - Conic: c as Radial. t = frac((atan2(p.x, -p.y) in degrees - (Angle + N.AngleOffset)) / 360): 0 up, clockwise.
  *     - Diamond: c and the radii as Radial (Ellipse radii for both shapes); p turned by -(Angle + N.AngleOffset) degrees,
  *       with a = radians(Angle + N.AngleOffset) that is q = (p.x cos a + p.y sin a, -p.x sin a + p.y cos a) (v runs down,
  *       so a positive Angle turns the diamond clockwise); t = |q.x| / Rx + |q.y| / Ry.
+ *     - Reflected: c as Radial, d and the length as Linear's: t = 2 |dot(p, d)| / max(|A sin a| + |cos a|, 1e-6).
  *     - Corners: no t; the colour is the first four stops mixed bilinearly at (saturate(u), saturate(v)), premultiplied in
  *       the Interpolation space, the last stop standing in for any of the four that is missing.
  *  frac(x) is x - floor(x) throughout, negative x included, as HLSL's frac is.
  *  2. Scale and move: S = Scale * N.ScaleMultiplier (at least 1e-4), o = Offset + N.Phase. Linear:
- *     t = (t - 0.5) / S + 0.5 - o. Radial, Conic, Diamond: t = t / S - o.
+ *     t = (t - 0.5) / S + 0.5 - o. Radial, Conic, Diamond, Reflected: t = t / S - o.
  *  3. Spread, over the span from the first stop's position a to the last's b (as Pad when b - a <= 0): Pad leaves t;
  *     Repeat t = a + frac((t - a) / (b - a)) * (b - a); Reflect s = (t - a) / (b - a), s = 1 - |frac(s / 2) * 2 - 1|,
  *     t = a + s * (b - a).
@@ -211,10 +218,13 @@ struct DREAMGUI_API FDreamGradient
 	/** The colours. The first MaxStops are used; positions out of order are taken as CSS takes them, each at least the one before. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient")
 	TArray<FDreamGradientStop> Stops;
-	/** Degrees, as CSS measures them: 0 points up, clockwise, 180 -- the default -- down. A Linear's direction, a Conic's start, a Diamond's turn. */
+	/**
+	 * Degrees, as CSS measures them: 0 points up, clockwise, 180 -- the default -- down. A Linear's and a Reflected's
+	 * direction, a Conic's start, a Radial ellipse's and a Diamond's turn.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient", meta = (UIMin = "0", UIMax = "360"))
 	float Angle = 180.0f;
-	/** A Radial's, Conic's or Diamond's centre, as fractions of the box from its top left: CSS's `at x% y%`. */
+	/** A Radial's, Conic's, Diamond's or Reflected's centre, as fractions of the box from its top left: CSS's `at x% y%`. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient")
 	FVector2f Center = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient")
@@ -250,19 +260,27 @@ struct DREAMGUI_API FDreamGradient
 	FLinearColor Evaluate(const FVector2f& InBoxUV, float InAspect = 1.0f, const FDreamPaintAnimation& InAnimation = FDreamPaintAnimation()) const;
 
 	/**
+	 * The radii R a Radial's ending shape has (step 1 of the reference: a circle's two alike), or a Diamond's, in box heights,
+	 * before Scale, for a box InAspect wide for its height; (0.5, 0.5) for a type that has none. What an editor that draws
+	 * the shape on the box measures it by.
+	 */
+	FVector2f GetEndingRadii(float InAspect = 1.0f) const;
+
+	/**
 	 * Read a CSS gradient: linear-gradient, radial-gradient, conic-gradient and their repeating- forms, with angles in
 	 * deg, turn, rad or grad, `to <side or corner>`, `at <position>` in percentages and keywords, the size and shape
 	 * keywords, `from <angle>`, `in srgb | srgb-linear | oklab`, stops with percentage positions (one or two each), and
 	 * the colours a rich text's <color> takes (names, #hex, rgb(), rgba(), transparent). Beyond CSS, what ToCss writes for
-	 * what CSS cannot say: diamond-gradient and corners-gradient, reflecting- for Reflect, and the Scale and Offset. False,
+	 * what CSS cannot say: diamond-gradient, reflected-gradient and corners-gradient, reflecting- for Reflect, a turn of a
+	 * radial-gradient's ellipse (an <angle> in its prelude), and the Scale and Offset. False,
 	 * with OutGradient untouched and OutError saying where, for anything else.
 	 *
 	 * THE GRAMMAR, as read and as ToCss writes it. Keywords, function names and hex digits in any case; spaces where CSS
 	 * allows them.
 	 *   gradient := 'none' | [ 'repeating-' | 'reflecting-' ] kind '(' [ prelude ] [ ',' stop ]* ')'
 	 *               (with no prelude the first stop follows the bracket)
-	 *   kind     := 'linear-gradient' | 'radial-gradient' | 'conic-gradient' | 'diamond-gradient' | 'corners-gradient'
-	 *               | 'none-gradient'
+	 *   kind     := 'linear-gradient' | 'radial-gradient' | 'conic-gradient' | 'diamond-gradient' | 'reflected-gradient'
+	 *               | 'corners-gradient' | 'none-gradient'
 	 *   prelude  := items separated by spaces, in any order, each at most once. Every item is read in every kind, CSS's
 	 *               own kinds included, so that a field the kind does not use still comes back (ToCss writes it then):
 	 *     <angle> | 'to' side [ side ] | 'from' <angle>  Angle. deg, grad, rad or turn, or a bare 0. 'to top' is 0deg,

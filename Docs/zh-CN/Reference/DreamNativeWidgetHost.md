@@ -1,8 +1,3 @@
----
-title: "UDreamNativeWidgetHost"
-description: "UDreamNativeWidgetHost"
----
-
 <a id="udreamnativewidgethost"></a>
 
 # UDreamNativeWidgetHost
@@ -15,26 +10,13 @@ description: "UDreamNativeWidgetHost"
 
 DreamGUI 层级中由 UMG 控件填充的一个空洞。
 
-UMG 的 NativeWidgetHost 是反方向的桥接——用一个 UMG 控件包裹原始的 Slate 控件——而这里
-是同一思路指向相反方向，而这恰恰是此处重要的方向：DreamGUI
-树是外层，项目需要的是一种方式，把它已经拥有的 UMG 界面
-（一个引擎控件、一个插件的面板、一个纯 Slate 的编辑器表面）保留在其中。
+UMG 的 NativeWidgetHost 是反方向的桥接——用一个 UMG 控件包裹原始的 Slate 控件——而这里是同一思路指向相反方向，而这恰恰是此处重要的方向：DreamGUI 树是外层，项目需要的是一种方式，把它已经拥有的 UMG 界面（一个引擎控件、一个插件的面板、一个纯 Slate 的编辑器表面）保留在其中。
 
-这套机制早已存在，却没有对应的控件：UDreamUMGWidget 将一个 UUserWidget（或一个裸的
-SWidget）渲染到渲染目标，并把它作为本库自身的几何体绘制，而
-UDreamUMGWidgetInteraction 将指针事件路由进去。两者都是作者必须
-知道要添加、连接和设置尺寸的组件。此类就是完成这件事的那一个标签。
+这套机制早已存在，却没有对应的控件：UDreamUMGWidget 将一个 UUserWidget（或一个裸的 SWidget）渲染到渲染目标，并把它作为本库自身的几何体绘制，而 UDreamUMGWidgetInteraction 将指针事件路由进去。两者都是作者必须知道要添加、连接和设置尺寸的组件。此类就是完成这件事的那一个标签。
 
-它不是什么：一种将 UMG 布局与 DreamGUI 布局混合的方式。被托管的控件被绘制到
-以此控件尺寸为大小的纹理中，对周围的一切一无所知——它无法推动
-DreamGUI 布局，DreamGUI 也无法触及它内部。这就是渲染目标
-桥接所达成的交易，与 UMG 自己的世界空间控件组件所做的相同，而一个假装
-并非如此的控件，就是在谎报哪个布局过程拥有什么。
+它不是什么：一种将 UMG 布局与 DreamGUI 布局混合的方式。被托管的控件被绘制到以此控件尺寸为大小的纹理中，对周围的一切一无所知——它无法推动 DreamGUI 布局，DreamGUI 也无法触及它内部。这就是渲染目标桥接所达成的交易，与 UMG 自己的世界空间控件组件所做的相同，而一个假装并非如此的控件，就是在谎报哪个布局过程拥有什么。
 
-需要一个世界，就像所有实例化 UserWidget 的东西一样：没有世界时（无头测试、
-设计器中不构建世界的部分），宿主节点存在、已设置尺寸和放置，
-只是什么都不绘制。这与 UDreamListViewBase 对行模板类给出的答案
-相同。
+需要一个世界，就像所有实例化 UserWidget 的东西一样：没有世界时（无头测试、设计器中不构建世界的部分），宿主节点存在、已设置尺寸和放置，只是什么都不绘制。这与 UDreamListViewBase 对行模板类给出的答案相同。
 
 <a id="properties"></a>
 
@@ -59,3 +41,4 @@ DreamGUI 布局，DreamGUI 也无法触及它内部。这就是渲染目标
 | `void SetBackgroundColor(FLinearColor InBackgroundColor)` | callable | 渲染目标在被托管控件背后被清除成的颜色。立即推送到宿主视觉。 |
 | `void SetResolutionScale(float InResolutionScale)` | callable | 宿主每个局部单位对应的渲染目标像素数。立即推送到宿主视觉。 |
 | `void SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)` | callable | 替换被托管的类并重新实例化它。为空则清空该空洞。 |
+

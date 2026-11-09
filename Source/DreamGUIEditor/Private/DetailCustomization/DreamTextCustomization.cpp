@@ -100,34 +100,14 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	DreamGUICategory.AddProperty(OverflowTypeHandle);
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, bAutoWrapText));
 
-	TArray<FName> NeedToHidePropertyNames;
+	// The rich-text rows are always in the group under the switch, and show while it is on by their EditCondition.
 	auto RichText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, bRichText));
-	RichText_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
-	// True as the fallback because it is the value that hides NOTHING: a selection that disagrees still
-	// has objects using the rich-text properties, and hiding them would hide live properties.
-	const bool bRichText = DreamDetailsMultiSelect::ValueOr<bool>(RichText_PH, true);
-	if (bRichText)
-	{
-		IDetailGroup& RichTextGroup = DreamGUICategory.AddGroup(FName("RichText"), RichText_PH->GetPropertyDisplayName());
-		RichTextGroup.HeaderProperty(RichText_PH);
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextTagFilterFlags)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextCustomStyleData)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextImageData)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, CreatedRichTextImageObjectArray)));
-	}
-	else
-	{
-		DreamGUICategory.AddProperty(RichText_PH);
-		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextCustomStyleData));
-		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextImageData));
-		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamText, CreatedRichTextImageObjectArray));
-		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextTagFilterFlags));
-	}
-
-	for (auto item : NeedToHidePropertyNames)
-	{
-		DetailBuilder.HideProperty(item);
-	}
+	IDetailGroup& RichTextGroup = DreamGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(UDreamText, bRichText), RichText_PH->GetPropertyDisplayName());
+	RichTextGroup.HeaderProperty(RichText_PH);
+	RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextTagFilterFlags)));
+	RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextCustomStyleData)));
+	RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, RichTextImageData)));
+	RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, CreatedRichTextImageObjectArray)));
 
 	//wrapping: where a line breaks and how much room the lines take
 	{
@@ -332,9 +312,8 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		.AutoWrapText(true)
 	]
 	;
-	// UDreamVisualBatchMesh's, declared on the base, so by name.
+	// UDreamVisualBatchMesh's, declared on the base, so by name. Its blend mode is a row of the widget's Layer category.
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(FName(TEXT("PropertiesForMaterial")), UDreamVisualBatchMesh::StaticClass()));
-	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(FName(TEXT("BlendMode")), UDreamVisualBatchMesh::StaticClass()));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, ExpandMeshSize)));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, SmallTextRaster)));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, DynamicPixelsPerUnit)));

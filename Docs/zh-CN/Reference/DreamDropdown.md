@@ -1,8 +1,3 @@
----
-title: "UDreamDropdown"
-description: "UDreamDropdown"
----
-
 <a id="udreamdropdown"></a>
 
 # UDreamDropdown
@@ -126,3 +121,4 @@ UMG 类中所有面向蓝图的成员，以及它们去了哪里。*adopt*：同
 | `UComboBoxString` | `GetOptionCount` | adopt | `GetOptionCount` |  |
 | `UComboBoxString` | `IsOpen` | adopt | `IsOpen` | 从 behaviour 的可见性接缝镜像而来，因此在别处点击关闭的列表在这里不会仍然是打开的。 |
 | `UComboBoxString` | `SetStyle` | adopt | `SetStyle` | 在 UComboBoxString 上不是 UFUNCTION（其 Setter 元数据为其命名）；在这里添加，以便外观可以在运行时替换。 |
+

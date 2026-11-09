@@ -1,8 +1,3 @@
----
-title: "FDreamProgressBarStyle"
-description: "FDreamProgressBarStyle"
----
-
 <a id="fdreamprogressbarstyle"></a>
 
 # FDreamProgressBarStyle
@@ -13,8 +8,7 @@ description: "FDreamProgressBarStyle"
 
 进度条：一条轨道及其填充部分。
 
-没有滑块颜色，也没有指针状态，因为没有交互行为：填充比例
-是控件的唯一属性，而填充的几何形状由控件自身驱动。
+没有滑块颜色，也没有指针状态，因为没有交互行为：填充比例是控件的唯一属性，而填充的几何形状由控件自身驱动。
 
 <a id="properties"></a>
 
@@ -32,3 +26,4 @@ description: "FDreamProgressBarStyle"
 | `RadialThickness` | `float` | Progress Bar Style|Radial | 是 | 读 / 写 |  |
 | `RadialStartAngle` | `float` | Progress Bar Style|Radial | 是 | 读 / 写 |  |
 | `BorderPadding` | `FMargin` | Progress Bar Style | 是 | 读 / 写 |  |
+

@@ -1,0 +1,108 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// The layers of a stylize effect (EDreamStylizeType), one pass each over a picture: a CRT screen, a glitch, chromatic
+// aberration, a halftone screen, ordered dithering, film grain, a vignette, posterization. Each layer is three float4 rows
+// (DREAMUI_STYLIZE_ROWS_PER_LAYER), the first float of the first its number, the rest its parameters as FDreamUIStylizeMath::Pack
+// lays them out. Sizes are in units of the canvas, times the pixels to a unit the pass is given.
+//
+// A pattern laid on the screen -- scanlines, a halftone screen, the dither matrix, grain -- is measured in the target's own
+// pixels, so it stays where it is when the element moves under it; what is laid on the element -- the CRT's curve, the
+// vignette, radial aberration -- is measured in the element's rect.
+//
+// The CPU says the same in FDreamUIStylizeMath (Core/DreamUIStylize.h) for the layers that are a function of a pixel's own
+// colour and place: the dither, posterization, the vignette, the scanlines, the halftone's coverage.
+
+#ifndef DREAMUI_STYLIZE_USH
+#define DREAMUI_STYLIZE_USH
+
+#include "/Plugin/DreamGUI/Private/DreamUIBlend.ush"
+
+#define DREAMUI_STYLIZE_MAX_LAYERS 8
+#define DREAMUI_STYLIZE_ROWS_PER_LAYER 3
+
+#define DREAMUI_STYLIZE_NONE 0
+#define DREAMUI_STYLIZE_CRT 1
+#define DREAMUI_STYLIZE_GLITCH 2
+#define DREAMUI_STYLIZE_CHROMATIC_ABERRATION 3
+#define DREAMUI_STYLIZE_HALFTONE 4
+#define DREAMUI_STYLIZE_DITHER 5
+#define DREAMUI_STYLIZE_FILM_GRAIN 6
+#define DREAMUI_STYLIZE_VIGNETTE 7
+#define DREAMUI_STYLIZE_POSTERIZE 8
+
+/** The seeds of the layers' hashes: any constants, the same on the CPU. */
+#define DREAMUI_STYLIZE_GLITCH_SEED 0x68E31DA4u
+#define DREAMUI_STYLIZE_GRAIN_SEED 0xB5297A4Du
+
+/** A hash of a cell to 0..1, as the clip masks' noise is made (DreamUIClip_Hash). */
+float DreamUIStylize_Hash01(int2 Cell, uint Seed)
+{
+	return (float)(DreamUIClip_Hash(asuint(Cell.x), asuint(Cell.y), Seed) & 0xFFFFFFu) / 16777215.0;
+}
+
+/** The Bayer matrix's threshold at a cell, 0 up to (not including) 1: 4 by 4 or 8 by 8. */
+float DreamUIStylize_Bayer(int2 Cell, int Size)
+{
+	// Built bit by bit: the matrix of size 2n interleaves four of size n, as Bayer's recursion does.
+	const int Bits = Size >= 8 ? 3 : 2;
+	int X = Cell.x & (Size - 1);
+	int Y = Cell.y & (Size - 1);
+	int Value = 0;
+	for (int Bit = 0; Bit < Bits; ++Bit)
+	{
+		const int Xb = (X >> Bit) & 1;
+		const int Yb = (Y >> Bit) & 1;
+		Value |= (((Xb ^ Yb) << 1) | Yb) << (2 * (Bits - 1 - Bit));
+	}
+	return (Value + 0.5) / (float)(Size * Size);
+}
+
+/** Dithered quantization of one channel to Levels levels at threshold T. */
+float DreamUIStylize_Dither(float C, float Levels, float T)
+{
+	const float Steps = max(Levels - 1.0, 1.0);
+	return saturate(floor(saturate(C) * Steps + T) / Steps);
+}
+
+/** Scanlines: how much of a pixel's light survives, by the target row it is on (in units of the canvas, Spacing apart). */
+float DreamUIStylize_Scanline(float TargetY, float PixelScale, float Spacing, float Strength)
+{
+	const float Line = TargetY / max(PixelScale * Spacing, 1e-3);
+	return 1.0 - Strength * (0.5 - 0.5 * cos(6.2831853 * Line));
+}
+
+/** The vignette's amount at Q, the pixel's place in the element (-1..1 on each axis), as far as Radius and Softness put it. */
+float DreamUIStylize_Vignette(float2 Q, float Aspect, float Roundness, float Radius, float Softness, float Intensity)
+{
+	// Round in the element's own units at roundness 1, in its box's at 0.
+	const float2 R = float2(Q.x * lerp(1.0, Aspect, Roundness), Q.y);
+	const float D = length(R) / sqrt(2.0);
+	return Intensity * smoothstep(Radius, Radius + max(Softness, 1e-3), D);
+}
+
+/**
+ * The ink a halftone dot or line of Coverage lays at P, a point in the screen's cells (each cell one unit), Aa a pixel in
+ * cells. A dot or a line thinner than a pixel fades with its size, so that none at all inks nothing.
+ */
+float DreamUIStylize_HalftoneInk(float2 P, float Coverage, bool bLines, float Aa)
+{
+	const float2 F = frac(P) - 0.5;
+	const float Width = max(Aa, 1e-4);
+	if (bLines)
+	{
+		const float Half = saturate(Coverage) * 0.5;
+		return saturate((Half - abs(F.y)) / Width + 0.5) * saturate(Half * 2.0 / Width);
+	}
+	const float Radius = sqrt(saturate(Coverage) / 3.14159265);
+	return saturate((Radius - length(F)) / Width + 0.5) * saturate(Radius * 2.0 / Width);
+}
+
+float2 DreamUIStylize_Rotate(float2 P, float Degrees)
+{
+	const float A = Degrees * 0.0174532925;
+	const float S = sin(A);
+	const float C = cos(A);
+	return float2(P.x * C - P.y * S, P.x * S + P.y * C);
+}
+
+#endif // DREAMUI_STYLIZE_USH

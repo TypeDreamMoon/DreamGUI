@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Text/DreamUITimelineWriteBack.h"
+
 #include "DreamWidgetBehaviourTestTypes.h"
 
 #include "DreamWidgetBlueprint.h"
@@ -250,7 +252,7 @@ namespace DreamUITextGateTestLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIDuiBackedTreeRefusesStructuralEditsTest,
-	"DreamGUI.Designer.ADuiBackedTreeRefusesStructuralEdits",
+	"DreamGUI.Designer.ADuiBackedTreeKeepsItsBindingsInTheFile",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
@@ -269,22 +271,10 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 		return false;
 	}
 
-	// Six patterns, one per entry point, each demanding the file name as well as the refusal. This is
-	// the whole assertion that the refusals are AUDIBLE: an expected message that never occurs is
-	// reported as a test error, so a gate that returned false without logging fails right here.
-	// Occurrences 0 -- "at least once" -- rather than an exact count: what is being asserted is that
-	// each refusal was said, and pinning the number would make the test fail the day a call site
-	// gains a second route to the same gate.
-	// No literal space before the file name: the message spells it `in 'GateStructural.dui'`, so the
-	// character in front of it is an apostrophe. The first version of these patterns asked for a
-	// space, matched nothing, and every refusal counted as an unexpected error -- the gates all fired
-	// correctly and the test failed anyway.
-	AddExpectedError(TEXT("Refusing to create a .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to delete .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to move .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to rename .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to duplicate .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to paste widgets .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
+	// Every structural edit -- creating, deleting, duplicating, pasting, moving, renaming, the behaviours and the panel
+	// -- is written into the file now, and DreamUITextStructureAutomationTests, DreamUITextMoveRenameAutomationTests
+	// and DreamUITextComponentsAutomationTests hold each to it. So is a binding: the Bind control writes its `<-` line
+	// (DreamUITextStatementAutomationTests).
 
 	FScopedGatedDesigner Scoped(TEXT("BP_GateStructural"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
 	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
@@ -297,41 +287,24 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("and so is its child"), Child)) return false;
 	const int32 CountBefore = Scoped.TemplateCount();
 
-	// ---- the five in DreamWidgetTreeEditing
-	TestNull(TEXT("Creating a widget is refused"),
-		DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Added")));
-	TestFalse(TEXT("Deleting one is refused"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Child));
-	TestFalse(TEXT("Moving one is refused"), DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, Child, Root, 0));
-	TestEqual(TEXT("Renaming one is refused"),
-		DreamWidgetTreeEditing::RenameWidget(Scoped.Blueprint, Child, TEXT("Renamed")), FString());
-	TestNull(TEXT("Duplicating one is refused"),
-		DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, Child, Root, -1));
-
-	// ---- the sixth, which is not in that namespace at all
 	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
 	UDreamWidget* PreviewChild = Scoped.FindPreview(TEXT("Child"));
-	if (!TestNotNull(TEXT("the child has a preview to copy"), PreviewChild)) return false;
+	if (!TestNotNull(TEXT("the child has a preview to work on"), PreviewChild)) return false;
+	TestTrue(TEXT("a binding is authored from the panel, as its line in the file"), DreamUITextAuthoring::CanAuthorBindingsOn(PreviewChild));
+
 	// Copy is deliberately NOT gated: it writes nothing to the asset, and refusing it would stop an
 	// author lifting a subtree out of a .dui-backed screen to paste into a hand-authored one.
 	const TArray<UDreamWidget*> ToCopy{ PreviewChild };
 	Scoped.Designer->DesignerCopyWidgets(ToCopy);
-	if (!TestTrue(TEXT("copying a widget out of a .dui-backed tree still works"),
-		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()))
-	{
-		return false;
-	}
-	TestEqual(TEXT("Pasting into it is refused"),
-		Scoped.Designer->DesignerPasteWidgets(Scoped.FindPreview(TEXT("Root"))).Num(), 0);
+	TestTrue(TEXT("copying a widget out of a .dui-backed tree still works"),
+		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
 
-	// And nothing moved. Six refusals that each returned the right value while quietly doing the work
-	// anyway is a state every assertion above passes in.
+	// And nothing moved: copying writes nothing to the asset.
 	TestEqual(TEXT("the hierarchy is exactly what the file says"), Scoped.TemplateCount(), CountBefore);
 	TestNotNull(TEXT("the child is still there"), Scoped.FindTemplate(TEXT("Child")));
-	TestNull(TEXT("under the name the file gives it"), Scoped.FindTemplate(TEXT("Renamed")));
-	TestNull(TEXT("and nothing was added"), Scoped.FindTemplate(TEXT("Added")));
 
-	// The sentence itself, once: every one of the six is built by this function, so this is where the
-	// claim "the message tells the author where to go" is actually checked rather than pattern-matched.
+	// The refusal sentence the remaining structural refusals are built with, once: this is where the claim "the
+	// message tells the author where to go" is actually checked rather than pattern-matched.
 	const FString Refusal = DreamUITextAuthoring::DescribeStructuralRefusal(Scoped.Blueprint, TEXT("delete 'Child'")).ToString();
 	TestTrue(TEXT("the refusal names the file"), Refusal.Contains(Source.FileName));
 	TestTrue(TEXT("and says where the structure lives"), Refusal.Contains(TEXT("text")));
@@ -584,9 +557,17 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 
 	// ---- and the custom-row half, which is the one a property-only gate misses
 	TestTrue(TEXT("A custom row on the widget is read-only by default"),
-		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Visual"))));
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Behavior"))));
 	TestFalse(TEXT("except in the categories the write-back covers"),
 		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("DreamLayout"))));
+	// The class pickers of the visual, the panel and the self layout: a new one is written as the node's type or its
+	// `+` line, so they stay live.
+	TestFalse(TEXT("the visual's class picker is live"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Visual"))));
+	TestFalse(TEXT("and the panel's"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("LayoutContainer"))));
+	TestFalse(TEXT("and the self layout's"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("LayoutSelf"))));
 
 	return true;
 }
@@ -653,12 +634,11 @@ bool FDreamUIBoundPropertyIsShownReadOnlyTest::RunTest(const FString&)
 			DreamUITextAuthoring::IsPropertyReadOnly(Visual, FontSize, {}));
 	}
 
-	// The third block: authoring a NEW binding here. Not a write-back problem at all -- the compiler
-	// replaces the whole binding list from the file, so a binding made in the panel is deleted rather
-	// than merely not saved, and the Create Binding entry would leave an orphan function behind.
-	TestFalse(TEXT("The details panel cannot author bindings on a text-authored class"),
+	// The third block: authoring a NEW binding here. The compiler replaces the whole binding list from the file, so the
+	// panel writes the `<-` line rather than the list, and the compile reads it back.
+	TestTrue(TEXT("The details panel authors bindings on a text-authored class, as lines of its file"),
 		DreamUITextAuthoring::CanAuthorBindingsOn(Visual));
-	TestFalse(TEXT("nor on the widget itself"), DreamUITextAuthoring::CanAuthorBindingsOn(Title));
+	TestTrue(TEXT("on the widget itself too"), DreamUITextAuthoring::CanAuthorBindingsOn(Title));
 
 	return true;
 }
@@ -946,16 +926,13 @@ bool FDreamUITextCompileMovesTheAnimationPanelTest::RunTest(const FString&)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUITimelineReadOnlyFollowsTheAnimationTest,
-	"DreamGUI.Designer.SwitchingBetweenATimelineAndAnEditableAnimationSwitchesReadOnly",
+	"DreamGUI.Designer.ATimelineOpensEditableBesideAnAnimationTheEditorMade",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * Switching animations kept whatever editability the Animations panel's Sequencer had been opened with.
- *
- * Sequencer reads read-only once, when it is made, and the panel handed it every later animation through
- * ResetToNewRootSequence. Opened on an animation made in the editor and then given a `timeline` one, it let the author
- * edit what the next compile rebuilds from the file; opened the other way round, it left the editor's own animation
- * locked. This alternates the two on one host.
+ * A `timeline` block's animation opens editable when the editor can write its edits back into the block
+ * (FDreamUITimelineWriteBack), like one made in the animation editor -- alternated on one host, because Sequencer reads
+ * read-only once, when it is made, and the panel makes a new one whenever the answer changes.
  */
 bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 {
@@ -979,7 +956,7 @@ bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 	UDreamWidgetAnimation* Editable = Host != nullptr ? Host->AddNewAnimation() : nullptr;
 	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid())
 		|| !TestTrue(TEXT("and a host holding a timeline and an editable animation"),
-			Timeline != nullptr && Editable != nullptr && !Timeline->IsEditable() && Editable->IsEditable()))
+			Timeline != nullptr && Editable != nullptr && Timeline->IsLanguageOwned() && Editable->IsEditable()))
 	{
 		return false;
 	}
@@ -991,11 +968,12 @@ bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 
 	Panel->SelectAnimation(Timeline);
 	Sequencer = Panel->GetSequencer();
-	TestTrue(TEXT("a timeline after it is read-only"), Sequencer.IsValid() && Sequencer->IsReadOnly());
+	TestTrue(TEXT("the file can take a timeline's edits"), FDreamUITimelineWriteBack::CanWriteBack(Timeline));
+	TestTrue(TEXT("so a timeline after it opens editable too"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
 
 	Panel->SelectAnimation(Editable);
 	Sequencer = Panel->GetSequencer();
-	TestTrue(TEXT("and the editable one after that is editable again"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
+	TestTrue(TEXT("and the editor's own one after that is editable as well"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
 
 	Panel->ClearAnimationSelection();
 	return true;

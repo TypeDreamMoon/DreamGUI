@@ -1,0 +1,76 @@
+// A trail behind the pointer: a ribbon laid where User.DreamUI_PointerPosition is, frame after frame, thinning and fading
+// as it ages, and a few motes shed along it. It runs while the pointer is over the panel (the sample's trigger activates
+// the system on enter and deactivates it on exit); world space, so the trail stays where the pointer was.
+System(Name="Samples/Niagara/NS_Sample_PointerTrail", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        Position DreamUI_PointerPosition = (0, 0, 0)            [ Group="DreamUI" ];
+        float    Width                   = 16.0                 [ Group="Look" ];
+        Color    Tint                    = (0.35, 0.8, 1.0, 1)  [ Group="Look" ];
+    }
+
+    Emitter Trail
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = false;
+            AllocationMode     = Fixed;
+            PreAllocationCount = 48;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Infinite);
+            SpawnRate(SpawnRate = 90.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(Lifetime = 0.35);
+            Position Particles.Position = User.DreamUI_PointerPosition;
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            float Particles.RibbonWidth = hlsl { User.Width * (1.0 - Particles.NormalizedAge) };
+            Color Particles.Color       = hlsl { float4(User.Tint.rgb, (1.0 - Particles.NormalizedAge) * User.Tint.a) };
+        }
+
+        RibbonRenderer Trail
+        {
+            TessellationMode = Automatic;
+        }
+    }
+
+    Emitter Motes
+    {
+        Settings = {
+            SimTarget  = CPU;
+            LocalSpace = false;
+            AllocationMode     = Fixed;
+            PreAllocationCount = 32;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Infinite);
+            SpawnRate(SpawnRate = 24.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.4, LifetimeMax = 0.8);
+            Position Particles.Position   = User.DreamUI_PointerPosition;
+            Vector   Particles.Velocity   = RandomRangeVector(Minimum = (-40, 0, -10), Maximum = (40, 0, 60));
+            Vector2  Particles.SpriteSize = (6, 6);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            SolveForcesAndVelocity();
+            Color Particles.Color = hlsl { float4(User.Tint.rgb * 1.6, 1.0 - Particles.NormalizedAge) };
+        }
+
+        SpriteRenderer Motes
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}

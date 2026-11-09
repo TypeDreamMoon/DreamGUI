@@ -28,6 +28,8 @@ public:
     /** Widget constructor */
 	void Construct(const FArguments& Args, UWorld* InWorld);
 	void Refresh();
+	/** InComponent selected in the component list, and its properties shown, as a click on its row does. */
+	void ShowComponent(class UDreamUIBehaviour* InComponent);
 
 	// FNotifyHook -- the details view edits PREVIEW widgets, and a preview is rebuilt from the
 	// authoring tree, so an edit that stopped there would be gone at the next rebuild. These two are
@@ -110,6 +112,7 @@ private:
 	 * things only the `.dui` can say, and both are drawn disabled rather than failing on click.
 	 */
 	bool IsEditorAllowEditing()const;
+	bool IsNameEditable()const;
 	/** The hierarchy this panel is showing belongs to a `.dui`. */
 	bool IsTextAuthoredHierarchy() const;
 	/** The banner above the properties: which file owns this, and what is still editable here. */

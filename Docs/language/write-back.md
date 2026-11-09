@@ -6,28 +6,62 @@ description: "The designer is a front end for the .dui — which line an edit is
 ## What the designer writes back
 
 The designer is a front end for the file: a change made there is a change to the text, written into the line that
-holds the value -- or a new line after the node's others -- with everything else byte for byte as it was. A few
-things have no line to write into, and the designer says so (DUI7004) instead of inventing one:
+holds the value -- or a new line after the node's others -- with everything else byte for byte as it was.
 
-- the visibility of a widget an `if` shows or hides -- change the condition, or move the widget out of the branch;
-- a `SizeRule` other than Fill on `@fill 2` -- write `@slot SizeRule = …` and `@slot FillWeight = 2` in its place.
-  A new weight replaces the number in `@fill 2`, and a bare `@fill` given another rule becomes `@slot SizeRule = …`;
-- anything on a row of a `rows` table but a column's value or a line of the row's own block: the row's line spells only
-  its columns. A column's value is replaced in its cell. A row is not removed, moved, named or given a `+` block from
-  the designer, and no node is placed beside a table (the place would be inside it) -- edit the text.
-
-A value a node takes from its style's `+ Component` line is not written either (DUI7005): the style is shared, and the
-node has no `+` line of its own to hold the change. Add one (`+ VerticalBox { Spacing = 20 }`) or change the style.
-
-A widget added in the designer is written with the type this file would use: its `use … as` alias when the class has
-one here, a container type for a plain widget that lays out children (`VerticalBox Column`). One dropped into a named
-slot of a component instance is written into that slot's fill, `slot Detail { … }`, which is written first when the
-instance has none. An unnamed node renamed in the designer gets its first id, written after its type. The template of a
-`for` or an `each` is not removed or moved out of its loop: a loop with nothing to repeat does not build.
+**Values.** Numbers, strings, tuples, colours, enums and asset references are written as the literals the language
+reads. A list or a set is written as `[a, b]` and a map as `{ key: value }`, the whole container replacing its line;
+a set or a map that only came back in another order is no change, and a changed one keeps the file's order with new
+entries after it. An element that is a struct with no short form -- a layer style's drop shadow, an
+adjustment -- is the quoted text of its fields that differ from the struct's defaults, as the builder reads it:
+`Style.DropShadows = ["(Angle=45.000000,Distance=8.000000)"]`. A reference to another widget of the hierarchy (an
+explicit navigation target, a toggle's group) is written as that node's bare id; one into another file's component has
+no id here and is refused.
 
 A turn -- made with the 2D view's rotate handle, the 3D view's gizmo or the details panel -- is written as the euler,
 `RelativeRotationEuler = (0, 0, 30)`: pitch, yaw and roll in degrees, a turn in the canvas plane being the roll,
 clockwise for a positive one. The quaternion the asset keeps has no spelling and is never written.
+
+A value a node takes from its **style's** `+ Component` line is written as an override on the node: a
+`+ Component { … }` line of its own holding the changed value. The style is shared and stays as it was.
+
+`@fill N` given a new weight has the number replaced; a bare `@fill` given another `SizeRule` becomes
+`@slot SizeRule = …`; and `@fill 2` given another rule becomes its two lines, `@slot SizeRule = …` and
+`@slot FillWeight = 2`.
+
+**Structure.** A widget added in the designer is written with the type this file would use: its `use … as` alias when
+the class has one here, a container type for a plain widget that lays out children (`VerticalBox Column`). One dropped
+into a named slot of a component instance is written into that slot's fill, `slot Detail { … }`, which is written first
+when the instance has none. Removing a widget takes its whole block; moving one lifts its text and puts it back in front
+of the sibling it now stands before; a rename is written as the new id with `(was: OldId)`, so the next compile carries
+the variable, the bindings, the animation paths and the localization keys the old name owned. An unnamed node renamed in
+the designer gets its first id, written after its type. Behaviours are `+` lines added, removed and moved; a new panel
+or visual class rewrites the node's type or its `+` line, and lines the new class has no property for are taken out.
+
+A row of a `rows` table is one line: removing it takes the line, moving it lifts the line to before another row of
+the same table, and duplicating it copies the line (the copy's key is bumped until the author gives it its own).
+
+**Statements.** A binding from the Bind control is written as `Property <- Function()`, replacing the property's own line
+when it has one; *Remove Binding* takes the line out, and *Unbind and Set to This Value* writes `Property = value` in its
+place. A two-way binding is `Value <-> Variable` (or a viewmodel member, `Value <-> Settings.Volume`), offered only on a
+control that announces its value through `OnValueChangedBP`. A route from the Events rows is `Event -> Handler`: on the
+node's line, or in the node's own `+ Component` block for a behaviour the node writes as one. These are written
+straight into the document as one line each, in the gesture's transaction.
+
+**Animations.** An edit in the animation editor to a `timeline` block's animation is written into the block: keys' times
+and values, the ease from one key to the next, event keys, the duration, a track added or removed as a line. A track
+whose keys did not change keeps its line byte for byte; comments and the `loop` line stay as they are.
+
+**What is refused**, with the reason, before anything changes -- a few things have no line to write into, and the
+designer says so (DUI7004) instead of inventing one:
+
+- the visibility of a widget an `if` shows or hides -- change the condition, or move the widget out of the branch -- and
+  a binding or route written over a line the front end made rather than read;
+- the template of a `for` or an `each` removed or moved out of its loop: a loop with nothing to repeat does not build;
+- on a `rows` table: renaming a row, giving it a `+` block, moving it out of its table, or placing a node beside the
+  table (the place would be inside it);
+- a value whose type or content has no spelling (DUI7003, today only non-finite floats among values that have one);
+- in the animation editor, a key with tangents of its own or stepped interpolation -- write `timeline Name external` to
+  hand the animation to Sequencer for good.
 
 If a source file is read-only or a write fails, the document keeps the edited text in memory. A later flush retries
 that write even when no value changed. Compile retries it too, and reports DUI6023 while it still cannot write; the

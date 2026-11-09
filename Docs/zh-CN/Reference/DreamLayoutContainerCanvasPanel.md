@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerCanvasPanel"
-description: "UDreamLayoutContainerCanvasPanel"
----
-
 <a id="udreamlayoutcontainercanvaspanel"></a>
 
 # UDreamLayoutContainerCanvasPanel
@@ -40,3 +35,4 @@ UMG 类中面向蓝图的每个成员，以及它们的去向。*adopt*：名称
 | UMG | 成员 | 状态 | 此处 | 备注 |
 |---|---|---|---|---|
 | `UCanvasPanel` | `AddChildToCanvas` | map | `AddChild` | 此处的一个插槽类对应一个动词：AddChild 返回 UDreamPanelSlot，画布矩形直接在其上设置。 |
+

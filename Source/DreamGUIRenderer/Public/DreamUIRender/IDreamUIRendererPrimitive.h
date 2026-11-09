@@ -12,6 +12,7 @@
 class FDreamUIRenderer;
 class FSceneViewFamily;
 class FDreamVisualPostProcessRenderProxy;
+struct FDreamUICompositeDesc;
 
 /**
  * Shared ownership of a post-process render proxy.
@@ -69,6 +70,11 @@ struct FDreamUIMeshBatchContainer
 	 * after the primitive is gone still reads it.
 	 */
 	TSharedPtr<const FRenderResource, ESPMode::ThreadSafe> PrimitiveUniformBufferHold;
+	/**
+	 * In world space, what the batch covers, for a draw of a mode that reads what is behind it: the part of the target
+	 * copied before it is drawn. Invalid for any other draw.
+	 */
+	FBox BackdropBounds = FBox(ForceInit);
 
 	FDreamUIMeshBatchContainer() {}
 
@@ -81,6 +87,8 @@ enum class EDreamUIRendererPrimitiveType :uint8
 {
 	Mesh,
 	PostProcess,
+	/** Group markers, each opening or closing a group (DreamUI_GetCompositeElement). */
+	Group,
 };
 
 struct FDreamUIRenderSectionProxy;
@@ -117,4 +125,9 @@ public:
 	virtual void DreamUI_GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector& Collector, const FDreamUIPrimitiveDataContainer& PrimitiveData, TArray<FDreamUIMeshBatchContainer>& ResultArray) = 0;
 	/** Returns a reference, not a borrow: the caller keeps the proxy alive for as long as it renders with it. */
 	virtual FDreamVisualPostProcessRenderProxyPtr DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const = 0;
+	/**
+	 * A group marker's section: the group's composite and whether the marker opens it (bOutBegin) or closes it -- a closing
+	 * one's composite says only which group. Null for any other section. Valid while the section is, on the render thread.
+	 */
+	virtual const FDreamUICompositeDesc* DreamUI_GetCompositeElement(FDreamUIRenderSectionProxy* SectionPtr, bool& bOutBegin) const { return nullptr; }
 };

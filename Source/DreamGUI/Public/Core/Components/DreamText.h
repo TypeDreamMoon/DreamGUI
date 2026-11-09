@@ -487,13 +487,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bRichText = false;
 	/** Flags to enable/disable rich text tag. */
-	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIText_RichTextTagFilterFlags", EditCondition = "bRichText"))
+	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIText_RichTextTagFilterFlags", EditCondition = "bRichText", EditConditionHides))
 		int32 RichTextTagFilterFlags = 0xffffffff;
 	/** rich text custom style data for custom tag and rendering custom style */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "bRichText"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "bRichText", EditConditionHides))
 		TObjectPtr<UDreamUIRichTextCustomStyleData> RichTextCustomStyleData = nullptr;
 	/** rich text image data for rendering image inside UIText */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "bRichText"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (EditCondition = "bRichText", EditConditionHides))
 		TObjectPtr<UDreamUIRichTextImageData_BaseObject> RichTextImageData = nullptr;
 	/**
 	 * The amount of pixels per unit to use for dynamically created bitmap texture, such as BitmapFont. 

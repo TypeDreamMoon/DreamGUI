@@ -1,8 +1,3 @@
----
-title: "UDreamUICaptureLibrary"
-description: "UDreamUICaptureLibrary"
----
-
 <a id="udreamuicapturelibrary"></a>
 
 # UDreamUICaptureLibrary
@@ -30,3 +25,4 @@ description: "UDreamUICaptureLibrary"
 | `bool SaveCanvasToPng(UDreamCanvas* InCanvas, FString InFilePath)` | callable | 将 InCanvas 绘制的内容以 PNG 形式保存到 InFilePath：即绘制到渲染目标中的画布的目标。在屏幕或世界中绘制的画布没有自己的图像——它是视口图像的一部分，由 SaveViewportToPng 写入。 |
 | `bool SaveRenderTargetToPng(UTextureRenderTarget2D* InTarget, FString InFilePath)` | callable | 将 InTarget 的像素以 PNG 形式保存到 InFilePath（当路径没有扩展名时会添加 .png）。目标的 alpha 会被保留，因此没有被绘制覆盖的部分在文件中保持透明。 |
 | `bool SaveViewportToPng(UObject* InWorldContextObject, FString InFilePath)` | callable | 将 InWorldContextObject 的世界所显示在的视口——游戏的视口，或在编辑器中显示该世界的关卡视口——以 PNG 形式保存到 InFilePath：包含场景及其中所有面板，如同玩家所见。游戏的视口直接绘制到其窗口中，只有在绘制某一帧时才能读取，因此在游戏中此函数返回 false；在那里请使用引擎的截图请求来获取图像（HighResShot、FScreenshotRequest）。 |
+

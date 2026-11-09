@@ -23,6 +23,7 @@
 #include "Text/DreamUIMenus.h"
 #include "Text/DreamUISourceWatcher.h"
 #include "Text/DreamUISymbolExport.h"
+#include "Workflow/DreamUIEditorWorkflow.h"
 #include "DreamUIEditorCommands.h"
 #include "DreamUIEditorTools.h"
 #include "DreamUIControlRegistry.h"
@@ -45,6 +46,7 @@
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontData_DistanceField.h"
 #include "AssetTypeActions/AssetTypeActions_DreamGradientAsset.h"
 
+#include "DetailCustomization/DreamDetailsLayout.h"
 #include "DetailCustomization/DreamWidgetCustomization.h"
 #include "DetailCustomization/DreamVisualCustomization.h"
 #include "DetailCustomization/DreamVisualBatchMeshCustomization.h"
@@ -60,6 +62,14 @@
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.h"
 #include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "Designer/DreamDesignerEffectHandles.h"
+#include "Designer/DreamDesignerGradientHandles.h"
+#include "Designer/DreamDesignerHandles.h"
+#include "Designer/DreamDesignerPointHandleProviders.h"
+#include "DetailCustomization/PropertyType/DreamBlendModeCustomization.h"
+#include "DetailCustomization/PropertyType/DreamAngleCustomization.h"
+#include "DetailCustomization/PropertyType/DreamCurveCustomizations.h"
+#include "DreamTweener.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
@@ -148,11 +158,43 @@
 #include "Localization/DreamUITextLocator.h"
 #include "Localization/DreamUITranslationFit.h"
 
+namespace DreamGUIEditorModuleLocal
+{
+	/** What picks out the angle properties among every float property; the same one unregisters the dial. */
+	TSharedPtr<IPropertyTypeIdentifier> AngleWheelIdentifier;
+}
+
 const FName FDreamGUIEditorModule::DreamUIDynamicSpriteAtlasViewerTabName(TEXT("DreamUIDynamicSpriteAtlasViewerName"));
 const FName FDreamGUIEditorModule::DreamUIWidgetInspectorTabName(TEXT("DreamUIWidgetInspectorTabName"));
 
 #define LOCTEXT_NAMESPACE "FDreamGUIEditorModule"
 DEFINE_LOG_CATEGORY(DreamGUIEditor);
+
+namespace DreamGUIEditorModuleLocal
+{
+	/** The viewport handle providers this module registered, to unregister when it stops. */
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> DesignerHandleProviders;
+
+	TArray<TSharedRef<IDreamDesignerHandleProvider>> MakeDesignerHandleProviders()
+	{
+		return {
+			DreamDesignerPointHandles::MakeLatticeProvider(),
+			DreamDesignerPointHandles::MakePathProvider(),
+		};
+	}
+
+	/** The kinds of handles properties ask for by meta=(DreamGUI_Handle="Kind"), registered and unregistered with the providers. */
+	TArray<TPair<FName, FDreamDesignerHandleKindFactory>> MakeDesignerHandleKinds()
+	{
+		return {
+			{ DreamDesignerGradientHandles::KindName, DreamDesignerGradientHandles::MakeKindFactory() },
+			{ DreamDesignerEffectHandles::MaskKindName, DreamDesignerEffectHandles::MakeMaskKindFactory() },
+			{ DreamDesignerEffectHandles::GlassKindName, DreamDesignerEffectHandles::MakeGlassKindFactory() },
+			{ DreamDesignerEffectHandles::ShadowKindName, DreamDesignerEffectHandles::MakeShadowKindFactory() },
+			{ DreamDesignerEffectHandles::LightKindName, DreamDesignerEffectHandles::MakeLightKindFactory() },
+		};
+	}
+}
 
 void FDreamGUIEditorModule::StartupModule()
 {
@@ -223,6 +265,8 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 	// The Tools entries and this plugin's share of the Dream-family toolbar combo.
 	FDreamUIMenus::Register();
+	// Copying and pasting layer styles, the eyedropper and the project's swatches, the preset library.
+	DreamUIEditorWorkflow::Startup(*this);
 
 	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
 	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
@@ -263,48 +307,67 @@ void FDreamGUIEditorModule::StartupModule()
 	//register custom editor
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-		PropertyModule.RegisterCustomClassLayout(UDreamWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamVisual::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamVisualBatchMesh::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualBatchMeshCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamSpriteBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamSpriteBaseCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamSprite::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamSpriteCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamCanvas::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamCanvasCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamText::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamTextureBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextureBaseCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamRectBlock::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamRectBlockCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamTexture::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextureCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamVisualPostProcess::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualPostProcessCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamWidget::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamVisual::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamVisualBatchMesh::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualBatchMeshCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamSpriteBase::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamSpriteBaseCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamSprite::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamSpriteCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamCanvas::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamCanvasCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamText::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamTextureBase::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextureBaseCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamRectBlock::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamRectBlockCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamTexture::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamTextureCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamVisualPostProcess::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamVisualPostProcessCustomization::MakeInstance)));
 
-		PropertyModule.RegisterCustomClassLayout(UDreamUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUISpriteDataCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIStaticSpriteAtlasDataCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontData_FreeTypeRenderCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUISpriteData::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUISpriteDataCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIStaticSpriteAtlasDataCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontData_FreeTypeRenderCustomization::MakeInstance)));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontFallbackCustomization::MakeInstance));
 		// A text's paints, a gradient asset and a custom style's paint all show their gradients through this one.
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamGradientCustomization::MakeInstance));
+		// The designer viewport's handles: a warp's lattice and a path's points, and the kinds properties are tagged with --
+		// a rect block's gradients, a clip's mask, a glass, shadows and lights.
+		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::MakeDesignerHandleProviders())
+		{
+			FDreamDesignerHandles::Register(Provider);
+			DreamGUIEditorModuleLocal::DesignerHandleProviders.Add(Provider);
+		}
+		for (TPair<FName, FDreamDesignerHandleKindFactory>& Kind : DreamGUIEditorModuleLocal::MakeDesignerHandleKinds())
+		{
+			FDreamDesignerHandles::RegisterKind(Kind.Key, MoveTemp(Kind.Value));
+		}
+		// Every blend mode row -- an element's, a group's, a layer effect's -- shows the modes as pictures, and the hovered one on the widget.
+		PropertyModule.RegisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamBlendModeCustomization::MakeInstance));
+		// An angle tagged DreamGUI_Editor="AngleWheel" -- a light's, a gradient's, a rotation's -- is a dial beside its number.
+		DreamGUIEditorModuleLocal::AngleWheelIdentifier = MakeShared<FDreamAngleWheelIdentifier>();
+		PropertyModule.RegisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamAngleCustomization::MakeInstance), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
+		// A layer style's contours are curves to pick and edit; an ease is its curve.
+		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamStyleContour::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamContourCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(StaticEnum<EDreamTweenEase>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamEaseCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIToggle::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUITextInput::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UUIToggle::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UUITextInput::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance)));
 		// ONE registration for every native control, on the base they all share: a class layout is
 		// found by walking up the superclass chain, so UDreamUIControl covers UDreamButton,
 		// UDreamRingMenu and the twenty-odd others -- and covers the next one for free. The four
 		// registrations above are BEHAVIOUR components, which is a different panel entirely.
-		PropertyModule.RegisterCustomClassLayout(UDreamUIControl::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIControlCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIControl::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIControlCustomization::MakeInstance)));
 
-		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance)));
 
 		// The "green +": event rows in the designer's details panel. Two registrations, one class of
 		// rows -- UDreamUserWidget is every native control and every nested widget Blueprint, and
 		// UDreamUIBehaviour is where the interaction events (UIButton, UIToggle...) actually live.
 		// Class layouts stack along the inheritance chain, so these run alongside the widget and
 		// behaviour customizations above rather than replacing them.
-		PropertyModule.RegisterCustomClassLayout(UDreamUserWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UDreamUIBehaviour::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUserWidget::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance)));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIBehaviour::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance)));
 
-		PropertyModule.RegisterCustomClassLayout(UDreamUIFontEmojiData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontEmojiDataCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIFontEmojiData::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontEmojiDataCustomization::MakeInstance)));
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIEventDelegate::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIEventDelegateCustomization::MakeInstance));
 		//PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIEventDelegateTwoParam::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIEventDelegateTwoParamCustomization::MakeInstance));
@@ -337,13 +400,16 @@ void FDreamGUIEditorModule::StartupModule()
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIComponentReferenceCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(UDreamWidgetAnimationComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetAnimationComponentCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamWidgetAnimationComponent::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetAnimationComponentCustomization::MakeInstance)));
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamImageBrushStructCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(UDreamLayoutContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamLayoutContainerCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamLayoutContainer::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamLayoutContainerCustomization::MakeInstance)));
 		
-		PropertyModule.RegisterCustomClassLayout(UDreamWidgetPresenterComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetPresenterBaseCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamWidgetPresenterComponentBase::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetPresenterBaseCustomization::MakeInstance)));
+
+		// Last: a class with DreamGUI_ tags and no customization above gets one that places them.
+		FDreamDetailsLayout::RegisterForTaggedClasses();
 	}
 	//register asset
 	{
@@ -504,6 +570,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 	FDreamUISymbolExport::Unregister();
 	FDreamUIBridgeService::Unregister();
+	DreamUIEditorWorkflow::Shutdown(*this);
 	FDreamUIMenus::Unregister();
 	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();
@@ -512,6 +579,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// The component clipboard parks a UObject in a static. Releasing it at static-teardown time
 	// touches an object system that is already gone, so it is released here instead.
 	DreamUIWidgetComponentClipboard_Reset();
+	// The blend modes' pictures are textures held in a static, for the same reason.
+	FDreamBlendModeThumbnails::Shutdown();
 
 	FDreamUIEditorCommands::Unregister();
 	// Registered lazily by the designer toolkit (DreamWidgetBlueprintEditor). A module only unloads
@@ -555,6 +624,20 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName());
+		for (const TSharedRef<IDreamDesignerHandleProvider>& Provider : DreamGUIEditorModuleLocal::DesignerHandleProviders)
+		{
+			FDreamDesignerHandles::Unregister(Provider);
+		}
+		DreamGUIEditorModuleLocal::DesignerHandleProviders.Reset();
+		for (const TPair<FName, FDreamDesignerHandleKindFactory>& Kind : DreamGUIEditorModuleLocal::MakeDesignerHandleKinds())
+		{
+			FDreamDesignerHandles::UnregisterKind(Kind.Key);
+		}
+		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
+		DreamGUIEditorModuleLocal::AngleWheelIdentifier.Reset();
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamStyleContour::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamTweenEase>()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
@@ -609,6 +692,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamLayoutContainer::StaticClass()->GetFName());
 		
 		PropertyModule.UnregisterCustomClassLayout(UDreamWidgetPresenterComponentBase::StaticClass()->GetFName());
+
+		FDreamDetailsLayout::UnregisterForTaggedClasses();
 	}
 	//unregister asset
 	{

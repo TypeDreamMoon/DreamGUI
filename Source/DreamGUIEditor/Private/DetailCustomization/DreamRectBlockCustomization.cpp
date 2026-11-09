@@ -14,9 +14,56 @@
 #include "IDetailGroup.h"
 #include "IPropertyUtilities.h"
 #include "Core/Components/DreamWidget.h"
+#include "Designer/DreamDesignerGradientHandles.h"
+#include "Designer/DreamDesignerHandles.h"
+#include "DetailWidgetRow.h"
+#include "Styling/AppStyle.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
+#include "Widgets/Text/STextBlock.h"
 
 #define LOCTEXT_NAMESPACE "DreamRectBlockCustomization"
+
+namespace DreamRectBlockCustomizationLocal
+{
+	/**
+	 * A toggle under one of the gradients that has the viewport show its handles (FDreamDesignerHandles::SetActive), as Tab
+	 * in the viewport would; turned off, the viewport picks again.
+	 */
+	void AddViewportHandlesRow(IDetailGroup& InGroup, EDreamRectBlockGradientSlot InSlot, const TAttribute<bool>& InEnabled)
+	{
+		const FName Provider = DreamDesignerGradientHandles::GetProviderName(InSlot);
+		InGroup.AddWidgetRow()
+		.FilterString(LOCTEXT("ViewportHandlesSearch", "Viewport Handles"))
+		.IsEnabled(InEnabled)
+		.NameContent()
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.Text(LOCTEXT("ViewportHandles", "Viewport Handles"))
+		]
+		.ValueContent()
+		[
+			SNew(SCheckBox)
+			.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+			.IsChecked_Lambda([Provider]()
+			{
+				return FDreamDesignerHandles::GetActive() == Provider ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			})
+			.OnCheckStateChanged_Lambda([Provider](ECheckBoxState InState)
+			{
+				FDreamDesignerHandles::SetActive(InState == ECheckBoxState::Checked ? Provider : NAME_None);
+			})
+			.ToolTipText(LOCTEXT("ViewportHandles_ToolTip", "Drag this gradient's ends and stops in the designer's viewport. The viewport shows one kind of handles at a time; Tab there steps through the others."))
+			[
+				SNew(STextBlock)
+				.Margin(FMargin(6.0f, 1.0f))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(LOCTEXT("EditInViewport", "Edit in Viewport"))
+			]
+		];
+	}
+}
 FDreamRectBlockCustomization::FDreamRectBlockCustomization()
 {
 }
@@ -178,6 +225,9 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 		auto PropertyHandle = DetailBuilder.GetProperty(PropertyName);
 		PropertyHandle->SetPropertyDisplayName(PropertyDisplayName);
 		auto PropertyUnitHandle = DetailBuilder.GetProperty(FName(*(PropertyName.ToString() + TEXT("UnitMode"))));
+		// Drawn on this row of its own, so out of the category's default rows.
+		DetailBuilder.HideProperty(PropertyHandle);
+		DetailBuilder.HideProperty(PropertyUnitHandle);
 		auto ValueHorizontalBox = SNew(SHorizontalBox);
 		uint32 NumChildren = 0;
 		PropertyHandle->GetNumChildren(NumChildren);
@@ -239,10 +289,11 @@ Group.AddPropertyRow(PropertyName##Handle).IsEnabled(IsEnabledAttribute);
 #define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute, EnableMinMax)\
 CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), IsEnabledAttribute, EnableMinMax);
 	
+	using namespace DreamRectBlockCustomizationLocal;
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	
-	DetailBuilder.HideCategory(TEXT("DreamGUI-ProceduralRect"));
-	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bUniformSetCornerRadius));
+	// The rows below lay the rect block's own category out; what they do not place stays in it, and what they edit on another
+	// property's row (the unit buttons, the lock, the texture switch) is tagged DreamGUI_Hidden.
 
 	auto UniformSetCornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bUniformSetCornerRadius));
 	auto CornerRadiusUnitModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, CornerRadiusUnitMode));
@@ -268,6 +319,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 		}
 		}));
 
+	// Drawn on the row below, so out of the category's default rows.
+	DetailBuilder.HideProperty(CornerRadiusHandle);
 	DreamGUICategory.AddCustomRow(LOCTEXT("CornerRadius", "CornerRadius"), false)
 	.PropertyHandleList({ CornerRadiusHandle, UniformSetCornerRadiusHandle, CornerRadiusUnitModeHandle })
 	.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
@@ -419,6 +472,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			: BodyGroup.AddGroup(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodySpriteTexture), BodySpriteTextureHandle->GetPropertyDisplayName(), true)
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == EDreamRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
+		// The group's header row below draws the switch and whichever picker it selects.
+		DetailBuilder.HideProperty(BodySpriteTextureHandle);
 		TextureGroup.HeaderRow()
 			.FilterString(TempBodyTextureHandle->GetPropertyDisplayName())
 			.PropertyHandleList({ BodyTextureModeHandle, BodyTextureHandle, BodySpriteTextureHandle })
@@ -545,12 +600,16 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 
 		auto BodyTextureScaleModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureScaleMode));
 		BodyTextureScaleModeHandle->SetPropertyDisplayName(LOCTEXT("BodyTextureScaleMode_DisplayName", "Scale Mode"));
-		TextureGroup.AddPropertyRow(BodyTextureScaleModeHandle).IsEnabled(TAttribute<bool>::CreateLambda([=]()
+		const TAttribute<bool> HasBodyTexture = TAttribute<bool>::CreateLambda([=]()
 		{
 			UObject* BodyTexture = nullptr;
 			TempBodyTextureHandle->GetValue(BodyTexture);
 			return BodyTexture != nullptr && EnableBodyAttribute.Get();
-		}));
+		});
+		TextureGroup.AddPropertyRow(BodyTextureScaleModeHandle).IsEnabled(HasBodyTexture);
+		// Nine-slicing: how the texture is drawn, and the margins it keeps at their own size.
+		TextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureDrawMode))).IsEnabled(HasBodyTexture);
+		TextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureMargin))).IsEnabled(HasBodyTexture);
 
 		//gradient
 		auto EnableBodyGradientHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, bEnableBodyGradient));
@@ -564,10 +623,9 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 				EnableBodyGradientHandle->GetValue(bEnable);
 				return bEnable && EnableBodyAttribute.Get();
 			});
-			AddPropertyRowToGroup(BodyGradientColor, Color, BodyGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, IsEnableGradientAttribute, false);
-			AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, IsEnableGradientAttribute, false);
-			AddPropertyRowToGroup(BodyGradientRotation, Rotation, BodyGradientGroup, IsEnableGradientAttribute);
+			// The gradient row (FDreamGradientCustomization): its strip, type and presets, its CSS, its stops and its fields.
+			AddPropertyRowToGroup(BodyGradient, Gradient, BodyGradientGroup, IsEnableGradientAttribute);
+			AddViewportHandlesRow(BodyGradientGroup, EDreamRectBlockGradientSlot::Body, IsEnableGradientAttribute);
 		}
 	}
 
@@ -598,10 +656,10 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 				BorderGradientHandle->GetValue(bEnableGradient);
 				return bEnableGradient && IsEnableBorderAttribute.Get();
 			});
-			AddPropertyRowToGroup(BorderGradientColor, Color, BorderGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, IsEnableGradientAttribute, false);
-			AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, IsEnableGradientAttribute, false);
-			AddPropertyRowToGroup(BorderGradientRotation, Rotation, BorderGradientGroup, IsEnableGradientAttribute);
+			auto BorderGradientValueHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BorderGradient));
+			BorderGradientValueHandle->SetPropertyDisplayName(LOCTEXT("BorderGradient_DisplayName", "Gradient"));
+			BorderGradientGroup.AddPropertyRow(BorderGradientValueHandle).IsEnabled(IsEnableGradientAttribute);
+			AddViewportHandlesRow(BorderGradientGroup, EDreamRectBlockGradientSlot::Border, IsEnableGradientAttribute);
 		}
 	}
 

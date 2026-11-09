@@ -82,15 +82,7 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	}));
 	AtlasPackingCategory.AddProperty(PackingType_PH);
 
-	switch (PackingType)
-	{
-	case EDreamUISpritePackingType::Static:
-		break;
-	case EDreamUISpritePackingType::Dynamic:
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingAtlas));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, AtlasTextureIndex));
-		break;
-	}
+	// The static atlas and its page show for static packing by their EditConditions; the tag row below is dynamic packing's.
 	auto PackingAtlas_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingAtlas));
 	PackingAtlas_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities] {
 		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
@@ -392,6 +384,14 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 				]
 			]
 		];
+	}
+	else
+	{
+		// No texture to draw the border editor over, but the padding and the border are still the sprite's: their rows stay.
+		IDetailCategoryBuilder& paddingCategory = DetailBuilder.EditCategory("Padding");
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, SpriteInfo.Padding));
+		IDetailCategoryBuilder& borderCategory = DetailBuilder.EditCategory("Border");
+		borderCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, SpriteInfo.Border));
 	}
 }
 

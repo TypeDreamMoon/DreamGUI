@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetDesignerViewportClient.h"
+#include "Core/DreamUIClipData.h"
+#include "Core/DreamUIClipMask.h"
 #include "DreamWidgetDesignerEdMode.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Designer/DreamWidgetPreviewHost.h"
@@ -925,6 +927,81 @@ void FDreamWidgetDesignerViewportClient::DrawWidgetScreenOutline(UDreamWidget* I
 	}
 }
 
+void FDreamWidgetDesignerViewportClient::DrawClipMaskOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas) const
+{
+	if (!IsValid(InWidget))return;
+	TSharedPtr<FDreamUIClipData> Clip = InWidget->GetClipData().Pin();
+	if (!Clip.IsValid() || Clip->GetWidget() != InWidget)return;
+	TArray<FDreamUIClipData::FLevel, TInlineAllocator<16>> Levels;
+	Clip->CollectLevels(Levels);
+	for (const FDreamUIClipData::FLevel& Level : Levels)
+	{
+		// The widget's own levels only, its mask and the layer below it: the clips around are their widgets' to show.
+		if (Level.Node->GetWidget() != InWidget || !Level.IsMasked())continue;
+		const bool bBelow = Level.Node->GetKind() == FDreamUIClipData::EKind::Below;
+		const int32 Shape = (Level.Mask != nullptr && !bBelow) ? static_cast<int32>(Level.Mask->Shape) : static_cast<int32>(EDreamClipMaskShape::Rect);
+		float ParamA = 0.0f, ParamB = 0.0f;
+		if (Level.Mask != nullptr && !bBelow)
+		{
+			FVector4f Packed[DreamUIClipLayout::MaskTexels];
+			if (FDreamUIClipMaskMath::PackMask(*Level.Mask, Level.HalfSize, INDEX_NONE, Packed))
+			{
+				ParamA = Packed[0].Y;
+				ParamB = Packed[0].Z;
+			}
+		}
+		const FVector4f Radius(Level.CornerRadius.Y, Level.CornerRadius.X, Level.CornerRadius.W, Level.CornerRadius.Z);
+		auto Distance = [&](FVector2f P)
+		{
+			return Shape == static_cast<int32>(EDreamClipMaskShape::Rect)
+				? FDreamUIClipMaskMath::SdRoundRect(P, Level.HalfSize, Radius)
+				: FDreamUIClipMaskMath::ShapeDistance(Shape, P, Level.HalfSize, ParamA, ParamB);
+		};
+		// The outline where the distance crosses zero, found along rays from the centre; a ring's hole is the second
+		// crossing, drawn as an outline of its own.
+		const float Reach = Level.HalfSize.Size() * 1.5f + 1.0f;
+		auto DrawCrossing = [&](bool bInner)
+		{
+			constexpr int32 Steps = 96;
+			TArray<FVector2D, TInlineAllocator<Steps>> Points;
+			for (int32 Step = 0; Step < Steps; ++Step)
+			{
+				const float Angle = UE_TWO_PI * Step / Steps;
+				const FVector2f Direction(FMath::Sin(Angle), FMath::Cos(Angle));
+				float Low = 0.0f, High = Reach;
+				if (bInner)
+				{
+					// Inside the hole the distance is positive: the hole's edge is the first crossing to negative.
+					if (Distance(FVector2f::ZeroVector) <= 0.0f)return;
+				}
+				for (int32 Iteration = 0; Iteration < 24; ++Iteration)
+				{
+					const float Mid = (Low + High) * 0.5f;
+					const float D = Distance(Direction * Mid);
+					const bool bPast = bInner ? D <= 0.0f : D > 0.0f;
+					(bPast ? High : Low) = Mid;
+				}
+				const FVector Local(0.0, Direction.X * High, Direction.Y * High);
+				FVector2D Pixel;
+				if (!DreamWorldToPixelInFront(View, Level.CentreToWorld.TransformPosition(Local), Pixel))return;
+				Points.Add(Pixel / Canvas.GetDPIScale());
+			}
+			for (int32 Index = 0; Index < Points.Num(); ++Index)
+			{
+				FCanvasLineItem Line(Points[Index], Points[(Index + 1) % Points.Num()]);
+				Line.SetColor(bBelow ? FLinearColor(0.35f, 1.0f, 0.55f, 0.9f) : FLinearColor(1.0f, 0.85f, 0.2f, 0.9f));
+				Line.LineThickness = 1.0f;
+				Canvas.DrawItem(Line);
+			}
+		};
+		DrawCrossing(false);
+		if (Shape == static_cast<int32>(EDreamClipMaskShape::Ring))
+		{
+			DrawCrossing(true);
+		}
+	}
+}
+
 void FDreamWidgetDesignerViewportClient::DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
@@ -1367,6 +1444,14 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			}
 		}
 	}
+	if (DesignerPtr.IsValid() && DesignerPtr.Pin()->GetShowClipMasks())
+	{
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : DesignerPtr.Pin()->GetSelectedWidgets())
+		{
+			DrawClipMaskOutline(WeakWidget.Get(), View, Canvas);
+		}
+	}
+	DrawDesignerHandles(View, Canvas);
 	// The selection outline and its handles follow the widget wherever the camera is.
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
@@ -1600,6 +1685,7 @@ void FDreamWidgetDesignerViewportClient::ReceivedFocus(FViewport* InViewport)
 void FDreamWidgetDesignerViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
+	if (IsDraggingDesignerHandle())FinishDesignerHandleDrag(true);
 	// An arrow held while the focus went never sends its release here.
 	EndNudgeTransaction();
 	bDesignerMarqueePending = false;
@@ -1622,6 +1708,7 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 
 	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
+	if (IsDraggingDesignerHandle())UpdateDesignerHandleDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
 
@@ -1645,6 +1732,37 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
 	if (!DesignerPtr.IsValid())return false;
+	if (IsDraggingDesignerHandle() && EventArgs.Event == IE_Pressed && EventArgs.Key == EKeys::Escape)
+	{
+		FinishDesignerHandleDrag(true);
+		return true;
+	}
+	if (IsDraggingDesignerHandle() && EventArgs.Event == IE_Released && EventArgs.Key == EKeys::LeftMouseButton)
+	{
+		FinishDesignerHandleDrag(false);
+		return true;
+	}
+	if (bSwallowNextLeftRelease && EventArgs.Key == EKeys::LeftMouseButton && EventArgs.Event == IE_Released)
+	{
+		bSwallowNextLeftRelease = false;
+		return true;
+	}
+	// A double click is offered to the handles' providers first: on a gradient's line it adds a stop.
+	if (EventArgs.Key == EKeys::LeftMouseButton && EventArgs.Event == IE_DoubleClick && EventArgs.Viewport != nullptr
+		&& !bDesignerDragging && !bDesignerDragPending && !IsDraggingDesignerHandle()
+		&& HandleDesignerDoubleClick(FVector2D(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY())))
+	{
+		bDesignerMarqueePending = false;
+		bDesignerMarqueeActive = false;
+		bSwallowNextLeftRelease = true;
+		return true;
+	}
+	// Tab: the selection's next kind of handles, or none -- the selection box alone -- after the last.
+	if (EventArgs.Key == EKeys::Tab && EventArgs.Event == IE_Pressed && !IsCtrlPressed() && !IsAltPressed() && !IsShiftPressed()
+		&& !bDesignerDragging && !bDesignerDragPending && CycleDesignerHandles())
+	{
+		return true;
+	}
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;
@@ -1702,7 +1820,18 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		if (bDesignerMarqueePending)FinishDesignerMarquee();
 		return false;
 	}
-	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || !Viewport)return false;
+	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || IsDraggingDesignerHandle() || !Viewport)return false;
+	// A provider's handle -- a lattice's point, a path's, a gradient's end or stop -- is smaller than any of the selection's
+	// own handles and sits inside the selection, so it is tried first.
+	{
+		const FVector2D Pixel(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
+		FDesignerHandleHit Hit;
+		if (HitTestDesignerHandles(Pixel, Hit) && BeginDesignerHandleDrag(Hit, Pixel))
+		{
+			KeepTickingThroughGesture();
+			return true;
+		}
+	}
 
 	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 	FSceneView* View = CalcSceneView(&ViewFamily);
@@ -4275,7 +4404,20 @@ EMouseCursor::Type FDreamWidgetDesignerViewportClient::GetCursor(FViewport* InVi
 	{
 		return EMouseCursor::GrabHandClosed;
 	}
-	if (bDesignerDragging || bDesignerDragPending || bDesignerMarqueeActive || !IsOrtho())return EngineCursor;
+	// A provider's handle (a lattice's point, a gradient's end or stop) under the pointer, or held.
+	if (IsDraggingDesignerHandle())
+	{
+		return EMouseCursor::Crosshairs;
+	}
+	if (bDesignerDragging || bDesignerDragPending || bDesignerMarqueeActive)return EngineCursor;
+	{
+		FDesignerHandleHit Hit;
+		if (HitTestDesignerHandles(FVector2D(X, Y), Hit))
+		{
+			return EMouseCursor::Crosshairs;
+		}
+	}
+	if (!IsOrtho())return EngineCursor;
 	// Read against the handles as they were last drawn, which in a realtime viewport is this frame's: the cursor talks
 	// about what is on screen, so with the chrome switched off -- the handle still grabbable but not drawn, and its
 	// place not refreshed -- it says nothing.

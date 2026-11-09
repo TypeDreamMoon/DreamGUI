@@ -17,6 +17,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/Interface.h"
+#include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
 
 namespace DreamUIWidgetLibraryLocal

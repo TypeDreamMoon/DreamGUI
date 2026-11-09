@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "EntitySystem/MovieSceneEntityIDs.h"
 
 class DREAMGUI_API FDreamUIMaterialHandle

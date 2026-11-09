@@ -8,8 +8,10 @@
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "Core/DreamUIQuadTree.h"
 #include "UObject/ObjectKey.h"
+#include "DreamUIRender/DreamUICompositor.h"
 
 class UDreamVisualPostProcess;
+class UDreamVisual;
 class UDreamUIFontData_BaseObject;
 struct FDreamUIMeshVertex;
 class UMaterialInterface;
@@ -18,6 +20,8 @@ class UDreamWidget;
 class UDreamVisualBatchMesh;
 class UDreamVisualDirectMesh;
 class UDreamUIMeshComponent;
+class UDreamLayerGroup;
+class UDreamLayerStyle;
 struct FDreamUIRenderSection;
 
 enum class EDreamUIDrawCallType :uint8
@@ -26,6 +30,12 @@ enum class EDreamUIDrawCallType :uint8
 	PostProcess,
 	DirectMesh,
 	ChildCanvas,
+	/**
+	 * A group opened, and closed: what is drawn between the two goes into a texture of its own, put over what is behind it
+	 * as the group's composite says (FDreamUICompositeDesc). Nothing batches across either.
+	 */
+	GroupBegin,
+	GroupEnd,
 };
 
 class FDreamUIRenderData
@@ -56,8 +66,24 @@ public:
 	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
+	/** How many segments the direct mesh draws in, read off it on the game thread: the batching makes a draw call of each. */
+	int32 DirectMeshSegmentCount = 1;
 
 	TWeakObjectPtr<UDreamCanvas> ChildCanvas;
+
+	/**
+	 * A group marker's composite: the whole of it on the opening marker, its id alone on the closing one. Made on the game
+	 * thread as the markers are put among the entries (UDreamCanvas::InsertCompositeMarkers), never written after.
+	 */
+	TSharedPtr<const FDreamUICompositeDesc> Composite;
+	/** The layer group a marker is for, when it is one's: what its opacity and mode are read from every frame. */
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	/** The element a group drawn already is for (UDreamVisual::GetCompositeSource): what its composite is read from every frame. */
+	TWeakObjectPtr<UDreamVisual> CompositeVisual;
+	/** The visual whose effect a group's picture goes through (UDreamVisual::GetChildrenEffect): read every frame. */
+	TWeakObjectPtr<UDreamVisual> EffectVisual;
+	/** The layer style a group's picture is styled by (UDreamLayerStyle on a widget drawn apart): read every frame. */
+	TWeakObjectPtr<UDreamLayerStyle> LayerStyle;
 
 	/**
 	 * The widget the entry was prepared from, as a key: the canvas finds the entry's place in its widget list with it on
@@ -95,6 +121,15 @@ public:
 	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
+	/** Which of the direct mesh's segments this draw call draws (UDreamVisualDirectMesh::GetSegmentCount). */
+	int32 DirectMeshSegment = 0;
+	/**
+	 * The canvas shades this direct mesh segment itself (UDreamVisualDirectMesh::GetSegmentShading): Texture, Material and
+	 * BlendMode say how, as for a batched draw call, and bDirectMeshBuiltIn whether the built-in shader draws it. Set on the
+	 * game thread as the sections are set up.
+	 */
+	bool bDirectMeshShaded = false;
+	bool bDirectMeshBuiltIn = false;
 
 	/**
 	 * The render section this draw-call produced in UpdateDrawCallMesh, or null when it was skipped
@@ -149,6 +184,8 @@ public:
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
 	/** The blend mode every element in this draw-call shares; the blend state is set once per draw-call. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/** The mask textures the draw binds: each slot the one its elements read there, if any reads it (FDreamUIMaskTextures). */
+	FDreamUIMaskTextures MaskTextures;
 	/**
 	 * Whether it holds elements of render layers, whose vertices are relative to their layers and are placed on the canvas
 	 * by the layers' rows of the render layer table (DreamUIRenderLayer.ush), on the GPU. Any number of layers, and elements
@@ -162,6 +199,16 @@ public:
 	void PlaceBounds(const class UDreamUIRenderLayerTable* InTable);
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
+
+	/** A group marker's composite and layer group, as FDreamUIRenderData has them; bCompositeBegin for the opening one. */
+	TSharedPtr<const FDreamUICompositeDesc> Composite;
+	TWeakObjectPtr<UDreamLayerGroup> LayerGroup;
+	TWeakObjectPtr<UDreamVisual> CompositeVisual;
+	TWeakObjectPtr<UDreamVisual> EffectVisual;
+	/** See FDreamUIRenderData::LayerStyle. */
+	TWeakObjectPtr<UDreamLayerStyle> LayerStyle;
+	bool bCompositeBegin = false;
+	bool IsGroupMarker() const { return Type == EDreamUIDrawCallType::GroupBegin || Type == EDreamUIDrawCallType::GroupEnd; }
 public:
 	/**
 	 * The cheap refresh, for a draw call whose layout still holds: each visual's copy of its geometry taken again

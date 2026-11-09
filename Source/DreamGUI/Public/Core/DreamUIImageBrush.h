@@ -82,10 +82,10 @@ public:
 	float PixelsPerUnitMultiplier = 1;
 
 	/** Filled only: how much of the image is shown, 0 shows none of it and 1 all of it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (ClampMin = 0.0, ClampMax = 1.0, EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (ClampMin = 0.0, ClampMax = 1.0, EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled", EditConditionHides))
 	float FillAmount = 1.0f;
 	/** Filled only: the shape of the cut. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled", EditConditionHides))
 	EDreamUIImageBrushFillMethod FillMethod = EDreamUIImageBrushFillMethod::Horizontal;
 	/**
 	 * Filled only: which corner or edge a radial fill starts from. Held as a byte for the same reason
@@ -93,10 +93,10 @@ public:
 	 * (EDreamUISpriteFillOriginType_Radial90 / _Radial180 / _Radial360), and only one of them applies
 	 * at a time. Ignored by the horizontal and vertical methods.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled", EditConditionHides))
 	uint8 FillOrigin = 0;
 	/** Filled only: fill from the other end. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::Filled", EditConditionHides))
 	bool FillDirectionFlip = false;
 
 	/**
@@ -104,10 +104,10 @@ public:
 	 * bottom-left -- clockwise from the top left, the order CSS and UDreamRectBlock both use. Each is
 	 * clamped to half the shorter side, so a big enough radius gives a capsule rather than an error.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::RoundedBox"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::RoundedBox", EditConditionHides))
 	FVector4f CornerRadius = FVector4f(8, 8, 8, 8);
 	/** RoundedBox only: points along each corner arc. More is smoother and costs two triangles each. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (ClampMin = 1, ClampMax = 32, EditCondition = "DrawAs==EDreamUIImageBrushDrawType::RoundedBox"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (ClampMin = 1, ClampMax = 32, EditCondition = "DrawAs==EDreamUIImageBrushDrawType::RoundedBox", EditConditionHides))
 	int32 CornerSegments = 6;
 
 	UObject* GetResourceObject()const { return ResourceObject; }

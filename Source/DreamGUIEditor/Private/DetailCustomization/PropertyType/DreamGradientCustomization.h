@@ -137,6 +137,14 @@ namespace DreamGradientDetails
 	/** Row tags (FDetailWidgetRow::RowTag) of the rows the customization adds besides the gradient's own fields. */
 	inline const FName CssRowTag(TEXT("DreamGradientCss"));
 	inline const FName StopsRowTag(TEXT("DreamGradientStops"));
+	/** The note a gradient drawn from its fallback (meta DreamGUI_GradientFallback, while it has no stops) shows. */
+	inline const FName FallbackRowTag(TEXT("DreamGUI_GradientFallback"));
+
+	/**
+	 * The gradient InHandle's first object draws: its own, or when it has no stops what its property's fallback function
+	 * answers (meta=(DreamGUI_GradientFallback="Function")). False when there is none to read.
+	 */
+	DREAMGUIEDITOR_API bool ReadDrawnGradient(const TSharedRef<IPropertyHandle>& InHandle, FDreamGradient& OutGradient);
 
 	/** Whether a gradient of type InType and radial size InSize uses its field InField (an FDreamGradient member name): the rows the details show. */
 	DREAMGUIEDITOR_API bool IsFieldUsed(FName InField, EDreamPaintType InType, EDreamPaintRadialSize InSize);

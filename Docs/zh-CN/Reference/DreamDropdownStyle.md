@@ -1,8 +1,3 @@
----
-title: "FDreamDropdownStyle"
-description: "FDreamDropdownStyle"
----
-
 <a id="fdreamdropdownstyle"></a>
 
 # FDreamDropdownStyle
@@ -41,3 +36,4 @@ description: "FDreamDropdownStyle"
 | `ItemBrush` | `FDreamUIFaceBrush` | 下拉样式 | 是 | 读取 / 写入 |  |
 | `StateFaces` | `FDreamUIStateFaces` | 下拉样式 | 是 | 读取 / 写入 |  |
 | `ContentPadding` | `FMargin` | 下拉样式 | 是 | 读取 / 写入 |  |
+

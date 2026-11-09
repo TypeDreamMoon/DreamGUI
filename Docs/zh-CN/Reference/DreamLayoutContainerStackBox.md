@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerStackBox"
-description: "UMG Stack Box"
----
-
 <a id="udreamlayoutcontainerstackbox"></a>
 
 # UDreamLayoutContainerStackBox
@@ -46,3 +41,4 @@ UMG 类中每个面向蓝图的成员，以及它们在此处的去向。*adopt*
 | `UStackBox` | `Orientation` | adopt | `Orientation` | 使用 EDreamPanelOrientation 而非 Slate 的 EOrientation，因此 .dui 文本和细节面板中拼写的两个词与本插件其余部分保持一致。 |
 | `UStackBox` | `AddChildToStackBox` | map | `AddChild` | 此处一个插槽类对应一个动词；AddChild 返回该插槽。 |
 | `UStackBox` | `ReplaceStackBoxChildAt` | map | `ReplaceChildAt` | 位于面板基类上，因此每个面板都拥有它。 |
+

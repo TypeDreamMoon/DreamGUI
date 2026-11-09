@@ -1,8 +1,3 @@
----
-title: "FDreamTabViewStyle"
-description: "FDreamTabViewStyle"
----
-
 <a id="fdreamtabviewstyle"></a>
 
 # FDreamTabViewStyle
@@ -39,3 +34,4 @@ description: "FDreamTabViewStyle"
 | `CornerRadius` | `float` | 选项卡视图样式 | 是 | 读 / 写 |  |
 | `TabBrush` | `FDreamUIFaceBrush` | 选项卡视图样式 | 是 | 读 / 写 |  |
 | `PageBrush` | `FDreamUIFaceBrush` | 选项卡视图样式 | 是 | 读 / 写 |  |
+

@@ -107,6 +107,20 @@ outside them through, and a screen built around the old way will feel different:
   the widget was up, and hid and showed the widget to make the key work, can drop that step; nothing else changes. A
   screen that named an action on a live button ahead of time, meaning the key to work only later, sets the action
   when the key should start working.
+- **A rect block's gradients have stops.** `BodyGradient` and `BorderGradient` (`FDreamGradient`) take the place of the
+  two-colour gradient's properties, which are still read -- from assets and from `.dui` files -- and drawn, as two
+  stops, while the gradient has none: nothing to do for a project, and a rect block looks as it did to a level per
+  channel. The first edit of such a gradient in the designer writes its stops and replaces its two-colour lines in the
+  `.dui`. In C++ and Blueprint the setters `SetBodyGradientColor`, `…Center`, `…Radius`, `…Rotation`, the two unit
+  modes' and the border's are deprecated (they go on working, on the first stop, the centre, the radius and the angle once
+  there are stops); set the gradient with `SetBodyGradient` / `SetBorderGradient`. Their getters now return by value
+  (`FColor GetBodyGradientColor() const`), which breaks only code that took their address, and
+  `GetBorderGradientCenterUnitMode` answers the border gradient centre's unit mode rather than the corner radius's. A
+  material that calls `DreamUI_CalculateRectBlock` itself with its old arguments draws a rect block's gradients as plain
+  colours; passing the paint rows (`DreamUI_PaintDataTexture`) after the data texture draws them. See
+  [Gradients and viewport handles](../concepts/gradients.md).
+- **A radial gradient's ellipse turns with its `Angle`.** A text paint whose radial gradient was left with an angle
+  other than 0 or 180 draws its ellipse turned; an angle of 180 puts the old look back.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

@@ -1,8 +1,3 @@
----
-title: "UDreamButton"
-description: "UDreamButton"
----
-
 <a id="udreambutton"></a>
 
 # UDreamButton
@@ -15,16 +10,11 @@ description: "UDreamButton"
 
 一个层级结构由代码而非资产定义的按钮。
 
-两个节点——一个面，以及其上的孔——以及 BP_Button 数月来缺失的行为。
-这一缺失正是这个类存在的全部理由：一个始终添加自身 UIButton 的控件
-不存在点击它却毫无反应的状态。
+两个节点——一个面，以及其上的孔——以及 BP_Button 数月来缺失的行为。这一缺失正是这个类存在的全部理由：一个始终添加自身 UIButton 的控件不存在点击它却毫无反应的状态。
 
-面的画刷保持白色，而可选组件将样式中的颜色以绝对值写入其中，
-而非画廊那种用有色画刷乘以近白色调的惯常做法——两个来源的乘积
-是任何样式表都无法命名的一种外观。
+面的画刷保持白色，而可选组件将样式中的颜色以绝对值写入其中，而非画廊那种用有色画刷乘以近白色调的惯常做法——两个来源的乘积是任何样式表都无法命名的一种外观。
 
-它自身不绘制任何文本。按钮上的内容就是宿主放入孔中的内容，
-而孔默认只有一个，因此嵌套即可填充它：
+它自身不绘制任何文本。按钮上的内容就是宿主放入孔中的内容，而孔默认只有一个，因此嵌套即可填充它：
 
     Native.Button Confirm {
         Text { Text = "确定" }
@@ -115,3 +105,4 @@ UMG 类中每一个面向蓝图的成员，以及它们的去向。*adopt*：同
 | `UButton` | `SetPressMethod` | adopt | `SetPressMethod` |  |
 | `UButton` | `SetAllowDragDrop` | adopt | `SetAllowDragDrop` | 添加或销毁面板的 UDreamUIDragSource，这正是赋予此处拖拽意义的东西。 |
 | `UButton` | `bAllowDragDrop` | adopt | `bAllowDragDrop` | 关闭，与 UMG 一致。 |
+

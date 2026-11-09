@@ -1,8 +1,3 @@
----
-title: "FDreamMenuAnchorStyle"
-description: "FDreamMenuAnchorStyle"
----
-
 <a id="fdreammenuanchorstyle"></a>
 
 # FDreamMenuAnchorStyle
@@ -13,14 +8,9 @@ description: "FDreamMenuAnchorStyle"
 
 菜单锚点：弹出窗口的外观，以及它相对于打开它的控件如何摆放。
 
-UMG 的 MenuAnchor 将 Placement 保留为控件属性，而这里把它放在样式里，因为它和圆角半径属于
-同一类决策——项目希望每个菜单都以相同的方式打开——同时也因为控件仍通过样式的覆盖位
-按实例暴露它。
+UMG 的 MenuAnchor 将 Placement 保留为控件属性，而这里把它放在样式里，因为它和圆角半径属于同一类决策——项目希望每个菜单都以相同的方式打开——同时也因为控件仍通过样式的覆盖位按实例暴露它。
 
-放置方式枚举不在此处声明：它是 EDreamMenuPlacement，属于
-UDreamLayoutContainerMenuAnchor，读取它的运算逻辑也一并归在那里。布局面板和控件共用同一个枚举和同一套
-放置数学，因此由二者中任意一方打开的菜单都会落在相同的
-位置——并且当新增一种放置方式时，无需同步任何东西。
+放置方式枚举不在此处声明：它是 EDreamMenuPlacement，属于 UDreamLayoutContainerMenuAnchor，读取它的运算逻辑也一并归在那里。布局面板和控件共用同一个枚举和同一套放置数学，因此由二者中任意一方打开的菜单都会落在相同的位置——并且当新增一种放置方式时，无需同步任何东西。
 
 <a id="properties"></a>
 
@@ -34,3 +24,4 @@ UDreamLayoutContainerMenuAnchor，读取它的运算逻辑也一并归在那里�
 | `CornerRadius` | `float` | Menu Anchor Style | yes | read / write |  |
 | `BackgroundBrush` | `FDreamUIFaceBrush` | Menu Anchor Style | yes | read / write |  |
 | `TransitionDuration` | `float` | Menu Anchor Style | yes | read / write |  |
+

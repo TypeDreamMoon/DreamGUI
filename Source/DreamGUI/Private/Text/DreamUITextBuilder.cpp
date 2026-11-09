@@ -365,6 +365,20 @@ namespace DreamUITextBuilderLocal
 			OutReason = TEXT("it is a delegate, which has no text form");
 			return false;
 		}
+		// A container is as writable as what it holds: a list of subobjects is still part of the object graph, a map
+		// of delegates still has no text form. Asked of the element types, by the same rules.
+		if (const FArrayProperty* AsArray = CastField<FArrayProperty>(InProperty))
+		{
+			return IsWritableFromText(AsArray->Inner, OutReason);
+		}
+		if (const FSetProperty* AsSet = CastField<FSetProperty>(InProperty))
+		{
+			return IsWritableFromText(AsSet->ElementProp, OutReason);
+		}
+		if (const FMapProperty* AsMap = CastField<FMapProperty>(InProperty))
+		{
+			return IsWritableFromText(AsMap->KeyProp, OutReason) && IsWritableFromText(AsMap->ValueProp, OutReason);
+		}
 		return true;
 	}
 
@@ -708,8 +722,133 @@ namespace DreamUITextBuilderLocal
 		case EDreamUIValueKind::Tuple:      return FString::Printf(TEXT("a tuple of %d"), InValue.Elements.Num());
 		case EDreamUIValueKind::HexColor:   return TEXT("a hex colour");
 		case EDreamUIValueKind::AssetPath:  return TEXT("an asset path");
+		case EDreamUIValueKind::List:       return FString::Printf(TEXT("a list of %d"), InValue.Items.Num());
+		case EDreamUIValueKind::Map:        return FString::Printf(TEXT("a map of %d"), InValue.Items.Num());
 		}
 		return TEXT("a value");
+	}
+
+	bool WriteValue(const FResolvedDestination& InDestination, const FDreamUINode& InNode,
+		const FDreamUIProperty& InProperty, FBuildContext& InContext);
+	bool IsNodeReferenceProperty(const FObjectPropertyBase* InProperty);
+
+	/**
+	 * A list into an array or a set, a map into a map: each element written by WriteValue against the element's own
+	 * property, so an element takes exactly the spellings a property of its type takes -- and is refused, at its own
+	 * location, the way such a property would be. The container is emptied first; a container that does not take a
+	 * value is left empty rather than half filled.
+	 *
+	 * A set's or a map's elements are built in scratch storage and then added, which is why a set or map of NODES is
+	 * refused: a node id is resolved after the whole file is read, into the address it was written to, and a scratch
+	 * address is gone by then. An array's elements stay where they are written, so an array of nodes is fine.
+	 */
+	bool WriteContainer(const FResolvedDestination& InDestination, const FDreamUINode& InNode,
+		const FDreamUIProperty& InProperty, const FDreamUIValue& InValue, FBuildContext& InContext)
+	{
+		FProperty* Leaf = InDestination.LeafProperty;
+		void* ValuePtr = InDestination.LeafValuePtr;
+		const FArrayProperty* AsArray = CastField<FArrayProperty>(Leaf);
+		const FSetProperty* AsSet = CastField<FSetProperty>(Leaf);
+		const FMapProperty* AsMap = CastField<FMapProperty>(Leaf);
+		const EDreamUIValueKind Wanted = AsMap != nullptr ? EDreamUIValueKind::Map : EDreamUIValueKind::List;
+		if ((AsArray == nullptr && AsSet == nullptr && AsMap == nullptr) || InValue.Kind != Wanted)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Location,
+				FString::Printf(TEXT("'%s' is %s, and '%s' takes %s"), *InProperty.Name, *DescribeValueKind(InValue),
+					*Leaf->GetCPPType(),
+					AsMap != nullptr ? TEXT("a map, written { key: value }")
+						: (AsArray != nullptr || AsSet != nullptr) ? TEXT("a list, written [a, b]")
+						: TEXT("a single value, not a container")));
+			return false;
+		}
+
+		auto IsNodeElement = [](const FProperty* InElement)
+		{
+			const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InElement);
+			return AsObject != nullptr && IsNodeReferenceProperty(AsObject);
+		};
+		if ((AsSet != nullptr && IsNodeElement(AsSet->ElementProp))
+			|| (AsMap != nullptr && (IsNodeElement(AsMap->KeyProp) || IsNodeElement(AsMap->ValueProp))))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Location,
+				FString::Printf(TEXT("'%s' is a set or map of nodes, which a node id cannot be written into; make it an array"), *InProperty.Name));
+			return false;
+		}
+
+		auto WriteElement = [&](FProperty* InElementProperty, void* InElementPtr, const FDreamUIValue& InElement, const FString& InTag)
+		{
+			FResolvedDestination Element = InDestination;
+			Element.LeafProperty = InElementProperty;
+			Element.LeafValuePtr = InElementPtr;
+			Element.bNested = true;
+			// A text element gets a localization key of its own: the property's, told apart by place.
+			Element.LocalizationDiscriminator = InDestination.LocalizationDiscriminator + InTag;
+			FDreamUIProperty ElementProperty = InProperty;
+			ElementProperty.Value = InElement;
+			return WriteValue(Element, InNode, ElementProperty, InContext);
+		};
+		// Scratch storage for one element of a set or a map, initialised and torn down with its property.
+		struct FScratch
+		{
+			const FProperty* Property;
+			void* Memory;
+			explicit FScratch(const FProperty* InProperty)
+				: Property(InProperty), Memory(FMemory::Malloc(InProperty->GetSize(), InProperty->GetMinAlignment()))
+			{
+				Property->InitializeValue(Memory);
+			}
+			~FScratch()
+			{
+				Property->DestroyValue(Memory);
+				FMemory::Free(Memory);
+			}
+		};
+
+		if (AsArray != nullptr)
+		{
+			FScriptArrayHelper Helper(AsArray, ValuePtr);
+			Helper.EmptyAndAddValues(InValue.Items.Num());
+			for (int32 Index = 0; Index < InValue.Items.Num(); ++Index)
+			{
+				if (!WriteElement(AsArray->Inner, Helper.GetRawPtr(Index), InValue.Items[Index], FString::Printf(TEXT("[%d]"), Index)))
+				{
+					Helper.EmptyValues();
+					return false;
+				}
+			}
+			return true;
+		}
+		if (AsSet != nullptr)
+		{
+			FScriptSetHelper Helper(AsSet, ValuePtr);
+			Helper.EmptyElements();
+			for (int32 Index = 0; Index < InValue.Items.Num(); ++Index)
+			{
+				FScratch Element(AsSet->ElementProp);
+				if (!WriteElement(AsSet->ElementProp, Element.Memory, InValue.Items[Index], FString::Printf(TEXT("[%d]"), Index)))
+				{
+					Helper.EmptyElements();
+					return false;
+				}
+				Helper.AddElement(Element.Memory);
+			}
+			return true;
+		}
+		FScriptMapHelper Helper(AsMap, ValuePtr);
+		Helper.EmptyValues();
+		for (int32 Index = 0; Index < InValue.Items.Num() && Index < InValue.Keys.Num(); ++Index)
+		{
+			FScratch Key(AsMap->KeyProp);
+			FScratch Item(AsMap->ValueProp);
+			if (!WriteElement(AsMap->KeyProp, Key.Memory, InValue.Keys[Index], FString::Printf(TEXT("{%d}"), Index))
+				|| !WriteElement(AsMap->ValueProp, Item.Memory, InValue.Items[Index], FString::Printf(TEXT("[%d]"), Index)))
+			{
+				Helper.EmptyValues();
+				return false;
+			}
+			Helper.AddPair(Key.Memory, Item.Memory);
+		}
+		return true;
 	}
 
 	void RaiseTypeMismatch(const FDreamUIProperty& InProperty, const FProperty* InLeaf, FBuildContext& InContext)
@@ -869,6 +1008,15 @@ namespace DreamUITextBuilderLocal
 			Substituted.Location = Authored.Location;
 		}
 		const FDreamUIValue& Value = Authored.Kind == EDreamUIValueKind::ResourceRef ? Substituted : Authored;
+
+		// Containers: `[a, b]` for an array or a set, `{ key: value }` for a map. And the other way round, a container
+		// literal on anything else is said here, before a branch below reads its slice as something it is not.
+		const bool bIsContainer = CastField<FArrayProperty>(Leaf) != nullptr || CastField<FSetProperty>(Leaf) != nullptr
+			|| CastField<FMapProperty>(Leaf) != nullptr;
+		if (bIsContainer || Value.Kind == EDreamUIValueKind::List || Value.Kind == EDreamUIValueKind::Map)
+		{
+			return WriteContainer(InDestination, InNode, InProperty, Value, InContext);
+		}
 
 		if (const FTextProperty* AsText = CastField<FTextProperty>(Leaf))
 		{

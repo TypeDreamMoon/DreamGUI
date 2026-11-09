@@ -1,8 +1,3 @@
----
-title: "FDreamSpinBoxStyle"
-description: "FDreamSpinBoxStyle"
----
-
 <a id="fdreamspinboxstyle"></a>
 
 # FDreamSpinBoxStyle
@@ -35,3 +30,4 @@ Declared in `Public/Controls/DreamControlStyles.h`.
 | `CornerRadius` | `float` | 数值框样式 | 是 | 读 / 写 |  |
 | `ButtonBrush` | `FDreamUIFaceBrush` | 数值框样式 | 是 | 读 / 写 |  |
 | `FieldBrush` | `FDreamUIFaceBrush` | 数值框样式 | 是 | 读 / 写 |  |
+

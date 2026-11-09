@@ -11,6 +11,7 @@
 #include "Slate/SceneViewport.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
+#include "Workflow/DreamUIPresetLibrary.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetDesignerViewport"
 
@@ -122,6 +123,16 @@ namespace DreamWidgetDesignerViewportLocal
 
 FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
 {
+	// A preset from the preset library goes onto the widget under the pointer, not into a container.
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid() && EditorViewportClient.IsValid())
+	{
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		UDreamWidget* Target = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
+		const bool bTakes = FDreamUIPresetDragDropOp::CanDropOnto(DragDropEvent, Target);
+		EditorViewportClient->SetPaletteDropPreview(bTakes ? Target : nullptr);
+		return bTakes ? FReply::Handled() : FReply::Unhandled();
+	}
 	if (DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>().IsValid() && EditorViewportClient.IsValid())
 	{
 		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
@@ -155,6 +166,16 @@ FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, con
 
 FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
 {
+	if (DragDropEvent.GetOperationAs<FDreamUIPresetDragDropOp>().IsValid())
+	{
+		const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
+		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		UDreamWidget* Target = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
+		EditorViewportClient->ClearPaletteDropPreview();
+		return FDreamUIPresetDragDropOp::DropOnto(DragDropEvent, *Editor, Target) ? FReply::Handled() : FReply::Unhandled();
+	}
 	if (TSharedPtr<FDreamUIPaletteDragDropOp> PaletteOp = DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>())
 	{
 		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();

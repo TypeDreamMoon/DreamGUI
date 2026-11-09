@@ -1,8 +1,3 @@
----
-title: "FDreamTileViewStyle"
-description: "FDreamTileViewStyle"
----
-
 <a id="fdreamtileviewstyle"></a>
 
 # FDreamTileViewStyle
@@ -26,3 +21,4 @@ FDreamListStyle::RowHeight 仍然是平铺项的高度，因此平铺项的尺�
 | `List` | `FDreamListStyle` | Tile View Style | 是 | 读 / 写 |  |
 | `TileWidth` | `float` | Tile View Style | 是 | 读 / 写 |  |
 | `TileSpacing` | `float` | Tile View Style | 是 | 读 / 写 |  |
+

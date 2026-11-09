@@ -8,6 +8,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
+#include "Text/DreamUIBlueprintConverter.h"
 
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
@@ -160,6 +161,33 @@ void FAssetTypeActions_DreamWidgetBlueprint::GetActions(const TArray<UObject*>& 
 				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAssets(Created);
 			}
 		})));
+
+	// Hand-authored ones only: a Blueprint built from a .dui has nothing to convert.
+	Section.AddMenuEntry(
+		"DreamUI_ConvertToText",
+		LOCTEXT("ConvertToText", "Convert to Text (.dui)"),
+		LOCTEXT("ConvertToTextTooltip", "Write each selected Blueprint's hierarchy, bindings and routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first; a backup of the asset (<Name>_PreDui) is made before anything changes."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Documentation"),
+		FUIAction(
+			FExecuteAction::CreateLambda([Blueprints]()
+			{
+				TArray<UDreamWidgetBlueprint*> Convertible;
+				for (const TWeakObjectPtr<UDreamWidgetBlueprint>& Weak : Blueprints)
+				{
+					if (FDreamUIBlueprintConverter::IsConvertible(Weak.Get()))
+					{
+						Convertible.Add(Weak.Get());
+					}
+				}
+				FDreamUIBlueprintConverter::ConvertWithConfirmation(Convertible);
+			}),
+			FCanExecuteAction::CreateLambda([Blueprints]()
+			{
+				return Blueprints.ContainsByPredicate([](const TWeakObjectPtr<UDreamWidgetBlueprint>& Weak)
+				{
+					return FDreamUIBlueprintConverter::IsConvertible(Weak.Get());
+				});
+			})));
 
 	Section.AddMenuEntry(
 		"DreamUI_NewChildBlueprint",

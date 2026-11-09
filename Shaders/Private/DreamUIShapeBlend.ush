@@ -1,0 +1,107 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// Rounded rects melted together by a smooth minimum (UDreamShapeBlendGroup): the layout is DreamUIShapeBlend.h's, a header
+// texel and four a member. Read through two macros the includer defines first:
+//   DREAMUI_SHAPE_BLEND_PARAMS   the parameters DreamUIShapeBlend_Distance takes after its own, with their leading comma
+//                                (a rect block's: its row of rect block data), or nothing (glass: a constant buffer's rows)
+//   DREAMUI_SHAPE_BLEND_ROW(i)   texel i of the record, 0 the header, reading those parameters
+//
+// FDreamUIShapeBlendMath is this on the CPU, function for function: it is what a click is tested by.
+
+#ifndef DREAMUI_SHAPE_BLEND_USH
+#define DREAMUI_SHAPE_BLEND_USH
+
+#ifndef DREAMUI_SHAPE_BLEND_PARAMS
+#error DREAMUI_SHAPE_BLEND_PARAMS must be defined before DreamUIShapeBlend.ush is included
+#endif
+#ifndef DREAMUI_SHAPE_BLEND_ROW
+#error DREAMUI_SHAPE_BLEND_ROW(i) must be defined before DreamUIShapeBlend.ush is included
+#endif
+
+#define DREAMUI_SHAPE_BLEND_HEADER_TEXELS 1
+#define DREAMUI_SHAPE_BLEND_MEMBER_TEXELS 4
+#define DREAMUI_SHAPE_BLEND_MAX_MEMBERS 32
+#define DREAMUI_SHAPE_BLEND_UNION 0
+#define DREAMUI_SHAPE_BLEND_SUBTRACT 1
+#define DREAMUI_SHAPE_BLEND_INTERSECT 2
+
+/** A member's rounded rect, as a rect block measures its own (DreamUI_sdRoundRect). */
+float DreamUIShapeBlend_RoundRect(float2 P, float2 B, float4 R)
+{
+	R = min(R, min(B.x, B.y));
+	R.xy = (P.x > 0.0) ? R.xy : R.wz;
+	R.x = (P.y > 0.0) ? R.x : R.y;
+	const float2 Q = abs(P) - B + R.x;
+	return min(max(Q.x, Q.y), 0.0) + length(max(Q, 0.0)) - R.x;
+}
+
+/** The sRGB curve undone, exactly (DreamUIBlend_ToLinear's): kept here so that a shader can read a shape blend alone. */
+float DreamUIShapeBlend_ToLinearChannel(float X)
+{
+	return X <= 0.04045 ? X / 12.92 : pow((X + 0.055) / 1.055, 2.4);
+}
+float3 DreamUIShapeBlend_ToLinear(float3 C)
+{
+	return float3(DreamUIShapeBlend_ToLinearChannel(C.r), DreamUIShapeBlend_ToLinearChannel(C.g), DreamUIShapeBlend_ToLinearChannel(C.b));
+}
+
+/** ARGB bytes in a float's bits, alpha on top: the colour straight and linear. */
+float4 DreamUIShapeBlend_Color(float Bits)
+{
+	const uint Packed = asuint(Bits);
+	const float4 Encoded = float4((Packed >> 16) & 0xff, (Packed >> 8) & 0xff, Packed & 0xff, (Packed >> 24) & 0xff) / 255.0;
+	return float4(DreamUIShapeBlend_ToLinear(Encoded.rgb), Encoded.a);
+}
+
+/**
+ * The melted shape's signed distance at P (units from the frame's centre, +Y down, negative inside), and its colour there:
+ * the members', each as much as it makes the shape. The members are folded in in order, each by its operation.
+ */
+float DreamUIShapeBlend_Distance(float2 P, out float4 Color DREAMUI_SHAPE_BLEND_PARAMS)
+{
+	const float4 Header = DREAMUI_SHAPE_BLEND_ROW(0);
+	const int Count = min((int)round(Header.x), DREAMUI_SHAPE_BLEND_MAX_MEMBERS);
+	const float K = max(Header.y, 1e-4);
+	float D = 1e6;
+	Color = float4(0.0, 0.0, 0.0, 0.0);
+	LOOP
+	for (int Member = 0; Member < Count; ++Member)
+	{
+		const int First = DREAMUI_SHAPE_BLEND_HEADER_TEXELS + Member * DREAMUI_SHAPE_BLEND_MEMBER_TEXELS;
+		const float4 T0 = DREAMUI_SHAPE_BLEND_ROW(First);
+		const float4 T1 = DREAMUI_SHAPE_BLEND_ROW(First + 1);
+		const float4 T2 = DREAMUI_SHAPE_BLEND_ROW(First + 2);
+		const float4 T3 = DREAMUI_SHAPE_BLEND_ROW(First + 3);
+		const float2 Offset = P - T1.xy;
+		const float2 Local = float2(T0.x * Offset.x + T0.y * Offset.y, T0.z * Offset.x + T0.w * Offset.y);
+		const float Di = DreamUIShapeBlend_RoundRect(Local, T1.zw, T2);
+		const float4 Ci = DreamUIShapeBlend_Color(T3.y);
+		const int Operation = (int)round(T3.x);
+		if (Member == 0)
+		{
+			D = Operation == DREAMUI_SHAPE_BLEND_SUBTRACT ? 1e6 : Di;
+			Color = Ci;
+			continue;
+		}
+		if (Operation == DREAMUI_SHAPE_BLEND_SUBTRACT)
+		{
+			const float H = saturate(0.5 + 0.5 * (Di + D) / K);
+			D = lerp(-Di, D, H) + K * H * (1.0 - H);
+		}
+		else if (Operation == DREAMUI_SHAPE_BLEND_INTERSECT)
+		{
+			const float H = saturate(0.5 + 0.5 * (D - Di) / K);
+			D = lerp(Di, D, H) + K * H * (1.0 - H);
+			Color = lerp(Ci, Color, H);
+		}
+		else
+		{
+			const float H = saturate(0.5 + 0.5 * (Di - D) / K);
+			D = lerp(Di, D, H) - K * H * (1.0 - H);
+			Color = lerp(Ci, Color, H);
+		}
+	}
+	return D;
+}
+
+#endif // DREAMUI_SHAPE_BLEND_USH

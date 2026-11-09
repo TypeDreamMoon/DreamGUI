@@ -1,8 +1,3 @@
----
-title: "UDreamUIWidgetLibrary"
-description: "UDreamUIWidgetLibrary"
----
-
 <a id="udreamuiwidgetlibrary"></a>
 
 # UDreamUIWidgetLibrary
@@ -13,13 +8,9 @@ description: "UDreamUIWidgetLibrary"
 
 声明于 `Public/DreamUIWidgetLibrary.h`。
 
-从蓝图中查找控件、驱动拖拽以及构建图像画刷——即 UMG 的 UWidgetBlueprintLibrary 中
-在本框架里具有实际意义的那部分内容。
+从蓝图中查找控件、驱动拖拽以及构建图像画刷——即 UMG 的 UWidgetBlueprintLibrary 中在本框架里具有实际意义的那部分内容。
 
-不具备实际意义的部分已在对照表中连同原因一并列出，而这些原因归根结底是同一条：UMG 的该函数库有一半是 Slate 的底层管线。FEventReply、OnPaint 绘制上下文以及
-Slate 的输入事件结构体描述的是 SWidget 与 Slate 之间的对话，而 DreamGUI 控件
-从不会有这种对话——它的输入以 UDreamPointerEventData 的形式来自事件
-系统，其像素则来自自身的网格体。
+不具备实际意义的部分已在对照表中连同原因一并列出，而这些原因归根结底是同一条：UMG 的该函数库有一半是 Slate 的底层管线。FEventReply、OnPaint 绘制上下文以及 Slate 的输入事件结构体描述的是 SWidget 与 Slate 之间的对话，而 DreamGUI 控件从不会有这种对话——它的输入以 UDreamPointerEventData 的形式来自事件系统，其像素则来自自身的网格体。
 
 <a id="functions"></a>
 
@@ -109,3 +100,4 @@ UMG 该类中所有面向蓝图的成员，以及它们的去向。*adopt*：名
 | `UWidgetBlueprintLibrary` | `RestorePreviousWindowTitleBarState` | reject |  | 参见 SetWindowTitleBarState。 |
 | `UWidgetBlueprintLibrary` | `SetWindowTitleBarOnCloseClickedDelegate` | reject |  | 参见 SetWindowTitleBarState。 |
 | `UWidgetBlueprintLibrary` | `SetWindowTitleBarCloseButtonActive` | reject |  | 参见 SetWindowTitleBarState。 |
+

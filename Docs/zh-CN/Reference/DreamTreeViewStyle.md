@@ -1,8 +1,3 @@
----
-title: "FDreamTreeViewStyle"
-description: "FDreamTreeViewStyle"
----
-
 <a id="fdreamtreeviewstyle"></a>
 
 # FDreamTreeViewStyle
@@ -25,3 +20,4 @@ description: "FDreamTreeViewStyle"
 | `TwistyColor` | `FColor` | 树视图样式 | 是 | 读 / 写 |  |
 | `ExpandedBrush` | `FDreamUIFaceBrush` | 树视图样式 | 是 | 读 / 写 |  |
 | `CollapsedBrush` | `FDreamUIFaceBrush` | 树视图样式 | 是 | 读 / 写 |  |
+

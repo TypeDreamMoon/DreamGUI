@@ -89,6 +89,10 @@ namespace DreamUIRenderStats
 		CoverageFlushes,
 		/** Game thread: bytes of font atlas sent to the render thread -- field, colour and coverage glyphs, and whole slices. */
 		FontAtlasUploadBytes,
+		/** Render thread: groups put down over what is behind them (FDreamUICompositeStack). */
+		GroupsComposited,
+		/** Render thread: copies of what is behind, made for a draw or a group to blend over. */
+		BackdropCopies,
 		Num
 	};
 

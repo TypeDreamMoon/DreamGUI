@@ -1,8 +1,3 @@
----
-title: "FDreamInputKeySelectorStyle"
-description: "FDreamInputKeySelectorStyle"
----
-
 <a id="fdreaminputkeyselectorstyle"></a>
 
 # FDreamInputKeySelectorStyle
@@ -32,3 +27,4 @@ description: "FDreamInputKeySelectorStyle"
 | `ContentPadding` | `FMargin` | 输入按键选择器样式 | 是 | 读 / 写 |  |
 | `CornerRadius` | `float` | 输入按键选择器样式 | 是 | 读 / 写 |  |
 | `FaceBrush` | `FDreamUIFaceBrush` | 输入按键选择器样式 | 是 | 读 / 写 |  |
+

@@ -28,6 +28,8 @@ struct FDreamUIBuiltInTextures
 	const UTexture* RenderLayerTable = nullptr;
 	const UTexture* RectBlockData = nullptr;
 	const UTexture* PaintData = nullptr;
+	const UTexture* MaskTexture0 = nullptr;
+	const UTexture* MaskTexture1 = nullptr;
 };
 
 /**
@@ -67,6 +69,12 @@ struct FDreamUIBuiltInDrawParams
 	 * are; null where the world has none.
 	 */
 	TWeakObjectPtr<const UTexture> PaintData;
+	/**
+	 * The textures the clip masks of the draw's elements read, by slot (FDreamUIDrawCall::MaskTextures): null where none of
+	 * them reads one, and a white texture is bound there, which nothing samples.
+	 */
+	TWeakObjectPtr<const UTexture> MaskTexture0;
+	TWeakObjectPtr<const UTexture> MaskTexture1;
 	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
 	FTextureReferenceRHIRef MainTextureRHI;
 	FSamplerStateRHIRef MainSamplerRHI;
@@ -77,6 +85,10 @@ struct FDreamUIBuiltInDrawParams
 	FTextureReferenceRHIRef RenderLayerTableRHI;
 	FTextureReferenceRHIRef RectBlockDataRHI;
 	FTextureReferenceRHIRef PaintDataRHI;
+	FTextureReferenceRHIRef MaskTexture0RHI;
+	FSamplerStateRHIRef MaskSampler0RHI;
+	FTextureReferenceRHIRef MaskTexture1RHI;
+	FSamplerStateRHIRef MaskSampler1RHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/**
@@ -130,7 +142,12 @@ public:
 	class FDepthFade : SHADER_PERMUTATION_BOOL("LEXUI_DEPTH_FADE");
 	/** Vertex colour only: the editor's widget outline frames, which have no widget record to read. */
 	class FPlainColor : SHADER_PERMUTATION_BOOL("DREAMUI_PLAIN_COLOR");
-	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor>;
+	/**
+	 * Blended over a copy of what is behind (DreamUI_BackdropTex), for the modes the blend hardware cannot do
+	 * (DreamUIBlend::ReadsBackdrop).
+	 */
+	class FBackdrop : SHADER_PERMUTATION_BOOL("DREAMUI_BACKDROP");
+	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor, FBackdrop>;
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FVector4f, DreamUI_GammaValues)
@@ -144,12 +161,24 @@ public:
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RectBlockDataTex)
 		/** The world's paint rows (FDreamUIBuiltInDrawParams::PaintData), read by Load: no sampler. */
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_PaintDataTex)
+		/** The clip masks' textures, by slot (FDreamUIBuiltInDrawParams::MaskTexture0/1), each with its own sampler. */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex0)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler0)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MaskTex1)
+		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_MaskTexSampler1)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_SceneDepthTex)
 		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_SceneDepthTexSampler)
 		SHADER_PARAMETER(FVector4f, DreamUI_SceneDepthTextureScaleOffset)
 		SHADER_PARAMETER(float, DreamUI_SceneDepthBlend)
 		SHADER_PARAMETER(int32, DreamUI_SceneDepthFade)
 		SHADER_PARAMETER(FVector2f, DreamUI_ViewSizeInv)
+		/**
+		 * x: the draw's blend mode (EDreamUIBlendMode), y: 1 where what is behind is a viewport's, whose alpha says nothing,
+		 * zw: the target pixel of the backdrop copy's first texel.
+		 */
+		SHADER_PARAMETER(FVector4f, DreamUI_BlendParams)
+		/** What the draw covers of the target, copied before it: read by Load, where DREAMUI_BACKDROP is on. */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_BackdropTex)
 	END_SHADER_PARAMETER_STRUCT()
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
@@ -162,6 +191,11 @@ public:
 		}
 		// The plain-colour variant is editor helper geometry, which is never depth-blended.
 		if (PermutationVector.Get<FPlainColor>() && PermutationVector.Get<FBlendDepth>())
+		{
+			return false;
+		}
+		// Helper geometry never reads a backdrop. A world-space element does, its alpha the scene's occlusion first.
+		if (PermutationVector.Get<FBackdrop>() && PermutationVector.Get<FPlainColor>())
 		{
 			return false;
 		}

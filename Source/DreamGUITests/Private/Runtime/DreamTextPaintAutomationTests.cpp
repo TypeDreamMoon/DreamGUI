@@ -79,7 +79,7 @@ namespace DreamTextPaintTestLocal
 	FDreamGradient MakeRandomGradient(FRandomStream& InRandom)
 	{
 		FDreamGradient Gradient;
-		Gradient.Type = static_cast<EDreamPaintType>(InRandom.RandRange(0, 5));
+		Gradient.Type = static_cast<EDreamPaintType>(InRandom.RandRange(0, static_cast<int32>(EDreamPaintType::Reflected)));
 		Gradient.Spread = static_cast<EDreamPaintSpread>(InRandom.RandRange(0, 2));
 		Gradient.Interpolation = static_cast<EDreamPaintInterpolation>(InRandom.RandRange(0, 2));
 		Gradient.Shape = static_cast<EDreamPaintRadialShape>(InRandom.RandRange(0, 1));
@@ -239,7 +239,12 @@ namespace DreamTextPaintTestLocal
 			if (Type == 2)
 			{
 				const FVector2f R = Radii(Centre, bEllipse);
-				T = FVector2f(Point.X / R.X, Point.Y / R.Y).Size();
+				const FVector2f Q(Point.X * FMath::Cos(Turn) + Point.Y * FMath::Sin(Turn), -Point.X * FMath::Sin(Turn) + Point.Y * FMath::Cos(Turn));
+				T = FVector2f(Q.X / R.X, Q.Y / R.Y).Size();
+			}
+			else if (Type == 6)
+			{
+				T = 2.0f * FMath::Abs(Point.X * FMath::Sin(Turn) - Point.Y * FMath::Cos(Turn)) / FMath::Max(FMath::Abs(InAspect * FMath::Sin(Turn)) + FMath::Abs(FMath::Cos(Turn)), 1e-6f);
 			}
 			else if (Type == 3)
 			{
@@ -1124,6 +1129,94 @@ bool FDreamTextPaintStyleTest::RunTest(const FString& Parameters)
 	WithoutPreset.Preset = nullptr;
 	TestTrue(TEXT("paints with different presets differ"), WithoutPreset != WithPreset);
 	TestFalse(TEXT("and without it this one has nothing to paint"), WithoutPreset.IsPainting());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPaintReflectedTest,
+	"DreamGUI.Text.Paint.AReflectedGradientRunsBothWaysFromALineThroughItsCentre",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextPaintReflectedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextPaintTestLocal;
+	FDreamGradient Ramp = MakeRamp(EDreamPaintType::Reflected);
+	TestTrue(TEXT("it paints"), Ramp.IsPainting());
+	// The default angle points down: 0 across the middle, 1 at the top and at the bottom, alike.
+	TestEqual(TEXT("0 on the line through the centre"), Ramp.Evaluate(FVector2f(0.3f, 0.5f)).R, 0.0f, 1e-5f);
+	TestEqual(TEXT("1 at the bottom"), Ramp.Evaluate(FVector2f(0.5f, 1.0f)).R, 1.0f, 1e-5f);
+	TestEqual(TEXT("and at the top"), Ramp.Evaluate(FVector2f(0.5f, 0.0f)).R, 1.0f, 1e-5f);
+	TestEqual(TEXT("half way, either way"), Ramp.Evaluate(FVector2f(0.5f, 0.25f)).R, 0.5f, 1e-5f);
+	TestEqual(TEXT("the same below"), Ramp.Evaluate(FVector2f(0.5f, 0.75f)).R, 0.5f, 1e-5f);
+
+	// Across a box twice as wide as tall: as long as a Linear's line, which is the width.
+	Ramp.Angle = 90.0f;
+	TestEqual(TEXT("a quarter of the width from the centre is half way"), Ramp.Evaluate(FVector2f(0.75f, 0.2f), 2.0f).R, 0.5f, 1e-5f);
+	TestEqual(TEXT("the side is the end"), Ramp.Evaluate(FVector2f(0.0f, 0.9f), 2.0f).R, 1.0f, 1e-5f);
+
+	// Its centre moves the line; its scale and offset go from the line out, as a Radial's go from the centre.
+	Ramp.Center = FVector2f(0.25f, 0.5f);
+	TestEqual(TEXT("0 on the moved line"), Ramp.Evaluate(FVector2f(0.25f, 0.1f)).R, 0.0f, 1e-5f);
+	TestEqual(TEXT("a quarter of the box from it, half way"), Ramp.Evaluate(FVector2f(0.0f, 0.1f)).R, 0.5f, 1e-5f);
+	Ramp.Center = FVector2f(0.5f, 0.5f);
+	Ramp.Scale = 2.0f;
+	TestEqual(TEXT("twice as long"), Ramp.Evaluate(FVector2f(1.0f, 0.5f)).R, 0.5f, 1e-5f);
+	Ramp.Scale = 1.0f;
+	Ramp.Offset = 0.25f;
+	TestEqual(TEXT("moved out by its offset"), Ramp.Evaluate(FVector2f(1.0f, 0.5f)).R, 0.75f, 1e-5f);
+
+	// Written as CSS, and read back.
+	FDreamGradient Read;
+	FString Error;
+	if (TestTrue(TEXT("reflected-gradient reads"), FDreamGradient::ParseCss(TEXT("reflected-gradient(90deg at 25% 50%, #000, #fff)"), Read, &Error)))
+	{
+		TestTrue(TEXT("as a Reflected, turned and moved"), Read.Type == EDreamPaintType::Reflected && Read.Angle == 90.0f && Read.Center == FVector2f(0.25f, 0.5f));
+		FDreamGradient Again;
+		TestTrue(TEXT("its CSS reads back as it"), FDreamGradient::ParseCss(Read.ToCss(), Again) && Again == Read);
+		TestTrue(TEXT("its name is the one it was read by"), Read.ToCss().StartsWith(TEXT("reflected-gradient(")));
+	}
+	TestTrue(TEXT("with a spread before it too"), FDreamGradient::ParseCss(TEXT("repeating-reflected-gradient(#000, #fff 50%)"), Read)
+		&& Read.Type == EDreamPaintType::Reflected && Read.Spread == EDreamPaintSpread::Repeat);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPaintRadialTurnTest,
+	"DreamGUI.Text.Paint.ARadialEllipseTurnsWithTheAngleAndACircleDoesNotChange",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextPaintRadialTurnTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextPaintTestLocal;
+	FDreamGradient Ellipse = MakeRamp(EDreamPaintType::Radial);
+	Ellipse.Size = EDreamPaintRadialSize::Explicit;
+	Ellipse.Radius = FVector2f(0.5f, 0.25f);
+	// At the default angle the ellipse is as CSS draws it: wide across, short down.
+	TestEqual(TEXT("unturned, a quarter across is half way"), Ellipse.Evaluate(FVector2f(0.75f, 0.5f)).R, 0.5f, 1e-5f);
+	TestEqual(TEXT("and an eighth down is too"), Ellipse.Evaluate(FVector2f(0.5f, 0.625f)).R, 0.5f, 1e-5f);
+	// A quarter turn stands it up.
+	Ellipse.Angle = 90.0f;
+	TestEqual(TEXT("turned, an eighth across is half way"), Ellipse.Evaluate(FVector2f(0.625f, 0.5f)).R, 0.5f, 1e-5f);
+	TestEqual(TEXT("and a quarter down is"), Ellipse.Evaluate(FVector2f(0.5f, 0.75f)).R, 0.5f, 1e-5f);
+	// A circle is the same whatever the angle.
+	FDreamGradient Circle = MakeRamp(EDreamPaintType::Radial);
+	Circle.Shape = EDreamPaintRadialShape::Circle;
+	Circle.Size = EDreamPaintRadialSize::ClosestSide;
+	for (const float Angle : { 0.0f, 33.0f, 180.0f, 271.0f })
+	{
+		Circle.Angle = Angle;
+		TestEqual(*FString::Printf(TEXT("a circle at %.0f degrees"), Angle), Circle.Evaluate(FVector2f(0.6f, 0.7f)).R,
+			FVector2f(0.1f, 0.2f).Size() / 0.5f, 1e-5f);
+	}
+
+	// The radii it is measured by, in box heights, for a box twice as wide as tall.
+	TestEqual(TEXT("an explicit ellipse's radii"), Ellipse.GetEndingRadii(2.0f), FVector2f(1.0f, 0.25f));
+	Circle.Angle = 180.0f;
+	TestEqual(TEXT("a circle's to the nearer side"), Circle.GetEndingRadii(2.0f), FVector2f(0.5f, 0.5f));
+	FDreamGradient Diamond = MakeRamp(EDreamPaintType::Diamond);
+	Diamond.Size = EDreamPaintRadialSize::FarthestSide;
+	TestEqual(TEXT("a diamond's, always an ellipse's"), Diamond.GetEndingRadii(2.0f), FVector2f(1.0f, 0.5f));
+	TestEqual(TEXT("a type with none answers a half"), MakeRamp(EDreamPaintType::Linear).GetEndingRadii(2.0f), FVector2f(0.5f, 0.5f));
 	return true;
 }
 

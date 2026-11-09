@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerMenuAnchor"
-description: "UDreamLayoutContainerMenuAnchor"
----
-
 <a id="udreamlayoutcontainermenuanchor"></a>
 
 # UDreamLayoutContainerMenuAnchor
@@ -49,3 +44,4 @@ UMG 的 UMenuAnchor 的布局侧实现。
 | `void SetPlacement(EDreamMenuPlacement Value)` | callable | 设置放置方式 |
 | `void SetUseApplicationMenuStack(bool Value)` | callable | 立即生效：已打开的菜单会关闭并以另一种方式再次打开。 |
 | `void ToggleOpen()` | callable | 切换打开 |
+

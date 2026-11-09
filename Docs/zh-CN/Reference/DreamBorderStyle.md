@@ -1,8 +1,3 @@
----
-title: "FDreamBorderStyle"
-description: "FDreamBorderStyle"
----
-
 <a id="fdreamborderstyle"></a>
 
 # FDreamBorderStyle
@@ -27,3 +22,4 @@ UMG 的 Border 是一个带有外观的面板，本库已经以 PANEL 条目（�
 | `BorderThickness` | `float` | 边框样式 | 是 | 读 / 写 |  |
 | `BorderColor` | `FColor` | 边框样式 | 是 | 读 / 写 |  |
 | `BackgroundBrush` | `FDreamUIFaceBrush` | 边框样式 | 是 | 读 / 写 |  |
+

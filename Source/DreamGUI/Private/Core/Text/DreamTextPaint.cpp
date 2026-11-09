@@ -49,7 +49,7 @@ namespace DreamTextPaintLocal
 
 	void PrepareGradient(const FDreamGradient& InGradient, FPreparedGradient& OutPrepared)
 	{
-		OutPrepared.Type = PaintEnumInRange(InGradient.Type, EDreamPaintType::Corners);
+		OutPrepared.Type = PaintEnumInRange(InGradient.Type, EDreamPaintType::Reflected);
 		OutPrepared.Spread = PaintEnumInRange(InGradient.Spread, EDreamPaintSpread::Reflect);
 		OutPrepared.Interpolation = PaintEnumInRange(InGradient.Interpolation, EDreamPaintInterpolation::Oklab);
 		OutPrepared.Shape = PaintEnumInRange(InGradient.Shape, EDreamPaintRadialShape::Circle);
@@ -237,8 +237,21 @@ namespace DreamTextPaintLocal
 bool FDreamGradient::IsPainting() const
 {
 	const uint8 TypeValue = static_cast<uint8>(Type);
-	return TypeValue != static_cast<uint8>(EDreamPaintType::None) && TypeValue <= static_cast<uint8>(EDreamPaintType::Corners)
+	return TypeValue != static_cast<uint8>(EDreamPaintType::None) && TypeValue <= static_cast<uint8>(EDreamPaintType::Reflected)
 		&& Stops.Num() > 0;
+}
+
+FVector2f FDreamGradient::GetEndingRadii(float InAspect) const
+{
+	using namespace DreamTextPaintLocal;
+	FPreparedGradient Prepared;
+	PrepareGradient(*this, Prepared);
+	if (Prepared.Type != EDreamPaintType::Radial && Prepared.Type != EDreamPaintType::Diamond)
+	{
+		return FVector2f(0.5f, 0.5f);
+	}
+	const float Aspect = FMath::IsFinite(InAspect) ? InAspect : 1.0f;
+	return GetPaintRadii(Prepared, Prepared.Center, Aspect, Prepared.Type == EDreamPaintType::Diamond || Prepared.Shape == EDreamPaintRadialShape::Ellipse);
 }
 
 FLinearColor FDreamGradient::Evaluate(const FVector2f& InBoxUV, float InAspect, const FDreamPaintAnimation& InAnimation) const
@@ -290,7 +303,11 @@ FLinearColor FDreamGradient::Evaluate(const FVector2f& InBoxUV, float InAspect, 
 		const FVector2f Centre = Prepared.Center + InAnimation.CenterOffset;
 		const FVector2f Point((U - Centre.X) * Aspect, V - Centre.Y);
 		const FVector2f Radii = GetPaintRadii(Prepared, Centre, Aspect, Prepared.Shape == EDreamPaintRadialShape::Ellipse);
-		T = FVector2f(Point.X / Radii.X, Point.Y / Radii.Y).Size();
+		// Turned as a Diamond is: an ellipse's axes follow the angle.
+		const float Sine = FMath::Sin(TurnRadians);
+		const float Cosine = FMath::Cos(TurnRadians);
+		const FVector2f Turned(Point.X * Cosine + Point.Y * Sine, -Point.X * Sine + Point.Y * Cosine);
+		T = FVector2f(Turned.X / Radii.X, Turned.Y / Radii.Y).Size();
 		break;
 	}
 	case EDreamPaintType::Conic:
@@ -310,6 +327,16 @@ FLinearColor FDreamGradient::Evaluate(const FVector2f& InBoxUV, float InAspect, 
 		const float Cosine = FMath::Cos(TurnRadians);
 		const FVector2f Turned(Point.X * Cosine + Point.Y * Sine, -Point.X * Sine + Point.Y * Cosine);
 		T = FMath::Abs(Turned.X) / Radii.X + FMath::Abs(Turned.Y) / Radii.Y;
+		break;
+	}
+	case EDreamPaintType::Reflected:
+	{
+		// A Linear's line through the centre, measured both ways from it, at twice the rate: 1 where a Linear's ends are.
+		const FVector2f Centre = Prepared.Center + InAnimation.CenterOffset;
+		const FVector2f Point((U - Centre.X) * Aspect, V - Centre.Y);
+		const float Sine = FMath::Sin(TurnRadians);
+		const float Cosine = FMath::Cos(TurnRadians);
+		T = 2.0f * FMath::Abs(Point.X * Sine - Point.Y * Cosine) / FMath::Max(FMath::Abs(Aspect * Sine) + FMath::Abs(Cosine), 1e-6f);
 		break;
 	}
 	default:
@@ -459,6 +486,7 @@ namespace DreamTextPaintCssLocal
 		{ TEXT("radial-gradient"), EDreamPaintType::Radial },
 		{ TEXT("conic-gradient"), EDreamPaintType::Conic },
 		{ TEXT("diamond-gradient"), EDreamPaintType::Diamond },
+		{ TEXT("reflected-gradient"), EDreamPaintType::Reflected },
 		{ TEXT("corners-gradient"), EDreamPaintType::Corners },
 		{ TEXT("none-gradient"), EDreamPaintType::None },
 	};
@@ -1497,8 +1525,8 @@ namespace DreamTextPaintCssLocal
 		}
 		if (Kind == nullptr)
 		{
-			OutError = MakeCssError(Whole.Offset, FString::Printf(TEXT("'%s' is not a gradient this reads: linear-, radial-, conic-, diamond- or ")
-				TEXT("corners-gradient, each with repeating- or reflecting- before it if wanted"), *Whole.Text.Left(Open)));
+			OutError = MakeCssError(Whole.Offset, FString::Printf(TEXT("'%s' is not a gradient this reads: linear-, radial-, conic-, diamond-, ")
+				TEXT("reflected- or corners-gradient, each with repeating- or reflecting- before it if wanted"), *Whole.Text.Left(Open)));
 			return false;
 		}
 

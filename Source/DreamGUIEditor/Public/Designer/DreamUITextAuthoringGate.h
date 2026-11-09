@@ -7,34 +7,33 @@
 class FProperty;
 class UDreamWidget;
 class UDreamWidgetBlueprint;
+struct FDreamUIStructuralEdit;
 
 /**
  * What the designer is allowed to do to a hierarchy that came out of a `.dui`.
  *
  * The direction is "the text is the only truth and the designer is a graphical front end for it".
- * That buys a lot -- one place to read, one place to diff, one place to review -- and it costs
- * exactly one thing: the designer can no longer do everything it used to. Two kinds of edit stop
- * being possible, for two different reasons:
+ * That buys one place to read, one place to diff, one place to review -- and it means every edit the
+ * designer makes has to become a line of the file, or be refused before it is made. An edit that is
+ * neither -- one that appears, works, survives every check the author would think to make, and is
+ * gone at the next compile because the compile rebuilds the tree from the file -- is the failure
+ * this namespace exists to prevent.
  *
- *   STRUCTURE, because nothing writes it back. The write-back patcher replaces the text of ONE value
- *   or inserts ONE line; it never inserts a node, removes one, or reorders anything (see
- *   FDreamUITextPatcher's class comment, which says so as a design constraint rather than as a
- *   limitation to be lifted). So a create, a delete, a reparent, a rename or a paste performed here
- *   would live until the next compile and then be gone, because the next compile rebuilds the tree
- *   from the file.
+ * So the designer's edits are ASKED here first:
  *
- *   PROPERTIES THE WRITE-BACK WILL NOT CARRY, for five separate reasons that all end the same way.
- *   The details panel shows every UPROPERTY on a UDreamWidget; the language addresses a node, its
- *   panel slot and its behaviours, and the write-back covers a subset even of that. A property is
- *   refused when it is outside the writable set, when its VALUE has no `.dui` spelling (an asset
- *   reference -- a font, a texture, a material), when the file drives it with `<-`, when a loop line
- *   produced N copies of the widget, and -- for the Bind control rather than a value -- when a
- *   binding would be authored from the panel at all.
+ *   STRUCTURE -- creating, deleting, duplicating, pasting, moving, renaming, wrapping, behaviours,
+ *   panels, the class pickers, `rows` rows -- is written into the file by the write-back
+ *   (FDreamUITextWriteBack, through FDreamUITextPatcher's structural edits), and CheckStructuralEdit
+ *   applies the edit to a copy of the text first: a refusal there is the patcher's own reason, said
+ *   before the tree is touched (a loop template, a widget an `if` shows, the inside of another file's
+ *   component).
  *
- * Both failures have the same shape and it is the worst shape an editor can have: the edit appears,
- * works, survives every check the author would think to make, and is silently gone at the next
- * compile. So this exists to turn both into something visible BEFORE the edit -- a refusal that says
- * why, or a row that is drawn disabled.
+ *   STATEMENTS -- a binding, a route, a two-way binding, a value written in place of a binding -- are
+ *   placed by ResolveStatementSite and written by WriteStatementToText, as one line each.
+ *
+ *   PROPERTIES THE WRITE-BACK CANNOT CARRY are drawn disabled with the reason (GetPropertyEditVerdict):
+ *   outside the writable set, a value with no `.dui` spelling, a property the file drives with `<-`,
+ *   a widget a loop line made N copies of.
  *
  * WHY A GATE AND NOT A SECOND STORE. The rejected alternative was to let the designer edit anything
  * and keep the extra values on the asset, merging them back over the generated tree. That is a
@@ -42,22 +41,13 @@ class UDreamWidgetBlueprint;
  * remove -- and the merge has no answer for the case that matters, where the file and the asset
  * disagree because a human edited both.
  *
- * WHERE THE REFUSALS LIVE, and why not all in one place: the five structural primitives are in
- * DreamWidgetTreeEditing, but PASTE is not one of them -- it is
- * FDreamWidgetBlueprintEditor::DesignerPasteWidgets, which builds its own copies straight onto the
- * tree. Adding a behaviour is a third shape again (DesignerAddComponentBy / DesignerRemoveComponent
- * call NotifyStructureChanged directly), replacing a panel is a fourth (ReplaceSelectedWidgetLayout),
- * and the hierarchy panel's drag-drop is a fifth -- it calls TrySetParent on the widgets itself.
- * Every one of those call sites asks this namespace, and the message is built here so ten refusals
- * cannot drift into ten different sentences.
- *
- * ONE RULE ENFORCED SOMEWHERE ELSE ENTIRELY, named here because the two halves have to agree: the
- * ROTATE and SCALE gizmos are withheld on a text-authored hierarchy, by
- * FDreamWidgetDesignerViewportClient::GetWidgetMode. The reason is the writable set -- the write-back
- * carries `AnchorData.*` and nothing else, so a MOVE survives (it recomputes the anchors, and those
- * are written) while a rotate or a scale writes only RelativeRotation / RelativeScale, which the
- * language has no spelling for. A panel that greyed the rotation while the gizmo went on writing it
- * would be the contradiction this pair exists to avoid.
+ * WHERE THE CALLS LIVE, and why not all in one place: the structural primitives are in
+ * DreamWidgetTreeEditing, but PASTE is FDreamWidgetBlueprintEditor::DesignerPasteWidgets, behaviours
+ * are DesignerAddComponentBy / DesignerRemoveComponent / DesignerMoveComponent, replacing a panel is
+ * ReplaceSelectedWidgetLayout, the hierarchy panel's drag-drop calls TrySetParent itself, the Bind
+ * control is DreamWidgetPropertyBindingExtension and the Events rows are DreamWidgetEventRoutes. Every
+ * one of those asks this namespace, and a refusal's message is built here so they cannot drift into
+ * different sentences.
  */
 namespace DreamUITextAuthoring
 {
@@ -149,6 +139,107 @@ namespace DreamUITextAuthoring
 	 */
 	DREAMGUIEDITOR_API FString DescribeClassForAuthor(const UClass* InClass);
 	DREAMGUIEDITOR_API FText DescribeStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint, const FString& InOperation);
+
+	// ---------------------------------------------------------------------------------------------
+	// The structural edits a `.dui` CAN take: creating, deleting, duplicating and pasting widgets.
+	//
+	// Those four are written into the file by the write-back (a node inserted, a node removed), so on
+	// a text-authored hierarchy they are no longer refused outright: each is CHECKED against the file
+	// before anything is touched, refused with the patcher's own reason when it cannot be written, and
+	// written into the text before the compile that rebuilds the tree from it (WriteStructureToText).
+	// Moving, renaming, behaviours and replacing a panel are still RefuseStructuralEdit's.
+	// ---------------------------------------------------------------------------------------------
+
+	/**
+	 * Whether InEdit can be written into this Blueprint's `.dui` as it is now, without writing anything.
+	 *
+	 * True straight away for a hand-authored Blueprint. Otherwise the edit is applied to a COPY of the
+	 * text by the patcher that the write-back uses, so a refusal here is exactly the refusal the flush
+	 * would have met, in its words. On top of the patcher: the file has to parse (with bInVerifyBuild,
+	 * build), an insert's parent has to be a node the file writes, and -- with bInVerifyBuild -- the
+	 * edited text may raise no error the current one does not, which is how a removal that would leave
+	 * a reference to the removed node dangling is caught before the author loses the node to it.
+	 *
+	 * An insert whose TypeName is empty is spelled from InWidgetForType the way the write-back will
+	 * spell it. Cheap enough for a click; a drag's hover should pass bInVerifyBuild = false, which
+	 * parses and patches but builds no tree.
+	 */
+	DREAMGUIEDITOR_API bool CheckStructuralEdit(const UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit,
+		bool bInVerifyBuild, FText& OutReason, const UDreamWidget* InWidgetForType = nullptr);
+
+	/**
+	 * Every node id the `.dui` declares, previous `(was:)` ids included. Empty for a hand-authored
+	 * Blueprint or a file that does not parse.
+	 *
+	 * What a new widget's name must avoid as well as the tree's: an id the file already holds -- a node
+	 * the tree does not show, an id a rename is still migrating from -- would make the write-back read
+	 * the new widget as that node and not write it at all.
+	 */
+	DREAMGUIEDITOR_API void CollectAuthoredNodeIds(const UDreamWidgetBlueprint* InBlueprint, TSet<FString>& OutIds);
+
+	/** Say no to one structural edit with the reason CheckStructuralEdit gave, out loud, as RefuseStructuralEdit does. */
+	DREAMGUIEDITOR_API void ReportStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint,
+		const TCHAR* InFunction, int32 InLine, const FString& InOperation, const FText& InReason);
+
+	/**
+	 * Write the template tree's shape and new values into the `.dui`, before a compile rebuilds the
+	 * tree from it. What DreamWidgetTreeEditing::NotifyStructureChanged calls first.
+	 *
+	 * The compile reads the FILE, so a widget added to the template and not written there is gone a
+	 * moment later, inside the same gesture. Through the open designer's write-back when there is one
+	 * (its document, its undo), and through a write-back of its own when there is none, so a script or
+	 * a commandlet editing the tree is written exactly as the designer is.
+	 *
+	 * A no-op, returning true, for a hand-authored Blueprint; while a transaction is being applied (the
+	 * document is being restored, not edited); and while the compile is answering a change made to the
+	 * file outside the editor, where the file wins. Whatever the write could not settle -- a node it
+	 * could not write, one it could not remove -- is said, with the file's name, and false returned:
+	 * the compile is about to undo exactly that.
+	 */
+	DREAMGUIEDITOR_API bool WriteStructureToText(UDreamWidgetBlueprint* InBlueprint);
+
+	/** Whether the `.dui` writes InNodeId as a row of a `rows` table. False for a hand-authored Blueprint or a file that does not parse. */
+	DREAMGUIEDITOR_API bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId);
+
+	/**
+	 * Where one of a text-authored widget's objects comes from in its `.dui`: OutLine is the node's own `+` line that
+	 * builds it (INDEX_NONE when none does -- it is its style's, its type's, or came with another component), and
+	 * bOutTypeIsContainer says whether the node's TYPE names its panel (`VerticalBox Column`).
+	 *
+	 * What a behaviour or panel gesture asks before it touches the template: only a line the node writes can be taken
+	 * out, moved, or swapped for another. False, with a reason, when the file cannot be read or does not write the node.
+	 */
+	DREAMGUIEDITOR_API bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
+		const UObject* InComponent, int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason);
+
+	// ---------------------------------------------------------------------------------------------
+	// Statements: bindings (`<-`), routes (`->`), two-way bindings (`<->`), and a value written in place of a binding.
+	//
+	// On a text-authored hierarchy these are lines of the `.dui`, and the compile rebuilds the Blueprint's binding and
+	// route lists from them; so the Bind control, the Events rows and "unbind and set" write the line, and the compile
+	// that follows reads it back.
+	// ---------------------------------------------------------------------------------------------
+
+	/**
+	 * Which line a statement about InName on InTemplateOwner -- a template widget, its visual, or one of its behaviours --
+	 * is written on: fills OutEdit's NodeId, PropertyTarget, ComponentIndex and PropertyName. The kind, the statement and
+	 * the match are the caller's.
+	 *
+	 * A behaviour the node writes as a `+` line takes it in that block. One the node's style or type gives it takes it on
+	 * the node's own line, when that line reaches it -- the builder offers a bare name to the widget, its visual, the
+	 * panel its type names and its behaviours in that order, and the first that has the name takes it. False, with a
+	 * reason, when the line would reach another object, or the file does not write the node.
+	 */
+	DREAMGUIEDITOR_API bool ResolveStatementSite(const UDreamWidgetBlueprint* InBlueprint, const UObject* InTemplateOwner, FName InName,
+		FDreamUIStructuralEdit& OutEdit, FText& OutReason);
+
+	/**
+	 * Write one SetStatement or RemoveProperty into the Blueprint's `.dui`: checked first (CheckStructuralEdit, building
+	 * the result), then applied to the document through the open designer's write-back, or one of its own -- inside the
+	 * caller's transaction, so it undoes with whatever else the gesture did. The caller then marks the Blueprint
+	 * structurally modified, and the compile reads the line back. False, with the reason, when it was refused.
+	 */
+	DREAMGUIEDITOR_API bool WriteStatementToText(UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit, FText& OutReason);
 
 	/** Why one property row is not editable. Ordered so the FIRST reason that applies is the one shown. */
 	enum class EPropertyEditVerdict : uint8
@@ -246,11 +337,11 @@ namespace DreamUITextAuthoring
 	/**
 	 * Whether a binding may be AUTHORED from the details panel on this object.
 	 *
-	 * False for a text-authored class, and this one is not about write-back at all: the compiler
-	 * REPLACES UDreamWidgetBlueprint::PropertyBindings wholesale from the `<-` lines in the file
-	 * (DreamWidgetBlueprintCompiler.cpp, "the bindings alongside it, for the same reason"). A binding
-	 * authored here therefore does not merely fail to reach the file -- it is deleted by the next
-	 * compile, along with the function the Create Binding entry just made and opened.
+	 * True for a text-authored class too, now that a binding there is written as its `<-` line: the compiler REPLACES
+	 * UDreamWidgetBlueprint::PropertyBindings wholesale from those lines, so the panel writes the line
+	 * (WriteStatementToText) instead of the list, and the compile reads it back. Whether a particular line can be
+	 * written is asked when it is chosen (ResolveStatementSite, CheckStructuralEdit), with the reason when it cannot.
+	 * False only for a widget a text-authored class does not write -- one inside a nested instance, with no node here.
 	 */
 	DREAMGUIEDITOR_API bool CanAuthorBindingsOn(const UObject* InOwner);
 

@@ -1,8 +1,3 @@
----
-title: "UDreamUIControl"
-description: "UDreamUIControl"
----
-
 <a id="udreamuicontrol"></a>
 
 # UDreamUIControl
@@ -17,10 +12,10 @@ description: "UDreamUIControl"
 
 所有此类控件共有的并不是那棵树，而是生成一棵树的四个步骤。此类持有 NativeOnInitialized，并按顺序执行它们：
 
-    1. 一棵树          -- RealizeTemplate()，或在没有东西替换它时使用 RealizeBuiltIn()
-    2. 各个部件        -- BindParts()，按名称，从 CollectParts 声明的唯一列表中获取
-    3. 各个行为        -- WireParts()，作用于第 2 步找到的任意节点
-    4. 外观            -- ApplyStyle()，并在任何旋钮变化时再次执行
+    1. a tree           -- RealizeTemplate(), or RealizeBuiltIn() when nothing replaces it
+    2. the parts        -- BindParts(), by NAME, from the one list CollectParts declares
+    3. the behaviours   -- WireParts(), on whichever nodes step 2 found
+    4. the look         -- ApplyStyle(), and again whenever a knob changes
 
 将第 1 步与第 2 步分开，正是 Template 得以实现的原因。过去，控件通过构建器的 .Out() 来访问其部件，这种方式在构造时写入一个指针，因此只对由本代码写入的树有效；而之后按名称绑定则对任何具有正确名称的树都有效，因此这两条路径仅在步骤 1 上有所不同。这也是为什么 CollectParts 是一个列表，而不是在指针列表旁再放一个名称查找：两份相同名称的列表，正是模板会悄悄停止驱动代码树中依然命名的某个部件的方式。
 
@@ -58,3 +53,4 @@ description: "UDreamUIControl"
 | `void OnControlReady()` | 事件 | 控件已完全构建：其树已存在，其部件已绑定，其行为已接线，其样式已推送过一次。 |
 | `void SetStyleSource(EDreamUIStyleSource InStyleSource)` | 可调用 | 运行时外观的来源。会重新推送，因为一个改变了来源却未重新解析的样式会成为一个属性，其全部效果在别的东西碰巧推送之前都不可见——而这正是该家族各 setter 存在所要防止的失败。 |
 | `void SetStyleVariant(FName InStyleVariant)` | 可调用 | 项目表中的哪个命名条目。出于上述原因会重新推送。 |
+

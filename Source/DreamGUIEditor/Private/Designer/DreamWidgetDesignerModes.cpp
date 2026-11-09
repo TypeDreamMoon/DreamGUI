@@ -9,6 +9,7 @@
 #include "Designer/SDreamWidgetPalette.h"
 #include "Animation/SDreamWidgetAnimationEditor.h"
 #include "DreamWidgetBlueprint.h"
+#include "Workflow/SDreamUIPresetLibrary.h"
 
 #include "BlueprintEditorTabs.h"
 #include "SBlueprintEditorToolbar.h"
@@ -178,6 +179,13 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 			TSharedPtr<SWidget> Widget = Editor.GetCompilerResultsWidget();
 			return Widget.IsValid() ? Widget.ToSharedRef() : SNullWidget::NullWidget;
 		});
+	// The project's gradients, layer styles and effect settings, applied by a double-click or a drop.
+	AddPanel(FDreamWidgetDesignerTabs::PresetsID, LOCTEXT("PresetsTab", "Presets"),
+		FSlateIcon(AppStyle, "Icons.Adjust"),
+		[](FDreamWidgetBlueprintEditor& Editor) -> TSharedRef<SWidget>
+		{
+			return SNew(SDreamUIPresetLibrary, StaticCastSharedRef<FDreamWidgetBlueprintEditor>(Editor.AsShared()));
+		});
 	// Spawned empty on purpose: the sequencer invokes this id itself and fills it with the curve
 	// editor. Without a home here it would dock into whatever window the tab manager guesses.
 	AddPanel(FDreamWidgetDesignerTabs::SequencerCurvesID,
@@ -187,6 +195,7 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 
 	//   +-----------+--------------------------------+-----------+
 	//   | Palette   |                                |           |
+	//   | Presets   |                                |           |
 	//   +-----------+           Viewport             |  Details  |
 	//   | Hierarchy |                                |           |
 	//   |           +--------------------------------+-----------+
@@ -196,7 +205,8 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 	constexpr float ViewportWidth = 0.75f;
 	constexpr float BottomDrawerHeight = 0.3f;
 	// _v2: the Compiler Results tab joined the bottom stack, and a saved _v1 layout has no slot for it.
-	TabLayout = FTabManager::NewLayout("DreamWidgetBlueprintEditor_Designer_Layout_v2")
+	// _v3: the Presets tab joined the Palette's stack.
+	TabLayout = FTabManager::NewLayout("DreamWidgetBlueprintEditor_Designer_Layout_v3")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -210,7 +220,9 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 				(
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.5f)
+					->SetForegroundTab(FDreamWidgetDesignerTabs::PaletteID)
 					->AddTab(FDreamWidgetDesignerTabs::PaletteID, ETabState::OpenedTab)
+					->AddTab(FDreamWidgetDesignerTabs::PresetsID, ETabState::OpenedTab)
 				)
 				->Split
 				(

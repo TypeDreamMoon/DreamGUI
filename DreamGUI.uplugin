@@ -20,6 +20,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "Niagara",
+			"Enabled": true
+		},
+		{
 			"Name": "DreamLoc",
 			"Enabled": true,
 			"Optional": true
@@ -75,10 +79,28 @@
 			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{
+			"Name": "DreamGUIPsd",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
+		},
+		{
 			"Name": "DreamTween",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUINiagara",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUINiagaraEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{
 			"Name": "DreamGUITests",

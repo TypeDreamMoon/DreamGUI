@@ -29,6 +29,9 @@
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 #include "Widget/SDreamGradientPreview.h"
+#include "Widget/SDreamUIEyedropper.h"
+#include "Workflow/DreamUIPresetLibrary.h"
+#include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
@@ -148,9 +151,51 @@ namespace DreamGradientCustomizationLocal
 		return StructProperty != nullptr && StructProperty->Struct == FDreamGradient::StaticStruct();
 	}
 
+	/** meta=(DreamGUI_GradientFallback="Function"): what a gradient with no stops draws, asked of its object. */
+	const FName FallbackMeta(TEXT("DreamGUI_GradientFallback"));
+
 	/**
-	 * The first gradient InHandle edits. bOutMultipleValues: whether the others differ from it. The editing rows show the
-	 * first and write to all; the CSS row says the selection disagrees.
+	 * InGradient -- or, when it has no stops and its property names a fallback (FallbackMeta), what that function of InOwner
+	 * answers: a function taking nothing and returning an FDreamGradient. A rect block's gradient is drawn as its old
+	 * two-colour gradient until it has stops; the rows show that, and an edit starts from it.
+	 */
+	FDreamGradient WithFallback(const IPropertyHandle& InHandle, const FDreamGradient& InGradient, const UObject* InOwner)
+	{
+		if (!InGradient.Stops.IsEmpty() || InOwner == nullptr)
+		{
+			return InGradient;
+		}
+		const FString& FunctionName = InHandle.GetMetaData(FallbackMeta);
+		UFunction* Function = FunctionName.IsEmpty() ? nullptr : InOwner->FindFunction(FName(*FunctionName));
+		const FStructProperty* Return = Function != nullptr ? CastField<FStructProperty>(Function->GetReturnProperty()) : nullptr;
+		if (Return == nullptr || Return->Struct != FDreamGradient::StaticStruct() || Function->NumParms != 1)
+		{
+			return InGradient;
+		}
+		uint8* Parameters = static_cast<uint8*>(FMemory_Alloca_Aligned(Function->ParmsSize, Function->GetMinAlignment()));
+		FMemory::Memzero(Parameters, Function->ParmsSize);
+		Return->InitializeValue_InContainer(Parameters);
+		const_cast<UObject*>(InOwner)->ProcessEvent(Function, Parameters);
+		FDreamGradient Answer = *Return->ContainerPtrToValuePtr<FDreamGradient>(Parameters);
+		Return->DestroyValue_InContainer(Parameters);
+		return Answer;
+	}
+
+	/** The objects InHandle's raw values are in, one each, or nothing where they cannot be told. */
+	TArray<UObject*> GetOwnersOfRawData(const IPropertyHandle& InHandle, int32 InRawCount)
+	{
+		TArray<UObject*> Owners;
+		InHandle.GetOuterObjects(Owners);
+		if (Owners.Num() != InRawCount)
+		{
+			Owners.Init(nullptr, InRawCount);
+		}
+		return Owners;
+	}
+
+	/**
+	 * The first gradient InHandle edits, as drawn (WithFallback). bOutMultipleValues: whether the others differ from it. The
+	 * editing rows show the first and write to all; the CSS row says the selection disagrees.
 	 */
 	bool ReadFirstGradient(const TSharedPtr<IPropertyHandle>& InHandle, FDreamGradient& OutGradient, bool* bOutMultipleValues = nullptr)
 	{
@@ -164,19 +209,21 @@ namespace DreamGradientCustomizationLocal
 		}
 		TArray<const void*> RawData;
 		InHandle->AccessRawData(RawData);
-		const FDreamGradient* First = nullptr;
-		for (const void* Raw : RawData)
+		const TArray<UObject*> Owners = GetOwnersOfRawData(*InHandle, RawData.Num());
+		bool bFound = false;
+		for (int32 Index = 0; Index < RawData.Num(); ++Index)
 		{
-			if (Raw == nullptr)
+			if (RawData[Index] == nullptr)
 			{
 				continue;
 			}
-			const FDreamGradient* Gradient = static_cast<const FDreamGradient*>(Raw);
-			if (First == nullptr)
+			const FDreamGradient Gradient = WithFallback(*InHandle, *static_cast<const FDreamGradient*>(RawData[Index]), Owners[Index]);
+			if (!bFound)
 			{
-				First = Gradient;
+				OutGradient = Gradient;
+				bFound = true;
 			}
-			else if (*Gradient != *First)
+			else if (Gradient != OutGradient)
 			{
 				if (bOutMultipleValues != nullptr)
 				{
@@ -185,12 +232,7 @@ namespace DreamGradientCustomizationLocal
 				break;
 			}
 		}
-		if (First == nullptr)
-		{
-			return false;
-		}
-		OutGradient = *First;
-		return true;
+		return bFound;
 	}
 
 	bool CanEdit(const TSharedRef<IPropertyHandle>& InHandle)
@@ -304,24 +346,38 @@ namespace DreamGradientCustomizationLocal
 		return TAttribute<bool>::CreateLambda([InHandle]() { return IsWritableFromCustomRows(InHandle); });
 	}
 
-	/** Every gradient InHandle edits as InEdit leaves it; whether any of them changed. */
+	/**
+	 * Every gradient InHandle edits as InEdit leaves it; whether any of them changed. An edit starts from the gradient as
+	 * drawn (WithFallback), so the first edit of one drawn from a fallback writes the fallback's stops with it; one the edit
+	 * leaves as it was is written back as it was.
+	 */
 	bool ComputeEdits(const TSharedRef<IPropertyHandle>& InHandle, TFunctionRef<void(FDreamGradient&)> InEdit, TArray<FDreamGradient>& OutValues)
 	{
 		TArray<const void*> RawData;
 		InHandle->AccessRawData(RawData);
+		const TArray<UObject*> Owners = GetOwnersOfRawData(*InHandle, RawData.Num());
 		OutValues.Reset(RawData.Num());
 		bool bChanged = false;
-		for (const void* Raw : RawData)
+		for (int32 Index = 0; Index < RawData.Num(); ++Index)
 		{
-			if (Raw == nullptr)
+			if (RawData[Index] == nullptr)
 			{
 				OutValues.AddDefaulted();
 				continue;
 			}
-			const FDreamGradient& Current = *static_cast<const FDreamGradient*>(Raw);
-			FDreamGradient& Edited = OutValues.Add_GetRef(Current);
+			const FDreamGradient& Raw = *static_cast<const FDreamGradient*>(RawData[Index]);
+			const FDreamGradient Current = WithFallback(*InHandle, Raw, Owners[Index]);
+			FDreamGradient Edited = Current;
 			InEdit(Edited);
-			bChanged |= Edited != Current;
+			if (Edited != Current)
+			{
+				bChanged = true;
+				OutValues.Add(MoveTemp(Edited));
+			}
+			else
+			{
+				OutValues.Add(Raw);
+			}
 		}
 		return bChanged;
 	}
@@ -660,12 +716,92 @@ namespace DreamGradientCustomizationLocal
 		return MenuBuilder.MakeWidget();
 	}
 
+	/**
+	 * Whether a gradient of the selection is drawn from its fallback (WithFallback): it has no stops of its own, and its
+	 * fields are not what is drawn. Its field rows then step aside; what it draws is in the strip, the CSS and the stops.
+	 */
+	bool IsDrawnFromFallback(const TSharedRef<IPropertyHandle>& InGradientHandle)
+	{
+		if (!InGradientHandle->IsValidHandle() || InGradientHandle->GetMetaData(FallbackMeta).IsEmpty())
+		{
+			return false;
+		}
+		TArray<const void*> RawData;
+		InGradientHandle->AccessRawData(RawData);
+		const TArray<UObject*> Owners = GetOwnersOfRawData(*InGradientHandle, RawData.Num());
+		for (int32 Index = 0; Index < RawData.Num(); ++Index)
+		{
+			const FDreamGradient* Raw = static_cast<const FDreamGradient*>(RawData[Index]);
+			if (Raw != nullptr && Raw->Stops.IsEmpty() && !WithFallback(*InGradientHandle, *Raw, Owners[Index]).Stops.IsEmpty())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** A type's name as an image editor gives it, where it has one. */
+	FText GetTypeLabel(EDreamPaintType InType)
+	{
+		switch (InType)
+		{
+		case EDreamPaintType::None: return LOCTEXT("TypeNone", "None");
+		case EDreamPaintType::Linear: return LOCTEXT("TypeLinear", "Linear");
+		case EDreamPaintType::Radial: return LOCTEXT("TypeRadial", "Radial");
+		case EDreamPaintType::Conic: return LOCTEXT("TypeConic", "Angle (Conic)");
+		case EDreamPaintType::Diamond: return LOCTEXT("TypeDiamond", "Diamond");
+		case EDreamPaintType::Corners: return LOCTEXT("TypeCorners", "Four Corners");
+		case EDreamPaintType::Reflected: return LOCTEXT("TypeReflected", "Reflected");
+		default: return FText::GetEmpty();
+		}
+	}
+
+	/**
+	 * The header's type picker: the type drawn (the selection's first, as drawn), and every type to change to, as one undoable
+	 * edit through EditGradients -- which, for a gradient drawn from its fallback, writes the fallback's stops with the type.
+	 */
+	TSharedRef<SWidget> MakeTypePicker(const TSharedRef<IPropertyHandle>& InHandle, const TSharedRef<FGradientFrameCache>& InCache)
+	{
+		return SNew(SComboButton)
+			.ComboButtonStyle(FAppStyle::Get(), "SimpleComboButton")
+			.HasDownArrow(true)
+			.ContentPadding(FMargin(2.0f, 0.0f))
+			.IsEnabled_Lambda([InHandle]() { return CanEdit(InHandle) && IsWritableFromCustomRows(InHandle); })
+			.ToolTipText(LOCTEXT("TypePicker_ToolTip", "The kind of gradient: along a line, out from a centre, round it, in a diamond, out both ways from a line, or the four corners."))
+			.ButtonContent()
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text_Lambda([InCache]()
+				{
+					const FGradientFrameCache::FReading& Reading = InCache->Get();
+					return Reading.bMultipleValues ? LOCTEXT("TypeMultiple", "Multiple") : GetTypeLabel(Reading.Gradient.Type);
+				})
+			]
+			.OnGetMenuContent_Lambda([InHandle]()
+			{
+				FMenuBuilder Menu(/*bInShouldCloseWindowAfterMenuSelection*/ true, nullptr);
+				for (const EDreamPaintType Type : { EDreamPaintType::Linear, EDreamPaintType::Radial, EDreamPaintType::Conic, EDreamPaintType::Diamond,
+					EDreamPaintType::Reflected, EDreamPaintType::Corners, EDreamPaintType::None })
+				{
+					Menu.AddMenuEntry(GetTypeLabel(Type), FText::GetEmpty(), FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([InHandle, Type]()
+					{
+						DreamGradientDetails::EditGradients(InHandle, LOCTEXT("ChangeType", "Change Gradient Type"), [Type](FDreamGradient& InOutGradient)
+						{
+							InOutGradient.Type = Type;
+						});
+					})));
+				}
+				return Menu.MakeWidget();
+			});
+	}
+
 	/** Shown when a gradient of the selection uses the field: a selection that disagrees shows what any of it uses. */
 	TAttribute<EVisibility> MakeFieldVisibility(const TSharedRef<IPropertyHandle>& InGradientHandle, FName InField)
 	{
 		return TAttribute<EVisibility>::CreateLambda([InGradientHandle, InField]()
 		{
-			if (!InGradientHandle->IsValidHandle())
+			if (!InGradientHandle->IsValidHandle() || IsDrawnFromFallback(InGradientHandle))
 			{
 				return EVisibility::Collapsed;
 			}
@@ -795,6 +931,75 @@ namespace DreamGradientCustomizationLocal
 		];
 	}
 
+	/**
+	 * Under the stops, one eyedropper per stop, beside a block of the stop's colour: a pick from the designer viewport (or
+	 * the screen) becomes that stop's colour, keeping its alpha, as one undo step.
+	 */
+	TSharedRef<SWidget> MakeStopPicks(const TSharedRef<IPropertyHandle>& InGradientHandle)
+	{
+		const auto StopColor = [InGradientHandle](int32 InIndex, FColor& OutColor)
+		{
+			FDreamGradient Gradient;
+			if (!ReadFirstGradient(InGradientHandle, Gradient) || !Gradient.Stops.IsValidIndex(InIndex))
+			{
+				return false;
+			}
+			OutColor = Gradient.Stops[InIndex].Color;
+			return true;
+		};
+		TSharedRef<SHorizontalBox> Picks = SNew(SHorizontalBox);
+		for (int32 Index = 0; Index < FDreamGradient::MaxStops; ++Index)
+		{
+			Picks->AddSlot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 0.0f, 6.0f, 0.0f)
+			[
+				SNew(SHorizontalBox)
+				.Visibility_Lambda([StopColor, Index]()
+				{
+					FColor Unused;
+					return StopColor(Index, Unused) ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(SColorBlock)
+					.Size(FVector2D(12.0, 12.0))
+					.Color_Lambda([StopColor, Index]()
+					{
+						FColor Color = FColor::White;
+						StopColor(Index, Color);
+						return FLinearColor::FromSRGBColor(Color);
+					})
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(SDreamUIEyedropperButton)
+					.IsEnabled_Lambda([InGradientHandle]() { return CanEdit(InGradientHandle); })
+					.ToolTipText(FText::Format(LOCTEXT("PickStop_ToolTip", "Pick stop {0}'s colour from the designer viewport, or anywhere on the screen."), FText::AsNumber(Index + 1)))
+					.OnPicked_Lambda([InGradientHandle, Index](const FDreamUIPickedColor& InPicked)
+					{
+						DreamGradientDetails::EditGradients(InGradientHandle, LOCTEXT("PickStopColour", "Pick Gradient Stop Colour"),
+							[Index, &InPicked](FDreamGradient& InOutGradient)
+							{
+								if (InOutGradient.Stops.IsValidIndex(Index))
+								{
+									const uint8 Alpha = InOutGradient.Stops[Index].Color.A;
+									InOutGradient.Stops[Index].Color = InPicked.SRGB;
+									InOutGradient.Stops[Index].Color.A = Alpha;
+								}
+							});
+					})
+				]
+			];
+		}
+		return Picks;
+	}
+
 	void AddStopsRow(IDetailChildrenBuilder& ChildBuilder, const TSharedRef<IPropertyHandle>& InGradientHandle, const TSharedRef<IPropertyHandle>& InStopsHandle)
 	{
 		const TSharedRef<FStopsWriter> Writer = MakeShared<FStopsWriter>(InGradientHandle);
@@ -835,7 +1040,18 @@ namespace DreamGradientCustomizationLocal
 		.MinDesiredWidth(250.0f)
 		.MaxDesiredWidth(1000.0f)
 		[
-			GradientEditor
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				GradientEditor
+			]
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.0f, 2.0f, 0.0f, 2.0f)
+			[
+				MakeStopPicks(InGradientHandle)
+			]
 		];
 	}
 }
@@ -1286,36 +1502,56 @@ void FDreamGradientCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> Pr
 	.MinDesiredWidth(250.0f)
 	.MaxDesiredWidth(600.0f)
 	[
-		SNew(SHorizontalBox)
-		+ SHorizontalBox::Slot()
-		.FillWidth(1.0f)
-		.VAlign(VAlign_Center)
-		.Padding(0.0f, 2.0f, 4.0f, 2.0f)
-		[
-			SNew(SDreamGradientPreview)
-			.DesiredSize(FVector2D(160.0, 18.0))
-			.Gradient_Lambda([PreviewCache]()
+		// A gradient preset dragged from the preset library onto the row paints with it, as one undo step.
+		SNew(SDreamUIPresetDropTarget)
+		.Kind(EDreamUIPresetKind::Gradient)
+		.OnDropped_Lambda([PropertyHandle](const FDreamUIPresetDragDropOp& InOperation)
+		{
+			FDreamGradient Dropped;
+			if (CanEdit(PropertyHandle) && InOperation.GetGradient(Dropped))
 			{
-				return PreviewCache->Get().Gradient;
-			})
-			.ToolTipText_Lambda([PropertyHandle]() { return GetSummaryText(PropertyHandle); })
-		]
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
+				ApplyPreset(PropertyHandle, Dropped, FText::FromName(InOperation.GetPreset().Name));
+			}
+		})
 		[
-			SNew(SComboButton)
-			.ComboButtonStyle(FAppStyle::Get(), "SimpleComboButton")
-			.HasDownArrow(true)
-			.ContentPadding(FMargin(2.0f, 0.0f))
-			.ToolTipText(LOCTEXT("Presets_ToolTip", "Paint with a preset -- one of the project's gradient assets, or of its presets in Project Settings > Plugins > Dream GUI -- or keep this gradient as one."))
-			.ButtonContent()
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 2.0f, 4.0f, 2.0f)
 			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(LOCTEXT("Presets", "Presets"))
+				SNew(SDreamGradientPreview)
+				.DesiredSize(FVector2D(160.0, 18.0))
+				.Gradient_Lambda([PreviewCache]()
+				{
+					return PreviewCache->Get().Gradient;
+				})
+				.ToolTipText_Lambda([PropertyHandle]() { return GetSummaryText(PropertyHandle); })
 			]
-			.OnGetMenuContent_Lambda([PropertyHandle]() { return MakePresetMenu(PropertyHandle); })
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 0.0f, 4.0f, 0.0f)
+			[
+				MakeTypePicker(PropertyHandle, PreviewCache)
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SComboButton)
+				.ComboButtonStyle(FAppStyle::Get(), "SimpleComboButton")
+				.HasDownArrow(true)
+				.ContentPadding(FMargin(2.0f, 0.0f))
+				.ToolTipText(LOCTEXT("Presets_ToolTip", "Paint with a preset -- one of the project's gradient assets, or of its presets in Project Settings > Plugins > Dream GUI -- or keep this gradient as one."))
+				.ButtonContent()
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.Text(LOCTEXT("Presets", "Presets"))
+				]
+				.OnGetMenuContent_Lambda([PropertyHandle]() { return MakePresetMenu(PropertyHandle); })
+			]
 		]
 	]
 	// The row's Copy and Paste speak CSS, the spelling a .dui and a project preset take; a paste of the property system's
@@ -1375,8 +1611,23 @@ void FDreamGradientCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> 
 		return;
 	}
 
+	// A gradient drawn from its fallback says so: its fields are not what is drawn, and the first edit writes what is.
+	ChildBuilder.AddCustomRow(LOCTEXT("FallbackSearch", "Gradient"))
+		.RowTag(DreamGradientDetails::FallbackRowTag)
+		.Visibility(TAttribute<EVisibility>::CreateLambda([PropertyHandle]()
+		{
+			return IsDrawnFromFallback(PropertyHandle) ? EVisibility::Visible : EVisibility::Collapsed;
+		}))
+		.WholeRowContent()
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFontItalic())
+			.AutoWrapText(true)
+			.Text(LOCTEXT("FallbackHint", "Drawn as the two-colour gradient this was written with. Edit it here or with its handles in the viewport and it becomes these stops."))
+		];
 	AddCssRow(ChildBuilder, PropertyHandle);
-	ChildBuilder.AddProperty(TypeHandle.ToSharedRef());
+	// The header picks the type; the row stays for search and for copying the field.
+	ChildBuilder.AddProperty(TypeHandle.ToSharedRef()).Visibility(EVisibility::Collapsed);
 	AddStopsRow(ChildBuilder, PropertyHandle, StopsHandle.ToSharedRef());
 	// The same stops as a list, for typing exact positions and colours.
 	ChildBuilder.AddProperty(StopsHandle.ToSharedRef())
@@ -1401,6 +1652,7 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 	const bool bRadial = InType == EDreamPaintType::Radial;
 	const bool bConic = InType == EDreamPaintType::Conic;
 	const bool bDiamond = InType == EDreamPaintType::Diamond;
+	const bool bReflected = InType == EDreamPaintType::Reflected;
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Type) || InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Stops))
 	{
 		// Kept in sight whatever the type: a type that paints nothing still holds its stops.
@@ -1412,13 +1664,13 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Angle))
 	{
-		// A Linear's direction, a Conic's start, a Diamond's turn.
-		return bLinear || bConic || bDiamond;
+		// A Linear's and a Reflected's direction, a Conic's start, a Radial ellipse's and a Diamond's turn.
+		return bLinear || bReflected || bConic || bRadial || bDiamond;
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Center))
 	{
 		// A Linear runs through the box's middle.
-		return bRadial || bConic || bDiamond;
+		return bRadial || bConic || bDiamond || bReflected;
 	}
 	if (InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Shape))
 	{
@@ -1438,7 +1690,7 @@ bool DreamGradientDetails::IsFieldUsed(FName InField, EDreamPaintType InType, ED
 		|| InField == GET_MEMBER_NAME_CHECKED(FDreamGradient, Offset))
 	{
 		// Along the gradient's line: Corners has none.
-		return bLinear || bRadial || bConic || bDiamond;
+		return bLinear || bRadial || bConic || bDiamond || bReflected;
 	}
 	// A field this does not know is shown.
 	return true;
@@ -1459,6 +1711,12 @@ bool DreamGradientDetails::EditGradients(const TSharedRef<IPropertyHandle>& InGr
 	const FScopedTransaction Transaction(InDescription);
 	StoreEdits(InGradientHandle, NewValues, EPropertyChangeType::ValueSet);
 	return true;
+}
+
+bool DreamGradientDetails::ReadDrawnGradient(const TSharedRef<IPropertyHandle>& InHandle, FDreamGradient& OutGradient)
+{
+	using namespace DreamGradientCustomizationLocal;
+	return IsGradientHandle(InHandle) && ReadFirstGradient(InHandle, OutGradient);
 }
 
 bool DreamGradientDetails::ApplyCss(const TSharedRef<IPropertyHandle>& InGradientHandle, const FString& InCss, FText& OutError)

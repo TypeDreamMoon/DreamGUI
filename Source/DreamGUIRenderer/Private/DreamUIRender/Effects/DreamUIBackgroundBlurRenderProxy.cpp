@@ -2,7 +2,11 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIRender/DreamUIPostProcessEffects.h"
+#include "DreamUIRender/DreamUIBackdropEffects.h"
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
+#include "DreamUIBackdropEffectPasses.h"
+#include "Engine/Texture.h"
+#include "TextureResource.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRendererLogging.h"
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
@@ -22,6 +26,10 @@ class FUIBackgroundBlurRenderProxy : public FDreamVisualPostProcessRenderProxy
 public:
 	int MaxDownSampleLevel = 0;
 	float BlurStrength = 0.0f;
+	/** None draws the uniform blur below, as it always did; any other map draws the progressive blur. */
+	FDreamUIBlurStrengthMap StrengthMap;
+	FTextureReferenceRHIRef StrengthMapTexture;
+	FSamplerStateRHIRef StrengthMapSampler;
 public:
 	FUIBackgroundBlurRenderProxy()
 		:FDreamVisualPostProcessRenderProxy()
@@ -31,6 +39,35 @@ public:
 	virtual bool CanRender()const override
 	{
 		return BlurStrength > 0.0f;
+	}
+	virtual void Render_RenderThread(const FDreamUIPostProcessContext& InContext) override
+	{
+		if (StrengthMap.Kind == 0 || InContext.Stack == nullptr || OutputTargetTexture.IsValid() || bUseFullSize)
+		{
+			FDreamVisualPostProcessRenderProxy::Render_RenderThread(InContext);
+			return;
+		}
+		SCOPE_CYCLE_COUNTER(STAT_BackgroundBlur);
+		if (BlurStrength <= 0.0f)
+		{
+			return;
+		}
+		// The pyramid over the copy, each pixel taking the level its map and the blur's strength ask for.
+		const int32 MaxLevel = FMath::Clamp(StrengthMap.MaxLevel, 1, DreamUIPostProcessEffects::BlurPyramidLevels - 1);
+		DreamUIBackdropPasses::FRegion Region;
+		if (!DreamUIBackdropPasses::CopyRegion(InContext, *this, 0.0f, DreamUIPostProcessEffects::GetBlurPyramidReach(MaxLevel) + 1, Region))
+		{
+			return;
+		}
+		DreamUIBackdropPasses::FComposite Composite;
+		Composite.Effect = 1;
+		Composite.Strength = BlurStrength;
+		Composite.Map = StrengthMap;
+		Composite.Map.MaxLevel = MaxLevel;
+		Composite.MapTexture = StrengthMapTexture;
+		Composite.MapSampler = StrengthMapSampler;
+		DreamUIBackdropPasses::BuildPyramid(InContext.GraphBuilder, InContext.GlobalShaderMap, Region.Copy, MaxLevel, Composite.Levels);
+		DreamUIBackdropPasses::DrawComposite(InContext, *this, Region, Composite);
 	}
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
@@ -211,6 +248,25 @@ void DreamUIPostProcessEffects::SetBackgroundBlur_GameThread(const FDreamVisualP
 		{
 			BackgroundBlurRenderProxy->MaxDownSampleLevel = InMaxDownSampleLevel;
 			BackgroundBlurRenderProxy->BlurStrength = InBlurStrength;
+		});
+}
+
+void DreamUIPostProcessEffects::SetBackgroundBlurStrengthMap_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, const FDreamUIBlurStrengthMap& InMap)
+{
+	if (!InProxy.IsValid())
+	{
+		return;
+	}
+	auto BackgroundBlurRenderProxy = StaticCastSharedPtr<FUIBackgroundBlurRenderProxy>(InProxy);
+	ENQUEUE_RENDER_COMMAND(FDreamBackgroundBlur_UpdateStrengthMap)
+		([BackgroundBlurRenderProxy, InMap](FRHICommandListImmediate& RHICmdList)
+		{
+			// The texture was alive when this was enqueued; only its reference and sampler are kept.
+			const FTextureResource* Resource = InMap.Texture != nullptr ? InMap.Texture->GetResource() : nullptr;
+			BackgroundBlurRenderProxy->StrengthMapTexture = InMap.Texture != nullptr ? InMap.Texture->TextureReference.TextureReferenceRHI : FTextureReferenceRHIRef();
+			BackgroundBlurRenderProxy->StrengthMapSampler = Resource != nullptr ? Resource->SamplerStateRHI : FSamplerStateRHIRef();
+			BackgroundBlurRenderProxy->StrengthMap = InMap;
+			BackgroundBlurRenderProxy->StrengthMap.Texture = nullptr;
 		});
 }
 

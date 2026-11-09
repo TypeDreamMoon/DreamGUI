@@ -6,6 +6,9 @@
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Layout/Margin.h"
+#include "Core/DreamLayerStyleTypes.h"
+#include "Core/DreamUIShapeBlend.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "DreamRectBlock.generated.h"
 
 
@@ -67,6 +70,7 @@ enum class EDreamRectBlockTextureMode : uint8
 };
 
 class UDreamUISpriteData_BaseObject;
+class UDreamShapeBlendGroup;
 
 /**
  * UV channel-
@@ -97,8 +101,87 @@ public:
 	 */
 	bool IsDrawnByBuiltInShader() const;
 
+	/** The texels of a rect block's row before its layer style's record (DreamUIRectBlock.ush's DREAMUI_RECT_BLOCK_STYLE_FIRST). */
+	static constexpr int32 OwnDataTexels = 12;
+	/**
+	 * Its widget's layer style (UDreamLayerStyle) changed, or came or went: the style drawn in its pixels is written into its row
+	 * again and its quad grown by what the style reaches.
+	 */
+	void OnLayerStyleChanged();
+
+	/**
+	 * Its own shadows, border and gradient written as a layer style: the outer shadow as a drop shadow, the inner shadow as an inner
+	 * shadow, the border as an inside stroke (its gradient as the stroke's), the body gradient as a radial gradient overlay. The
+	 * same four effects, a second way to write them; the rect block draws them itself, and a layer style on its widget adds to them.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	FDreamLayerEffects GetEffectsAsLayerStyle() const;
+	/**
+	 * The reverse: InStyle's first drop shadow, inner shadow, stroke and gradient overlay written into this rect block's own
+	 * shadows, border and gradient, each turned off where InStyle has none. What those cannot say -- a blend mode, a contour,
+	 * noise, a stroke outside the edge -- is dropped; the effects of other kinds are not read.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetEffectsFromLayerStyle(const FDreamLayerEffects& InStyle);
+
+	/** The body's gradient as written: with no stops, the two-colour one (GetEffectiveBodyGradient) is drawn. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	const FDreamGradient& GetBodyGradient() const { return BodyGradient; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetBodyGradient(const FDreamGradient& InGradient);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	const FDreamGradient& GetBorderGradient() const { return BorderGradient; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetBorderGradient(const FDreamGradient& InGradient);
+	/**
+	 * The gradient the body is drawn with while bEnableBodyGradient is on: BodyGradient, or with no stops the two-colour
+	 * gradient its old properties say, as two stops at its widget's size (MakeTwoColourGradient).
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	FDreamGradient GetEffectiveBodyGradient() const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	FDreamGradient GetEffectiveBorderGradient() const;
+	/**
+	 * A two-colour gradient as stops: InInnerColor at InCenter fading to InOuterColor at InRadius (both in units, the centre
+	 * from the rect's bottom left), turned by InRotation degrees, on a rect InWidth by InHeight -- a radial ellipse of an
+	 * explicit radius mixed in linear light, the inner colour laid over the outer one as the rect block always laid it.
+	 */
+	static FDreamGradient MakeTwoColourGradient(const FColor& InInnerColor, const FColor& InOuterColor, const FVector2f& InCenter, const FVector2f& InRadius,
+		float InRotation, float InWidth, float InHeight);
+	/** The rows of its world's paint rows its gradients are drawn from; INDEX_NONE for one it does not draw. For tests and tools. */
+	int32 GetBodyGradientRow() const { return BodyGradientRow; }
+	int32 GetBorderGradientRow() const { return BorderGradientRow; }
+
+	/** Its corners' radii in units, as its unit mode resolves them at its widget's size. */
+	FVector4f GetResolvedCornerRadius() const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+	EDreamShapeBlendOperation GetShapeBlendOperation() const { return ShapeBlendOperation; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+	void SetShapeBlendOperation(EDreamShapeBlendOperation Value);
+	/**
+	 * What its parent's shape blend group (UDreamShapeBlendGroup) says of it: a member melted into the group's shape, drawn by
+	 * the group's first member, the leader, which draws InShape (in its own frame) over InBounds. A null group: on its own again.
+	 */
+	void SetShapeBlend(UDreamShapeBlendGroup* InGroup, bool bInLeader, const FDreamUIShapeBlendShape* InShape, const FBox2f& InBounds);
+	/** Melted into a shape blend group's shape, drawn by its leader or by nothing of its own. */
+	bool IsMeltedIntoShapeBlend() const { return ShapeBlendGroup.IsValid(); }
+	bool IsShapeBlendLeader() const { return bShapeBlendLeader && ShapeBlendGroup.IsValid(); }
+
+	/**
+	 * A reveal highlight on its border (a UDreamPointerLight over it): the border's gradient centred on InCenter (units from its
+	 * rect's bottom left, as BorderGradientCenter in units), InRadius across, in InColor, in place of its own border gradient
+	 * while on. Not saved.
+	 */
+	void SetRevealHighlight(bool bInOn, const FVector2f& InCenter, float InRadius, const FColor& InColor);
+	bool HasRevealHighlight() const { return bRevealHighlight; }
+	/** Drawn by that material rather than the built-in shader while it is set. */
+	virtual void SetMaterialOverride(UMaterialInterface* InMaterial) override;
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	using Super::PreEditChange;
+	virtual void PreEditChange(FEditPropertyChain& PropertyAboutToChange) override;
+	virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 protected:
 	virtual void OnPreChangeSpriteProperty();
@@ -114,9 +197,12 @@ protected:
 	friend class FDreamRectBlockCustomization;
 
 #pragma region BlockData
+	// DreamGUI_Hidden on every *UnitMode below, the body's texture mode and texture, and bUniformSetCornerRadius: the
+	// details panel edits each on another property's row -- the unit button beside a value, the Texture/Sprite switch and
+	// picker heading the body's texture group, the lock on the corner radius (FDreamRectBlockCustomization).
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector4f CornerRadius = FVector4f(0.1f, 0.1f, 0.1f, 0.1f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode CornerRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
 	/** Prevent edge aliasing, useful when in 3d. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", AdvancedDisplay)
@@ -126,9 +212,9 @@ protected:
 		bool bEnableBody = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FColor BodyColor = FColor::White;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockTextureMode BodyTextureMode = EDreamRectBlockTextureMode::Sprite;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false", DreamGUI_Hidden))
 		TObjectPtr<class UTexture> BodyTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<UDreamUISpriteData_BaseObject> BodySpriteTexture = nullptr;
@@ -149,40 +235,63 @@ protected:
 		FMargin BodyTextureMargin = FMargin(0.0f);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableBodyGradient = false;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	/**
+	 * What the body is filled with in place of BodyColor while bEnableBodyGradient is on, times its texture: a gradient of up
+	 * to FDreamGradient::MaxStops stops, linear, radial, angle (Conic), diamond, reflected or four corners -- the gradient a
+	 * text paints with, drawn from the same rows. With no stops it is the two-colour gradient rect blocks had before
+	 * (BodyGradientColor at BodyGradientCenter to BodyColor at BodyGradientRadius, turned by BodyGradientRotation), as the two
+	 * stops GetEffectiveBodyGradient makes of it; the first edit in the editor writes those stops here, and the .dui line it
+	 * writes takes the place of the two-colour lines.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "bEnableBodyGradient",
+		DreamGUI_Handle = "Gradient", DreamGUI_GradientFallback = "GetEffectiveBodyGradient",
+		DreamGUI_Replaces = "BodyGradientColor,BodyGradientCenter,BodyGradientCenterUnitMode,BodyGradientRadius,BodyGradientRadiusUnitMode,BodyGradientRotation"))
+		FDreamGradient BodyGradient;
+	/**
+	 * The two-colour gradient's colour, centre (from the rect's bottom left), radius and turn, and the units of the two:
+	 * read from what was written before BodyGradient had stops, and drawn while it has none. Not shown in the editor; their
+	 * setters are deprecated.
+	 */
+	UPROPERTY()
 		FColor BodyGradientColor = FColor::Black;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		FVector2f BodyGradientCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		EDreamRectBlockUnitMode BodyGradientCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		FVector2f BodyGradientRadius = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		EDreamRectBlockUnitMode BodyGradientRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
+	UPROPERTY()
 		float BodyGradientRotation = 0;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableBorder = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float BorderWidth = 2;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode BorderWidthUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FColor BorderColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableBorderGradient = false;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	/** What the border is drawn in place of BorderColor while bEnableBorderGradient is on: as BodyGradient is for the body. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "bEnableBorderGradient",
+		DreamGUI_Handle = "Gradient", DreamGUI_GradientFallback = "GetEffectiveBorderGradient",
+		DreamGUI_Replaces = "BorderGradientColor,BorderGradientCenter,BorderGradientCenterUnitMode,BorderGradientRadius,BorderGradientRadiusUnitMode,BorderGradientRotation"))
+		FDreamGradient BorderGradient;
+	/** The border's two-colour gradient, as BodyGradientColor and the rest are the body's. */
+	UPROPERTY()
 		FColor BorderGradientColor = FColor::Black;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		FVector2f BorderGradientCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		EDreamRectBlockUnitMode BorderGradientCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		FVector2f BorderGradientRadius = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY()
 		EDreamRectBlockUnitMode BorderGradientRadiusUnitMode = EDreamRectBlockUnitMode::Percentage;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
+	UPROPERTY()
 		float BorderGradientRotation = 0;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
@@ -191,24 +300,24 @@ protected:
 		FColor InnerShadowColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowSize = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowSizeUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowBlur = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 		float InnerShadowAngle = 45;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float InnerShadowDistance = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode InnerShadowDistanceUnitMode = EDreamRectBlockUnitMode::Value;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableRadialFill = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector2f RadialFillCenter = FVector2f(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode RadialFillCenterUnitMode = EDreamRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float RadialFillRotation = 0;
@@ -221,20 +330,22 @@ protected:
 		FColor OuterShadowColor = FColor(0, 0, 0, 128);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float OuterShadowSize = 0;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowSizeUnitMode = EDreamRectBlockUnitMode::Value;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0"))
 		float OuterShadowBlur = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0", DreamGUI_Handle = "Shadow"))
 		float OuterShadowAngle = 45;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float OuterShadowDistance = 4;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowDistanceUnitMode = EDreamRectBlockUnitMode::Value;
 
-	void FillData(uint8* Data, float width, float height);
+	void FillData(uint8* Data, float width, float height, const struct FDreamUILayerStyleRecord* InStyle = nullptr);
+	/** The style drawn in this rect block's pixels: its widget's layer style's record, when that is drawn here; else null. */
+	const struct FDreamUILayerStyleRecord* FindLayerStyleRecord() const;
 	float GetValueWithUnitMode(float SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const;
 	FVector4f GetValueWithUnitMode(const FVector4f& SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const;
 	FVector2f GetValueWithUnitMode(const FVector2f& SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const;
@@ -311,12 +422,8 @@ private:
 	}
 
 	void OnCornerRadiusUnitModeChanged(float width, float height);
-	OnVector2UnitModeChanged(BodyGradientCenter);
-	OnVector2UnitModeChanged(BodyGradientRadius);
 
 	OnFloatUnitModeChanged(BorderWidth, 0.5f);
-	OnVector2UnitModeChanged(BorderGradientCenter);
-	OnVector2UnitModeChanged(BorderGradientRadius);
 
 	OnFloatUnitModeChanged(InnerShadowSize, 0.5f);
 	OnFloatUnitModeChanged(InnerShadowBlur, 1.0f);
@@ -331,7 +438,7 @@ private:
 #pragma endregion
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DreamGUI_Hidden))
 		bool bUniformSetCornerRadius = true;
 #endif
 
@@ -345,6 +452,10 @@ private:
 		TObjectPtr<class UDreamUIDataAsTexture> DataRows = nullptr;
 	/** Its world's rows, or the asset's own in a world with no UI manager to keep any. */
 	UDreamUIDataAsTexture* FindDataRows() const;
+	/** How this rect block joins the shape its parent's shape blend group makes, when there is one (UDreamShapeBlendGroup). */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
+		EDreamShapeBlendOperation ShapeBlendOperation = EDreamShapeBlendOperation::Union;
+
 	/** When do raycast interaction, will the CornerRadius be considered? Only support RaycastType.Rect. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Raycast")
 		bool bRaycastSupportCornerRadius = true;
@@ -367,7 +478,44 @@ private:
 
 	void MarkNeedUpdateBlockData();
 	uint8 bNeedUpdateBlockData : 1;
+	/** How far its layer style reached when its quad was last made. */
+	float LastStyleReach = 0.0f;
+	/** The shape blend group it is melted into, the shape it draws as the group's leader and the row that holds it. */
+	TWeakObjectPtr<UDreamShapeBlendGroup> ShapeBlendGroup;
+	FDreamUIShapeBlendShape ShapeBlendShape;
+	FBox2f ShapeBlendBounds = FBox2f(ForceInit);
+	int32 ShapeBlendRow = INDEX_NONE;
+	bool bShapeBlendLeader = false;
+	/** See SetRevealHighlight. */
+	bool bRevealHighlight = false;
+	FVector2f RevealCenter = FVector2f::ZeroVector;
+	float RevealRadius = 0.0f;
+	FColor RevealColor = FColor::Transparent;
+	void ReleaseShapeBlendRow();
+	/** The gradients drawn, from their rows of the paint rows of the world they were taken in, and what those rows hold. */
+	int32 BodyGradientRow = INDEX_NONE;
+	int32 BorderGradientRow = INDEX_NONE;
+	FDreamGradient BodyGradientHeld;
+	FDreamGradient BorderGradientHeld;
+	TWeakObjectPtr<class UDreamUIManagerWorldSubsystem> GradientRowsOwner;
+	/** The gradients to draw at a rect InWidth by InHeight: the written ones, or the two-colour ones as stops. */
+	FDreamGradient ResolveBodyGradient(float InWidth, float InHeight) const;
+	FDreamGradient ResolveBorderGradient(float InWidth, float InHeight) const;
+	/** Its widget's size, or 100 by 100 without one: what the two-colour gradient's units are measured against. */
+	FVector2f GetSizeForGradients() const;
+	/** Its gradient rows brought to what it draws now -- the reveal highlight in the border's place while it is on. Before FillData. */
+	void UpdateGradientRows(float InWidth, float InHeight);
+	void ReleaseGradientRows();
+#if WITH_EDITORONLY_DATA
+	/** A field of a gradient that had no stops is being edited, and what that gradient drew before (PreEditChange). */
+	bool bBodyGradientEditFromTwoColour = false;
+	bool bBorderGradientEditFromTwoColour = false;
+	FDreamGradient GradientBeforeEdit;
+#endif
 	uint8 bHasAddToSprite : 1;
+public:
+	/** Its body's rounded rect: what a widget clipping to it as the layer below is clipped to. */
+	virtual bool GetClipUnderlay(struct FDreamClipUnderlay& OutUnderlay)const override;
 protected:
 	bool LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const;
 	virtual bool LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
@@ -427,18 +575,22 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		bool GetEnableBodyGradient()const { return bEnableBodyGradient; }
+	/**
+	 * The two-colour gradient's colour, centre (from the rect's bottom left), radius and turn -- or, once BodyGradient has
+	 * stops, its first stop's colour, its centre, its radius and its angle, in the two-colour units.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FColor& GetBodyGradientColor()const { return BodyGradientColor; }
+		FColor GetBodyGradientColor()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FVector2f& GetBodyGradientCenter()const { return BodyGradientCenter; }
+		FVector2f GetBodyGradientCenter()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamRectBlockUnitMode GetBodyGradientCenterUnitMode()const { return BodyGradientCenterUnitMode; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FVector2f& GetBodyGradientRadius()const { return BodyGradientRadius; }
+		FVector2f GetBodyGradientRadius()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamRectBlockUnitMode GetBodyGradientRadiusUnitMode()const { return BodyGradientRadiusUnitMode; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		float GetBodyGradientRotation()const { return BodyGradientRotation; }
+		float GetBodyGradientRotation()const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		bool GetEnableBorder()const { return bEnableBorder; }
@@ -450,18 +602,19 @@ public:
 		const FColor& GetBorderColor()const { return BorderColor; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		bool GetEnableBorderGradient()const { return bEnableBorderGradient; }
+	/** The border's, as GetBodyGradientColor and the rest are the body's. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FColor& GetBorderGradientColor()const { return BorderGradientColor; }
+		FColor GetBorderGradientColor()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FVector2f& GetBorderGradientCenter()const { return BorderGradientCenter; }
+		FVector2f GetBorderGradientCenter()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		EDreamRectBlockUnitMode GetBorderGradientCenterUnitMode()const { return CornerRadiusUnitMode; }
+		EDreamRectBlockUnitMode GetBorderGradientCenterUnitMode()const { return BorderGradientCenterUnitMode; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		const FVector2f& GetBorderGradientRadius()const { return BorderGradientRadius; }
+		FVector2f GetBorderGradientRadius()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamRectBlockUnitMode GetBorderGradientRadiusUnitMode()const { return BorderGradientRadiusUnitMode; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		float GetBorderGradientRotation()const { return BorderGradientRotation; }
+		float GetBorderGradientRotation()const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		bool GetEnableInnerShadow()const { return bEnableInnerShadow; }
@@ -543,17 +696,27 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetEnableBodyGradient(bool value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	/**
+	 * The two-colour gradient's setters. On a gradient that has stops they set its first stop's colour, its centre, its
+	 * radius (as an explicit one) and its angle.
+	 */
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: a gradient of any number of stops."))
 		void SetBodyGradientColor(const FColor& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: a gradient of any number of stops."))
 		void SetBodyGradientCenter(const FVector2D& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: its centre is a fraction of the rect.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: its centre is a fraction of the rect."))
 		void SetBodyGradientCenterUnitMode(EDreamRectBlockUnitMode value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: a gradient of any number of stops."))
 		void SetBodyGradientRadius(const FVector2D& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: its radius is a fraction of the rect.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: its radius is a fraction of the rect."))
 		void SetBodyGradientRadiusUnitMode(EDreamRectBlockUnitMode value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BodyGradient (SetBodyGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Body Gradient instead: a gradient of any number of stops."))
 		void SetBodyGradientRotation(float value);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -566,17 +729,24 @@ public:
 		void SetBorderColor(const FColor& value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetEnableBorderGradient(bool value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	/** The border's two-colour setters, as the body's: on a gradient that has stops, its first stop, centre, radius and angle. */
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: a gradient of any number of stops."))
 		void SetBorderGradientColor(const FColor& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: a gradient of any number of stops."))
 		void SetBorderGradientCenter(const FVector2D& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: its centre is a fraction of the rect.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: its centre is a fraction of the rect."))
 		void SetBorderGradientCenterUnitMode(EDreamRectBlockUnitMode value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: a gradient of any number of stops."))
 		void SetBorderGradientRadius(const FVector2D& value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: its radius is a fraction of the rect.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: its radius is a fraction of the rect."))
 		void SetBorderGradientRadiusUnitMode(EDreamRectBlockUnitMode value);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UE_DEPRECATED(5.8, "Set BorderGradient (SetBorderGradient) instead: a gradient of any number of stops.")
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeprecatedFunction, DeprecationMessage = "Set Border Gradient instead: a gradient of any number of stops."))
 		void SetBorderGradientRotation(float value);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

@@ -131,8 +131,14 @@ When a block names a property twice, the later line wins. A node's own lines win
 | Asset path | `/Game/UI/T_Icon`, `"/Game/UI/T_Icon.T_Icon"` | An object or class reference. Quoted works too. |
 | Resource | `@Accent` | The value of a `resources` entry. See [Resources](styles-and-resources.md#resources). |
 | Node id | `CheckMark` | On a property that holds a widget, a visual or a behaviour: the node of that id in this file. |
+| List | `[1, 2, 3]`, `["A", "B"]`, `[(0, 0), (8, 8)]`, `[]` | An array or a set: each element a value of the element type, node ids included in an array. A set keeps no order. May span lines; a trailing comma is allowed. |
+| Map | `{ Hover: #FFCC00, Pressed: #AA8800 }`, `{}` | A map: `key: value` entries, each side a value of its type. A name key that is one word may be written bare. |
+| Contour | `Gaussian`, `"custom(0 0, 0.5 1 corner, 1 0)"` | A layer style's contour: a named shape's word, or a custom curve's points -- each its input and output, `corner` after a point the curve bends at. |
 
 A flags enum has no `|`; write a combination as the number its flags add up to.
+
+A list on a property that is not an array or a set, a map on one that is not a map, or a set or map of nodes, is
+DUI4009; a list or a map that does not read (a bracket never closed, a map entry with no `:`) is DUI2023.
 
 A string can carry the key it is localized under: `Text = "OK" @key("Dialog.Confirm")`. Without one the key is
 `<node id>.<property>` -- with the component's class and position between the two for a line of a `+` block -- in the

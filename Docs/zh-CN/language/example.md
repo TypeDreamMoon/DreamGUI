@@ -146,15 +146,10 @@ Widget Root {
 
 逐段看它依赖的规则：
 
-- `use … as ui` 让库的名字和界面自己的名字分开：`: ui.Caption`、`@ui.Panel`，行组件则是 `ui.Row`——库自己那行
-  `use "SettingsRow.dui" as Row` 随库一起进了命名空间。
-- `ui.Row Audio { … }` 是行组件的一个实例：`Label`、`Value` 和 `Index` 设的是它的 props——只是初始值，之后处理函数通过行的变量
-  `Audio` 去改 `Value`；`Changed ->` 路由的是行从箭头按钮里用 `emit` 抛出的事件。
-- `VerticalBox Page` 和那个无名的 `HorizontalBox` 都是把容器写成节点类型；它们的 `Spacing` 和
-  `Padding` 是容器的属性。
+- `use … as ui` 让库的名字和界面自己的名字分开：`: ui.Caption`、`@ui.Panel`，行组件则是 `ui.Row`——库自己那行 `use "SettingsRow.dui" as Row` 随库一起进了命名空间。
+- `ui.Row Audio { … }` 是行组件的一个实例：`Label`、`Value` 和 `Index` 设的是它的 props——只是初始值，之后处理函数通过行的变量 `Audio` 去改 `Value`；`Changed ->` 路由的是行从箭头按钮里用 `emit` 抛出的事件。
+- `VerticalBox Page` 和那个无名的 `HorizontalBox` 都是把容器写成节点类型；它们的 `Spacing` 和 `Padding` 是容器的属性。
 - `Widget Rows : ui.Column` 从样式拿到它的竖排盒子和 Fill。
 - `if` 只在 `HasUnsavedChanges()` 为真时显示提示；它翻转时没有东西被创建或销毁。
-- `for` 为类的 `KeyHints` 数组（一个 FieldNotify 的对象变量数组，元素有 `Label`
-  成员）每一项生成一个文字，排在两个按钮之后，`Text <- Hint.Label` 把每个副本绑到它那一项上。
-- 界面的类需要提供 `HasUnsavedChanges`、`KeyHints`、三个 `Handle…Changed(Index, Step)` 处理函数、
-  `HandleApply` 和 `HandleBack`，写在 C++ 里或 Blueprint 的图表里都行。
+- `for` 为类的 `KeyHints` 数组（一个 FieldNotify 的对象变量数组，元素有 `Label` 成员）每一项生成一个文字，排在两个按钮之后，`Text <- Hint.Label` 把每个副本绑到它那一项上。
+- 界面的类需要提供 `HasUnsavedChanges`、`KeyHints`、三个 `Handle…Changed(Index, Step)` 处理函数、 `HandleApply` 和 `HandleBack`，写在 C++ 里或 Blueprint 的图表里都行。

@@ -1,8 +1,3 @@
----
-title: "UDreamPanelLayoutBase"
-description: "UDreamPanelLayoutBase"
----
-
 <a id="udreampanellayoutbase"></a>
 
 # UDreamPanelLayoutBase
@@ -52,3 +47,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UPanelWidget` | `RemoveChild` | adopt | `RemoveChild` | 与 UMG 一样分离并让子项保持存活；所有权转移给调用方。 |
 | `UPanelWidget` | `HasAnyChildren` | adopt | `HasAnyChildren` |  |
 | `UPanelWidget` | `ClearChildren` | map | `DestroyAllChildren` | 以它在这里必须做的事情命名。UMG 的版本只是分离并让 GC 回收这些碎片，而在此插件中这会使已注册的活跃控件无人持有。 |
+

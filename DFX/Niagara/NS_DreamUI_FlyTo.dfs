@@ -1,0 +1,55 @@
+// What UDreamNiagaraSystem::BurstTo spawns when no flight system is set: a handful of bright tokens that scatter from where
+// they are spawned, then sweep in an arc to User.DreamUI_TargetPosition and shrink into it -- coins to a counter, stars to a
+// score. The target is written every frame by the widget (the target's centre, in the simulation's world), so a moving
+// target is caught. Copy it to make your own: keep the parameter's name and the world space.
+System(Name="Niagara/NS_DreamUI_FlyTo", Root="Plugin.DreamGUI")
+{
+    Properties = {
+        Position DreamUI_TargetPosition = (0, 0, 0)            [ Group="DreamUI"; Description="Where the tokens fly to. DreamGUI writes it." ];
+        int      Count                  = 10                   [ Group="Flight" ];
+        float    Spread                 = 40.0                 [ Group="Flight"; Description="How far the tokens scatter before they fly, in units." ];
+        Color    Tint                   = (1.0, 0.78, 0.25, 1) [ Group="Look" ];
+        float    Size                   = 16.0                 [ Group="Look" ];
+    }
+
+    Emitter Tokens
+    {
+        Settings = {
+            SimTarget   = CPU;
+            LocalSpace  = false;
+            Determinism = false;
+        }
+
+        EmitterUpdate = {
+            EmitterState(LifeCycleMode = Self, LoopBehavior = Once, LoopDuration = 0.1);
+            SpawnBurst_Instantaneous(SpawnCount = User.Count, SpawnTime = 0.0);
+        }
+
+        ParticleSpawn = {
+            Spawn/Initialization/V2/InitializeParticle(LifetimeMode = Random, LifetimeMin = 0.75, LifetimeMax = 1.05);
+            SystemLocation();
+            Position Particles.DreamUI.Start   = Particles.Position;
+            Vector   Particles.DreamUI.Scatter = RandomRangeVector(Minimum = (-1, 0, -1), Maximum = (1, 0, 1));
+            float    Particles.DreamUI.Spin    = RandomRangeFloat(Minimum = -360.0, Maximum = 360.0);
+        }
+
+        ParticleUpdate = {
+            ParticleState();
+            // Out along the scatter and back in an arc, while the path eases from the start to the target (a smoothstep, written
+            // out: the VM has none).
+            Position Particles.Position = hlsl {
+                lerp(Particles.DreamUI.Start, User.DreamUI_TargetPosition, saturate((Particles.NormalizedAge - 0.15) * 1.1764706) * saturate((Particles.NormalizedAge - 0.15) * 1.1764706) * (3.0 - 2.0 * saturate((Particles.NormalizedAge - 0.15) * 1.1764706)))
+                    + Particles.DreamUI.Scatter * User.Spread * sin(saturate(Particles.NormalizedAge * 1.4) * 3.14159)
+            };
+            Vector2 Particles.SpriteSize = hlsl { float2(User.Size, User.Size) * (1.0 - 0.6 * saturate((Particles.NormalizedAge - 0.8) * 5.0) * saturate((Particles.NormalizedAge - 0.8) * 5.0) * (3.0 - 2.0 * saturate((Particles.NormalizedAge - 0.8) * 5.0))) };
+            float   Particles.SpriteRotation = hlsl { Particles.DreamUI.Spin * Particles.NormalizedAge };
+            Color   Particles.Color = hlsl { float4(User.Tint.rgb * (1.0 + 1.5 * saturate((Particles.NormalizedAge - 0.85) * 6.6666667) * saturate((Particles.NormalizedAge - 0.85) * 6.6666667) * (3.0 - 2.0 * saturate((Particles.NormalizedAge - 0.85) * 6.6666667))), User.Tint.a) };
+        }
+
+        SpriteRenderer Tokens
+        {
+            Alignment  = Unaligned;
+            FacingMode = FaceCamera;
+        }
+    }
+}

@@ -1,8 +1,3 @@
----
-title: "UDreamToggle"
-description: "UDreamToggle"
----
-
 <a id="udreamtoggle"></a>
 
 # UDreamToggle
@@ -15,14 +10,9 @@ description: "UDreamToggle"
 
 一个层级结构由代码而非资源构成的开关。
 
-BP_Toggle 拥有的同样四个节点——一个方框、其中有一个勾选标记、旁边有一个标签——在
-NativeOnInitialized 中构建，而不是从模板实例化而来。这样做的收益在于，该控件
-不可能处于半成品状态：BP_Button 发布了数月却没有在其上挂载 UIButton，而没有任何人指出这一点，
-而一个总是添加自身行为的类不可能遭遇这种情况。
+BP_Toggle 拥有的同样四个节点——一个方框、其中有一个勾选标记、旁边有一个标签——在 NativeOnInitialized 中构建，而不是从模板实例化而来。这样做的收益在于，该控件不可能处于半成品状态：BP_Button 发布了数月却没有在其上挂载 UIButton，而没有任何人指出这一点，而一个总是添加自身行为的类不可能遭遇这种情况。
 
-代价则是一棵没人能打开的树。作者原本必须深入
-层级结构去修改的一切，在这里都必须成为属性，这就是 FDreamToggleStyle 的意义所在，而
-一旦某个项目希望其所有开关保持一致，这就不再足够了。
+代价则是一棵没人能打开的树。作者原本必须深入层级结构去修改的一切，在这里都必须成为属性，这就是 FDreamToggleStyle 的意义所在，而一旦某个项目希望其所有开关保持一致，这就不再足够了。
 
 它无需任何语言改动即可组合进 .dui，因为类路径本身就已经是一个节点标签：
 
@@ -111,3 +101,4 @@ UMG 类中每一个面向蓝图的成员，以及它们去向何处。*adopt*：
 | `UCheckBox` | `SetTouchMethod` | adopt | `SetTouchMethod` |  |
 | `UCheckBox` | `SetPressMethod` | adopt | `SetPressMethod` |  |
 | `UCheckBox` | `SetStyle` | adopt | `SetStyle` | 不是 UCheckBox 上的 UFUNCTION（其 Setter meta 如此命名）；在此添加是因为一个运行时无法替换的样式是只有设计者才能更改的外观。 |
+

@@ -100,6 +100,9 @@ public class DreamGUIEditor : ModuleRules
 			new string[]
 			{
                 "EditorStyle",
+				// The timeline write-back reads a sequence's sampled keys back as the ease that made them, with the same
+				// curves the builder sampled (FDreamUITimelineWriteBack).
+				"DreamTween",
 				// UDreamUIDesignerSettings: the designer's view preferences live in
 				// EditorPerProjectUserSettings, not in the prefab asset.
 				"DeveloperSettings",

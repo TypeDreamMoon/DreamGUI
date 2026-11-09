@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamCanvasCustomization.h"
+#include "DetailCustomization/DreamDetailsLayout.h"
 #include "DreamDetailsCopyPaste.h"
 #include "DreamUIEditorUtils.h"
 #include "Core/Components/DreamCanvas.h"
@@ -425,9 +426,13 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}
 	}
 
-	for (auto item : NeedToHidePropertyNames)
+	// What does not apply to this canvas -- it is not a root, it does not render to a target, it is in world space -- is decided
+	// by what the canvas is, not by another property, so no EditCondition can say it. Each keeps its row, collapsed until it
+	// applies (the panel is rebuilt when what decides it changes), rather than being taken out of the panel.
+	FDreamDetailsLayout Layout(DetailBuilder);
+	for (const FName& Item : NeedToHidePropertyNames)
 	{
-		DetailBuilder.HideProperty(item);
+		Layout.ShowWhen(Item, false);
 	}
 }
 

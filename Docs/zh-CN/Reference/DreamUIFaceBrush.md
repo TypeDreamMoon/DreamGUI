@@ -1,8 +1,3 @@
----
-title: "FDreamUIFaceBrush"
-description: "FDreamUIFaceBrush"
----
-
 <a id="fdreamuifacebrush"></a>
 
 # FDreamUIFaceBrush
@@ -13,10 +8,7 @@ description: "FDreamUIFaceBrush"
 
 控件某一部分的程序化矩形面的可选皮肤。
 
-留空表示该面保持普通圆角矩形——即内置外观。设置一张纹理（或一个
-图集精灵）后，该面会在相同的轮廓内绘制它：圆角半径、边框和可选中项的
-着色都仍然有效，因为该皮肤是矩形的 BODY 纹理，而不是另一种视觉。
-特意不使用图像画刷：控件面的本质始终是矩形。
+留空表示该面保持普通圆角矩形——即内置外观。设置一张纹理（或一个图集精灵）后，该面会在相同的轮廓内绘制它：圆角半径、边框和可选中项的着色都仍然有效，因为该皮肤是矩形的 BODY 纹理，而不是另一种视觉。特意不使用图像画刷：控件面的本质始终是矩形。
 
 <a id="properties"></a>
 
@@ -30,3 +22,4 @@ description: "FDreamUIFaceBrush"
 | `DrawMode` | `EDreamRectBlockTextureDrawMode` | Face Brush | 是 | 读 / 写 | Image / Box / Border——即 Slate 的 DrawAs，也是这个画刷此前唯一无法表达的项。 |
 | `Margin` | `FMargin` | Face Brush | 是 | 读 / 写 | 九宫格边缘，以纹理像素为单位——即 Slate 的 Margin，也是美术手头就有的数字：文件中八像素宽的边框，在任意矩形尺寸下屏幕上仍是八像素宽。除非 DrawMode 为切片，否则忽略。 |
 | `ImageSize` | `FVector2D` | Face Brush | 是 | 读 / 写 | 图像自身绘制尺寸——即 Slate 的 ImageSize。零表示不发表意见：该部分保持样式赋予它的尺寸。非零值会胜过带有尺寸字段的部分的样式尺寸字段（开关的方框和标记、单选按钮的方框和圆点、滑块的滑块柄）。 |
+

@@ -61,6 +61,56 @@ void UDreamVisualDirectMesh::OnSupplyMeshSection(TWeakObjectPtr<UDreamUIMeshComp
 	MeshSection = InSection;
 }
 
+void UDreamVisualDirectMesh::OnSupplyMeshSegment(TWeakObjectPtr<UDreamUIMeshComponent> InMesh, TWeakPtr<FDreamUIRenderSection_DirectMesh> InSection, int32 InSegment)
+{
+	// A canvas supplies an element's segments in order, 0 first, every time it builds its draw calls: what segment 0 opens is
+	// the whole of this build's, and a segment the element no longer draws in -- its section pooled, perhaps handed to
+	// another -- is not kept to be written into.
+	if (InSegment == 0)
+	{
+		MeshSegments.Reset();
+	}
+	if (InSegment >= 0)
+	{
+		if (MeshSegments.Num() <= InSegment)
+		{
+			MeshSegments.SetNum(InSegment + 1);
+		}
+		MeshSegments[InSegment] = InSection;
+	}
+	if (InSegment == 0)
+	{
+		OnSupplyMeshSection(InMesh, InSection);
+	}
+	else
+	{
+		Mesh = InMesh;
+	}
+}
+
+TSharedPtr<FDreamUIRenderSection_DirectMesh> UDreamVisualDirectMesh::GetMeshSegment(int32 InSegment)const
+{
+	if (!Mesh.IsValid() || !MeshSegments.IsValidIndex(InSegment))
+	{
+		return nullptr;
+	}
+	TSharedPtr<FDreamUIRenderSection_DirectMesh> Section = MeshSegments[InSegment].Pin();
+	// Taken back by the pool and handed to another element, or to another segment of this one, since it was supplied.
+	if (!Section.IsValid() || Section->DirectMeshVisualObject.Get() != this || Section->Segment != InSegment)
+	{
+		return nullptr;
+	}
+	return Section;
+}
+
+void UDreamVisualDirectMesh::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)
+{
+	// The sections came from the old canvas's mesh, and are that mesh's to pool and hand out again: the new canvas supplies its
+	// own when it next builds its draw calls.
+	MeshSegments.Reset();
+	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
+}
+
 bool UDreamVisualDirectMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	if (RaycastType == EDreamVisualRaycastType::Rect)
@@ -141,17 +191,23 @@ bool UDreamVisualDirectMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVecto
 void UDreamVisualDirectMesh::PostFillMeshData()
 {
 	if (!MeshSection.IsValid())return;
-	auto Widget = GetWidget();
-	auto Canvas = Widget->GetRenderCanvas();
 	if (bWidgetPropertyDataStartPositionChanged)
 	{
 		bWidgetPropertyDataStartPositionChanged = false;
 		UpdateGeometryWidgetPropertyData(MeshSection.Pin()->Vertices, MeshSection.Pin()->ValidVerticesNum, this->WidgetPropertyDataStartPosition);
 	}
+	UpdateWidgetPropertyRecord();
+}
+
+void UDreamVisualDirectMesh::UpdateWidgetPropertyRecord()
+{
+	auto Widget = GetWidget();
+	auto Canvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	if (Canvas == nullptr)return;
 	if (bWidgetPropertyDataFontMarkDirty)
 	{
 		bWidgetPropertyDataFontMarkDirty = false;
-		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), 0);
+		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), GetWidgetPropertyMark());
 		// Never in a render layer (UDreamCanvas::CanBeRenderLayer): its vertices are where they are.
 		FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), 0);
 	}

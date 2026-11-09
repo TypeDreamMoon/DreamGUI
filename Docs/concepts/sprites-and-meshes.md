@@ -69,6 +69,11 @@ inherits `UMeshComponent`. Its render sections come in **four kinds**: `Mesh`, `
 **In-place patching** (`TryPatchMeshSection`) and **claiming pooled sections** (`ClaimPooledMeshSections`) both live here.
 It is also where `DreamGUI.Memory` gets the byte counts of mesh sections.
 
+A `DirectMesh` element may draw in **several segments** (`GetSegmentCount`), each a section and a draw call of its own; may
+leave its shading to the canvas (`GetSegmentShading`: the built-in shader or a material, given the clip, the clip masks'
+textures and the blend mode as a batched element is); and may write its vertices every frame the canvas sends its sections
+(`WantsFrameRefresh`, `RefreshMeshSegments`). The `NiagaraSystem` visual is built on that: see [Niagara particles](niagara.md).
+
 **`UDream2DLineRendererBase`** (`DreamGUIExtensions`, abstract) is the shared base of the 2D line family (`Line2DRaw` /
 `Line2DChildren`). It **inherits `UDreamImage`** — **lines are drawn with a brush too**; their vertices just are not a
 rect.

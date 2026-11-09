@@ -11,7 +11,9 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
 
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
@@ -295,8 +297,234 @@ namespace DreamUIWriteBackLocal
 	 * somebody should chase: the row is grey, the drag does nothing, and before this the only trace
 	 * was one Output Log line. Set only for the second kind; left alone for the first.
 	 */
+	/**
+	 * The node ids of the tree whose value is being printed, for the one literal that needs the tree to be spelled: a
+	 * node reference, written as the bare id of the node it points at. Set for the length of a value pass by CollectEdits
+	 * (one map per side); null everywhere else -- a details-panel probe, a resource -- where no tree is in sight.
+	 */
+	const TMap<FString, UDreamWidget*>* GPrintNodeIds = nullptr;
+	/** The two trees' ids for the value pass under way, which CompareAndAppend hands to GPrintNodeIds side by side. */
+	const TMap<FString, UDreamWidget*>* GComparisonLiveIds = nullptr;
+	const TMap<FString, UDreamWidget*>* GComparisonTextIds = nullptr;
+
+	/**
+	 * Set for the length of CollectUnwritableDifferences: where a value pass says what it could not print. Null for every
+	 * flush -- a value with no spelling is left alone there, as it always was, and only a conversion has to hear of it.
+	 */
+	TArray<FString>* GUnwritableSink = nullptr;
+
+	/**
+	 * Whether two values of a property with no spelling differ in a way a conversion would lose. An object that is no
+	 * asset -- a widget's own subobject, an object made at run time -- is a different object in every tree by
+	 * construction, so two of them count as the same; anything else is compared as the engine compares it.
+	 */
+	bool DiffersWithoutSpelling(const FProperty* InLeaf, const void* InLive, const void* InText)
+	{
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeaf))
+		{
+			const UObject* Live = AsObject->GetObjectPropertyValue(InLive);
+			const UObject* Text = AsObject->GetObjectPropertyValue(InText);
+			if ((Live == nullptr) != (Text == nullptr))
+			{
+				return true;
+			}
+			if (Live == nullptr || (!Live->IsAsset() && !Text->IsAsset()))
+			{
+				return false;
+			}
+			return Live != Text;
+		}
+		return !InLeaf->Identical(InLive, InText, PPF_None);
+	}
+
+	/** The node an object a node reference can hold belongs to: itself, its visual, a behaviour on it. */
+	const UDreamWidget* NodeOfReferencedObject(const UObject* InObject)
+	{
+		if (const UDreamWidget* AsWidget = Cast<UDreamWidget>(InObject))
+		{
+			return AsWidget;
+		}
+		if (const UDreamWidgetSubObjectBehaviour* AsSubObject = Cast<UDreamWidgetSubObjectBehaviour>(InObject))
+		{
+			return AsSubObject->GetWidget();
+		}
+		if (const UDreamUIBehaviour* AsBehaviour = Cast<UDreamUIBehaviour>(InObject))
+		{
+			return AsBehaviour->GetWidget();
+		}
+		return nullptr;
+	}
+
 	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText,
-		bool* OutValueIsUnrepresentable = nullptr)
+		bool* OutValueIsUnrepresentable = nullptr);
+
+	/**
+	 * A name key as a map is written by hand -- `{ Hover: #FFCC00 }`, not `{ "Hover": #FFCC00 }` -- when it is one word the
+	 * builder reads back as that name. Anything else (a space, a leading digit, a word the language already means) stays
+	 * quoted.
+	 */
+	FString BareNameKey(const FString& InQuoted)
+	{
+		if (InQuoted.Len() < 3 || !InQuoted.StartsWith(TEXT("\"")) || !InQuoted.EndsWith(TEXT("\"")))
+		{
+			return InQuoted;
+		}
+		const FString Word = InQuoted.Mid(1, InQuoted.Len() - 2);
+		auto IsWordChar = [](TCHAR InChar)
+		{
+			return FChar::IsDigit(InChar) || InChar == TEXT('_') || (InChar >= TEXT('a') && InChar <= TEXT('z'))
+				|| (InChar >= TEXT('A') && InChar <= TEXT('Z')) || InChar > 0x7F;
+		};
+		if (FChar::IsDigit(Word[0]) || Word.Equals(TEXT("true"), ESearchCase::IgnoreCase)
+			|| Word.Equals(TEXT("false"), ESearchCase::IgnoreCase) || Word.Equals(TEXT("None"), ESearchCase::IgnoreCase))
+		{
+			return InQuoted;
+		}
+		for (const TCHAR Char : Word)
+		{
+			if (!IsWordChar(Char))
+			{
+				return InQuoted;
+			}
+		}
+		return Word;
+	}
+
+	/**
+	 * One element of a container. A struct with no short form is written the way the builder reads one there -- a quoted
+	 * string it hands the engine's importer, `Style.DropShadows = ["(Angle=120,Distance=6)"]` -- with only the fields that
+	 * differ from the struct's defaults, so two equal values print alike and an untouched field is not spelled. Anything
+	 * else prints as a leaf does.
+	 */
+	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
+	{
+		if (PrintLiteral(InElement, InValuePtr, OutText, OutValueIsUnrepresentable))
+		{
+			return true;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InElement);
+		if (AsStruct == nullptr || AsStruct->Struct == nullptr || DreamUIValueFormat::HasShortForm(InElement)
+			|| (OutValueIsUnrepresentable != nullptr && *OutValueIsUnrepresentable))
+		{
+			return false;
+		}
+		const UScriptStruct* Struct = AsStruct->Struct;
+		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
+		Struct->InitializeStruct(Defaults);
+		FString Exported;
+		AsStruct->ExportTextItem_Direct(Exported, InValuePtr, Defaults, nullptr, PPF_None);
+		Struct->DestroyStruct(Defaults);
+		FMemory::Free(Defaults);
+		if (Exported.IsEmpty())
+		{
+			// Every field at its default: the importer reads an empty list of fields as that.
+			Exported = TEXT("()");
+		}
+		OutText = QuoteString(Exported);
+		return true;
+	}
+
+	/**
+	 * A container's entries as they print: a list's elements in order, a set's elements and a map's `key: value`s in
+	 * the order the container holds them, with each entry's identity (the element, the key) in OutKeys. False when an
+	 * entry has no spelling -- then neither has the container.
+	 */
+	bool PrintContainerEntries(const FProperty* InLeaf, const void* InValuePtr, TArray<FString>& OutKeys,
+		TArray<FString>& OutEntries, bool* OutValueIsUnrepresentable)
+	{
+		OutKeys.Reset();
+		OutEntries.Reset();
+		auto IsNodeElement = [](const FProperty* InElement)
+		{
+			const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InElement);
+			return AsObject != nullptr && FDreamUITextBuilder::IsNodeReferenceProperty(AsObject);
+		};
+		if (const FArrayProperty* AsArray = CastField<FArrayProperty>(InLeaf))
+		{
+			FScriptArrayHelper Helper(AsArray, InValuePtr);
+			for (int32 Index = 0; Index < Helper.Num(); ++Index)
+			{
+				FString Element;
+				if (!PrintContainerElement(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				OutKeys.Add(Element);
+				OutEntries.Add(MoveTemp(Element));
+			}
+			return true;
+		}
+		if (const FSetProperty* AsSet = CastField<FSetProperty>(InLeaf))
+		{
+			// The builder refuses a set of nodes (a scratch address cannot take a node id), so the printer does too.
+			if (IsNodeElement(AsSet->ElementProp))
+			{
+				return false;
+			}
+			FScriptSetHelper Helper(AsSet, InValuePtr);
+			for (int32 Index = 0, Left = Helper.Num(); Left > 0; ++Index)
+			{
+				if (!Helper.IsValidIndex(Index))
+				{
+					continue;
+				}
+				--Left;
+				FString Element;
+				if (!PrintContainerElement(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				OutKeys.Add(Element);
+				OutEntries.Add(MoveTemp(Element));
+			}
+			return true;
+		}
+		if (const FMapProperty* AsMap = CastField<FMapProperty>(InLeaf))
+		{
+			if (IsNodeElement(AsMap->KeyProp) || IsNodeElement(AsMap->ValueProp))
+			{
+				return false;
+			}
+			FScriptMapHelper Helper(AsMap, InValuePtr);
+			for (int32 Index = 0, Left = Helper.Num(); Left > 0; ++Index)
+			{
+				if (!Helper.IsValidIndex(Index))
+				{
+					continue;
+				}
+				--Left;
+				FString Key;
+				FString Value;
+				if (!PrintLiteral(AsMap->KeyProp, Helper.GetKeyPtr(Index), Key, OutValueIsUnrepresentable)
+					|| !PrintContainerElement(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				if (CastField<FNameProperty>(AsMap->KeyProp) != nullptr)
+				{
+					Key = BareNameKey(Key);
+				}
+				OutEntries.Add(FString::Printf(TEXT("%s: %s"), *Key, *Value));
+				OutKeys.Add(MoveTemp(Key));
+			}
+			return true;
+		}
+		return false;
+	}
+
+	FString JoinContainer(const FProperty* InLeaf, const TArray<FString>& InEntries)
+	{
+		const bool bMap = CastField<FMapProperty>(InLeaf) != nullptr;
+		if (InEntries.IsEmpty())
+		{
+			return bMap ? TEXT("{}") : TEXT("[]");
+		}
+		return bMap ? FString::Printf(TEXT("{ %s }"), *FString::Join(InEntries, TEXT(", ")))
+			: FString::Printf(TEXT("[%s]"), *FString::Join(InEntries, TEXT(", ")));
+	}
+
+	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText,
+		bool* OutValueIsUnrepresentable)
 	{
 		if (InLeaf == nullptr || InValuePtr == nullptr)
 		{
@@ -311,6 +539,19 @@ namespace DreamUIWriteBackLocal
 			const FText& Value = AsText->GetPropertyValue(InValuePtr);
 			const FString* Source = FTextInspector::GetSourceString(Value);
 			OutText = QuoteString(Source != nullptr ? *Source : Value.ToString());
+			return true;
+		}
+
+		if (CastField<FArrayProperty>(InLeaf) != nullptr || CastField<FSetProperty>(InLeaf) != nullptr
+			|| CastField<FMapProperty>(InLeaf) != nullptr)
+		{
+			TArray<FString> Keys;
+			TArray<FString> Entries;
+			if (!PrintContainerEntries(InLeaf, InValuePtr, Keys, Entries, OutValueIsUnrepresentable))
+			{
+				return false;
+			}
+			OutText = JoinContainer(InLeaf, Entries);
 			return true;
 		}
 
@@ -423,7 +664,22 @@ namespace DreamUIWriteBackLocal
 			// the class being rebuilt, taking the whole hierarchy down (DUI5001 -> DUI6002).
 			if (FDreamUITextBuilder::IsNodeReferenceProperty(AsObject))
 			{
-				return false;
+				// Spelled with the tree when there is one: the bare id of the node the reference points at, which the
+				// builder reads back as that node, its visual or its behaviour by the property's own type. A node this
+				// tree does not hold under that id -- one inside another file's component -- has no id to write here.
+				const UObject* Referenced = AsObject->GetObjectPropertyValue(InValuePtr);
+				if (Referenced == nullptr)
+				{
+					OutText = TEXT("None");
+					return true;
+				}
+				const UDreamWidget* Node = NodeOfReferencedObject(Referenced);
+				if (GPrintNodeIds == nullptr || Node == nullptr || GPrintNodeIds->FindRef(Node->GetDisplayName()) != Node)
+				{
+					return false;
+				}
+				OutText = Node->GetDisplayName();
+				return true;
 			}
 			const UObject* Value = AsObject->GetObjectPropertyValue(InValuePtr);
 			// The second fence, for object properties outside the node-reference family: a
@@ -724,8 +980,60 @@ namespace DreamUIWriteBackLocal
 		FString LiveText;
 		FString TextText;
 		bool bLiveIsUnrepresentable = false;
-		if (!PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText, &bLiveIsUnrepresentable)
-			|| !PrintLiteral(Text.Leaf, Text.ValuePtr, TextText))
+		bool bPrinted = false;
+		{
+			TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIds(GPrintNodeIds, GComparisonLiveIds);
+			bPrinted = PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText, &bLiveIsUnrepresentable);
+		}
+		if (bPrinted)
+		{
+			TGuardValue<const TMap<FString, UDreamWidget*>*> TextIds(GPrintNodeIds, GComparisonTextIds);
+			bPrinted = PrintLiteral(Text.Leaf, Text.ValuePtr, TextText);
+		}
+		// A set and a map are the same value in any order, and a TSet rebuilt from the file need not iterate in the
+		// file's order: compared as entries, and when they do differ, written in the order the file already has them
+		// with what the live value adds after -- so an edit is a change to the line, not a reshuffle of it.
+		if (bPrinted && (CastField<FSetProperty>(Live.Leaf) != nullptr || CastField<FMapProperty>(Live.Leaf) != nullptr))
+		{
+			TArray<FString> LiveKeys;
+			TArray<FString> LiveEntries;
+			TArray<FString> TextKeys;
+			TArray<FString> TextEntries;
+			{
+				TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIds(GPrintNodeIds, GComparisonLiveIds);
+				PrintContainerEntries(Live.Leaf, Live.ValuePtr, LiveKeys, LiveEntries, nullptr);
+			}
+			{
+				TGuardValue<const TMap<FString, UDreamWidget*>*> TextIds(GPrintNodeIds, GComparisonTextIds);
+				PrintContainerEntries(Text.Leaf, Text.ValuePtr, TextKeys, TextEntries, nullptr);
+			}
+			TArray<FString> SortedLive = LiveEntries;
+			TArray<FString> SortedText = TextEntries;
+			SortedLive.Sort();
+			SortedText.Sort();
+			if (SortedLive == SortedText)
+			{
+				return;
+			}
+			TArray<FString> Ordered;
+			for (const FString& Key : TextKeys)
+			{
+				const int32 Found = LiveKeys.IndexOfByKey(Key);
+				if (Found != INDEX_NONE)
+				{
+					Ordered.Add(LiveEntries[Found]);
+				}
+			}
+			for (int32 Index = 0; Index < LiveKeys.Num(); ++Index)
+			{
+				if (!TextKeys.Contains(LiveKeys[Index]))
+				{
+					Ordered.Add(LiveEntries[Index]);
+				}
+			}
+			LiveText = JoinContainer(Live.Leaf, Ordered);
+		}
+		if (!bPrinted)
 		{
 			// No spelling for this type. Leaving the line alone is the answer; see PrintLiteral.
 			// The exception is a live value with no spelling of its OWN -- a NaN, an undeclared enum
@@ -738,6 +1046,10 @@ namespace DreamUIWriteBackLocal
 				OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchValueNotRepresentable, InComparison.Location,
 					FString::Printf(TEXT("'%s' on '%s' holds a value this language cannot spell (a non-finite number, or an enum byte the enum does not declare), so its line was left untouched"),
 						*InComparison.PropertyName, *InComparison.NodeId));
+			}
+			if (GUnwritableSink != nullptr && (bLiveIsUnrepresentable || DiffersWithoutSpelling(Live.Leaf, Live.ValuePtr, Text.ValuePtr)))
+			{
+				GUnwritableSink->AddUnique(FString::Printf(TEXT("%s.%s"), *InComparison.NodeId, *InComparison.PropertyName));
 			}
 			return;
 		}
@@ -968,6 +1280,344 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
+	 * How a `+` line names this class, verified against the builder's own reading of it, or empty.
+	 *
+	 * Same discipline as FindContainerTypeName: the candidates are tried and kept only when
+	 * ResolveComponentClass answers with this very class, so a written line always reads back as what
+	 * was meant.
+	 */
+	FString FindComponentSpelling(const UClass* InClass)
+	{
+		if (InClass == nullptr)
+		{
+			return FString();
+		}
+		const FString Container = FindContainerTypeName(InClass);
+		if (!Container.IsEmpty() && FDreamUITextBuilder::ResolveComponentClass(Container) == InClass)
+		{
+			return Container;
+		}
+		const FString Full = InClass->GetName();
+		TArray<FString> Candidates{ Full };
+		static const TCHAR* Prefixes[] = { TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf"), TEXT("DreamLayout"), TEXT("Dream") };
+		for (const TCHAR* Prefix : Prefixes)
+		{
+			FString Candidate = Full;
+			if (Candidate.RemoveFromStart(Prefix, ESearchCase::CaseSensitive) && !Candidate.IsEmpty())
+			{
+				Candidates.Add(MoveTemp(Candidate));
+			}
+		}
+		for (const FString& Candidate : Candidates)
+		{
+			if (FDreamUITextBuilder::ResolveComponentClass(Candidate) == InClass)
+			{
+				return Candidate;
+			}
+		}
+		return FString();
+	}
+
+	/**
+	 * The objects on a widget a `+ Class { }` line builds: its behaviours, its layout container and its
+	 * layout self. Not the visual or the panel slot, which the type and `@slot` lines own, and nothing
+	 * transient -- run time's additions are nobody's line.
+	 */
+	void CollectAuthorableComponentObjects(const UDreamWidget* InWidget, TArray<const UObject*>& OutObjects)
+	{
+		OutObjects.Reset();
+		if (!IsValid(InWidget))
+		{
+			return;
+		}
+		for (const UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
+		{
+			// The animation host is the animation editor's, carried across compiles by display name; the
+			// grammar has no way to author what it holds, so a line for it would be an empty shell.
+			if (IsValid(Behaviour) && !Behaviour->HasAnyFlags(RF_Transient)
+				&& !Behaviour->IsA<UDreamWidgetAnimationComponent>())
+			{
+				OutObjects.Add(Behaviour);
+			}
+		}
+		if (const UObject* Container = InWidget->GetLayoutContainer(); IsValid(Container) && !Container->HasAnyFlags(RF_Transient))
+		{
+			OutObjects.Add(Container);
+		}
+		if (const UObject* Self = InWidget->GetLayoutSelf(); IsValid(Self) && !Self->HasAnyFlags(RF_Transient))
+		{
+			OutObjects.Add(Self);
+		}
+	}
+
+	/** The node with this id in InAst, or null -- matched as the patcher matches ids, ignoring case. */
+	const FDreamUINode* FindAstNode(const FDreamUIAst& InAst, const FString& InId)
+	{
+		const FDreamUINode* Found = nullptr;
+		if (!InId.IsEmpty())
+		{
+			InAst.ForEachNode([&Found, &InId](const FDreamUINode& InNode)
+			{
+				if (Found == nullptr && !InNode.Id.IsEmpty() && InNode.Id.Equals(InId, ESearchCase::IgnoreCase))
+				{
+					Found = &InNode;
+				}
+			});
+		}
+		return Found;
+	}
+
+	/**
+	 * meta=(DreamGUI_Replaces="A,B"): the older properties a property replaced. Their lines go from a node when it is
+	 * written there, so that the file never says one thing two ways: a rect block's gradient, written once it has stops, takes
+	 * the place of its two-colour gradient's lines.
+	 */
+	const FName MetaReplaces(TEXT("DreamGUI_Replaces"));
+
+	/** The property a value edit's head names, on what its node makes (the widget, its visual, its panel) or its `+` block. */
+	const FProperty* FindEditedHead(const FDreamUINode& InNode, const FDreamUIPropertyEdit& InEdit, const TMap<FString, UDreamWidget*>& InLiveById)
+	{
+		FString Head = InEdit.PropertyName;
+		int32 Dot = INDEX_NONE;
+		if (Head.FindChar(TEXT('.'), Dot))
+		{
+			Head.LeftInline(Dot);
+		}
+		if (InEdit.Target == EDreamUIPatchTarget::Component)
+		{
+			const UClass* Class = InNode.Components.IsValidIndex(InEdit.ComponentIndex)
+				? FDreamUITextBuilder::ResolveComponentClass(InNode.Components[InEdit.ComponentIndex].ClassName) : nullptr;
+			return Class != nullptr ? FindFProperty<FProperty>(Class, *Head) : nullptr;
+		}
+		const UDreamWidget* Live = nullptr;
+		for (const TPair<FString, UDreamWidget*>& Entry : InLiveById)
+		{
+			if (Entry.Key.Equals(InEdit.NodeId, ESearchCase::IgnoreCase))
+			{
+				Live = Entry.Value;
+				break;
+			}
+		}
+		if (!IsValid(Live))
+		{
+			return nullptr;
+		}
+		const UObject* Candidates[] = { Live, Live->GetVisual(), Live->GetLayoutContainer() };
+		for (const UObject* Candidate : Candidates)
+		{
+			if (Candidate != nullptr)
+			{
+				if (const FProperty* Found = FindFProperty<FProperty>(Candidate->GetClass(), *Head))
+				{
+					return Found;
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The lines InEdits' values replace (MetaReplaces), as removals: for each edit whose property names properties it took
+	 * the place of, every line of its node -- or of its `+` block -- that writes one of them.
+	 */
+	void CollectReplacedLines(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree, const TArray<FDreamUIPropertyEdit>& InEdits,
+		TArray<FDreamUIStructuralEdit>& OutRemovals)
+	{
+		TMap<FString, UDreamWidget*> LiveById;
+		bool bMapped = false;
+		TSet<FString> Seen;
+		for (const FDreamUIPropertyEdit& Edit : InEdits)
+		{
+			if (Edit.Target == EDreamUIPatchTarget::Slot)
+			{
+				continue;
+			}
+			const FDreamUINode* Node = FindAstNode(InAst, Edit.NodeId);
+			if (Node == nullptr)
+			{
+				continue;
+			}
+			if (!bMapped)
+			{
+				MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveById);
+				bMapped = true;
+			}
+			const FProperty* Head = FindEditedHead(*Node, Edit, LiveById);
+			if (Head == nullptr || !Head->HasMetaData(MetaReplaces))
+			{
+				continue;
+			}
+			const bool bComponent = Edit.Target == EDreamUIPatchTarget::Component;
+			const TArray<FDreamUIProperty>* Lines = bComponent
+				? (Node->Components.IsValidIndex(Edit.ComponentIndex) ? &Node->Components[Edit.ComponentIndex].Properties : nullptr)
+				: &Node->Properties;
+			if (Lines == nullptr)
+			{
+				continue;
+			}
+			TArray<FString> Replaced;
+			Head->GetMetaData(MetaReplaces).ParseIntoArray(Replaced, TEXT(","));
+			for (FString& Name : Replaced)
+			{
+				Name.TrimStartAndEndInline();
+			}
+			for (const FDreamUIProperty& Line : *Lines)
+			{
+				if (Line.bSynthesized || Line.bRowCell)
+				{
+					continue;
+				}
+				FString LineHead = Line.Name;
+				int32 LineDot = INDEX_NONE;
+				if (LineHead.FindChar(TEXT('.'), LineDot))
+				{
+					LineHead.LeftInline(LineDot);
+				}
+				if (!Replaced.ContainsByPredicate([&LineHead](const FString& InName) { return InName.Equals(LineHead, ESearchCase::IgnoreCase); }))
+				{
+					continue;
+				}
+				const FString Signature = FString::Printf(TEXT("%s|%d|%d|%s"), *Node->Id, bComponent ? 1 : 0, Edit.ComponentIndex, *Line.Name);
+				if (Seen.Contains(Signature))
+				{
+					continue;
+				}
+				Seen.Add(Signature);
+				FDreamUIStructuralEdit& Remove = OutRemovals.AddDefaulted_GetRef();
+				Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+				Remove.NodeId = Node->Id;
+				Remove.PropertyName = Line.Name;
+				Remove.PropertyTarget = bComponent ? EDreamUIPatchTarget::Component : EDreamUIPatchTarget::Node;
+				Remove.ComponentIndex = bComponent ? Edit.ComponentIndex : INDEX_NONE;
+			}
+		}
+	}
+
+	const FDreamUINode* FindAstParentWithin(const FDreamUINode& InScope, const FDreamUINode* InChild)
+	{
+		for (const FDreamUINode& Child : InScope.Children)
+		{
+			if (&Child == InChild)
+			{
+				return &InScope;
+			}
+			if (const FDreamUINode* Found = FindAstParentWithin(Child, InChild))
+			{
+				return Found;
+			}
+		}
+		return nullptr;
+	}
+
+	bool IsAddressableChild(const FDreamUINode& InNode)
+	{
+		return InNode.Kind == EDreamUINodeKind::Widget || InNode.Kind == EDreamUINodeKind::NamedSlot;
+	}
+
+	/** Where a live widget stands, in the terms a structural edit is placed by. */
+	struct FPlacement
+	{
+		/** The parent's id, empty for the root. */
+		FString ParentId;
+		/** The named slot of a component instance the widget fills, empty for the instance's own block. */
+		FString FillSlotName;
+		/** The authored sibling it stands before, empty for last. */
+		FString BeforeId;
+		/** The block it belongs in: the parent's node, or the fill of the slot. Null when the text has none. */
+		const FDreamUINode* Destination = nullptr;
+	};
+
+	/**
+	 * Read off the live tree, against the text it is about to be written into: which block the widget belongs in,
+	 * and which authored sibling it stands in front of there. The neighbour is the first sibling after it that the
+	 * destination block declares -- a widget this same flush has not written yet, a loop's copies and the builder's
+	 * own widgets are skipped -- so the place is one the text can say.
+	 */
+	FPlacement ResolvePlacement(const UDreamWidget* InLiveWidget, const UDreamWidgetTree* InLiveTree, const FDreamUIAst& InAst)
+	{
+		FPlacement Placement;
+		const UDreamWidget* Parent = IsValid(InLiveWidget) ? InLiveWidget->GetParent() : nullptr;
+		if (!IsValid(Parent))
+		{
+			return Placement;
+		}
+		Placement.ParentId = Parent == InLiveTree->RootWidget ? FString() : Parent->GetDisplayName();
+		// Content of a component instance hangs off the instance whichever slot it fills; the slot is in the instance's
+		// NamedSlotContent, and only for a NAMED slot -- the default one is nesting alone. Written as an ordinary child,
+		// named-slot content would be default-slot content on the next compile.
+		if (const UDreamUserWidget* Instance = Cast<UDreamUserWidget>(Parent))
+		{
+			TArray<FName> SlotNames;
+			UDreamUserWidget::CollectDeclaredSlotNames(Instance->GetClass(), SlotNames);
+			const FName DefaultSlot = Instance->GetDefaultSlotName();
+			for (const FName& SlotName : SlotNames)
+			{
+				if (SlotName != DefaultSlot && Instance->GetContentForNamedSlot(SlotName) == InLiveWidget)
+				{
+					Placement.FillSlotName = SlotName.ToString();
+					break;
+				}
+			}
+		}
+		const FDreamUINode* ParentNode = Placement.ParentId.IsEmpty()
+			? (InAst.bHasRoot ? &InAst.Root : nullptr) : FindAstNode(InAst, Placement.ParentId);
+		Placement.Destination = ParentNode;
+		if (ParentNode != nullptr && !Placement.FillSlotName.IsEmpty())
+		{
+			Placement.Destination = ParentNode->Children.FindByPredicate([&Placement](const FDreamUINode& InChild)
+			{
+				return InChild.Kind == EDreamUINodeKind::NamedSlot && InChild.bFillsSlot
+					&& InChild.Id.Equals(Placement.FillSlotName, ESearchCase::IgnoreCase);
+			});
+		}
+		if (Placement.Destination == nullptr)
+		{
+			return Placement;
+		}
+		const TArray<UDreamWidget*>& Siblings = Parent->GetChildren();
+		const int32 Index = Siblings.IndexOfByKey(InLiveWidget);
+		for (int32 Next = Index + 1; Index != INDEX_NONE && Next < Siblings.Num(); ++Next)
+		{
+			const UDreamWidget* Sibling = Siblings[Next];
+			if (!IsValid(Sibling) || Sibling->HasAnyFlags(RF_Transient))
+			{
+				continue;
+			}
+			const FString SiblingId = Sibling->GetDisplayName();
+			if (Placement.Destination->Children.ContainsByPredicate([&SiblingId](const FDreamUINode& InChild)
+			{
+				return IsAddressableChild(InChild) && InChild.Id.Equals(SiblingId, ESearchCase::IgnoreCase);
+			}))
+			{
+				Placement.BeforeId = SiblingId;
+				break;
+			}
+		}
+		return Placement;
+	}
+
+	/** Whether the text already has InNode where Placement says it stands: same block, same next sibling. */
+	bool IsAlreadyPlaced(const FDreamUIAst& InAst, const FDreamUINode& InNode, const FPlacement& InPlacement)
+	{
+		const FDreamUINode* TextParent = InAst.bHasRoot ? FindAstParentWithin(InAst.Root, &InNode) : nullptr;
+		if (TextParent == nullptr || TextParent != InPlacement.Destination)
+		{
+			return false;
+		}
+		const int32 Index = TextParent->Children.IndexOfByPredicate([&InNode](const FDreamUINode& InChild) { return &InChild == &InNode; });
+		FString NextId;
+		for (int32 Next = Index + 1; Index != INDEX_NONE && Next < TextParent->Children.Num(); ++Next)
+		{
+			if (IsAddressableChild(TextParent->Children[Next]))
+			{
+				NextId = TextParent->Children[Next].Id;
+				break;
+			}
+		}
+		return NextId.Equals(InPlacement.BeforeId, ESearchCase::IgnoreCase);
+	}
+
+	/**
 	 * How a `.dui` would write this widget's TYPE: the file's own short name for the class, a built-in tag, a layout
 	 * container, or the class path it nests.
 	 *
@@ -1147,7 +1797,8 @@ UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InTex
 
 void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet)
+	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet, const TSet<FString>* InSweepNodeIds,
+	TArray<FDreamUIStructuralEdit>* OutStyleOverrides)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1165,9 +1816,17 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	{
 		Dirty = nullptr;
 	}
-	auto KeepName = [Dirty](const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+	auto KeepName = [Dirty, InSweepNodeIds](const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
 		const FString& InName)
 	{
+		// After a change of shape: the nodes just written are swept whole, the rest say only what was
+		// reported. See the header for why there is no sweep to fall back on here.
+		if (InSweepNodeIds != nullptr)
+		{
+			return InSweepNodeIds->Contains(InNodeId)
+				|| (Dirty != nullptr
+					&& Dirty->Contains(DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InName)));
+		}
 		return Dirty == nullptr
 			|| Dirty->Contains(DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InName));
 	};
@@ -1178,6 +1837,9 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	TMap<FString, UDreamWidget*> TextWidgets;
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InTextTree), TextWidgets);
+	// For a node reference to be printed as the id of the node it points at, on each side (see GPrintNodeIds).
+	TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIdsForThisPass(GComparisonLiveIds, &LiveWidgets);
+	TGuardValue<const TMap<FString, UDreamWidget*>*> TextIdsForThisPass(GComparisonTextIds, &TextWidgets);
 
 	// What FindContainerClassForType answered per node type, for this one walk: it is a class search, and a file names
 	// the same handful of types on every row.
@@ -1426,7 +2088,10 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 				}
 				for (const FString& Name : Names)
 				{
-					if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, ComponentIndex, Name))
+					// A `+` line the shape pass has just written is swept whole, as a new node is.
+					if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, ComponentIndex, Name)
+						&& !(InSweepNodeIds != nullptr
+							&& InSweepNodeIds->Contains(InNode.Id + TEXT("+") + InNode.Components[ComponentIndex].ClassName)))
 					{
 						continue;
 					}
@@ -1489,6 +2154,23 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 						Comparison.PropertyName = Name;
 						CompareAndAppend(Comparison, Differences, OutDiagnostics);
 					}
+					if (OutStyleOverrides != nullptr && !Differences.IsEmpty())
+					{
+						// The node's own `+ Class` line is where its value goes: the builder applies the style's line and
+						// then the node's to the same object, so a line on the node overrides for this node alone.
+						const bool bAsked = OutStyleOverrides->ContainsByPredicate([&InNode, &Component](const FDreamUIStructuralEdit& InEdit)
+						{
+							return InEdit.NodeId == InNode.Id && InEdit.ComponentClassName == Component.ClassName;
+						});
+						if (!bAsked)
+						{
+							FDreamUIStructuralEdit& Override = OutStyleOverrides->AddDefaulted_GetRef();
+							Override.Kind = EDreamUIStructuralEditKind::InsertComponent;
+							Override.NodeId = InNode.Id;
+							Override.ComponentClassName = Component.ClassName;
+						}
+						continue;
+					}
 					for (const FDreamUIPropertyEdit& Difference : Differences)
 					{
 						OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchStyleComponentNotWritable, InNode.Location,
@@ -1537,6 +2219,46 @@ void FDreamUITextWriteBack::ClearDirtyProperties(const UDreamWidgetTree* InTree)
 	}
 }
 
+namespace DreamUIWriteBackQueueLocal
+{
+	/** Per tree, weakly keyed, for the reasons GetDirtyMap gives. In the order the edits were made. */
+	TMap<TWeakObjectPtr<const UDreamWidgetTree>, TArray<FDreamUIStructuralEdit>>& GetQueueMap()
+	{
+		static TMap<TWeakObjectPtr<const UDreamWidgetTree>, TArray<FDreamUIStructuralEdit>> Map;
+		for (auto It = Map.CreateIterator(); It; ++It)
+		{
+			if (!It.Key().IsValid())
+			{
+				It.RemoveCurrent();
+			}
+		}
+		return Map;
+	}
+}
+
+void FDreamUITextWriteBack::QueueStructuralEdit(const UDreamWidgetTree* InTree, const FDreamUIStructuralEdit& InEdit)
+{
+	if (InTree != nullptr)
+	{
+		DreamUIWriteBackQueueLocal::GetQueueMap().FindOrAdd(InTree).Add(InEdit);
+	}
+}
+
+void FDreamUITextWriteBack::ClearQueuedStructuralEdits(const UDreamWidgetTree* InTree)
+{
+	if (InTree != nullptr)
+	{
+		DreamUIWriteBackQueueLocal::GetQueueMap().Remove(InTree);
+	}
+}
+
+int32 FDreamUITextWriteBack::NumQueuedStructuralEdits(const UDreamWidgetTree* InTree)
+{
+	const TArray<FDreamUIStructuralEdit>* Found = InTree != nullptr
+		? DreamUIWriteBackQueueLocal::GetQueueMap().Find(InTree) : nullptr;
+	return Found != nullptr ? Found->Num() : 0;
+}
+
 int32 FDreamUITextWriteBack::NumDirtyProperties(const UDreamWidgetTree* InTree)
 {
 	const TSet<FString>* Found = InTree != nullptr
@@ -1545,7 +2267,9 @@ int32 FDreamUITextWriteBack::NumDirtyProperties(const UDreamWidgetTree* InTree)
 }
 
 void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
-	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits)
+	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
+	bool bInIncludeRemovals, const TSet<FString>* InSkipInsertIds, const TSet<FString>* InComponentCheckIds,
+	TSet<FString>* OutSweepKeys, TArray<FString>* OutDropped, TArray<FString>* OutUnsettled, const TSet<FString>* InAttempted)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1575,34 +2299,64 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 	});
 
 	// ---- removed: in the file, built into the reference tree, gone from the live one --------------
-	InAst.ForEachNode([&](const FDreamUINode& InNode)
+	//
+	// Outermost only. A node's text holds its children's, so removing a subtree is ONE removal: a second
+	// one for a child would cover characters the first already takes, and the patcher refuses the two
+	// as a pair -- which is how deleting anything with children used to write nothing at all.
+	if (bInIncludeRemovals)
 	{
-		// A slot FILL is not a widget of this file: its id is the name of a slot the component declares,
-		// and the widget the trees hold under that name is the component's. Nothing here removes it.
-		if (InNode.Id.IsEmpty() || InNode.bFillsSlot
-			|| (InNode.Kind != EDreamUINodeKind::Widget && InNode.Kind != EDreamUINodeKind::NamedSlot))
+		// Whether anything under a node is still alive in the live tree. Such a node is NOT removed even when it has
+		// gone itself: its text holds the living widget's, and taking it out would delete a widget the author kept.
+		// That is the shape a rename the queue was not told about takes (the old id gone, its children still there
+		// under the new one), and the shape of a move out of a deleted parent the queue has not written yet -- both
+		// left for the residue to report rather than settled by losing the subtree.
+		TFunction<bool(const FDreamUINode&)> HoldsLiveDescendant;
+		HoldsLiveDescendant = [&](const FDreamUINode& InNode)
 		{
-			return;
-		}
-		if (TextWidgets.Contains(InNode.Id) && !LiveWidgets.Contains(InNode.Id))
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				if ((!Child.Id.IsEmpty() && LiveWidgets.Contains(Child.Id)) || HoldsLiveDescendant(Child))
+				{
+					return true;
+				}
+			}
+			return false;
+		};
+		TFunction<void(const FDreamUINode&, bool)> VisitForRemovals;
+		VisitForRemovals = [&](const FDreamUINode& InNode, bool bInAncestorRemoved)
 		{
-			FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
-			Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
-			Edit.NodeId = InNode.Id;
-		}
-	});
+			bool bRemoved = bInAncestorRemoved;
+			// A slot FILL is not a widget of this file: its id is the name of a slot the component declares,
+			// and the widget the trees hold under that name is the component's. Nothing here removes it.
+			if (!bInAncestorRemoved && !InNode.Id.IsEmpty() && !InNode.bFillsSlot
+				&& (InNode.Kind == EDreamUINodeKind::Widget || InNode.Kind == EDreamUINodeKind::NamedSlot)
+				&& TextWidgets.Contains(InNode.Id) && !LiveWidgets.Contains(InNode.Id)
+				&& !HoldsLiveDescendant(InNode))
+			{
+				FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+				Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
+				Edit.NodeId = InNode.Id;
+				bRemoved = true;
+			}
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				VisitForRemovals(Child, bRemoved);
+			}
+		};
+		VisitForRemovals(InAst.Root, /*bInAncestorRemoved*/false);
+	}
 
 	// ---- added: on the live tree and on neither the file nor the reference tree -------------------
 	//
-	// Parents first, so a subtree dropped in at once is written outermost-in and each insert finds a
-	// block its parent's insert has already created. The walk is depth-first from the root, which is
-	// that order by construction.
+	// Only under a parent the file ALREADY declares. A child of a node being inserted in this same
+	// batch has no parent in InAst to be planned against, so it waits for the next round, when the
+	// text has been read back with its parent in it (ProduceText). The walk is depth-first from the
+	// root, so siblings are planned in the order the live tree holds them.
 	TArray<UDreamWidget*> LiveWidgetsInOrder;
 	if (IsValid(InLiveTree->RootWidget))
 	{
 		UDreamWidget::CollectChildrenWidgets(InLiveTree->RootWidget, LiveWidgetsInOrder, /*IncludeTarget*/true);
 	}
-	TSet<FString> Inserted;
 	for (UDreamWidget* LiveWidget : LiveWidgetsInOrder)
 	{
 		// Transient is run time's: the copies a `for` makes of its template stand among the host
@@ -1623,50 +2377,383 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 			// A new ROOT is not an insert, it is a different file. Nothing sensible to write.
 			continue;
 		}
-		const FString ParentId = Parent->GetDisplayName();
-		if (!AuthoredIds.Contains(ParentId) && !Inserted.Contains(ParentId))
+		if (InSkipInsertIds != nullptr && InSkipInsertIds->Contains(Id))
 		{
-			// The parent is a synthesised widget (an `each` content holder) or a node the file does
-			// not declare. Writing into it would be writing into machinery the author never typed.
+			continue;
+		}
+		const FString ParentId = Parent->GetDisplayName();
+		if (!AuthoredIds.Contains(ParentId))
+		{
+			// The parent is a synthesised widget (an `each` content holder), a node the file does not
+			// declare, or one this flush has not written yet. Writing into the first two would be writing
+			// into machinery the author never typed; the third is the next round's.
 			continue;
 		}
 
 		FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
 		Edit.Kind = EDreamUIStructuralEditKind::InsertNode;
-		Edit.ParentId = Parent == InLiveTree->RootWidget ? FString() : ParentId;
+		// Placed by neighbour (the authored sibling it stands before) and by the named slot it fills, which the
+		// patcher writes into the instance's `slot Name { … }` fill.
+		const FPlacement Placement = ResolvePlacement(LiveWidget, InLiveTree, InAst);
+		Edit.ParentId = Placement.ParentId;
 		Edit.NewId = Id;
-		Edit.ChildIndex = Parent->GetChildIndex(LiveWidget);
+		Edit.BeforeId = Placement.BeforeId;
+		Edit.FillSlotName = Placement.FillSlotName;
 		Edit.TypeName = DescribeWidgetForText(LiveWidget, InAst);
-		// Content of a component instance hangs off the instance whichever slot it fills; the slot is in the instance's
-		// NamedSlotContent, and only for a NAMED slot -- the default one is nesting alone. Written as an ordinary child,
-		// named-slot content would be default-slot content on the next compile, so the slot rides along and the patcher
-		// writes it into the instance's `slot Name { … }` fill.
-		if (const UDreamUserWidget* Instance = Cast<UDreamUserWidget>(Parent))
+	}
+
+	// ---- the `+` lines of a node this flush has just written -------------------------------------
+	//
+	// A node is inserted as `Type Id { }`, and the type spells the visual and, for a plain widget, its
+	// layout container -- nothing else. A pasted button's behaviours, or a container on a widget that
+	// also has a visual, have no line until one is written here, and without it the value pass would
+	// have no object to write their settings onto and the next compile would drop them. Matched by
+	// class, as many times as the live node carries one: anything the text node already builds (from
+	// its type, or a behaviour the builder adds with it) is in both and cancels out.
+	if (InComponentCheckIds != nullptr)
+	{
+		for (const FString& Id : *InComponentCheckIds)
 		{
-			TArray<FName> SlotNames;
-			UDreamUserWidget::CollectDeclaredSlotNames(Instance->GetClass(), SlotNames);
-			const FName DefaultSlot = Instance->GetDefaultSlotName();
-			for (const FName& SlotName : SlotNames)
+			const UDreamWidget* LiveWidget = LiveWidgets.FindRef(Id);
+			const UDreamWidget* TextWidget = TextWidgets.FindRef(Id);
+			if (!IsValid(LiveWidget) || !IsValid(TextWidget))
 			{
-				if (SlotName != DefaultSlot && Instance->GetContentForNamedSlot(SlotName) == LiveWidget)
+				continue;
+			}
+			TArray<const UObject*> TextObjects;
+			CollectAuthorableComponentObjects(TextWidget, TextObjects);
+			TArray<const UObject*> LiveObjects;
+			CollectAuthorableComponentObjects(LiveWidget, LiveObjects);
+			for (const UObject* LiveObject : LiveObjects)
+			{
+				const int32 Match = TextObjects.IndexOfByPredicate([LiveObject](const UObject* InCandidate)
 				{
-					Edit.FillSlotName = SlotName.ToString();
-					break;
+					return InCandidate != nullptr && InCandidate->GetClass() == LiveObject->GetClass();
+				});
+				if (Match != INDEX_NONE)
+				{
+					TextObjects[Match] = nullptr;
+					continue;
+				}
+				const FString Spelling = FindComponentSpelling(LiveObject->GetClass());
+				if (Spelling.IsEmpty())
+				{
+					// No name the builder reads back as this class: writing a guess would be a line the
+					// next compile rejects. The value pass then has nothing to write onto, which is the
+					// same loss without a broken file.
+					continue;
+				}
+				FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+				Edit.Kind = EDreamUIStructuralEditKind::InsertComponent;
+				Edit.NodeId = Id;
+				Edit.ComponentClassName = Spelling;
+			}
+		}
+	}
+
+	// ---- the type and the `+` lines of a node both trees have --------------------------------------
+	//
+	// What the designer changes about a node without adding or removing one: a visual swapped for
+	// another, a panel replaced, a behaviour added, taken off or moved. Read off the two trees like
+	// everything above, paired by class, so whatever both build alike cancels out.
+	auto Emit = [&OutEdits, InAttempted](FDreamUIStructuralEdit&& InEdit) -> bool
+	{
+		if (InAttempted != nullptr && InAttempted->Contains(MakeEditSignature(InEdit)))
+		{
+			return false;
+		}
+		OutEdits.Add(MoveTemp(InEdit));
+		return true;
+	};
+	auto ResolvesOn = [](const FString& InName, TConstArrayView<const UClass*> InClasses)
+	{
+		int32 Dot = INDEX_NONE;
+		const FString Head = InName.FindChar(TEXT('.'), Dot) ? InName.Left(Dot) : InName;
+		for (const UClass* Class : InClasses)
+		{
+			if (Class != nullptr && FindFProperty<FProperty>(Class, FName(*Head)) != nullptr)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	InAst.ForEachNode([&](const FDreamUINode& InNode)
+	{
+		if (InNode.Kind != EDreamUINodeKind::Widget || InNode.Id.IsEmpty() || !InNode.RowKey.IsEmpty()
+			|| (InComponentCheckIds != nullptr && InComponentCheckIds->Contains(InNode.Id)))
+		{
+			return;
+		}
+		const UDreamWidget* Live = LiveWidgets.FindRef(InNode.Id);
+		const UDreamWidget* Text = TextWidgets.FindRef(InNode.Id);
+		if (!IsValid(Live) || !IsValid(Text))
+		{
+			return;
+		}
+
+		// The type: what the visual is, which widget blueprint a nested instance is, and -- when the type is a
+		// panel's name (`VerticalBox Column`) -- which panel it is.
+		const UClass* LiveVisual = Live->GetVisual() != nullptr ? Live->GetVisual()->GetClass() : nullptr;
+		const UClass* TextVisual = Text->GetVisual() != nullptr ? Text->GetVisual()->GetClass() : nullptr;
+		const UClass* LiveContainer = Live->GetLayoutContainer() != nullptr ? Live->GetLayoutContainer()->GetClass() : nullptr;
+		const UClass* TextContainer = Text->GetLayoutContainer() != nullptr ? Text->GetLayoutContainer()->GetClass() : nullptr;
+		const bool bTypeIsContainer = FDreamUITextBuilder::FindContainerClassForType(InNode.TypeName) != nullptr;
+
+		// Another panel converts every child's slot to its own slot class, and an `@slot` line the new class has no
+		// property for would stop the file building. Those go with the panel change, and are said.
+		if (LiveContainer != TextContainer)
+		{
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				const UDreamWidget* LiveChild = Child.Id.IsEmpty() ? nullptr : LiveWidgets.FindRef(Child.Id);
+				const UClass* SlotClass = IsValid(LiveChild) && LiveChild->GetPanelSlot() != nullptr ? LiveChild->GetPanelSlot()->GetClass() : nullptr;
+				if (SlotClass == nullptr || !Child.RowKey.IsEmpty())
+				{
+					continue;
+				}
+				const UClass* SlotCandidates[] = { SlotClass };
+				for (const FDreamUIProperty& Line : Child.SlotProperties)
+				{
+					if (Line.bSynthesized || Line.bRowCell || ResolvesOn(Line.Name, MakeArrayView(SlotCandidates)))
+					{
+						continue;
+					}
+					FDreamUIStructuralEdit Remove;
+					Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+					Remove.NodeId = Child.Id;
+					Remove.PropertyName = Line.Name;
+					Remove.PropertyTarget = EDreamUIPatchTarget::Slot;
+					if (Emit(MoveTemp(Remove)) && OutDropped != nullptr)
+					{
+						OutDropped->Add(FString::Printf(TEXT("%s.@slot %s = %s"), *Child.Id, *Line.Name, *Line.Value.Raw));
+					}
 				}
 			}
 		}
-		Inserted.Add(Id);
+
+		const bool bRetype = LiveVisual != TextVisual
+			|| (Live->IsA<UDreamUserWidget>() && Live->GetClass() != Text->GetClass())
+			|| (bTypeIsContainer && LiveContainer != TextContainer);
+		if (bRetype)
+		{
+			const FString NewType = DescribeWidgetForText(Live, InAst);
+			if (!NewType.IsEmpty() && !NewType.Equals(InNode.TypeName, ESearchCase::CaseSensitive))
+			{
+				FDreamUIStructuralEdit Retype;
+				Retype.Kind = EDreamUIStructuralEditKind::RetypeNode;
+				Retype.NodeId = InNode.Id;
+				Retype.TypeName = NewType;
+				if (Emit(MoveTemp(Retype)))
+				{
+					if (OutSweepKeys != nullptr)
+					{
+						OutSweepKeys->Add(InNode.Id);
+					}
+					// A line the new type has no property for would stop the file building; it goes, and is said.
+					const UClass* NewTypeContainer = FDreamUITextBuilder::FindContainerClassForType(NewType) != nullptr ? LiveContainer : nullptr;
+					const UClass* Candidates[] = { Live->GetClass(), LiveVisual, NewTypeContainer };
+					for (const FDreamUIProperty& Property : InNode.Properties)
+					{
+						if (Property.bSynthesized || Property.bRowCell || ResolvesOn(Property.Name, MakeArrayView(Candidates)))
+						{
+							continue;
+						}
+						FDreamUIStructuralEdit Remove;
+						Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+						Remove.NodeId = InNode.Id;
+						Remove.PropertyName = Property.Name;
+						if (Emit(MoveTemp(Remove)) && OutDropped != nullptr)
+						{
+							OutDropped->Add(FString::Printf(TEXT("%s.%s = %s"), *InNode.Id, *Property.Name, *Property.Value.Raw));
+						}
+					}
+					return;
+				}
+			}
+		}
+
+		// The `+` lines: paired by class with what the node now holds. A type that names the panel owns the panel.
+		TArray<const UObject*> LineObjects;
+		CollectComponentObjectsInAuthorOrder(InNode, Text, LineObjects);
+		TArray<const UObject*> LiveObjects;
+		CollectAuthorableComponentObjects(Live, LiveObjects);
+		TArray<const UObject*> TextObjects;
+		CollectAuthorableComponentObjects(Text, TextObjects);
+		if (bTypeIsContainer)
+		{
+			auto IsContainer = [](const UObject* InObject) { return InObject != nullptr && InObject->IsA<UDreamLayoutContainer>(); };
+			LiveObjects.RemoveAll(IsContainer);
+			TextObjects.RemoveAll(IsContainer);
+		}
+		TArray<const UObject*> UnpairedLive = LiveObjects;
+		TArray<const UObject*> UnpairedText;
+		for (const UObject* TextObject : TextObjects)
+		{
+			const int32 Pair = UnpairedLive.IndexOfByPredicate([TextObject](const UObject* InLive) { return InLive->GetClass() == TextObject->GetClass(); });
+			if (Pair != INDEX_NONE)
+			{
+				UnpairedLive.RemoveAt(Pair);
+			}
+			else
+			{
+				UnpairedText.Add(TextObject);
+			}
+		}
+
+		bool bLinesChanged = false;
+		TArray<const UClass*> LiveClasses;
+		for (const UObject* Object : LiveObjects)
+		{
+			LiveClasses.Add(Object->GetClass());
+		}
+		LiveClasses.Add(Live->GetClass());
+		LiveClasses.Add(LiveVisual);
+		for (const UObject* Gone : UnpairedText)
+		{
+			const int32 Line = LineObjects.IndexOfByKey(Gone);
+			if (Line == INDEX_NONE)
+			{
+				if (OutUnsettled != nullptr)
+				{
+					OutUnsettled->AddUnique(FString::Printf(TEXT("%s: + %s"), *InNode.Id, *GetNameSafe(Gone->GetClass())));
+				}
+				continue;
+			}
+			FDreamUIStructuralEdit Remove;
+			Remove.Kind = EDreamUIStructuralEditKind::RemoveComponent;
+			Remove.NodeId = InNode.Id;
+			Remove.ComponentIndex = Line;
+			Remove.ComponentClassName = InNode.Components[Line].ClassName;
+			if (Emit(MoveTemp(Remove)))
+			{
+				bLinesChanged = true;
+				// A value of the block the node's objects can no longer take is lost with the block, and said. One
+				// they can take is written again by the value pass, under the line that holds it now.
+				for (const FDreamUIProperty& Property : InNode.Components[Line].Properties)
+				{
+					if (!ResolvesOn(Property.Name, LiveClasses) && OutDropped != nullptr)
+					{
+						OutDropped->Add(FString::Printf(TEXT("%s.%s = %s"), *InNode.Id, *Property.Name, *Property.Value.Raw));
+					}
+				}
+			}
+		}
+		for (const UObject* Added : UnpairedLive)
+		{
+			const FString Spelling = FindComponentSpelling(Added->GetClass());
+			if (Spelling.IsEmpty())
+			{
+				continue;
+			}
+			FDreamUIStructuralEdit Insert;
+			Insert.Kind = EDreamUIStructuralEditKind::InsertComponent;
+			Insert.NodeId = InNode.Id;
+			Insert.ComponentClassName = Spelling;
+			if (Emit(MoveTemp(Insert)))
+			{
+				bLinesChanged = true;
+				if (OutSweepKeys != nullptr)
+				{
+					OutSweepKeys->Add(InNode.Id + TEXT("+") + Spelling);
+				}
+			}
+		}
+		if (bLinesChanged)
+		{
+			return;
+		}
+
+		// The order of the behaviour lines, against the order the live node holds those behaviours in. One move a
+		// round: the first place they disagree gets the behaviour the live node has there.
+		TArray<int32> BehaviourLines;
+		TArray<const UClass*> TextOrder;
+		for (int32 Line = 0; Line < LineObjects.Num(); ++Line)
+		{
+			if (LineObjects[Line] != nullptr && LineObjects[Line]->IsA<UDreamUIBehaviour>())
+			{
+				BehaviourLines.Add(Line);
+				TextOrder.Add(LineObjects[Line]->GetClass());
+			}
+		}
+		TArray<const UClass*> Remaining = TextOrder;
+		TArray<const UClass*> LiveOrder;
+		for (const UDreamUIBehaviour* Behaviour : Live->GetAllComponents())
+		{
+			if (IsValid(Behaviour) && Remaining.RemoveSingle(Behaviour->GetClass()) > 0)
+			{
+				LiveOrder.Add(Behaviour->GetClass());
+			}
+		}
+		if (LiveOrder.Num() != TextOrder.Num())
+		{
+			return;
+		}
+		for (int32 Place = 0; Place < TextOrder.Num(); ++Place)
+		{
+			if (TextOrder[Place] == LiveOrder[Place])
+			{
+				continue;
+			}
+			for (int32 From = Place + 1; From < TextOrder.Num(); ++From)
+			{
+				if (TextOrder[From] == LiveOrder[Place])
+				{
+					FDreamUIStructuralEdit Move;
+					Move.Kind = EDreamUIStructuralEditKind::MoveComponent;
+					Move.NodeId = InNode.Id;
+					Move.ComponentIndex = BehaviourLines[From];
+					Move.ChildIndex = BehaviourLines[Place];
+					Move.ComponentClassName = InNode.Components[BehaviourLines[From]].ClassName;
+					Emit(MoveTemp(Move));
+					break;
+				}
+			}
+			break;
+		}
+	});
+}
+
+FString FDreamUITextWriteBack::MakeEditSignature(const FDreamUIStructuralEdit& InEdit)
+{
+	return FString::Printf(TEXT("%d|%s|%s|%s|%s|%d|%d|%s|%d"), static_cast<int32>(InEdit.Kind), *InEdit.NodeId, *InEdit.NewId,
+		*InEdit.TypeName, *InEdit.ComponentClassName, InEdit.ComponentIndex, InEdit.ChildIndex, *InEdit.PropertyName,
+		static_cast<int32>(InEdit.PropertyTarget));
+}
+
+int32 FDreamUITextWriteBack::FindComponentLine(const FDreamUINode& InNode, const UDreamWidget* InWidget, const UObject* InComponent)
+{
+	if (!IsValid(InWidget) || InComponent == nullptr)
+	{
+		return INDEX_NONE;
 	}
+	TArray<const UObject*> LineObjects;
+	DreamUIWriteBackLocal::CollectComponentObjectsInAuthorOrder(InNode, InWidget, LineObjects);
+	return LineObjects.IndexOfByKey(InComponent);
+}
+
+FString FDreamUITextWriteBack::DescribeComponentForText(const UClass* InClass)
+{
+	return DreamUIWriteBackLocal::FindComponentSpelling(InClass);
+}
+
+FString FDreamUITextWriteBack::DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst)
+{
+	return DreamUIWriteBackLocal::DescribeWidgetForText(InWidget, InAst);
 }
 
 bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 	FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits,
-	const UObject* InLiveDefaults)
+	const UObject* InLiveDefaults, FDreamUIStructuralResidue* OutResidue)
 {
 	OutText = InText;
 	if (OutEdits != nullptr)
 	{
 		OutEdits->Reset();
+	}
+	if (OutResidue != nullptr)
+	{
+		OutResidue->Reset();
 	}
 	if (InLiveTree == nullptr)
 	{
@@ -1691,33 +2778,332 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// every location after it -- the property pass has to be planned against the file it will land
 	// in, not the one that came in. This is the "a caller that wants two edits re-parses in between"
 	// rule from FDreamUITextPatcher's own comment, and this is the caller.
+	//
+	// In rounds, because a subtree is written outermost-in and a child's insert can only be planned
+	// against a text that already holds its parent. Each round collects against the text as it now is,
+	// applies, and reads the result back; the loop ends on a round with nothing to do, or one whose
+	// edits were all refused (the patcher has said why). Bounded by the nesting the parser accepts,
+	// one level per round, plus one round for the `+` lines of the deepest nodes.
 	FString Working = InText;
-	TArray<FDreamUIStructuralEdit> StructuralEdits;
-	CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits);
-	if (StructuralEdits.Num() > 0)
-	{
-		FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, StructuralEdits, OutDiagnostics);
+	TSet<FString> WrittenIds;
+	TSet<FString> RefusedInserts;
+	TSet<FString> ComponentCheckIds;
+	// Edits on existing nodes a round already tried (never emitted twice), what retypes and removed blocks took
+	// out, and what the latest round could not take out of the file.
+	TSet<FString> Attempted;
+	TArray<FString> Dropped;
+	TArray<FString> Unsettled;
+	bool bShapeChanged = false;
 
+	// The edits a gesture queued (QueueStructuralEdit): renames and moves, which the trees cannot be read for.
+	// Each is applied on its own against the text as it stands -- the next one's locations are only right in the
+	// text the last one produced -- and one that cannot be planned yet (a move into a node the shape pass has not
+	// written) waits for the next round. Its refusal is kept, and said only if it never lands.
+	struct FPendingEdit
+	{
+		FDreamUIStructuralEdit Edit;
+		TArray<FDreamUIDiagnostic> Refusal;
+	};
+	TArray<FPendingEdit> Pending;
+	if (const TArray<FDreamUIStructuralEdit>* Queued = DreamUIWriteBackQueueLocal::GetQueueMap().Find(InLiveTree))
+	{
+		for (const FDreamUIStructuralEdit& Edit : *Queued)
+		{
+			Pending.Add({ Edit, {} });
+		}
+	}
+	TMap<FString, UDreamWidget*> LiveById;
+	if (!Pending.IsEmpty())
+	{
+		DreamUIWriteBackLocal::MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveById);
+	}
+	// False only when an edit produced a text that does not build; then nothing is written at all.
+	auto ApplyPending = [&]() -> bool
+	{
+		using namespace DreamUIWriteBackLocal;
+		for (int32 Index = 0; Index < Pending.Num();)
+		{
+			FDreamUIStructuralEdit Edit = Pending[Index].Edit;
+			if (Edit.Kind == EDreamUIStructuralEditKind::MoveNode)
+			{
+				// Placed where the widget stands NOW, so the caller only had to say which node moved.
+				if (const UDreamWidget* Live = LiveById.FindRef(Edit.NodeId))
+				{
+					const FPlacement Placement = ResolvePlacement(Live, InLiveTree, Ast);
+					Edit.ParentId = Placement.ParentId;
+					Edit.FillSlotName = Placement.FillSlotName;
+					Edit.BeforeId = Placement.BeforeId;
+					const FDreamUINode* TextNode = FindAstNode(Ast, Edit.NodeId);
+					if (TextNode != nullptr && Placement.Destination != nullptr && IsAlreadyPlaced(Ast, *TextNode, Placement))
+					{
+						// Moved back where it was, or written there by an earlier edit: nothing to do.
+						Pending.RemoveAt(Index);
+						continue;
+					}
+				}
+			}
+
+			const FString BeforeEdit = Working;
+			FDreamUIDiagnosticBag Attempt;
+			Attempt.SourceName = OutDiagnostics.SourceName;
+			const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, MakeArrayView(&Edit, 1), Attempt);
+			if (Working.Equals(BeforeEdit, ESearchCase::CaseSensitive))
+			{
+				if (bPlanned && !Attempt.HasErrors())
+				{
+					// The file already says it (a statement written twice): done, and nothing to report.
+					Pending.RemoveAt(Index);
+					continue;
+				}
+				Pending[Index].Refusal = Attempt.Diagnostics;
+				++Index;
+				continue;
+			}
+
+			FDreamUIAst Rebuilt;
+			FDreamUIDiagnosticBag ReadBack;
+			ReadBack.SourceName = OutDiagnostics.SourceName;
+			TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, ReadBack));
+			if (!RebuiltTree.IsValid())
+			{
+				for (FDreamUIDiagnostic& Diagnostic : ReadBack.Diagnostics)
+				{
+					OutDiagnostics.Add(MoveTemp(Diagnostic));
+				}
+				return false;
+			}
+			Ast = MoveTemp(Rebuilt);
+			TextTree = MoveTemp(RebuiltTree);
+			// A binding, a route or a value line written or taken out is not a change of shape: the value pass stays the
+			// dirty set's (or the sweep's), as it is for the overrides below.
+			if (Edit.Kind != EDreamUIStructuralEditKind::SetStatement && Edit.Kind != EDreamUIStructuralEditKind::RemoveProperty)
+			{
+				bShapeChanged = true;
+			}
+			Pending.RemoveAt(Index);
+		}
+		return true;
+	};
+
+	for (int32 Round = 0; Round <= DreamUIAst::MaxNestingDepth + 1; ++Round)
+	{
+		if (!ApplyPending())
+		{
+			OutText = InText;
+			return false;
+		}
+
+		TArray<FDreamUIStructuralEdit> StructuralEdits;
+		Unsettled.Reset();
+		// WrittenIds doubles as the sweep set: the shape pass adds a retyped node and `Id+Class` of a new `+` line.
+		CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits,
+			/*bInIncludeRemovals*/Round == 0, &RefusedInserts, &ComponentCheckIds, &WrittenIds, &Dropped, &Unsettled, &Attempted);
+		// Each node's `+` lines are asked for once, in the round right after the node was written.
+		ComponentCheckIds.Reset();
+		if (StructuralEdits.IsEmpty())
+		{
+			break;
+		}
+		for (const FDreamUIStructuralEdit& Edit : StructuralEdits)
+		{
+			Attempted.Add(MakeEditSignature(Edit));
+		}
+
+		const FString BeforeRound = Working;
+		FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, StructuralEdits, OutDiagnostics);
+		if (Working.Equals(BeforeRound, ESearchCase::CaseSensitive))
+		{
+			break;
+		}
+
+		// Its own bag: the builder repeats every warning the file carries on every read, and one copy of
+		// those per round would bury the one that matters. Kept only when the read fails.
 		FDreamUIAst Rebuilt;
-		TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, OutDiagnostics));
+		FDreamUIDiagnosticBag RoundDiagnostics;
+		RoundDiagnostics.SourceName = OutDiagnostics.SourceName;
+		TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, RoundDiagnostics));
 		if (!RebuiltTree.IsValid())
 		{
 			// The shape pass produced a file that does not build. Nothing is written at all -- half a
 			// structural change is worse than none, and the diagnostics say which line went wrong.
+			for (FDreamUIDiagnostic& Diagnostic : RoundDiagnostics.Diagnostics)
+			{
+				OutDiagnostics.Add(MoveTemp(Diagnostic));
+			}
 			OutText = InText;
 			return false;
 		}
+
+		// Which inserts landed: those are swept whole by the value pass and get their `+` lines next
+		// round. One that did not land is not asked again -- it would be refused for the same reason.
+		TSet<FString> NowDeclared;
+		Rebuilt.ForEachNode([&NowDeclared](const FDreamUINode& InNode)
+		{
+			if (!InNode.Id.IsEmpty())
+			{
+				NowDeclared.Add(InNode.Id);
+			}
+		});
+		for (const FDreamUIStructuralEdit& Edit : StructuralEdits)
+		{
+			if (Edit.Kind != EDreamUIStructuralEditKind::InsertNode)
+			{
+				continue;
+			}
+			if (NowDeclared.Contains(Edit.NewId))
+			{
+				WrittenIds.Add(Edit.NewId);
+				ComponentCheckIds.Add(Edit.NewId);
+			}
+			else
+			{
+				RefusedInserts.Add(Edit.NewId);
+			}
+		}
+
 		Ast = MoveTemp(Rebuilt);
 		TextTree = MoveTemp(RebuiltTree);
+		bShapeChanged = true;
+	}
+
+	// The last chance for a queued edit the rounds made room for; what still does not land is said.
+	if (!ApplyPending())
+	{
+		OutText = InText;
+		return false;
+	}
+	for (FPendingEdit& Unapplied : Pending)
+	{
+		for (FDreamUIDiagnostic& Diagnostic : Unapplied.Refusal)
+		{
+			OutDiagnostics.Add(MoveTemp(Diagnostic));
+		}
+	}
+
+	if (OutResidue != nullptr)
+	{
+		// Read off the same two maps the shape pass pairs by, so the residue is exactly the disagreement
+		// that pass could not settle -- and empty for every flush whose shape already matched.
+		TMap<FString, UDreamWidget*> LiveWidgets;
+		TMap<FString, UDreamWidget*> TextWidgets;
+		DreamUIWriteBackLocal::MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
+		DreamUIWriteBackLocal::MapWidgetsByNodeId(TextTree.Get(), TextWidgets);
+		for (const TPair<FString, UDreamWidget*>& Pair : LiveWidgets)
+		{
+			if (!TextWidgets.Contains(Pair.Key))
+			{
+				OutResidue->Unwritten.Add(Pair.Key);
+			}
+		}
+		for (const TPair<FString, UDreamWidget*>& Pair : TextWidgets)
+		{
+			if (!LiveWidgets.Contains(Pair.Key))
+			{
+				OutResidue->Unremoved.Add(Pair.Key);
+			}
+			// Under another parent: a move the text did not take, which the compile is about to put back.
+			else if (const UDreamWidget* Live = LiveWidgets.FindRef(Pair.Key))
+			{
+				const UDreamWidget* LiveParent = Live->GetParent();
+				const UDreamWidget* TextParent = Pair.Value->GetParent();
+				if (IsValid(LiveParent) && IsValid(TextParent)
+					&& !LiveParent->GetDisplayName().Equals(TextParent->GetDisplayName(), ESearchCase::IgnoreCase))
+				{
+					OutResidue->Unmoved.Add(Pair.Key);
+				}
+			}
+		}
+		OutResidue->Unsettled = Unsettled;
+		OutResidue->Dropped = Dropped;
+	}
+
+	// ---- between the two: OVERRIDES of a style's values ----------------------------------------------
+	//
+	// A value a node takes from its style's `+ Class` line has no line of its own to change. Asked of the value pass,
+	// such a change becomes a `+ Class { }` line on the node, written here, and the value pass below then writes the
+	// changed values into it: the node overrides the style for itself, and every other node wearing it is untouched.
+	TArray<FDreamUIPropertyEdit> Probe;
+	{
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		TArray<FDreamUIStructuralEdit> Overrides;
+		CollectEdits(Ast, InLiveTree, TextTree.Get(), Probe, ProbeDiagnostics, /*bInUseDirtySet*/true,
+			bShapeChanged ? &WrittenIds : nullptr, &Overrides);
+		if (!Overrides.IsEmpty())
+		{
+			const FString BeforeOverrides = Working;
+			FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, Overrides, OutDiagnostics);
+			if (!Working.Equals(BeforeOverrides, ESearchCase::CaseSensitive))
+			{
+				FDreamUIAst Rebuilt;
+				FDreamUIDiagnosticBag ReadBack;
+				ReadBack.SourceName = OutDiagnostics.SourceName;
+				TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, ReadBack));
+				if (!RebuiltTree.IsValid())
+				{
+					for (FDreamUIDiagnostic& Diagnostic : ReadBack.Diagnostics)
+					{
+						OutDiagnostics.Add(MoveTemp(Diagnostic));
+					}
+					OutText = InText;
+					return false;
+				}
+				Ast = MoveTemp(Rebuilt);
+				TextTree = MoveTemp(RebuiltTree);
+				// Not a change of shape: the value that asked for the line is still the dirty set's (or the sweep's), and
+				// so is every other value of this flush. Only after a shape pass, which narrows the value pass to the
+				// nodes it wrote, does the new line join those.
+				if (bShapeChanged)
+				{
+					for (const FDreamUIStructuralEdit& Override : Overrides)
+					{
+						WrittenIds.Add(Override.NodeId + TEXT("+") + Override.ComponentClassName);
+					}
+				}
+			}
+		}
+	}
+
+	// ---- and the lines a value replaces -------------------------------------------------------------
+	//
+	// A value whose property replaced older ones (meta=(DreamGUI_Replaces)) takes their lines out of its node as it is
+	// written -- a rect block's two-colour gradient's lines go when its gradient is first written with stops -- so the file
+	// never says one thing two ways. Planned from the probe above, which names properties rather than places, against the
+	// text as it now is, and read back before the value pass is planned against it.
+	{
+		TArray<FDreamUIStructuralEdit> Replaced;
+		DreamUIWriteBackLocal::CollectReplacedLines(Ast, InLiveTree, Probe, Replaced);
+		if (!Replaced.IsEmpty())
+		{
+			const FString BeforeRemovals = Working;
+			FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, Replaced, OutDiagnostics);
+			if (!Working.Equals(BeforeRemovals, ESearchCase::CaseSensitive))
+			{
+				FDreamUIAst Rebuilt;
+				FDreamUIDiagnosticBag ReadBack;
+				ReadBack.SourceName = OutDiagnostics.SourceName;
+				TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, ReadBack));
+				if (!RebuiltTree.IsValid())
+				{
+					for (FDreamUIDiagnostic& Diagnostic : ReadBack.Diagnostics)
+					{
+						OutDiagnostics.Add(MoveTemp(Diagnostic));
+					}
+					OutText = InText;
+					return false;
+				}
+				Ast = MoveTemp(Rebuilt);
+				TextTree = MoveTemp(RebuiltTree);
+			}
+		}
 	}
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------
 	TArray<FDreamUIPropertyEdit> Edits;
-	// The dirty set is skipped for a flush that changed the shape: a node that has just been written
-	// into the file has no dirty entries, and its authored values would go unwritten. Sweeping is the
-	// fallback the set is layered over, and this is one of the cases it exists for.
+	// After a change of shape, the nodes just written are swept whole -- they have no dirty entries,
+	// and every value they hold is one the author made -- while every other node writes only what was
+	// reported. A plain value flush is the dirty set over the sweep, exactly as before.
 	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics,
-		/*bInUseDirtySet*/StructuralEdits.IsEmpty());
+		/*bInUseDirtySet*/true, bShapeChanged ? &WrittenIds : nullptr);
 	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits, OutDiagnostics);
 	if (OutEdits != nullptr)
 	{
@@ -1849,11 +3235,99 @@ bool FDreamUITextWriteBack::Flush(FString& OutError)
 	return FlushTree(Pinned->GetBlueprint()->WidgetTree, OutError, LiveDefaults);
 }
 
+bool FDreamUITextWriteBack::ApplyStatementEdit(const FDreamUIStructuralEdit& InEdit, FString& OutError)
+{
+	OutError.Reset();
+	LastDiagnostics.Reset();
+	UDreamUIDocument* Document = DocumentHandle.Get();
+	if (Document == nullptr)
+	{
+		OutError = TEXT("this write-back has no document");
+		return false;
+	}
+	LastDiagnostics.SourceName = FPaths::GetCleanFilename(GetFilePath());
+
+	const FString Current = Document->GetContent();
+	FDreamUIAst Ast;
+	if (!FDreamUISourceFile::Parse(Current, LastDiagnostics.SourceName, Ast, LastDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
+	{
+		OutError = FString::Printf(TEXT("'%s' does not parse, so nothing was written into it"), *LastDiagnostics.SourceName);
+		return false;
+	}
+	FString Updated = Current;
+	const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Updated, Ast, MakeArrayView(&InEdit, 1), LastDiagnostics);
+	if (!bPlanned)
+	{
+		const FDreamUIDiagnostic* First = LastDiagnostics.Diagnostics.FindByPredicate(
+			[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
+		OutError = First != nullptr ? First->ToString() : TEXT("the patcher refused the line");
+		return false;
+	}
+	return ApplyTextChange(Updated, OutError);
+}
+
+FString FDreamUITextWriteBack::GetDocumentText() const
+{
+	const UDreamUIDocument* Document = DocumentHandle.Get();
+	return Document != nullptr ? Document->GetContent() : FString();
+}
+
+bool FDreamUITextWriteBack::ApplyTextChange(const FString& InNewText, FString& OutError)
+{
+	OutError.Reset();
+	UDreamUIDocument* Document = DocumentHandle.Get();
+	if (Document == nullptr)
+	{
+		OutError = TEXT("this write-back has no document");
+		return false;
+	}
+	if (InNewText.Equals(Document->GetContent(), ESearchCase::CaseSensitive))
+	{
+		return true;
+	}
+	// Read back before it is written: whatever made the new text, it has to leave a file that still parses.
+	{
+		FDreamUIAst ReadBack;
+		FDreamUIDiagnosticBag ReadBackDiagnostics;
+		ReadBackDiagnostics.SourceName = FPaths::GetCleanFilename(GetFilePath());
+		if (!FDreamUISourceFile::Parse(InNewText, ReadBackDiagnostics.SourceName, ReadBack, ReadBackDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			const FDreamUIDiagnostic* First = ReadBackDiagnostics.Diagnostics.FindByPredicate(
+				[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
+			OutError = First != nullptr ? First->ToString() : TEXT("the written file would not parse");
+			return false;
+		}
+	}
+
+	FScopedTransaction Transaction(LOCTEXT("DreamUIStatementTransaction", "Edit DreamUI Text"));
+	TGuardValue<bool> WritingBack(bIsWritingBack, true);
+	const bool bSet = Document->SetContent(InNewText, OutError);
+	if (Document->GetContent().Equals(InNewText, ESearchCase::CaseSensitive))
+	{
+		++WriteCount;
+	}
+	return bSet;
+}
+
+bool FDreamUITextWriteBack::PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText)
+{
+	return DreamUIWriteBackLocal::PrintLiteral(InLeaf, InValuePtr, OutText, nullptr);
+}
+
+void FDreamUITextWriteBack::CollectUnwritableDifferences(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits, TArray<FString>& OutUnwritable,
+	FDreamUIDiagnosticBag& OutDiagnostics)
+{
+	TGuardValue<TArray<FString>*> Sink(DreamUIWriteBackLocal::GUnwritableSink, &OutUnwritable);
+	CollectEdits(InAst, InLiveTree, InTextTree, OutEdits, OutDiagnostics, /*bInUseDirtySet*/false);
+}
+
 bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError,
 	const UObject* InLiveDefaults)
 {
 	OutError.Reset();
 	LastDiagnostics.Reset();
+	LastResidue.Reset();
 	LastEditCount = 0;
 
 	UDreamUIDocument* Document = DocumentHandle.Get();
@@ -1874,7 +3348,12 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 	const FString Current = Document->GetContent();
 	FString Updated;
 	TArray<FDreamUIPropertyEdit> Edits;
-	if (!ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits, InLiveDefaults))
+	const bool bProduced = ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits, InLiveDefaults, &LastResidue);
+	// Consumed by this attempt, whether it landed or not. What did not land is in the residue and the bag, and the
+	// compile that follows rebuilds the tree from the file -- a queued edit kept past it would describe a tree that
+	// is gone, and be applied again to the next flush's text.
+	ClearQueuedStructuralEdits(InLiveTree);
+	if (!bProduced)
 	{
 		OutError = FString::Printf(
 			TEXT("'%s' does not currently parse and build, so nothing was written back: %s"),

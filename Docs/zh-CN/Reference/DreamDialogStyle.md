@@ -1,8 +1,3 @@
----
-title: "FDreamDialogStyle"
-description: "FDreamDialogStyle"
----
-
 <a id="fdreamdialogstyle"></a>
 
 # FDreamDialogStyle
@@ -35,3 +30,4 @@ description: "FDreamDialogStyle"
 | `PrimaryButton` | `FDreamButtonStyle` | Dialog Style | 是 | 读 / 写 |  |
 | `ButtonLabelColor` | `FColor` | Dialog Style | 是 | 读 / 写 |  |
 | `ButtonLabelFontSize` | `float` | Dialog Style | 是 | 读 / 写 |  |
+

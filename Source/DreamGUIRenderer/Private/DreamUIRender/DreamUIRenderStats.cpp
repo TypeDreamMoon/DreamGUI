@@ -53,6 +53,8 @@ namespace DreamUIRenderStats
 			TEXT("CoverageJobs"),
 			TEXT("CoverageFlushes"),
 			TEXT("FontAtlasUploadBytes"),
+			TEXT("GroupsComposited"),
+			TEXT("BackdropCopies"),
 		};
 		static_assert(UE_ARRAY_COUNT(CounterNames) == CounterCount, "every counter has its name");
 	}

@@ -157,9 +157,12 @@ bool FDreamGalleryRectBlocksTest::RunTest(const FString& Parameters)
 	}
 	if (UDreamRectBlock* Graded = Stage->AddRectBlock(TEXT("Gradient"), FVector2D(100.0, 100.0), FVector2D(60.0, 60.0), FColor(255, 120, 40, 255), 12.0f))
 	{
+		// Written the two-colour way, which a rect block still reads.
 		Graded->SetEnableBodyGradient(true);
+		PRAGMA_DISABLE_DEPRECATION_WARNINGS
 		Graded->SetBodyGradientColor(FColor(255, 40, 160, 255));
 		Graded->SetBodyGradientRotation(45.0f);
+		PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	}
 	if (UDreamRectBlock* Inset = Stage->AddRectBlock(TEXT("InnerShadow"), FVector2D(100.0, 100.0), FVector2D(-60.0, -60.0), FColor(60, 200, 120, 255), 16.0f))
 	{

@@ -161,6 +161,8 @@ namespace DreamTests
 		void PumpFrame(float InDeltaSeconds = 1.0f / 60.0f);
 		/** Move, press, release, with a frame after each: a click, as the designer sees one. */
 		bool ClickAt(FIntPoint InPixel, const FKey& InButton = EKeys::LeftMouseButton);
+		/** A click, then the second press as a double click and its release, a frame after each. Whether the double click was taken. */
+		bool DoubleClickAt(FIntPoint InPixel, const FKey& InButton = EKeys::LeftMouseButton);
 		/**
 		 * Press the left button at InFrom, travel to InTo in InSteps even moves with a frame after
 		 * each, and let go there. The last frame is pumped before the release because a designer
