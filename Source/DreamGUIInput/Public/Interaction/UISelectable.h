@@ -259,45 +259,45 @@ protected:
 	/** Optional shared style. Inline values below remain the backwards-compatible fallback. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI-Selectable", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UDreamSelectableStyle> Style = nullptr;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType == EUISelectableTransitionType::Color || TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 	TWeakObjectPtr<UDreamVisual> TransitionTarget;
 	
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
 	EUISelectableTransitionType TransitionType = EUISelectableTransitionType::Color;
 
-	UPROPERTY(EditAnywhere, Category="DreamGUI-Selectable", meta=(EditCondition="TransitionType==EUISelectableTransitionType::Custom"))
+	UPROPERTY(EditAnywhere, Category="DreamGUI-Selectable", meta=(EditCondition="TransitionType==EUISelectableTransitionType::Custom", EditConditionHides))
 	TWeakObjectPtr<UUISelectableTransition> CustomTransition = nullptr;
 	UPROPERTY(Transient)TObjectPtr<class UDreamTweener> TransitionTweener = nullptr;
 	
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 		FColor NormalColor = FColor(255, 255, 255, 255);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 		FColor HoveredColor = FColor(200, 200, 200, 255);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 		FColor PressedColor = FColor(150, 150, 150, 255);
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 		FColor DisabledColor = FColor(150, 150, 150, 128);
 	/**
 	 * Give keyboard and gamepad focus a look of its own. Off, a focused control wears the Hovered
 	 * visuals -- what every control authored before focus was a separate state already expects.
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "TransitionType != EUISelectableTransitionType::None", EditConditionHides))
 		bool bUseFocusedVisuals = false;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "bUseFocusedVisuals"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "bUseFocusedVisuals && TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 		FColor FocusedColor = FColor(220, 220, 255, 255);
 
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		FDreamUIImageBrush NormalImageBrush;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		FDreamUIImageBrush HoveredImageBrush;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		FDreamUIImageBrush PressedImageBrush;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		FDreamUIImageBrush DisabledImageBrush;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "bUseFocusedVisuals"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "bUseFocusedVisuals && TransitionType == EUISelectableTransitionType::ImageBrush", EditConditionHides))
 		FDreamUIImageBrush FocusedImageBrush;
 
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (ClampMin = "0.0", EditCondition = "TransitionType == EUISelectableTransitionType::Color", EditConditionHides))
 	float AnimDuration = 0.2f;
 
 	/**
@@ -450,27 +450,27 @@ protected:
 		bool bUseFocusRing = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationLeft = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationLeft == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationLeftSpecific;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationRight = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationRight == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationRightSpecific;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationUp = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationUp == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationUpSpecific;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationDown = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationDown == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationDownSpecific;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationNext = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationNext == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationNextSpecific;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationPrev = EUISelectableNavigationMode::Auto;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation", meta = (EditCondition = "NavigationPrev == EUISelectableNavigationMode::Explicit", EditConditionHides))
 		TWeakObjectPtr<UUISelectable> NavigationPrevSpecific;
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")

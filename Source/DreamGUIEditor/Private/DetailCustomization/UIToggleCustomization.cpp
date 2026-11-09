@@ -52,72 +52,31 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&CustomTransition);
 
-	// Hiding rows may only act on unanimity: a selection that disagrees about the transition still
-	// has objects using each of them, so hiding either set would hide properties that are live for
-	// some of them. MAX_uint8 matches no branch below, which leaves every row in place.
-	const uint8 TransitionType = DreamDetailsMultiSelect::ValueOr<uint8>(ToggleTransition_PH, MAX_uint8);
-	TArray<FName> NeedToHidePropertyNamesForTransition;
-	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), LOCTEXT("Transition", "Transition"));
+	// Every row of every transition is in the group; each shows for the transitions it applies to by its EditCondition.
+	// Named after its header property, as a group with a header property is found by.
+	IDetailGroup& TransitionGroup = category.AddGroup(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleTransitionType), LOCTEXT("Transition", "Transition"));
 	TransitionGroup.HeaderProperty(ToggleTransition_PH);
-	if (TransitionType == (uint8)(EUISelectableTransitionType::None))
+	TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
+	const uint8 TransitionType = DreamDetailsMultiSelect::ValueOr<uint8>(ToggleTransition_PH, MAX_uint8);
+	if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush) && ToggleTransitionTarget_Visual && !ToggleTransitionTarget_Visual->IsA<UDreamImage>())
 	{
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleTransitionTarget));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleDuration));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
+		TransitionGroup.AddWidgetRow()
+			.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be DreamImage"))
+			.ValueContent()
+			.MinDesiredWidth(500)
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be DreamImage"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			];
 	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
-	{
-		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
-		if (ToggleTransitionTarget_Visual && !ToggleTransitionTarget_Visual->IsA<UDreamImage>())
-		{
-			TransitionGroup.AddWidgetRow()
-				.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be DreamImage"))
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be DreamImage"))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
-
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleDuration)));
-	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
-	{
-		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
-
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OffColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OnColor)));
-		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleDuration)));
-	}
-	else if (TransitionType == (uint8)(EUISelectableTransitionType::Custom))
-	{
-		TransitionGroup.AddPropertyRow(CustomTransition_PH);
-
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleTransitionTarget));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnColor));
-	}
-	for (auto item : NeedToHidePropertyNamesForTransition)
-	{
-		DetailBuilder.HideProperty(item);
-	}
+	TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OffColor)));
+	TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OnColor)));
+	TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush)));
+	TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush)));
+	TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, ToggleDuration)));
+	TransitionGroup.AddPropertyRow(CustomTransition_PH);
 }
 void FUIToggleCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
