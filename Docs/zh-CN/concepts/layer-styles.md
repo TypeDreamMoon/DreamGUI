@@ -35,7 +35,9 @@ description: 任何控件上的图像编辑器式图层样式——投影、发�
 后面的画在前面的上面。
 
 **预设**（`UDreamLayerStylePreset`，数据资产）用来共享样式：引用预设的图层样式画预设的样式，并跟随预设的每次修改。
-`DetachFromPreset` 把预设复制成控件自己的样式。
+`DetachFromPreset` 把预设复制成控件自己的样式。预设也可以带上图层的混合模式和不透明度（`bIncludeBlending`、
+`Blending`）：从设计器的预设库套用时顺带给控件设一次；跟随它的图层样式只画效果。在设计器里，样式可以从 widget 菜单和
+Presets 标签页在控件之间复制、存成预设，见[控件设计器](../tools/designer.md#layer-styles-colours-and-presets)。
 
 ### 样式怎么画
 

@@ -88,6 +88,18 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 - **对称渐变。** `EDreamPaintType::Reflected`（`reflected-gradient(…)`）从过渐变中心的一条线向两边对称展开，文字和 RectBlock 都能用。
 - **遮罩、玻璃、阴影和光的视口手柄。** 设计器视口给裁剪 widget 的裁剪区和遮罩画手柄——裁剪矩形的四条边（它的边距）、矩形遮罩的圆角、多边形的圆角、星形或圆环的内径和羽化，轮廓按遮罩自己的距离函数描出；玻璃的圆角、边缘宽度和光；图层样式和 RectBlock 的每个阴影，拖到它落下的位置就同时改角度和距离（用全局光的样式阴影转的是全局光，用它的效果一起转）；指针光的位置和照射范围，以及画成圆盘的图层样式全局光。都随属性标签挂上（`DreamGUI_Handle`：`MaskShape`、`GlassShape`、`Shadow`、`Light`）。圆角和羽化默认一起动，Alt 只动一个；Shift 让角度按 15° 一档。见[视口手柄](../tools/designer.md#viewport-handles)。
 - **效果的光在一处读写。** `DreamLayerStyleLight`（`Core/DreamLayerStyleTypes.h`）在效果的角度和高度实际存放的地方读写它们——用全局光的效果是样式的全局光——并在阴影的角度、距离和偏移之间换算；渲染器打包阴影偏移也走它。
+- **复制和粘贴图层样式。** 设计器的 widget 菜单复制选中 widget 的图层样式（*Copy Includes* 勾上时连同混合模式、不透明度、
+  裁剪和遮罩），粘贴到每个选中的 widget 上，一步撤销，并写进 `.dui`。剪贴板里是 `.dui` 的几行，所以能贴到别的 Blueprint、
+  贴进文本编辑器，手写的几行也能粘贴。见[控件设计器](../tools/designer.md#copying-and-pasting-a-layer-style)。
+- **吸管和项目色板。** 设计器细节面板的每个颜色行都有吸管，读设计器视口自己的画面（效果、样式、混合之后的像素）或屏幕
+  上的像素；旁边是项目色板（`UDreamGUISettings::ProjectSwatches`），点一下就用，也能从这里加色。两者都是项目自己的编辑器
+  也能用的控件（`SDreamUIEyedropperButton`、`SDreamUIColorQuickPick`）。
+  见[控件设计器](../tools/designer.md#the-eyedropper-and-the-projects-palette)。
+- **预设库。** 设计器新增 Presets 标签页，分栏列出项目的渐变、图层样式和效果参数——项目设置里的文本预设（`GradientPresets`，
+  以及新增的 `StylePresets`、`EffectPresets`）和资产（`UDreamGradientAsset`、`UDreamLayerStylePreset`）——双击或拖到 widget
+  上套用到选择，可跟随也可复制，也能从选中的 widget 存成预设。样式预设资产可以带上图层的混合模式和不透明度
+  （`bIncludeBlending`）；`DreamUIStylePresets` 供项目自己的编辑器创建样式预设。见[控件设计器](../tools/designer.md#the-preset-library)。
+- **结构体列表能写回 `.dui` 了。** 图层样式的投影、描边和叠加，调整图层的各项调整，以及其他没有简写的结构体列表、Set、Map，都按读入的写法写回——`Style.DropShadows = ["(Angle=120,Distance=6)"]`，只写与结构体默认值不同的字段；以前设计器能从文件读这种列表，却写不回去。见[写回](../language/write-back.md#what-the-designer-writes-back)。
 
 - **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
   选了自动开启裁剪到边界）、添加或关闭图层样式和图层组的开关，以及控件上的每个效果——眼睛负责开关，点名字打开设置。层级面板在
@@ -128,6 +140,7 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 
 ### 修复
 
+- **写进单行节点的行留在它的块里。** 一次写入往一个在同一行开闭的块（`Text Title { Text = "Hi" }`）里加两个属性时，整次写入会被拒绝；给这样的节点加一行 `+` 时，这一行会写到右括号后面，变成父节点的行为。两者现在都落在块里。
 - **创建一个抽象类的 widget 会记一条错误**，而不是停在 NewObject 的断言上。从列表里选的类不会是抽象的，但由变量喂给类引脚或 Create Dream Widget Of Class 调用的类可能是。
 - **DreamUI Widget Blueprint 的缩略图就是它编写的那个界面。** 内容浏览器的磁贴以前是编写时锚点矩形的线框，不知道布局把东西排到了哪里，所以大多数界面画出来是一个灰框加一两条线。缩略图现在像设计器的预览一样建出 widget，在设计画布上排好、画出来，和 UMG 画 widget 缩略图一样；没有编译出类的 Blueprint 仍然画线框。它在资产没有干净的缩略图时和保存时画，不会在指针停在上面的每一帧都画，所以大界面不会卡住浏览器。已经存进资产的缩略图会一直显示，直到资产下一次被修改并保存。见[内容浏览器](../tools/designer.md#the-content-browser)。
 - **开了 Substrate 的工程里，Additive 材质画得出来了。** 开 Substrate 时，引擎把旧式 Additive 材质转成「自发光乘不透明度、全透射」的无光照层，DreamGUI 的渲染器把它当成没有覆盖，材质什么都没画。现在画的和不开 Substrate 时一样：自发光，按不透明度。

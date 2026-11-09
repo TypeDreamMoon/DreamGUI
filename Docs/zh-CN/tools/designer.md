@@ -183,6 +183,90 @@ Layout），然后是它是什么（Visual、Panel、Self Layout）、它怎么�
 Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `RequireVisual`、
 `RequireComponent`、`OnePerWidget` 或 `AddRule` 为自己的组件加规则。
 
+<a id="layer-styles-colours-and-presets"></a>
+
+## 图层样式、颜色与预设
+
+<a id="copying-and-pasting-a-layer-style"></a>
+
+### 复制和粘贴图层样式
+
+widget 菜单（层级面板的菜单，视口里右键打开的也是它）里有一节 **Layer Style**，就是图像编辑器里那一对：
+
+- **Copy Layer Style** 把选中 widget 的[图层样式](../concepts/layer-styles.md)放到剪贴板上；*Copy Includes*
+  勾了的话，连同它的混合模式和不透明度、它的裁剪和遮罩一起（这个选择会记住）。
+- **Paste Layer Style** 把它写到每个选中的 widget 上：写进各自的图层样式，没有的就加一个；剪贴板里带了混合模式和
+  遮罩的，也写到元素的混合模式和 widget 的裁剪上。菜单项的文字会说剪贴板里带了哪几样。整次粘贴是一步撤销；
+  `.dui` 驱动的 Blueprint 上会写进文件。
+
+剪贴板里放的是 `.dui` 的几行，也就是一个节点块里能写的那些行，所以复制的样式能贴到另一个 Blueprint、另一次编辑器
+会话里，也能直接贴进文本编辑器打开的 `.dui`；手写的几行同样能粘贴：
+
+```
+// DreamGUI layer style
+BlendMode = Multiply
+RenderOpacity = 0.8
+Clipping = ClipToBounds
+ClipMask.Shape = Ellipse
++ DreamLayerStyle {
+    Style.DropShadows = ["(Angle=120,Distance=6,Size=10,Opacity=0.6)"]
+    Style.BevelEmboss.bEnabled = true
+}
+```
+
+只写和默认值不同的值；粘贴会整块替换它带的那几样：样式贴到已有样式的 widget 上，旧样式的效果一个也不留。widget
+的样式来自 `.dui` 的 style（`: Card`）时，不会去改那个 style，而是在 widget 自己的节点上写一个覆盖。
+
+<a id="the-eyedropper-and-the-projects-palette"></a>
+
+### 吸管和项目色板
+
+细节面板里每一个颜色行——`FLinearColor` 和 `FColor` 都算，图层样式里的颜色也算——旁边有两个按钮：
+
+- **吸管。** 点它，移到设计器视口上，再点一下取色。在视口上读的是视口自己的画面：画出来的那个像素，背后和自身的
+  每个效果、图层样式、混合模式都已算进去，设计器盖在视口上的东西不算。在屏幕别处读的是屏幕上的像素。Esc 或右键
+  放下吸管。取色保留该行原来的 alpha，是一步撤销。
+- **色板。** 项目的色块，点一下就用；*Add This Colour to the Palette* 把这一行的颜色加进去，在色块上右键可以去掉
+  它。色板是项目设置（Project Settings > Plugins > Dream GUI > Editor > Palette，
+  `UDreamGUISettings::ProjectSwatches`，存在 `DefaultDreamGUI.ini`），项目里每个人看到的是同一套颜色。
+
+渐变的 **Stops** 行也给每个色标配了吸管，在色标下方、色块旁边：取到的颜色就是那个色标的颜色，保留它的 alpha。
+
+两者都是 `DreamGUIEditor` 模块的控件，项目自己的编辑器也能用：`SDreamUIEyedropperButton`（只要读色用
+`FDreamUIEyedropper::Sample`）、`SDreamUIColorQuickPick` 和 `SDreamUISwatchGrid`。它们都不写值：调用方拿到颜色后
+在自己的事务里写。
+
+<a id="the-preset-library"></a>
+
+### 预设库
+
+**Presets** 标签页（在调色板旁边，Window 菜单里也有）把项目的预设分成三栏：**Gradients**（渐变）、**Styles**
+（样式）和 **Effects**（效果参数）。每一栏列出项目设置里的文本预设和预设资产：
+
+| 栏 | 文本预设（Project Settings > Plugins > Dream GUI） | 资产 |
+| --- | --- | --- |
+| Gradients | `GradientPresets`：CSS，`linear-gradient(90deg, #FF8A5B, #2B5FD9)` | `UDreamGradientAsset` |
+| Styles | `StylePresets`：就是上面粘贴图层样式用的那几行 | `UDreamLayerStylePreset` |
+| Effects | `EffectPresets`：一个效果节点 `Glass { Refraction = 18  Frost = 0.25 }`，或一个行为的一行 `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }` | —— |
+
+双击一个预设，或点 *Apply to Selection*，套用到选中的 widget 上；拖到视口或层级里的某个 widget 上，就套用到那个
+widget（拖到选中的某一个上时，套用到整个选择）。每次都是一步撤销，并写进 `.dui`：
+
+- **渐变**写到 widget 的第一个 paint 上——文字的字面（`TextStyle.FacePaint`，并打开它）——没有的话写到第一个渐变属性，
+  并打开它靠来显示的开关（它的 `EditCondition`，比如 RectBlock 的 `bEnableBodyGradient`）；把渐变预设拖到细节面板里
+  某个渐变行上，就用它画那个渐变；
+- **样式**写到 widget 的图层样式上，和粘贴一样；预设带了混合选项的，连同混合一起写；
+- **效果参数**在同一种效果的 widget 上设它写到的那些值，其余不动；行为的参数会在 widget 没有该行为时把它加上。
+
+资产是被跟随的：文字的 paint 把渐变资产记作自己的 Preset，图层样式把样式预设记作自己的 Preset，资产改了它们也跟着改。
+右键菜单里的 *Apply as a Copy* 改为把资产的值写进去。右键菜单还能把预设换一种方式保存——文本预设存成资产，资产存成
+文本预设——以及删除文本预设。*Save Selection* 把选中 widget 的渐变、图层样式或效果参数存成一个新预设。
+
+样式预设资产也可以带上图层的混合选项（*Include Layer Blending Options*，`bIncludeBlending`）：套用时顺带设一次
+widget 的混合模式和不透明度；跟随这个资产的图层样式只画它的效果。`DreamUIStylePresets`（`DreamGUIEditor` 模块）
+供项目自己的编辑器创建样式预设：`CreatePresetAsset`、`SaveTextPreset`，以及图像编辑器式的「新建样式」窗口
+`PromptNewStyle`。
+
 <a id="the-viewport-toolbar"></a>
 
 ## 视口工具栏

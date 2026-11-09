@@ -40,7 +40,11 @@ clipped to it, and blends with it by its own mode. Where there are several of on
 earlier one.
 
 A **preset** (`UDreamLayerStylePreset`, a data asset) keeps a style to share: a layer style that names one draws the
-preset's style, and follows every edit of it. `DetachFromPreset` copies it into the widget's own style.
+preset's style, and follows every edit of it. `DetachFromPreset` copies it into the widget's own style. A preset can keep
+the layer's blend mode and opacity too (`bIncludeBlending`, `Blending`): applied from the designer's preset library it
+sets them on the widget once; a layer style following it draws only its effects. In the designer, styles are copied from
+widget to widget and kept as presets from the widget menu and the Presets tab: see
+[The widget designer](../tools/designer.md#layer-styles-colours-and-presets).
 
 ### How a style is drawn
 

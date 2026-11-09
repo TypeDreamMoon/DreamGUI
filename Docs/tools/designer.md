@@ -197,6 +197,91 @@ live in `FDreamUIComponentSupport` (module `DreamGUIEditor`): one registered for
 Blueprint ones included. A project adds rules for its own components from its editor module's `StartupModule`, with
 `RequireVisual`, `RequireComponent`, `OnePerWidget` or `AddRule`.
 
+## Layer styles, colours and presets
+
+### Copying and pasting a layer style
+
+The widget menu (the hierarchy's, which the viewport's right click opens too) has a **Layer Style** section, an image
+editor's pair:
+
+- **Copy Layer Style** puts the selected widget's [layer style](../concepts/layer-styles.md) on the clipboard -- and its
+  blend mode and opacity, and its clip and mask, when *Copy Includes* says so (the choice is remembered).
+- **Paste Layer Style** writes it onto every selected widget: into each one's own layer style, added where it has none,
+  and onto its element's blend mode and its clip when the copy carries them. Its label says what the copy carries. The
+  whole paste is one undo step, and on a Blueprint backed by a `.dui` it is written into the file.
+
+The clipboard holds lines of `.dui`, the ones a node's block takes, so a copy pastes into another Blueprint, into another
+editor session, and into a `.dui` opened in a text editor; and lines written by hand paste the same way:
+
+```
+// DreamGUI layer style
+BlendMode = Multiply
+RenderOpacity = 0.8
+Clipping = ClipToBounds
+ClipMask.Shape = Ellipse
++ DreamLayerStyle {
+    Style.DropShadows = ["(Angle=120,Distance=6,Size=10,Opacity=0.6)"]
+    Style.BevelEmboss.bEnabled = true
+}
+```
+
+Only what differs from the defaults is written, and a paste replaces the parts it carries whole: a style pasted onto a
+widget with a style of its own leaves none of the old one's effects behind. A style the widget gets from a `.dui` style
+(`: Card`) is not edited there: the paste writes an override on the widget's own node.
+
+### The eyedropper and the project's palette
+
+Every colour row of the details panel -- `FLinearColor` and `FColor` alike, a layer style's colours included -- has two
+buttons beside it:
+
+- **The eyedropper.** Click it, move over the designer viewport, click to pick. Over the viewport it reads the viewport's
+  own picture: the pixel as drawn, after every effect behind and on it, its layer style and blend mode, and nothing the
+  designer draws over the viewport. Anywhere else on the screen it reads the screen's pixel. Escape or a right click puts
+  it down. The pick keeps the row's alpha and is one undo step.
+- **The palette.** The project's swatches, a click away; *Add This Colour to the Palette* keeps the row's colour, and a
+  right click on a swatch takes it out. The palette is a project setting (Project Settings > Plugins > Dream GUI >
+  Editor > Palette, `UDreamGUISettings::ProjectSwatches`, saved in `DefaultDreamGUI.ini`), so every author of the project
+  sees the same colours.
+
+A gradient's **Stops** row has an eyedropper for each stop too, under the stops beside a block of its colour: the pick
+becomes that stop's colour, keeping its alpha.
+
+Both are widgets of the `DreamGUIEditor` module for an editor of a project's own: `SDreamUIEyedropperButton` (and
+`FDreamUIEyedropper::Sample` for the reading alone), `SDreamUIColorQuickPick` and `SDreamUISwatchGrid`. None of them
+writes a value: the caller writes the colour it is handed, in a transaction of its own.
+
+### The preset library
+
+The **Presets** tab (beside the palette, and in the Window menu) shelves the project's presets in three: **Gradients**,
+**Styles** and **Effects**. Each shelf lists the presets kept as text in the project settings and the preset assets:
+
+| Shelf | Kept as text (Project Settings > Plugins > Dream GUI) | Kept as an asset |
+| --- | --- | --- |
+| Gradients | `GradientPresets`: CSS, `linear-gradient(90deg, #FF8A5B, #2B5FD9)` | `UDreamGradientAsset` |
+| Styles | `StylePresets`: the lines a pasted layer style is, above | `UDreamLayerStylePreset` |
+| Effects | `EffectPresets`: an effect's node, `Glass { Refraction = 18  Frost = 0.25 }`, or a behaviour's line, `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }` | -- |
+
+Double-click a preset, or *Apply to Selection*, to put it on the selected widgets; drag it onto a widget in the viewport
+or the hierarchy to put it on that widget (or on the whole selection, when the widget is one of it). Each is one undo step,
+written into the `.dui`:
+
+- a **gradient** goes onto the widget's first paint -- a text's face (`TextStyle.FacePaint`, switched on) -- or else its
+  first gradient property, with the switch it is drawn by turned on (its `EditCondition`, such as a rect block's
+  `bEnableBodyGradient`); a gradient preset dragged onto a gradient's row in the details panel paints that gradient;
+- a **style** goes onto the widget's layer style, as a paste does, with the blending when the preset keeps it;
+- **effect settings** set the values they name on a widget of that effect, and leave the rest; a behaviour's settings
+  bring the behaviour when the widget has none.
+
+An asset is followed: the text's paint names the gradient asset as its preset, the layer style names the style preset as
+its preset, and both change when the asset does. The right-click menu's *Apply as a Copy* writes the asset's values
+instead. It also keeps a preset the other way round -- a text preset as an asset, an asset as a text preset -- and removes
+a text preset. *Save Selection* keeps the selected widget's gradient, layer style or effect settings as a new preset.
+
+A style preset asset can keep the layer's blending too (*Include Layer Blending Options*, `bIncludeBlending`): applying it
+then also sets the widget's blend mode and opacity, once; a layer style following the asset only ever draws its effects.
+`DreamUIStylePresets` (module `DreamGUIEditor`) makes style presets for an editor of a project's own: `CreatePresetAsset`,
+`SaveTextPreset` and `PromptNewStyle`, an image editor's New Style window.
+
 ## The viewport toolbar
 
 | Item | What it does |

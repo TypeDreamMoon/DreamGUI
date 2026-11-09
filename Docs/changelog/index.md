@@ -205,6 +205,26 @@ What is on `main` after 1.0.0, and ships with the next version.
 - **An effect's light, read and written in one place.** `DreamLayerStyleLight` (`Core/DreamLayerStyleTypes.h`) answers and
   sets an effect's angle and altitude where they are kept -- the style's global light for an effect that uses it -- and turns
   a shadow's angle and distance into its offset and back; the renderer packs its shadows' offsets through it.
+- **Copy and paste layer styles.** The designer's widget menu copies the selected widget's layer style — and its blend mode,
+  opacity, clip and mask when *Copy Includes* says so — and pastes it onto every selected widget, in one undo step, written
+  into the `.dui`. The clipboard holds lines of `.dui`, so a copy pastes into another Blueprint and into a text editor, and
+  lines written by hand paste too. See [The widget designer](../tools/designer.md#copying-and-pasting-a-layer-style).
+- **An eyedropper and the project's palette.** Every colour row of the designer's details panel has an eyedropper that
+  reads the designer viewport's own picture — the pixel after its effects, style and blend mode — or the screen's, and the
+  project's palette (`UDreamGUISettings::ProjectSwatches`), a click away and added to from there. Both are widgets an
+  editor of a project's own can use (`SDreamUIEyedropperButton`, `SDreamUIColorQuickPick`). See
+  [The widget designer](../tools/designer.md#the-eyedropper-and-the-projects-palette).
+- **The preset library.** A Presets tab in the designer shelves the project's gradients, layer styles and effect settings
+  — text in the project settings (`GradientPresets`, and the new `StylePresets` and `EffectPresets`) and assets
+  (`UDreamGradientAsset`, `UDreamLayerStylePreset`) — applied to the selection with a double-click or by a drag onto a
+  widget, followed or copied, and kept from a selection. A style preset asset can keep the layer's blend mode and opacity
+  (`bIncludeBlending`); `DreamUIStylePresets` makes style presets for an editor of a project's own. See
+  [The widget designer](../tools/designer.md#the-preset-library).
+- **Lists of structs are written back to a `.dui`.** A layer style's drop shadows, strokes and overlays, an adjustment
+  layer's adjustments and every other list, set or map of structs with no short form is written the way it is read —
+  `Style.DropShadows = ["(Angle=120,Distance=6)"]`, the fields that differ from the struct's defaults — where the
+  designer could read such a list from a file and never write one. See
+  [Write-back](../language/write-back.md#what-the-designer-writes-back).
 
 - **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
   mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
@@ -280,6 +300,9 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Fixed
 
+- **Lines added to a node written on one line stay in its block.** Two properties written into a block that opens and
+  closes on one line (`Text Title { Text = "Hi" }`) in one write had the whole write refused, and a `+` line added to
+  such a node was written after its brace — a behaviour of the parent. Both now land inside the block.
 - **A built-in element in Multiply is exact when it is partly transparent.** Its transparent pixels darkened what was behind
   them to black; it now darkens by its colour as far as its alpha says, as the composite does.
 - **A clip whose pivot is off its centre stays on its widget under a scaled or turned parent.** Its centre was moved by
