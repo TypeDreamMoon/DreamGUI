@@ -150,6 +150,15 @@ bool FDreamNiagaraPackTest::RunTest(const FString& Parameters)
 			DreamNiagaraVertexLayout::Unpack(DreamNiagaraVertexLayout::Pack(Scale, Blend), OutScale, OutBlend);
 			TestTrue(*FString::Printf(TEXT("Scale %.4f, blend %.4f: the scale comes back (%.4f)"), Scale, Blend, OutScale), Near(OutScale, Scale, 1e-4f));
 			TestTrue(*FString::Printf(TEXT("Scale %.4f, blend %.4f: the blend comes back (%.4f)"), Scale, Blend, OutBlend), Near(OutBlend, Blend, 2e-3f));
+			// As the pixel shader is given it: interpolated, a little off what every vertex of the quad carries. A value below its
+			// whole step must not read as the step below with a blend of 1, the next frame.
+			const float Noises[] = { -1e-3f, -1e-4f, -1e-5f, 1e-5f, 1e-4f, 1e-3f };
+			for (float Noise : Noises)
+			{
+				DreamNiagaraVertexLayout::Unpack(DreamNiagaraVertexLayout::Pack(Scale, Blend) + Noise, OutScale, OutBlend);
+				TestTrue(*FString::Printf(TEXT("Scale %.4f, blend %.4f, %+g off: the scale comes back (%.4f)"), Scale, Blend, Noise, OutScale), Near(OutScale, Scale, 1e-4f));
+				TestTrue(*FString::Printf(TEXT("Scale %.4f, blend %.4f, %+g off: the blend comes back (%.4f)"), Scale, Blend, Noise, OutBlend), Near(OutBlend, Blend, 3e-3f));
+			}
 		}
 	}
 	// A colour no brighter than 1 is kept as it is; a brighter one by the smallest step that brings it to 1.
