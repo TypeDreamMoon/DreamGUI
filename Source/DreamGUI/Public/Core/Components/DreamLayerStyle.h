@@ -106,7 +106,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Layer Style")
 	TObjectPtr<UDreamLayerStylePreset> Preset = nullptr;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Layer Style",
-		meta = (EditCondition = "Preset == nullptr"))
+		meta = (EditCondition = "Preset == nullptr", DreamGUI_Handle = "Shadow"))
 	FDreamLayerEffects Style;
 
 private:

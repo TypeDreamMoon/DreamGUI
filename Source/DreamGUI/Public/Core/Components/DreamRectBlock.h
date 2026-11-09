@@ -336,7 +336,7 @@ protected:
 		float OuterShadowBlur = 4;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
 		EDreamRectBlockUnitMode OuterShadowBlurUnitMode = EDreamRectBlockUnitMode::Value;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0", DreamGUI_Handle = "Shadow"))
 		float OuterShadowAngle = 45;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		float OuterShadowDistance = 4;
