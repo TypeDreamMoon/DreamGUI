@@ -227,6 +227,14 @@ What is on `main` after 1.0.0, and ships with the next version.
   (a fill, a transition's colours, a password character) show and hide with the value without the panel rebuilding. An
   extension's classes use the same tags. See [Property meta tags](../guides/property-meta.md).
 
+- **Editing controls.** Blend modes are pictures in their row and menu -- each drawn by the mode's own formula, all 27 in an
+  image editor's order and groups -- and hovering one shows the widget drawn in it, recording and saving nothing until it
+  is clicked. Angles tagged `DreamGUI_Editor = "AngleWheel"` (the layer style's, the gradient overlay's, the glass's light, a
+  mask transition's rotation, a text path's start) are a dial beside the number, and an effect with Use Global Light on
+  turns the style's global light from its own row. Contours are curves with the named shapes to pick and the curve to
+  edit, and eases show their curves. In a `.dui` a contour is a named shape's word or `"custom(0 0, 0.5 1 corner, 1 0)"`.
+  See [The widget designer](../tools/designer.md).
+
 ### Changed
 
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its

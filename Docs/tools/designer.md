@@ -147,6 +147,26 @@ The **Layer** category gathers what makes a widget a layer, from wherever it liv
 None of these rows is anywhere else as well: the opacity used to be in Appearance, the mask and clipping to the layer
 below under Appearance > Clipping, the blend mode among the visual's own rows.
 
+### Editing controls
+
+- **Blend modes** show as pictures: each mode's picture is a disc blended over hues and greys by the mode's own
+  formula, and the menu lists all 27 in an image editor's order and groups (Normal is `Alpha`, Linear Dodge (Add) is
+  `Additive`). Hovering a mode shows the widgets being edited drawn in it, until the pointer moves on or the menu closes;
+  nothing is recorded or saved until a mode is clicked.
+- **Angles** tagged `DreamGUI_Editor = "AngleWheel"` are a dial beside the number: drag it (Shift snaps to 15 degrees) or type.
+  What follows a colon says which way the angle runs: nothing for an image editor's (0 at three o'clock,
+  counter-clockwise), `AngleWheel:CW`, or `AngleWheel:TopCW` (a clock's). A layer style's effect with *Use Global Light* on edits the style's
+  global light angle from its own row, and every effect sharing the global light turns with it; the row says *Global*.
+  A drag is one undo step. The layer style's angles, the gradient overlay's, the glass's light, a mask transition's
+  rotation and a text-on-path circle's start are dials.
+- **Contours** are curves: the row shows the curve; its popup has the named shapes as pictures to pick and the curve to
+  edit -- click to add a point, drag one out of the box to remove it, Alt+click or double-click to make a corner.
+  Editing a named shape starts a custom curve from it.
+- **Eases** (`EDreamTweenEase`) show their curves, in the row and in the menu.
+
+These controls are registered for the whole editor, not for the designer's panel alone: any details panel that shows
+such a property -- a data asset's, a dialog's, a structure shown on its own -- edits it with the same control.
+
 A visual's own rows are ordered by what they do:
 
 - A **Text** leads with Text, Font, Font Size, Font Style, Color, alignment, Overflow Type, Auto Wrap Text and Rich Text;
