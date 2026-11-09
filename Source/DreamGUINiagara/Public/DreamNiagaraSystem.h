@@ -76,8 +76,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamNiagaraBurstFinished, int32, B
 /**
  * A Niagara system drawn as part of a DreamGUI canvas.
  *
- * The element owns a Niagara component it registers with its world but attaches to nothing, renders nothing and keeps out of
- * Niagara's scalability: the component only simulates. Every frame the canvas sends its sections, the element waits for the
+ * The element owns a Niagara component it registers with its world but attaches to nothing, gives the scene no proxy for and
+ * keeps out of Niagara's scalability: the component only simulates. Every frame the canvas sends its sections, the element waits for the
  * simulation's tick to finish, reads each renderer's particles through its bindings and writes them into a segment of its
  * own -- one draw call per sprite or ribbon renderer, in Niagara's renderer order -- so the particles are clipped, masked,
  * blended and grouped as every DreamGUI element is.

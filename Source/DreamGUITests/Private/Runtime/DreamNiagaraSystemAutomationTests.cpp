@@ -464,7 +464,9 @@ bool FDreamNiagaraLifetimeTest::RunTest(const FString& Parameters)
 		Weak = Component;
 		TestTrue(TEXT("The component is registered with the widget's world"), Component->IsRegistered() && Component->GetWorld() == Stage.World.World);
 		TestNull(TEXT("...attached to nothing"), Component->GetAttachParent());
-		TestFalse(TEXT("...rendering nothing"), Component->GetRenderingEnabled());
+		// Not its rendering turned off, which Niagara hands its proxy only as it ticks: no proxy at all. Under -nullrhi nothing
+		// activates and nothing would have one; the play-session test of the effects sample holds the scene to it on a GPU.
+		TestNull(TEXT("...given no proxy by the scene"), Component->SceneProxy);
 		TestFalse(TEXT("...and out of the scalability's reach"), Component->GetAllowScalability());
 		TestEqual(TEXT("One simulation in the world"), CountLiveComponents(Stage.World.World), 1);
 

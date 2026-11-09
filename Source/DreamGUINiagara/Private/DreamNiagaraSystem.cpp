@@ -9,6 +9,7 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "DreamNiagaraMeshBuilder.h"
+#include "DreamNiagaraSimulationComponent.h"
 #include "DreamNiagaraVertexLayout.h"
 #include "Event/DreamPointerEventData.h"
 
@@ -315,11 +316,11 @@ UNiagaraComponent* UDreamNiagaraSystem::MakeComponent(UNiagaraSystem* InSystem, 
 	{
 		return nullptr;
 	}
-	UNiagaraComponent* Made = NewObject<UNiagaraComponent>(const_cast<UDreamNiagaraSystem*>(this), NAME_None, DreamUI::RuntimeObjectFlags);
+	// Simulated only: the scene is given no proxy for it (UDreamNiagaraSimulationComponent), and nothing culls it for not being
+	// seen.
+	UNiagaraComponent* Made = NewObject<UDreamNiagaraSimulationComponent>(const_cast<UDreamNiagaraSystem*>(this), NAME_None, DreamUI::RuntimeObjectFlags);
 	Made->SetAutoActivate(false);
 	Made->SetAutoDestroy(false);
-	// Simulated only: nothing of it goes into the scene, and nothing culls it for not being seen.
-	Made->SetRenderingEnabled(false);
 	Made->SetAllowScalability(false);
 	Made->SetUsingAbsoluteLocation(true);
 	Made->SetUsingAbsoluteRotation(true);
