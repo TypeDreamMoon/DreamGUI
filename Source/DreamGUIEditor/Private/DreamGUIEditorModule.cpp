@@ -67,6 +67,8 @@
 #include "Designer/DreamDesignerPointHandleProviders.h"
 #include "DetailCustomization/PropertyType/DreamBlendModeCustomization.h"
 #include "DetailCustomization/PropertyType/DreamAngleCustomization.h"
+#include "DetailCustomization/PropertyType/DreamCurveCustomizations.h"
+#include "DreamTweener.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
@@ -330,6 +332,9 @@ void FDreamGUIEditorModule::StartupModule()
 		// An angle tagged DreamGUI_Editor="AngleWheel" -- a light's, a gradient's, a rotation's -- is a dial beside its number.
 		DreamGUIEditorModuleLocal::AngleWheelIdentifier = MakeShared<FDreamAngleWheelIdentifier>();
 		PropertyModule.RegisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamAngleCustomization::MakeInstance), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
+		// A layer style's contours are curves to pick and edit; an ease is its curve.
+		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamStyleContour::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamContourCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(StaticEnum<EDreamTweenEase>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamEaseCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance)));
@@ -619,6 +624,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
 		DreamGUIEditorModuleLocal::AngleWheelIdentifier.Reset();
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamStyleContour::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamTweenEase>()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
