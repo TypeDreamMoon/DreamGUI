@@ -194,7 +194,7 @@ struct DREAMGUI_API FDreamStyleGradientFill
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient")
 	EDreamStyleGradientType Type = EDreamStyleGradientType::Linear;
 	/** Degrees: 0 left to right, 90 bottom to top. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient", meta = (UIMin = "-180", UIMax = "180"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Editor = "AngleWheel"))
 	float Angle = 90.0f;
 	/** How long the gradient is as a fraction of the layer's extent along it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gradient", meta = (ClampMin = "0.1", ClampMax = "1.5"))
@@ -332,7 +332,7 @@ struct DREAMGUI_API FDreamStyleDropShadow
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Shadow")
 	bool bUseGlobalLight = true;
 	/** Where the light comes from, degrees: the shadow falls the other way. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Shadow", meta = (UIMin = "-180", UIMax = "180", EditCondition = "!bUseGlobalLight"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Shadow", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Editor = "AngleWheel"))
 	float Angle = 120.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Shadow", meta = (ClampMin = "0", UIMax = "100"))
 	float Distance = 5.0f;
@@ -373,7 +373,7 @@ struct DREAMGUI_API FDreamStyleInnerShadow
 	float Opacity = 0.75f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inner Shadow")
 	bool bUseGlobalLight = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inner Shadow", meta = (UIMin = "-180", UIMax = "180", EditCondition = "!bUseGlobalLight"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inner Shadow", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Editor = "AngleWheel"))
 	float Angle = 120.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inner Shadow", meta = (ClampMin = "0", UIMax = "100"))
 	float Distance = 5.0f;
@@ -499,7 +499,7 @@ struct DREAMGUI_API FDreamStyleBevelEmboss
 	float Soften = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bevel and Emboss")
 	bool bUseGlobalLight = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bevel and Emboss", meta = (UIMin = "-180", UIMax = "180", EditCondition = "!bUseGlobalLight"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bevel and Emboss", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Editor = "AngleWheel"))
 	float Angle = 120.0f;
 	/** How high the light is, degrees: 90 straight above. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bevel and Emboss", meta = (ClampMin = "0", ClampMax = "90", EditCondition = "!bUseGlobalLight"))
@@ -561,7 +561,7 @@ struct DREAMGUI_API FDreamStyleSatin
 	FColor Color = FColor::Black;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Satin", meta = (ClampMin = "0", ClampMax = "1"))
 	float Opacity = 0.5f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Satin", meta = (UIMin = "-180", UIMax = "180"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Satin", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Editor = "AngleWheel"))
 	float Angle = 19.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Satin", meta = (ClampMin = "0", UIMax = "100"))
 	float Distance = 11.0f;
@@ -683,7 +683,7 @@ struct DREAMGUI_API FDreamLayerEffects
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (ClampMin = "0", ClampMax = "1"))
 	float FillOpacity = 1.0f;
 	/** The light every effect that uses the global light takes, degrees. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Handle = "Light"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (UIMin = "-180", UIMax = "180", DreamGUI_Handle = "Light", DreamGUI_Editor = "AngleWheel"))
 	float GlobalLightAngle = 120.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layer Style", meta = (ClampMin = "0", ClampMax = "90"))
 	float GlobalLightAltitude = 30.0f;

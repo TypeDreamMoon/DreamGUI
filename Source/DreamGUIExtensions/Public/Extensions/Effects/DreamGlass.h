@@ -163,7 +163,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass|Highlight", meta = (ClampMin = "0", UIMax = "32"))
 	float HighlightWidth = 3.0f;
 	/** Where the light comes from: degrees, 0 from above, clockwise. */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass|Highlight", meta = (UIMin = "0", UIMax = "360"))
+	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass|Highlight", meta = (UIMin = "0", UIMax = "360", DreamGUI_Editor = "AngleWheel:TopCW"))
 	float LightAngle = 315.0f;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI|Glass|Highlight", meta = (ClampMin = "0", UIMax = "64"))
 	float ShadowWidth = 10.0f;

@@ -106,7 +106,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Transition", meta = (EditCondition = "Preset==EDreamMaskTransitionPreset::Clock||Preset==EDreamMaskTransitionPreset::Iris||Preset==EDreamMaskTransitionPreset::Diamond||Preset==EDreamMaskTransitionPreset::Ink||Preset==EDreamMaskTransitionPreset::Shatter", EditConditionHides))
 	FVector2D Centre = FVector2D(0.5, 0.5);
 	/** Degrees clockwise the Wipe, Clock and Blinds shapes are turned. */
-	UPROPERTY(EditAnywhere, Category = "Transition", meta = (UIMin = "-360.0", UIMax = "360.0", EditCondition = "Preset==EDreamMaskTransitionPreset::Wipe||Preset==EDreamMaskTransitionPreset::Clock||Preset==EDreamMaskTransitionPreset::Blinds", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "Transition", meta = (UIMin = "-360.0", UIMax = "360.0", DreamGUI_Editor = "AngleWheel:CW", EditCondition = "Preset==EDreamMaskTransitionPreset::Wipe||Preset==EDreamMaskTransitionPreset::Clock||Preset==EDreamMaskTransitionPreset::Blinds", EditConditionHides))
 	float Angle = 0.0f;
 	/** Stripes for Blinds, squares across for Checker, shards for Shatter. */
 	UPROPERTY(EditAnywhere, Category = "Transition", meta = (ClampMin = "1", ClampMax = "256", EditCondition = "Preset==EDreamMaskTransitionPreset::Blinds||Preset==EDreamMaskTransitionPreset::Checker||Preset==EDreamMaskTransitionPreset::Shatter", EditConditionHides))

@@ -69,7 +69,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
 	FVector2D CircleCentre = FVector2D(0.0, -100.0);
 	/** Degrees clockwise from twelve o'clock the arc starts at. */
-	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (UIMin = "-360.0", UIMax = "360.0", EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (UIMin = "-360.0", UIMax = "360.0", DreamGUI_Editor = "AngleWheel:TopCW", EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
 	float StartAngle = -90.0f;
 	/** Degrees the arc runs; 360 is the whole circle, which the text then wraps around. */
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (ClampMin = "0.0", ClampMax = "360.0", EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))

@@ -66,6 +66,7 @@
 #include "Designer/DreamDesignerHandles.h"
 #include "Designer/DreamDesignerPointHandleProviders.h"
 #include "DetailCustomization/PropertyType/DreamBlendModeCustomization.h"
+#include "DetailCustomization/PropertyType/DreamAngleCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
@@ -151,6 +152,12 @@
 #include "Window/DreamUIWidgetInspector.h"
 #include "ToolMenus.h"//ShutdownModule takes the designer viewport toolbar back out of the registry
 #include "Designer/SDreamWidgetDesignerViewportToolbar.h"
+
+namespace DreamGUIEditorModuleLocal
+{
+	/** What picks out the angle properties among every float property; the same one unregisters the dial. */
+	TSharedPtr<IPropertyTypeIdentifier> AngleWheelIdentifier;
+}
 
 const FName FDreamGUIEditorModule::DreamUIDynamicSpriteAtlasViewerTabName(TEXT("DreamUIDynamicSpriteAtlasViewerName"));
 const FName FDreamGUIEditorModule::DreamUIWidgetInspectorTabName(TEXT("DreamUIWidgetInspectorTabName"));
@@ -320,6 +327,9 @@ void FDreamGUIEditorModule::StartupModule()
 		}
 		// Every blend mode row -- an element's, a group's, a layer effect's -- shows the modes as pictures, and the hovered one on the widget.
 		PropertyModule.RegisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamBlendModeCustomization::MakeInstance));
+		// An angle tagged DreamGUI_Editor="AngleWheel" -- a light's, a gradient's, a rotation's -- is a dial beside its number.
+		DreamGUIEditorModuleLocal::AngleWheelIdentifier = MakeShared<FDreamAngleWheelIdentifier>();
+		PropertyModule.RegisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamAngleCustomization::MakeInstance), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FDreamDetailsLayout::Wrap(FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance)));
@@ -607,6 +617,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 			FDreamDesignerHandles::UnregisterKind(Kind.Key);
 		}
 		PropertyModule.UnregisterCustomPropertyTypeLayout(StaticEnum<EDreamUIBlendMode>()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FName(TEXT("FloatProperty")), DreamGUIEditorModuleLocal::AngleWheelIdentifier);
+		DreamGUIEditorModuleLocal::AngleWheelIdentifier.Reset();
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
