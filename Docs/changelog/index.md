@@ -194,6 +194,17 @@ What is on `main` after 1.0.0, and ships with the next version.
   [Property meta tags](../guides/property-meta.md#viewport-handles).
 - **Reflected gradients.** `EDreamPaintType::Reflected` (`reflected-gradient(…)`) runs both ways from a line through the
   gradient's centre, for texts as for rect blocks.
+- **Handles for masks, glass, shadows and lights.** The designer's viewport draws handles for a clipping widget's clip and
+  mask -- the clip rect's sides (its margins), a rect mask's corners, a polygon's roundness, a star's or a ring's inner size
+  and the feather, along the outline the mask's own distance function cuts; a glass's corners, its edge's width and its
+  light; each shadow of a layer style or a rect block, dragged where it falls to set its angle and distance together (a
+  style's shadow on the global light turns the global light, and every effect on it with it); a pointer light's place and
+  reach, and a layer style's global light as a disc. Each comes with its property's tag (`DreamGUI_Handle`: `MaskShape`,
+  `GlassShape`, `Shadow`, `Light`). Corners and feathers move together, Alt one alone; Shift snaps an angle to 15 degrees.
+  See [Viewport handles](../tools/designer.md#viewport-handles).
+- **An effect's light, read and written in one place.** `DreamLayerStyleLight` (`Core/DreamLayerStyleTypes.h`) answers and
+  sets an effect's angle and altitude where they are kept -- the style's global light for an effect that uses it -- and turns
+  a shadow's angle and distance into its offset and back; the renderer packs its shadows' offsets through it.
 
 - **The layer effects in the editor.** A widget's details open on a **Layer** category: opacity, its visual's blend
   mode, clipping to the layer below, the mask (a shape to pick, which turns clipping to bounds on), switches that add or
@@ -217,6 +228,11 @@ What is on `main` after 1.0.0, and ships with the next version.
   extension's classes use the same tags. See [Property meta tags](../guides/property-meta.md).
 
 ### Changed
+
+- **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
+  gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
+  them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*
+  button under a rect block's gradient among others; a rect block's body and border gradients are two kinds.
 
 - **A binding that reads only FieldNotify variables no longer reads them every frame** once its Blueprint is
   recompiled: it updates when they announce a change. C++ that assigns such a variable without broadcasting it — which

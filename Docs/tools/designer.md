@@ -22,8 +22,8 @@ The designer was reviewed against UMG's widget designer. Added since upstream:
   fixes that.
 - **Hover feedback**: the widget under the pointer is outlined.
 - **Per-axis resize handles**, and the **anchor medallion**, which shows the selected widget's anchors on the canvas.
-- **Handles for what the selection has**: a warp's lattice points, a path's points, a rect block's gradient — its ends,
-  centre and stops (see [Gradients and viewport handles](../concepts/gradients.md#viewport-handles)). A drag is one undo
+- **Handles for what the selection has**: a warp's lattice points, a path's points, a rect block's gradients, a clip's
+  mask, a glass, shadows and lights, one kind at a time (see [Viewport handles](#viewport-handles)). A drag is one undo
   step, Esc puts it back, and a class backed by a `.dui` gets the change in its file when the button comes up.
 - **Marquee selection**: drag a box over empty space to select the widgets in it.
 - **Drag to reparent on the canvas**: drag a widget into another container.
@@ -47,6 +47,37 @@ layer, a holo foil, a pointer light, a tilt card, a mesh modifier), a **warp** (
 **particles**. Hovering a mark lists what it stands for and how each is set. Clicking it turns the effects of that kind
 off, and on again, through their own switches -- to compare with and without them; the mark dims while they are off. It
 is an ordinary edit: one undo step, saved, and written to the `.dui` of a class backed by one.
+
+### Viewport handles
+
+With one widget selected — unlocked, and the asset's own — the viewport draws handles for what it has. A widget can have
+several kinds; one kind is shown at a time, named under the selection with the kind **Tab** shows next. Tab steps through
+the kinds the selection has and then to none, which leaves the selection box alone (to resize from a corner a handle sits
+on, say), and then back to the first. Tab is the viewport's only while it has the keyboard; in the details panel, the
+hierarchy or any text box it moves the focus as it always does.
+
+Which kind a selection shows: the one last picked — by Tab, or a details panel's *Edit in Viewport* button — when the
+selection has it; otherwise the first it has: a warp's lattice and a path's points, then the kinds its properties are
+tagged with (`DreamGUI_Handle`, see [Property meta tags](../guides/property-meta.md#viewport-handles)) — its visual's,
+each of its behaviours', its own — in the order they are declared. With the handles turned off by Tab, every selection
+shows none until Tab is pressed again.
+
+| Kind | What it shows, and what a drag changes |
+|---|---|
+| Warp Lattice, Path Points | A warp's lattice points; a path's points |
+| Body Gradient, Border Gradient | A rect block's gradient: its ends, centre and stops ([Gradients](../concepts/gradients.md#viewport-handles)) |
+| Shadows | A rect block's own outer and inner shadow, where they fall: dragging one sets its angle and its distance together |
+| Glass | A glass's outline and the line its refracting edge reaches in to: its corners (`CornerRadius`, in its own unit mode), its `EdgeWidth`, and where its highlight's light comes from (`LightAngle`) |
+| Style Shadows | Each shadow of a layer style (drop shadows round, inner shadows diamond), where it falls, angle and distance together. A shadow that uses the global light turns the global light, and every effect that uses it turns with it |
+| Global Light | A layer style's global light, when an effect uses it, as a disc — its angle round the disc, its altitude in from the rim |
+| Pointer Light | Where a pointer light stands (in the designer it stands at `LightPosition`) and the circle it reaches |
+| Mask | A clipping widget's clip and the mask on it ([Clip masks](../concepts/clip-masks.md)): the cut the mask makes and its feather's band; the clip rect's sides (`ClippingMargin`, which the mask's shape is fitted to), a rect mask's corners (`ClippingCornerRadius`), a polygon's `Roundness`, a star's inner corners or a ring's hole (`InnerRatio`), and the `Feather` |
+
+Corners and feathers move together — all four at once, as a widget's clip does while it sets its corners as one — and
+**Alt** moves the one dragged alone. **Shift** keeps an angle to steps of 15°, and on a clip's side moves the opposite side
+out with it. **Esc** while dragging puts everything back. A drag is one undo step and is written to the `.dui` when the
+button comes up. Things that are not the widget's own to change have no handles: a layer style that follows a preset, a
+mask a behaviour drives, a glass that takes its shape from a shape blend, and an effect that is off.
 
 ## The palette
 

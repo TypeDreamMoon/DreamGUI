@@ -79,6 +79,7 @@ description: 调整图层、渐进模糊、折射玻璃与风格化效果——�
 | 高光 | 朝向 `LightAngle`（0 为上方，顺时针；背光一侧也有少许）的边缘上 `HighlightColor`、`HighlightStrength`、`HighlightWidth`；边缘内侧的 `ShadowWidth`、`ShadowStrength` |
 
 比 `EdgeWidth` 更靠内的平坦中部原样显示背后画面（磨砂与色调除外）。视觉元素的 alpha 让它淡出。
+在设计器里，它的 **Glass** 手柄能在视口里拖圆角、边缘宽度和光的方向（见[视口手柄](../tools/designer.md#viewport-handles)）。
 
 `Shape` 设为 `ShapeBlend` 时，玻璃取形状融合组把 RectBlock 融成的形状（见[形状融合](layer-styles.md)）：
 `ShapeBlendGroup` 指定的控件上的融合组，不指定时取玻璃自己控件上的。玻璃画满整个融合形状，成员伸到哪里就画到哪里，

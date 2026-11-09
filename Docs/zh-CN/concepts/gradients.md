@@ -56,8 +56,8 @@ Body › Gradient（和 Border › Gradient）这一行把渐变画成一条色�
   双击连线，在那里加一个当前颜色的色标。
 - 按住 **Shift** 时旋转按 15° 一档。拖动中按 **Esc** 全部还原。
 
-一次拖动是一步撤销，松开鼠标时写回 `.dui`。主体和描边的渐变都开着时，手柄显示主体的；细节面板里描边那一行有个按钮，
-可以换成显示描边的。
+一次拖动是一步撤销，松开鼠标时写回 `.dui`。主体渐变和描边渐变是两种手柄，视口同一时刻只显示一种：**Tab** 在它们和选中内容的
+其它手柄之间轮换（见[视口手柄](../tools/designer.md#viewport-handles)），细节面板里渐变那一行下的 *Edit in Viewport* 按钮直接显示它。
 
 ## 以前的两色渐变
 
@@ -83,7 +83,12 @@ Esc 时还原预览、松开时把属性写进资产再写回 `.dui`，还有双
 
 属性也可以用标签自己要手柄：`meta=(DreamGUI_Handle="Kind")`，或带参数的 `"Kind:Args"`。模块用 `FDreamDesignerHandles::RegisterKind`
 和一个工厂注册种类，视口给选中控件每个打了标签的属性——控件自己的、视觉的、行为的——一个由工厂为它造的提供者，名字是 `种类.属性`。
-RectBlock 的 `BodyGradient` 和 `BorderGradient` 标的是 `Gradient` 种类；标签和种类的表见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
+RectBlock 的 `BodyGradient` 和 `BorderGradient` 标的是 `Gradient` 种类；裁剪遮罩、玻璃、阴影和光各有自己的种类
+（`Designer/DreamDesignerEffectHandles.h`，每个手柄的编号也在那里）。标签和种类的表见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
+
+视口同一时刻只显示一个提供者的手柄，选框下方写着它的 `GetDisplayName`：选中内容有活动提供者（`FDreamDesignerHandles::SetActive`
+传它的名字——比如细节面板里的一个按钮）的手柄时显示它，否则显示第一个有手柄的：先是注册的提供者，再是按找到顺序的打标签属性。
+Tab 换到下一个，最后一个之后是「关」（`FDreamDesignerHandles::Off`）。
 
 ```cpp
 #include "Designer/DreamDesignerHandles.h"

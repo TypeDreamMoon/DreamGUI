@@ -27,7 +27,8 @@ by the same formulas.
 
 A mask at its defaults is no mask: the clip is the plain rect, and costs exactly what it always did. In the details panel
 the mask is under **Appearance ▸ Clipping**; the designer outlines the selected widget's mask (the **Clip Masks** switch of
-the viewport's toolbar).
+the viewport's toolbar), and its **Mask** handles drag the clip rect's sides, a rect mask's corners, a polygon's roundness,
+a star's or a ring's inner size and the feather in the viewport (see [Viewport handles](../tools/designer.md#viewport-handles)).
 
 A behaviour can drive a widget's clip mask in place of `ClipMask` while it runs (`UDreamWidget::SetDrivenClipMask`):
 [mask transitions](mask-transitions.md) do. The driven mask is not saved, shown or written into `ClipMask`; while one is

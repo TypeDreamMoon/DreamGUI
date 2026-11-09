@@ -66,6 +66,10 @@ float FillAmount = 1;
 | 种类 | 标在哪儿 | 手柄 |
 |---|---|---|
 | `Gradient` | RectBlock 的 `BodyGradient`、`BorderGradient` | 渐变的端点、中心和色标（见[渐变](../concepts/gradients.md#视口手柄)） |
+| `MaskShape` | 控件的 `ClipMask` | 裁剪矩形的四条边、矩形遮罩的圆角、多边形的圆角、星形或圆环的内径、羽化 |
+| `GlassShape` | 玻璃的 `CornerRadius` | 圆角、边缘宽度、光从哪边来 |
+| `Shadow` | 图层样式的 `Style`；RectBlock 的 `OuterShadowAngle` | 样式的阴影；RectBlock 自带的两个阴影——都画在落下的位置 |
+| `Light` | 指针光的 `LightPosition`；图层样式的 `Style.GlobalLightAngle` | 光站的位置和照到多远；画成圆盘的全局光 |
 
 种类由画它的模块注册，给一个为单个标签属性造提供者的工厂：
 

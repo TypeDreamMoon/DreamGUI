@@ -87,6 +87,8 @@ of half the smaller side), or a shape blend's melted shape (below). A click outs
 | Highlight | `HighlightColor`, `HighlightStrength` and `HighlightWidth` along the edge facing `LightAngle` (0 from above, clockwise, and a little on the far side); `ShadowWidth`, `ShadowStrength` inside the edge |
 
 Its flat middle -- further in than `EdgeWidth` -- shows what is behind as it is (frost and tone aside). Its alpha fades it.
+In the designer, its **Glass** handles drag its corners, its edge's width and its light in the viewport (see
+[Viewport handles](../tools/designer.md#viewport-handles)).
 
 With `Shape` set to `ShapeBlend` the glass takes the shape a shape blend group melts its rect blocks into (see
 [Shape blends](layer-styles.md#shape-blends)): the group on the widget `ShapeBlendGroup` names, or on the glass's own widget

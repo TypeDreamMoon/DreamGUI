@@ -25,6 +25,14 @@ its effects as they are, and a global light (angle and altitude) the effects tha
 an image editor's dialog shows -- angles in degrees from the right, counter-clockwise, sizes in units, percentages as
 fractions -- so that a style read from an image editor's file maps onto it field for field.
 
+An effect's light is read and written where it is kept with `DreamLayerStyleLight` (`Core/DreamLayerStyleTypes.h`):
+`GetAngle` and `GetAltitude` answer the global light's for an effect that uses it and the effect's own otherwise, and
+`SetAngle` and `SetAltitude` set them there -- setting the angle of an effect on the global light turns the global light,
+and every effect that uses it, as an image editor does. `GetShadowOffset` turns a shadow's angle and distance into where
+it lies from the layer (widget space, +Y up), the offset the renderer draws it at, and `GetAngleAndDistance` turns it back.
+In the designer, the **Shadows** handles drag each shadow where it falls and the **Lights** handles drag the global light
+(see [Viewport handles](../tools/designer.md#viewport-handles)).
+
 From the bottom up, a styled widget is drawn: its drop shadows, its outer glow, the widget itself (at its fill opacity),
 the pattern overlay, the gradient overlays, the colour overlays, the satin, the inner glow, the inner shadows, the strokes
 and the bevel. The drop shadows and the outer glow lie behind the widget; everything from the overlays up lies on it,
@@ -91,7 +99,8 @@ takes its shape from a group this way (`UDreamGlass`, `Shape` `ShapeBlend`; see 
   of every rect block with a border under it on itself -- a reveal highlight that costs a rect block's row. Following the
   pointer it fades in while the pointer is over its widget's plane within reach and out when it leaves, and everything goes
   back to its own light. In a world that is not playing -- the designer's preview -- there is no pointer to follow, so it
-  stands at its `LightPosition` there, which is where to put it to see what it lights.
+  stands at its `LightPosition` there, which is where to put it to see what it lights. In the designer, the **Lights**
+  handles drag where it stands and how far it reaches.
 - **`UDreamTiltCard`** tilts a widget towards the pointer on a spring, the edge under the pointer dipping away, and grows it
   a little while the pointer is over it; through the render transform, so layout is untouched. Put it in a perspective scope
   (a parent with `Perspective` on) for the tilt to foreshorten.

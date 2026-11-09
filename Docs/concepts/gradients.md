@@ -61,8 +61,10 @@ one:
   there.
 - **Shift** keeps a turn to steps of 15°. **Esc** while dragging puts everything back.
 
-A drag is one undo step, and the `.dui` is written when the mouse button comes up. When a rect block has both gradients on,
-the handles are the body's; the border's row in the details panel has a button that shows the border's instead.
+A drag is one undo step, and the `.dui` is written when the mouse button comes up. The body's gradient and the border's are
+two kinds of handles, and the viewport shows one kind at a time: **Tab** steps between them and the selection's other kinds
+(see [Viewport handles](../tools/designer.md#viewport-handles)), and the *Edit in Viewport* button under a gradient's row
+in the details panel shows that one.
 
 ## Two-colour gradients from before
 
@@ -97,8 +99,14 @@ registered for every widget.
 A property can ask for handles itself, by its tag: `meta=(DreamGUI_Handle="Kind")`, or `"Kind:Args"` with arguments for
 the kind. A module registers the kind with `FDreamDesignerHandles::RegisterKind` and a factory, and the viewport gives each
 tagged property of the selected widget -- its own, its visual's, its behaviours' -- a provider the factory makes for it,
-named `Kind.Property`. A rect block's `BodyGradient` and `BorderGradient` are tagged with the `Gradient` kind; the tags and
-the kinds are listed in [Property meta tags](../guides/property-meta.md#viewport-handles).
+named `Kind.Property`. A rect block's `BodyGradient` and `BorderGradient` are tagged with the `Gradient` kind; a clip's
+mask, a glass, shadows and lights have kinds of their own (`Designer/DreamDesignerEffectHandles.h`, with every handle's
+number). The tags and the kinds are listed in [Property meta tags](../guides/property-meta.md#viewport-handles).
+
+The viewport shows one provider's handles at a time, named under the selection by `GetDisplayName`: the active one
+(`FDreamDesignerHandles::SetActive` with its name -- a button in a details panel, say) when the selection has its handles,
+else the first that has any: the registered providers, then the tagged properties in the order they are found. Tab steps
+to the next, then to none (`FDreamDesignerHandles::Off`).
 
 ```cpp
 #include "Designer/DreamDesignerHandles.h"

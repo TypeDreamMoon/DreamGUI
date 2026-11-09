@@ -69,6 +69,10 @@ to the kind as it is.
 | Kind | Tagged on | Handles |
 |---|---|---|
 | `Gradient` | a rect block's `BodyGradient`, `BorderGradient` | The gradient's ends, centre and stops ([Gradients](../concepts/gradients.md#viewport-handles)) |
+| `MaskShape` | a widget's `ClipMask` | Its clip's sides, a rect mask's corners, a polygon's roundness, a star's or a ring's inner size, the feather |
+| `GlassShape` | a glass's `CornerRadius` | Its corners, its edge's width, where its light comes from |
+| `Shadow` | a layer style's `Style`; a rect block's `OuterShadowAngle` | The style's shadows; the rect block's own two -- each where it falls |
+| `Light` | a pointer light's `LightPosition`; a layer style's `Style.GlobalLightAngle` | Where the light stands and how far it reaches; the global light as a disc |
 
 A kind is registered by the module that draws it, with a factory that makes the provider for one tagged property:
 

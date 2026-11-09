@@ -24,7 +24,8 @@ description: "裁剪控件的裁剪遮罩——形状、羽化边、纹理或程
 | `HitTest` | `Bounds`（默认：按裁剪矩形做点击检测，与没有遮罩时相同）或 `Mask`（遮罩值至少一半处才命中） |
 
 默认值的遮罩等于没有遮罩：裁剪就是原来的矩形，开销与原来完全相同。细节面板里遮罩位于 **外观 ▸ Clipping**；设计器会描出所选控件
-的遮罩轮廓（视口工具栏的 **Clip Masks** 开关）。
+的遮罩轮廓（视口工具栏的 **Clip Masks** 开关），它的 **Mask** 手柄能在视口里拖裁剪矩形的四条边、矩形遮罩的圆角、多边形的圆角、
+星形或圆环的内径，以及羽化（见[视口手柄](../tools/designer.md#viewport-handles)）。
 
 行为组件可以在运行期间代替 `ClipMask` 驱动控件的裁剪遮罩（`UDreamWidget::SetDrivenClipMask`）：[遮罩转场](mask-transitions.md)就是这样
 做的。被驱动的遮罩不保存、不显示，也不写进 `ClipMask`；驱动期间，原本不裁剪到自身边界的控件会裁剪（Inherit 按 Clip To Bounds、

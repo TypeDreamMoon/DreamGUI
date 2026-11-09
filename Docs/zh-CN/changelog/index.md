@@ -86,6 +86,8 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
   提供者由该种类的工厂为它造（`FDreamDesignerHandles::RegisterKind`）。RectBlock 的 `BodyGradient`、`BorderGradient` 标的是 `Gradient`。
   见[属性 meta 标签](../guides/property-meta.md#viewport-handles)。
 - **对称渐变。** `EDreamPaintType::Reflected`（`reflected-gradient(…)`）从过渐变中心的一条线向两边对称展开，文字和 RectBlock 都能用。
+- **遮罩、玻璃、阴影和光的视口手柄。** 设计器视口给裁剪 widget 的裁剪区和遮罩画手柄——裁剪矩形的四条边（它的边距）、矩形遮罩的圆角、多边形的圆角、星形或圆环的内径和羽化，轮廓按遮罩自己的距离函数描出；玻璃的圆角、边缘宽度和光；图层样式和 RectBlock 的每个阴影，拖到它落下的位置就同时改角度和距离（用全局光的样式阴影转的是全局光，用它的效果一起转）；指针光的位置和照射范围，以及画成圆盘的图层样式全局光。都随属性标签挂上（`DreamGUI_Handle`：`MaskShape`、`GlassShape`、`Shadow`、`Light`）。圆角和羽化默认一起动，Alt 只动一个；Shift 让角度按 15° 一档。见[视口手柄](../tools/designer.md#viewport-handles)。
+- **效果的光在一处读写。** `DreamLayerStyleLight`（`Core/DreamLayerStyleTypes.h`）在效果的角度和高度实际存放的地方读写它们——用全局光的效果是样式的全局光——并在阴影的角度、距离和偏移之间换算；渲染器打包阴影偏移也走它。
 
 - **编辑器里的图层效果。** 控件的细节面板最上面是 **Layer** 分类：不透明度、视觉的混合模式、剪贴到下一层、遮罩（快速选形状，
   选了自动开启裁剪到边界）、添加或关闭图层样式和图层组的开关，以及控件上的每个效果——眼睛负责开关，点名字打开设置。层级面板在
@@ -104,6 +106,8 @@ https://github.com/TypeDreamMoon/DreamGUI/blob/main/CHANGELOG.md
 <a id="changed"></a>
 
 ### 变更
+
+- **视口同一时刻只显示一种手柄。** 设计器视口只显示选中内容的一种手柄——渐变的、遮罩的、阴影的……——选框下方写着它和按 Tab 会换成的那种；**Tab** 依次轮换，最后是「关」，只剩选框。`FDreamDesignerHandles::SetActive` 选一种，RectBlock 渐变下的 *Edit in Viewport* 按钮就是这么做的；RectBlock 的主体渐变和描边渐变是两种。
 
 - **只读取 FieldNotify 变量的绑定在它的 Blueprint 重新编译后不再每帧读取它们**：变量宣布变化时才更新。C++ 给这样的变量赋值却不广播——FieldNotify 从不允许这样做——不再被轮询掩盖；`DreamUI.Binding.ForcePoll 1` 能把它找出来。
 - **Create Dream Widget Of Class 不再出现在 Blueprint 菜单中**：Create Dream Widget 节点代表它，就像 UMG 的 Create Widget 节点代表 `UWidgetBlueprintLibrary::Create` 一样。已经调用它的图表照常编译。由于它是 BlueprintInternalUseOnly，在 Python 中也没有了。
