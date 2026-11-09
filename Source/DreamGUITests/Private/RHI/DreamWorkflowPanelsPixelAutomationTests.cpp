@@ -191,7 +191,7 @@ bool FDreamWorkflowPanelsPixelTest::RunTest(const FString&)
 	DreamUILayerStyleClipboard::Copy(Scoped.FindTemplate(TEXT("Card")), EDreamUIStyleParts::All);
 	FMenuBuilder Menu(/*bShouldCloseWindowAfterMenuSelection*/true, nullptr);
 	FModuleManager::GetModuleChecked<FDreamGUIEditorModule>(TEXT("DreamGUIEditor")).ExtendWidgetContextMenu(Menu, Designer);
-	Pictures.Add({ TEXT("Workflow_LayerStyleMenu"), Menu.MakeWidget(), FIntPoint(380, 150) });
+	Pictures.Add({ TEXT("Workflow_LayerStyleMenu"), Menu.MakeWidget(), FIntPoint(380, 176) });
 
 	for (const FPicture& Picture : Pictures)
 	{

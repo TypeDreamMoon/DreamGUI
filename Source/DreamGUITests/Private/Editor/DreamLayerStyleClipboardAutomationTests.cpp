@@ -343,8 +343,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * The designer's widget menu -- the hierarchy's, which the viewport opens too -- has a Layer Style section with Copy, Paste
- * and the Copy Includes choices, through the editor module's extension point, for a selection.
+ * The designer's widget menu -- the hierarchy's, which the viewport opens too -- has a Layer Style section with the Layer
+ * Style dialog, Copy, Paste and the Copy Includes choices, through the editor module's extension point, for a selection.
  */
 bool FDreamLayerStyleMenuTest::RunTest(const FString&)
 {
@@ -366,6 +366,7 @@ bool FDreamLayerStyleMenuTest::RunTest(const FString&)
 	TArray<FString> Texts;
 	CollectTexts(Builder.MakeWidget(), Texts);
 	TestTrue(TEXT("the menu has the Layer Style section"), Texts.Contains(TEXT("Layer Style")));
+	TestTrue(TEXT("with the Layer Style dialog first"), Texts.Contains(TEXT("Layer Style...")));
 	TestTrue(TEXT("with Copy"), Texts.Contains(TEXT("Copy Layer Style")));
 	TestTrue(TEXT("and Paste, naming what the copy carries"), Texts.Contains(TEXT("Paste Layer Style (style, blend mode, mask)")));
 	TestTrue(TEXT("and what a copy includes"), Texts.Contains(TEXT("Copy Includes")));
