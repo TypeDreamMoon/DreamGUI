@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamTestCulture.h"
 #include "DreamUITextStructureTestFixtures.h"
 
 #include "Designer/DreamUITextAuthoringGate.h"
@@ -284,6 +285,8 @@ bool FDreamUITextBehaviourGesturesTest::RunTest(const FString&)
 	UUIButton* StyleButton = FindBehaviour<UUIButton>(StyledPreview);
 	if (TestNotNull(TEXT("the styled node has the style's behaviour"), StyleButton))
 	{
+		// The refusal is logged, and matched by the expected error above in the English it is written in.
+		const DreamTests::FScopedEnglish English;
 		TestFalse(TEXT("removing a behaviour its style gives it is refused"), Scoped.Designer->DesignerRemoveComponent(StyledPreview, StyleButton));
 		TestEqual(TEXT("and the file is untouched"), Source.Read(), Before);
 	}

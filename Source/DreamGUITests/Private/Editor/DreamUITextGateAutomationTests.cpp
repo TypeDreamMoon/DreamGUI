@@ -6,6 +6,7 @@
 
 #include "Text/DreamUITimelineWriteBack.h"
 
+#include "DreamTestCulture.h"
 #include "DreamWidgetBehaviourTestTypes.h"
 
 #include "DreamWidgetBlueprint.h"
@@ -847,6 +848,8 @@ bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
 		{
 			return false;
 		}
+		// Its message has no code to match by, so it is matched in the English it is written in.
+		const DreamTests::FScopedEnglish English;
 		AddExpectedError(TEXT("no such function"), EAutomationExpectedErrorFlags::Contains, 0);
 		FScopedGatedDesigner Scoped(TEXT("EventRouteNH"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
 		TestTrue(TEXT("a missing handler fails the compile"), Scoped.CompileErrors > 0);
