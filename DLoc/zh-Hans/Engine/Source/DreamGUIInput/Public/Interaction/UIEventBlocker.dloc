@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UIEventBlocker {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventBlocker.h#UIEventBlocker
+    src   "UIEvent Blocker"
+    text  "UI事件阻止器"
+    state machine
+}
+
+UIEventBlocker:AllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventBlocker.h#UIEventBlocker:AllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+namespace UObjectToolTips
+
+UIEventBlocker {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventBlocker.h#UIEventBlocker
+    src   "use this component to stop DreamPointerEvent bubble up"
+    text  "使用此组件阻止 DreamPointerEvent 事件冒泡。"
+    state machine
+}
+
+namespace UObjectCategory
+
+UIEventBlocker {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventBlocker.h#UIEventBlocker:AllowEventBubbleUp
+    src   "UIEventBlocker"
+    text  "UI事件阻止器"
+    state machine
+}

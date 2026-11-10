@@ -1,0 +1,303 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBaseEventData {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData
+    src   "Dream Base Event Data"
+    text  "Dream 基础事件数据"
+    state machine
+}
+
+DreamBaseEventData:EventType {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:EventType
+    src   "Event Type"
+    // from the engine's zh-Hans
+    text  "事件类型"
+    state draft
+}
+
+DreamBaseEventData:SelectedComponent {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:SelectedComponent
+    src   "Selected Component"
+    // from the engine's zh-Hans
+    text  "选定的组件"
+    state draft
+}
+
+DreamBaseEventData:ToString:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:ToString:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+EDreamUIMouseButtonType.EDreamUIMouseButtonType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:EDreamUIMouseButtonType_MAX
+    src   "EDream UIMouse Button Type MAX"
+    text  "EDream UIMouseButtonType_MAX"
+    state machine
+}
+
+EDreamUIMouseButtonType.Left {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamUIMouseButtonType.Middle {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:Middle
+    src   "Middle"
+    // from the engine's zh-Hans
+    text  "中"
+    state draft
+}
+
+EDreamUIMouseButtonType.Right {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamUIMouseButtonType.UserDefined1 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined1
+    src   "User Defined 1"
+    text  "自定义按钮 1"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined2 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined2
+    src   "User Defined 2"
+    text  "自定义按钮 2"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined3 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined3
+    src   "User Defined 3"
+    text  "自定义按钮 3"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined4 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined4
+    src   "User Defined 4"
+    text  "自定义按钮 4"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined5 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined5
+    src   "User Defined 5"
+    text  "自定义按钮 5"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined6 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined6
+    src   "User Defined 6"
+    text  "自定义按钮 6"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined7 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined7
+    src   "User Defined 7"
+    text  "自定义按钮 7"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined8 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined8
+    src   "User Defined 8"
+    text  "自定义按钮 8"
+    state machine
+}
+
+EDreamUIPointerEventType.BeginDrag {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:BeginDrag
+    src   "Begin Drag"
+    text  "开始拖动"
+    state machine
+}
+
+EDreamUIPointerEventType.Click {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Click
+    src   "Click"
+    text  "点击"
+    state machine
+}
+
+EDreamUIPointerEventType.Deselect {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Deselect
+    src   "Deselect"
+    // from the engine's zh-Hans
+    text  "取消选择"
+    state draft
+}
+
+EDreamUIPointerEventType.DoubleClick {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:DoubleClick
+    src   "Double Click"
+    // from the engine's zh-Hans
+    text  "Double Click"
+    state draft
+}
+
+EDreamUIPointerEventType.Down {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Down
+    src   "Down"
+    // from the engine's zh-Hans
+    text  "下移"
+    state draft
+}
+
+EDreamUIPointerEventType.Drag {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Drag
+    src   "Drag"
+    // from the engine's zh-Hans
+    text  "拖拉"
+    state draft
+}
+
+EDreamUIPointerEventType.DragDrop {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:DragDrop
+    src   "Drag Drop"
+    text  "拖放"
+    state machine
+}
+
+EDreamUIPointerEventType.EDreamUIPointerEventType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:EDreamUIPointerEventType_MAX
+    src   "EDream UIPointer Event Type MAX"
+    text  "EDream UIPointer Event Type MAX"
+    state machine
+}
+
+EDreamUIPointerEventType.EndDrag {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:EndDrag
+    src   "End Drag"
+    text  "结束拖放"
+    state machine
+}
+
+EDreamUIPointerEventType.Enter {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Enter
+    src   "Enter"
+    // from the engine's zh-Hans
+    text  "回车键"
+    state draft
+}
+
+EDreamUIPointerEventType.Exit {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Exit
+    src   "Exit"
+    // from the engine's zh-Hans
+    text  "退出"
+    state draft
+}
+
+EDreamUIPointerEventType.LongPress {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:LongPress
+    src   "Long Press"
+    // from the engine's zh-Hans
+    text  "长按"
+    state draft
+}
+
+EDreamUIPointerEventType.Pinch {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Pinch
+    src   "Pinch"
+    // from the engine's zh-Hans
+    text  "捏握"
+    state draft
+}
+
+EDreamUIPointerEventType.Scroll {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Scroll
+    src   "Scroll"
+    // from the engine's zh-Hans
+    text  "滚动"
+    state draft
+}
+
+EDreamUIPointerEventType.Select {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Select
+    src   "Select"
+    // from the engine's zh-Hans
+    text  "选择"
+    state draft
+}
+
+EDreamUIPointerEventType.Swipe {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Swipe
+    src   "Swipe"
+    text  "滑动"
+    state machine
+}
+
+EDreamUIPointerEventType.Up {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Up
+    src   "Up"
+    // from the engine's zh-Hans
+    text  "上移"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamBaseEventData:EventType {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:EventType
+    src   "event type"
+    // from the engine's zh-Hans
+    text  "事件类型"
+    state draft
+}
+
+DreamBaseEventData:SelectedComponent {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:SelectedComponent
+    src   "current selected component. when call Deselect interface, this is also the new selected component"
+    text  "当前选中的组件。调用 Deselect 接口时，此属性也是新的选中组件。"
+    state machine
+}
+
+EDreamUIMouseButtonType.UserDefined1 {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIMouseButtonType:UserDefined1
+    src   "UserDefinedX is for custom defined input button type.\n\nDeliberately kept although no plugin code produces one: these are the extension point for a\nproject that has a fourth or fifth button, which reaches them by passing one to\nUDreamStandaloneInputModule::InputTrigger. \"Unused inside the plugin\" is what they are for."
+    text  "UserDefinedX 用于自定义输入按钮类型。\n\n尽管插件代码不会产生这种类型，仍特意保留：它们是供\n项目使用的扩展点；项目若有第四个或第五个按钮，可通过将其传给\nUDreamStandaloneInputModule::InputTrigger 来使用。“在插件内未使用”正是它们的用途。"
+    state machine
+}
+
+EDreamUIPointerEventType.DoubleClick {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:DoubleClick
+    src   "The second press on the same widget inside DoubleClickTime, sent instead of its Down. Its Up and Click still follow."
+    text  "在 DoubleClickTime 范围内，对同一控件的第二次按下会发送 DoubleClick 事件，而不是 Down 事件。其 Up 和 Click 事件仍然会触发。"
+    state machine
+}
+
+EDreamUIPointerEventType.LongPress {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:LongPress
+    src   "The trigger held on one widget for LongPressTime without becoming a drag."
+    text  "在 LongPressTime 范围内，持续按住一个控件，不会触发拖动事件。"
+    state machine
+}
+
+EDreamUIPointerEventType.Pinch {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Pinch
+    src   "Two pointers moving together or apart. Carried by UDreamGestureEventData."
+    text  "两个指针同时向内或向外移动。由 UDreamGestureEventData 携带。"
+    state machine
+}
+
+EDreamUIPointerEventType.Swipe {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#EDreamUIPointerEventType:Swipe
+    src   "One pointer travelling far enough, fast enough, in one direction. Carried by UDreamGestureEventData."
+    text  "一个指针在某个方向上移动足够远，速度足够快。由 UDreamGestureEventData 携带。"
+    state machine
+}

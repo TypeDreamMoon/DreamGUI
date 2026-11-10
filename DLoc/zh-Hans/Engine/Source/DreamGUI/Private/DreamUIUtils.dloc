@@ -1,0 +1,24 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIUtils
+
+MissingDefaultContent {
+    at    Source/DreamGUI/Private/DreamUIUtils.cpp
+    src   "{0} Load default texture error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."
+    text  "{0} 加载默认纹理时出错！DreamUI 插件缺少部分内容，重新安装该插件可能解决问题。"
+    state machine
+}
+
+StaticMeshHasMultipleSections {
+    at    Source/DreamGUI/Private/DreamUIUtils.cpp
+    src   "StaticMesh {0} has {1} sections, only the first one will be used."
+    text  "StaticMesh {0} 包含 {1} 个部分，仅使用第一个部分。"
+    state machine
+}
+
+StaticMeshHasTooManyUVSets {
+    at    Source/DreamGUI/Private/DreamUIUtils.cpp
+    src   "StaticMesh {0} has {1} UV sets; DreamGUI vertex data supports at most {2}."
+    text  "StaticMesh {0} 包含 {1} 个 UV 集合；DreamGUI 顶点数据最多支持 {2} 个。"
+    state machine
+}

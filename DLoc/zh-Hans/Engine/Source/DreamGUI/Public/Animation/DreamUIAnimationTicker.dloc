@@ -1,0 +1,34 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAnimationTicker {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationTicker.h#DreamUIAnimationTicker
+    src   "Dream UIAnimation Ticker"
+    text  "Dream UI 动画计时器"
+    state machine
+}
+
+DreamUIAnimationTicker:Registry {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationTicker.h#DreamUIAnimationTicker:Registry
+    src   "Registry"
+    // from the engine's zh-Hans
+    text  "注册表"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIAnimationTicker {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationTicker.h#DreamUIAnimationTicker
+    src   "What ticks the animation players DreamGUI's components make, instead of the world's sequence tick manager.\n\nThe world's tick manager ticks every client registered with it, every frame: a weak look-up, a shared pointer copied and a\nvirtual call each, playing or not -- and a wall of widgets keeps thousands of players, most of them waiting for their next\nplay (UDreamWidgetAnimationComponent::SparePlayers). The weak look-ups alone were a twentieth of the screen-space wall's\nframe. A ticker ticks only the players with something to do (Activate), from a list it holds them in.\n\n- One ticker per world and tick interval, registered with the world's tick manager as one client of its own: it is ticked\n  where and when its players would have been, with the delta they would have had -- the same interval, the same pause rule.\n- Its players register with a tick manager of the ticker's (GetRegistry) that nothing ticks: Initialize wants one to\n  register with, and their linker, runner and latent actions are that tick manager's. The ticker flushes that runner and\n  runs those latent actions after its players, as the world's tick manager does after its own.\n- A player is let go once it has nothing to do -- not playing, its clock ready, nothing to sync -- and is ticked again\n  from the next play (UDreamWidgetAnimationPlayer::KeepTicked).\n- DreamUI.Animation.Ticker 0: players made from then on register with the world's tick manager, as before."
+    text  "DreamGUI 的组件所创建的动画播放器由什么执行 Tick，而不是由世界的序列 Tick 管理器执行。\n\n世界的 Tick 管理器每帧都会对注册到它的每个客户端执行 Tick：每个客户端都要进行一次弱引用查找、一次共享指针复制和一次\n虚调用，无论是否正在播放——而一堵控件墙会保有数千个播放器，其中大多数都在等待下一次\n播放（UDreamWidgetAnimationComponent::SparePlayers）。仅弱引用查找一项就占了屏幕空间控件墙帧时间的\n二十分之一。Ticker 只对有事可做的播放器执行 Tick（Activate），且这些播放器来自它持有的列表。\n\n- 每个世界、每个 Tick 间隔对应一个 Ticker，它作为自己的一个客户端注册到世界的 Tick 管理器：它会在其播放器原本应被 Tick 的\n  位置和时机接受 Tick，并使用这些播放器原本会获得的 Delta——相同间隔、相同暂停规则。\n- 它的播放器会注册到该 Ticker 自己的一个 Tick 管理器（GetRegistry）中，而没有任何东西会 Tick 这个管理器：Initialize 需要一个管理器来\n  注册，且它们的 linker、runner 和潜在动作都属于那个 Tick 管理器。Ticker 会在其播放器之后刷新该 runner，并\n  运行那些潜在动作，就像世界的 Tick 管理器在其自己的客户端之后所做的那样。\n- 一旦播放器无事可做——未在播放、时钟已就绪、没有需要同步的内容——它就会被释放，并从下一次播放开始再次\n  接受 Tick（UDreamWidgetAnimationPlayer::KeepTicked）。\n- DreamUI.Animation.Ticker 0：从那时起创建的播放器会像以前一样注册到世界的 Tick 管理器。"
+    state machine
+}
+
+DreamUIAnimationTicker:Registry {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationTicker.h#DreamUIAnimationTicker:Registry
+    src   "See GetRegistry."
+    text  "请参阅 GetRegistry。"
+    state machine
+}

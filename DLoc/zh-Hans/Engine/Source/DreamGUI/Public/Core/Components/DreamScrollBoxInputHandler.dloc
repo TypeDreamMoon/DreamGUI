@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamScrollBoxInputHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollBoxInputHandler.h#DreamScrollBoxInputHandler
+    src   "Dream Scroll Box Input Handler"
+    text  "DreamScrollBox输入处理"
+    state machine
+}
+
+DreamScrollBoxInputHandler:TargetLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollBoxInputHandler.h#DreamScrollBoxInputHandler:TargetLayout
+    src   "Target Layout"
+    text  "目标布局"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamScrollBoxInputHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollBoxInputHandler.h#DreamScrollBoxInputHandler
+    src   "Wheel and drag input for UDreamLayoutContainerScrollBox.\n\nA layout container is a UDreamWidgetSubObjectBehaviour and cannot receive pointer events, so the scrolling\ngesture lives here and writes back into the layout's scroll offset. Created transiently by the scroll box on\nregister and destroyed with it, so it never ends up serialized into a prefab."
+    text  "UDreamLayoutContainerScrollBox的滚轮与拖拽输入。\n\n布局容器是一种UDreamWidgetSubObjectBehaviour（控件子对象行为），无法接收指针事件，因此滚动手势\n放在这里，并写回布局的滚动偏移量。它由滚动框在\n注册时临时创建，并随其一同销毁，因此永远不会被序列化到预制体中。"
+    state machine
+}

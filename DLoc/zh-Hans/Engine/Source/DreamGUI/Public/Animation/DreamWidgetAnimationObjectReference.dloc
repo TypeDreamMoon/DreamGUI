@@ -1,0 +1,107 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetAnimationObjectReference {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference
+    src   "Dream Widget Animation Object Reference"
+    text  "Dream控件动画对象引用"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:HelperWidget {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:HelperWidget
+    src   "Helper Widget"
+    text  "辅助控件"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:HelperWidgetPath {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:HelperWidgetPath
+    src   "Helper Widget Path"
+    text  "辅助控件路径"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:Object {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:Object
+    src   "Object"
+    // from the engine's zh-Hans
+    text  "Object"
+    state draft
+}
+
+DreamWidgetAnimationObjectReference:ObjectPathRelativeToWidget {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:ObjectPathRelativeToWidget
+    src   "Object Path Relative to Widget"
+    text  "相对于控件的对象路径"
+    state machine
+}
+
+DreamWidgetAnimationObjectReferenceMap {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReferenceMap
+    src   "Dream Widget Animation Object Reference Map"
+    text  "Dream控件动画对象引用映射"
+    state machine
+}
+
+DreamWidgetAnimationObjectReferenceMap:BindingIds {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReferenceMap:BindingIds
+    src   "Binding Ids"
+    // from the engine's zh-Hans
+    text  "绑定ID"
+    state draft
+}
+
+DreamWidgetAnimationObjectReferenceMap:References {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReferenceMap:References
+    src   "References"
+    // from the engine's zh-Hans
+    text  "引用"
+    state draft
+}
+
+DreamWidgetAnimationObjectReferences {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReferences
+    src   "Dream Widget Animation Object References"
+    text  "Dream控件动画对象引用"
+    state machine
+}
+
+DreamWidgetAnimationObjectReferences:Array {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReferences:Array
+    src   "Array"
+    // from the engine's zh-Hans
+    text  "数组"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetAnimationObjectReference {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference
+    src   "An external reference to a level sequence object, resolvable through an arbitrary context."
+    text  "对关卡序列对象的外部引用，可通过任意上下文解析。"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:HelperWidget {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:HelperWidget
+    src   "for direct reference widget.\n\nMUTABLE, like Object above and for the same reason: under the class model this pointer is a\nCACHE over HelperWidgetPath, not the binding. An instanced animation is handed the class\ntemplate's copy of it verbatim -- FObjectInstancingGraph re-points only Instanced properties and\nthis is a plain one -- so it arrives naming a widget in the authoring tree, which resolves\nperfectly and animates the wrong tree while holding it alive. Correcting that is a re-point, so\nthe const resolvers have to be able to do it."
+    text  "用于直接引用的控件。\n\nMUTABLE，与上面的Object一样且原因相同：在类模型下，此指针是\nHelperWidgetPath之上的缓存，而非绑定。实例化动画会原样获得类模板中的\n该副本——FObjectInstancingGraph只重新指向Instanced属性，而这是一个\n普通属性——因此它到达时指向的是编辑树中的某个控件，解析完全正确，\n却在保持其存活的同时驱动错误的树。纠正这一点就是重新指向，因此const\n解析函数必须能够执行此操作。"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:HelperWidgetPath {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:HelperWidgetPath
+    src   "HelperWidget's path relative to context widget, split by '/'. If only '/' means it is the context widget itself."
+    text  "HelperWidget相对于上下文控件的路径，以“/”分隔。若仅为“/”，则表示上下文控件自身。"
+    state machine
+}
+
+DreamWidgetAnimationObjectReference:ObjectPathRelativeToWidget {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationObjectReference.h#DreamWidgetAnimationObjectReference:ObjectPathRelativeToWidget
+    src   "object path relative to owner widget\nif path is empty then means widget self"
+    text  "相对于所有者控件的对象路径\n若路径为空，则表示控件自身"
+    state machine
+}

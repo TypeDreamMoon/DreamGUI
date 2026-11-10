@@ -1,0 +1,81 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamSpriteBase {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase
+    src   "Dream Sprite Base"
+    text  "Dream精灵基础"
+    state machine
+}
+
+DreamSpriteBase:GetOverrideMaterial:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:GetOverrideMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSpriteBase:GetSprite:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:GetSprite:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSpriteBase:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:OverrideMaterial
+    src   "Override Material"
+    // from the engine's zh-Hans
+    text  "重载材质"
+    state draft
+}
+
+DreamSpriteBase:SetOverrideMaterial:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetOverrideMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSpriteBase:SetSprite:bSetSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetSprite:bSetSize
+    src   "Set Size"
+    text  "设置大小"
+    state machine
+}
+
+DreamSpriteBase:SetSprite:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetSprite:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSpriteBase:Sprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:Sprite
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamSpriteBase {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase
+    src   "This is base class for create custom mesh based on UISprite."
+    text  "这是用于创建基于UISprite的自定义网格的基础类。"
+    state machine
+}
+
+DreamSpriteBase:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:OverrideMaterial
+    src   "Use a custom material to render this sprite"
+    text  "使用自定义材质来渲染此精灵。"
+    state machine
+}

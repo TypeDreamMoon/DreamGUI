@@ -1,0 +1,185 @@
+dloc 1
+culture zh-Hans
+namespace DreamUITextAuthoringGate
+
+StructuralRefusalFolded {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "{0} ({1} more refused)"
+    text  "{0} (还有 {1} 个被拒绝)"
+    state machine
+}
+
+StructuralRefusalOpen {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "Open the file"
+    text  "打开文件"
+    state machine
+}
+
+SetAuthoredSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "Set DreamUI Source File"
+    text  "设置 DreamUI 资源文件"
+    state machine
+}
+
+StructuralRefusal {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "Refusing to {0} in '{1}': its hierarchy is authored in '{2}'. Structure lives in the text -- edit the file to change it; the designer edits values."
+    text  "拒绝在“{1}”中{0}：其层次结构在“{2}”中编写。结构存在于文本中——要更改结构请编辑文件；设计器编辑的是值。"
+    state machine
+}
+
+ReadOnly_Binding {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' drives this from a function. Editing it here would replace the binding with the value it is currently showing."
+    text  "'{0}' 由函数驱动。在此处编辑会用当前显示的数值替换绑定。"
+    state machine
+}
+
+ReadOnly_Loop {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "One line of '{0}' produces every copy of this widget, so there is no per-copy value to write."
+    text  "单行 '{0}' 会生成此小部件的每个副本，因此没有每个副本的数值可供写入。"
+    state machine
+}
+
+ReadOnly_NotWritable {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "This value is written in '{0}'. The designer writes layout, slot and style values back to the file; the rest would be lost at the next compile."
+    text  "此数值写入到 '{0}'。设计师将布局、槽和样式数值写入文件；其他数值将在下次编译时丢失。"
+    state machine
+}
+
+ReadOnly_NoSpelling {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' has no way to write this value down -- asset references and unsupported types are left alone rather than guessed at -- so a change here would be lost at the next compile."
+    text  "'{0}' 没有写入此数值的方法，资产引用和不支持的类型会被忽略，因此在此处进行的更改将在下次编译时丢失。"
+    state machine
+}
+
+Structure_NoFile {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "the class names no .dui to write into"
+    text  "类名没有 .dui 文件可供写入。"
+    state machine
+}
+
+Structure_Unreadable {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' could not be read"
+    text  "'{0}' 无法读取。"
+    state machine
+}
+
+Structure_FileBroken {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' does not currently build, so nothing can be written into it -- fix the file first: {1}"
+    text  "'{0}' 当前无法构建，因此无法写入任何内容，请先修复文件：{1}。"
+    state machine
+}
+
+Structure_ParentNotAuthored {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' is made by '{1}' rather than written in it (the content an 'each' builds, or another asset's own widgets), so nothing can be placed inside it from here"
+    text  "'{0}' 由 '{1}' 创建，而不是写入其中（内容由 'each' 构建，或另一个资产自身的部件），因此无法在此处放置任何内容。"
+    state machine
+}
+
+Structure_RenameTimeline {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "the timeline '{0}' (line {1}) drives '{2}' by name, and a rename here would leave its track pointing at nothing; rename it in the text, track and all"
+    text  "时间轴“{0}”（第{1}行）按名称驱动“{2}”，在此处重命名会让它的轨道指向空；请在文本中重命名，连同轨道一并修改"
+    state machine
+}
+
+Structure_NothingWritten {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' has no line this change could be written into"
+    text  "“{0}”没有可写入此更改的行"
+    state machine
+}
+
+Structure_WouldBreak {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' would stop building: {1}"
+    text  "“{0}”将无法继续构建：{1}"
+    state machine
+}
+
+Structure_WouldNotBuild {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' would stop building"
+    text  "“{0}”将无法继续构建"
+    state machine
+}
+
+StructuralCheckRefusal {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "Refusing to {0} in '{1}': {2} (its hierarchy is authored in '{3}')."
+    text  "拒绝在“{1}”中{0}：{2}（其层次结构在“{3}”中编写）。"
+    state machine
+}
+
+StructureDropped {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' no longer holds these lines, which the new type or panel has no property for: {1}"
+    text  "“{0}”不再保留这些行，新类型或面板没有用于它们的属性：{1}"
+    state machine
+}
+
+StructureNotWritten {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "Could not write every change to the hierarchy of '{0}' into '{1}', so the compile that follows undoes it -- {2}"
+    text  "无法将“{0}”层次结构的所有更改写入“{1}”，因此随后的编译会将其撤销——{2}"
+    state machine
+}
+
+Structure_FileBrokenComponent {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' does not currently parse, so nothing can be written into it -- fix the file first: {1}"
+    text  "“{0}”当前无法解析，因此无法向其中写入任何内容——请先修复文件：{1}"
+    state machine
+}
+
+Structure_NodeNotAuthored {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "'{0}' is not a node '{1}' writes"
+    text  "“{0}”不是“{1}”所写入的节点"
+    state machine
+}
+
+Statement_NoSite {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "only a widget of this text-authored hierarchy, its visual or one of its behaviours takes a binding or a route"
+    text  "只有此文本编写层次结构中的控件、其视觉元素或其某个行为才接受绑定或路由"
+    state machine
+}
+
+Statement_NotAnObject {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "only the widget, its visual and its behaviours take a binding or a route"
+    text  "只有控件、其视觉元素及其行为才接受绑定或路由"
+    state machine
+}
+
+Statement_LineReachesAnother {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "a '{0}' line on '{1}' would reach its {2} first, and this {3} comes from the node's style or type; write the {3} as a '+' line on the node in the text, and the line goes in its block"
+    text  "'{1}' 上的 '{0}' 行会先到达它的{2}，而这个{3}来自节点的样式或类型；请在文本中把{3}写成该节点上的 '+' 行，该行便会归入其块"
+    state machine
+}
+
+Statement_NotText {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "this Blueprint authors its own hierarchy, and has no .dui to write into"
+    text  "此蓝图自行定义层级结构，不包含任何 .dui 文件。"
+    state machine
+}
+
+Statement_NotAStatement {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUITextAuthoringGate.cpp
+    src   "only a statement -- a binding, a route, or a value -- is written this way"
+    text  "只有语句，例如绑定、路由或值，才以这种方式写入。"
+    state machine
+}

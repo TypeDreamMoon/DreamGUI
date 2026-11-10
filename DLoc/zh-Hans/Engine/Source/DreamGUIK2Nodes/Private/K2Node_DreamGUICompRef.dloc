@@ -1,0 +1,67 @@
+dloc 1
+culture zh-Hans
+namespace UK2Node_DreamGUICompRef_GetComponent
+
+GetComponentTitle_FullNoCast {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "Get Component for DreamGUIComponentReference (type unknown -- cast the result yourself)"
+    text  "获取 DreamGUIComponentReference 的组件（类型未知，请自行进行类型转换）"
+    state machine
+}
+
+GetComponentTitle_Full {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "Get Component for DreamGUIComponentReference"
+    text  "获取 DreamGUIComponentReference 的组件"
+    state machine
+}
+
+UK2Node_DreamGUI_GetCompactNodeTitle {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "•"
+    // from the engine's zh-Hans
+    text  "•"
+    state draft
+}
+
+UK2Node_DreamGUI_GetKeywords {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "ComponentRef"
+    text  "组件引用"
+    state machine
+}
+
+GetComponent_Tooltip {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "Get component from DreamGUIComponentReference\nIf the node is \"!Get\", that means auto cast failed, so you need to cast the result ActorComponent to your desired type."
+    text  "从 DreamGUIComponentReference 获取组件。\n如果节点显示 \"!Get\"，表示自动类型转换失败，您需要将 ActorComponent 结果手动转换为所需的类型。"
+    state machine
+}
+
+UK2Node_DreamGUI_GetMenuCategory {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "DreamGUI"
+    text  "DreamGUI 资源"
+    state machine
+}
+
+GetComponentNoAutoCast {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "@@ could not work out the component type, so its output is a plain ActorComponent. Cast the result to the type you expect."
+    text  "无法确定组件类型，因此输出的是一个普通的 ActorComponent。请将结果转换为您期望的类型。"
+    state machine
+}
+
+InvalidFunctionName {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "The function has not been found."
+    text  "未找到该函数。"
+    state machine
+}
+
+CastNotConnected {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamGUICompRef.cpp
+    src   "@@ could not cast its result to the component type."
+    text  "无法将结果转换为组件类型。"
+    state machine
+}

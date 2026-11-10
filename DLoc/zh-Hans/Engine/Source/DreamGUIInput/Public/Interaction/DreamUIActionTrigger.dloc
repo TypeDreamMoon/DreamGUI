@@ -1,0 +1,167 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIActionTrigger {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger
+    src   "Dream UIAction Trigger"
+    text  "Dream UIAction触发器"
+    state machine
+}
+
+DreamUIActionTrigger:Action {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:Action
+    src   "Action"
+    // from the engine's zh-Hans
+    text  "操作"
+    state draft
+}
+
+DreamUIActionTrigger:bBindGlobally {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:bBindGlobally
+    src   "Bind Globally"
+    text  "全局绑定"
+    state machine
+}
+
+DreamUIActionTrigger:bDisplayInActionBar {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:bDisplayInActionBar
+    src   "Display in Action Bar"
+    // from the engine's zh-Hans
+    text  "在操作栏中显示"
+    state draft
+}
+
+DreamUIActionTrigger:GetAction:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetAction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionTrigger:GetUserIndex:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionTrigger:IsActionBound:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:IsActionBound:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionTrigger:SetAction:InAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetAction:InAction
+    src   "In Action"
+    // from the engine's zh-Hans
+    text  "输入操作"
+    state draft
+}
+
+DreamUIActionTrigger:SetUserIndex:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetUserIndex:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIActionTrigger:SyntheticPointerEvent {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SyntheticPointerEvent
+    src   "Synthetic Pointer Event"
+    text  "合成指针事件"
+    state machine
+}
+
+DreamUIActionTrigger:UserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIActionTrigger {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger
+    src   "\"This button is also what Confirm does.\"\n\nCommonUI spells this as UCommonButtonBase::TriggeringInputAction -- an action named on the button\nitself, so that a screen's Confirm key and its Confirm button are one thing and cannot drift apart.\nDreamGUI has the two halves already (the action router knows which screen owns a key; the pointer\npipeline knows how to click a widget) and nothing joined them, so every project wired the same key\nto the same button by hand in a Blueprint and got to keep both copies in step itself.\n\nPut this beside the button. It is a behaviour rather than a field on UUIButton on purpose: that way\nit works for any widget -- a card, a row, a custom control -- and no control class has to know the\naction system exists.\n\nLifetime, which is the part that has to be right: the binding is registered when the widget goes\nlive and dropped the moment it stops being -- hidden, disabled, destroyed, or its screen closed.\nA key can only ever fire a button the player could have clicked."
+    text  "“此按钮同时也是确认操作所做的事。”\n\nCommonUI 将此表示为 UCommonButtonBase::TriggeringInputAction——在按钮\n自身上指定一个操作，这样界面的确认键和确认按钮就是同一件事，不会彼此脱节。\nDreamGUI 已经具备这两半（操作路由器知道哪个界面拥有某个按键；指针\n管线知道如何点击控件），但没有任何东西把它们连接起来，所以每个项目都在蓝图里手动把同一个按键\n接到同一个按钮上，还得自己让两份保持同步。\n\n把它放在按钮旁边。它有意设计为行为而不是 UUIButton 上的字段：这样\n它对任何控件都有效——卡片、行、自定义控件——并且没有任何控件类需要知道\n操作系统的存在。\n\n生命周期，这是必须正确的部分：绑定在控件上线时注册，\n并在它不再上线的那一刻丢弃——隐藏、禁用、销毁或其界面关闭。\n按键只能触发玩家本可以点击的按钮。"
+    state machine
+}
+
+DreamUIActionTrigger:bBindGlobally {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:bBindGlobally
+    src   "Bind for every screen rather than only while this widget's screen is in front.\n\nOff by default, and that default is the whole point of scoping: a button on a page underneath a\ndialog must not answer the dialog's keypress. On for something that really is always available."
+    text  "为每个界面绑定，而不是仅在此控件的界面位于最前时绑定。\n\n默认关闭，而这个默认值正是作用域的意义所在：对话框下方页面上的按钮\n绝不能响应对话框的按键。对于确实始终可用的东西则开启。"
+    state machine
+}
+
+DreamUIActionTrigger:bDisplayInActionBar {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:bDisplayInActionBar
+    src   "Offer this action to prompt bars. And-ed with the action row's own flag, which can still hide it."
+    text  "将此操作提供给提示栏。与该操作行自身的标志按位与，该标志仍可将其隐藏。"
+    state machine
+}
+
+DreamUIActionTrigger:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetUserIndex
+    src   "Whose key: UserIndex when it names a player, else the player who owns this widget (UDreamWidget::GetOwningPlayerIndex)."
+    text  "按键属于谁：如果 UserIndex 指定了玩家，则为该玩家；否则为拥有此控件的玩家（UDreamWidget::GetOwningPlayerIndex）。"
+    state machine
+}
+
+DreamUIActionTrigger:IsActionBound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:IsActionBound
+    src   "True while the action is registered with the router -- that is, while the key would reach here."
+    text  "在操作注册到路由器期间为真——也就是说，在按键能够到达此处期间为真。"
+    state machine
+}
+
+DreamUIActionTrigger:ReceiveOnActionTriggered {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:ReceiveOnActionTriggered
+    src   "Called after the click has been dispatched, for anything the widget's own handlers do not cover."
+    text  "在点击已分发之后调用，用于处理控件自身处理程序未覆盖的任何内容。"
+    state machine
+}
+
+DreamUIActionTrigger:SetAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetAction
+    src   "The action row this widget answers to. Empty means nothing is bound. Set while the widget is live -- active and\ninteractable -- it is bound at once, the old one let go, as CommonUI's SetTriggeringInputAction binds; set while it\nis not, it is bound when the widget goes live."
+    text  "此控件所响应的操作行。为空表示未绑定任何内容。在控件处于活动状态（已激活且\n可交互）时设置，会立即绑定并释放旧的操作，与 CommonUI 的 SetTriggeringInputAction 绑定方式相同；在控件\n不处于活动状态时设置，则在控件进入活动状态时绑定。"
+    state machine
+}
+
+DreamUIActionTrigger:SetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetUserIndex
+    src   "-1: the owning player."
+    text  "-1：拥有此控件的玩家。"
+    state machine
+}
+
+DreamUIActionTrigger:SyntheticPointerEvent {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SyntheticPointerEvent
+    src   "A pointer event to dispatch the synthetic click with. Never enters the event system's pointer map."
+    text  "用于分发合成点击的指针事件。永远不会进入事件系统的指针映射。"
+    state machine
+}
+
+DreamUIActionTrigger:TriggerAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:TriggerAction
+    src   "Fire as though the widget had been clicked. Public so a screen can trigger it itself -- a\ntutorial pointing at the button, a test -- and so the router's callback has something to call."
+    text  "像控件被点击一样触发。设为公开是为了让界面可以自行触发它——例如\n指向该按钮的教程、测试——也是为了让路由器的回调有可调用的对象。"
+    state machine
+}
+
+DreamUIActionTrigger:UserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:UserIndex
+    src   "Whose key. Matches the event system's user index. -1, the default: the player who owns this widget."
+    text  "谁的按键。与事件系统的用户索引匹配。-1（默认值）：拥有此控件的玩家。"
+    state machine
+}

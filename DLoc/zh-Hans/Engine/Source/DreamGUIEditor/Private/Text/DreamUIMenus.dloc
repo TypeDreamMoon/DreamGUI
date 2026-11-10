@@ -1,0 +1,73 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIMenus
+
+RebuildAllConfirm {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Rebuild every text-backed widget Blueprint in the project?\n\nBlueprints that are not loaded will be loaded and compiled; this can take a while."
+    text  "是否重建项目中的所有基于文本的控件蓝图？\n\n未加载的蓝图将被加载和编译，这可能需要一些时间。"
+    state machine
+}
+
+DreamToolsComboLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Dream"
+    text  "Dream"
+    state machine
+}
+
+DreamToolsComboTooltip {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Dream-family language tools: open a source workspace in VSCode, or rebuild a whole source tree (DreamShader / DreamFX / DreamUI)."
+    text  "Dream-family 语言工具：在 VSCode 中打开源代码工作区，或重建整个源代码树（DreamShader / DreamFX / DreamUI）。"
+    state machine
+}
+
+DreamUISectionLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "DreamUI"
+    text  "DreamUI 设置"
+    state machine
+}
+
+OpenWorkspaceLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "DreamUI Workspace"
+    text  "DreamUI 工作区"
+    state machine
+}
+
+OpenWorkspaceTooltip {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Rewrite DUI/DreamUI.code-workspace from the current source roots and open it in VSCode, or Notepad if VSCode is unavailable."
+    text  "从当前源代码根目录重写 DUI/DreamUI.code-workspace，并在 VSCode 中打开，如果 VSCode 不可用，则使用 Notepad。"
+    state machine
+}
+
+RebuildAllLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Rebuild DUI"
+    text  "重建 DUI"
+    state machine
+}
+
+RebuildAllTooltip {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Recompile every text-backed widget Blueprint in the project, loading the ones that are not. Asks first."
+    text  "重建项目中的所有基于文本的控件蓝图，并加载未加载的蓝图。会先询问。"
+    state machine
+}
+
+OpenWorkspaceToolsLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Open DreamUI Workspace (VSCode)"
+    text  "打开 DreamUI 工作区 (VSCode)"
+    state machine
+}
+
+RebuildAllToolsLabel {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIMenus.cpp
+    src   "Rebuild DUI"
+    text  "重建 DUI"
+    state machine
+}

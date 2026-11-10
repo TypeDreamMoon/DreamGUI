@@ -1,0 +1,234 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIFontFallbackCustomization
+
+ScriptHan {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Han"
+    text  "韩文"
+    state machine
+}
+
+ScriptKana {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Kana"
+    text  "平假名"
+    state machine
+}
+
+ScriptHangul {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Hangul"
+    text  "韩文"
+    state machine
+}
+
+ScriptCJKPunctuation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "CJK punctuation"
+    text  "CJK标点符号"
+    state machine
+}
+
+ScriptFullwidth {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Fullwidth"
+    text  "全角"
+    state machine
+}
+
+ScriptEmoji {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Emoji"
+    text  "表情符号"
+    state machine
+}
+
+SummaryEveryCharacter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "every character"
+    text  "所有字符"
+    state machine
+}
+
+ScriptCJK {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "CJK"
+    // from the engine's zh-Hans
+    text  "CJK"
+    state draft
+}
+
+SummaryMoreRanges {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "{0} more"
+    text  "{0} 个范围"
+    state machine
+}
+
+SummaryMultipleValues {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}
+
+SummaryNoFont {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "No font"
+    text  "无字体"
+    state machine
+}
+
+SummaryAnyLanguage {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "any language"
+    text  "任意语言"
+    state machine
+}
+
+SummaryPreferred {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "before the font's own face"
+    text  "优先使用"
+    state machine
+}
+
+EntryFaceName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Face {0}"
+    text  "字体 {0}"
+    state machine
+}
+
+EntryFaceName_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Fallbacks[{0}]: the font's face {1}. Face 0 is the font's own."
+    text  "备用字体[{0}]: 使用字体 {1}。字体 0 为该字体的原生面。"
+    state machine
+}
+
+PresetsSection {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Presets"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+CJKPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "CJK"
+    // from the engine's zh-Hans
+    text  "CJK"
+    state draft
+}
+
+CJKPreset_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Han (the unified ideographs, extensions A and B, the compatibility ideographs), hiragana and katakana, Hangul, CJK symbols and punctuation, and the halfwidth and fullwidth forms."
+    text  "汉字（包括统一表意文字、扩展 A 和 B、兼容表意文字）、平假名和片假名、韩文、CJK 符号和标点，以及半宽和全宽形式。"
+    state machine
+}
+
+EmojiPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Emoji"
+    text  "表情符号"
+    state machine
+}
+
+EmojiPreset_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Every code point an emoji can start with: the pictograph blocks, the regional indicators of flags, the symbols and dingbats that take U+FE0F, and the keycap bases # * 0-9."
+    text  "每个表情符号都以一个 Unicode 码位开始：象形图块、旗帜区域指示器、采用 U+FE0F 的符号和图表，以及键盘基础符号 # * 0-9。"
+    state machine
+}
+
+BlocksSection {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Unicode blocks"
+    text  "Unicode 块"
+    state machine
+}
+
+AddBlock_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Add a Unicode block, or the CJK or emoji preset, to the code points this face may draw."
+    text  "将一个 Unicode 块或 CJK/表情符号预设添加到此字体可以绘制的码位中。"
+    state machine
+}
+
+AddBlock {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Add Unicode block"
+    text  "添加 Unicode 块"
+    state machine
+}
+
+CodepointMultipleValues {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}
+
+Codepoint_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "A code point in hex: 4E00, U+4E00 or 0x4E00."
+    text  "码位以十六进制表示：4E00，U+4E00 或 0x4E00。"
+    state machine
+}
+
+NotACodepoint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "\"{0}\" is not a code point: type it in hex, from 0 to 10FFFF, as 4E00, U+4E00 or 0x4E00."
+    text  "“{0}” 不是一个码位：请使用十六进制表示法，范围为 0 到 10FFFF，例如 4E00、U+4E00 或 0x4E00。"
+    state machine
+}
+
+InvalidRange {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "not a range of code points: Min must be at most Max, both from 0 to 10FFFF"
+    text  "不是一个码位范围：最小值必须小于或等于最大值，两者都必须在 0 到 10FFFF 之间。"
+    state machine
+}
+
+RangeInsideBlock {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "in {0}"
+    // from the engine's zh-Hans
+    text  "在{0}中"
+    state draft
+}
+
+RangeAcrossBlocks {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "across {0} blocks"
+    text  "跨越 {0} 个块"
+    state machine
+}
+
+AddCulture {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Add culture"
+    text  "添加文化"
+    state machine
+}
+
+AddCulture_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "Add a culture to the ones this face is meant for. A text matches when its language, or a language it falls back to, is one of them: \"zh\" covers Chinese of any script."
+    text  "将文化添加到此字体旨在使用的文化列表中。文本匹配时，其语言或其回退语言之一必须是列表中的一项：“zh” 涵盖所有语种的中文。"
+    state machine
+}
+
+CultureDisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}

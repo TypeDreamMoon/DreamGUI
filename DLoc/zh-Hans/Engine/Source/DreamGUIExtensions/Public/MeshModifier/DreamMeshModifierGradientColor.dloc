@@ -1,0 +1,209 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierGradientColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor
+    src   "GradientColor"
+    text  "渐变颜色"
+    state machine
+}
+
+DreamMeshModifierGradientColor:bMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:bMultiplySourceAlpha
+    src   "Multiply Source Alpha"
+    text  "是否混合源 Alpha"
+    state machine
+}
+
+DreamMeshModifierGradientColor:Color1 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color1
+    src   "Color 1"
+    // from the engine's zh-Hans
+    text  "Color 1"
+    state draft
+}
+
+DreamMeshModifierGradientColor:Color2 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color2
+    src   "Color 2"
+    // from the engine's zh-Hans
+    text  "Color 2"
+    state draft
+}
+
+DreamMeshModifierGradientColor:Color3 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color3
+    src   "Color 3"
+    // from the engine's zh-Hans
+    text  "颜色3"
+    state draft
+}
+
+DreamMeshModifierGradientColor:Color4 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color4
+    src   "Color 4"
+    text  "颜色 4"
+    state machine
+}
+
+DreamMeshModifierGradientColor:DirectionType {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:DirectionType
+    src   "Direction Type"
+    text  "方向类型"
+    state machine
+}
+
+DreamMeshModifierGradientColor:GetColor1:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor1:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:GetColor2:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor2:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:GetColor3:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor3:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:GetColor4:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor4:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:GetDirectionType:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetDirectionType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:GetMultiplySourceAlpha:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetMultiplySourceAlpha:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetColor1:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor1:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetColor2:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor2:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetColor3:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor3:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetColor4:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor4:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetDirectionType:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetDirectionType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierGradientColor:SetMultiplySourceAlpha:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetMultiplySourceAlpha:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamMeshModifierGradientColorDirection.BottomToTop {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:BottomToTop
+    src   "Bottom to Top"
+    text  "从下到上"
+    state machine
+}
+
+EDreamMeshModifierGradientColorDirection.EDreamMeshModifierGradientColorDirection_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:EDreamMeshModifierGradientColorDirection_MAX
+    src   "EDream Mesh Modifier Gradient Color Direction MAX"
+    text  "渐变方向最大值"
+    state machine
+}
+
+EDreamMeshModifierGradientColorDirection.FourCorner {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:FourCorner
+    src   "Four Corner"
+    text  "四角"
+    state machine
+}
+
+EDreamMeshModifierGradientColorDirection.LeftToRight {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:LeftToRight
+    src   "Left to Right"
+    text  "从左到右"
+    state machine
+}
+
+EDreamMeshModifierGradientColorDirection.RightToLeft {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:RightToLeft
+    src   "Right to Left"
+    text  "从右到左"
+    state machine
+}
+
+EDreamMeshModifierGradientColorDirection.TopToBottom {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#EDreamMeshModifierGradientColorDirection:TopToBottom
+    src   "Top to Bottom"
+    text  "从上到下"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierGradientColor:Color3 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color3
+    src   "only use for FourCorner"
+    text  "仅在四角模式下使用"
+    state machine
+}
+
+DreamMeshModifierGradientColor:Color4 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:Color4
+    src   "only use for FourCorner"
+    text  "仅在四角模式下使用"
+    state machine
+}

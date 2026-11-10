@@ -1,0 +1,375 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamVisualPostProcess {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess
+    src   "Dream Visual Post Process"
+    text  "Dream视觉后处理"
+    state machine
+}
+
+DreamVisualPostProcess:AutoOutputRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:AutoOutputRenderTarget
+    src   "Auto Output Render Target"
+    text  "自动输出渲染目标"
+    state machine
+}
+
+DreamVisualPostProcess:bEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamVisualPostProcess:bUseFullSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:bUseFullSize
+    src   "Use Full Size"
+    text  "使用全尺寸"
+    state machine
+}
+
+DreamVisualPostProcess:GetMaskTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetMaskTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetMaskTextureUVRect:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetMaskTextureUVRect:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetOutputRenderTarget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetOutputRenderTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetRenderType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetRenderType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetTintMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetTintMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetTintStrength:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetTintStrength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:GetUseFullSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetUseFullSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:IsEnabled:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:MaskTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:MaskTexture
+    src   "Mask Texture"
+    // from the engine's zh-Hans
+    text  "Mask Texture"
+    state draft
+}
+
+DreamVisualPostProcess:MaskTextureUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:MaskTextureUVRect
+    src   "Mask Texture UVRect"
+    text  "遮罩纹理 UV 矩形"
+    state machine
+}
+
+DreamVisualPostProcess:OutputRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:OutputRenderTarget
+    src   "Output Render Target"
+    // from the engine's zh-Hans
+    text  "输出渲染目标"
+    state draft
+}
+
+DreamVisualPostProcess:RenderType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:RenderType
+    src   "Render Type"
+    // from the engine's zh-Hans
+    text  "渲染类型"
+    state draft
+}
+
+DreamVisualPostProcess:SetEnabled:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetMaskTexture:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetMaskTexture:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetMaskTextureUVRect:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetMaskTextureUVRect:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetRenderType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetRenderType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetTintMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetTintStrength:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintStrength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:SetUseFullSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetUseFullSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualPostProcess:TintMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:TintMode
+    src   "Tint Mode"
+    text  "着色模式"
+    state machine
+}
+
+DreamVisualPostProcess:TintStrength {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:TintStrength
+    src   "Tint Strength"
+    // from the engine's zh-Hans
+    text  "Tint Strength"
+    state draft
+}
+
+EDreamBackgroundBlurRenderType.EDreamBackgroundBlurRenderType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamBackgroundBlurRenderType:EDreamBackgroundBlurRenderType_MAX
+    src   "EDream Background Blur Render Type MAX"
+    text  "EDream 背景模糊渲染类型 (最大值)"
+    state machine
+}
+
+EDreamBackgroundBlurRenderType.RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamBackgroundBlurRenderType:RenderTarget
+    src   "Render Target"
+    // from the engine's zh-Hans
+    text  "渲染目标"
+    state draft
+}
+
+EDreamBackgroundBlurRenderType.Screen {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamBackgroundBlurRenderType:Screen
+    src   "Screen"
+    // from the engine's zh-Hans
+    text  "屏幕"
+    state draft
+}
+
+EDreamPostProcessTintMode.Additive {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Additive
+    src   "Additive"
+    // from the engine's zh-Hans
+    text  "Additive"
+    state draft
+}
+
+EDreamPostProcessTintMode.Blend {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Blend
+    src   "Blend"
+    // from the engine's zh-Hans
+    text  "混合"
+    state draft
+}
+
+EDreamPostProcessTintMode.EDreamPostProcessTintMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:EDreamPostProcessTintMode_MAX
+    src   "EDream Post Process Tint Mode MAX"
+    text  "EDream 后处理着色模式 (最大值)"
+    state machine
+}
+
+EDreamPostProcessTintMode.Multiply {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Multiply
+    src   "Multiply"
+    // from the engine's zh-Hans
+    text  "乘"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamVisualPostProcess {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess
+    src   "UI element that can do post-processing effect on screen space.\nOnly valid on DreamUIRenderer (ScreenSpaceUI or WorldSpace-DreamUIRenderer)."
+    text  "可在屏幕空间执行后处理效果的UI元素。\n仅对DreamUIRenderer（ScreenSpaceUI或WorldSpace-DreamUIRenderer）有效。"
+    state machine
+}
+
+DreamVisualPostProcess:AutoOutputRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:AutoOutputRenderTarget
+    src   "The output render target this visual made because none was assigned. Held apart from\nOutputRenderTarget, which is the author's: never saved, duplicated or copied."
+    text  "由于未指定而由该视觉元素自行创建的输出渲染目标。与\nOutputRenderTarget分开保存，后者属于作者：从不保存、复制或拷贝。"
+    state machine
+}
+
+DreamVisualPostProcess:bEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:bEnabled
+    src   "Off, the effect draws nothing: to compare with and without it."
+    text  "关闭时，效果不绘制任何内容：用于对比开启与关闭时的效果。"
+    state machine
+}
+
+DreamVisualPostProcess:bUseFullSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:bUseFullSize
+    src   "Use root canvas size instead of just this UI element rect area.\nFor screen-space-overlay UI, this will act as full screen size.\nFor world-space-DreamUI, this will use root canvas size."
+    text  "使用根画布尺寸，而不是仅使用此 UI 元素矩形区域。\n对于屏幕空间叠加 UI，它将充当全屏尺寸。\n对于世界空间 DreamUI，它将使用根画布尺寸。"
+    state machine
+}
+
+DreamVisualPostProcess:MaskTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:MaskTexture
+    src   "Use maskTexture's red channel to mask out effect result."
+    text  "使用maskTexture纹理的红色通道遮罩效果结果。"
+    state machine
+}
+
+DreamVisualPostProcess:MaskTextureUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:MaskTextureUVRect
+    src   "MaskTexture UV offset and scale info. Only get good result when MaskTextureType is Simple"
+    text  "遮罩纹理的 UV 偏移和缩放信息。仅当 MaskTextureType 为 Simple 时才能获得最佳效果。"
+    state machine
+}
+
+DreamVisualPostProcess:OutputRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:OutputRenderTarget
+    src   "Blur result will output to this RenderTarget.\nWill create one if not specified."
+    text  "模糊处理的结果将输出到此渲染目标。\n如果未指定，则会自动创建一个。"
+    state machine
+}
+
+DreamVisualPostProcess:SetEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetEnabled
+    src   "Off, the effect draws nothing and what it covers shows as if it were not there; every setting is kept."
+    text  "关闭时，该效果不绘制任何内容，被遮盖的部分会显示为未被遮盖的状态；所有设置都将保留。"
+    state machine
+}
+
+DreamVisualPostProcess:TintMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:TintMode
+    src   "How this visual's Color tints the captured background.\nOnly the RGB of Color is used — its alpha keeps whatever meaning the effect gives it (background blur\nreads alpha as blur strength), so TintStrength controls how strongly the tint applies."
+    text  "该视觉元素的Color如何为捕获的背景着色。\n仅使用Color的RGB——其alpha保留效果赋予它的含义（背景模糊\n将alpha读取为模糊强度），因此由TintStrength控制着色的强度。"
+    state machine
+}
+
+DreamVisualPostProcess:TintStrength {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:TintStrength
+    src   "0 leaves the background untouched in every mode; 1 applies the tint fully."
+    text  "0 会在所有模式下保持背景不变；1 会完全应用着色。"
+    state machine
+}
+
+EDreamBackgroundBlurRenderType.RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamBackgroundBlurRenderType:RenderTarget
+    src   "Output to a RenderTarget"
+    text  "输出到渲染目标。"
+    state machine
+}
+
+EDreamBackgroundBlurRenderType.Screen {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamBackgroundBlurRenderType:Screen
+    src   "Render direct to screen"
+    text  "直接渲染到屏幕。"
+    state machine
+}
+
+EDreamPostProcessTintMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode
+    src   "How a post-process visual's Color is combined with the background it captured."
+    text  "此后处理视觉的颜色如何与捕获的背景结合。"
+    state machine
+}
+
+EDreamPostProcessTintMode.Additive {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Additive
+    src   "result = background + Color * Strength. Glow-like brightening."
+    text  "result = background + Color * Strength。类似于发光的效果。"
+    state machine
+}
+
+EDreamPostProcessTintMode.Blend {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Blend
+    src   "result = lerp(background, Color, Strength). Washes the background towards Color, and can lighten it."
+    text  "result = lerp(background, Color, Strength)。使背景向颜色靠拢，并可以使其变亮。"
+    state machine
+}
+
+EDreamPostProcessTintMode.Multiply {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#EDreamPostProcessTintMode:Multiply
+    src   "result = background * Color. Can only darken or colourise; white leaves it untouched."
+    text  "result = background * Color。只能使背景变暗或着色；白色不会改变它。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Tint {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:TintMode
+    src   "DreamGUI|Tint"
+    text  "DreamGUI|着色"
+    state machine
+}

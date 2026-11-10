@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPsdImportCommandlet {
+    at    Source/DreamGUIPsd/Private/Commandlets/DreamPsdImportCommandlet.h#DreamPsdImportCommandlet
+    src   "Dream Psd Import Commandlet"
+    text  "Dream PSD 导入工具"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPsdImportCommandlet {
+    at    Source/DreamGUIPsd/Private/Commandlets/DreamPsdImportCommandlet.h#DreamPsdImportCommandlet
+    src   "Imports a layered document without opening the editor:\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -Psd=<file> [-Folder=/Game/UI] [-Name=<name>] [-Dui=<file>]\n      [-NoBlueprint] [-NoSave] [-DryRun] [-Dump] [-Report=<file>]\n\n-Dump prints the document as the reader sees it (every layer, its kind, blocks and masks) and imports nothing.\n-Report writes the import's report to a file. Exit code 0 when the import succeeded.\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -WriteSample=<file>\n\nwrites an original sample document that exercises what the importer maps, to try it on."
+}

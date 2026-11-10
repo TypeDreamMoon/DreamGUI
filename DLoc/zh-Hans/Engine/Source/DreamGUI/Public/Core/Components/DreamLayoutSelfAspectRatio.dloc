@@ -1,0 +1,153 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayoutSelfAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio
+    src   "LayoutSelf-AspectRatio"
+    text  "布局自适应宽高比"
+    state machine
+}
+
+DreamLayoutSelfAspectRatio:AspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:AspectRatio
+    src   "Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "高宽比"
+    state draft
+}
+
+DreamLayoutSelfAspectRatio:AspectRatioType {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:AspectRatioType
+    src   "Aspect Ratio Type"
+    text  "宽高比类型"
+    state machine
+}
+
+DreamLayoutSelfAspectRatio:GetAspectRatio:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatio:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayoutSelfAspectRatio:GetAspectRatioType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatioType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayoutSelfAspectRatio:SetAspectRatio:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:SetAspectRatio:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayoutSelfAspectRatio:SetAspectRatioType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:SetAspectRatioType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamLayoutAspectRatioType.EDreamLayoutAspectRatioType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:EDreamLayoutAspectRatioType_MAX
+    src   "EDream Layout Aspect Ratio Type MAX"
+    text  "EDreamLayoutAspectRatioType_MAX"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.EnvelopeParent {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:EnvelopeParent
+    src   "Envelope Parent"
+    text  "父容器适配"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.FitInParent {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:FitInParent
+    src   "Fit in Parent"
+    text  "完全包含于父容器"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.HeightControlWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:HeightControlWidth
+    src   "Height Control Width"
+    text  "高度控制宽度"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamLayoutAspectRatioType.WidthControlHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:WidthControlHeight
+    src   "Width Control Height"
+    text  "宽度控制高度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamLayoutSelfAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio
+    src   "Resizes DreamWidget to fit a specified aspect ratio."
+    text  "调整DreamWidget控件的大小，使其适应指定的宽高比。"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.EnvelopeParent {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:EnvelopeParent
+    src   "Sizes the rectangle such that the parent rectangle is fully contained within."
+    text  "调整矩形大小，使其完全包含在父矩形内。"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.FitInParent {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:FitInParent
+    src   "Sizes the rectangle such that it's fully contained within the parent rectangle."
+    text  "调整矩形大小，使其完全包含在父矩形内。"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.HeightControlWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:HeightControlWidth
+    src   "Height control width"
+    text  "高度控制宽度。"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:None
+    src   "Unlock aspect ratio"
+    text  "解除宽高比限制。"
+    state machine
+}
+
+EDreamLayoutAspectRatioType.WidthControlHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#EDreamLayoutAspectRatioType:WidthControlHeight
+    src   "Width control height"
+    text  "宽度控制高度"
+    state machine
+}
+
+namespace UObjectCategory
+
+LayoutSelf {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatio
+    src   "LayoutSelf"
+    text  "布局自适应"
+    state machine
+}

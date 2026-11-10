@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIFontData_BaseObject
+
+MissingDefaultContent {
+    at    Source/DreamGUI/Private/Core/DreamUIFontData_BaseObject.cpp
+    src   "{0} Load default font error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."
+    text  "{0} 加载默认字体时出错！缺少 DreamUI 插件的部分内容，重新安装该插件可能解决问题。"
+    state machine
+}

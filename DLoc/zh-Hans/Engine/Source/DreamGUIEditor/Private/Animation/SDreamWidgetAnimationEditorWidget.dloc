@@ -1,0 +1,273 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetAnimationEditorWidget
+
+NoAnimationSelected {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "No Animation Selected"
+    // from the engine's zh-Hans
+    text  "未选中动画"
+    state draft
+}
+
+DefaultSequencerLabel {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Sequencer"
+    // from the engine's zh-Hans
+    text  "Sequencer"
+    state draft
+}
+
+NothingSelected {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Select a sequence"
+    // from the engine's zh-Hans
+    text  "选择一个序列"
+    state draft
+}
+
+ReplaceBindingWithWidget {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Replace with {0}"
+    // from the engine's zh-Hans
+    text  "替换为 {0}"
+    state draft
+}
+
+ReplaceBindingWithWidgetTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Rebind this track to the widget selected in the designer, keeping every section and key."
+    text  "将此轨道重新绑定到设计器中选定的控件，保留所有部分和键。"
+    state machine
+}
+
+ReplaceBinding_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Replace Animation Binding"
+    text  "替换动画绑定。"
+    state machine
+}
+
+AddSelectedWidget_Label {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add Track for {0}"
+    // from the engine's zh-Hans
+    text  "为{0}添加轨道"
+    state draft
+}
+
+AddSelectedWidgetBound_Tooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "The widget selected in the designer already has a binding in this animation."
+    text  "设计器中选定的控件已经在此动画中具有绑定。"
+    state machine
+}
+
+AddSelectedWidget_Tooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Bind the widget selected in the designer, without hunting for it in the tree below."
+    text  "将设计器中选定的控件绑定，无需在下面的树中搜索。"
+    state machine
+}
+
+AddSelectedWidgetToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add Selected Widget to Sequencer"
+    text  "将选定的控件添加到 Sequencer。"
+    state machine
+}
+
+AddWidget_Label {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add Widget Track"
+    text  "添加控件轨道。"
+    state machine
+}
+
+AddWidget_Tooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add a binding to one of widget and allow it to be animated by Sequencer"
+    text  "将控件绑定，并允许 Sequencer 动画处理它。"
+    state machine
+}
+
+ChooseWidget {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Choose Widget:"
+    text  "选择控件。"
+    state machine
+}
+
+NestedWidgetNotBindable {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "This widget belongs to a nested widget blueprint, so a track bound to it would follow a name path through another asset and break the moment that asset renames it. Animate it inside its own blueprint instead."
+    text  "此控件属于嵌套的控件蓝图，因此与之绑定的轨道将跟踪另一个资产中的名称路径，并在该资产重命名时中断。请在自己的蓝图中对其进行动画处理。"
+    state machine
+}
+
+NoPreviewForWidget {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "This widget has no preview to animate against yet. Compile the Blueprint, or reopen the designer, and try again."
+    text  "此控件尚无预览动画。请编译蓝图，或重新打开设计器，然后重试。"
+    state machine
+}
+
+AddWidgetToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add Widget to Sequencer"
+    text  "将控件添加到 Sequencer。"
+    state machine
+}
+
+TimelineNotWritten {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "This edit of '{0}' could not be written into its timeline block, and the next compile will undo it: {1}"
+    text  "对“{0}”的此次编辑无法写入其时间轴块，下次编译将会撤销该编辑：{1}"
+    state machine
+}
+
+ComponentsSection {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Components"
+    // from the engine's zh-Hans
+    text  "组件"
+    state draft
+}
+
+ComponentLabelFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}
+
+AddComponentToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add component to Sequencer"
+    // from the engine's zh-Hans
+    text  "将组件添加到Sequencer"
+    state draft
+}
+
+SubObjectsSection {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "SubObjects"
+    // from the engine's zh-Hans
+    text  "子Object"
+    state draft
+}
+
+WidgetVisualLabelFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}
+
+AddVisualToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add visual to Sequencer"
+    text  "添加到 Sequencer"
+    state machine
+}
+
+WidgetLayoutContainerLabelFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}
+
+AddLayoutContainerToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add LayoutContainer to Sequencer"
+    text  "将布局容器添加到 Sequencer"
+    state machine
+}
+
+WidgetLayoutSelfLabelFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}
+
+AddLayoutSelfToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add LayoutSelf to Sequencer"
+    text  "将布局自身添加到 Sequencer"
+    state machine
+}
+
+ControlPartsSection {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Control Parts"
+    text  "控制部件"
+    state machine
+}
+
+ControlPartLabelFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0} ({1})"
+    // from the engine's zh-Hans
+    text  "{0}（{1}）"
+    state draft
+}
+
+ControlPartTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Bind {0}, the part this control builds under that name. Its own visual and components can then be tracked from its row."
+    text  "绑定 {0}，该控件构建的部件，其名称为。可以从其行跟踪其自身的视觉效果和组件。"
+    state machine
+}
+
+AddControlPartToSequencer {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add Control Part to Sequencer"
+    text  "将控制部件添加到 Sequencer"
+    state machine
+}
+
+MaterialsSection {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Materials"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+ImageBrushMaterialToolTipFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add a material track for the {0} property."
+    // from the engine's zh-Hans
+    text  "添加 {0} 属性的材质轨道。"
+    state draft
+}
+
+TextMaterialToolTipFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add a material track for the {0} property."
+    // from the engine's zh-Hans
+    text  "添加 {0} 属性的材质轨道。"
+    state draft
+}
+
+AddWidgetMaterialTrack {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "Add widget material track"
+    // from the engine's zh-Hans
+    text  "添加控件材质轨道"
+    state draft
+}
+
+TrackDisplayNameFormat {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditorWidget.cpp
+    src   "{0}"
+    // from the engine's zh-Hans
+    text  "{0}"
+    state draft
+}

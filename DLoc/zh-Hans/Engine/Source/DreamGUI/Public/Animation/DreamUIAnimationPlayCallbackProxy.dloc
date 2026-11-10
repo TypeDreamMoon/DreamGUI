@@ -1,0 +1,202 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAnimationPlayCallbackProxy {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy
+    src   "Dream UIAnimation Play Callback Proxy"
+    text  "Dream UI 动画播放回调代理"
+    state machine
+}
+
+DreamUIAnimationPlayCallbackProxy:Finished {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:Finished
+    src   "Finished"
+    // from the engine's zh-Hans
+    text  "已完成"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Result {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Widget {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:EndAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:EndAtTime
+    src   "End at Time"
+    // from the engine's zh-Hans
+    text  "结束时间"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Result {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Widget {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIAnimationPlayCallbackProxy {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy
+    src   "The object behind the \"Play Animation with Finished event\" node: plays through the widget and\nfires Finished one frame after the instance ends, naturally or by Stop. Mirrors UMG's\nUWidgetAnimationPlayCallbackProxy; the K2 node that spawns it lives in DreamGUIK2Nodes.\n\nTakes any UDreamWidget, not only a user widget. An animation component is an ordinary behaviour\nand sits on plain widgets all the time; requiring a UDreamUserWidget here meant those animations\nhad no async node at all, while a graph holding one had nothing to connect. A user widget still\nplays through its own forwarding layer, which is what routes a handle to the right component."
+    text  "“播放动画并触发 Finished 事件”节点背后的对象：在控件上播放动画，并\n在实例结束后（自然结束或通过 Stop 停止）的一帧触发 Finished。对应 UMG 的\nUWidgetAnimationPlayCallbackProxy；生成它的 K2 节点位于 DreamGUIK2Nodes 中。\n\n接受任意 UDreamWidget，而不仅是用户控件。动画组件是一种普通行为，\n经常挂在普通控件上；在此要求 UDreamUserWidget，意味着这些动画\n根本没有异步节点，而持有该控件的图表也没有可连接的对象。用户控件仍\n通过自己的转发层播放，由该层将句柄路由到正确的组件。"
+    state machine
+}
+
+DreamUIAnimationPlayCallbackProxy:Finished {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:Finished
+    src   "The instance ended. Fired the frame after, so a graph can safely play the next animation."
+    text  "实例已结束。在之后一帧触发，因此图表可以安全地播放下一个动画。"
+    state machine
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject
+    src   "Play an animation on the widget and trigger the Finished event when the instance is done."
+    text  "在控件上播放动画，并在实例完成时触发“完成”事件。"
+    state machine
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject
+    src   "Play a time range of an animation on the widget and trigger the Finished event when the instance is done."
+    text  "在控件上播放动画的一段指定时间范围，并在实例完成时触发 Finished 事件。"
+    state machine
+}
+
+namespace UObjectShortTooltips
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject
+    src   "Play Animation and trigger event on Finished"
+    // from the engine's zh-Hans
+    text  "播放动画并在完成时触发事件"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject
+    src   "Play Animation Time Range and trigger event on Finished"
+    // from the engine's zh-Hans
+    text  "播放动画时间范围并在完成时触发事件"
+    state draft
+}

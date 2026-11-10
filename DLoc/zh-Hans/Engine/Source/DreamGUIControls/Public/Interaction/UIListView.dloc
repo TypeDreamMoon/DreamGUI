@@ -1,0 +1,480 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EUIListSelectionMode.EUIListSelectionMode_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#EUIListSelectionMode:EUIListSelectionMode_MAX
+    src   "EUIList Selection Mode MAX"
+    text  "最大选择模式"
+    state machine
+}
+
+EUIListSelectionMode.Multi {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#EUIListSelectionMode:Multi
+    src   "Multi"
+    // from the engine's zh-Hans
+    text  "多个"
+    state draft
+}
+
+EUIListSelectionMode.None {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#EUIListSelectionMode:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EUIListSelectionMode.Single {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#EUIListSelectionMode:Single
+    src   "Single"
+    // from the engine's zh-Hans
+    text  "单个"
+    state draft
+}
+
+EUIListSelectionMode.SingleToggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#EUIListSelectionMode:SingleToggle
+    src   "Single Toggle"
+    text  "单选"
+    state machine
+}
+
+UIListEntry {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry
+    src   "UIList Entry"
+    text  "列表项"
+    state machine
+}
+
+UIListEntry:bSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:bSelected
+    src   "Selected"
+    // from the engine's zh-Hans
+    text  "选定项"
+    state draft
+}
+
+UIListEntry:GetItem:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:GetItem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListEntry:GetItemIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:GetItemIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListEntry:GetTreeDepth:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:GetTreeDepth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListEntry:IsSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:IsSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListEntry:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListEntry:ItemIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+UIListEntry:ReceiveOnListItemAssigned:bInSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ReceiveOnListItemAssigned:bInSelected
+    src   "In Selected"
+    // from the engine's zh-Hans
+    text  "输入已选项"
+    state draft
+}
+
+UIListEntry:ReceiveOnListItemAssigned:InIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ReceiveOnListItemAssigned:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+UIListEntry:ReceiveOnListItemAssigned:InItem {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ReceiveOnListItemAssigned:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+UIListEntry:ReceiveOnSelectionChanged:bInSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ReceiveOnSelectionChanged:bInSelected
+    src   "In Selected"
+    // from the engine's zh-Hans
+    text  "输入已选项"
+    state draft
+}
+
+UIListEntry:TreeDepth {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:TreeDepth
+    src   "Tree Depth"
+    // from the engine's zh-Hans
+    text  "Tree Depth"
+    state draft
+}
+
+UIListItemEvent__DelegateSignature:Entry {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListItemEvent__DelegateSignature:Entry
+    src   "Entry"
+    // from the engine's zh-Hans
+    text  "入口"
+    state draft
+}
+
+UIListItemEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListItemEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListSelectionChangedEvent__DelegateSignature:bSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListSelectionChangedEvent__DelegateSignature:bSelected
+    src   "Selected"
+    // from the engine's zh-Hans
+    text  "选定项"
+    state draft
+}
+
+UIListSelectionChangedEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListSelectionChangedEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView
+    src   "UIList View"
+    text  "列表视图"
+    state machine
+}
+
+UIListView:AddItem:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:AddItem:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView:GetListItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:GetListItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListView:GetSelectedItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:GetSelectedItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListView:IsItemSelected:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:IsItemSelected:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView:IsItemSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:IsItemSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListView:Items {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:Items
+    src   "Items"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView:OnEntryGenerated {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:OnEntryGenerated
+    src   "On Entry Generated"
+    // from the engine's zh-Hans
+    text  "生成条目时"
+    state draft
+}
+
+UIListView:OnEntryReleased {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:OnEntryReleased
+    src   "On Entry Released"
+    // from the engine's zh-Hans
+    text  "释放条目时"
+    state draft
+}
+
+UIListView:OnItemClicked {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:OnItemClicked
+    src   "On Item Clicked"
+    // from the engine's zh-Hans
+    text  "点击项目时"
+    state draft
+}
+
+UIListView:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:OnSelectionChanged
+    src   "On Selection Changed"
+    // from the engine's zh-Hans
+    text  "选择已变化时"
+    state draft
+}
+
+UIListView:RemoveItem:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:RemoveItem:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView:RemoveItem:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:RemoveItem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIListView:SelectedItems {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SelectedItems
+    src   "Selected Items"
+    // from the engine's zh-Hans
+    text  "选定项目"
+    state draft
+}
+
+UIListView:SelectionMode {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SelectionMode
+    src   "Selection Mode"
+    // from the engine's zh-Hans
+    text  "选择模式"
+    state draft
+}
+
+UIListView:SetItemSelection:bClearOthers {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SetItemSelection:bClearOthers
+    src   "Clear Others"
+    text  "清除其他选中项"
+    state machine
+}
+
+UIListView:SetItemSelection:bSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SetItemSelection:bSelected
+    src   "Selected"
+    // from the engine's zh-Hans
+    text  "选定项"
+    state draft
+}
+
+UIListView:SetItemSelection:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SetItemSelection:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UIListView:SetListItems:InItems {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:SetListItems:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+UITileView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITileView
+    src   "UITile View"
+    text  "瓦片视图"
+    state machine
+}
+
+UITileView:NumColumns {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITileView:NumColumns
+    src   "Num Columns"
+    // from the engine's zh-Hans
+    text  "数字列"
+    state draft
+}
+
+UITreeView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView
+    src   "UITree View"
+    text  "树视图"
+    state machine
+}
+
+UITreeView:ExpandedItems {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:ExpandedItems
+    src   "Expanded Items"
+    // from the engine's zh-Hans
+    text  "扩展项目"
+    state draft
+}
+
+UITreeView:IsItemExpanded:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:IsItemExpanded:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UITreeView:IsItemExpanded:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:IsItemExpanded:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITreeView:ItemDepths {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:ItemDepths
+    src   "Item Depths"
+    text  "项深度"
+    state machine
+}
+
+UITreeView:RootItems {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:RootItems
+    src   "Root Items"
+    text  "根项"
+    state machine
+}
+
+UITreeView:SetItemExpansion:bExpanded {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:SetItemExpansion:bExpanded
+    src   "Expanded"
+    // from the engine's zh-Hans
+    text  "已展开"
+    state draft
+}
+
+UITreeView:SetItemExpansion:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:SetItemExpansion:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UITreeView:SetRootItems:InRootItems {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:SetRootItems:InRootItems
+    src   "In Root Items"
+    text  "根项"
+    state machine
+}
+
+UITreeView:ToggleItemExpansion:Item {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView:ToggleItemExpansion:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+UITreeViewItem {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeViewItem
+    src   "UITree View Item"
+    text  "树视图项"
+    state machine
+}
+
+UITreeViewItem:GetTreeChildren:OutChildren {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeViewItem:GetTreeChildren:OutChildren
+    src   "Out Children"
+    text  "输出子项"
+    state machine
+}
+
+namespace UObjectCategory
+
+ListEntry {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:GetItem
+    src   "ListEntry"
+    text  "列表项"
+    state machine
+}
+
+ListView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView:AddItem
+    src   "ListView"
+    // from the engine's zh-Hans
+    text  "列表视图"
+    state draft
+}
+
+TileView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITileView:NumColumns
+    src   "TileView"
+    // from the engine's zh-Hans
+    text  "瓦片视图"
+    state draft
+}
+
+TreeView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeViewItem:GetTreeChildren
+    src   "TreeView"
+    // from the engine's zh-Hans
+    text  "树视图"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UIListView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListView
+    src   "SUPERSEDED by UDreamListView (`Native.List`) for new work. Kept for the assets that use it,\nand still the only road to a TILE view -- UUITileView derives from it and the control library\nhas no equivalent.\n\nUDreamListView does not compose this class, and the reasons are recorded in its header rather\nthan repeated here: the unit is a UObject*, a cell needs a live world and an already-arranged\nviewport, the pool is sized by visible count rather than source count, and Awake hands the\ndata-source seat to whoever claimed it first. None of those are defects; they are what a\nrecycling stack costs, and a control that must also work in a headless test and in an\nauthoring tree cannot pay them."
+    text  "新项目请改用UDreamListView（`Native.List`），此类已被取代。为使用它的资产保留，\n并且它仍是进入TILE视图的唯一途径——UUITileView由它派生，而控件库\n没有对应实现。\n\nUDreamListView不组合此类，原因记录在其头文件中，而非\n在此重复：单元是UObject*，单元格需要活动世界和已排布好的\n视口，池按可见数量而非源数量确定大小，Awake会把\n数据源席位交给最先占用它的对象。这些都不是缺陷；它们是\n回收栈的代价，而一个还必须在无头测试和\n编辑树中工作的控件无法承担这些代价。"
+    state machine
+}
+
+UITreeView {
+    at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UITreeView
+    src   "SUPERSEDED by UDreamTreeView (`Native.TreeView`). Kept for the assets that use it. Same story\nas UUIListView above -- the control flattens its own source and owns its rows."
+    text  "已由UDreamTreeView（`Native.TreeView`）取代。为使用它的资产保留。情况与\n上面的UUIListView相同——该控件会展平自身的数据源并自行持有其行。"
+    state machine
+}

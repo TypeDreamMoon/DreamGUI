@@ -1,0 +1,381 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamProgressBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar
+    src   "Dream Progress Bar"
+    text  "Dream进度条"
+    state machine
+}
+
+DreamProgressBar:bIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:bIsMarquee
+    src   "Is Marquee"
+    // from the engine's zh-Hans
+    text  "为边框"
+    state draft
+}
+
+DreamProgressBar:FillColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:FillColorAndOpacity
+    src   "Fill Color and Opacity"
+    // from the engine's zh-Hans
+    text  "填充颜色和不透明度"
+    state draft
+}
+
+DreamProgressBar:FillNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:FillNode
+    src   "Fill Node"
+    text  "填充节点"
+    state machine
+}
+
+DreamProgressBar:FillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:FillType
+    src   "Fill Type"
+    // from the engine's zh-Hans
+    text  "填充类型"
+    state draft
+}
+
+DreamProgressBar:GetFillColorAndOpacity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillColorAndOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetFillType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetIsMarquee:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetIsMarquee:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetMarqueeDuration:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetMarqueeDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetMarqueeFraction:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetMarqueeFraction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetPercent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetPercent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetShape:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetShape:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamProgressBar:MarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeDuration
+    src   "Marquee Duration"
+    text  "缓动时长"
+    state machine
+}
+
+DreamProgressBar:MarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeFraction
+    src   "Marquee Fraction"
+    text  "缓动进度"
+    state machine
+}
+
+DreamProgressBar:MarqueeTime {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeTime
+    src   "Marquee Time"
+    text  "缓动时间"
+    state machine
+}
+
+DreamProgressBar:Percent {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Percent
+    src   "Percent"
+    // from the engine's zh-Hans
+    text  "百分比"
+    state draft
+}
+
+DreamProgressBar:SetFillColorAndOpacity:InFillColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillColorAndOpacity:InFillColorAndOpacity
+    src   "In Fill Color and Opacity"
+    text  "填充颜色和不透明度"
+    state machine
+}
+
+DreamProgressBar:SetFillType:InFillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillType:InFillType
+    src   "In Fill Type"
+    text  "填充类型"
+    state machine
+}
+
+DreamProgressBar:SetIsMarquee:bInIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetIsMarquee:bInIsMarquee
+    src   "In Is Marquee"
+    text  "是否缓动"
+    state machine
+}
+
+DreamProgressBar:SetMarqueeDuration:InMarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeDuration:InMarqueeDuration
+    src   "In Marquee Duration"
+    text  "缓动时长"
+    state machine
+}
+
+DreamProgressBar:SetMarqueeFraction:InMarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeFraction:InMarqueeFraction
+    src   "In Marquee Fraction"
+    text  "缓动进度"
+    state machine
+}
+
+DreamProgressBar:SetPercent:InPercent {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetPercent:InPercent
+    src   "In Percent"
+    // from the engine's zh-Hans
+    text  "在百分比中"
+    state draft
+}
+
+DreamProgressBar:SetShape:InShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetShape:InShape
+    src   "In Shape"
+    text  "形状"
+    state machine
+}
+
+DreamProgressBar:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamProgressBar:Shape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamProgressBar:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamProgressBar:TrackNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:TrackNode
+    src   "Track Node"
+    text  "跟踪节点"
+    state machine
+}
+
+EDreamProgressFillType.BottomToTop {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType:BottomToTop
+    src   "Bottom to Top"
+    text  "从下到上"
+    state machine
+}
+
+EDreamProgressFillType.EDreamProgressFillType_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType:EDreamProgressFillType_MAX
+    src   "EDream Progress Fill Type MAX"
+    text  "EDream Progress Fill Type MAX"
+    state machine
+}
+
+EDreamProgressFillType.LeftToRight {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType:LeftToRight
+    src   "Left to Right"
+    text  "从左到右"
+    state machine
+}
+
+EDreamProgressFillType.RightToLeft {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType:RightToLeft
+    src   "Right to Left"
+    text  "从右到左"
+    state machine
+}
+
+EDreamProgressFillType.TopToBottom {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType:TopToBottom
+    src   "Top to Bottom"
+    text  "从上到下"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamProgressBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar
+    src   "A progress bar whose hierarchy is code, not an asset.\n\nTwo nodes and no behaviour: a track that IS the root -- the button's face-is-root argument, a bar\nis one rectangle -- and a fill inside it that the control drives. UUIProgressBar exists and could\ndrive the same geometry, but a behaviour earns its place by owning interaction or per-frame work\n(marquee), and a plain bar has neither; the control writing the fill itself is smaller than\nhanding a part to a component whose other features it hides.\n\nTWO SHAPES, ONE CONTROL. Bar spends the percent as the fill's WIDTH; Radial spends it as a swept\nANGLE and the two rects become rings. That is one enum rather than two classes for the reason the\nslider has one Direction rather than two Blueprint presets: the parts, the property and the style\nare identical and only the drawing differs. Radial rides the fill rect's OWN RadialFill wedge --\nno second visual, no mask, no material variant -- and the ring itself is the rect's border with\nits body switched off, because a border is the only hole this primitive has.\n\nA Throbber falls out of that and needs no class of its own: a Radial bar at a fixed Percent whose\nRadialStartAngle (or the widget's rotation) an animation spins is exactly the spinner UMG ships,\nand it is styled from the same sheet as every other bar in the project.\n\nUMG parity is UProgressBar's core: Percent in 0..1, SetPercent/GetPercent, no events -- progress\nis written by code, so there is nobody to notify.\n\n    /Script/DreamGUIControls.DreamProgressBar LoadProgress {\n        Percent = 0.35\n    }\n\n    /Script/DreamGUIControls.DreamProgressBar Spinner {\n        Shape = Radial\n        Percent = 0.25\n    }"
+    text  "一个层级结构由代码而非资产定义的进度条。\n\n两个节点，没有行为：一条本身就是根节点的轨道——这与按钮的face-is-root论点相同，\n一个条就是一个矩形——以及其中一块由控件驱动的填充。UUIProgressBar存在，也能驱动\n同样的几何体，但一个行为之所以有其位置，是因为它承担了交互或逐帧工作（跑马灯），\n而普通的条两者皆无；由控件自己写入填充，比把某个部件交给一个会顺带隐藏\n其他功能的组件要轻量。\n\n两种形状，一个控件。Bar把百分比用作填充的宽度；Radial把它用作扫过\n的角度，两个矩形于是变成圆环。它是一个枚举而不是两个类，理由和滑块\n只有一个Direction而不是两个蓝图预设一样：部件、属性和样式\n完全相同，只有绘制方式不同。Radial借助填充矩形自身的RadialFill楔形——\n没有第二个可视对象、没有遮罩、没有材质变体——而圆环本身就是关闭了\n主体的矩形边框，因为边框是这个图元唯一拥有的中空部分。\n\nThrobber由此自然得出，不需要自己的类：一个固定Percent的Radial条，其\nRadialStartAngle（或控件的旋转）由动画旋转，正是UMG自带的旋转指示器，\n而且它与项目中其他每个条都从同一张样式表取样式。\n\n与UMG对齐是UProgressBar的核心：Percent在0..1，SetPercent/GetPercent，没有事件——进度\n由代码写入，因此无人需要通知。\n\n    /Script/DreamGUIControls.DreamProgressBar LoadProgress {\n        Percent = 0.35\n    }\n\n    /Script/DreamGUIControls.DreamProgressBar Spinner {\n        Shape = Radial\n        Percent = 0.25\n    }"
+    state machine
+}
+
+DreamProgressBar:bIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:bIsMarquee
+    src   "The INDETERMINATE bar -- UMG's bIsMarquee: a short fill sweeping the track forever, for work\nwhose length nobody knows.\n\nPercent is ignored while this is on, which is the whole meaning of indeterminate; the fill's\nown length becomes MarqueeFraction of the track. It is the one thing on this control that costs\na per-frame tick, so the tick is opted in and out with the flag rather than left running: a\ndeterminate bar pays nothing.\n\nBar only. The class comment offers the ring's own answer for a spinner -- a Radial at a fixed\nPercent whose rotation an animation drives -- and that one needs no tick from this control."
+    text  "不确定态条——UMG的bIsMarquee：一小段填充在轨道上永远扫过，用于\n长度无人知晓的工作。\n\n开启此项时忽略Percent，这正是“不确定”的全部含义；填充自身的\n长度成为轨道的MarqueeFraction。它是此控件上唯一需要\n逐帧tick的东西，因此tick由该标志按需开启和关闭，而不是一直运行：\n确定态的条不付出任何代价。\n\n仅限Bar。类注释给出了圆环自身的加载指示器方案——一个固定\nPercent的Radial，其旋转由动画驱动——那个方案不需要此控件提供tick。"
+    state machine
+}
+
+DreamProgressBar:FillColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:FillColorAndOpacity
+    src   "A tint over the style's fill colour -- UMG's FillColorAndOpacity, which is a tint over\nSProgressBar's fill image for the same reason: the style says what a filled bar looks like,\nand this says what is happening to this one right now. White is no opinion."
+    text  "叠加在样式填充颜色之上的着色——即UMG的FillColorAndOpacity（填充颜色与不透明度），它出于同样的理由\n叠加在SProgressBar的填充图像之上：样式说明填充好的条长什么样，\n而这个属性说明此刻这一个条正在发生什么。白色表示不表态。"
+    state machine
+}
+
+DreamProgressBar:FillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:FillType
+    src   "Which edge the fill grows from. Bar only -- a ring's direction is its RadialStartAngle, which\nthe style already states."
+    text  "填充从哪条边生长出来。仅限Bar——圆环的方向由其RadialStartAngle决定，\n样式已经说明了这一点。"
+    state machine
+}
+
+DreamProgressBar:MarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeDuration
+    src   "Seconds for one sweep, entrance to exit. Zero or less parks the sweep at the start edge."
+    text  "一次扫过（从进入到退出）所需的秒数。为零或更小时，扫过停在起始边缘。"
+    state machine
+}
+
+DreamProgressBar:MarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeFraction
+    src   "How much of the track the sweeping fill covers, 0..1. A fraction rather than a pixel count for\nthe reason every other length on this control is one: a bar is stretched by whoever placed it."
+    text  "扫过的填充覆盖轨道的多少，0..1。用比例而不是像素值，理由与此控件上\n其他每个长度相同：条由放置它的人拉伸。"
+    state machine
+}
+
+DreamProgressBar:MarqueeTime {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:MarqueeTime
+    src   "How far the marquee has swept, in seconds, wrapped into one cycle. Transient because a sweep is\na live gesture and not something a package should remember."
+    text  "跑马灯已扫过的距离，以秒计，回绕在一个周期内。之所以是瞬态，是因为扫过是\n一个实时动作，而不是包应当记住的东西。"
+    state machine
+}
+
+DreamProgressBar:Percent {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Percent
+    src   "How much of the track is filled, 0..1. A property so .dui and bindings can see it; the value\nis stored as authored and clamped only where it becomes geometry, which is UMG's arrangement.\n\nBlueprintSetter, not a bare writable field: nothing re-derives a control from a property that\nchanged, so a runtime `Set Percent` straight onto the variable used to move the number and\nleave the fill where it was -- visible to nobody until something else happened to restyle."
+    text  "轨道被填充的比例，0..1。它是一个属性，因此.dui和绑定都能看到它；数值\n按编写时的样子存储，只在成为几何体时才被钳制，这正是UMG的做法。\n\n是BlueprintSetter（蓝图Setter），而不是裸露的可写字段：属性变化不会让任何东西\n重新推导控件，因此运行时直接对变量执行`Set Percent`，过去只会移动\n数字而把填充留在原处——除非有别的事情重新设定了样式，否则谁也看不出来。"
+    state machine
+}
+
+DreamProgressBar:SetFillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillType
+    src   "Re-places the fill: the direction decides which edge it is anchored to and which axis it spends."
+    text  "重新放置填充：方向决定它锚定在哪条边，以及它消耗哪条轴。"
+    state machine
+}
+
+DreamProgressBar:SetIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetIsMarquee
+    src   "Turning it on starts the sweep AND the per-frame tick it needs; turning it off stops both."
+    text  "开启后会启动扫掠以及它所需的逐帧Tick；关闭后两者都会停止。"
+    state machine
+}
+
+DreamProgressBar:SetMarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeDuration
+    src   "Seconds for one sweep. Zero or less parks it at the start edge, which is where it re-places to."
+    text  "一次扫掠所需的秒数。为零或更小时会停驻在起始边缘，也就是它重新放置的位置。"
+    state machine
+}
+
+DreamProgressBar:SetMarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeFraction
+    src   "How wide the sweeping fill is. Clamped where the property is, and re-placed at once: the\nwidth is read by the sweep, and a sweep parked by a zero duration would otherwise keep the\nold width until something else moved it."
+    text  "扫掠填充的宽度。在属性处进行钳制，并立即重新放置：\n宽度由扫掠读取，否则因零时长而停驻的扫掠会一直保持\n旧宽度，直到其他因素移动它。"
+    state machine
+}
+
+DreamProgressBar:SetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetShape
+    src   "Re-pushes the whole style, because the shape decides what every other knob means."
+    text  "重新推送整个样式，因为形状决定了其它每个参数的含义。"
+    state machine
+}
+
+DreamProgressBar:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamProgressBar:Shape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Shape
+    src   "Which silhouette the percent is spent on: a bar's width, or a ring's swept angle. A property,\nnot a subclass -- see the class comment, and EDreamProgressShape."
+    text  "百分比作用在哪种轮廓上：条的宽度，还是环的扫掠角度。这是一个属性，\n而不是子类——请参见类注释和EDreamProgressShape。"
+    state machine
+}
+
+DreamProgressBar:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+EDreamProgressFillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#EDreamProgressFillType
+    src   "Which edge a Bar's fill grows from -- UMG's EProgressBarFillType, its four DIRECTIONAL cases.\n\nFour rather than one because the slider next door has had Direction since it was written and a\nprogress bar that could only run left-to-right was the family's one asymmetry: a vertical charge\nmeter and a right-to-left bar (which is what a mirrored-for-RTL layout needs) were not expressible\nat all. UMG's two FillFromCenter cases are deliberately absent -- they are a different SHAPE of\nfill rather than a direction, and this control's Radial already covers the \"grows from a middle\"\nwant with something a bar cannot draw."
+    text  "条的填充从哪条边生长——即UMG的EProgressBarFillType中它的四个方向性（DIRECTIONAL）用例。\n\n之所以是四个而不是一个，是因为隔壁的滑块从写出来起就有Direction，而一个\n只能从左到右的进度条是这个家族唯一的不对称之处：垂直电量表和从右到左的\n条（镜像RTL布局所需要的）根本无法表达。UMG的两个FillFromCenter用例被有意\n省略——它们是填充的不同形状而非方向，而此控件的Radial\n已经用条画不出来的方式满足了“从中间生长”\n的需求。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Progress Bar" {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillColorAndOpacity
+    src   "Progress Bar"
+    // from the engine's zh-Hans
+    text  "进度条"
+    state draft
+}

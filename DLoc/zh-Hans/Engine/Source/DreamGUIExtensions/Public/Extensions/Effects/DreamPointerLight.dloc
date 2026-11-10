@@ -1,0 +1,304 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerLight {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight
+    src   "Dream Pointer Light"
+    text  "Dream指针光源"
+    state machine
+}
+
+DreamPointerLight:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamPointerLight:bFollowPointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bFollowPointer
+    src   "Follow Pointer"
+    text  "跟随指针"
+    state machine
+}
+
+DreamPointerLight:bLightBevels {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bLightBevels
+    src   "Light Bevels"
+    text  "照亮斜角"
+    state machine
+}
+
+DreamPointerLight:bRevealBorders {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bRevealBorders
+    src   "Reveal Borders"
+    text  "显露边框"
+    state machine
+}
+
+DreamPointerLight:FadeSpeed {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:FadeSpeed
+    src   "Fade Speed"
+    text  "淡入淡出速度"
+    state machine
+}
+
+DreamPointerLight:FollowSharpness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:FollowSharpness
+    src   "Follow Sharpness"
+    text  "跟随锐度"
+    state machine
+}
+
+DreamPointerLight:GetCurrentIntensity:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentIntensity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerLight:GetCurrentPosition:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerLight:GetLightPosition:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetLightPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerLight:Height {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:Height
+    src   "Height"
+    // from the engine's zh-Hans
+    text  "高度"
+    state draft
+}
+
+DreamPointerLight:Intensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:Intensity
+    src   "Intensity"
+    // from the engine's zh-Hans
+    text  "强度"
+    state draft
+}
+
+DreamPointerLight:IsEnabled:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerLight:LightColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:LightColor
+    src   "Light Color"
+    // from the engine's zh-Hans
+    text  "光源颜色"
+    state draft
+}
+
+DreamPointerLight:LightPosition {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:LightPosition
+    src   "Light Position"
+    text  "光源位置"
+    state machine
+}
+
+DreamPointerLight:PointerId {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:PointerId
+    src   "Pointer Id"
+    text  "指针 ID"
+    state machine
+}
+
+DreamPointerLight:Radius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:Radius
+    src   "Radius"
+    // from the engine's zh-Hans
+    text  "半径"
+    state draft
+}
+
+DreamPointerLight:SetEnabled:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetFollowPointer:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetFollowPointer:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetHeight:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetHeight:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetIntensity:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetIntensity:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetLightColor:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetLightColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetLightPosition:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetLightPosition:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:SetRadius:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetRadius:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPointerLight:UserIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerLight {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight
+    src   "A small light over the widget's subtree that follows the pointer, or stands where it is put (and can be animated there): a\ncolour, a strength, how far it reaches and how high it stands above the widgets. What it lights:\n\n- every bevel and emboss of a layer style under it (UDreamLayerStyle), lit from where the light is rather than by the style's\n  own angle and altitude -- the highlight follows the pointer across a raised button;\n- every rect block under it with a border: the border's gradient is centred on the light, in its colour, so the edge near the\n  pointer lights up and the rest stays as it was -- a reveal highlight, at the cost of a rect block's row and nothing more.\n\nFollowing the pointer, it fades in while the pointer is over its widget's plane within its reach and out when it leaves;\neverything it lit goes back to its own light then."
+    text  "控件子树上方的一盏小光源，会跟随指针，也可固定在其放置的位置（并可在该处播放动画）：一种\n颜色、强度、作用距离，以及它高出控件的高度。它照亮的内容：\n\n- 其下方图层样式（UDreamLayerStyle）的每个斜角和浮雕，照明来自光源所在的位置，而不是样式\n自带的角度和高度——高光会跟随指针掠过凸起的按钮；\n- 其下方每个带边框的矩形块：边框的渐变以光源为中心、采用光源的颜色，因此靠近\n指针的边缘会亮起，其余部分保持原样——一种显露式高光，代价仅是多一个矩形块的行，别无其他。\n\n跟随指针时，当指针位于其作用范围内的控件平面上时淡入，离开时淡出；\n届时它照亮的一切都会恢复自身的光照。"
+    state machine
+}
+
+DreamPointerLight:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bEnabled
+    src   "Off, it lights nothing: to compare with and without it."
+    text  "关闭时它不照亮任何内容：便于比较启用与不启用的效果。"
+    state machine
+}
+
+DreamPointerLight:bFollowPointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bFollowPointer
+    src   "Follow the pointer (on), or stand at LightPosition (off)."
+    text  "跟随指针（开启），或停在LightPosition处（关闭）。"
+    state machine
+}
+
+DreamPointerLight:bLightBevels {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bLightBevels
+    src   "Light the bevels of the layer styles under it."
+    text  "照亮其下方图层样式的斜角。"
+    state machine
+}
+
+DreamPointerLight:bRevealBorders {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:bRevealBorders
+    src   "Centre the border gradients of the rect blocks under it on the light."
+    text  "将其下方矩形块的边框渐变以该光源为中心。"
+    state machine
+}
+
+DreamPointerLight:FadeSpeed {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:FadeSpeed
+    src   "How quickly it fades in and out, in intensities per second."
+    text  "淡入和淡出所需的时间，单位为每秒的强度。"
+    state machine
+}
+
+DreamPointerLight:FollowSharpness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:FollowSharpness
+    src   "How quickly it catches up with the pointer: higher is tighter, 0 is at once."
+    text  "跟随指针的速度：数值越高，跟随越紧；0 表示立即跟随。"
+    state machine
+}
+
+DreamPointerLight:GetCurrentIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentIntensity
+    src   "How strong it is now: its intensity, faded in and out as the pointer comes and goes."
+    text  "当前强度，即亮度，随着指针的出现和消失而淡入淡出。"
+    state machine
+}
+
+DreamPointerLight:GetCurrentPosition {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentPosition
+    src   "Where the light is now, in the widget's own space from its rect's centre (+Y up): the pointer's place, smoothed."
+    text  "当前位置，相对于小部件的矩形中心（+Y 向上），即指针的位置，经过平滑处理。"
+    state machine
+}
+
+DreamPointerLight:Height {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:Height
+    src   "How high above the widgets it stands, in units: lower, the light grazes the bevels."
+    text  "高度，相对于小部件的单位：数值越小，光线越接近边角线。"
+    state machine
+}
+
+DreamPointerLight:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:IsEnabled
+    src   "Where the light stands, in the widget's own space from its rect's centre (+Y up), when it does not follow the pointer."
+    text  "当前状态，如果禁用，则不发光；如果启用，则从当前位置发光。"
+    state machine
+}
+
+DreamPointerLight:Radius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:Radius
+    src   "How far it reaches, in units: nothing past it is lit."
+    text  "半径，单位为：超出此范围则不发光。"
+    state machine
+}
+
+DreamPointerLight:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetEnabled
+    src   "Off, it lights nothing; on, it lights again from where it would be now."
+    text  "当前状态，如果禁用，则不发光；如果启用，则从当前位置发光。"
+    state machine
+}
+
+DreamPointerLight:UserIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:UserIndex
+    src   "Whose pointer it follows."
+    text  "跟随的指针的索引。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Pointer Light" {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentIntensity
+    src   "DreamGUI|Pointer Light"
+    text  "DreamGUI 指针光"
+    state machine
+}

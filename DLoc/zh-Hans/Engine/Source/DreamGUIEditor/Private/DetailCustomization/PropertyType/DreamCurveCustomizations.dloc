@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamCurveCustomizations
+
+EditContour {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamCurveCustomizations.cpp
+    src   "Edit Contour"
+    text  "编辑轮廓"
+    state machine
+}
+
+ContourHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamCurveCustomizations.cpp
+    src   "Click to add a point, drag one off to remove it, Alt+click for a corner."
+    text  "点击添加点，拖动删除点，Alt+点击选择角点。"
+    state machine
+}

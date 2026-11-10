@@ -1,0 +1,28 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerEdMode
+
+DreamWidgetDesignerEdModeName {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerEdMode.cpp
+    src   "DreamGUI Designer"
+    text  "DreamGUI 设计器"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamWidgetDesignerEdMode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerEdMode.cpp#DreamWidgetDesignerEdMode
+    src   "Dream Widget Designer Ed Mode"
+    text  "Dream控件设计器编辑模式"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetDesignerEdMode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerEdMode.cpp#DreamWidgetDesignerEdMode
+    src   "The editor mode the designer's viewport runs, and the only reason it exists is the engine's\ntransform gizmo.\n\nFWidget::Render draws nothing unless some active mode's ShouldDrawWidget() says yes, and the stock\nanswer (FLegacyEdModeWidgetHelper::ShouldDrawWidget) is \"yes if actors or scene components are\nselected\". A prefab's contents are DreamWidgets, which the engine's selection sets never hold, so\nwith no mode of our own the gizmo is invisible however the viewport client answers\nGetWidgetLocation. This mode answers yes unconditionally and lets\nFDreamWidgetDesignerViewportClient::GetWidgetMode be the one place that decides whether a gizmo\nappears -- it returns WM_None with nothing selected, and in the designer view, which has its own\nrect handles.\n\nRegistration is automatic: UAssetEditorSubsystem::RegisterEditorModes walks every UEdMode CDO and\nregisters it under GetModeInfo().ID."
+    text  "设计器视口所运行的编辑器模式，它存在的唯一理由就是引擎的\n变换gizmo。\n\n除非某个活动模式的ShouldDrawWidget()返回true，否则FWidget::Render不绘制任何内容，而默认\n答案（FLegacyEdModeWidgetHelper::ShouldDrawWidget）是“如果选中了Actor或场景组件，\n则为true”。预制体的内容是DreamWidget控件，引擎的选择集从不包含它们，所以\n如果没有我们自己的模式，无论视口客户端如何回答\nGetWidgetLocation，gizmo都不可见。此模式无条件返回true，并让\nFDreamWidgetDesignerViewportClient::GetWidgetMode成为决定gizmo\n是否出现的唯一位置——未选中任何内容时它返回WM_None，在设计器视图中也是如此，因为设计器视图有自己的\n矩形手柄。\n\n注册是自动的：UAssetEditorSubsystem（资产编辑器子系统）::RegisterEditorModes会遍历每个UEdMode CDO，并\n按GetModeInfo().ID注册它。"
+    state machine
+}

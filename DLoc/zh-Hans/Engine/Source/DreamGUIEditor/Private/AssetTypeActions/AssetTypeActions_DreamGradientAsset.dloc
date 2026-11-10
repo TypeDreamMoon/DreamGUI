@@ -1,0 +1,22 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamGradientAsset
+
+CopyAsCss {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamGradientAsset.cpp
+    src   "Copy as CSS"
+    text  "复制为 CSS"
+    state machine
+}
+
+CopyAsCss_ToolTip {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamGradientAsset.cpp
+    src   "Copy the gradient as CSS, the way a .dui file, a project gradient preset or a rich text's <gradient=...> writes it."
+}
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamGradientAsset.cpp
+    src   "Dream Gradient"
+    text  "梦幻渐变"
+    state machine
+}

@@ -1,0 +1,24 @@
+dloc 1
+culture zh-Hans
+namespace ""
+
+028D1B8A4895B79ECFED848593820356 {
+    at    Content/Niagara/NS_DreamUI_FlyTo.uasset#NS_DreamUI_FlyTo:NiagaraSystemEditorData_0.NiagaraScriptVariable_0.Metadata.Description
+    src   "Where the tokens fly to. DreamGUI writes it."
+    text  "令牌飞向的位置。DreamGUI 会写入它。"
+    state machine
+}
+
+5C68EBA34B3E50409F3084BA47CD5E0E {
+    at    Content/Niagara/NS_DreamUI_FlyTo.uasset#NS_DreamUI_FlyTo:NiagaraSystemEditorData_0.NiagaraScriptVariable_2.Metadata.Description
+    src   "How far the tokens scatter before they fly, in units."
+    text  "令牌飞散的距离，单位为。"
+    state machine
+}
+
+F69505AD458C77B84AAFEE8956C964E2 {
+    at    Content/Niagara/NS_DreamUI_FlyTo.uasset#NS_DreamUI_FlyTo:Tokens_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_1.Metadata.Description
+    src   "The position of the particle. This is its own type for LWC support."
+    text  "粒子的位置。这是一个专用的类型，用于 LWC 支持。"
+    state machine
+}

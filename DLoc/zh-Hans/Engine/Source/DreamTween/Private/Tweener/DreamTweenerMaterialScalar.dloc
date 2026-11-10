@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerMaterialScalar {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerMaterialScalar.h#DreamTweenerMaterialScalar
+    src   "Dream Tweener Material Scalar"
+    text  "Dream Tweener 材质标量"
+    state machine
+}

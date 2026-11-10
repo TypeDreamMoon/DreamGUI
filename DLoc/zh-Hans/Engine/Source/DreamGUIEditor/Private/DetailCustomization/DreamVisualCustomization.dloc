@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace UIBaseRenderableCustomization
+
+RaycastCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamVisualCustomization.cpp
+    src   "Raycast"
+    // from the engine's zh-Hans
+    text  "光线投射"
+    state draft
+}

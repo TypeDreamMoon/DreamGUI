@@ -1,0 +1,74 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUISpriteDataCustomization
+
+ReloadTexture_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "ReloadTexture"
+    text  "重新加载纹理"
+    state machine
+}
+
+ReloadTexture_Button {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "ReloadTexture"
+    text  "重新加载纹理"
+    state machine
+}
+
+PackingTag {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Packing Tag"
+    text  "纹理打包标签"
+    state machine
+}
+
+OpenAtlas {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Open Atlas Viewer"
+    text  "打开纹理图集查看器"
+    state machine
+}
+
+TextureSizeError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Target texture width or height is too large! Consider use UITexture to render this texture."
+    text  "目标纹理宽度或高度过大！请考虑使用 UITexture 渲染该纹理。"
+    state machine
+}
+
+BorderEditorTitleRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "BorderEditor"
+    text  "边框编辑器"
+    state machine
+}
+
+BorderEditorTitle {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Border Editor"
+    text  "边框编辑器"
+    state machine
+}
+
+ApplyTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Click this button after change these values, or it will not take effect."
+    text  "修改数值后，请点击此按钮以使更改生效。"
+    state machine
+}
+
+Apply {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "Apply"
+    // from the engine's zh-Hans
+    text  "应用"
+    state draft
+}
+
+BorderEditor {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUISpriteDataCustomization.cpp
+    src   "BorderEditor"
+    text  "边框编辑器"
+    state machine
+}

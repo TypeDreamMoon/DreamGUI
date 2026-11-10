@@ -1,0 +1,329 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIActionBar {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar
+    src   "Dream UIAction Bar"
+    text  "DreamUI操作栏"
+    state machine
+}
+
+DreamUIActionBar:EntryClass {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:EntryClass
+    src   "Entry Class"
+    // from the engine's zh-Hans
+    text  "条目类"
+    state draft
+}
+
+DreamUIActionBar:EntryWidgets {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:EntryWidgets
+    src   "Entry Widgets"
+    text  "条目控件"
+    state machine
+}
+
+DreamUIActionBar:GetEntryWidgets:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetEntryWidgets:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionBar:GetPrompts:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetPrompts:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionBar:GetUserIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionBar:MaxEntries {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:MaxEntries
+    src   "Max Entries"
+    // from the engine's zh-Hans
+    text  "Max Entries"
+    state draft
+}
+
+DreamUIActionBar:Prompts {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:Prompts
+    src   "Prompts"
+    // from the engine's zh-Hans
+    text  "Prompts"
+    state draft
+}
+
+DreamUIActionBar:SetUserIndex:Value {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:SetUserIndex:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIActionBar:SpawnedEntries {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:SpawnedEntries
+    src   "Spawned Entries"
+    text  "生成的条目"
+    state machine
+}
+
+DreamUIActionBar:UserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIActionBarEntry {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry
+    src   "Dream UIAction Bar Entry"
+    text  "DreamUI操作栏条目"
+    state machine
+}
+
+DreamUIActionBarEntry:Binding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:Binding
+    src   "Binding"
+    // from the engine's zh-Hans
+    text  "绑定"
+    state draft
+}
+
+DreamUIActionBarEntry:GetBinding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetBinding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionBarEntry:GetHoldProgress:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetHoldProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionBarEntry:IconImage {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:IconImage
+    src   "Icon Image"
+    text  "图标图像"
+    state machine
+}
+
+DreamUIActionBarEntry:KeyText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:KeyText
+    src   "Key Text"
+    text  "按键文本"
+    state machine
+}
+
+DreamUIActionBarEntry:LabelText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:LabelText
+    src   "Label Text"
+    text  "标签文本"
+    state machine
+}
+
+DreamUIActionBarEntry:ReceiveOnBindingChanged:InBinding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnBindingChanged:InBinding
+    src   "In Binding"
+    // from the engine's zh-Hans
+    text  "在绑定中"
+    state draft
+}
+
+DreamUIActionBarEntry:ReceiveOnHoldProgressChanged:InHoldProgress {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnHoldProgressChanged:InHoldProgress
+    src   "In Hold Progress"
+    text  "按住进度"
+    state machine
+}
+
+DreamUIActionBarEntry:SetBinding:InBinding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetBinding:InBinding
+    src   "In Binding"
+    // from the engine's zh-Hans
+    text  "在绑定中"
+    state draft
+}
+
+DreamUIActionBarEntry:SetIconImage:Value {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetIconImage:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIActionBarEntry:SetKeyText:Value {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetKeyText:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIActionBarEntry:SetLabelText:Value {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetLabelText:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIActionBar {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar
+    src   "The row of \"A: Confirm  B: Back\" prompts along the bottom of a screen.\n\nIt reads the router rather than being told what to show, so it cannot drift out of step with what\nthe keys actually do -- the failure mode of every hand-authored prompt bar, where a screen changes\na binding and the hint underneath keeps advertising the old one.\n\nRebuilt only when the answer changes: when bindings come or go, when the player switches device, and\nwhen they pick up another model of pad (the glyphs are per model). Polling would mean reloading a\nprefab per entry per frame.\n\nAfter the screen's own actions come the shoulder buttons' two prompts, \"previous tab\" and \"next tab\",\nwhile the player has a tab view those keys would switch (DreamUIKeyRouting::FindTabSwitchTarget,\nasked at the rebuild): the project's PreviousTabKeys and NextTabKeys, the first of each for the device\nin use -- none on a device the tables have no key for.\n\nA prompt is also a button, as CommonUI's bound action button is: an entry with a button in it -- a\nUDreamButton as the entry class, or a prefab built around a UUIButton -- runs the action it shows when\nit is clicked, tapped or confirmed with the pad (UDreamUIActionRouter::ExecuteAction). A disabled bar's\nprompts are disabled buttons: they click nothing and the pad passes over them."
+    text  "屏幕底部那行“A：确认  B：返回”提示。\n\n它读取路由器，而不是被告知要显示什么，因此不会与实际\n按键行为脱节——这正是每个手写提示条的失败模式，屏幕改了一个\n绑定，下面的提示却还在宣传旧的。\n\n只在答案变化时重建：绑定增删时、玩家切换设备时，以及\n玩家换上另一种型号的手柄时（字形按型号区分）。轮询意味着每\n帧为每个条目重新加载一个预制体。\n\n屏幕自身的操作之后，是肩键的两个提示“上一个页签”和“下一个页签”，\n前提是玩家有这些键可以切换的页签视图（DreamUIKeyRouting::FindTabSwitchTarget，\n在重建时询问）：项目的PreviousTabKeys和NextTabKeys，各自取所用设备\n对应的第一个——若键表中没有该设备的键，则没有。\n\n提示也是一个按钮，正如CommonUI的绑定操作按钮那样：内部带按钮的条目——以\nUDreamButton作为条目类，或围绕UUIButton构建的预制体——在被点击、轻触或用\n手柄确认时执行它所显示的操作（UDreamUIActionRouter::ExecuteAction）。禁用状态操作栏的\n提示就是禁用的按钮：它们不响应点击，手柄也会直接跳过。"
+    state machine
+}
+
+DreamUIActionBar:EntryClass {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:EntryClass
+    src   "Loaded once per prompt, as a child of this widget. Nothing is shown without one."
+    text  "每个提示加载一次，作为此控件的子项。未设置时不显示任何内容。"
+    state machine
+}
+
+DreamUIActionBar:EntryWidgets {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:EntryWidgets
+    src   "Non-owning view of the same widgets, so Blueprint can read the row without a copy per call."
+    text  "这些相同控件的非拥有视图，因此蓝图无需在每次调用时复制即可读取该行。"
+    state machine
+}
+
+DreamUIActionBar:GetEntryWidgets {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetEntryWidgets
+    src   "The entry widgets currently on the bar, in the order they are shown."
+    text  "当前位于操作栏上的条目控件，按显示顺序排列。"
+    state machine
+}
+
+DreamUIActionBar:GetPrompts {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetPrompts
+    src   "What the last rebuild put on the bar, in order, MaxEntries at most: one prompt per entry -- the same list\nwith no entry prefab to draw it, which is how a test or a bar drawn some other way reads it."
+    text  "上次重建按顺序放到栏上的内容，最多 MaxEntries 个：每个条目一个提示——即同一份列表\n但不带用于绘制它的条目预制件，测试或用其他方式绘制的栏正是这样读取它的。"
+    state machine
+}
+
+DreamUIActionBar:GetUserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetUserIndex
+    src   "Whose prompts: UserIndex when it names a player, else the player who owns this widget (UDreamWidget::GetOwningPlayerIndex)."
+    text  "提示属于哪个玩家：如果 UserIndex 指定了玩家则为该索引，否则为拥有此控件的玩家（UDreamWidget::GetOwningPlayerIndex）。"
+    state machine
+}
+
+DreamUIActionBar:MaxEntries {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:MaxEntries
+    src   "Guard against a runaway table filling the screen with prompts."
+    text  "防止失控的表格用提示占满屏幕。"
+    state machine
+}
+
+DreamUIActionBar:Prompts {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:Prompts
+    src   "See GetPrompts."
+    text  "参见 GetPrompts。"
+    state machine
+}
+
+DreamUIActionBar:Rebuild {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:Rebuild
+    src   "Throw the entries away and build them again from the router."
+    text  "丢弃所有条目，并从路由器重新构建。"
+    state machine
+}
+
+DreamUIActionBar:SetUserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:SetUserIndex
+    src   "-1: the owning player."
+    text  "-1：拥有此控件的玩家。"
+    state machine
+}
+
+DreamUIActionBar:UserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:UserIndex
+    src   "Whose prompts these are. Matches the event system's user index. -1, the default: the player who owns this widget."
+    text  "这些提示属于哪个玩家。与事件系统的用户索引一致。-1（默认值）：拥有此控件的玩家。"
+    state machine
+}
+
+DreamUIActionBarEntry {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry
+    src   "One prompt on the bar: the key glyph or name, and the words beside it.\n\nPut this on the root of the entry prefab and point it at the two or three widgets that draw the\nprompt. Filling those in is all most projects need; anything more elaborate overrides the Blueprint\nevent, which is called after the defaults have been applied and can undo any of them."
+    text  "栏上的一个提示：按键图标或名称，以及旁边的文字。\n\n将它放在条目预制件的根上，并指向绘制该\n提示的两三个控件。多数项目只需填好这些内容；更复杂的做法是重写蓝图\n事件，该事件在应用默认值之后调用，可以撤销其中的任何一项。"
+    state machine
+}
+
+DreamUIActionBarEntry:GetHoldProgress {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetHoldProgress
+    src   "0..1 through this entry's hold, kept live by the router. Always 0 for an action that fires on press."
+    text  "此条目按住过程的 0..1 进度，由路由器保持实时更新。对于按下即触发的操作始终为 0。"
+    state machine
+}
+
+DreamUIActionBarEntry:IconImage {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:IconImage
+    src   "The key glyph. Hidden when the action has no icon for the device in use."
+    text  "按键图标。当该操作对当前使用的设备没有图标时隐藏。"
+    state machine
+}
+
+DreamUIActionBarEntry:KeyText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:KeyText
+    src   "The key's name, for when there is no glyph. Shown exactly when the icon is not, so a prompt is\nnever blank and never says the same thing twice."
+    text  "按键名称，用于没有图标的情况。仅在图标不显示时显示，因此提示\n永远不会为空，也不会重复显示相同内容。"
+    state machine
+}
+
+DreamUIActionBarEntry:LabelText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:LabelText
+    src   "What the action does, in words."
+    text  "用文字说明该操作的作用。"
+    state machine
+}
+
+DreamUIActionBarEntry:ReceiveOnBindingChanged {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnBindingChanged
+    src   "Called after the defaults have been written, so it can override any of them."
+    text  "在默认值写入后调用，以便可以覆盖任何默认值。"
+    state machine
+}
+
+DreamUIActionBarEntry:ReceiveOnHoldProgressChanged {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnHoldProgressChanged
+    src   "Called every time this entry's hold progress moves, and once with 0 when the hold ends.\n\nThis is where a filling ring is drawn. Pushed from the router rather than ticked: an entry for an\naction that fires on press never hears from it at all."
+    text  "当此条目的按住进度发生变化时调用，按住结束时再以 0 调用一次。\n\n此处绘制填充圆环。它由路由器推送，而不是逐帧轮询：按下即触发的操作\n所对应的条目完全收不到此调用。"
+    state machine
+}
+
+DreamUIActionBarEntry:SetBinding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetBinding
+    src   "Fill this entry in from a binding. Called by the bar right after the prefab is loaded."
+    text  "从此绑定中填充此条目。由工具栏在加载预制件后调用。"
+    state machine
+}
+
+DreamUIActionBarEntry:SetLabelText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetLabelText
+    src   "Wiring, for an entry assembled in code rather than authored as a prefab."
+    text  "用于通过代码组装的条目，而不是作为预制件创建。"
+    state machine
+}

@@ -1,0 +1,66 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIComponentSupport
+
+NeedsVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "Needs {0} on this widget."
+    text  "需要在此控件上添加 {0}。"
+    state machine
+}
+
+NeedsComponent {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "Needs a {0} on this widget first."
+    text  "需要在此控件上先添加 {0}。"
+    state machine
+}
+
+OnePerWidget {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "This widget already has a {0}."
+    text  "此控件已经有 {0}。"
+    state machine
+}
+
+MeshVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "a visual that builds a mesh (Text, Image, Sprite, Texture, Rect Block...)"
+    text  "一个用于构建网格的视觉元素（文本、图像、精灵、纹理、矩形块...）。"
+    state machine
+}
+
+TextVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "a Text visual"
+    text  "文本视觉元素。"
+    state machine
+}
+
+SpriteVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "a Sprite visual"
+    text  "精灵视觉元素。"
+    state machine
+}
+
+TextureVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "a Texture visual"
+    text  "纹理视觉元素。"
+    state machine
+}
+
+UMGWidgetVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "a UMG Widget visual"
+    text  "UMG 控件视觉元素。"
+    state machine
+}
+
+ContentWidgetChildren {
+    at    Source/DreamGUIEditor/Private/DreamUIComponentSupport.cpp
+    src   "Holds one child, and this widget has {0}."
+    text  "只能容纳一个子项，且此控件具有{0}。"
+    state machine
+}

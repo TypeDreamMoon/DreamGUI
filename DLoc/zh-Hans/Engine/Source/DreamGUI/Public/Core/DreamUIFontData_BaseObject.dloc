@@ -1,0 +1,40 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIFontData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h#DreamUIFontData_BaseObject
+    src   "Dream UIFont Data Base Object"
+    text  "Dream UI 字体数据 基础对象"
+    state machine
+}
+
+DreamUIFontData_BaseObject:EmojiData {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h#DreamUIFontData_BaseObject:EmojiData
+    src   "Emoji Data"
+    text  "表情数据"
+    state machine
+}
+
+DreamUIFontData_BaseObject:PresetMaterials {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h#DreamUIFontData_BaseObject:PresetMaterials
+    src   "Preset Materials"
+    text  "预设材质"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIFontData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h#DreamUIFontData_BaseObject
+    src   "base font class, UIText can use a implemented asset object to render text"
+    text  "基础字体类，UIText 可以使用已实现的资源对象来渲染文本。"
+    state machine
+}
+
+DreamUIFontData_BaseObject:PresetMaterials {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h#DreamUIFontData_BaseObject:PresetMaterials
+    src   "Put materials here so DreamText can easily select OverrideMaterial from this array."
+    text  "在此处放置材质，以便 DreamText 可以轻松选择 OverrideMaterial。"
+    state machine
+}

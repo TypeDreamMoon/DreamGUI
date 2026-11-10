@@ -1,0 +1,327 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamHoloFoil {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil
+    src   "Dream Holo Foil"
+    text  "Dream Holo Foil"
+    state machine
+}
+
+DreamHoloFoil:BandAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:BandAngle
+    src   "Band Angle"
+    text  "频段角度"
+    state machine
+}
+
+DreamHoloFoil:BandFrequency {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:BandFrequency
+    src   "Band Frequency"
+    // from the engine's zh-Hans
+    text  "带宽频率"
+    state draft
+}
+
+DreamHoloFoil:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamHoloFoil:FoilMask {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:FoilMask
+    src   "Foil Mask"
+    text  "箔片遮罩"
+    state machine
+}
+
+DreamHoloFoil:FoilMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:FoilMaterial
+    src   "Foil Material"
+    text  "箔片材质"
+    state machine
+}
+
+DreamHoloFoil:GetCurrentView:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:GetCurrentView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamHoloFoil:Intensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:Intensity
+    src   "Intensity"
+    // from the engine's zh-Hans
+    text  "强度"
+    state draft
+}
+
+DreamHoloFoil:IsEnabled:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamHoloFoil:ManualView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:ManualView
+    src   "Manual View"
+    text  "手动视图"
+    state machine
+}
+
+DreamHoloFoil:PointerId {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:PointerId
+    src   "Pointer Id"
+    text  "指针 ID"
+    state machine
+}
+
+DreamHoloFoil:Rainbow {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:Rainbow
+    src   "Rainbow"
+    text  "彩虹"
+    state machine
+}
+
+DreamHoloFoil:RainbowTexture {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:RainbowTexture
+    src   "Rainbow Texture"
+    text  "彩虹纹理"
+    state machine
+}
+
+DreamHoloFoil:SetEnabled:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamHoloFoil:SetIntensity:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetIntensity:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamHoloFoil:SetManualView:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetManualView:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamHoloFoil:SetViewSource:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetViewSource:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamHoloFoil:SparkleCells {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SparkleCells
+    src   "Sparkle Cells"
+    text  "闪光单元"
+    state machine
+}
+
+DreamHoloFoil:SparkleDensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SparkleDensity
+    src   "Sparkle Density"
+    text  "闪光密度"
+    state machine
+}
+
+DreamHoloFoil:SparkleIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SparkleIntensity
+    src   "Sparkle Intensity"
+    text  "闪光强度"
+    state machine
+}
+
+DreamHoloFoil:UserIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamHoloFoil:ViewSharpness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:ViewSharpness
+    src   "View Sharpness"
+    text  "视图清晰度"
+    state machine
+}
+
+DreamHoloFoil:ViewSource {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:ViewSource
+    src   "View Source"
+    text  "视图源"
+    state machine
+}
+
+EDreamHoloFoilView.EDreamHoloFoilView_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:EDreamHoloFoilView_MAX
+    src   "EDream Holo Foil View MAX"
+    text  "梦幻全息箔视图 (最大值)"
+    state machine
+}
+
+EDreamHoloFoilView.Manual {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Manual
+    src   "Manual"
+    // from the engine's zh-Hans
+    text  "手动"
+    state draft
+}
+
+EDreamHoloFoilView.Pointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Pointer
+    src   "Pointer"
+    text  "指针"
+    state machine
+}
+
+EDreamHoloFoilView.Tilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Tilt
+    src   "Tilt"
+    // from the engine's zh-Hans
+    text  "Tilt"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamHoloFoil {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil
+    src   "A trading card's holo foil over an image, a sprite, a texture or a rect block: rainbow bands that slide as the angle of view\nchanges, a glare across the card and sparkles that twinkle as it turns, where the foil mask says. The angle of view is the\npointer's offset from the centre, a tilt card's tilt, or set by hand.\n\nDrawn by a material of its own (DreamUI_HoloFoil, made by DreamShader from DShader/DreamUI_HoloFoil.dsm), which the element\ndraws with while the foil is on; the material shades the element as the default one does and adds the foil. A material is\na draw call of its own, which a few cards on screen can afford."
+    text  "集换式卡牌的全息箔，叠加在图像、Sprite、纹理或矩形块上：彩虹色带会随视角变化\n而滑动，卡面上有一道眩光，转动时还有闪烁的闪光点，位置由箔遮罩决定。视角是\n指针相对中心的偏移、倾斜卡牌的倾斜角度，或手动设置。\n\n由独立材质（DreamUI_HoloFoil，由DreamShader从DShader/DreamUI_HoloFoil.dsm生成）绘制，全息箔开启时\n元素使用该材质绘制；该材质像默认材质一样为元素着色，并叠加箔效果。每个材质\n都会产生一次独立的绘制调用，屏幕上有少量卡牌时还可以承受。"
+    state machine
+}
+
+DreamHoloFoil:BandAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:BandAngle
+    src   "The bands' angle, degrees from across."
+    text  "彩带的角度，以度数为单位，相对于水平方向。"
+    state machine
+}
+
+DreamHoloFoil:BandFrequency {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:BandFrequency
+    src   "How many bands cross the element."
+    text  "彩带的数量，横跨元素。"
+    state machine
+}
+
+DreamHoloFoil:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:bEnabled
+    src   "Off, the element is drawn as if there were no foil: to compare with and without it."
+    text  "禁用：元素以没有箔膜的效果绘制。"
+    state machine
+}
+
+DreamHoloFoil:FoilMask {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:FoilMask
+    src   "Where the foil is: its red channel; none is everywhere."
+    text  "箔膜的位置：其红色通道；无则表示无箔膜。"
+    state machine
+}
+
+DreamHoloFoil:FoilMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:FoilMaterial
+    src   "Made by this foil: a copy makes its own when it attaches."
+    text  "由该箔膜创建：复制时会创建自己的副本。"
+    state machine
+}
+
+DreamHoloFoil:GetCurrentView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:GetCurrentView
+    src   "The angle of view now, -1..1 across and up."
+    text  "当前的视角度，范围为 -1 到 1，水平和垂直方向。"
+    state machine
+}
+
+DreamHoloFoil:Rainbow {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:Rainbow
+    src   "The bands' colours, along a band."
+    text  "彩带的颜色，沿着一条彩带。"
+    state machine
+}
+
+DreamHoloFoil:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetEnabled
+    src   "Off, the element draws with its own material again; on, with the foil's."
+    text  "禁用：元素使用其自身的材质进行绘制；启用：元素使用箔膜的材质进行绘制。"
+    state machine
+}
+
+DreamHoloFoil:SparkleCells {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SparkleCells
+    src   "How many cells across the sparkles are laid in."
+    text  "闪烁效果的单元格数量，横跨元素。"
+    state machine
+}
+
+DreamHoloFoil:SparkleDensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SparkleDensity
+    src   "The share of the cells that sparkle."
+    text  "闪烁单元格的比例。"
+    state machine
+}
+
+DreamHoloFoil:ViewSharpness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:ViewSharpness
+    src   "How quickly the view follows its source: higher is tighter, 0 is at once."
+    text  "视图跟随源对象的速度：数值越高，跟随越紧，0 表示即时。"
+    state machine
+}
+
+EDreamHoloFoilView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView
+    src   "Where a holo foil takes its angle of view from."
+    text  "全息箔的视角来源。"
+    state machine
+}
+
+EDreamHoloFoilView.Manual {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Manual
+    src   "ManualView, set or animated."
+    text  "手动视图，可设置或动画。"
+    state machine
+}
+
+EDreamHoloFoilView.Pointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Pointer
+    src   "The pointer's offset from the element's centre."
+    text  "指针相对于元素中心的偏移量。"
+    state machine
+}
+
+EDreamHoloFoilView.Tilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#EDreamHoloFoilView:Tilt
+    src   "The tilt of a tilt card on the same widget (UDreamTiltCard)."
+    text  "同一小部件上的倾斜卡片的倾斜角度 (UDreamTiltCard)。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Holo Foil" {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:GetCurrentView
+    src   "DreamGUI|Holo Foil"
+    text  "DreamGUI|全息箔"
+    state machine
+}

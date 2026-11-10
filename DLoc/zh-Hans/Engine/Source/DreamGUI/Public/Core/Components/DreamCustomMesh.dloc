@@ -1,0 +1,50 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamCustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh
+    src   "Dream Custom Mesh"
+    text  "Dream自定义网格"
+    state machine
+}
+
+DreamCustomMesh:CustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:CustomMesh
+    src   "Custom Mesh"
+    // from the engine's zh-Hans
+    text  "自定义网格体"
+    state draft
+}
+
+DreamCustomMesh:GetCustomMesh:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:GetCustomMesh:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCustomMesh:SetCustomMesh:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:SetCustomMesh:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamCustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh
+    src   "Render UI element with DreamGUICustomMesh."
+    text  "使用 DreamGUICustomMesh 渲染 UI 元素。"
+    state machine
+}
+
+DreamCustomMesh:CustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:CustomMesh
+    src   "Use a mesh generator to create your own mesh instead of a simple rect"
+    text  "使用网格生成器创建自己的网格，而不是使用简单的矩形。"
+    state machine
+}

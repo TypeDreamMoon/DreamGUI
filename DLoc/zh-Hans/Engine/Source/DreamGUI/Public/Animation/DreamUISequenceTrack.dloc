@@ -1,0 +1,40 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISequenceSection {
+    at    Source/DreamGUI/Public/Animation/DreamUISequenceTrack.h#DreamUISequenceSection
+    src   "Dream UISequence Section"
+    text  "Dream UI序列段落"
+    state machine
+}
+
+DreamUISequenceSystem {
+    at    Source/DreamGUI/Public/Animation/DreamUISequenceTrack.h#DreamUISequenceSystem
+    src   "Dream UISequence System"
+    text  "Dream UI序列系统"
+    state machine
+}
+
+DreamUISequenceTrack {
+    at    Source/DreamGUI/Public/Animation/DreamUISequenceTrack.h#DreamUISequenceTrack
+    src   "Dream UISequence Track"
+    text  "Dream UI序列轨道"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUISequenceSection {
+    at    Source/DreamGUI/Public/Animation/DreamUISequenceTrack.h#DreamUISequenceSection
+    src   "Plays a UDreamUISequence asset under a widget (or presenter) binding of an outer sequence.\nThe section overrides the asset's root binding to resolve as this track's own bound object, so\none animation asset drives whichever presenter the outer sequence points it at -- the\nTemplateSequence trick, re-rooted for widget trees."
+    text  "播放外层序列的控件（或呈现器）绑定下的 UDreamUISequence 资产。\n该分段会覆盖资产的根绑定，使其解析为此轨道自身绑定的对象，因此\n一个动画资产即可驱动外层序列所指向的任意呈现器——即\nTemplateSequence 技巧，并为控件树重新设定根。"
+    state machine
+}
+
+DreamUISequenceSystem {
+    at    Source/DreamGUI/Public/Animation/DreamUISequenceTrack.h#DreamUISequenceSystem
+    src   "Installs/removes the root-binding override when a DreamUI sequence section links or unlinks."
+    text  "当 DreamUI 序列段落链接或取消链接时，安装/移除根绑定覆盖。"
+    state machine
+}

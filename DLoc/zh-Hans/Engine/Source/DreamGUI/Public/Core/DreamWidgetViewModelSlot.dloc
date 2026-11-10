@@ -1,0 +1,146 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetViewModelSlot {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot
+    src   "Dream Widget View Model Slot"
+    text  "Dream控件视图模型插槽"
+    state machine
+}
+
+DreamWidgetViewModelSlot:Class {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:Class
+    src   "Class"
+    // from the engine's zh-Hans
+    text  "类"
+    state draft
+}
+
+DreamWidgetViewModelSlot:Source {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:Source
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
+DreamWidgetViewModelSlot:SourceName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:SourceName
+    src   "Source Name"
+    // from the engine's zh-Hans
+    text  "源名称"
+    state draft
+}
+
+DreamWidgetViewModelSlot:VariableName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:VariableName
+    src   "Variable Name"
+    // from the engine's zh-Hans
+    text  "Variable Name"
+    state draft
+}
+
+EDreamViewModelSource.EDreamViewModelSource_MAX {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:EDreamViewModelSource_MAX
+    src   "EDream View Model Source MAX"
+    text  "EDream视图模型源MAX"
+    state machine
+}
+
+EDreamViewModelSource.Global {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Global
+    src   "Global"
+    // from the engine's zh-Hans
+    text  "全局"
+    state draft
+}
+
+EDreamViewModelSource.Host {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Host
+    src   "Host"
+    // from the engine's zh-Hans
+    text  "主机"
+    state draft
+}
+
+EDreamViewModelSource.New {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:New
+    src   "New"
+    // from the engine's zh-Hans
+    text  "新"
+    state draft
+}
+
+EDreamViewModelSource.Parent {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Parent
+    src   "Parent"
+    // from the engine's zh-Hans
+    text  "父项"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetViewModelSlot {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot
+    src   "One `viewmodels` entry, compiled: the class variable that holds the object, the class it must be, and where the\nobject comes from. Filled at Initialize, after the tree is instanced and before NativeOnInitialized\n(UDreamUserWidget::ResolveViewModels), so On Initialized and every binding's first value already see it.\n\nThe variable itself is an ordinary Blueprint variable the compiler declares -- an object reference of Class,\nFieldNotify and Expose on Spawn -- so a host setting it is heard by every binding that reads through it."
+    text  "一个已编译的`viewmodels`条目：保存对象的类变量、它必须是哪个类，以及对象来自\n哪里。在Initialize时填充，此时树已实例化、早于NativeOnInitialized\n（UDreamUserWidget::ResolveViewModels），因此On Initialized和每个绑定的首个值已经能看到它。\n\n该变量本身是编译器声明的一个普通蓝图变量——Class的对象引用，\n带FieldNotify和Expose on Spawn——因此宿主控件设置它时，每个通过它读取的绑定都能收到。"
+    state machine
+}
+
+DreamWidgetViewModelSlot:Class {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:Class
+    src   "The declared class. Any UObject class; one implementing INotifyFieldValueChanged is what makes bindings through it subscribe instead of poll."
+    text  "声明的类。任意UObject类；实现了INotifyFieldValueChanged的类会让通过它的绑定改为订阅而非轮询。"
+    state machine
+}
+
+DreamWidgetViewModelSlot:SourceName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:SourceName
+    src   "Global and Parent: the name written after the keyword (`global \"Stash\"`). None when the class alone decides."
+    text  "Global和Parent：写在关键字后面的名称（`global \"Stash\"`）。仅由类决定时为空。"
+    state machine
+}
+
+DreamWidgetViewModelSlot:VariableName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#DreamWidgetViewModelSlot:VariableName
+    src   "The variable the compiler declared for the entry: the name the file wrote."
+    text  "编译器为该条目声明的变量：文件中写入的名称。"
+    state machine
+}
+
+EDreamViewModelSource {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource
+    src   "Where a `viewmodels { … }` entry's object comes from when nobody handed one over.\n\nHost is what an entry with nothing after its name means: whoever makes the widget supplies the object -- an Expose\non Spawn pin of Create Dream Widget, UDreamUserWidget::SetViewModel, a Blueprint Set, or a host's own\n`Name <- Other.Thing` line on this widget used as a component."
+    text  "当没有人提供对象时，`viewmodels { … }`条目的对象来自哪里。\n\nHost表示条目名称后不写任何内容时的含义：由创建控件的一方提供对象——Create Dream Widget的Expose\non Spawn引脚、UDreamUserWidget::SetViewModel、蓝图Set，或宿主在此控件用作组件时自己\n写的`Name <- Other.Thing`行。"
+    state machine
+}
+
+EDreamViewModelSource.Global {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Global
+    src   "`InventoryVM Inventory = global`, `= global \"Stash\"` -- UDreamViewModelSubsystem's, by class and name."
+    text  "`InventoryVM Inventory = global`、`= global \"Stash\"`——来自UDreamViewModelSubsystem，按类和名称查找。"
+    state machine
+}
+
+EDreamViewModelSource.Host {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Host
+    src   "`PlayerVM Player` -- the host gives it."
+    text  "`PlayerVM Player`——由宿主提供。"
+    state machine
+}
+
+EDreamViewModelSource.New {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:New
+    src   "`SettingsVM Settings = new` -- this widget makes one, outered to itself, when it was given none."
+    text  "`SettingsVM Settings = new`——如果没有提供，此控件会自己创建一个，Outer为自身。"
+    state machine
+}
+
+EDreamViewModelSource.Parent {
+    at    Source/DreamGUI/Public/Core/DreamWidgetViewModelSlot.h#EDreamViewModelSource:Parent
+    src   "`PartyVM Party = parent`, `= parent \"Party\"` -- the nearest enclosing user widget's view model of that class."
+    text  "`PartyVM Party = parent`、`= parent \"Party\"`——最近的外层用户控件中该类的视图模型。"
+    state machine
+}

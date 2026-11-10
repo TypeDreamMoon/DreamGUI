@@ -1,0 +1,64 @@
+dloc 1
+culture zh-Hans
+namespace DreamTextFontStyleCustomization
+
+None_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "No style"
+    text  "无样式"
+    state machine
+}
+
+None {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "Off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+Bold_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "Bold"
+    // from the engine's zh-Hans
+    text  "加粗"
+    state draft
+}
+
+Bold {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "B"
+    // from the engine's zh-Hans
+    text  "B"
+    state draft
+}
+
+Italic_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "Italic"
+    // from the engine's zh-Hans
+    text  "斜体"
+    state draft
+}
+
+Italic {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "I"
+    // from the engine's zh-Hans
+    text  "I"
+    state draft
+}
+
+Bold&Italic_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "Bold and Italic"
+    text  "粗体和斜体"
+    state machine
+}
+
+Bold&Italic {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextFontStyleCustomization.h
+    src   "B&I"
+    text  "粗斜"
+    state machine
+}

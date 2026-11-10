@@ -1,0 +1,25 @@
+dloc 1
+culture zh-Hans
+namespace DreamBlendModeCustomization
+
+Normal {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamBlendModeCustomization.cpp
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+LinearDodge {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamBlendModeCustomization.cpp
+    src   "Linear Dodge (Add)"
+    text  "线性混合（相加）"
+    state machine
+}
+
+ModeTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamBlendModeCustomization.cpp
+    src   "Hover to see the widget drawn in this mode; click to use it."
+    text  "悬停以查看以该模式绘制的小部件；单击以使用它。"
+    state machine
+}

@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGUIEditorSubsystem {
+    at    Source/DreamGUIEditor/Public/DreamGUIEditorSubsystem.h#DreamGUIEditorSubsystem
+    src   "Dream GUIEditor Subsystem"
+    text  "DreamGUI 编辑器子系统"
+    state machine
+}
+
+DreamGUIEditorSubsystem:SpriteIconTextures {
+    at    Source/DreamGUIEditor/Public/DreamGUIEditorSubsystem.h#DreamGUIEditorSubsystem:SpriteIconTextures
+    src   "Sprite Icon Textures"
+    text  "精灵图标纹理"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGUIEditorSubsystem {
+    at    Source/DreamGUIEditor/Public/DreamGUIEditorSubsystem.h#DreamGUIEditorSubsystem
+    src   "The editor's side of DreamGUI, for the length of an editor session: what a recompile of a widget class\ndoes to the trees built from it, what a texture reimport refreshes, the source watcher's queue, and the\nfew things the details panels remember between one panel and the next.\n\nRECOMPILE, the way UMG does it. A Blueprint compile reinstances every live object of the class with a\nproperty copy, and a copy of a widget tree is a husk: its own widget tree is DuplicateTransient, its\nregistration is not a property, and whatever it had built is left behind registered and unowned. So the\ntrees go before the reinstancer ever sees them. On OnBlueprintPreCompile of a widget class, every tree in\nevery world that holds an instance of it is let go by whoever owns it -- a world host\n(IDreamWidgetTreeHost) or a screen page, which remember how to build it again, a preview\n(IDreamRecompilePreview), or, for an instance nothing can rebuild, destroyed outright. The reinstancer\nfinds only garbage. A tick after OnBlueprintCompiled, the owners that are still there build again from\nthe new class, and whatever is still registered from an old class is reported.\n\nThere is no policy for a play session: its trees go and come back like the editor's. Blocking the\nrelease would not block the compile -- the engine compiles regardless -- it would only hand the\nreinstancer the trees to copy, which is the husk this exists to prevent."
+    text  "DreamGUI在编辑器一侧，覆盖编辑器会话的整个时长：控件类重新编译会\n对由它构建的树产生什么影响，纹理重新导入会刷新什么，源监视器的队列，以及\n详细信息面板在不同面板之间保留的少量信息。\n\n重新编译，采用UMG的做法。蓝图编译会用属性拷贝重新实例化该类的每个活动对象，\n而控件树的副本只是一个空壳：其自身的控件树是DuplicateTransient，其\n注册信息不是属性，并且它已构建的任何内容都会被留下，处于已注册且无主的状态。因此，这些\n树会在重新实例化器看到它们之前被移除。在控件类的OnBlueprintPreCompile事件中，每个世界中的\n每一棵持有其实例的树，都会由其所有者释放——世界宿主\n（IDreamWidgetTreeHost）或屏幕页面，它们记得如何重新构建；也可能是预览\n（IDreamRecompilePreview）；或者对于无法重新构建的实例，则直接销毁。重新实例化器\n只会发现垃圾。在OnBlueprintCompiled之后的一帧，仍存在的所有者会基于\n新类重新构建，任何仍注册自旧类的内容都会被报告。\n\n游戏运行会话没有此类策略：它的树会像编辑器中的树一样移除并恢复。阻止\n释放并不会阻止编译——引擎无论如何都会编译——它只会把\n树交给重新实例化器去拷贝，而这正是此机制要避免的空壳。"
+    state machine
+}

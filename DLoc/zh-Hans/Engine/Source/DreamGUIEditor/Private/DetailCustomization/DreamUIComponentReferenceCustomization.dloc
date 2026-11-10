@@ -1,0 +1,46 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIComponentRefereceHelperCustomization
+
+ComponentCheckTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "You must set your component class in variable declaration!"
+    text  "您必须在变量声明中设置组件类！"
+    state machine
+}
+
+ComponentOfTypeNotFound {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "No valid component found on target actor!"
+    text  "未在目标 Actor 上找到有效的组件！"
+    state machine
+}
+
+TargetActorHaveMultipleComponent_YouMustSelectOne {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "Target actor have multiple valid components, you need to select one of them"
+    text  "目标 Actor 具有多个有效的组件，您需要选择其中一个。"
+    state machine
+}
+
+Tip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "Clear component selection, will use first one."
+    text  "清除组件选择，将使用第一个。"
+    state machine
+}
+
+SelectComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "Select Component Reference"
+    text  "选择组件引用"
+    state machine
+}
+
+ComponentButtonNone {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIComponentReferenceCustomization.cpp
+    src   "None"
+    // from the engine's zh-Hans
+    text  "无"
+    state draft
+}

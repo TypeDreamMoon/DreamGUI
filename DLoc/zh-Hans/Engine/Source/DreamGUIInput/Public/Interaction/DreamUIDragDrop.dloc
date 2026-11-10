@@ -1,0 +1,454 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDragDropSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem
+    src   "Dream UIDrag Drop Subsystem"
+    text  "DreamUI 拖拽子系统"
+    state machine
+}
+
+DreamUIDragDropSubsystem:CancelActiveDrag:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:CancelActiveDragForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDragForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIDragDropSubsystem:CancelActiveDragForUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDragForUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:Get:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:Get:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:Get:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:Get:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIDragDropSubsystem:GetDragCount:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForPointer:InPointerID {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForPointer:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForPointer:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForPointer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InPointerID {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForUserPointer:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForPointer:InPointerID {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForPointer:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InPointerID {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragDropSubsystem:IsDragInProgressForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgressForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIDragDropSubsystem:IsDragInProgressForUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgressForUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragSource {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource
+    src   "DreamUI Drag Source"
+    text  "DreamUI 拖拽源"
+    state machine
+}
+
+DreamUIDragSource:bAllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:bAllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+DreamUIDragSource:CreateDragOperation:EventData {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:CreateDragOperation:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamUIDragSource:CreateDragOperation:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:CreateDragOperation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDragSource:DragVisualClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:DragVisualClass
+    src   "Drag Visual Class"
+    text  "拖动视觉类"
+    state machine
+}
+
+DreamUIDragSource:DragVisualOffset {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:DragVisualOffset
+    src   "Drag Visual Offset"
+    text  "拖动视觉偏移"
+    state machine
+}
+
+DreamUIDragSource:Payload {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:Payload
+    src   "Payload"
+    // from the engine's zh-Hans
+    text  "负载"
+    state draft
+}
+
+DreamUIDragSource:Tag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:Tag
+    src   "Tag"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamUIDropTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget
+    src   "DreamUI Drop Target"
+    text  "DreamUI 放置目标"
+    state machine
+}
+
+DreamUIDropTarget:CanAcceptDrop:Operation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:CanAcceptDrop:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
+DreamUIDropTarget:CanAcceptDrop:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:CanAcceptDrop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDropTarget:HandleAcceptedDrop:Operation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:HandleAcceptedDrop:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
+DreamUIDropTarget:IsDragHovered:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:IsDragHovered:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDropTarget:OnDragEnter {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDragEnter
+    src   "On Drag Enter"
+    // from the engine's zh-Hans
+    text  "On Drag Enter"
+    state draft
+}
+
+DreamUIDropTarget:OnDragLeave {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDragLeave
+    src   "On Drag Leave"
+    // from the engine's zh-Hans
+    text  "On Drag Leave"
+    state draft
+}
+
+DreamUIDropTarget:OnDragOver {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDragOver
+    src   "On Drag Over"
+    // from the engine's zh-Hans
+    text  "On Drag Over"
+    state draft
+}
+
+DreamUIDropTarget:OnDropAccepted {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDropAccepted
+    src   "On Drop Accepted"
+    text  "OnDropAccepted"
+    state machine
+}
+
+DreamUIDropTarget:RequiredPayloadClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:RequiredPayloadClass
+    src   "Required Payload Class"
+    text  "必需的有效负载类"
+    state machine
+}
+
+DreamUIDropTarget:RequiredTag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:RequiredTag
+    src   "Required Tag"
+    text  "必需的标签"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIDragDropSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem
+    src   "The drag VISUAL: when a drag carrying an operation with a DragVisualClass begins, this spawns\nthat widget on a raycast-disabled overlay canvas and walks it under the pointer until the drag\nends. Purely cosmetic -- sources and targets work without it -- which is why it lives in a\nsubsystem rather than in the pipeline."
+    text  "拖动视觉表现：当携带带有 DragVisualClass 的操作的拖动开始时，此对象会在禁用射线检测的覆盖画布上生成\n该控件，并让它在指针下移动，直到拖动\n结束。纯属视觉表现——源和目标无需它也能工作——因此它位于\n子系统而不是管线中。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:CancelActiveDrag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDrag
+    src   "Cancel every drag in flight, every player's: each source is told its drag ended, unhandled operations get\ntheir OnDragCancelled, and the visuals go away.\n@return true when there was at least one drag to cancel."
+    text  "取消所有进行中的拖动，包括每个玩家的拖动：每个源都会收到其拖动已结束的通知，未处理的操作会触发\n其 OnDragCancelled，视觉表现也随之消失。\n@return 当至少有一个可取消的拖动时返回 true。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:CancelActiveDragForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDragForUser
+    src   "Cancel player InUserIndex's drags, and only theirs: what Escape does during a drag. Any player's Escape used to\ncancel player 0's drag.\n@return true when that player had a drag to cancel."
+    text  "取消玩家 InUserIndex 的拖动，且仅限该玩家的：即拖动期间按 Escape 所做的事。以前任何玩家按 Escape 都会\n取消玩家 0 的拖动。\n@return 当该玩家有可取消的拖动时返回 true。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragCount {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragCount
+    src   "How many drags are being followed at once. One per finger on a touch screen, per player."
+    text  "正在跟踪的拖拽数量。每个触摸屏上的手指对应一个拖拽，每个玩家对应一个拖拽。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForPointer
+    src   "The operation the first player's pointer InPointerID is carrying, or null when it is not dragging one."
+    text  "第一个玩家的指针 InPointerID 正在携带的操作，如果它没有进行拖拽，则为 null。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForUserPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer
+    src   "The operation player InUserIndex's pointer InPointerID is carrying, or null."
+    text  "玩家 InUserIndex 的指针 InPointerID 正在携带的操作，如果它没有进行拖拽，则为 null。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer
+    src   "The drop target the first player's pointer InPointerID is hovering, or null. For a slot asking \"am I next?\"."
+    text  "第一个玩家的指针 InPointerID 当前悬停的放置目标，没有则为 null。供询问“轮到我了吗？”的槽使用。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer
+    src   "The drop target player InUserIndex's pointer InPointerID is hovering, or null."
+    text  "玩家 InUserIndex 的指针 InPointerID 当前悬停的放置目标，没有则为 null。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:IsDragInProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgress
+    src   "True while any pointer of any player is carrying a UDreamDragDropOperation."
+    text  "当任一玩家的任一指针携带着 UDreamDragDropOperation 时为 true。"
+    state machine
+}
+
+DreamUIDragDropSubsystem:IsDragInProgressForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgressForUser
+    src   "True while a pointer of player InUserIndex is carrying one."
+    text  "当玩家 InUserIndex 的某个指针携带着操作时为 true。"
+    state machine
+}
+
+DreamUIDragSource {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource
+    src   "Makes its widget a drag SOURCE with meaning: when the pointer pipeline starts a drag here, this\ncreates a UDreamDragDropOperation and writes it onto the pointer's event data, where drop targets\nfind it. Without one of these (or code doing the same), a drag is pure geometry -- which is\nexactly what a scroll view wants and an inventory item does not.\n\nFill the properties for the common case, or override CreateDragOperation for a payload only\nruntime knows. Returning null from the override declines the meaning without disturbing the\ngeometric drag."
+    text  "使其控件成为有含义的拖动源：当指针管线在此处开始拖动时，此对象会\n创建一个 UDreamDragDropOperation 并将其写入指针的事件数据，放置目标\n从中查找它。若没有此组件（或执行相同操作的代码），拖动就只是纯几何行为——这正是\n滚动视图想要的，而物品栏物品则不然。\n\n常见情况下填写属性，或为只有运行时才知道的载荷重写 CreateDragOperation。\n从重写中返回 null 会拒绝该含义，但不会影响\n几何拖动。"
+    state machine
+}
+
+DreamUIDragSource:bAllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:bAllowEventBubbleUp
+    src   "Whether the drag events keep bubbling above this widget while an operation rides them.\nDefault off: an item inside a scroll view should be DRAGGED, not scroll its list."
+    text  "在操作随拖动事件传递期间，拖动事件是否继续冒泡到此控件之上。\n默认关闭：滚动视图中的物品应当被拖动，而不是滚动其列表。"
+    state machine
+}
+
+DreamUIDragSource:CreateDragOperation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:CreateDragOperation
+    src   "Build the operation for a drag that just started here. The default fills it from the properties."
+    text  "为刚刚在此处开始的拖动构建操作。默认实现会从属性中填充它。"
+    state machine
+}
+
+DreamUIDragSource:Tag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:Tag
+    src   "Copied onto the operation. See UDreamDragDropOperation for what each means."
+    text  "复制到操作上。各属性的含义参见 UDreamDragDropOperation。"
+    state machine
+}
+
+DreamUIDropTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget
+    src   "Makes its widget a drop TARGET: reads the operation off a drop that lands here, filters by tag\nand payload class, and on acceptance marks the operation handled and broadcasts. A drop this\ntarget refuses keeps bubbling, so nested targets behave like nested anything else."
+    text  "使其控件成为放置目标：从落到此处的放置中读取操作，按标签\n和载荷类进行筛选，接受时将操作标记为已处理并广播。此\n目标拒绝的放置会继续冒泡，因此嵌套目标的行为与其他嵌套对象一样。"
+    state machine
+}
+
+DreamUIDropTarget:CanAcceptDrop {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:CanAcceptDrop
+    src   "The acceptance decision. The default checks RequiredTag and RequiredPayloadClass."
+    text  "接受判定。默认实现检查 RequiredTag 和 RequiredPayloadClass。"
+    state machine
+}
+
+DreamUIDropTarget:HandleAcceptedDrop {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:HandleAcceptedDrop
+    src   "What acceptance DOES, before the delegates fire. The default does nothing but exist to override."
+    text  "接受时执行的操作，位于委托触发之前。默认实现不做任何事，仅供重写。"
+    state machine
+}
+
+DreamUIDropTarget:IsDragHovered {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:IsDragHovered
+    src   "True while any live acceptable operation is hovering this target."
+    text  "当有任何有效的可接受操作悬停在此目标上时为 true。"
+    state machine
+}
+
+DreamUIDropTarget:OnDragEnter {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDragEnter
+    src   "Drop-hover feedback, driven by UDreamUIDragDropSubsystem while a drag is in flight. Enter and\nLeave fire once each per operation at the edges, Over fires every frame in between -- so a slot can light up\nthe moment a payload it can take arrives over it, instead of the acceptance decision being\ninvisible until the player lets go.\n\nOnly the target that WOULD accept the drop is hovered: CanAcceptDrop is asked before Enter,\nexactly as it is asked on the drop itself, and a refusing target is skipped for whichever\nancestor accepts -- the same bubbling the drop does."
+    text  "拖放悬停反馈，在拖动进行期间由 UDreamUIDragDropSubsystem 驱动。Enter 和\nLeave 在操作的两端各触发一次，Over 则在两者之间的每一帧触发——因此插槽可以在\n可接受的载荷到达其上方的那一刻就亮起，而不必等玩家松手后才让接受判定\n变得可见。\n\n只有会接受该拖放的目标才会收到悬停：CanAcceptDrop 在 Enter 之前被询问，\n与在拖放本身上询问的时机完全相同，被拒绝的目标会被跳过，交给接受它的\n祖先目标——与拖放本身相同的冒泡方式。"
+    state machine
+}
+
+DreamUIDropTarget:OnDropAccepted {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:OnDropAccepted
+    src   "Fired after HandleAcceptedDrop, before the operation's own OnDropHandled."
+    text  "在 HandleAcceptedDrop 之后、操作自身的 OnDropHandled 之前触发。"
+    state machine
+}
+
+DreamUIDropTarget:RequiredPayloadClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:RequiredPayloadClass
+    src   "Accept only payloads of this class. Null accepts any payload, including none."
+    text  "仅接受此类的载荷。为 null 时接受任何载荷，包括无载荷。"
+    state machine
+}
+
+DreamUIDropTarget:RequiredTag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:RequiredTag
+    src   "Accept only operations with this tag. None accepts any tag."
+    text  "仅接受带此标签的操作。为 None 时接受任何标签。"
+    state machine
+}

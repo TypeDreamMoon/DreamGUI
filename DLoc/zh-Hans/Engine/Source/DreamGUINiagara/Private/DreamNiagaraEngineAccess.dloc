@@ -1,0 +1,73 @@
+dloc 1
+culture zh-Hans
+namespace DreamNiagara
+
+NoEmitterData {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "The emitter has no data to read."
+    text  "发射器没有可读取的数据。"
+    state machine
+}
+
+Stateless {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "A lightweight (stateless) emitter: its particles are not simulated where DreamGUI can read them. Make it a standard emitter on the CPU."
+    text  "轻量级（无状态）发射器：其粒子不在 DreamGUI 可读取的位置进行模拟。请将其设为 CPU 上的标准发射器。"
+    state machine
+}
+
+GPU {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "The emitter is simulated on the GPU, whose particles DreamGUI does not read yet. Set its Sim Target to CPU."
+    text  "发射器在 GPU 上模拟，DreamGUI 尚不读取其粒子。请将其 Sim Target 设为 CPU。"
+    state machine
+}
+
+EmitterSource {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "A sprite renderer drawing one sprite for the emitter: only particle sprites are drawn."
+    text  "为该发射器绘制单个精灵的精灵渲染器：仅绘制粒子精灵。"
+    state machine
+}
+
+ViewSort {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "Sorted by the view, which a flat UI has no depth for: sorted by the custom sorting attribute instead, lower drawn first."
+    text  "按视图排序，而平面 UI 没有深度：改为按自定义排序属性排序，位置较低的先绘制。"
+    state machine
+}
+
+Facing {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "A custom facing is not read: every sprite faces the reader."
+    text  "不读取自定义朝向：每个精灵都朝向观察者。"
+    state machine
+}
+
+RibbonShape {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "A ribbon of another shape than a plane is drawn as a plane facing the reader."
+    text  "非平面形状的条带会绘制为朝向观察者的平面。"
+    state machine
+}
+
+RibbonEdges {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "The UV edges' smooth transition is drawn as locked edges."
+    text  "UV 边缘的平滑过渡绘制为锁定边缘。"
+    state machine
+}
+
+RibbonUVDistance {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "Tiled by the particles' UV distance is drawn tiled over the ribbon's length."
+    text  "按粒子的 UV 距离平铺会沿条带长度平铺绘制。"
+    state machine
+}
+
+Renderer {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraEngineAccess.cpp
+    src   "{0} is not drawn: DreamGUI draws sprite and ribbon renderers."
+    text  "不绘制 {0}：DreamGUI 绘制精灵和条带渲染器。"
+    state machine
+}

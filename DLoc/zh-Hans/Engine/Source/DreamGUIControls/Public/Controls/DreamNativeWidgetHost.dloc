@@ -1,0 +1,169 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamNativeWidgetHost {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost
+    src   "Dream Native Widget Host"
+    text  "Dream原生控件宿主"
+    state machine
+}
+
+DreamNativeWidgetHost:BackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:BackgroundColor
+    src   "Background Color"
+    // from the engine's zh-Hans
+    text  "背景颜色"
+    state draft
+}
+
+DreamNativeWidgetHost:GetHostedWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetHostedWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNativeWidgetHost:GetWidgetClass:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetWidgetClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNativeWidgetHost:HostNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:HostNode
+    src   "Host Node"
+    text  "宿主节点"
+    state machine
+}
+
+DreamNativeWidgetHost:HostVisual {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:HostVisual
+    src   "Host Visual"
+    text  "宿主视觉"
+    state machine
+}
+
+DreamNativeWidgetHost:ResolutionScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:ResolutionScale
+    src   "Resolution Scale"
+    // from the engine's zh-Hans
+    text  "Resolution Scale"
+    state draft
+}
+
+DreamNativeWidgetHost:SetBackgroundColor:InBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetBackgroundColor:InBackgroundColor
+    src   "In Background Color"
+    // from the engine's zh-Hans
+    text  "在背景颜色中"
+    state draft
+}
+
+DreamNativeWidgetHost:SetResolutionScale:InResolutionScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetResolutionScale:InResolutionScale
+    src   "In Resolution Scale"
+    text  "输入分辨率缩放"
+    state machine
+}
+
+DreamNativeWidgetHost:SetWidgetClass:InWidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetWidgetClass:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamNativeWidgetHost:WidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:WidgetClass
+    src   "Widget Class"
+    // from the engine's zh-Hans
+    text  "Widget Class"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamNativeWidgetHost {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost
+    src   "A hole in a DreamGUI hierarchy that a UMG widget fills.\n\nUMG's NativeWidgetHost is the reverse bridge -- a UMG widget wrapping a raw Slate one -- and this\nis the same idea pointed the other way, which is the direction that matters here: the DreamGUI\ntree is the outer one, and what a project needs is a way to keep a UMG screen it already owns\n(an engine widget, a plugin's panel, a Slate-only editor surface) inside it.\n\nThe machinery already existed and had no control: UDreamUMGWidget renders a UUserWidget (or a bare\nSWidget) to a render target and draws it as this library's own geometry, and\nUDreamUMGWidgetInteraction routes pointer events into it. Both are components an author had to\nknow to add, wire and size. This class is the one tag that does it.\n\nWHAT IT IS NOT: a way to mix UMG layout with DreamGUI layout. The hosted widget is drawn into a\ntexture at this control's size and knows nothing about what is around it -- it cannot push the\nDreamGUI layout around and DreamGUI cannot reach inside it. That is the bargain the render-target\nbridge makes, it is the same one UMG's own world-space widget component makes, and a control that\npretended otherwise would be lying about which layout pass owns what.\n\nNEEDS A WORLD, like everything that instances a UserWidget: with none (a headless test, the parts\nof the designer that build no world) the host node exists, sized and placed, and simply draws\nnothing. That is the same answer UDreamListViewBase gives for a row template class."
+    text  "DreamGUI 层级中由 UMG 控件填充的一个洞。\n\nUMG 的 NativeWidgetHost 是反向的桥接——用 UMG 控件包装原生 Slate 控件——而这里\n是把同样的想法指向另一个方向，而这个方向才是此处关键：DreamGUI\n树是外层的那一个，项目需要的是把已经拥有的 UMG 界面\n（引擎控件、插件的面板、仅 Slate 的编辑器界面）保留在其中。\n\n相关机制早已存在，却没有可供使用的控件：UDreamUMGWidget 把 UUserWidget（或裸\nSWidget）渲染到渲染目标，并作为本库自己的几何体绘制出来，而\nUDreamUMGWidgetInteraction 把指针事件路由进去。两者都是作者必须\n知道要添加、连接并设置尺寸的组件。这个类就是完成这件事的那一个标记。\n\n它不是什么：不是把 UMG 布局与 DreamGUI 布局混用的方式。被托管的控件会按此控件的尺寸绘制到\n一张纹理中，对周围的东西一无所知——它无法推动\nDreamGUI 布局，DreamGUI 也无法触及它的内部。这就是渲染目标桥接所达成的\n交易，与 UMG 自己的世界空间控件组件所做的相同；而一个假装并非如此的控件，\n就是在布局由谁掌管这件事上说谎。\n\n需要一个世界，就像所有实例化 UserWidget 的东西一样：没有世界时（无头测试、\n设计器中不构建世界的那些部分），宿主节点依然存在、已设置尺寸和位置，只是\n什么都不绘制。这与 UDreamListViewBase 对行模板类给出的答案相同。"
+    state machine
+}
+
+DreamNativeWidgetHost:BackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:BackgroundColor
+    src   "What shows through where the hosted widget draws nothing. Transparent by default."
+    text  "托管控件不绘制任何内容之处所透出的内容。默认透明。"
+    state machine
+}
+
+DreamNativeWidgetHost:GetHostedWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetHostedWidget
+    src   "The instance the bridge made, or null while there is no world or no class."
+    text  "桥接所创建的实例；没有世界或没有类时为空。"
+    state machine
+}
+
+DreamNativeWidgetHost:HostNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:HostNode
+    src   "The node whose visual is the bridge. Public because everything under a control is reachable."
+    text  "其视觉即为桥接的节点。设为公开，是因为控件下的所有内容都可访问。"
+    state machine
+}
+
+DreamNativeWidgetHost:HostVisual {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:HostVisual
+    src   "The bridge itself, for everything this control does not wrap."
+    text  "桥接本身，用于此控件未包装的所有内容。"
+    state machine
+}
+
+DreamNativeWidgetHost:ResolutionScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:ResolutionScale
+    src   "How many render-target pixels one local unit is worth. One is pixel-for-pixel.\n\nHere rather than in a style because it is not a LOOK, it is a fidelity-versus-memory decision\nabout one particular hosted widget, and a project sheet has nothing useful to say about it."
+    text  "一个本地单位相当于多少个渲染目标像素。值为 1 时即逐像素对应。\n\n放在这里而不是放在样式里，是因为它不是一种外观，而是针对某个特定\n托管控件的保真度与内存之间的取舍，项目样式表对此没有有用的说法。"
+    state machine
+}
+
+DreamNativeWidgetHost:SetBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetBackgroundColor
+    src   "What the render target is cleared to behind the hosted widget. Pushed to the host visual at once."
+    text  "托管控件背后的渲染目标清除成的颜色。会立即推送到宿主视觉。"
+    state machine
+}
+
+DreamNativeWidgetHost:SetResolutionScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetResolutionScale
+    src   "Render-target pixels per local unit of the host. Pushed to the host visual at once."
+    text  "宿主每个本地单位对应的渲染目标像素数。会立即推送到宿主视觉。"
+    state machine
+}
+
+DreamNativeWidgetHost:SetWidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetWidgetClass
+    src   "Replace the hosted class and re-instance it. Null empties the hole."
+    text  "替换所托管的类并重新实例化。设为Null时该空洞将被清空。"
+    state machine
+}
+
+DreamNativeWidgetHost:WidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:WidgetClass
+    src   "The UMG widget class to instance and draw. Null draws nothing, which is an empty hole."
+    text  "要实例化并绘制的UMG控件类。为Null时不绘制任何内容，即一个空洞。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Native Widget Host" {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetHostedWidget
+    src   "Native Widget Host"
+    // from the engine's zh-Hans
+    text  "本地控件主机"
+    state draft
+}

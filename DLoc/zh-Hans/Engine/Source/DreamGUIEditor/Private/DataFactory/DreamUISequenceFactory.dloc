@@ -1,0 +1,36 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+WidgetAnimation {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISequenceFactory.cpp
+    src   "Widget Animation"
+    // from the engine's zh-Hans
+    text  "控件动画"
+    state draft
+}
+
+WidgetAnimationToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISequenceFactory.cpp
+    src   "A widget animation as an asset of its own: reusable across widget Blueprints, and playable from a Level Sequence."
+    text  "一个独立的组件动画资源，可在组件蓝图中重用，并可从关卡序列中播放。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUISequenceFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISequenceFactory.cpp#DreamUISequenceFactory
+    src   "Dream UISequence Factory"
+    text  "Dream UI序列工厂"
+    state machine
+}
+
+namespace DreamUISequence
+
+AssetTypeActionsName {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISequenceFactory.cpp
+    src   "DreamUI Animation"
+    text  "DreamUI 动画"
+    state machine
+}

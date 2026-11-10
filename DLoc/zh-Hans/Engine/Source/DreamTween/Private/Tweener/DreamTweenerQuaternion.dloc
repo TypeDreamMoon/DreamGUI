@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerQuaternion {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerQuaternion.h#DreamTweenerQuaternion
+    src   "Dream Tweener Quaternion"
+    text  "DreamTweener 旋转量"
+    state machine
+}

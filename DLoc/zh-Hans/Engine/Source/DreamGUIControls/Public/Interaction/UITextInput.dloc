@@ -1,0 +1,1601 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTextInputCustomValidation {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation
+    src   "Dream Text Input Custom Validation"
+    text  "Dream Text Input 自定义验证"
+    state machine
+}
+
+DreamTextInputCustomValidation:ReceiveOnValidateInput:InIndexOfInsertedChar {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation:ReceiveOnValidateInput:InIndexOfInsertedChar
+    src   "In Index Of Inserted Char"
+    text  "插入字符索引"
+    state machine
+}
+
+DreamTextInputCustomValidation:ReceiveOnValidateInput:InString {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation:ReceiveOnValidateInput:InString
+    src   "In String"
+    // from the engine's zh-Hans
+    text  "在字符串中"
+    state draft
+}
+
+DreamTextInputCustomValidation:ReceiveOnValidateInput:InTextInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation:ReceiveOnValidateInput:InTextInput
+    src   "In Text Input"
+    text  "文本输入框"
+    state machine
+}
+
+DreamTextInputCustomValidation:ReceiveOnValidateInput:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation:ReceiveOnValidateInput:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+EUITextInputDisplayType.EUITextInputDisplayType_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputDisplayType:EUITextInputDisplayType_MAX
+    src   "EUIText Input Display Type MAX"
+    text  "文本输入显示类型 (最大值)"
+    state machine
+}
+
+EUITextInputDisplayType.Password {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputDisplayType:Password
+    src   "Password"
+    // from the engine's zh-Hans
+    text  "密码"
+    state draft
+}
+
+EUITextInputDisplayType.Standard {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputDisplayType:Standard
+    src   "Standard"
+    // from the engine's zh-Hans
+    text  "标准"
+    state draft
+}
+
+EUITextInputType.Alphanumeric {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Alphanumeric
+    src   "Alphanumeric"
+    text  "字母数字"
+    state machine
+}
+
+EUITextInputType.Custom {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Custom
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "Custom"
+    state draft
+}
+
+EUITextInputType.DecimalNumber {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:DecimalNumber
+    src   "Decimal Number"
+    text  "十进制数"
+    state machine
+}
+
+EUITextInputType.EmailAddress {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:EmailAddress
+    src   "Email Address"
+    text  "电子邮件地址"
+    state machine
+}
+
+EUITextInputType.EUITextInputType_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:EUITextInputType_MAX
+    src   "EUIText Input Type MAX"
+    text  "文本输入类型 (最大值)"
+    state machine
+}
+
+EUITextInputType.IntegerNumber {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:IntegerNumber
+    src   "Integer Number"
+    // from the engine's zh-Hans
+    text  "整数"
+    state draft
+}
+
+EUITextInputType.Password {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Password
+    src   "Password"
+    // from the engine's zh-Hans
+    text  "密码"
+    state draft
+}
+
+EUITextInputType.Standard {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Standard
+    src   "Standard"
+    // from the engine's zh-Hans
+    text  "标准"
+    state draft
+}
+
+UITextInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput
+    src   "UIText Input"
+    text  "文本输入框"
+    state machine
+}
+
+UITextInput:ActivateInput:EventData {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ActivateInput:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+UITextInput:bAllowContextMenu {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAllowContextMenu
+    src   "Allow Context Menu"
+    // from the engine's zh-Hans
+    text  "允许快捷菜单"
+    state draft
+}
+
+UITextInput:bAllowMultiLine {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAllowMultiLine
+    src   "Allow Multi Line"
+    text  "允许多行"
+    state machine
+}
+
+UITextInput:bAllowUndoRedo {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAllowUndoRedo
+    src   "Allow Undo Redo"
+    text  "允许撤销/重做"
+    state machine
+}
+
+UITextInput:bAutoActivateInputWhenNavigateIn {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAutoActivateInputWhenNavigateIn
+    src   "Auto Activate Input when Navigate In"
+    text  "导航进入时自动激活输入"
+    state machine
+}
+
+UITextInput:bClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bClearKeyboardFocusOnCommit
+    src   "Clear Keyboard Focus on Commit"
+    // from the engine's zh-Hans
+    text  "提交时清除键盘聚焦"
+    state draft
+}
+
+UITextInput:bIsCaretMovedWhenGainFocus {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bIsCaretMovedWhenGainFocus
+    src   "Is Caret Moved when Gain Focus"
+    // from the engine's zh-Hans
+    text  "获取焦距时插入符移动"
+    state draft
+}
+
+UITextInput:bReadOnly {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bReadOnly
+    src   "Read Only"
+    // from the engine's zh-Hans
+    text  "只读"
+    state draft
+}
+
+UITextInput:bRevertTextOnEscape {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bRevertTextOnEscape
+    src   "Revert Text on Escape"
+    // from the engine's zh-Hans
+    text  "退出时恢复文本"
+    state draft
+}
+
+UITextInput:bSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSelectAllTextOnCommit
+    src   "Select All Text on Commit"
+    // from the engine's zh-Hans
+    text  "提交时选择所有文本"
+    state draft
+}
+
+UITextInput:bSelectAllWhenActivateInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSelectAllWhenActivateInput
+    src   "Select All when Activate Input"
+    text  "激活输入时全选"
+    state machine
+}
+
+UITextInput:bSubmitWhenDeactivate {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSubmitWhenDeactivate
+    src   "Submit when Deactivate"
+    text  "停用时提交"
+    state machine
+}
+
+UITextInput:bTabTypesTabCharacter {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bTabTypesTabCharacter
+    src   "Tab Types Tab Character"
+    text  "制表符类型：制表符"
+    state machine
+}
+
+UITextInput:CaretBlinkRate {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretBlinkRate
+    src   "Caret Blink Rate"
+    text  "光标闪烁频率"
+    state machine
+}
+
+UITextInput:CaretColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretColor
+    src   "Caret Color"
+    text  "光标颜色"
+    state machine
+}
+
+UITextInput:CaretWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretWidget
+    src   "Caret Widget"
+    text  "光标控件"
+    state machine
+}
+
+UITextInput:CaretWidth {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretWidth
+    src   "Caret Width"
+    text  "光标宽度"
+    state machine
+}
+
+UITextInput:CompositionUnderlineColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineColor
+    src   "Composition Underline Color"
+    text  "输入框连字符颜色"
+    state machine
+}
+
+UITextInput:CompositionUnderlineObjectArray {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineObjectArray
+    src   "Composition Underline Object Array"
+    text  "输入框连字符对象数组"
+    state machine
+}
+
+UITextInput:CompositionUnderlineThickness {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineThickness
+    src   "Composition Underline Thickness"
+    text  "输入框连字符粗细"
+    state machine
+}
+
+UITextInput:ContextMenuBackgroundColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuBackgroundColor
+    src   "Context Menu Background Color"
+    text  "上下文菜单背景颜色"
+    state machine
+}
+
+UITextInput:ContextMenuBlocker {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuBlocker
+    src   "Context Menu Blocker"
+    text  "上下文菜单遮罩"
+    state machine
+}
+
+UITextInput:ContextMenuLongPressTime {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuLongPressTime
+    src   "Context Menu Long Press Time"
+    text  "上下文菜单长按时间"
+    state machine
+}
+
+UITextInput:ContextMenuRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuRoot
+    src   "Context Menu Root"
+    text  "上下文菜单根"
+    state machine
+}
+
+UITextInput:ContextMenuTextColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuTextColor
+    src   "Context Menu Text Color"
+    text  "上下文菜单文本颜色"
+    state machine
+}
+
+UITextInput:ContextMenuWidth {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuWidth
+    src   "Context Menu Width"
+    text  "上下文菜单宽度"
+    state machine
+}
+
+UITextInput:CustomValidation {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CustomValidation
+    src   "Custom Validation"
+    text  "自定义验证"
+    state machine
+}
+
+UITextInput:DeactivateInput:InFireEvent {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:DeactivateInput:InFireEvent
+    src   "In Fire Event"
+    text  "触发事件"
+    state machine
+}
+
+UITextInput:DisplayType {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:DisplayType
+    src   "Display Type"
+    // from the engine's zh-Hans
+    text  "显示类型"
+    state draft
+}
+
+UITextInput:GetActiveTextInput:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInput:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetActiveTextInputForPlayer:PlayerIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInputForPlayer:PlayerIndex
+    src   "Player Index"
+    // from the engine's zh-Hans
+    text  "播放器索引"
+    state draft
+}
+
+UITextInput:GetActiveTextInputForPlayer:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInputForPlayer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetActiveTextInputForPlayer:WorldContextObject {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInputForPlayer:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+UITextInput:GetAllowContextMenu:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetAllowContextMenu:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetAllowMultiLine:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetAllowMultiLine:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetAutoActivateInputWhenNavigateIn:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetAutoActivateInputWhenNavigateIn:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCaretBlinkRate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCaretBlinkRate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCaretColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCaretColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCaretWidth:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCaretWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetClearKeyboardFocusOnCommit:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetClearKeyboardFocusOnCommit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCompositionBeginIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCompositionBeginIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCompositionLength:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCompositionLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetCustomValidation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCustomValidation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetDisplayType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetDisplayType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetIgnoreKeys:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetIgnoreKeys:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetInputType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetInputType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetIsCaretMovedWhenGainFocus:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetIsCaretMovedWhenGainFocus:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetKeyboardType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetKeyboardType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetMaxLength:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetMaxLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetMultiLineSubmitFunctionKeys:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetMultiLineSubmitFunctionKeys:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetOverflowPolicy:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetOverflowPolicy:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetPasswordChar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetPasswordChar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetPlaceHolderActor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetPlaceHolderActor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetReadOnly:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetReadOnly:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetRevertTextOnEscape:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetRevertTextOnEscape:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetSelectAllTextOnCommit:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetSelectAllTextOnCommit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetSelectAllWhenActivateInput:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetSelectAllWhenActivateInput:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetSelectionColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetSelectionColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetSubmitWhenDeactivate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetSubmitWhenDeactivate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetTabTypesTabCharacter:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetTabTypesTabCharacter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetTextComponent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetTextComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetVirtualKeyboardDismissAction:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetVirtualKeyboardDismissAction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetVirtualKeyboardOptions:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetVirtualKeyboardOptions:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:GetVirtualKeyboardTrigger:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetVirtualKeyboardTrigger:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:HandleCharacterInputString:InCharacters {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:HandleCharacterInputString:InCharacters
+    src   "In Characters"
+    text  "输入字符"
+    state machine
+}
+
+UITextInput:HandleCharacterInputString:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:HandleCharacterInputString:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:IgnoreKeys {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IgnoreKeys
+    src   "Ignore Keys"
+    text  "忽略键"
+    state machine
+}
+
+UITextInput:InputType {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:InputType
+    src   "Input Type"
+    // from the engine's zh-Hans
+    text  "输入类型"
+    state draft
+}
+
+UITextInput:IsAnyTextSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsAnyTextSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:IsContextMenuOpen:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsContextMenuOpen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:IsInputActive:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsInputActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:KeyboardType {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:KeyboardType
+    src   "Keyboard Type"
+    // from the engine's zh-Hans
+    text  "键盘类型"
+    state draft
+}
+
+UITextInput:MaxLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:MaxLength
+    src   "Max Length"
+    // from the engine's zh-Hans
+    text  "Max Length"
+    state draft
+}
+
+UITextInput:MultiLineSubmitFunctionKeys {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:MultiLineSubmitFunctionKeys
+    src   "Multi Line Submit Function Keys"
+    text  "多行提交功能键"
+    state machine
+}
+
+UITextInput:OnInputActivate {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnInputActivate
+    src   "On Input Activate"
+    text  "输入激活"
+    state machine
+}
+
+UITextInput:OnInputActivateBP {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnInputActivateBP
+    src   "OnInputActivate"
+    text  "OnInputActivate"
+    state machine
+}
+
+UITextInput:OnSubmit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnSubmit
+    src   "On Submit"
+    text  "On Submit"
+    state machine
+}
+
+UITextInput:OnSubmitBP {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnSubmitBP
+    src   "OnSubmit"
+    text  "OnSubmit"
+    state machine
+}
+
+UITextInput:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UITextInput:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UITextInput:OverflowPolicy {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OverflowPolicy
+    src   "Overflow Policy"
+    // from the engine's zh-Hans
+    text  "溢出策略"
+    state draft
+}
+
+UITextInput:PasswordChar {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:PasswordChar
+    src   "Password Char"
+    text  "密码字符"
+    state machine
+}
+
+UITextInput:PlaceHolder {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:PlaceHolder
+    src   "Place Holder"
+    text  "占位符"
+    state machine
+}
+
+UITextInput:Redo:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:Redo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:SelectionColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SelectionColor
+    src   "Selection Color"
+    // from the engine's zh-Hans
+    text  "选项颜色"
+    state draft
+}
+
+UITextInput:SelectionMaskObjectArray {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SelectionMaskObjectArray
+    src   "Selection Mask Object Array"
+    text  "选择遮罩对象数组"
+    state machine
+}
+
+UITextInput:SetAllowContextMenu:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetAllowContextMenu:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetAllowMultiLine:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetAllowMultiLine:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetAutoActivateInputWhenNavigateIn:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetAutoActivateInputWhenNavigateIn:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetCaretBlinkRate:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCaretBlinkRate:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetCaretColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCaretColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetCaretWidth:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCaretWidth:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetClearKeyboardFocusOnCommit:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetClearKeyboardFocusOnCommit:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetCompositionRange:InBeginCharIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCompositionRange:InBeginCharIndex
+    src   "In Begin Char Index"
+    text  "起始字符索引"
+    state machine
+}
+
+UITextInput:SetCompositionRange:InLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCompositionRange:InLength
+    src   "In Length"
+    // from the engine's zh-Hans
+    text  "输入长度"
+    state draft
+}
+
+UITextInput:SetCustomValidation:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCustomValidation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetDisplayType:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetDisplayType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetIgnoreKeys:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetIgnoreKeys:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetInputType:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetInputType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetIsCaretMovedWhenGainFocus:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetIsCaretMovedWhenGainFocus:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetKeyboardType:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetKeyboardType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetMaxLength:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetMaxLength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetMultiLineSubmitFunctionKeys:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetMultiLineSubmitFunctionKeys:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetOverflowPolicy:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetOverflowPolicy:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetPasswordChar:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetPasswordChar:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetPlaceHolder:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetPlaceHolder:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetReadOnly:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetReadOnly:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetRevertTextOnEscape:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetRevertTextOnEscape:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetSelectAllTextOnCommit:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetSelectAllTextOnCommit:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetSelectAllWhenActivateInput:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetSelectAllWhenActivateInput:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetSelectionColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetSelectionColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetSubmitWhenDeactivate:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetSubmitWhenDeactivate:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetTabTypesTabCharacter:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTabTypesTabCharacter:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetText:InText {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetText:InText
+    src   "In Text"
+    // from the engine's zh-Hans
+    text  "在文本中"
+    state draft
+}
+
+UITextInput:SetTextVisual:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTextVisual:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetTextWithoutNotify:InText {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTextWithoutNotify:InText
+    src   "In Text"
+    // from the engine's zh-Hans
+    text  "在文本中"
+    state draft
+}
+
+UITextInput:SetVirtualKeyboardDismissAction:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboardDismissAction:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetVirtualKeyboardOptions:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboardOptions:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetVirtualKeyboardTrigger:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboardTrigger:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:SetVirtualKeyboradOptions:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboradOptions:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:Text {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+UITextInput:TextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:TextVisual
+    src   "Text Visual"
+    text  "文本视觉"
+    state machine
+}
+
+UITextInput:Undo:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:Undo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:UndoHistoryLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:UndoHistoryLength
+    src   "Undo History Length"
+    text  "撤销历史记录长度"
+    state machine
+}
+
+UITextInput:VerifyAndInsertStringAtCaretPosition:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VerifyAndInsertStringAtCaretPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextInput:VerifyAndInsertStringAtCaretPosition:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VerifyAndInsertStringAtCaretPosition:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInput:VirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VirtualKeyboardDismissAction
+    src   "Virtual Keyboard Dismiss Action"
+    // from the engine's zh-Hans
+    text  "虚拟键盘取消操作"
+    state draft
+}
+
+UITextInput:VirtualKeyboardOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VirtualKeyboardOptions
+    src   "Virtual Keyboard Options"
+    // from the engine's zh-Hans
+    text  "虚拟键盘选项"
+    state draft
+}
+
+UITextInput:VirtualKeyboardTrigger {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VirtualKeyboardTrigger
+    src   "Virtual Keyboard Trigger"
+    // from the engine's zh-Hans
+    text  "虚拟键盘触发器"
+    state draft
+}
+
+UITextInputActivateEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInputActivateEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextInputValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInputValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTextInputCustomValidation:ReceiveOnValidateInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#DreamTextInputCustomValidation:ReceiveOnValidateInput
+    src   "Verify input string, return true if the input string is good to use, false otherwise.\n@param InTextInput   The UITextInputComponent object reference which call this function.\n@param InString      The will display string value, for check if it is valid. If not, then display origin string value.\n@param InIndexOfInsertedChar New inserted char index in InString.\n@return true if the input string is good to use, false otherwise."
+    text  "验证输入字符串，如果输入字符串可用则返回 true，否则返回 false。\n@param InTextInput   调用此函数的 UITextInputComponent 组件对象引用。\n@param InString      将要显示的字符串值，用于检查其是否有效。如果无效，则显示原始字符串值。\n@param InIndexOfInsertedChar 新插入字符在 InString 中的索引。\n@return 如果输入字符串可用则返回 true，否则返回 false。"
+    state machine
+}
+
+EUITextInputDisplayType.Password {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputDisplayType:Password
+    src   "Display as password."
+    text  "以密码显示。"
+    state machine
+}
+
+EUITextInputType.Alphanumeric {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Alphanumeric
+    src   "Allows letters A-Z, a-z and numbers 0-9."
+    text  "允许字母 A-Z、a-z 和数字 0-9。"
+    state machine
+}
+
+EUITextInputType.Custom {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Custom
+    src   "Use a user implemented *CustomValidation* to do custom input check."
+    text  "使用用户实现的 *CustomValidation* 进行自定义输入检查。"
+    state machine
+}
+
+EUITextInputType.DecimalNumber {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:DecimalNumber
+    src   "Allows decimal numbers (positive or negative).\nCharacters 0-9, . (dot), and - (dash / minus sign) are allowed. The dash is only allowed as the first character. Only one dot in the string is allowed."
+    text  "允许十进制数（正数或负数）。\n允许字符 0-9、.（点）和 -（连字符/减号）。连字符只能作为第一个字符使用。字符串中只允许一个点。"
+    state machine
+}
+
+EUITextInputType.EmailAddress {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:EmailAddress
+    src   "Allows the characters that are allowed in an email address.\nAllows characters A-Z, a.z, 0-9, @, . (dot), !, #, $, %, &amp;, ', *, +, -, /, =, ?, ^, _, `, {, |, }, and ~.\nOnly one @ is allowed in the string and more than one dot in a row are not allowed. Note that the character validation does not validate the entire string as being a valid email address since it only does validation on a per-character level, resulting in the typed character either being added to the string or not."
+    text  "允许使用电子邮件地址中允许的字符。\n允许字符 A-Z, a.z, 0-9, @, .（点）, !, #, $, %, &amp;, ', *, +, -, /, =, ?, ^, _, `, {, |, }, 和 ~。\n字符串中只允许一个 @，并且不允许出现连续多个点。请注意，字符验证不会将整个字符串验证为有效的电子邮件地址，因为它只在单个字符级别进行验证，结果是输入的字符要么被添加到字符串中，要么不被添加。"
+    state machine
+}
+
+EUITextInputType.IntegerNumber {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:IntegerNumber
+    src   "Allow whole numbers (positive or negative).\nCharacters 0-9 and - (dash / minus sign) are allowed. The dash is only allowed as the first character."
+    text  "允许整数（正数或负数）。\n允许字符 0-9 和 -（短横线/减号）。短横线只能作为第一个字符。"
+    state machine
+}
+
+EUITextInputType.Password {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Password
+    src   "Display as password, without any validation.\nNOTE!!! This type will be deprecate, use DisplayType.Password instead."
+    text  "以密码形式显示，不进行任何验证。\n注意！！！此类型将被弃用，请改用 DisplayType.Password。"
+    state machine
+}
+
+EUITextInputType.Standard {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#EUITextInputType:Standard
+    src   "No validation. Any input is valid."
+    text  "不进行验证。任何输入均有效。"
+    state machine
+}
+
+UITextInput:bAllowContextMenu {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAllowContextMenu
+    src   "The edit menu -- cut, copy, paste, select all, undo, redo -- reached by right click, by a long\npress on touch, by the gamepad's Menu button, or by Shift+F10, which is Windows' own keyboard\nshortcut for it. UMG's editable text calls this AllowContextMenu and defaults it on.\nOnly the entries that can act right now are built: no Paste with an empty clipboard, no Cut or\nCopy out of a password field."
+    text  "编辑菜单——剪切、复制、粘贴、全选、撤销、重做——可通过右键单击、触摸长按、\n手柄的 Menu 按钮或 Shift+F10（Windows 自带的键盘\n快捷键）打开。UMG 的可编辑文本将其称为 AllowContextMenu，并默认开启。\n只会构建当前可以执行的条目：剪贴板为空时没有粘贴，密码字段中不提供剪切或\n复制。"
+    state machine
+}
+
+UITextInput:bAllowUndoRedo {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAllowUndoRedo
+    src   "Ctrl+Z / Ctrl+Y over a snapshot stack of (text, caret). Snapshots are taken before each edit\nthat changes the text, so an undo lands where the edit started rather than at index 0."
+    text  "在由（文本、插入符）构成的快照栈上执行 Ctrl+Z / Ctrl+Y。快照在每次会更改文本的编辑之前拍摄，\n因此撤销会回到编辑开始的位置，而不是索引 0 处。"
+    state machine
+}
+
+UITextInput:bAutoActivateInputWhenNavigateIn {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bAutoActivateInputWhenNavigateIn
+    src   "Automatic activate input when use navigation input and navigate in this. Tab is the exception that needs\nno switch here: a field Tab lands on starts its edit while UDreamGUISettings::bTabStartsTextEdit."
+    text  "使用导航输入并导航到此控件时自动激活输入。Tab 是此处的例外，无需开关：\nTab 所落到的字段会在 UDreamGUISettings::bTabStartsTextEdit 开启时开始编辑。"
+    state machine
+}
+
+UITextInput:bClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bClearKeyboardFocusOnCommit
+    src   "Stop editing once Enter commits the value -- UMG's ClearKeyboardFocusOnCommit.\n\nTRUE by default, where UMG's is false, because true is what this field has always done: Enter\nsubmitted and immediately ended the edit, with no way to ask for anything else. Turning it off\nis the new answer -- the field keeps the keyboard, ready for the next value, which is what a\nrow of fields a player tabs through wants."
+    text  "Enter 提交值后即结束编辑——对应 UMG 的 ClearKeyboardFocusOnCommit。\n\n默认为 TRUE，而 UMG 中默认为 false，因为 true 才是此字段一直以来的做法：Enter\n提交后立即结束编辑，没有任何办法要求别的。将其关闭\n才是新的做法——字段保留键盘，准备好接收下一个值，这正是\n玩家用 Tab 逐个切换的一行字段所需要的。"
+    state machine
+}
+
+UITextInput:bIsCaretMovedWhenGainFocus {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bIsCaretMovedWhenGainFocus
+    src   "Whether gaining the edit moves the caret -- UMG's IsCaretMovedWhenGainFocus.\n\nOn (the default, and what the field always did), an activation that nobody gave a position for\nputs the caret at the end of the text. Off, the caret stays on the index the previous edit left\nit at, which is what a field being re-entered by code rather than by a player wants.\nA click still places the caret where it landed either way: the click said where."
+    text  "获得编辑时是否移动插入符——对应 UMG 的 IsCaretMovedWhenGainFocus。\n\n开启（默认值，也是该字段一直以来的行为）时，没有任何一方指定位置的激活\n会将插入符置于文本末尾。关闭时，插入符会停留在上一次编辑留下的索引处，\n这正是由代码而非玩家重新进入的字段所需要的。\n无论哪种情况，单击仍会将插入符放在点击落下的位置：点击已经指明了位置。"
+    state machine
+}
+
+UITextInput:bReadOnly {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bReadOnly
+    src   "Read only text block, can copy text content, but not editable."
+    text  "只读文本块，可以复制文本内容，但不可编辑。"
+    state machine
+}
+
+UITextInput:bRevertTextOnEscape {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bRevertTextOnEscape
+    src   "Escape / Back throws the edit away instead of keeping it -- UMG's RevertTextOnEscape.\n\nThe text the field held when the edit STARTED is put back -- a player who opened a name field,\ntyped half a name and changed their mind meant \"undo this\", not \"store what I got to\" -- and the\nrevert is then reported ONCE through the submit/commit events, carrying the restored text, as\nUMG's RestoreOriginalText reports it through OnTextCommitted: whoever stores the value on commit\nstores what the field now holds. An edit that changed nothing reverts nothing and reports\nnothing. The edit ends either way (Escape is Back here). Off by default, which is both UMG's\ndefault and what this field did before the knob existed -- Back ended the edit and the\nhalf-typed value stayed.\n\nOnly the CANCEL road reads it (see CancelInput). Clicking away is not a cancel: nothing was\nsaid about the value, so bSubmitWhenDeactivate still decides what that moment means."
+    text  "Escape / Back 会丢弃编辑而不是保留它——对应 UMG 的 RevertTextOnEscape。\n\n编辑开始时字段所持有的文本会被放回——玩家打开名称字段、输入了一半名字又改变主意，\n其意思是“撤销这次操作”，而不是“保存我输入的内容”——随后该还原会通过提交事件\n报告一次，并携带还原后的文本，正如\nUMG 的 RestoreOriginalText 通过 OnTextCommitted 报告的那样：任何在提交时存储值的人，\n存储的是字段当前持有的内容。没有更改任何内容的编辑不会还原任何内容，也不会报告\n任何内容。无论哪种情况编辑都会结束（此处 Escape 即 Back）。默认关闭，这既是 UMG 的\n默认值，也是该开关存在之前此字段的行为——Back 结束编辑，而\n输入了一半的值会保留。\n\n只有 CANCEL 路径会读取它（见 CancelInput）。点击别处不是取消：没有对值\n作出任何表示，因此 bSubmitWhenDeactivate 仍决定那一刻的含义。"
+    state machine
+}
+
+UITextInput:bSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSelectAllTextOnCommit
+    src   "Select the whole value after a commit that KEPT the edit going -- UMG's SelectAllTextOnCommit.\nReady to be typed over. Only meaningful while the commit does not also end the edit: selecting\nthe contents of a field nobody is editing shows a highlight with no caret in it."
+    text  "在提交后仍继续编辑时选中整个值——即 UMG 的 SelectAllTextOnCommit。\n可直接键入覆盖。仅在提交不会同时结束编辑时才有意义：选中\n无人编辑的字段内容只会显示高亮而其中没有光标。"
+    state machine
+}
+
+UITextInput:bSelectAllWhenActivateInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSelectAllWhenActivateInput
+    src   "Select all text value when activate input."
+    text  "激活输入时选中全部文本值。"
+    state machine
+}
+
+UITextInput:bSubmitWhenDeactivate {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bSubmitWhenDeactivate
+    src   "Commit the value when the edit ends without an Enter -- clicking away, navigating away, Back /\nEscape ending the edit, the mobile keyboard being dismissed. UMG's editable text has always\nreported that moment through OnTextCommitted; DreamGUI only ever reported Enter, so a field\nthe player filled in and clicked out of never told anyone its value.\nAn Enter that already submitted does not submit twice."
+    text  "在编辑未按 Enter 即结束时提交值——点击别处、导航离开、Back /\nEscape 结束编辑、移动端键盘被收起。UMG 的可编辑文本一直\n通过 OnTextCommitted 上报该时刻；DreamGUI 过去只上报 Enter，因此玩家\n填好并点击离开的字段从未告知任何人它的值。\n已经提交过的 Enter 不会再次提交。"
+    state machine
+}
+
+UITextInput:bTabTypesTabCharacter {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:bTabTypesTabCharacter
+    src   "Tab types a tab character -- Shift+Tab too, which a keyboard sends as the same character -- and Ctrl+Tab\n(Ctrl+Shift+Tab backwards) is what leaves: what a notes or a code box wants. Multi-line only. Off, the\ndefault and a single-line field's only answer, Tab and Shift+Tab end the edit -- committed as navigating\naway commits (bSubmitWhenDeactivate) -- and move on to the next control or the previous one, as a\nbrowser's fields do; arriving there by Tab starts its edit when UDreamGUISettings::bTabStartsTextEdit."
+    text  "Tab 输入制表符——Shift+Tab 也一样，键盘发送的是同一个字符——而 Ctrl+Tab\n（Ctrl+Shift+Tab 反向）才是离开：这是备注或代码框想要的行为。仅限多行。关闭时，\n即默认值，也是单行字段唯一的选择，Tab 和 Shift+Tab 结束编辑——按导航\n离开的方式提交（bSubmitWhenDeactivate）——并移到下一个或上一个控件，如同\n浏览器的字段；通过 Tab 到达时，在 UDreamGUISettings::bTabStartsTextEdit 开启的情况下开始其编辑。"
+    state machine
+}
+
+UITextInput:CancelInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CancelInput
+    src   "End the edit the way Escape means it: with bRevertTextOnEscape on, the text the field held when\nthe edit began goes back in and that restored text is submitted once (UMG commits a revert); an\nedit that changed nothing submits nothing. Without it, this is the ordinary end of an edit and\nbSubmitWhenDeactivate still decides whether that moment reports a value.\n\nA road of its own rather than a flag on DeactivateInput, because the two callers mean different\nthings: clicking away said nothing about the value, and Back said \"throw this away\"."
+    text  "按 Escape 的语义结束编辑：开启 bRevertTextOnEscape 时，编辑开始时字段持有的文本\n会被放回，并且该恢复后的文本会提交一次（UMG 会提交一次还原）；未做任何\n更改的编辑不提交任何内容。关闭时，这就是编辑的普通结束，\nbSubmitWhenDeactivate 仍决定该时刻是否上报值。\n\n单独一条路径而非 DeactivateInput 上的一个标志，因为两个调用方含义不同：\n点击别处没有对值作出任何表示，而 Back 表示“丢弃它”。"
+    state machine
+}
+
+UITextInput:CaretColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretColor
+    src   "Light, because the caret is drawn ON the field and every shipped field is dark: the library's\nFDreamTextInputStyle paints the box (38,42,52) and its text (230,233,240). The old (50,50,50)\nwas four values away from that background -- an invisible caret on the default theme, which is\nthe one state a text field cannot afford. It follows the default text colour instead."
+    text  "浅色，因为光标绘制在字段之上，而所有已发布的字段都是深色：库的\nFDreamTextInputStyle 绘制框体 (38,42,52) 及其文本 (230,233,240)。旧的 (50,50,50)\n与该背景只差四个数值——在默认主题下是不可见的光标，而这是\ntext field 唯一无法承受的状态。因此改为跟随默认文本颜色。"
+    state machine
+}
+
+UITextInput:CaretWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CaretWidget
+    src   "a Sprite for caret, can blink, can represent current caret location"
+    text  "用于光标的 Sprite，可闪烁，可表示当前光标位置"
+    state machine
+}
+
+UITextInput:ClearUndoHistory {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ClearUndoHistory
+    src   "Forget the edit history. Called whenever the text is replaced wholesale from code."
+    text  "清除编辑历史。每当文本被代码整体替换时调用。"
+    state machine
+}
+
+UITextInput:CompositionUnderlineColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineColor
+    src   "The line drawn under text an IME is still composing, the way every text field marks the\ndifference between \"being typed\" and \"typed\". Slate's editable text does the same thing with\nits EditableText.CompositionBackground brush; a mesh UI has no text-run decoration to hang it\non, so it is drawn the way the selection highlight already is -- a strip per visual run."
+    text  "在 IME 仍在组合的文本下方绘制的线，正如每个文本字段都标记出\n“正在输入”与“已输入”的区别。Slate 的可编辑文本用其\nEditableText.CompositionBackground 画刷做同样的事；网格 UI 没有可挂载的\n文本段装饰，因此按现有选区高亮的方式绘制——每个可视文本段一条带。"
+    state machine
+}
+
+UITextInput:CompositionUnderlineObjectArray {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineObjectArray
+    src   "the composition underline: one strip per visual run, built exactly like the selection mask"
+    text  "组合下划线：每个可视文本段一条带，构建方式与选区遮罩完全相同"
+    state machine
+}
+
+UITextInput:CompositionUnderlineThickness {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CompositionUnderlineThickness
+    src   "How thick that line is, in UI units."
+    text  "该线的粗细，以 UI 单位计。"
+    state machine
+}
+
+UITextInput:ContextMenuLongPressTime {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ContextMenuLongPressTime
+    src   "How long a touch has to be held before it counts as a right click."
+    text  "触摸需要按住多久才算作右键点击。"
+    state machine
+}
+
+UITextInput:CustomValidation {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:CustomValidation
+    src   "Use this to do custom validation. Only valid when InputType = Custom"
+    text  "使用此项进行自定义验证。仅在 InputType = Custom 时有效。"
+    state machine
+}
+
+UITextInput:GetActiveTextInput {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInput
+    src   "A field being edited in any world, or null: the one there is, in a one-player game. Wherever there can be more\nthan one -- a split screen, several play sessions -- ask GetActiveTextInputForPlayer."
+    text  "任意世界中正在编辑的字段，若不存在则为 null：在单人游戏中即为唯一的那个。凡可能不止一个的场合——\n分屏、多个游玩会话——请改用 GetActiveTextInputForPlayer。"
+    state machine
+}
+
+UITextInput:GetActiveTextInputForPlayer {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInputForPlayer
+    src   "The field player PlayerIndex is typing into, in WorldContextObject's world, or null."
+    text  "玩家 PlayerIndex 在 WorldContextObject 的世界中正在输入的字段，若不存在则为 null。"
+    state machine
+}
+
+UITextInput:HandleCharacterInputString {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:HandleCharacterInputString
+    src   "Blueprint/host spelling of HandleCharacterInput: every character of the string in order."
+    text  "HandleCharacterInput 的蓝图/宿主写法：按顺序处理字符串中的每个字符。"
+    state machine
+}
+
+UITextInput:IgnoreKeys {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IgnoreKeys
+    src   "Keys the field leaves alone while it is edited: they go on to the game and to navigation instead -- the\narrows, say, on a field the pad's arrows should leave. Tab needs no entry: it ends the edit and moves on\nby itself (see bTabTypesTabCharacter), and so does the pad's confirm button."
+    text  "字段在编辑时不予处理的按键：它们会转而交给游戏和导航处理——例如手柄方向键本应离开的\n字段上的方向键。Tab 无需列出：它会自行结束编辑并继续移动\n（参见 bTabTypesTabCharacter），手柄的确认键也是如此。"
+    state machine
+}
+
+UITextInput:IsAnyTextSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsAnyTextSelected
+    src   "Whether anything is selected right now -- UMG's IsAnyTextSelected.\n\nAsked of the two caret indices rather than of the highlight bars: the bars are a VISUAL built\nfrom laid-out geometry and there are none at all before the field has been arranged, while the\nanchor and the caret are the selection itself."
+    text  "当前是否有任何内容被选中——对应 UMG 的 IsAnyTextSelected。\n\n查询的是两个光标索引，而不是高亮条：高亮条是由排版几何构建出的 VISUAL，\n在字段完成布局之前根本不存在，\n而锚点和光标才是选区本身。"
+    state machine
+}
+
+UITextInput:IsInputActive {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsInputActive
+    src   "True while this field owns the keyboard. Back has to know: with a field being edited, cancelling\nthe edit is what the player means, not closing the screen out from under them."
+    text  "当此字段拥有键盘输入时为 true。返回操作必须知道：当有字段正在编辑时，\n玩家想要的是取消编辑，而不是在其脚下关闭界面。"
+    state machine
+}
+
+UITextInput:KeyboardType {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:KeyboardType
+    src   "Which virtual keyboard a mobile platform should summon -- UMG's KeyboardType.\n\nDefault means \"whatever this field's input type implies\", which is what the field has always\nderived on its own (a decimal field asks for the number pad, a password field for the password\nkeyboard). Any other value states the keyboard outright, for the cases the input type cannot\nexpress -- a Standard field that holds an email address, or a web address."
+    text  "移动平台应唤起的虚拟键盘——即 UMG 的 KeyboardType。\n\nDefault 表示“由此字段的输入类型决定”，这也是该字段一直\n以来自行推导的结果（小数字段请求数字键盘，密码字段请求密码\n键盘）。其他值则直接指定键盘，用于输入类型无法\n表达的情况——例如存放电子邮件地址或网址的 Standard 字段。"
+    state machine
+}
+
+UITextInput:MaxLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:MaxLength
+    src   "Largest number of characters the field will hold. 0 means no limit, which is what every field\nwas before this existed. All four write roads answer to it -- typing, pasting, SetText and the\nIME's SetTextInRange -- because a limit only one road honours is not a limit."
+    text  "字段可容纳的最大字符数。0 表示不限制，在此属性出现之前每个字段\n都是如此。四种写入途径都受其约束——键入、粘贴、SetText 以及\n输入法的 SetTextInRange——因为只有一条途径遵守的限制算不上限制。"
+    state machine
+}
+
+UITextInput:MultiLineSubmitFunctionKeys {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:MultiLineSubmitFunctionKeys
+    src   "This will be used in multiline mode, when hit enter, if one of these keys is also pressing then the input will submit, otherwise a new line will be added.\nCommonly only use control/shift/alt key.\nNot allow \"Enter\" key."
+    text  "此属性用于多行模式：按下回车时，若同时按住其中某个键，则提交输入，否则插入换行。\n通常只使用 control/shift/alt 键。\n不允许使用 \"Enter\" 键。"
+    state machine
+}
+
+UITextInput:OnInputActivate {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnInputActivate
+    src   "Input activate or deactivate, means begin input or end input."
+    text  "输入激活或停用，即开始输入或结束输入。"
+    state machine
+}
+
+UITextInput:OnInputActivateBP {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnInputActivateBP
+    src   "DisplayName was a copy of OnSubmit's, so the Blueprint event list offered two \"OnSubmit\" entries\nwith different signatures -- one FString, one bool -- and no way to tell which was which."
+    text  "DisplayName 原先与 OnSubmit 的相同，导致蓝图事件列表中出现两个 \"OnSubmit\" 条目，\n签名却不同——一个为 FString，一个为 bool——无从分辨哪个是哪个。"
+    state machine
+}
+
+UITextInput:OnSubmit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OnSubmit
+    src   "Input submit by \"Enter\" key."
+    text  "按“Enter”键提交输入。"
+    state machine
+}
+
+UITextInput:OverflowPolicy {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:OverflowPolicy
+    src   "What a value too long for the box does WHILE NOBODY IS EDITING IT -- UMG's OverflowPolicy.\n\nIt has to be qualified that way, because on an editable field the paragraph's own overflow type\nis not a display choice at all: DreamTextLayout only looks for break opportunities under\nVerticalOverflow, so the overflow type IS the line-mode switch, and the caret's visible-window\narithmetic reads the same field. Two writers would fight over it.\n\nSo this one only speaks in the gap: while the field is not being edited, Ellipsis (or\nMultilineEllipsis) shows the value cut short with an ellipsis rather than simply clipped, and\nMiddleEllipsis keeps its start and its end with the ellipsis between them; activating the edit\nputs the line mode's own overflow back, because that is what the caret and the wrap need, and\nleaving the edit restores the ellipsis. Clip is the default and is exactly what every field\ndoes today."
+    text  "当没有人在编辑时，超出框的值会怎样处理——即 UMG 的 OverflowPolicy。\n\n之所以要这样限定，是因为在可编辑字段上，段落自身的溢出类型\n根本不是显示选择：DreamTextLayout 只在 VerticalOverflow 下查找断行机会，\n所以溢出类型就是行模式开关，而插入符的可见窗口\n计算读取的也是同一个字段。两个写入方会为此起冲突。\n\n因此这个属性只在编辑的空隙中起作用：当字段不在编辑状态时，Ellipsis（或\nMultilineEllipsis）会把值截短并以省略号显示，而不是简单地裁剪，\nMiddleEllipsis 则保留开头和结尾，把省略号放在两者之间；激活编辑\n会把行模式自身的溢出类型放回去，因为插入符和换行需要它，\n退出编辑则恢复省略号。Clip 是默认值，也正是现今每个字段\n的做法。"
+    state machine
+}
+
+UITextInput:PasswordChar {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:PasswordChar
+    src   "password display character"
+    text  "密码显示字符"
+    state machine
+}
+
+UITextInput:PlaceHolder {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:PlaceHolder
+    src   "If PlaceHolderActor is a UITextActor, then mobile virtual keyboard's hint text will get from PlaceHolderActor."
+    text  "如果 PlaceHolderActor 是 UITextActor，则移动端虚拟键盘的提示文本将取自 PlaceHolderActor。"
+    state machine
+}
+
+UITextInput:Redo {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:Redo
+    src   "Step forward again after an Undo. @return true if anything changed."
+    text  "撤销后再次向前一步。@return 如果有任何更改则返回 true。"
+    state machine
+}
+
+UITextInput:RevalidateText {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:RevalidateText
+    src   "Re-run the current input rules over the text already in the field, dropping what they now\nrefuse. Called whenever the rules themselves change (input type, custom validator, max length)."
+    text  "对字段中已有的文本重新应用当前输入规则，丢弃现在\n不再允许的内容。在规则本身发生变化（输入类型、自定义验证器、最大长度）时调用。"
+    state machine
+}
+
+UITextInput:SelectionMaskObjectArray {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SelectionMaskObjectArray
+    src   "selection mask"
+    text  "选择遮罩"
+    state machine
+}
+
+UITextInput:SelectWordAtCaret {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SelectWordAtCaret
+    src   "Select the word around the caret: the run of letters, digits and underscores that the character\nafter the caret belongs to (the one before it, at the end of the text), or the run of everything\nelse -- spaces, punctuation -- when that character is one of those. A double click does this at\nthe spot its second press lands on."
+    text  "选中插入符周围的单词：即插入符之后的字符所属的那段字母、数字和下划线\n（在文本末尾时则是它之前的字符所属的那段），或者当该字符属于其他类别时，\n选中由其他字符——空格、标点——组成的那一段。双击会在第二次按下\n所落的位置执行此操作。"
+    state machine
+}
+
+UITextInput:SetAllowContextMenu {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetAllowContextMenu
+    src   "Turning it off closes any menu that is open, the way UMG's AllowContextMenu behaves."
+    text  "将其关闭会关闭任何已打开的菜单，行为与 UMG 的 AllowContextMenu 相同。"
+    state machine
+}
+
+UITextInput:SetCompositionRange {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetCompositionRange
+    src   "Mark a run of the text as \"still being composed\" -- drawn with an underline, the way every\ntext field distinguishes an IME's working text from text that has been committed.\n\nSet from the IME context's UpdateCompositionRange (which used to be an empty function body),\nand public because a host driving composition itself -- a mobile keyboard bridge, a test --\nneeds the same road. Indices are offsets into the source string; a zero length clears the mark."
+    text  "把一段文本标记为“仍在组合中”——以下划线绘制，就像每个文本字段\n区分 IME 正在处理的文本和已提交文本那样。\n\n由 IME 上下文的 UpdateCompositionRange 设置（它以前是个空函数体），\n之所以公开，是因为自行驱动组合的宿主——移动键盘桥接、测试——\n需要同一条路。索引是源字符串中的偏移；长度为零则清除标记。"
+    state machine
+}
+
+UITextInput:SetMaxLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetMaxLength
+    src   "0 means no limit. Shortening the limit truncates what the field already holds."
+    text  "0 表示不限制。缩短限制会截断字段中已有的内容。"
+    state machine
+}
+
+UITextInput:SetOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetOverflowPolicy
+    src   "Re-pushes at once, so a policy written while the field sits idle is visible without an edit."
+    text  "立即重新推送，因此在字段空闲时写入的策略无需编辑即可看到效果。"
+    state machine
+}
+
+UITextInput:SetPasswordChar {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetPasswordChar
+    src   "Set password display char. Only allow one char in the value string"
+    text  "设置密码显示字符。值字符串中只允许一个字符"
+    state machine
+}
+
+UITextInput:SetTabTypesTabCharacter {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTabTypesTabCharacter
+    src   "Read at each Tab, so an edit already under way follows the new answer from the next key -- with one exception:\nwith UDreamGUISettings::bTabNavigation off, a field that typed no tabs when its edit began did not bind Tab on\nthe player's controller (GetTextInputKeys, bound once an edit begins), and there only its next edit takes Tab."
+    text  "每次 Tab 时读取，因此已在进行中的编辑会从下一个按键起遵循新的设置——但有一个例外：\n当 UDreamGUISettings::bTabNavigation 关闭时，字段在编辑开始时没有输入过 Tab，就不会在\n玩家控制器上绑定 Tab（GetTextInputKeys，在编辑开始时绑定），此时只有下一次编辑才会接受 Tab。"
+    state machine
+}
+
+UITextInput:SetText {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetText
+    src   "Set text value and send callback event"
+    text  "设置文本值并发送回调事件"
+    state machine
+}
+
+UITextInput:SetTextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTextVisual
+    src   "The text the field edits. EditAnywhere like its neighbours, so the designer and .dui always\nreached it by reflection while no caller could -- the UUIToggle transition-target hole again."
+    text  "该字段所编辑的文本。与其相邻属性一样是 EditAnywhere，因此设计器和 .dui 始终\n通过反射访问到它，而任何调用方都访问不到——又是 UUIToggle 过渡目标那个漏洞。"
+    state machine
+}
+
+UITextInput:SetTextWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTextWithoutNotify
+    src   "Set text value and NOT send callback event"
+    text  "设置文本值但不发送回调事件"
+    state machine
+}
+
+UITextInput:SetVirtualKeyboardOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboardOptions
+    src   "The correctly spelled name for SetVirtualKeyboradOptions, which stays as it is for callers.\nNot BlueprintCallable, and cannot be: FVirtualKeyboardOptions is a plain USTRUCT in Slate with\nno BlueprintType on it -- which is why the misspelled one was never a Blueprint node either."
+    text  "SetVirtualKeyboradOptions 的正确拼写名称，为调用方仍保留原名。\n不是 BlueprintCallable，也不能是：FVirtualKeyboardOptions 是 Slate 中的普通 USTRUCT，\n没有 BlueprintType——这也是拼错的那个从来不是蓝图节点的原因。"
+    state machine
+}
+
+UITextInput:ShowContextMenu {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:ShowContextMenu
+    src   "Open the edit menu next to the last place the pointer touched this field (the field's own\ncentre when there was no pointer -- a gamepad or Shift+F10 opened it). Builds only the entries\nthat can act; with none of them applicable nothing opens."
+    text  "在指针最后触及该字段的位置旁打开编辑菜单（没有指针时使用字段自身的\n中心——例如用手柄或 Shift+F10 打开）。只构建可执行的条目；\n若没有适用的条目则不会打开任何内容。"
+    state machine
+}
+
+UITextInput:Undo {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:Undo
+    src   "Step back through the edit history. @return true if anything changed."
+    text  "在编辑历史中后退一步。@return 若有任何更改则返回 true。"
+    state machine
+}
+
+UITextInput:UndoHistoryLength {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:UndoHistoryLength
+    src   "How many undo steps to keep. Older steps fall off the bottom."
+    text  "保留多少撤销步骤。较旧的步骤会从底部淘汰。"
+    state machine
+}
+
+UITextInput:VerifyAndInsertStringAtCaretPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VerifyAndInsertStringAtCaretPosition
+    src   "Verify input string value and insert the string value to text value at current caret position.\n@param Value string value to check and insert.\n@return true- if any char added."
+    text  "验证输入的字符串值，并将该字符串值插入到当前光标位置的文本值中。\n@param Value 要检查和插入的字符串值。\n@return true- 如果添加了任何字符。"
+    state machine
+}
+
+UITextInput:VirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VirtualKeyboardDismissAction
+    src   "What dismissing the virtual keyboard means -- UMG's VirtualKeyboardDismissAction.\n\nTextCommitOnDismiss keeps what the field did: the keyboard's Done button submits, and so does\ncancelling out of it (through the ordinary end-of-edit road). TextCommitOnAccept submits only\non Done. TextChangeOnDismiss never submits from the keyboard at all -- the text changed, and\nthat is the whole of what happened."
+    text  "关闭虚拟键盘意味着什么——UMG 的 VirtualKeyboardDismissAction。\n\nTextCommitOnDismiss 保持该字段原有的行为：键盘的“完成”按钮会提交，\n取消虚拟键盘也一样（走普通的编辑结束路径）。TextCommitOnAccept 仅在\n“完成”时提交。TextChangeOnDismiss 从不在键盘上提交——文本已更改，\n这就是所发生的全部。"
+    state machine
+}
+
+UITextInput:VirtualKeyboardTrigger {
+    at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VirtualKeyboardTrigger
+    src   "Which activations summon the virtual keyboard -- UMG's VirtualKeyboardTrigger.\n\nOnAllFocusEvents by default, where UMG's default is OnFocusByPointer, because every activation\nused to raise it: a field navigated into with a pad still needs a keyboard, since a pad has no\nother way to type. OnFocusByPointer is the opt-in for a screen that drives its own."
+    text  "哪些激活会唤起虚拟键盘——UMG 的 VirtualKeyboardTrigger。\n\n默认是 OnAllFocusEvents，而 UMG 的默认值是 OnFocusByPointer，因为过去每次激活\n都会唤起它：用手柄导航进入的字段仍然需要键盘，因为手柄没有别的输入方式。\nOnFocusByPointer 是为自行驱动键盘的界面提供的可选项。"
+    state machine
+}

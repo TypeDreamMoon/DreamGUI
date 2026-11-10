@@ -1,0 +1,25 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerHandles
+
+HandlesOffShort {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerHandles.cpp
+    src   "off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+ShownCaption {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerHandles.cpp
+    src   "{0} handles  ·  Tab: {1}"
+    text  "{0} 个句柄 · 选项卡：{1}"
+    state machine
+}
+
+OffCaption {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerHandles.cpp
+    src   "Handles off  ·  Tab: {0}"
+    text  "句柄已关闭 · 选项卡：{0}"
+    state machine
+}

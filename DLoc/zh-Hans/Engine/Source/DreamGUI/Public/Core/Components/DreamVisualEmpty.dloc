@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamVisualEmpty {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualEmpty.h#DreamVisualEmpty
+    src   "Dream Visual Empty"
+    text  "Dream Visual 空白"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamVisualEmpty {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualEmpty.h#DreamVisualEmpty
+    src   "DreamVisualEmpty is just an empty visual, it will not render, but can handle raycast event"
+    text  "DreamVisualEmpty 只是一个空的视觉元素，它不会渲染，但可以处理射线投射事件。"
+    state machine
+}

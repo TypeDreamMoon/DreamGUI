@@ -1,0 +1,50 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+MovieSceneDreamUIMaterialTrack {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack
+    src   "Movie Scene Dream UIMaterial Track"
+    text  "材质轨道"
+    state machine
+}
+
+MovieSceneDreamUIMaterialTrack:PropertyName {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack:PropertyName
+    src   "Property Name"
+    // from the engine's zh-Hans
+    text  "属性名称"
+    state draft
+}
+
+MovieSceneDreamUIMaterialTrack:TrackName {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack:TrackName
+    src   "Track Name"
+    // from the engine's zh-Hans
+    text  "轨道名称"
+    state draft
+}
+
+namespace UObjectToolTips
+
+MovieSceneDreamUIMaterialTrack {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack
+    src   "A material track which is specialized for DreamGUI's DreamVisualBatchMesh's CustomUIMaterial."
+    text  "一个专门用于 DreamGUI 的 DreamVisualBatchMesh 的 CustomUIMaterial 的材质轨道。"
+    state machine
+}
+
+MovieSceneDreamUIMaterialTrack:PropertyName {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack:PropertyName
+    src   "The name of the material property."
+    text  "材质属性的名称。"
+    state machine
+}
+
+MovieSceneDreamUIMaterialTrack:TrackName {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h#MovieSceneDreamUIMaterialTrack:TrackName
+    src   "The name of this track, generated from the property name path."
+    // from the engine's zh-Hans
+    text  "此轨道的命名，从属性命名路径生成。"
+    state draft
+}

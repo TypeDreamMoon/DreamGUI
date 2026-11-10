@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace UIStaticMesh
+
+StaticMeshHasMultipleSections {
+    at    Source/DreamGUIExtensions/Private/Extensions/DreamStaticMesh.cpp
+    src   "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."
+    text  "静态网格 {0} 包含 {1} 个部分。UIStaticMesh 期望静态网格只有一个部分。"
+    state machine
+}
+
+StaticMeshHasTooManyUVSets {
+    at    Source/DreamGUIExtensions/Private/Extensions/DreamStaticMesh.cpp
+    src   "StaticMesh {0} has {1} UV sets; DreamGUI vertex data supports at most {2}."
+    text  "StaticMesh {0} 包含 {1} 个 UV 集合；DreamGUI 顶点数据最多支持 {2} 个。"
+    state machine
+}

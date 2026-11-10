@@ -1,0 +1,59 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIEventDelegate
+
+NativeParameterError {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.Execute, If use NativeParameter, you must FireEvent with your own parameter!"
+    text  "DreamGUIEventDelegateData.Execute：如果使用 NativeParameter，必须使用自己的参数触发事件！"
+    state machine
+}
+
+NotValid {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.Execute, Not valid DreamGUIEventDelegate."
+    text  "DreamGUIEventDelegateData.Execute：无效的 DreamGUIEventDelegate。"
+    state machine
+}
+
+ParameterTypeNotEqual_DoubleToFloat {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.Execute, Parameter type not equal, DreamGUI will automatic convert it from double to float."
+    text  "DreamGUIEventDelegateData.Execute：参数类型不匹配，DreamGUI 会自动将 double 转换为 float。"
+    state machine
+}
+
+ParameterTypeNotEqual_FloatToDouble {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.Execute, Parameter type not equal, DreamGUI will automatic convert it from float to double."
+    text  "DreamGUIEventDelegateData.Execute：参数类型不匹配，DreamGUI 会自动将 float 转换为 double。"
+    state machine
+}
+
+ParameterTypeNotEqual {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.Execute, Parameter type not equal!"
+    text  "DreamGUIEventDelegateData.Execute：参数类型不匹配！"
+    state machine
+}
+
+FunctionNotSupport {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.FindAndExecute, Target function: {0} not supported!"
+    text  "DreamGUIEventDelegateData.FindAndExecute：目标函数 {0} 不受支持！"
+    state machine
+}
+
+FunctionNotExist {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamGUIEventDelegateData.FindAndExecute, Target function: {0} not exist!"
+    text  "DreamGUIEventDelegateData.FindAndExecute：目标函数 {0} 不存在！"
+    state machine
+}
+
+ParameterTypeMismatch {
+    at    Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp
+    src   "DreamUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}"
+    text  "DreamUIEventDelegate 的参数类型必须与声明一致。支持的参数类型：{0}，执行时的参数类型：{1}。"
+    state machine
+}

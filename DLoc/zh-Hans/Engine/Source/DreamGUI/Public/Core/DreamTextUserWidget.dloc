@@ -1,0 +1,27 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTextUserWidget {
+    at    Source/DreamGUI/Public/Core/DreamTextUserWidget.h#DreamTextUserWidget
+    src   "DreamUI Text User Widget"
+    text  "DreamUI 文本用户控件"
+    state machine
+}
+
+DreamTextUserWidget:SourceFile {
+    at    Source/DreamGUI/Public/Core/DreamTextUserWidget.h#DreamTextUserWidget:SourceFile
+    src   "Source File"
+    // from the engine's zh-Hans
+    text  "源文件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTextUserWidget {
+    at    Source/DreamGUI/Public/Core/DreamTextUserWidget.h#DreamTextUserWidget
+    src   "A user widget whose hierarchy is authored as text: one class, one .dui file.\n\nNothing here builds anything. The file is read by FDreamWidgetBlueprintCompilerContext, which\nparses it, builds the tree and installs it as the Blueprint's authored hierarchy before the class\ndeclares its variables -- so from that point on this is an ordinary UDreamUserWidget in every\nrespect: the same generated class, the same member variable per widget, the same property bindings,\nthe same designer. The only thing this class adds is the pointer to where the tree came from.\n\nThat is the whole design: text replaces the AUTHORING step, not the runtime. A class built from a\n.dui and a class built by dragging widgets around are the same kind of class, which is what lets\neverything already written against widget blueprints -- the preview host, the hierarchy panel, the\nanimation tracks, the nesting rules -- keep working without knowing this class exists."
+    text  "一种用户控件，其层级以文本形式编写：一个类，一个.dui文件。\n\n此处不构建任何内容。该文件由FDreamWidgetBlueprintCompilerContext读取，它\n解析文件、构建树，并在类声明其变量之前将其安装为蓝图编写的层级\n——因此从那时起，它在各方面都是一个普通的UDreamUserWidget：相同的生成类、\n每个控件相同的成员变量、相同的属性绑定、相同的设计器。这个类唯一新增的，\n是指向该树来源的指针。\n\n这就是整个设计：文本替代的是编写环节，而非运行时。由.dui构建的类和\n通过拖拽控件构建的类属于同一种类，正因如此，所有已针对控件蓝图编写的内容\n——预览宿主、层级面板、动画轨道、嵌套规则——都能在不知道这个类存在的情况下\n继续工作。"
+    state machine
+}

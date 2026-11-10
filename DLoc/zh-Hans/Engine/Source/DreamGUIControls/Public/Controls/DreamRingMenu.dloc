@@ -1,0 +1,1191 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRingMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu
+    src   "Dream Ring Menu"
+    text  "梦环菜单"
+    state machine
+}
+
+DreamRingMenu:BackdropNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:BackdropNode
+    src   "Backdrop Node"
+    text  "背景节点"
+    state machine
+}
+
+DreamRingMenu:bAllowDeselect {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bAllowDeselect
+    src   "Allow Deselect"
+    text  "允许取消选择"
+    state machine
+}
+
+DreamRingMenu:bHubFollowsHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bHubFollowsHighlight
+    src   "Hub Follows Highlight"
+    text  "中心跟随高亮"
+    state machine
+}
+
+DreamRingMenu:bOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bOpen
+    src   "Open"
+    // from the engine's zh-Hans
+    text  "打开"
+    state draft
+}
+
+DreamRingMenu:bRaycastSuspendedByClose {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bRaycastSuspendedByClose
+    src   "Raycast Suspended by Close"
+    text  "关闭时暂停射线"
+    state machine
+}
+
+DreamRingMenu:bSelectOnHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bSelectOnHighlight
+    src   "Select on Highlight"
+    text  "高亮时选择"
+    state machine
+}
+
+DreamRingMenu:bShowLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bShowLabels
+    src   "Show Labels"
+    // from the engine's zh-Hans
+    text  "显示标签"
+    state draft
+}
+
+DreamRingMenu:DeadZoneRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:DeadZoneRadius
+    src   "Dead Zone Radius"
+    // from the engine's zh-Hans
+    text  "死区半径"
+    state draft
+}
+
+DreamRingMenu:GetDeadZoneRadius:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetDeadZoneRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetHighlightedIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetHighlightedIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetHitArea:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetHitArea:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetItemCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetItemMidAngle:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemMidAngle:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:GetItemMidAngle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemMidAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetItemStartAngle:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemStartAngle:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:GetItemStartAngle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemStartAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetItemSweepAngle:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemSweepAngle:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:GetItemSweepAngle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemSweepAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetLabelFacing:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetLabelFacing:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetSelectedIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetSelectedIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetShowLabels:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetShowLabels:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetSliceHitRadiusScale:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetSliceHitRadiusScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:GetWedgeWidget:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetWedgeWidget:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:GetWedgeWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetWedgeWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:HighlightByAngle:InAngleDegrees {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightByAngle:InAngleDegrees
+    src   "In Angle Degrees"
+    text  "输入角度（度数）"
+    state machine
+}
+
+DreamRingMenu:HighlightByDirection:InDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightByDirection:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamRingMenu:HighlightedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightedIndex
+    src   "Highlighted Index"
+    text  "高亮索引"
+    state machine
+}
+
+DreamRingMenu:HitArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HitArea
+    src   "Hit Area"
+    text  "碰撞区域"
+    state machine
+}
+
+DreamRingMenu:HubLabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HubLabelNode
+    src   "Hub Label Node"
+    text  "中心标签节点"
+    state machine
+}
+
+DreamRingMenu:HubNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HubNode
+    src   "Hub Node"
+    text  "中心节点"
+    state machine
+}
+
+DreamRingMenu:HubText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HubText
+    src   "Hub Text"
+    text  "中心文本"
+    state machine
+}
+
+DreamRingMenu:IndexAtAngle:InAngleDegrees {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:IndexAtAngle:InAngleDegrees
+    src   "In Angle Degrees"
+    text  "输入角度（度数）"
+    state machine
+}
+
+DreamRingMenu:IndexAtAngle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:IndexAtAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:IsOpen:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:IsOpen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingMenu:Items {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Items
+    src   "Items"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamRingMenu:LabelFacing {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:LabelFacing
+    src   "Label Facing"
+    text  "标签方向"
+    state machine
+}
+
+DreamRingMenu:OnClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnClosed
+    src   "On Closed"
+    // from the engine's zh-Hans
+    text  "On Closed"
+    state draft
+}
+
+DreamRingMenu:OnHighlightChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnHighlightChanged
+    src   "On Highlight Changed"
+    text  "高亮状态改变时"
+    state machine
+}
+
+DreamRingMenu:OnItemActivated {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnItemActivated
+    src   "On Item Activated"
+    text  "项目激活时"
+    state machine
+}
+
+DreamRingMenu:OnOpened {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnOpened
+    src   "On Opened"
+    text  "打开时"
+    state machine
+}
+
+DreamRingMenu:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnSelectionChanged
+    src   "On Selection Changed"
+    // from the engine's zh-Hans
+    text  "选择已变化时"
+    state draft
+}
+
+DreamRingMenu:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamRingMenu:OnWedgeGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnWedgeGenerated
+    src   "On Wedge Generated"
+    text  "扇区生成时"
+    state machine
+}
+
+DreamRingMenu:RaycastableBeforeClose {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:RaycastableBeforeClose
+    src   "Raycastable Before Close"
+    text  "关闭前可射线检测"
+    state machine
+}
+
+DreamRingMenu:RingNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:RingNode
+    src   "Ring Node"
+    text  "环形节点"
+    state machine
+}
+
+DreamRingMenu:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SelectedIndex
+    src   "Selected Index"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamRingMenu:SetAllowDeselect:bInAllowDeselect {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetAllowDeselect:bInAllowDeselect
+    src   "In Allow Deselect"
+    text  "允许取消选择"
+    state machine
+}
+
+DreamRingMenu:SetDeadZoneRadius:InRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetDeadZoneRadius:InRadius
+    src   "In Radius"
+    // from the engine's zh-Hans
+    text  "输入半径"
+    state draft
+}
+
+DreamRingMenu:SetHighlightedIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHighlightedIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:SetHitArea:InHitArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHitArea:InHitArea
+    src   "In Hit Area"
+    text  "碰撞区域"
+    state machine
+}
+
+DreamRingMenu:SetHubFollowsHighlight:bInHubFollowsHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHubFollowsHighlight:bInHubFollowsHighlight
+    src   "In Hub Follows Highlight"
+    text  "中心跟随高亮"
+    state machine
+}
+
+DreamRingMenu:SetHubText:InHubText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHubText:InHubText
+    src   "In Hub Text"
+    text  "中心文本"
+    state machine
+}
+
+DreamRingMenu:SetItems:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetItems:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamRingMenu:SetLabelFacing:InFacing {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetLabelFacing:InFacing
+    src   "In Facing"
+    text  "标签方向"
+    state machine
+}
+
+DreamRingMenu:SetSelectedIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectedIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:SetSelectedIndexWithoutNotify:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectedIndexWithoutNotify:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamRingMenu:SetSelectOnHighlight:bInSelectOnHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectOnHighlight:bInSelectOnHighlight
+    src   "In Select on Highlight"
+    text  "选中时高亮"
+    state machine
+}
+
+DreamRingMenu:SetShowLabels:bInShowLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetShowLabels:bInShowLabels
+    src   "In Show Labels"
+    text  "显示标签"
+    state machine
+}
+
+DreamRingMenu:SetSliceHitRadiusScale:InScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSliceHitRadiusScale:InScale
+    src   "In Scale"
+    // from the engine's zh-Hans
+    text  "输入缩放"
+    state draft
+}
+
+DreamRingMenu:SetStickDeadZone:InStickDeadZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetStickDeadZone:InStickDeadZone
+    src   "In Stick Dead Zone"
+    text  "摇杆死区"
+    state machine
+}
+
+DreamRingMenu:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamRingMenu:SetWedgeTemplateClass:InWedgeTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetWedgeTemplateClass:InWedgeTemplateClass
+    src   "In Wedge Template Class"
+    text  "楔形模板类"
+    state machine
+}
+
+DreamRingMenu:SliceHitRadiusScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SliceHitRadiusScale
+    src   "Slice Hit Radius Scale"
+    text  "切片碰撞半径缩放"
+    state machine
+}
+
+DreamRingMenu:StepHighlight:InDelta {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:StepHighlight:InDelta
+    src   "In Delta"
+    text  "步进高亮增量"
+    state machine
+}
+
+DreamRingMenu:StickDeadZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:StickDeadZone
+    src   "Stick Dead Zone"
+    text  "摇杆死区"
+    state machine
+}
+
+DreamRingMenu:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamRingMenu:WedgeNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeNodes
+    src   "Wedge Nodes"
+    text  "楔形节点"
+    state machine
+}
+
+DreamRingMenu:WedgeRootNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeRootNode
+    src   "Wedge Root Node"
+    text  "楔形根节点"
+    state machine
+}
+
+DreamRingMenu:WedgeTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeTemplateClass
+    src   "Wedge Template Class"
+    text  "楔形模板类"
+    state machine
+}
+
+DreamRingMenu:WedgeTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeTemplateNode
+    src   "Wedge Template Node"
+    text  "楔形模板节点"
+    state machine
+}
+
+DreamRingMenuActivatedEvent__DelegateSignature:Index {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuActivatedEvent__DelegateSignature:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamRingMenuActivatedEvent__DelegateSignature:Tag {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuActivatedEvent__DelegateSignature:Tag
+    src   "Tag"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamRingMenuIndexEvent__DelegateSignature:Index {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuIndexEvent__DelegateSignature:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamRingMenuItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem
+    src   "Dream Ring Menu Item"
+    text  "环形菜单项"
+    state machine
+}
+
+DreamRingMenuItem:bEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamRingMenuItem:bOverrideColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:bOverrideColor
+    src   "Override Color"
+    // from the engine's zh-Hans
+    text  "重载颜色"
+    state draft
+}
+
+DreamRingMenuItem:Color {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamRingMenuItem:Icon {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Icon
+    src   "Icon"
+    // from the engine's zh-Hans
+    text  "图标"
+    state draft
+}
+
+DreamRingMenuItem:Label {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Label
+    src   "Label"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamRingMenuItem:Payload {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Payload
+    src   "Payload"
+    // from the engine's zh-Hans
+    text  "负载"
+    state draft
+}
+
+DreamRingMenuItem:Tag {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Tag
+    src   "Tag"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamRingMenuItem:Weight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Weight
+    src   "Weight"
+    // from the engine's zh-Hans
+    text  "权重"
+    state draft
+}
+
+DreamRingMenuWedgeEvent__DelegateSignature:Index {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuWedgeEvent__DelegateSignature:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamRingMenuWedgeEvent__DelegateSignature:Wedge {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuWedgeEvent__DelegateSignature:Wedge
+    src   "Wedge"
+    text  "扇形"
+    state machine
+}
+
+EDreamRingHitArea.EDreamRingHitArea_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea:EDreamRingHitArea_MAX
+    src   "EDream Ring Hit Area MAX"
+    text  "EDream Ring Hit Area MAX"
+    state machine
+}
+
+EDreamRingHitArea.Ring {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea:Ring
+    src   "Ring"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamRingHitArea.Slice {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea:Slice
+    src   "Slice"
+    // from the engine's zh-Hans
+    text  "切片"
+    state draft
+}
+
+EDreamRingLabelFacing.EDreamRingLabelFacing_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:EDreamRingLabelFacing_MAX
+    src   "EDream Ring Label Facing MAX"
+    text  "EDream Ring Label Facing MAX"
+    state machine
+}
+
+EDreamRingLabelFacing.Radial {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamRingLabelFacing.Tangential {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Tangential
+    src   "Tangential"
+    // from the engine's zh-Hans
+    text  "Tangential"
+    state draft
+}
+
+EDreamRingLabelFacing.Upright {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Upright
+    src   "Upright"
+    text  "直立"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamRingMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu
+    src   "A ring menu whose hierarchy is code, not an asset: wedges around a hub, picked by direction.\n\nThe radial menu every action game has and no UI framework ships, in the DreamGUI idiom. Items are\na UPROPERTY array, so .dui, the designer, Blueprint and a `<->` binding all drive it with no glue;\nthe look comes from the project sheet like every other control's.\n\nTHE WEDGE IS A RECT\n-------------------\nThere is no new visual and no new shader here. UDreamRectBlock already draws a rounded rect with\na border, a radial-fill mask, gradients and shadows -- and an annulus sector is exactly that rect\nwith the corner radius at 100%, the body off (so the BORDER is the ring), and the mask set to the\nslice. UDreamProgressBar's Radial shape found the first half of this; the second half is that the\nmask's start and sweep are per-item rather than a percentage. So every wedge inherits gradients,\ninner and outer shadows and soft edges for free, and a project that wants a fancier ring styles\nthe rect rather than waiting for a feature.\n\nThe cost is honest and worth stating: each wedge is a SQUARE the size of the whole ring, of which\nthe shader keeps one slice. Every wedge therefore overlaps every other, and a rect hit test would\nhand the topmost one the entire circle -- which is why the hit shape is\nUDreamRingSectorRaycast and not the default.\n\nWHY THE HIT TEST IS A CUSTOM RAYCAST AND NOT A TICK\n---------------------------------------------------\nThe obvious build is a control that reads the pointer every frame and works out an angle. This\none does not, and the difference is not style: with an exact sector as each wedge's hit shape the\nwhole existing event pipeline just works -- enter, exit, press, click, the selectable's four\ntransitions, event bubbling, the modal layer, the drag threshold. A ticking control would have\nhad to reimplement each of those and would still have been wrong about which of two overlapping\nmenus the pointer was in. The angle maths lives in one place, in the raycast, and the gamepad\nroute (HighlightByDirection) calls the same two static functions rather than a second copy.\n\nThe gap between wedges is DRAWN ONLY. Were it in the hit shape too, dragging across one would\nexit a wedge and enter nothing, and the highlight would blink off between every pair of items.\n\nHIGHLIGHT AND SELECTION ARE TWO THINGS\n--------------------------------------\nHighlight is where the pointer (or the stick) is; selection is what has been committed. A menu\nseparates them -- hover, then click -- and a weapon wheel does not, which is one bool\n(bSelectOnHighlight) rather than two controls. Both are readable, both fire, and\nOnItemActivated fires on every commit even when the same item is chosen twice, because\n\"invoke this command again\" is a thing a menu has to be able to say.\n\n    Native.RingMenu Wheel {\n        HitArea            = Slice\n        bSelectOnHighlight = true\n        Style.SweepAngle   = 360\n        OnItemActivated -> HandleWheelPick\n    }\n\nItems have no .dui text form yet -- an array of structs is the same language gap the dropdown's\nOptions hit -- so a .dui consumer fills them from its host class, with SetItems."
+    text  "环形菜单，其层级由代码而非资产定义：围绕枢纽的扇形，按方向选中。\n\n每个动作游戏都有、却没有哪个 UI 框架提供的径向菜单，以 DreamGUI 的惯用方式实现。项是\n一个 UPROPERTY 数组，因此 .dui、设计器、蓝图和 `<->` 绑定都能驱动它，无需胶水代码；\n外观和其他所有控件一样来自项目样式表。\n\n扇形就是一个矩形\n----------------\n这里没有新的视觉效果，也没有新的着色器。\nUDreamRectBlock 已经能绘制带边框、径向填充遮罩、渐变和阴影的圆角矩形——\n而圆环扇区恰好就是这个矩形：圆角半径设为 100%，主体关闭（于是边框就是圆环），\n遮罩设为该扇区。UDreamProgressBar 的 Radial 形状完成了前半部分；\n后半部分是遮罩的起点和扫过角按项设置，而不是百分比。\n因此每个扇形都免费继承渐变、内外阴影和柔和边缘，\n想要更花哨圆环的项目只需给这个矩形做样式，而不必等一个新功能。\n\n这个代价是诚实的，也值得说明：每个扇形都是一个与整个圆环同尺寸的正方形，\n着色器只保留其中一个扇区。因此每个扇形都与其他所有扇形重叠，矩形命中测试会\n把整个圆盘交给最上面的那个——这就是命中形状为\nUDreamRingSectorRaycast 而非默认形状的原因。\n\n为什么命中测试是自定义射线检测而不是每帧 Tick\n---------------------------------------------\n显而易见的做法是做一个每帧读取指针并算出角度的控件。\n这个控件没有这么做，区别不在风格：以精确的扇区作为每个扇形的命中形状，\n整套既有事件管线就直接可用——进入、离开、按下、点击、可选中控件的四种过渡、\n事件冒泡、模态层、拖拽阈值。一个每帧 Tick 的控件将不得不重新实现其中的每一项，\n而且仍然会搞错指针究竟落在两个重叠菜单中的哪一个。\n角度计算只存在于一个地方，即射线检测中；手柄路径（HighlightByDirection）调用的是同样的\n两个静态函数，而不是第二份副本。\n\n扇形之间的间隙只用于绘制。如果它也进入命中形状，拖拽穿过间隙就会离开一个扇形却进入空无，\n高亮会在每一对项之间闪烁熄灭。\n\n高亮和选中是两回事\n------------------\n高亮是指针（或摇杆）所在的位置；选中是已经提交的结果。菜单将两者分开——先悬停，再点击——\n而武器轮盘不分开，那是一个 bool（bSelectOnHighlight）而不是两个控件。\n两者都可读取，两者都会触发，\n而且即使同一项被选中两次，OnItemActivated 也会在每次提交时触发，\n因为“再次调用此命令”正是菜单必须能表达的事情。\n\n    Native.RingMenu Wheel {\n        HitArea            = Slice\n        bSelectOnHighlight = true\n        Style.SweepAngle   = 360\n        OnItemActivated -> HandleWheelPick\n    }\n\n项目前还没有 .dui 文本形式——结构体数组正是下拉框的 Options 所遇到的同一处语言缺口——\n因此 .dui 使用者通过 SetItems 从宿主类中填充它们。"
+    state machine
+}
+
+DreamRingMenu:ActivateHighlighted {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:ActivateHighlighted
+    src   "Commit whatever is highlighted: what a \"release the button to choose\" input calls."
+    text  "提交当前高亮的项：即“松开按键即选择”这类输入所调用的内容。"
+    state machine
+}
+
+DreamRingMenu:BackdropNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:BackdropNode
+    src   "The unbroken ring behind the wedges, filling the gaps between them."
+    text  "扇形背后不间断的圆环，填补扇形之间的间隙。"
+    state machine
+}
+
+DreamRingMenu:bAllowDeselect {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bAllowDeselect
+    src   "Clicking the item that is already selected clears the selection instead of re-choosing it."
+    text  "点击已选中的项会清除选择，而不是重新选中它。"
+    state machine
+}
+
+DreamRingMenu:bHubFollowsHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bHubFollowsHighlight
+    src   "The hub shows the highlighted item's label (falling back to the selected one's, then to\nHubText). Off leaves HubText alone, which is how the hub becomes a static title."
+    text  "中心毂显示高亮项的标签（没有则回退到选中项的标签，再回退到\nHubText）。关闭时不动 HubText，中心毂由此成为静态标题。"
+    state machine
+}
+
+DreamRingMenu:bRaycastSuspendedByClose {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bRaycastSuspendedByClose
+    src   "Close takes the ring out of the pointer's hit test for the length of its fade and Open puts it\nback: true between the two, with the ring's own raycastable setting kept here to be restored."
+    text  "Close 在淡出期间把圆环移出指针的命中测试，Open 再把它放回去：两者之间为 true，\n圆环自身的可射线检测设置会保存在此以便恢复。"
+    state machine
+}
+
+DreamRingMenu:bSelectOnHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bSelectOnHighlight
+    src   "Highlighting an item commits it, with no click -- the weapon wheel, where the pointer's\ndirection IS the choice and releasing the key is the confirm."
+    text  "高亮一项即提交该项，无需点击——即武器轮盘，指针的方向\n就是选择，松开按键就是确认。"
+    state machine
+}
+
+DreamRingMenu:bShowLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:bShowLabels
+    src   "Off leaves the wedges to their icons. A wheel of glyphs is an ordinary thing to want."
+    text  "关闭时扇形只显示图标。想要一个纯符号的轮盘是很平常的事。"
+    state machine
+}
+
+DreamRingMenu:Close {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Close
+    src   "Hide it, clearing the highlight on the way out. A player whose focus is on a wedge -- or went nowhere\nfrom the ring -- gets back what they had focused when it opened, before the fade starts."
+    text  "隐藏它，并在退出时清除高亮。焦点落在某个扇区上——或者从环上\n哪儿也没去的——玩家，会在淡出开始前重新获得打开时所聚焦的内容。"
+    state machine
+}
+
+DreamRingMenu:DeadZoneRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:DeadZoneRadius
+    src   "The radius inside which the POINTER picks nothing, in ring units. Zero (the default) means the\nstyle's InnerRadius, which is the hub's edge and the answer nine times in ten; a Slice menu\nthat wants a bigger \"let go here to cancel\" middle than its hub states one here.\n\nA stick has its own knob below, and deliberately so: the two are different quantities, and one\nnumber serving both would have compared a magnitude of 1 against a radius of 80."
+    text  "在此半径内指针不选中任何内容，单位为环单位。零（默认值）表示\n样式的 InnerRadius，即枢纽的边缘，十次中有九次就是答案；如果 Slice 菜单\n想要比其枢纽更大的“在此松开以取消”中间区域，可在此处指定。\n\n摇杆在下方有自己的开关，这是有意为之：两者是不同的量，\n若让一个数值兼顾两者，就会拿大小为 1 的量与半径 80 相比较。"
+    state machine
+}
+
+DreamRingMenu:GetItemMidAngle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemMidAngle
+    src   "The middle of an item's slice, which is where its icon and label ride."
+    text  "项扇区的中间位置，图标和标签即位于此处。"
+    state machine
+}
+
+DreamRingMenu:GetItemStartAngle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemStartAngle
+    src   "Where an item's slice begins, in degrees clockwise from twelve."
+    text  "项扇区的起始位置，以从十二点方向顺时针计算的角度表示。"
+    state machine
+}
+
+DreamRingMenu:GetItemSweepAngle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemSweepAngle
+    src   "How wide an item's slice is, in degrees -- its share of the style's sweep, by weight."
+    text  "项扇区的宽度，单位为度——即按权重分得样式扫过角度的份额。"
+    state machine
+}
+
+DreamRingMenu:GetWedgeWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetWedgeWidget
+    src   "The wedge standing for an item, or null when there is none."
+    text  "代表某个项的扇块，没有时为空。"
+    state machine
+}
+
+DreamRingMenu:HighlightByAngle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightByAngle
+    src   "Highlight whichever item owns this angle, in degrees clockwise from twelve."
+    text  "高亮拥有此角度的项，角度以从十二点方向顺时针计算。"
+    state machine
+}
+
+DreamRingMenu:HighlightByDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightByDirection
+    src   "Highlight whichever item owns this direction -- the gamepad route.\n\nThe vector is in the ring's own frame: +X right, +Y up, exactly what a right-stick axis pair\nreads. Its LENGTH is honoured against StickDeadZone -- a magnitude, not a radius -- so a stick\nbarely off centre highlights nothing. Set StickDeadZone to zero to take any direction at all."
+    text  "高亮拥有此方向的项——游戏手柄路径。\n\n该向量位于环自身的坐标系中：+X 向右，+Y 向上，正是右摇杆轴对\n读取的内容。其长度会与 StickDeadZone 比较——是大小而非半径——因此几乎离开\n中心的摇杆不会高亮任何内容。将 StickDeadZone 设为零即可接受任意方向。"
+    state machine
+}
+
+DreamRingMenu:HighlightedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HighlightedIndex
+    src   "Where the pointer is. Not a UPROPERTY the way SelectedIndex is: it is nobody's to author."
+    text  "指针所在的位置。它不像 SelectedIndex 那样是 UPROPERTY：不供任何人编辑。"
+    state machine
+}
+
+DreamRingMenu:HitArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HitArea
+    src   "See EDreamRingHitArea.\n\nBlueprintSetter, like the four knobs below it: each is read only by the style push or the hit\ntest it configures, so a runtime write straight onto the variable moved the number and left\nthe wheel behaving exactly as it did -- the SynchronizeProperties tax UDreamUIControl\ndocuments, paid here by the setter instead of by whoever forgets."
+    text  "参见 EDreamRingHitArea。\n\n与下面四个旋钮一样，它是蓝图设值函数 BlueprintSetter：每一处都只由样式推送或\ntest 它所配置的命中测试读取，因此直接在运行时写入变量只会改动数值，\n而轮的行为完全不变——这就是 UDreamUIControl 所记录的 SynchronizeProperties 代价，\n此处由 setter 承担，而不是由忘记的人承担。"
+    state machine
+}
+
+DreamRingMenu:HubNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HubNode
+    src   "The disc inside the ring."
+    text  "环内部的圆盘。"
+    state machine
+}
+
+DreamRingMenu:HubText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:HubText
+    src   "What the hub says with nothing highlighted. Empty is an empty hub."
+    text  "无高亮时枢纽显示的内容。为空即表示枢纽为空。"
+    state machine
+}
+
+DreamRingMenu:IndexAtAngle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:IndexAtAngle
+    src   "Which item owns an angle, or -1 when the sweep does not cover it."
+    text  "哪个项目拥有一个角度，或者当扫描范围不覆盖它时为 -1。"
+    state machine
+}
+
+DreamRingMenu:Items {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Items
+    src   "The wheel. Order is clockwise from the style's StartAngle."
+    text  "轮子。顺序是按照样式的 StartAngle 顺时针排列。"
+    state machine
+}
+
+DreamRingMenu:LabelFacing {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:LabelFacing
+    src   "See EDreamRingLabelFacing."
+    text  "参见 EDreamRingLabelFacing。"
+    state machine
+}
+
+DreamRingMenu:OnHighlightChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnHighlightChanged
+    src   "Where the pointer is. Fires with both routes -- the wedges' hover and HighlightByAngle."
+    text  "指针的位置。当楔形突出显示或通过 HighlightByAngle 时触发。"
+    state machine
+}
+
+DreamRingMenu:OnItemActivated {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnItemActivated
+    src   "An item was CHOSEN -- clicked, or confirmed through ActivateHighlighted. Fires every time,\nincluding when the choice is the item already selected, because a menu entry is a command and\n\"do it again\" has to be sayable. The tag rides along so a handler never switches on an index."
+    text  "某个项被选中——通过点击，或通过 ActivateHighlighted 确认。每次都会触发，\n包括所选就是当前已选中项时，因为菜单项是一条命令，\n“再来一次”必须能够表达。标签会随事件一起传递，因此处理程序永远不必根据索引做分支判断。"
+    state machine
+}
+
+DreamRingMenu:OnOpened {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnOpened
+    src   "Open and Close, each carrying the SELECTION at that moment -- which is the whole of what a\n\"hold to open, release to choose\" input wants back from a close."
+    text  "Open 和 Close，各自携带当时的选中项——这正是\n“按住打开、松开选择”输入在关闭时想要取回的全部内容。"
+    state machine
+}
+
+DreamRingMenu:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnSelectionChanged
+    src   "The committed item moved."
+    text  "已选项目发生变化。"
+    state machine
+}
+
+DreamRingMenu:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact name,\nso a value control carries it alongside its spoken events. Fires with OnSelectionChanged."
+    text  "`<->` 约定：双向绑定会针对这个确切名称合成其反向路径，\n因此值控件会将它和其显式事件一起携带。与 OnSelectionChanged 一起触发。"
+    state machine
+}
+
+DreamRingMenu:OnWedgeGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:OnWedgeGenerated
+    src   "One per wedge, every time it is BOUND to an item. The hook for a consumer whose wedges are\nricher than an icon over a label but who would rather not author a whole class: everything\nunder the wedge is reachable from here by display name, and anything added under\nWedgeTemplateNode before the first rebuild rides into every copy."
+    text  "每个扇区每次绑定到项时各触发一次。为这样的使用方提供的钩子：其扇区\n比“图标加标签”更丰富，但又不愿编写整个类：从\n这里可按显示名称访问扇区下的所有内容，并且在首次重建前添加到\nWedgeTemplateNode 下的任何内容都会带入每个副本。"
+    state machine
+}
+
+DreamRingMenu:Open {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Open
+    src   "Show the ring, scaling and fading it in when there is a world to tween in. Every player's focus is noted first."
+    text  "显示环形，并在有世界需要淡入时进行缩放和淡入。记录每个玩家的焦点。"
+    state machine
+}
+
+DreamRingMenu:RebuildItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:RebuildItems
+    src   "Throw the geometry at the wedges again, growing or shrinking the pool first if the item count\nmoved. Called for you by ApplyStyle -- wedge geometry IS style -- and by SetItems."
+    text  "再次将几何数据应用到各个扇区，如果项数量\n发生变化，则先扩大或缩小池。由 ApplyStyle——扇区几何就是样式——和 SetItems 为你调用。"
+    state machine
+}
+
+DreamRingMenu:RingNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:RingNode
+    src   "The node everything hangs under, and what Open and Close scale and fade."
+    text  "所有内容都挂载在该节点下，并且 Open 和 Close 会对其进行缩放和淡入。"
+    state machine
+}
+
+DreamRingMenu:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SelectedIndex
+    src   "The committed item. -1 is none, which is the resting state of a menu nobody has chosen from."
+    text  "已提交的项。-1 表示无，这是无人选择过的菜单的静止状态。"
+    state machine
+}
+
+DreamRingMenu:SetHighlightedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHighlightedIndex
+    src   "Move the highlight. -1, or a disabled item, clears it."
+    text  "移动高亮。-1 或禁用项会清除高亮。"
+    state machine
+}
+
+DreamRingMenu:SetHitArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHitArea
+    src   "The five setters below each write the field and then make the push that field is read by --\nthe whole of what a BlueprintSetter buys on this family. The hit-shape trio (HitArea, the\nslice's reach, the dead zone) is consulted by the raycast override at the moment a pointer\narrives rather than baked into anything drawn, so those three need no restyle at all; the two\nthat decide what a wedge SHOWS do."
+    text  "下面的五个设置器各自写入字段，然后执行读取该字段所需的推送——\n这就是蓝图设值函数 BlueprintSetter 在这一系列上带来的全部作用。命中形状三件套（HitArea、\n扇区的范围、死区）在指针到达时由射线检测重写查询，\n而不是烘焙到任何绘制内容中，因此那三个完全不需要重新设置样式；而决定\n扇区显示内容的两个则需要。"
+    state machine
+}
+
+DreamRingMenu:SetHubFollowsHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHubFollowsHighlight
+    src   "Whether the hub shows the highlighted item's label. The hub is re-read at once."
+    text  "中心是否显示高亮项的标签。中心会立即重新读取。"
+    state machine
+}
+
+DreamRingMenu:SetHubText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetHubText
+    src   "What the hub says when nothing else has a claim on it. The hub is re-read at once."
+    text  "当没有其他内容占用中心时，中心显示的文字。中心会立即重新读取。"
+    state machine
+}
+
+DreamRingMenu:SetItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetItems
+    src   "Replace the wheel and rebuild it."
+    text  "替换轮盘并重建。"
+    state machine
+}
+
+DreamRingMenu:SetLabelFacing {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetLabelFacing
+    src   "Re-orients every wedge's label, which is geometry the style push writes."
+    text  "重新调整每个扇区标签的朝向，这是样式推送所写入的几何信息。"
+    state machine
+}
+
+DreamRingMenu:SetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectedIndex
+    src   "Moves the selection and fires both selection events. Out of range selects nothing."
+    text  "移动选择并触发两个选择事件。超出范围时不选择任何项。"
+    state machine
+}
+
+DreamRingMenu:SetSelectedIndexWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectedIndexWithoutNotify
+    src   "The same move, silently: for pushing an authored value in, which is not the user choosing."
+    text  "同样的操作，但静默执行：用于推入外部指定的值，而不是用户在选择。"
+    state machine
+}
+
+DreamRingMenu:SetShowLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetShowLabels
+    src   "Wakes or sleeps every wedge's label, which the style push decides."
+    text  "唤醒或休眠每个扇区的标签，由样式推送决定。"
+    state machine
+}
+
+DreamRingMenu:SetStickDeadZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetStickDeadZone
+    src   "How far the stick has to be pushed before it points at anything, 0..1. Read on every stick sample."
+    text  "摇杆需被推动多远才会指向内容，0..1。每次采样摇杆时读取。"
+    state machine
+}
+
+DreamRingMenu:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetStyle
+    src   "Replace the look and push it."
+    text  "替换外观并推送。"
+    state machine
+}
+
+DreamRingMenu:SetWedgeTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetWedgeTemplateClass
+    src   "The authored wedge content. Instanced into each wedge at build, so a new class means a rebuild."
+    text  "制作的扇区内容。构建时实例化到每个扇区中，因此换用新类意味着重建。"
+    state machine
+}
+
+DreamRingMenu:SliceHitRadiusScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SliceHitRadiusScale
+    src   "How far a Slice reaches, as a multiple of the ring's outer radius. Ignored by Ring.\n\nTwo is one more ring's worth of slack -- comfortably past what is drawn, which is the whole\npoint of Slice, and still a bounded shape that a neighbour can be clicked outside of. It\nscales with the ring rather than being a pixel count, so a bigger wheel reaches further by\nitself.\n\nZERO IS NO LIMIT, and it is the weapon-wheel setting: the slice claims its direction to the\nedge of the screen and beyond. Correct for a menu that owns the screen (put it over a blocker,\nthe way a modal does) and wrong for anything sharing a panel -- an unbounded wedge wins the\nraycast against every widget earlier in the hierarchy, which is most of them."
+    text  "Slice 的延伸距离，以环外半径的倍数表示。Ring 会忽略此项。\n\n二相当于多出一个环的余量——稳稳超出绘制范围，而这正是 Slice\n的意义所在，同时仍是有限形状，邻居可以在其外部被点击。它\n随环缩放而不是按像素计数，因此更大的轮盘自身\n就能延伸得更远。\n\n零表示没有限制，也就是武器轮盘的设置：Slice 会将其方向延伸到\n屏幕边缘乃至更远。对于独占屏幕的菜单这是正确的（像模态那样放在阻挡器\n上方），对于任何与面板共享空间的情况则是错误的——无界扇区会在\n射线检测中胜过层级中更早的每个控件，而那是大多数控件。"
+    state machine
+}
+
+DreamRingMenu:StepHighlight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:StepHighlight
+    src   "Step the highlight round the ring, skipping disabled items. Wraps on a full wheel and stops at\nthe ends of a partial one -- a half-ring has a first and a last item, and pretending otherwise\nis how a keyboard user ends up somewhere off screen."
+    text  "沿环步进高亮，跳过已禁用项。完整轮盘上循环，部分轮盘上\n在两端停止——半环有第一项和最后一项，假装不是这样，\n键盘用户就会跑到屏幕之外的某处。"
+    state machine
+}
+
+DreamRingMenu:StickDeadZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:StickDeadZone
+    src   "How far a stick must be pushed before HighlightByDirection picks anything, as the vector's\nMAGNITUDE -- an axis pair is already normalized, so this is 0 to 1 and has nothing to do with\nthe ring's radii. What stops a resting stick's jitter from choosing an item every frame."
+    text  "摇杆必须推动多远，HighlightByDirection 才会选中内容，以向量的\n模（MAGNITUDE）表示——轴对已经归一化，因此范围是 0 到 1，与\n环的半径无关。它能防止静止摇杆的抖动每帧都选中一个项。"
+    state machine
+}
+
+DreamRingMenu:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why it\nstays editable instead of being gated on the enum."
+    text  "此实例自身的外观。当 StyleSource 如此指定且项目中确实存在样式表时，项目样式表\n优先；项目中不存在样式表时，此属性就是实际生效的外观——这也是它\n保持可编辑、而不是被枚举加以门控的原因。"
+    state machine
+}
+
+DreamRingMenu:WedgeNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeNodes
+    src   "The wedge widgets, parallel to Items."
+    text  "扇区控件，与 Items 一一对应。"
+    state machine
+}
+
+DreamRingMenu:WedgeRootNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeRootNode
+    src   "What the wedges are children of -- the template among them."
+    text  "扇区的父级——模板也在其中。"
+    state machine
+}
+
+DreamRingMenu:WedgeTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeTemplateClass
+    src   "A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every\nwedge widget, filling it, and the built-in label steps aside. The wedge's shape, its hit\nsector, its highlight and its click stay the control's, so a template only has to draw an item.\n\nCreated once per POOL wedge rather than per bind, which is what makes it survive a rebuild of\nthe item list; OnWedgeGenerated fires on every bind, and that is where a consumer updates it.\n\nNull (the default) is the built-in label. Instancing a user widget needs a world, so with none\nthis quietly stays the built-in wedge rather than producing half a ring. Exactly the bargain\nUDreamListViewBase::RowTemplateClass makes, in the same words."
+    text  "扇区的内容（CONTENT），在别处制作：在每个\n扇区控件内创建一个该类实例并填充它，内置标签随之让位。扇区的形状、命中\n区域、高亮和点击仍归控件所有，因此模板只需绘制一个项。\n\n按池中的每个扇区创建一次，而不是每次绑定创建，这正是它能在项列表\n重建后存活的原因；OnWedgeGenerated 在每次绑定时触发，使用方就在那里更新它。\n\n空（默认值）表示使用内置标签。实例化用户控件需要世界，因此没有\n世界时会安静地保留内置扇区，而不会产生半个环。与\nUDreamListViewBase::RowTemplateClass 做出的正是同样的取舍，用的也是同样的话。"
+    state machine
+}
+
+DreamRingMenu:WedgeTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:WedgeTemplateNode
+    src   "The thing wedges are copied from -- authored once, inactive, never drawn itself. Public\nbecause it is half of the \"hand it a template\" story."
+    text  "扇区复制自的对象——只制作一次，处于非活动状态，自身从不绘制。之所以\n公开，是因为它是“交给它一个模板”这一用法的另一半。"
+    state machine
+}
+
+DreamRingMenuItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem
+    src   "One entry on the wheel.\n\nA struct rather than an FText the way the dropdown's options are, because a ring menu's item is\nnot a line of text -- it is a command. The tag is what a handler switches on; an index is a\nterrible name for \"Reload\", and it stops being the right one the moment somebody inserts an item."
+    text  "轮盘上的一个条目。\n\n采用结构体而不是像下拉菜单选项那样使用FText，是因为环形菜单的条目\n不是一行文本——而是一条命令。处理程序根据标签进行分支；用索引作为\n“Reload”的名称很糟糕，一旦有人插入条目，它就不再是正确的名称。"
+    state machine
+}
+
+DreamRingMenuItem:bEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:bEnabled
+    src   "Off wears the style's disabled colour, stops answering the pointer, and cannot be highlighted."
+    text  "关闭时采用样式的禁用颜色，不再响应指针，并且无法高亮。"
+    state machine
+}
+
+DreamRingMenuItem:bOverrideColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:bOverrideColor
+    src   "This one wedge's RESTING colour, replacing the style's WedgeNormal. Hover, press and the\nselected colour stay the style's, so a red \"delete\" still highlights like everything else."
+    text  "此扇区的静止颜色，替代样式的WedgeNormal。悬停、按下和\n选中颜色仍使用样式的颜色，因此红色的“delete”仍会像其他项一样高亮。"
+    state machine
+}
+
+DreamRingMenuItem:Icon {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Icon
+    src   "The picture over the label. Empty is a label-only item; the label steps aside when the brush\nis the only thing set, so an icon-only wheel is a wheel with no labels typed into it."
+    text  "标签上方的图片。为空时是仅含标签的条目；当仅设置画刷时，标签会让位，\n因此仅图标轮盘就是没有输入任何标签的轮盘。"
+    state machine
+}
+
+DreamRingMenuItem:Label {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Label
+    src   "What the wedge says, and what the hub shows while this item is highlighted."
+    text  "扇区显示的内容，以及此条目高亮时中心显示的内容。"
+    state machine
+}
+
+DreamRingMenuItem:Payload {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Payload
+    src   "Whatever the consumer needs back when this item is chosen. The control never reads it."
+    text  "当此项被选中时，消费者需要返回的数据。控件不会读取此数据。"
+    state machine
+}
+
+DreamRingMenuItem:Tag {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Tag
+    src   "What this item MEANS, carried into OnItemActivated so a handler never switches on an index."
+    text  "当此项被选中时，消费者需要返回的数据。控件不会读取此数据。"
+    state machine
+}
+
+DreamRingMenuItem:Weight {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Weight
+    src   "How wide this item's slice is, relative to the others. Equal weights is the even wheel; a\nweight of 2 takes twice the angle of a weight of 1, which is how a \"cancel\" quadrant sits\nbeside six small ones. Zero-or-less is treated as one, and a set that adds to nothing spreads\nevenly -- neither is worth an error message when the honest answer is an even ring."
+    text  "此条目扇区的宽度相对于其他条目的比例。权重相等即为均匀轮盘；权重2\n占据的角度是权重1的两倍，这样“cancel”象限就能与六个小象限并排。\n小于等于零按一处理，总和为零的集合会均匀分布——当合理的答案就是均匀环时，\n这两种情况都不值得报错。"
+    state machine
+}
+
+EDreamRingHitArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea
+    src   "What a wedge claims of the pointer."
+    text  "指针所指向的区域。"
+    state machine
+}
+
+EDreamRingHitArea.Ring {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea:Ring
+    src   "Exactly the annulus that is drawn. The hub and everything past the outer edge are dead."
+    text  "绘制的环形区域。中心区域和超出外边缘的部分无效。"
+    state machine
+}
+
+EDreamRingHitArea.Slice {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingHitArea:Slice
+    src   "The slice, reaching PAST the drawn ring -- the weapon-wheel feel, where a flick of the mouse\nshort of the ring still picks the item in that direction. How far past is SliceHitRadiusScale,\nand that knob is not decoration: nothing culls a widget by its bounds before the trace, so an\nunbounded slice really does claim its whole direction across the screen, and the raycast sort\nhands a wedge every hit against anything earlier in the hierarchy. A menu that owns the screen\nwants exactly that; a menu sharing a panel with other controls makes them unclickable."
+    text  "扇区会延伸到绘制环之外——这是武器轮盘的手感：鼠标未触及环的轻甩\n仍会选中该方向上的条目。延伸多远由SliceHitRadiusScale决定，\n而这个参数并非装饰：在射线检测之前，没有任何东西会按边界剔除控件，因此\n无界扇区确实会占据屏幕上其整个方向，而射线检测排序\n会把对层级中更早任何对象的每次命中都交给扇区。独占屏幕的菜单\n正需要这一点；与其他控件共享面板的菜单则会使它们无法点击。"
+    state machine
+}
+
+EDreamRingLabelFacing {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing
+    src   "How an item's icon and label are turned."
+    text  "图标和标签的旋转方式。"
+    state machine
+}
+
+EDreamRingLabelFacing.Radial {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Radial
+    src   "Turned a further quarter, so text reads outward along the radius."
+    text  "旋转四分之一，文本沿半径方向显示。"
+    state machine
+}
+
+EDreamRingLabelFacing.Tangential {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Tangential
+    src   "Turned with the ring, so text runs along the tangent and its top faces outward."
+    text  "与环一起旋转，文本沿切线方向显示，顶部朝外。"
+    state machine
+}
+
+EDreamRingLabelFacing.Upright {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#EDreamRingLabelFacing:Upright
+    src   "Never turned. The readable default, and the only one that stays readable at the bottom."
+    text  "未旋转。默认的可读方向，也是唯一始终保持可读的方向。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Ring Menu" {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:ActivateHighlighted
+    src   "Ring Menu"
+    text  "环形菜单"
+    state machine
+}
+
+"Ring Menu Item" {
+    at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenuItem:Label
+    src   "Ring Menu Item"
+    text  "环形菜单项"
+    state machine
+}

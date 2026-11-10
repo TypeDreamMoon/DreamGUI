@@ -1,0 +1,90 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDocument {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#DreamUIDocument
+    src   "Dream UIDocument"
+    text  "Dream UIDocument"
+    state machine
+}
+
+DreamUIDocument:Content {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#DreamUIDocument:Content
+    src   "Content"
+    // from the engine's zh-Hans
+    text  "内容"
+    state draft
+}
+
+EDreamUIDocumentChangeReason.Edited {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:Edited
+    src   "Edited"
+    text  "已编辑"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.EDreamUIDocumentChangeReason_MAX {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:EDreamUIDocumentChangeReason_MAX
+    src   "EDream UIDocument Change Reason MAX"
+    text  "EDream UIDocument Change Reason MAX"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.Reloaded {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:Reloaded
+    src   "Reloaded"
+    text  "已重新加载"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.UndoRedo {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:UndoRedo
+    src   "Undo Redo"
+    text  "撤销/重做"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIDocument {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#DreamUIDocument
+    src   "The full text of one `.dui` file, held in a UObject so that UE's transaction system can undo it.\n\nThis class exists for exactly one reason, and it is not \"somewhere to keep a string\".\n\nUnder the `.dui` direction the text is the only truth and the designer is a graphical front end\nfor it: a property edit becomes `write the preview object -> patch the .dui -> regenerate the\ntree`. UE's undo restores OBJECTS. So with the text left outside the transaction, Ctrl+Z puts\nthe widget back, the line in the file still says the new value, and the next regeneration --\na recompile, a reopen, the next unrelated edit -- brings the change back. The undo appears to\nwork and then silently undoes itself. Putting Content inside a transaction is what buys the\nwhole undo stack for free, and it is why this cannot be deferred until after write-back exists:\nwrite-back built on \"edit the object and also write the file\" has to be torn out to add it.\n\nDeliberately knows nothing about `.dui` syntax. It moves bytes and it participates in undo; the\nparser, the builder and the patcher live elsewhere and are reached through OnTextChanged. That\nkeeps this testable and landable while the front end is still being written, and it means a\nmalformed file is still a document you can edit your way out of rather than a document that\nrefuses to exist.\n\nTwo contracts a caller has to know, both chosen rather than fallen into -- the reasoning is on\nSetContent and on PostEditUndo respectively:\n\n  1. THE CALLER OWNS THE TRANSACTION. SetContent only calls Modify(); it never opens one.\n  2. MEMORY IS THE TRUTH, DISK IS A PROJECTION THAT MAY LAG. A write that fails (read-only file,\n     not checked out) keeps the edit, says so, and is retried on the next flush."
+    text  "单个 `.dui` 文件的完整文本，保存在 UObject 中，以便 UE 的事务系统可以撤销它。\n\n这个类存在的理由只有一个，而绝不是“找个地方存一个字符串”。\n\n在 `.dui` 方向下，文本是唯一的事实来源，设计器只是它的图形前端：\n一次属性编辑会变成 `写入预览对象 -> 修补 .dui -> 重新生成树`。UE 的撤销\n恢复的是对象。因此，如果把文本留在事务之外，Ctrl+Z 会把控件还原，而文件中\n的那一行仍然写着新值，下一次重新生成——一次重新编译、一次重新打开、下一次\n无关的编辑——又会把改动带回来。撤销看起来生效了，随后又悄无声息地把自\n己撤销掉。把 Content 放进事务，正是可以免费获得整个撤销栈的原因，也是为\n什么这件事不能推迟到写回功能存在之后再做：建立在“修改对象的同时也写文件”\n之上的写回，必须被彻底拆掉才能加入它。\n\n它刻意对 `.dui` 语法一无所知。它只搬运字节并参与撤销；\n解析器、构建器和修补器位于别处，通过 OnTextChanged 访问。\n这使得在前端仍在编写期间，它依然可测试、可落地，也意味着\n一个格式错误的文件仍然是你可以通过编辑摆脱的文件，\n而不是一个拒绝存在的文件。\n\n调用方必须知道两个约定，二者都是有意选择而非顺手形成的——理由分别见\nSetContent 和 PostEditUndo 的注释：\n\n  1. 调用方负责事务。SetContent 只调用 Modify()；它从不开启事务。\n  2. 内存是事实，磁盘是可能滞后的投影。写入失败（只读文件、\n     未签出）时会保留这次编辑，说明情况，并在下一次刷新时重试。"
+    state machine
+}
+
+DreamUIDocument:Content {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#DreamUIDocument:Content
+    src   "The whole `.dui` file.\n\nA plain UPROPERTY, and it must stay one: this being in the transaction record is the entire\npoint of the class. Marking it Transient would be harmless (a transacting archive is not\npersistent, so transient properties are still recorded) but marking it NonTransactional would\nsilently remove it from undo and leave every test that checks the object passing."
+    text  "整个 `.dui` 文件。\n\n一个普通的 UPROPERTY，而且必须保持如此：它处于事务记录之中，正是这个类\n存在的全部意义。将其标记为 Transient 是无害的（事务归档不是持久化的，\n因此瞬态属性仍会被记录），但将其标记为 NonTransactional 会悄无声息地\n把它从撤销中移除，并让所有检查该对象的测试仍然通过。"
+    state machine
+}
+
+EDreamUIDocumentChangeReason {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason
+    src   "Why Content changed. The host regenerates the same way for all of them; this is for logging and for gating."
+    text  "Content 发生变化的原因。宿主对所有原因都按相同方式重新生成；这个值用于日志和门控。"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.Edited {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:Edited
+    src   "SetContent: an editor action wrote new text. Recorded in the caller's transaction."
+    text  "SetContent：编辑器操作写入了新文本。记录在调用方的事务中。"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.Reloaded {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:Reloaded
+    src   "LoadFromFile: the bytes on disk are now the truth, because someone outside the editor wrote them."
+    text  "LoadFromFile：磁盘上的字节现在是事实，因为编辑器之外的某个程序写入了它们。"
+    state machine
+}
+
+EDreamUIDocumentChangeReason.UndoRedo {
+    at    Source/DreamGUIEditor/Public/Text/DreamUIDocument.h#EDreamUIDocumentChangeReason:UndoRedo
+    src   "The transaction system put an older (or newer) Content back.\n\nUndo and redo are one value on purpose -- see the PostEditUndo comment: the engine does not\ntell us which one this was, and the document's response is identical either way."
+    text  "事务系统把一个更旧（或更新）的 Content 放了回来。\n\n撤销和重做有意共用一个值——参见 PostEditUndo 的注释：引擎不会\n告诉我们这是哪一个，而文档对两者的响应完全相同。"
+    state machine
+}

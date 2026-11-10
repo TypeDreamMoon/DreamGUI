@@ -1,0 +1,166 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamSelectableStyle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle
+    src   "Dream Selectable Style"
+    text  "可选择样式"
+    state machine
+}
+
+DreamSelectableStyle:AnimationDuration {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:AnimationDuration
+    src   "Animation Duration"
+    text  "动画持续时间"
+    state machine
+}
+
+DreamSelectableStyle:bUseFocusedVisuals {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:bUseFocusedVisuals
+    src   "Use Focused Visuals"
+    text  "使用聚焦视觉效果"
+    state machine
+}
+
+DreamSelectableStyle:ClickedForceFeedback {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:ClickedForceFeedback
+    src   "Clicked Force Feedback"
+    text  "点击力反馈"
+    state machine
+}
+
+DreamSelectableStyle:ClickedSound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:ClickedSound
+    src   "Clicked Sound"
+    // from the engine's zh-Hans
+    text  "Clicked Sound"
+    state draft
+}
+
+DreamSelectableStyle:DisabledColor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:DisabledColor
+    src   "Disabled Color"
+    text  "禁用颜色"
+    state machine
+}
+
+DreamSelectableStyle:DisabledImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:DisabledImageBrush
+    src   "Disabled Image Brush"
+    text  "禁用图像笔刷"
+    state machine
+}
+
+DreamSelectableStyle:FocusedColor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:FocusedColor
+    src   "Focused Color"
+    text  "聚焦颜色"
+    state machine
+}
+
+DreamSelectableStyle:FocusedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:FocusedImageBrush
+    src   "Focused Image Brush"
+    text  "聚焦图像笔刷"
+    state machine
+}
+
+DreamSelectableStyle:HoveredColor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:HoveredColor
+    src   "Hovered Color"
+    // from the engine's zh-Hans
+    text  "悬停颜色"
+    state draft
+}
+
+DreamSelectableStyle:HoveredImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:HoveredImageBrush
+    src   "Hovered Image Brush"
+    text  "悬停图像笔刷"
+    state machine
+}
+
+DreamSelectableStyle:HoveredSound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:HoveredSound
+    src   "Hovered Sound"
+    // from the engine's zh-Hans
+    text  "悬停音效"
+    state draft
+}
+
+DreamSelectableStyle:NormalColor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:NormalColor
+    src   "Normal Color"
+    text  "正常颜色"
+    state machine
+}
+
+DreamSelectableStyle:NormalImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:NormalImageBrush
+    src   "Normal Image Brush"
+    text  "正常图像笔刷"
+    state machine
+}
+
+DreamSelectableStyle:PressedColor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:PressedColor
+    src   "Pressed Color"
+    text  "按下颜色"
+    state machine
+}
+
+DreamSelectableStyle:PressedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:PressedImageBrush
+    src   "Pressed Image Brush"
+    text  "按下图像笔刷"
+    state machine
+}
+
+DreamSelectableStyle:PressedSound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:PressedSound
+    src   "Pressed Sound"
+    // from the engine's zh-Hans
+    text  "按压音效"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamSelectableStyle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle
+    src   "Reusable appearance shared by Button, Toggle, Slider and other selectable controls."
+    text  "可重用的外观，适用于按钮、切换按钮、滑块和其他可选择控件。"
+    state machine
+}
+
+DreamSelectableStyle:bUseFocusedVisuals {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:bUseFocusedVisuals
+    src   "Give keyboard and gamepad focus a look of its own. Off, a focused control wears the Hovered\nvisuals -- what every control authored before focus was a separate state already expects, and\nstill the right answer for a UI that is only ever driven by a pointer."
+    text  "让键盘和手柄焦点拥有独立的外观。关闭时，获得焦点的控件沿用悬停\n视觉效果——这也是焦点成为独立状态之前创建的所有控件所预期的，\n对于仅由指针驱动的 UI 而言仍是正确的选择。"
+    state machine
+}
+
+DreamSelectableStyle:ClickedForceFeedback {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:ClickedForceFeedback
+    src   "Rumble on click, for the gamepad the click came from."
+    text  "点击时，为游戏手柄提供震动反馈。"
+    state machine
+}
+
+DreamSelectableStyle:HoveredSound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:HoveredSound
+    src   "Audio and rumble live on the style, not the instance: a click should sound like the OTHER\nclicks in this UI, which is a shared decision the same way its colors are. Navigation gets no\nslot of its own -- moving focus fires Enter on the target, so HoveredSound already plays once\nper move."
+    text  "音频和震动归属于样式而非实例：一次点击的声音应当与此 UI 中其他\n点击一致，这与其颜色一样是共享的决定。导航没有\n自己的槽位——移动焦点会在目标上触发 Enter，因此 HoveredSound 每次移动\n时已经会播放一次。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Feedback {
+    at    Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h#DreamSelectableStyle:HoveredSound
+    src   "Feedback"
+    // from the engine's zh-Hans
+    text  "反馈"
+    state draft
+}

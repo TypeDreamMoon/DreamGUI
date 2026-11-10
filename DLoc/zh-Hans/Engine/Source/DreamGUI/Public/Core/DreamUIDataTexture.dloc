@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDataTexture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataTexture.h#DreamUIDataTexture
+    src   "Dream UIData Texture"
+    text  "Dream UIData纹理"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIDataTexture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataTexture.h#DreamUIDataTexture
+    src   "The texture a canvas's widget data, clip data and rect block data live in: rows of values the shaders read with\nLoad, one row -- or one block of pixels on a row -- per widget, clip or rect block.\n\nWhat it has that the UTexture2DDynamic before it did not is that it grows in place. A texture that has run out of\nrows is replaced on the render thread by a taller one holding the same rows, and the texture's reference -- what a\nmaterial, a material instance and the built-in shader all bind -- is pointed at the new one in the same command.\nEverything that samples this texture follows it without being told: no parameter to set again, no draw call to\nrebuild, no flush of the RHI. The UTexture2DDynamic was swapped for a new object instead, so every material instance,\npooled or not, and every render-thread copy of its resource had to hear of it, and one that did not drew through a\ntexture the collector had taken.\n\nThe render thread keeps a copy of the pixels. A frame's writes land in the copy in the order they were made, and go\nup as one texture update per run of rows they touched rather than one per write; growing uploads the copy into the\ntaller texture rather than copying texture to texture.\n\nIts size lives outside its properties on purpose: made at run time in the transient package and never saved,\nduplicated or copied, a copy that reached it anyway has no size, and makes no resource."
+    text  "纹理，画布的控件数据、裁剪数据和矩形块数据都存放在其中：着色器使用\nLoad读取的值行，每个控件、裁剪或矩形块对应一行——或一行上的一块像素。\n\n它与之前的UTexture2DDynamic不同之处在于，它会原地增长。一个已经用完\n行的纹理会由渲染线程替换为持有相同行的更高纹理，而该纹理的引用——材质、材质实例和内置着色器\n所绑定的对象——会在同一条命令中指向新纹理。\n所有对此纹理采样的内容都会自动跟随它：无需重新设置参数，无需重建绘制调用，\n也无需刷新RHI。UTexture2DDynamic则是被替换为一个新对象，因此每个材质实例，\n无论是否池化，以及其资源的每个渲染线程副本，都必须收到通知，而未收到通知的对象会通过\n已被收集器回收的纹理进行绘制。\n\n渲染线程保留一份像素副本。一帧的写入会按写入顺序落到副本中，并按它们涉及的连续行\n合并为一次纹理更新，而不是每次写入各更新一次；增长时会将副本上传到\n更高的纹理中，而不是在纹理之间复制。\n\n其尺寸有意放在属性之外：它在运行时于临时包中创建，从不会被保存、\n复制或拷贝，因此任何仍然到达它的副本都没有尺寸，也不会创建资源。"
+    state machine
+}

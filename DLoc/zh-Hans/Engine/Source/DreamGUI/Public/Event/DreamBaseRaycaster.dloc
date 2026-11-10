@@ -1,0 +1,111 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBaseRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster
+    src   "Dream Base Raycaster"
+    text  "DreamBaseRaycaster"
+    state machine
+}
+
+DreamBaseRaycaster:GetAffectByGamePause:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetAffectByGamePause:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetPointerID:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetPointerID:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetRayDirection:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetRayLength:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetRayOrigin:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayOrigin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetUserIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:PointerID {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:PointerID
+    src   "Pointer ID"
+    text  "指针 ID"
+    state machine
+}
+
+DreamBaseRaycaster:SetPointerID:Value {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetPointerID:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBaseRaycaster:SetUserIndex:InUserIndex {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetUserIndex:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamBaseRaycaster:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamBaseRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster
+    src   "Base interaction component that perform a raycast hit test"
+    text  "基础交互组件，用于执行射线投射碰撞检测。"
+    state machine
+}
+
+DreamBaseRaycaster:PointerID {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:PointerID
+    src   "Link PointerID, limit this raycaster to work on specific pointer. This is useful when multiple pointer interact in same level.\nDefault is -1, means this raycaster will work on all pointers."
+    text  "链接 PointerID，限制此射线投射器仅对特定指针生效。当多个指针在同一场景中交互时，这非常有用。\n默认值为 -1，表示此射线投射器将作用于所有指针。"
+    state machine
+}
+
+DreamBaseRaycaster:SetUserIndex {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetUserIndex
+    src   "Which local player this raycaster speaks for -- the same index as that player's event system.\n\nAuthored in the Details panel for a placed raycaster; this setter exists for the ones the screen\nsubsystem creates, one per local player, which have no author to type it."
+    text  "此射线投射器代表哪个本地玩家——与该玩家事件系统的索引相同。\n\n对于已放置的射线投射器，此值在细节面板中编写；此设置器供屏幕\n子系统创建的射线投射器使用，每个本地玩家一个，它们没有可键入该值的作者。"
+    state machine
+}

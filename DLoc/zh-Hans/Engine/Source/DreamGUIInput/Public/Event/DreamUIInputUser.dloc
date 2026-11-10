@@ -1,0 +1,130 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIInputUser {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser
+    src   "Dream UIInput User"
+    text  "Dream UIInput用户"
+    state machine
+}
+
+DreamUIInputUser:GetFocusCause:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusCause:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:GetFocusedWidget:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusedWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:GetPlayerController:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetPlayerController:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:GetUserIndex:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:IsFocusVisible:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsFocusVisible:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:IsScriptUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsScriptUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:PinchEventData {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:PinchEventData
+    src   "Pinch Event Data"
+    text  "捏合事件数据"
+    state machine
+}
+
+DreamUIInputUser:PointerEventDataMap {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:PointerEventDataMap
+    src   "Pointer Event Data Map"
+    text  "指针事件数据映射"
+    state machine
+}
+
+DreamUIInputUser:TextKeys {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:TextKeys
+    src   "Text Keys"
+    text  "文本按键"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIInputUser {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser
+    src   "One player's input: their pointers, what each pointer is doing to the world, the device in their hands,\nthe cursor the UI lent their controller, their settings, and the dispatch of every event their pointers\nproduce.\n\nOwned by the world's UDreamUIInputSubsystem, one per local player -- made when the player joins, taken\ndown (every hover exited, every press let go) when the player leaves or the world ends -- and one per\nscript user, a player with no local player behind it that a test or a headless rig drives by hand.\n\nAn event system (UDreamEventSystem) is what a level places for a player. It used to be where all of this\nlived, which tied a player's input to an actor: a second player had none, an event system destroyed with\na sub-level took its player's hovers and presses with it in silence, and a service had to find \"the\" event\nsystem in its tick to hear anything. The event system is now the player's face in the level -- its\ndetails panel writes these settings, its Blueprint functions and events read and write them here -- and\nthe input module an input source feeds is the player's."
+    text  "单个玩家的输入：其指针、每个指针对世界所做的操作、其手中的设备、\nUI借给其控制器的光标、其设置，以及其指针产生的每个事件的\n分发。\n\n归世界的UDreamUIInputSubsystem所有，每个本地玩家一个——玩家加入时创建，玩家离开或世界\n结束时拆除（退出每次悬停、松开每次按下）——每个脚本用户一个，即背后没有本地玩家、\n由测试或无头装置手动驱动的玩家。\n\n事件系统（UDreamEventSystem）是关卡为玩家放置的东西。它曾经承载所有这些\n内容，这就把玩家的输入绑定到了某个Actor上：第二个玩家没有输入，随子关卡一起销毁的\n事件系统会悄无声息地带走其玩家的悬停和按下，而服务必须在tick中找到“那个”事件\n系统才能听到任何东西。现在事件系统是玩家在关卡中的门面——其\n细节面板写入这些设置，其蓝图函数和事件在此读写它们——而\n输入源所馈送的输入模块属于该玩家。"
+    state machine
+}
+
+DreamUIInputUser:GetFocusCause {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusCause
+    src   "What last moved this player's focus: a pointer's press, a directional step, Tab, or code. Recorded by the input\nsystem as it moves the focus -- the pointer module's selection, the navigation step, FocusForNavigation -- and read\nthrough UDreamUIInputServices::GetFocusCause by what draws the focus and by a text field Tab lands on."
+    text  "最近一次移动此玩家焦点的原因：指针按下、方向步进、Tab或代码。由输入\n系统在移动焦点时记录——指针模块的选择、导航步进、FocusForNavigation——并由绘制焦点的对象以及Tab落入的文本字段\n通过UDreamUIInputServices::GetFocusCause读取。"
+    state machine
+}
+
+DreamUIInputUser:GetFocusedWidget {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusedWidget
+    src   "What this player has focused: the widget their keys, characters and sticks go to."
+    text  "此玩家当前聚焦的内容：其按键、字符和摇杆所指向的控件。"
+    state machine
+}
+
+DreamUIInputUser:GetPlayerController {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetPlayerController
+    src   "This player's controller; see UDreamEventSystem::GetPlayerControllerForUser."
+    text  "此玩家的控制器；请参见UDreamEventSystem::GetPlayerControllerForUser。"
+    state machine
+}
+
+DreamUIInputUser:IsFocusVisible {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsFocusVisible
+    src   "UDreamUIInputServices::IsFocusVisible for this player."
+    text  "此玩家的UDreamUIInputServices::IsFocusVisible。"
+    state machine
+}
+
+DreamUIInputUser:IsScriptUser {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsScriptUser
+    src   "A player with no local player behind it: a test, a headless rig, a script driving input by hand."
+    text  "背后没有本地玩家的玩家：测试、无头装置、手动驱动输入的脚本。"
+    state machine
+}
+
+DreamUIInputUser:TextKeys {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:TextKeys
+    src   "The text target's keys, bound for this player and pushed on their controller while there is a target."
+    text  "文本目标的按键，为此玩家绑定，并在存在目标时压入其控制器。"
+    state machine
+}

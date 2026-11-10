@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamUIFontData
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamUIFontData_Bitmap.cpp
+    src   "DreamUI Font Data Bitmap"
+    text  "DreamUI 字体数据位图"
+    state machine
+}

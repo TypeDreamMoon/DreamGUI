@@ -1,0 +1,105 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRenderTargetInteraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction
+    src   "Dream UIRender Target Interaction"
+    text  "Dream UI 渲染目标交互"
+    state machine
+}
+
+DreamUIRenderTargetInteraction:bAllowEventBubbleUp {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction:bAllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+DreamUIRenderTargetInteraction:LineTraceSource {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction:LineTraceSource
+    src   "Line Trace Source"
+    text  "线追踪源"
+    state machine
+}
+
+DreamUIRenderTargetInteraction:TargetCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction:TargetCanvas
+    src   "Target Canvas"
+    text  "目标画布"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface
+    src   "Dream UIRender Target Interaction Source Interface"
+    text  "Dream UI 渲染目标交互源接口"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InHitFaceIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InHitFaceIndex
+    src   "In Hit Face Index"
+    text  "命中面索引"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InHitPoint {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InHitPoint
+    src   "In Hit Point"
+    text  "命中点"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InLineEnd {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InLineEnd
+    src   "In Line End"
+    text  "线段结束"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InLineStart {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InLineStart
+    src   "In Line Start"
+    text  "线段开始"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:OutHitUV {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:OutHitUV
+    src   "Out Hit UV"
+    text  "命中 UV"
+    state machine
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIRenderTargetInteraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction
+    src   "Lets pointers reach the UI a DreamUICanvas with RenderMode of RenderTarget draws onto a mesh.\nThis component should be placed on a actor which have a IDreamUIRenderTargetInteractionSourceInterface component.\n\nA nested surface (IDreamUINestedSurface): when a pointer's world ray lands on this actor, the input system asks\nthis component where on the target canvas the ray lands, and the widget there is what that pointer is over. The\none pipeline serves it -- every pointer and every player with its own state inside the surface, the broadcasts\ntooltips and drag visuals hang off, double clicks. It used to run a pipeline of its own in its tick, with one\nsynthesised pointer for every pointer and player there was, and none of that.\n\nThe pointer interfaces are still implemented, and do nothing but answer bAllowEventBubbleUp: over a part of the\nsurface with no widget, the actor is what the pointer is over, and its events bubble as they always have."
+    text  "让指针可以触及由RenderMode为RenderTarget的DreamUICanvas绘制到网格上的UI。\n此组件应放置在拥有IDreamUIRenderTargetInteractionSourceInterface组件的Actor上。\n\n嵌套表面（IDreamUINestedSurface）：当指针的世界射线落在此Actor上时，输入系统会询问\n此组件射线落在目标画布上的哪个位置，那里的控件就是该指针所悬停的控件。这\n一条管线为其服务——每个指针和每个玩家在表面内都有各自的状态，工具提示和拖拽视觉效果所依附的广播，\n双击也都由它处理。它过去在Tick中运行自己的管线，为当时的每个指针和玩家各\n合成一个指针，而这些都不再有了。\n\n指针接口仍然实现，但除了回答bAllowEventBubbleUp外不做任何事：在没有控件的\n表面上，Actor就是指针所悬停的对象，其事件会像以往一样冒泡。"
+    state machine
+}
+
+DreamUIRenderTargetInteraction:bAllowEventBubbleUp {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteraction:bAllowEventBubbleUp
+    src   "inherited events of this component can bubble up?"
+    text  "此组件继承的事件是否可向上冒泡？"
+    state machine
+}

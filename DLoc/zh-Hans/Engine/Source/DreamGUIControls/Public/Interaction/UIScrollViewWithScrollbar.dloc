@@ -1,0 +1,176 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EDreamUIScrollViewScrollbarVisibility.AutoHide {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#EDreamUIScrollViewScrollbarVisibility:AutoHide
+    src   "Auto Hide"
+    text  "自动隐藏"
+    state machine
+}
+
+EDreamUIScrollViewScrollbarVisibility.EDreamUIScrollViewScrollbarVisibility_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#EDreamUIScrollViewScrollbarVisibility:EDreamUIScrollViewScrollbarVisibility_MAX
+    src   "EDream UIScroll View Scrollbar Visibility MAX"
+    text  "EDream UIScroll View Scrollbar 可视性 MAX"
+    state machine
+}
+
+EDreamUIScrollViewScrollbarVisibility.Permanent {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#EDreamUIScrollViewScrollbarVisibility:Permanent
+    src   "Permanent"
+    text  "永久显示"
+    state machine
+}
+
+UIScrollViewWithScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar
+    src   "UIScroll View with Scrollbar"
+    text  "带滚动条的滚动视图"
+    state machine
+}
+
+UIScrollViewWithScrollbar:GetHorizontalScrollbar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:GetVerticalScrollbar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:GetViewport:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:HorizontalScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:HorizontalScrollbar
+    src   "Horizontal Scrollbar"
+    text  "水平滚动条"
+    state machine
+}
+
+UIScrollViewWithScrollbar:HorizontalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:HorizontalScrollbarVisibility
+    src   "Horizontal Scrollbar Visibility"
+    text  "水平滚动条可视性"
+    state machine
+}
+
+UIScrollViewWithScrollbar:HorizontalScrollbarWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:HorizontalScrollbarWidget
+    src   "Horizontal Scrollbar Widget"
+    text  "水平滚动条控件"
+    state machine
+}
+
+UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:SetVerticalScrollbarVisibility:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:SetVerticalScrollbarVisibility:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollViewWithScrollbar:VerticalScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:VerticalScrollbar
+    src   "Vertical Scrollbar"
+    text  "垂直滚动条"
+    state machine
+}
+
+UIScrollViewWithScrollbar:VerticalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:VerticalScrollbarVisibility
+    src   "Vertical Scrollbar Visibility"
+    text  "垂直滚动条可视性"
+    state machine
+}
+
+UIScrollViewWithScrollbar:VerticalScrollbarWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:VerticalScrollbarWidget
+    src   "Vertical Scrollbar Widget"
+    text  "垂直滚动条控件"
+    state machine
+}
+
+UIScrollViewWithScrollbar:Viewport {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:Viewport
+    src   "Viewport"
+    // from the engine's zh-Hans
+    text  "视口"
+    state draft
+}
+
+namespace UObjectToolTips
+
+EDreamUIScrollViewScrollbarVisibility.AutoHide {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#EDreamUIScrollViewScrollbarVisibility:AutoHide
+    src   "Auto hide scrollbar when content's size less than viewport's size."
+    text  "当内容大小小于视口大小时自动隐藏滚动条。"
+    state machine
+}
+
+EDreamUIScrollViewScrollbarVisibility.Permanent {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#EDreamUIScrollViewScrollbarVisibility:Permanent
+    src   "Always visible."
+    text  "始终可见。"
+    state machine
+}
+
+UIScrollViewWithScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar
+    src   "SUPERSEDED by UDreamScrollBox (`Native.ScrollBox`), and unreferenced by the plugin as of the\ncontrol library: nothing in Source/ constructs one, and the palette has never offered it.\n\nIt pairs a scroll view with scrollbars, which is what UDreamScrollBox does -- except the\ncontrol owns a real UDreamScrollBar rather than driving a bar somebody else placed, so the\nhandle geometry and the drag scale are computed from the same numbers. This class is the\nreason UDreamScrollBar's minimum handle size lives on the behaviour: two owners of one\nmeasurement is the bug that move was made to prevent.\n //ScrollView with scrollbars"
+    text  "已被 UDreamScrollBox（`Native.ScrollBox`）取代，且截至\n控件库，插件中已无任何引用：Source/ 中没有任何代码会构造它，控件面板也从未提供过它。\n\n它将滚动视图与滚动条配对，这正是 UDreamScrollBox 所做的事——只不过该\n控件拥有一个真正的 UDreamScrollBar，而不是去驱动由他人放置的滚动条，因此\n滑块几何与拖动比例都由同一组数值计算得出。本类正是\nUDreamScrollBar 的最小滑块尺寸位于行为对象上的原因：同一测量值有两个所有者，\n正是那次迁移所要避免的缺陷。\n //ScrollView with scrollbars"
+    state machine
+}
+
+UIScrollViewWithScrollbar:Viewport {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:Viewport
+    src   "For scrollbars to expand or shrink viewport"
+    text  "用于使滚动条扩展或缩小视口。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-ScrollViewWithScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbar
+    src   "DreamGUI-ScrollViewWithScrollbar"
+    text  "DreamGUI-ScrollViewWithScrollbar"
+    state machine
+}

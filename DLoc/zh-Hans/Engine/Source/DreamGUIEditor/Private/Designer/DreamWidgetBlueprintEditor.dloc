@@ -1,0 +1,729 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesigner
+
+UniqueWidgetNamesOnOpen {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Renamed {0} duplicate widget name(s) using UMG-style numeric suffixes. Save to keep the migration."
+    text  "已使用 UMG 风格的数字后缀重命名 {0} 个重复控件名称。请保存以保留迁移结果。"
+    state machine
+}
+
+DuplicateNamesInText {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "{0} widget name(s) appear more than once in '{1}': {2}. Rename them in the .dui."
+    text  "“{1}”中有 {0} 个控件名称重复出现：{2}。请在 .dui 中重命名它们。"
+    state machine
+}
+
+SharedParentRequired {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "This action needs the selected widgets to share a parent."
+    text  "此操作要求所选控件具有相同的父级。"
+    state machine
+}
+
+AlignLayoutParent {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "The shared parent has a layout container that positions its children -- align/distribute would be overridden by the layout."
+    text  "该共同父级具有定位其子项的布局容器——对齐/分布会被布局覆盖。"
+    state machine
+}
+
+AlignWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Align Widgets"
+    text  "对齐控件"
+    state machine
+}
+
+AlignDistribute {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Align"
+    // from the engine's zh-Hans
+    text  "对齐"
+    state draft
+}
+
+AlignSubMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Align"
+    // from the engine's zh-Hans
+    text  "对齐"
+    state draft
+}
+
+AlignSubMenuTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Line the selected sibling widgets up along an edge or center (they must share a parent)."
+    text  "将所选同级控件沿某条边缘或中心对齐（它们必须具有相同的父级）。"
+    state machine
+}
+
+AlignLeft {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Left Edges"
+    text  "左边缘"
+    state machine
+}
+
+AlignCenterH {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Horizontal Centers"
+    text  "水平中心"
+    state machine
+}
+
+AlignRight {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Right Edges"
+    text  "右边缘"
+    state machine
+}
+
+AlignTop {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Top Edges"
+    text  "上边缘"
+    state machine
+}
+
+AlignCenterV {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Vertical Centers"
+    text  "垂直中心"
+    state machine
+}
+
+AlignBottom {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Bottom Edges"
+    text  "下边缘"
+    state machine
+}
+
+DistributeSubMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Distribute"
+    // from the engine's zh-Hans
+    text  "分配"
+    state draft
+}
+
+DistributeSubMenuTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Even out the gaps between the selected sibling widgets (keeps the two outermost fixed)."
+    text  "使选定的相邻控件之间的间距均匀（保持最外侧两者的固定位置）。"
+    state machine
+}
+
+DistributeH {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Horizontally"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+DistributeV {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Vertically"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+DistributeWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Distribute Widgets"
+    text  "对齐控件。"
+    state machine
+}
+
+UnwrapWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Unwrap Widget"
+    text  "取消包装控件。"
+    state machine
+}
+
+FindReferencesProjectWide {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "{0} is a {1}; {2} other asset(s) use that class. The Output Log lists them."
+    text  "{0} 是一个 {1}；其他 {2} 个资源使用了该类。详细信息请查看输出日志。"
+    state machine
+}
+
+WrapWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Wrap Widgets"
+    // from the engine's zh-Hans
+    text  "包裹控件"
+    state draft
+}
+
+WrapLayoutRefused {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "{0} cannot hold {1} children."
+    text  "{0} 不能包含 {1} 个子元素。"
+    state machine
+}
+
+WrapNotMirrored {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Wrap With could not be applied to the asset, so it was rolled back."
+    text  "无法将“Wrap With”应用于该资源，已回滚。"
+    state machine
+}
+
+PanelNotOwnLine {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "its panel comes from its style, not from its own type or '+' line; change it there in the text"
+    text  "其面板来自样式，而不是其自身类型或“+”行；请在该处进行更改。"
+    state machine
+}
+
+ReplaceWidgetLayout {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Replace Widget Layout"
+    text  "替换控件布局。"
+    state machine
+}
+
+ReplaceLayoutRefused {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "{0} cannot hold {1} children."
+    text  "{0} 不能包含 {1} 个子元素。"
+    state machine
+}
+
+ToggleDesignerVisibility {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Toggle Designer Visibility"
+    text  "切换设计器可视性。"
+    state machine
+}
+
+ToggleDesignerLock {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Toggle Designer Lock"
+    text  "切换设计器锁定状态。"
+    state machine
+}
+
+SetDesignScreenSize {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Set Design Screen Size"
+    text  "设置设计屏幕尺寸。"
+    state machine
+}
+
+SizeRuleDesiredNoMeasurement {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Nothing in this prefab measures itself. Give the root widget a UMG-compatible panel and the canvas can be sized to what it contains, or choose Custom and type the root's current size."
+    text  "此预制件中没有任何元素进行自适应测量。为根控件添加一个与 UMG 兼容的面板，然后可以将画布大小调整为内容，或者选择“自定义”并输入根元素的当前尺寸。"
+    state machine
+}
+
+SizeRuleDesiredScaled {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "This prefab's canvas rule turns a {0} x {1} device into a {2} x {3} canvas, so the canvas cannot be sized to the content. Set the root DreamCanvas to Constant Pixel Size first."
+    text  "此预制件的画布规则会将 {0} x {1} 的设备转换为 {2} x {3} 的画布，因此画布无法根据内容进行调整。请先将根 DreamCanvas 设置为“恒定像素大小”。"
+    state machine
+}
+
+ArrangeCombo {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Arrange"
+    text  "对齐"
+    state machine
+}
+
+ArrangeComboTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Align or distribute the selected sibling widgets. Align needs two selected, Distribute three."
+    text  "对齐或分布所选的子控件。对齐需要选择两个控件，分布需要选择三个控件。"
+    state machine
+}
+
+NoTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "No Source File"
+    text  "无源文件"
+    state machine
+}
+
+NoTextSourceTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "This class builds its hierarchy from a .dui, and does not name one yet. Pick a file to author it in."
+    text  "此类从 .dui 文件构建其层次结构，尚未为其命名。请选择一个文件进行编辑。"
+    state machine
+}
+
+ConvertToTextButton {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Convert to Text"
+    text  "转换为文本"
+    state machine
+}
+
+ConvertToTextButtonTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Write this hierarchy, its bindings and its routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."
+    text  "将此层次结构、其绑定和其路由写入 DUI 文件夹下的新 .dui 文件，并从此以后从该文件构建类。无法在文件中容纳的内容将首先列出，并在进行任何更改之前备份资产。"
+    state machine
+}
+
+TextSourceSection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "DreamUI Source"
+    text  "DreamUI 源代码"
+    state machine
+}
+
+CreateTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Create Source File..."
+    text  "创建源文件..."
+    state machine
+}
+
+CreateTextSourceTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Write a new .dui with a starter hierarchy, point this class at it, and compile."
+    text  "使用包含基本层次结构的 `.dui` 文件，并将其指向此类，然后重新编译。"
+    state machine
+}
+
+PickTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Set Source File..."
+    text  "选择源文件..."
+    state machine
+}
+
+PickTextSourceTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Choose the .dui this class builds its hierarchy from, then recompile."
+    text  "选择此类构建其层次结构的 `.dui` 文件，然后重新编译。"
+    state machine
+}
+
+OpenTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Open in Default Editor"
+    text  "在默认编辑器中打开"
+    state machine
+}
+
+OpenTextSourceTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Open the .dui in whatever application the system opens .dui files with."
+    text  "在系统默认打开 .dui 文件的应用程序中打开该文件。"
+    state machine
+}
+
+ShowTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Show in Explorer"
+    // from the engine's zh-Hans
+    text  "在浏览器中显示"
+    state draft
+}
+
+ShowTextSourceTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Select the .dui in the file browser."
+    text  "在文件浏览器中选择 .dui 文件。"
+    state machine
+}
+
+RevealInVSCode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Reveal in VS Code"
+    text  "在 VS Code 中打开"
+    state machine
+}
+
+RevealInVSCodeTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Put the VS Code cursor on the line of the .dui that declares the selected widget, opening the DreamUI workspace first if VS Code is not running."
+    text  "将 VS Code 光标置于声明所选小部件的 .dui 文件的行，如果 VS Code 未运行，则首先打开 DreamUI 工作区。"
+    state machine
+}
+
+MissingTextSource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Not found: {0}"
+    text  "未找到：{0}"
+    state machine
+}
+
+RevealNoSourceFile {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "There is no .dui on disk for this widget Blueprint, so there is no line to reveal."
+    text  "此小部件蓝图没有对应的 .dui 文件，因此无法显示其声明行。"
+    state machine
+}
+
+RevealWriteFailed {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "DreamUI could not write the reveal request under Saved/DreamGUI/Bridge."
+    text  "DreamUI 无法在 Saved/DreamGUI/Bridge 目录下写入显示请求。"
+    state machine
+}
+
+RevealedFile {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Revealed {0} in VS Code."
+    text  "已在 VS Code 中打开 {0}。"
+    state machine
+}
+
+RevealedWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Revealed '{0}' at {1}({2}) in VS Code."
+    text  "已在 VS Code 中打开 '{0}'，位于 {1}({2})。"
+    state machine
+}
+
+PickTextSourceTitle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Pick a DreamUI source file"
+    text  "选择 DreamUI 源代码文件"
+    state machine
+}
+
+TextSourceExists {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "'{0}' already exists. Use Set Source File... to point at it."
+    text  "“{0}”已存在。请使用“设置源文件...”将其指向。"
+    state machine
+}
+
+TextSourceNotWritten {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Could not write '{0}'."
+    text  "无法写入“{0}”。"
+    state machine
+}
+
+TextSourceNotNamedByClass {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Wrote '{0}', but this class could not be pointed at it. Compile the class, then use Set Source File... to point at it."
+    text  "已写入“{0}”，但此类未指向该文件。请编译该类，然后使用“设置源文件...”将其指向该文件。"
+    state machine
+}
+
+CreateTextSourceTitle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Create a DreamUI source file"
+    text  "创建 DreamUI 源文件"
+    state machine
+}
+
+DreamWidgetDesignerAppLabel {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "DreamUI Designer"
+    text  "DreamUI 设计器"
+    state machine
+}
+
+LoadingAsset {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "Loading Asset {0}"
+    // from the engine's zh-Hans
+    text  "正在加载资产{0}"
+    state draft
+}
+
+Error_SelfAsChild {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "A hierarchy cannot contain itself."
+    text  "层次结构不能包含自身。"
+    state machine
+}
+
+Error_CyclicNesting {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "That hierarchy derives from this one, so placing it here would nest this hierarchy inside itself."
+    text  "该层次结构源自此层次结构，因此将其放置此处会导致此层次结构嵌套在自身内部。"
+    state machine
+}
+
+Error_ParentAtCapacity {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "The target widget cannot accept the dropped hierarchy."
+    text  "目标控件无法接受此层次结构。"
+    state machine
+}
+
+CreateFromAssetDrop_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "DreamUI Create from asset drop"
+    text  "DreamUI 从资源创建"
+    state machine
+}
+
+CreateWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "DreamUI Create Widget"
+    text  "DreamUI 创建控件"
+    state machine
+}
+
+BehaviourNoSpelling {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "the .dui has no name for this behaviour"
+    text  "此行为在 .dui 文件中没有名称。"
+    state machine
+}
+
+BehaviourNotOwnLine {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "it comes from the node's style or type, not from a '+' line of its own; change it there in the text"
+    text  "它来自节点的样式或类型，而不是节点的自己的 '+' 行；请在该处进行更改。"
+    state machine
+}
+
+BehaviourOrderNotOwnLines {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "only the node's own '+' lines have an order in the file, and one of these comes from its style or type"
+    text  "只有节点的自己的 '+' 行才在文件中具有顺序，其中一个来自节点的样式或类型。"
+    state machine
+}
+
+PasteTextRoot {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "a .dui holds exactly one root, and pasting into an empty hierarchy would make a new one"
+    text  "一个 .dui 文件只包含一个根节点，如果粘贴到空的层级结构中，会创建一个新的根节点。"
+    state machine
+}
+
+GraphReferenceToDoomedWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "{0} - used in {1}"
+    text  "{0} - 用于 {1}。"
+    state machine
+}
+
+SomeGraph {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp
+    src   "a graph"
+    text  "一个图表。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIDesignerSettings {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings
+    src   "DreamUI Designer"
+    text  "DreamUI 设计器。"
+    state machine
+}
+
+DreamUIDesignerSettings:bGridSnapEnabled {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bGridSnapEnabled
+    src   "Grid Snap Enabled"
+    text  "网格对齐。"
+    state machine
+}
+
+DreamUIDesignerSettings:bPreviewDPIScale {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bPreviewDPIScale
+    src   "Preview DPIScale"
+    text  "预览 DPI 缩放。"
+    state machine
+}
+
+DreamUIDesignerSettings:bRealtimeViewport {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRealtimeViewport
+    src   "Realtime Viewport"
+    // from the engine's zh-Hans
+    text  "实时视口"
+    state draft
+}
+
+DreamUIDesignerSettings:bRespectDesignerLocks {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRespectDesignerLocks
+    src   "Respect Designer Locks"
+    text  "尊重设计器锁定。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowClipMasks {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowClipMasks
+    src   "Show Clip Masks"
+    text  "显示遮罩。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerChrome {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerChrome
+    src   "Show Designer Chrome"
+    text  "显示设计器边框。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerGuides {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerGuides
+    src   "Show Designer Guides"
+    text  "显示设计器辅助线。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerRulers {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerRulers
+    src   "Show Designer Rulers"
+    text  "显示设计器标尺。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowLayoutDebug {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowLayoutDebug
+    src   "Show Layout Debug"
+    text  "显示布局调试信息。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowResolutionGuides {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowResolutionGuides
+    src   "Show Resolution Guides"
+    text  "显示分辨率参考线"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowSafeZone {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowSafeZone
+    src   "Show Safe Zone"
+    text  "显示安全区域"
+    state machine
+}
+
+DreamUIDesignerSettings:GridSize {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:GridSize
+    src   "Grid Size"
+    // from the engine's zh-Hans
+    text  "网格大小"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIDesignerSettings {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings
+    src   "How this author's designer behaves, as opposed to what the asset is. Grid snapping, the grid size\nand the overlays are preferences: kept on the asset they dirtied assets whose content nobody had\ntouched, and travelled to teammates in the diff; kept in DefaultEditor.ini they were still one\nshared project-wide value. Per-project-per-user is the same home UMG's designer uses. The canvas\nsize and the lock set stay on the asset, because those describe the hierarchy itself."
+    text  "说明此作者的设计器如何运作，而非资产本身是什么。网格吸附、网格大小\n和叠加层属于偏好设置：保存在资产上会弄脏内容无人改动过的资产，\n并在差异中传给团队成员；保存在DefaultEditor.ini中则仍是项目范围内\n共享的单一值。按项目、按用户正是UMG设计器所使用的存放位置。画布\n大小和锁定集合留在资产上，因为它们描述的是层级本身。"
+    state machine
+}
+
+DreamUIDesignerSettings:bGridSnapEnabled {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bGridSnapEnabled
+    src   "Snap designer moves and resizes to GridSize."
+    text  "使设计器中的移动和缩放吸附到GridSize。"
+    state machine
+}
+
+DreamUIDesignerSettings:bPreviewDPIScale {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bPreviewDPIScale
+    src   "Shrink the design canvas by the project's DPI curve, the way UMG's designer does.\n\nUUserInterfaceSettings::GetDPIScaleBasedOnSize turns a device resolution into the application\nscale Slate will apply, and a widget authored without it is authored at a size no device shows.\nOff by default because DreamCanvas has a scaler of its own: with both on, the canvas previews\nthe device scale AND the canvas rule, which is what actually happens at runtime."
+    text  "按项目的DPI曲线缩小设计画布，与UMG设计器的做法相同。\n\nUUserInterfaceSettings::GetDPIScaleBasedOnSize会把设备分辨率转换为Slate\n将应用的应用程序缩放比例，未按此创作的控件，其创作尺寸在任何设备上\n都不会显示。默认关闭，因为DreamCanvas有自己的缩放器：两者同时开启时，\n画布会同时预览设备缩放和画布规则，而这才是运行时实际发生的情况。"
+    state machine
+}
+
+DreamUIDesignerSettings:bRealtimeViewport {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRealtimeViewport
+    src   "Redraw the design viewport on every frame.\n\nOff, it redraws when the designer has something new to show -- a gesture, the pointer moving over\nit, a selection, a rebuild -- and otherwise four times a second, so an open designer nobody is\ntouching stops rendering its scene at the editor's frame rate. Animations and tweens playing in the\npreview are drawn at that slower rate while it is off."
+    text  "每帧重绘设计视口。\n\n关闭时，仅当设计器有新内容需要显示时才重绘——一次手势、指针在其上\n移动、一次选择、一次重建——其余时间每秒重绘四次，因此无人操作的\n设计器不再以编辑器的帧率渲染其场景。关闭期间，预览中播放的动画和\n补间也会以这一较慢的速率绘制。"
+    state machine
+}
+
+DreamUIDesignerSettings:bRespectDesignerLocks {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRespectDesignerLocks
+    src   "Honour the designer locks recorded on the asset. Turning it off reaches a locked background\nfor one edit without unlocking it, which is the only way back from a lock that would otherwise\nhave to be undone and redone. The locks themselves are untouched: this decides who reads them."
+    text  "遵循记录在资产上的设计器锁定。关闭此项后，可在不解锁的情况下对\n锁定的背景进行一次编辑，这是从锁定状态回退的唯一方式，否则只能\n先撤销再重做。锁定本身不受影响：此项决定由谁读取它们。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowClipMasks {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowClipMasks
+    src   "Outline the clip mask of each selected widget that has one: its shape where it cuts, in the clip's own frame."
+    text  "为每个具有裁剪遮罩的选中控件勾勒其裁剪遮罩：在裁剪自身的坐标系中绘制其裁剪处的形状。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerChrome {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerChrome
+    src   "Draw the selection outlines, handles, guides and readouts over the design surface."
+    text  "在设计表面之上绘制选择轮廓、控制柄、参考线和读数。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerGuides {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerGuides
+    src   "Show alignment guides while dragging in the designer."
+    text  "在设计器中拖动时显示对齐参考线。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowDesignerRulers {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerRulers
+    src   "Rulers along the top and left of the design viewport, in the canvas's own units."
+    text  "沿设计视口顶部和左侧显示的标尺，使用画布自身的单位。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowLayoutDebug {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowLayoutDebug
+    src   "Show the selected widget's measurement, arrangement, slot, ownership and clipping diagnostics."
+    text  "显示选中控件的测量、排列、槽位、归属和裁剪诊断信息。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowResolutionGuides {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowResolutionGuides
+    src   "Overlay common device resolutions on the design canvas, like UMG's designer surface."
+    text  "在设计画布上叠加常见设备分辨率，类似 UMG 的设计器画布。"
+    state machine
+}
+
+DreamUIDesignerSettings:bShowSafeZone {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowSafeZone
+    src   "Draw the platform's title-safe area on the design canvas.\n\nIts own switch, not a rider on the resolution guides. The two answer different questions -- \"how\ndoes this look on a phone\" and \"will the TV crop my HUD\" -- and tying the safe area to the\nresolution overlay meant the only way to see it was to also draw six device rectangles over the\nscreen being designed."
+    text  "在设计画布上绘制平台的标题安全区。\n\n它是独立的开关，不依附于分辨率参考线。两者回答的是不同的问题——“如何\n在手机上显示”和“电视会不会裁掉我的HUD”——而把安全区绑到\n分辨率叠加层上，就意味着要想看到它，只能同时在被设计的屏幕上\n画出六个设备矩形。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Grid Snapping" {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bGridSnapEnabled
+    src   "Grid Snapping"
+    // from the engine's zh-Hans
+    text  "网格对齐"
+    state draft
+}
+
+Performance {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRealtimeViewport
+    src   "Performance"
+    // from the engine's zh-Hans
+    text  "性能"
+    state draft
+}
+
+"Designer Locks" {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bRespectDesignerLocks
+    src   "Designer Locks"
+    text  "设计器锁定"
+    state machine
+}
+
+Visualization {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetBlueprintEditor.cpp#DreamUIDesignerSettings:bShowDesignerGuides
+    src   "Visualization"
+    // from the engine's zh-Hans
+    text  "可视化"
+    state draft
+}

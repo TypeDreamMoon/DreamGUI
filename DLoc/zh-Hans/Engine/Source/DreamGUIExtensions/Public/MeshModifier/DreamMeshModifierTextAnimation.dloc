@@ -1,0 +1,209 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierTextAnimation {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation
+    src   "TextAnimation"
+    text  "文本动画"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:GetProperties:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperties:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:GetProperty:Index {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperty:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:GetProperty:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperty:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:GetSelector:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetSelector:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:GetSelectorOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetSelectorOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:Properties {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:Properties
+    src   "Properties"
+    // from the engine's zh-Hans
+    text  "属性"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:Selector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:Selector
+    src   "Selector"
+    // from the engine's zh-Hans
+    text  "选择器"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SelectorOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SelectorOffset
+    src   "Selector Offset"
+    text  "选择器偏移量"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:SetProperties:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperties:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SetProperty:Index {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperty:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SetProperty:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperty:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SetSelector:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetSelector:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SetSelectorOffset:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetSelectorOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:TextObject {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:TextObject
+    src   "Text Object"
+    text  "文本对象"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_Property {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Property
+    src   "Dream Mesh Modifier Text Animation Property"
+    text  "Dream Mesh Modifier 文本动画属性"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_Selector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector
+    src   "Dream Mesh Modifier Text Animation Selector"
+    text  "Dream Mesh Modifier 文本动画选择器"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_Selector:GetOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:GetOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_Selector:Offset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:Offset
+    src   "Offset"
+    // from the engine's zh-Hans
+    text  "偏移"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_Selector:SetOffset:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:SetOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierTextAnimation {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation
+    src   "per character animation control for DreamText"
+    text  "用于 DreamText 的每个字符动画控制。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:Properties {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:Properties
+    src   "Properties defines which property will affect and how"
+    text  "属性定义了要影响的属性以及影响方式。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:Selector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:Selector
+    src   "Selector defines the method to select characters in text"
+    text  "选择器定义了选择文本字符的方法。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:SelectorOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SelectorOffset
+    src   "This is just a agent to selector's offset property, for Sequencer access it."
+    text  "这只是一个选择器的偏移量属性代理，用于 Sequencer 访问。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:SetProperties {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperties
+    src   "Replaces the properties. Registered, the ones going out are wound down and the ones coming in started, as on unregister and register."
+    text  "替换属性。注册时，旧属性将被停止，新属性将被启动，类似于取消注册和注册。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation:SetProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperty
+    src   "Replaces one property, winding the old one down and starting the new one when registered; see SetProperties."
+    text  "替换属性，并在注册时停止旧属性并启动新属性；请参阅 SetProperties。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_Selector:Offset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:Offset
+    src   "0 means *Properties* will have no effect, 1 means *Properties* have full effect, and middle value is interplation.\nSo we can set this \"offset\" property to make animation."
+    text  "0 表示 *属性* 不起作用，1 表示 *属性* 具有全部作用，中间值是插值。\n因此，我们可以设置此“偏移量”属性以进行动画。"
+    state machine
+}

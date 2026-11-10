@@ -1,0 +1,70 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIPlayTweenSequenceComponent {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent
+    src   "Dream UIPlay Tween Sequence Component"
+    text  "Dream UI 播放 Tween 序列组件"
+    state machine
+}
+
+DreamUIPlayTweenSequenceComponent:bPlayNextWhenCycleComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:bPlayNextWhenCycleComplete
+    src   "Play Next when Cycle Complete"
+    text  "循环完成后播放下一个"
+    state machine
+}
+
+DreamUIPlayTweenSequenceComponent:bPlayOnStart {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:bPlayOnStart
+    src   "Play on Start"
+    text  "开始播放"
+    state machine
+}
+
+DreamUIPlayTweenSequenceComponent:OnComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:OnComplete
+    src   "On Complete"
+    // from the engine's zh-Hans
+    text  "On Complete"
+    state draft
+}
+
+DreamUIPlayTweenSequenceComponent:OnCompleteBP {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:OnCompleteBP
+    src   "OnComplete"
+    // from the engine's zh-Hans
+    text  "完成时"
+    state draft
+}
+
+DreamUIPlayTweenSequenceComponent:PlayTweenArray {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:PlayTweenArray
+    src   "Play Tween Array"
+    text  "播放 Tween 数组"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIPlayTweenSequenceComponent {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent
+    src   "play tween array sequentially, one after one."
+    text  "按顺序播放 Tween 数组，一个接一个。"
+    state machine
+}
+
+DreamUIPlayTweenSequenceComponent:bPlayNextWhenCycleComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:bPlayNextWhenCycleComplete
+    src   "Play next tween when tween cycle complete, or wait until all loop complete (which could stuck at single tween if the tween's loop is infinite)."
+    text  "循环完成后播放下一个 Tween，或等待所有循环完成（如果 Tween 的循环是无限的，可能会卡在单个 Tween 上）。"
+    state machine
+}
+
+DreamUIPlayTweenSequenceComponent:PlayTweenArray {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:PlayTweenArray
+    src   "Play tween array sequentially, one after one."
+    text  "按顺序播放 Tween 数组，一个接一个。"
+    state machine
+}

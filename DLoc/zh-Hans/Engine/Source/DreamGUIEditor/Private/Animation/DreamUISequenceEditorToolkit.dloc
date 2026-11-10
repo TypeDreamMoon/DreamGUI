@@ -1,0 +1,81 @@
+dloc 1
+culture zh-Hans
+namespace DreamUISequenceEditor
+
+HealedBindings {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "{0} binding(s) in this sequence named widgets that have since been moved, and have been repointed: {1}. Save the asset to keep the repair."
+    text  "{0}个序列中，以下命名的控件已移动，已重新指向：{1}。保存资源以保留修复结果。"
+    state machine
+}
+
+UnresolvableBindings {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "{0} binding(s) in this sequence name widgets the preview tree does not have: {1}. A rename in the widget class probably happened while this asset was unloaded -- repoint them, or re-add the '(was:)' line and recompile the class with this asset open."
+    text  "{0}个序列中，以下命名的控件在预览树中不存在：{1}。可能是由于此资源未加载时，控件类发生了重命名，请重新指向它们，或重新添加“(was:)”行，并在打开此资源的情况下重新编译类。"
+    state machine
+}
+
+namespace DreamUISequenceEditorToolkit
+
+ToolkitName {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "DreamUI Animation Editor"
+    text  "DreamUI 动画编辑器"
+    state machine
+}
+
+WorldCentricTabPrefix {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "DreamUI Animation "
+    text  "DreamUI 动画 "
+    state machine
+}
+
+ViewportTab {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Viewport"
+    // from the engine's zh-Hans
+    text  "视口"
+    state draft
+}
+
+SequencerTab {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Sequencer"
+    // from the engine's zh-Hans
+    text  "Sequencer"
+    state draft
+}
+
+DetailsTab {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Details"
+    // from the engine's zh-Hans
+    text  "细节"
+    state draft
+}
+
+ViewportTabLabel {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Viewport"
+    // from the engine's zh-Hans
+    text  "视口"
+    state draft
+}
+
+DetailsTabLabel {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Details"
+    // from the engine's zh-Hans
+    text  "细节"
+    state draft
+}
+
+SequencerTabLabel {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceEditorToolkit.cpp
+    src   "Sequencer"
+    // from the engine's zh-Hans
+    text  "Sequencer"
+    state draft
+}

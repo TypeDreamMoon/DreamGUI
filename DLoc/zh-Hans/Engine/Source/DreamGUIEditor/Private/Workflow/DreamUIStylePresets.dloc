@@ -1,0 +1,125 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIStylePresets
+
+SaveDialogTitle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Save Style Preset"
+    text  "保存样式预设"
+    state machine
+}
+
+Cancelled {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "No preset was made: the Save dialog was cancelled."
+    text  "未创建预设：保存对话框已取消。"
+    state machine
+}
+
+BadPath {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "'{0}' is not a content path a preset can be made in."
+    text  "'{0}'不是可创建预设的内容路径。"
+    state machine
+}
+
+NoPackage {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "The package '{0}' could not be made."
+    text  "无法创建包'{0}'。"
+    state machine
+}
+
+NoName {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "A text preset needs a name."
+    text  "文本预设需要一个名称。"
+    state machine
+}
+
+NoText {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "The style could not be written as text."
+    text  "无法将样式写为文本。"
+    state machine
+}
+
+NewStyleTitle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "New Style"
+    text  "新建样式"
+    state machine
+}
+
+NameLabel {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+IncludeEffects {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Include Layer Effects"
+    text  "包括图层效果"
+    state machine
+}
+
+IncludeBlendingTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "The widget's blend mode and opacity go with the style, and applying the preset sets them."
+    text  "控件的混合模式和不透明度会随样式一起保存，应用该预设时会一并设置。"
+    state machine
+}
+
+IncludeBlending {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Include Layer Blending Options"
+    text  "包括图层混合选项"
+    state machine
+}
+
+AsAssetTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "A Dream Layer Style Preset asset: a layer style can follow it, and every widget following it changes with it."
+    text  "Dream图层样式预设资产：图层样式可跟随它，跟随它的每个控件都会随之变化。"
+    state machine
+}
+
+AsAsset {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Save as an asset..."
+    text  "另存为资产..."
+    state machine
+}
+
+AsTextTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Lines of .dui kept in the project settings (Plugins > Dream GUI > Editor > Style Presets)."
+    text  "保存在项目设置中的.dui行（插件 > Dream GUI > 编辑器 > 样式预设）。"
+    state machine
+}
+
+AsText {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Save in the project settings"
+    text  "保存到项目设置"
+    state machine
+}
+
+OK {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "OK"
+    // from the engine's zh-Hans
+    text  "确定"
+    state draft
+}
+
+Cancel {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIStylePresets.cpp
+    src   "Cancel"
+    // from the engine's zh-Hans
+    text  "取消"
+    state draft
+}

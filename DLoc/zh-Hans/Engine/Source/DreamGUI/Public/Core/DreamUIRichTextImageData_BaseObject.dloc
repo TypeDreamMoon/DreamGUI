@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRichTextImageData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData_BaseObject.h#DreamUIRichTextImageData_BaseObject
+    src   "Dream UIRich Text Image Data Base Object"
+    text  "Dream UI 多格式文本图像数据 基础对象"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIRichTextImageData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData_BaseObject.h#DreamUIRichTextImageData_BaseObject
+    src   "base class for DreamText to render image inside text"
+    text  "DreamText 渲染图像的基础类。"
+    state machine
+}

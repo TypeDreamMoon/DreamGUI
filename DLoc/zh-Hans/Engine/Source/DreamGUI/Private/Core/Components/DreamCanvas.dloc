@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamCanvas
+
+SortOrderOutOfRange {
+    at    Source/DreamGUI/Private/Core/Components/DreamCanvas.cpp
+    src   "{0} sortOrder out of range!\nNOTE! sortOrder value is stored with int16 type, so valid range is -32768 to 32767"
+    text  "{0} 的排序顺序超出范围！\n注意：排序顺序的值以 int16 类型存储，因此有效范围为 -32768 到 32767"
+    state machine
+}

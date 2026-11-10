@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamNavigationInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface
+    src   "Dream Navigation Interface"
+    text  "Dream 导航接口"
+    state machine
+}
+
+DreamNavigationInterface:CanNavigateHere:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:CanNavigateHere:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNavigationInterface:OnNavigate:direction {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:OnNavigate:direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamNavigationInterface:OnNavigate:result {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:OnNavigate:result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamNavigationInterface:OnNavigate:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:OnNavigate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamNavigationInterface:CanNavigateHere {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:CanNavigateHere
+    src   "@return true if we can navigate from other to this, false otherwise"
+    text  "如果可以从其他节点导航到当前节点，则返回 true，否则返回 false。"
+    state machine
+}
+
+DreamNavigationInterface:OnNavigate {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:OnNavigate
+    src   "Called when a navigation event occurs.\n@param direction navigation direction\n@param result navigate next object\n@return true if this action can navigation to next, false if no need to navigate to next"
+    text  "当导航事件发生时调用。\n@param direction 导航方向\n@param result 导航到的下一个对象\n@return 如果可以导航到下一个对象，则返回 true，否则返回 false。"
+    state machine
+}

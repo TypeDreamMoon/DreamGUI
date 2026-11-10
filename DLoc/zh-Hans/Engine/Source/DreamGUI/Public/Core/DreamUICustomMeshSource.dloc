@@ -1,0 +1,213 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamCustomMeshSource_CurvyPlane {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_CurvyPlane
+    src   "DreamCustomMeshSource CurvyPlane"
+    text  "曲面平面"
+    state machine
+}
+
+DreamCustomMeshSource_CurvyPlane:CurveScale {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_CurvyPlane:CurveScale
+    src   "Curve Scale"
+    text  "曲线缩放"
+    state machine
+}
+
+DreamCustomMeshSource_CurvyPlane:Segment {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_CurvyPlane:Segment
+    src   "Segment"
+    // from the engine's zh-Hans
+    text  "分段"
+    state draft
+}
+
+DreamCustomMeshSource_CurvyPlane:ShapeCurve {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_CurvyPlane:ShapeCurve
+    src   "Shape Curve"
+    text  "形状曲线"
+    state machine
+}
+
+DreamCustomMeshSource_Cylinder {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_Cylinder
+    src   "DreamCustomMeshSource Cylinder"
+    text  "圆柱体"
+    state machine
+}
+
+DreamCustomMeshSource_Cylinder:CylinderArcAngle {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamCustomMeshSource_Cylinder:CylinderArcAngle
+    src   "Cylinder Arc Angle"
+    // from the engine's zh-Hans
+    text  "圆柱体弧形角度"
+    state draft
+}
+
+DreamUICustomMeshSource {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource
+    src   "Dream UICustom Mesh Source"
+    text  "Dream UI 自定义网格源"
+    state machine
+}
+
+DreamUICustomMeshSource:GetHitUVbyFaceIndex:InDreamMesh {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:InDreamMesh
+    src   "In Dream Mesh"
+    text  "UI 网格"
+    state machine
+}
+
+DreamUICustomMeshSource:GetHitUVbyFaceIndex:InHitFaceIndex {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:InHitFaceIndex
+    src   "In Hit Face Index"
+    text  "命中面索引"
+    state machine
+}
+
+DreamUICustomMeshSource:GetHitUVbyFaceIndex:InHitPoint {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:InHitPoint
+    src   "In Hit Point"
+    text  "命中点"
+    state machine
+}
+
+DreamUICustomMeshSource:GetHitUVbyFaceIndex:OutHitUV {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:OutHitUV
+    src   "Out Hit UV"
+    text  "命中 UV"
+    state machine
+}
+
+DreamUICustomMeshSource:GetHitUVbyFaceIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:InDreamMesh {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:InDreamMesh
+    src   "In Dream Mesh"
+    text  "UI 网格"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:InHitFaceIndex {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:InHitFaceIndex
+    src   "In Hit Face Index"
+    text  "命中面索引"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:InHitPoint {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:InHitPoint
+    src   "In Hit Point"
+    text  "命中点"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:InLineEnd {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:InLineEnd
+    src   "In Line End"
+    text  "线段结束"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:InLineStart {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:InLineStart
+    src   "In Line Start"
+    text  "线段开始"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:OutHitUV {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:OutHitUV
+    src   "Out Hit UV"
+    text  "命中 UV"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh:InDreamMesh {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InDreamMesh
+    src   "In Dream Mesh"
+    text  "UI 网格"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh:InTriangleChanged {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InTriangleChanged
+    src   "In Triangle Changed"
+    text  "三角形已更改"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexColorChanged {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexColorChanged
+    src   "In Vertex Color Changed"
+    text  "顶点颜色已更改"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexPositionChanged {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexPositionChanged
+    src   "In Vertex Position Changed"
+    text  "顶点位置已更改"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexUVChanged {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexUVChanged
+    src   "In Vertex UVChanged"
+    text  "顶点 UV 已更改"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveSupportDrawcallBatching:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveSupportDrawcallBatching:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUICustomMeshSource {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource
+    src   "UI mesh generator.\nThis class only hold the method of generating mesh, the actual mesh data is stored inside outer class (DreamBatchMesh) which hold this instance."
+    text  "UI 网格生成器。\n此类仅包含生成网格的方法，实际的网格数据存储在持有此实例的外部类（DreamBatchMesh）中。"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV
+    src   "Get uv value on raycast hit point. Normally just use \"GetHitUVbyFaceIndex\".\n@param InDreamMesh The UI element which will use this mesh.\n@param InHitFaceIndex Hit point face id on this mesh.\n@param InHitPoint Hit point.\n@param InLineStart Normally just use InHitFaceIndex and InHitPoint can get the right result, but you can use your own method to do line cast with InLineStart and InLineEnd parameters.\n@param InLineEnd See InLineStart.\n@param OutHitUV result uv\n@return true if hit suceess"
+    text  "获取射线检测命中点上的 UV 值。通常直接使用\"GetHitUVbyFaceIndex\"即可。\n@param InDreamMesh 将使用此网格的 UI 元素。\n@param InHitFaceIndex 命中点在此网格上的面 ID。\n@param InHitPoint 命中点。\n@param InLineStart 通常仅使用 InHitFaceIndex 和 InHitPoint 即可得到正确结果，但你也可以使用自己的方法，通过 InLineStart 和 InLineEnd 参数进行线段检测。\n@param InLineEnd 参见 InLineStart。\n@param OutHitUV 结果 UV\n@return 命中成功时返回 true"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveOnFillMesh {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh
+    src   "Fill the mesh data.\n@param InDreamMesh The UI element which will use this mesh.\n@param InTriangleChanged Normally just ignore this.\n@param InVertexPositionChanged Normally just ignore this.\n@param InVertexUVChanged Normally just ignore this.\n@param InVertexColorChanged Normally just ignore this."
+    text  "填充网格数据。\n@param InDreamMesh 将使用此网格的 UI 元素。\n@param InTriangleChanged 通常直接忽略此项。\n@param InVertexPositionChanged 通常直接忽略此项。\n@param InVertexUVChanged 通常直接忽略此项。\n@param InVertexColorChanged 通常直接忽略此项。"
+    state machine
+}
+
+DreamUICustomMeshSource:ReceiveSupportDrawcallBatching {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveSupportDrawcallBatching
+    src   "Is this mesh type support drawcall batching? When the mesh comes in 3d then should not do drawcall batching. Normally just leave it return false."
+    text  "此网格类型是否支持绘制调用合批？当网格以 3D 形式呈现时，不应进行绘制调用合批。通常保持返回 false 即可。"
+    state machine
+}

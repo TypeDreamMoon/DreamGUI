@@ -1,0 +1,178 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTiltCard {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard
+    src   "Dream Tilt Card"
+    text  "Dream倾斜卡片"
+    state machine
+}
+
+DreamTiltCard:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamTiltCard:bFollowPointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:bFollowPointer
+    src   "Follow Pointer"
+    text  "跟随指针"
+    state machine
+}
+
+DreamTiltCard:Damping {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:Damping
+    src   "Damping"
+    // from the engine's zh-Hans
+    text  "阻尼"
+    state draft
+}
+
+DreamTiltCard:GetTilt:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:GetTilt:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTiltCard:HoverScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:HoverScale
+    src   "Hover Scale"
+    text  "悬停缩放"
+    state machine
+}
+
+DreamTiltCard:IsEnabled:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTiltCard:MaxAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:MaxAngle
+    src   "Max Angle"
+    // from the engine's zh-Hans
+    text  "最大角度"
+    state draft
+}
+
+DreamTiltCard:PointerId {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:PointerId
+    src   "Pointer Id"
+    text  "指针 ID"
+    state machine
+}
+
+DreamTiltCard:SetEnabled:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTiltCard:SetFollowPointer:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetFollowPointer:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTiltCard:SetTargetTilt:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetTargetTilt:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTiltCard:Stiffness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:Stiffness
+    src   "Stiffness"
+    // from the engine's zh-Hans
+    text  "刚度"
+    state draft
+}
+
+DreamTiltCard:TargetTilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:TargetTilt
+    src   "Target Tilt"
+    text  "目标倾斜"
+    state machine
+}
+
+DreamTiltCard:UserIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTiltCard {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard
+    src   "Tilts the widget towards the pointer in 3D, on a spring: the edge under the pointer dips away, it grows a little while the\npointer is over it, and swings back flat when the pointer leaves. Through the widget's render transform, so layout is left\nas it is; put it inside a perspective scope (UDreamWidget's Perspective, on a parent) for the tilt to foreshorten.\n\nThe tilt it is at (GetTilt) is what a holo foil on the same widget (UDreamHoloFoil) can take its angle of view from."
+    text  "以弹簧效果让控件在3D中朝指针倾斜：指针下方的边缘会下沉远离，指针悬停其上时控件会略微\n放大，指针离开后则回弹至水平。通过控件的渲染变换实现，因此布局保持\n不变；请将其放在透视作用域内（父级上UDreamWidget的Perspective），倾斜才会产生透视缩短。\n\n它当前的倾斜（GetTilt）可作为同一控件上全息箔（UDreamHoloFoil）的视角依据。"
+    state machine
+}
+
+DreamTiltCard:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:bEnabled
+    src   "Off, the card lies flat: to compare with and without it."
+    text  "关闭时卡片保持水平：用于对比开启与关闭的效果。"
+    state machine
+}
+
+DreamTiltCard:GetTilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:GetTilt
+    src   "The tilt it is at now, -1..1 across and up: the spring's, not the pointer's."
+    text  "当前的倾斜值，横向和纵向均为-1..1：这是弹簧的值，而非指针的值。"
+    state machine
+}
+
+DreamTiltCard:HoverScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:HoverScale
+    src   "How much it grows while the pointer is over it."
+    text  "指针悬停在其上时的放大程度。"
+    state machine
+}
+
+DreamTiltCard:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:IsEnabled
+    src   "Where it tilts to when it does not follow the pointer: -1..1 across and up its rect, (0, 0) flat."
+    text  "不跟随指针时的倾斜目标：在其矩形范围内横向和纵向均为-1..1，(0, 0)表示水平。"
+    state machine
+}
+
+DreamTiltCard:MaxAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:MaxAngle
+    src   "The most it tilts, degrees, with the pointer at an edge."
+    text  "指针位于边缘时的最大倾斜角度（单位：度）。"
+    state machine
+}
+
+DreamTiltCard:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetEnabled
+    src   "Off, the card settles flat and at its own size, and stays there until it is turned on."
+    text  "关闭时，卡片会恢复为水平并保持自身大小，且在重新开启前一直如此。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Tilt Card" {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:GetTilt
+    src   "DreamGUI|Tilt Card"
+    text  "DreamGUI|倾斜卡片"
+    state machine
+}

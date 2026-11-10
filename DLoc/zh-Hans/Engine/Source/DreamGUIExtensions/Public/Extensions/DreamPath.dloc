@@ -1,0 +1,290 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPath {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath
+    src   "Path"
+    // from the engine's zh-Hans
+    text  "路径"
+    state draft
+}
+
+DreamPath:bClosed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:bClosed
+    src   "Closed"
+    // from the engine's zh-Hans
+    text  "已关闭"
+    state draft
+}
+
+DreamPath:bDrawLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:bDrawLine
+    src   "Draw Line"
+    // from the engine's zh-Hans
+    text  "绘制线条"
+    state draft
+}
+
+DreamPath:Curve {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:Curve
+    src   "Curve"
+    // from the engine's zh-Hans
+    text  "曲线"
+    state draft
+}
+
+DreamPath:GetClosed:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetClosed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:GetCurveType:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetCurveType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:GetDrawLine:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetDrawLine:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:GetLength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:GetPointAtDistance:InDistance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance:InDistance
+    src   "In Distance"
+    // from the engine's zh-Hans
+    text  "输入距离"
+    state draft
+}
+
+DreamPath:GetPointAtDistance:OutDirection {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance:OutDirection
+    src   "Out Direction"
+    // from the engine's zh-Hans
+    text  "输出方向"
+    state draft
+}
+
+DreamPath:GetPointAtDistance:OutPoint {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance:OutPoint
+    src   "Out Point"
+    // from the engine's zh-Hans
+    text  "输出点"
+    state draft
+}
+
+DreamPath:GetPoints:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPoints:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:GetSegmentsPerSpan:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetSegmentsPerSpan:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPath:Points {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:Points
+    src   "Points"
+    // from the engine's zh-Hans
+    text  "点"
+    state draft
+}
+
+DreamPath:SegmentsPerSpan {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SegmentsPerSpan
+    src   "Segments Per Span"
+    text  "每段的线段数"
+    state machine
+}
+
+DreamPath:SetClosed:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetClosed:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPath:SetCurveType:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetCurveType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPath:SetDrawLine:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetDrawLine:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPath:SetPoint:InIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoint:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamPath:SetPoint:InPoint {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoint:InPoint
+    src   "In Point"
+    // from the engine's zh-Hans
+    text  "输入点"
+    state draft
+}
+
+DreamPath:SetPoints:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoints:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPath:SetSegmentsPerSpan:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetSegmentsPerSpan:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamPathCurve.EDreamPathCurve_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve:EDreamPathCurve_MAX
+    src   "EDream Path Curve MAX"
+    text  "EDreamPathCurve_MAX"
+    state machine
+}
+
+EDreamPathCurve.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamPathCurve.Smooth {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve:Smooth
+    src   "Smooth"
+    // from the engine's zh-Hans
+    text  "平滑"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPath {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath
+    src   "A path drawn as a line: points that can be moved in the designer, joined straight or by a smooth curve, open or closed.\nIt is drawn with the line renderer's brush and width; with Draw Line off it draws nothing and is only a path, for text\nto run along (UDreamMeshModifierTextOnPath) or for anything else to measure (GetPointAtDistance)."
+    text  "一条用直线绘制的路径：可以在设计器中移动的点，可以直线连接或通过平滑曲线连接，可以是开放的或闭合的。\n它使用线渲染器的笔刷和宽度进行绘制；如果禁用“绘制线条”，则不会绘制线条，而只是一个路径，用于文本\n（UDreamMeshModifierTextOnPath）或用于测量其他对象（GetPointAtDistance）。"
+    state machine
+}
+
+DreamPath:bClosed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:bClosed
+    src   "The last point joins the first. The line then joins its ends too."
+    text  "最后一点连接到第一点。然后，线条连接其两端。"
+    state machine
+}
+
+DreamPath:bDrawLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:bDrawLine
+    src   "Draws the line; off, the path is there to be followed and nothing is drawn."
+    text  "绘制线条；禁用时，路径仅用于跟踪，不绘制任何内容。"
+    state machine
+}
+
+DreamPath:GetLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetLength
+    src   "The path's length in local units."
+    text  "路径的长度，以本地单位为单位。"
+    state machine
+}
+
+DreamPath:GetPointAtDistance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance
+    src   "The point InDistance along the path, in local space, and the direction it runs there."
+    text  "路径上距离 InDistance 处的一点，以本地坐标系表示，以及其运行方向。"
+    state machine
+}
+
+DreamPath:Points {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:Points
+    src   "The points the path runs through, in the widget's local space."
+    text  "路径上的一点，以本地坐标系表示；超出末尾的点将被忽略。"
+    state machine
+}
+
+DreamPath:SegmentsPerSpan {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SegmentsPerSpan
+    src   "Straight pieces between two points of a smooth path."
+    text  "路径通过其点的直线段。"
+    state machine
+}
+
+DreamPath:SetPoint {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoint
+    src   "One point, in local space; ignored past the end."
+    text  "路径上的一点，以本地坐标系表示；超出末尾的点将被忽略。"
+    state machine
+}
+
+EDreamPathCurve {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve
+    src   "How a path runs through its points."
+    text  "路径通过其点的形式。"
+    state machine
+}
+
+EDreamPathCurve.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve:Linear
+    src   "Straight from each point to the next."
+    text  "从每个点到下一个点的直线。"
+    state machine
+}
+
+EDreamPathCurve.Smooth {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#EDreamPathCurve:Smooth
+    src   "A smooth curve through every point (Catmull-Rom)."
+    text  "一条通过每个点的平滑曲线（Catmull-Rom）。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Path {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:Points
+    src   "Path"
+    // from the engine's zh-Hans
+    text  "路径"
+    state draft
+}

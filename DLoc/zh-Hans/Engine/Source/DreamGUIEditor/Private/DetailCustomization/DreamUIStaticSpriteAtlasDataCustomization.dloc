@@ -1,0 +1,61 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIStaticSpriteAtlasDataCustomization
+
+CheckSpriteDataError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Some spriteData in spriteArray is not valid! Click \"Cleanup\" button to clear invalid spriteData."
+    text  "spriteArray 中存在无效的 spriteData！点击“清理”按钮以清除无效的 spriteData。"
+    state machine
+}
+
+Error_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Error"
+    // from the engine's zh-Hans
+    text  "错误"
+    state draft
+}
+
+CleanupButtonText {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Cleanup"
+    // from the engine's zh-Hans
+    text  "清除"
+    state draft
+}
+
+PackAtlasButtonRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Pack Atlas"
+    text  "打包图集"
+    state machine
+}
+
+PackAtlasButton {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Pack Atlas"
+    text  "打包图集"
+    state machine
+}
+
+PackedDataSize_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Packed Data Size"
+    text  "打包数据大小"
+    state machine
+}
+
+PackedDataSize_Name {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Packed Data Size"
+    text  "打包数据大小"
+    state machine
+}
+
+PackedDataSize_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.cpp
+    src   "Store texture mip data, so we can recreate atlas texture with this data."
+    text  "存储纹理mipmap数据，以便我们可以使用这些数据重新创建图集纹理。"
+    state machine
+}

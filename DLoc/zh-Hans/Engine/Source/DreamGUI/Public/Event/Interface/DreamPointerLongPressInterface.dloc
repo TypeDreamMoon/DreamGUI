@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerLongPressInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface
+    src   "Dream Pointer Long Press Interface"
+    text  "梦境指针长按接口"
+    state machine
+}
+
+DreamPointerLongPressInterface:OnPointerLongPress:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerLongPressInterface:OnPointerLongPress:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerLongPressInterface:OnPointerLongPress {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress
+    src   "Called when the trigger has been held on this widget for the event system's LongPressTime.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当触发器在该组件上按住的时间超过事件系统的长按时间时，此函数会被调用。\n@return 是否允许事件冒泡？如果同一Actor的所有组件都返回true，则事件可以冒泡。"
+    state machine
+}

@@ -1,0 +1,98 @@
+dloc 1
+culture zh-Hans
+namespace DreamNiagaraSystemCustomization
+
+NotDrawn {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "{0}  {1}: not drawn."
+    text  "{0} {1}: 未绘制。"
+    state machine
+}
+
+Ribbon {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "ribbons"
+    // from the engine's zh-Hans
+    text  "条带"
+    state draft
+}
+
+Sprite {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "sprites"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+Drawn {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "{0}  drawn as {1}{2}, built-in: {3}, {4}"
+    text  "{0} 绘制为 {1}{2}，内置：{3}，{4}"
+    state machine
+}
+
+Local {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   " (local space)"
+    text  " (本地空间)"
+    state machine
+}
+
+NoRenderers {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "No system, or a system with no enabled renderer."
+    text  "无系统，或系统未启用渲染器。"
+    state machine
+}
+
+Renderers {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Renderers"
+    // from the engine's zh-Hans
+    text  "渲染器"
+    state draft
+}
+
+RenderersLabel {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Renderers"
+    // from the engine's zh-Hans
+    text  "渲染器"
+    state draft
+}
+
+RenderersTip {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "What DreamGUI draws of the system: CPU emitters' sprite and ribbon renderers, one draw call each."
+    text  "DreamGUI 绘制的内容：CPU 发射器的精灵和纹带渲染器，每个渲染器一个绘制调用。"
+    state machine
+}
+
+Convert {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Convert Particle Materials"
+    text  "转换粒子材质"
+    state machine
+}
+
+ConvertButton {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Convert Particle Materials"
+    text  "转换粒子材质"
+    state machine
+}
+
+ConvertTip {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Copy each drawn renderer's particle material as a DreamGUI UI material (beside it, _DreamUI; engine and plugin materials into /Game/DreamUI/ConvertedParticleMaterials), save it, put it in the material map and shade with Material."
+    text  "将每个绘制的渲染器的粒子材质复制为 DreamGUI UI 材质（旁边添加 _DreamUI；引擎和插件材质放入 /Game/DreamUI/ConvertedParticleMaterials），保存，放入材质地图并使用材质着色。"
+    state machine
+}
+
+ConvertTransaction {
+    at    Source/DreamGUINiagaraEditor/Private/DreamNiagaraSystemCustomization.cpp
+    src   "Convert Particle Materials"
+    text  "转换粒子材质"
+    state machine
+}

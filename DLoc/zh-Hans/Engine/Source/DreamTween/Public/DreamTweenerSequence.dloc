@@ -1,0 +1,268 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerSequence {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence
+    src   "Dream Tweener Sequence"
+    text  "Dream Tweener序列"
+    state machine
+}
+
+DreamTweenerSequence:Append:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:Append:tweener {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append:tweener
+    src   "Tweener"
+    text  "缓动器"
+    state machine
+}
+
+DreamTweenerSequence:Append:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:AppendCallback:callback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendCallback:callback
+    src   "Callback"
+    // from the engine's zh-Hans
+    text  "回调"
+    state draft
+}
+
+DreamTweenerSequence:AppendCallback:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendCallback:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:AppendInterval:interval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendInterval:interval
+    src   "Interval"
+    // from the engine's zh-Hans
+    text  "间隔"
+    state draft
+}
+
+DreamTweenerSequence:AppendInterval:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:AppendInterval:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendInterval:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:finishedTweenerList {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:finishedTweenerList
+    src   "Finished Tweener List"
+    text  "已完成的Tweener列表"
+    state machine
+}
+
+DreamTweenerSequence:Insert:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:Insert:timePosition {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert:timePosition
+    src   "Time Position"
+    text  "时间位置"
+    state machine
+}
+
+DreamTweenerSequence:Insert:tweener {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert:tweener
+    src   "Tweener"
+    text  "缓动器"
+    state machine
+}
+
+DreamTweenerSequence:Insert:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:InsertCallback:callback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback:callback
+    src   "Callback"
+    // from the engine's zh-Hans
+    text  "回调"
+    state draft
+}
+
+DreamTweenerSequence:InsertCallback:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:InsertCallback:timePosition {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback:timePosition
+    src   "Time Position"
+    text  "时间位置"
+    state machine
+}
+
+DreamTweenerSequence:Join:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Join:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:Join:tweener {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Join:tweener
+    src   "Tweener"
+    text  "缓动器"
+    state machine
+}
+
+DreamTweenerSequence:Join:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Join:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:Prepend:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:Prepend:tweener {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend:tweener
+    src   "Tweener"
+    text  "缓动器"
+    state machine
+}
+
+DreamTweenerSequence:Prepend:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:PrependInterval:interval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:PrependInterval:interval
+    src   "Interval"
+    // from the engine's zh-Hans
+    text  "间隔"
+    state draft
+}
+
+DreamTweenerSequence:PrependInterval:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:PrependInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSequence:PrependInterval:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:PrependInterval:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenerSequence:tweenerList {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:tweenerList
+    src   "Tweener List"
+    text  "Tweener列表"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTweenerSequence:Append {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append
+    src   "Adds the given tween to the end of the Sequence.\nNot support Tweener type: Delay/ DelayFrame/ Virtual.\nHas no effect if the Sequence has already started."
+    text  "将给定补间添加到序列末尾。\n不支持Tweener类型：Delay/ DelayFrame/ Virtual。\n如果序列已启动，则不起作用。"
+    state machine
+}
+
+DreamTweenerSequence:AppendCallback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendCallback
+    src   "Fires a callback when the sequence reaches the end of what it holds so far. DOTween's\nAppendCallback: \"slide out, THEN hide the panel\" is one sequence rather than a sequence plus an\nOnComplete that has to know how long the sequence turned out to be.\nHas no effect if the Sequence has already started."
+    text  "当序列到达其当前包含内容的末尾时触发回调。DOTween的\nAppendCallback：“滑出，然后隐藏面板”是一个序列，而不是一个序列加上一个\n必须知道该序列最终长度的OnComplete。\n如果序列已启动，则不起作用。"
+    state machine
+}
+
+DreamTweenerSequence:AppendInterval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendInterval
+    src   "Adds the given interval to the end of the Sequence.\nHas no effect if the Sequence has already started.\n@param interval The interval duration"
+    text  "将给定间隔添加到序列末尾。\n如果序列已启动，则不起作用。\n@param interval 间隔时长"
+    state machine
+}
+
+DreamTweenerSequence:Insert {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert
+    src   "Inserts the given tween at the given time position in the Sequence, automatically adding an interval if needed.\nNot support Tweener type: Delay/ DelayFrame/ Virtual.\nHas no effect if the Sequence has already started.\n@param timePosition The time position where the tween will be placed"
+    text  "将给定补间插入到序列中的指定时间位置，必要时会自动添加间隔。\n不支持Tweener类型：Delay/ DelayFrame/ Virtual。\n如果序列已启动，则不起作用。\n@param timePosition 补间放置的时间位置"
+    state machine
+}
+
+DreamTweenerSequence:InsertCallback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback
+    src   "Fires a callback at a time position in the sequence, wherever that falls among the tweens.\nHas no effect if the Sequence has already started."
+    text  "在序列中的某个时间位置触发回调，无论该时间位置处于各个补间之间的哪个位置。\n如果序列已启动，则不起作用。"
+    state machine
+}
+
+DreamTweenerSequence:Join {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Join
+    src   "Inserts the given tween at the same time position of the last tween added to the Sequence.\nNote that, in case of a Join after an interval, the insertion time will be the time where the interval starts, not where it finishes.\nNot support Tweener type: Delay/ DelayFrame/ Virtual.\nHas no effect if the Sequence has already started."
+    text  "将给定补间插入到添加到序列的最后一个补间的同一时间位置。\n请注意，如果在间隔之后执行Join，则插入时间将是间隔开始的时间，而不是间隔结束的时间。\n不支持Tweener类型：Delay/ DelayFrame/ Virtual。\n如果序列已启动，则不起作用。"
+    state machine
+}
+
+DreamTweenerSequence:Prepend {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend
+    src   "Adds the given tween to the beginning of the Sequence, pushing forward the other nested content.\nNot support Tweener type: Delay/ DelayFrame/ Virtual.\nHas no effect if the Sequence has already started."
+    text  "将给定补间添加到序列开头，并将其他嵌套内容向后推移。\n不支持Tweener类型：Delay/ DelayFrame/ Virtual。\n如果序列已启动，则不起作用。"
+    state machine
+}
+
+DreamTweenerSequence:PrependInterval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:PrependInterval
+    src   "Adds the given interval to the beginning of the Sequence, pushing forward the other nested content.\nHas no effect if the Sequence has already started.\n@param interval The interval duration"
+    text  "将给定间隔添加到序列开头，并将其他嵌套内容向后推移。\n如果序列已启动，则不起作用。\n@param interval 间隔时长"
+    state machine
+}

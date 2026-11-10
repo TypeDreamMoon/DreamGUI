@@ -1,0 +1,54 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIComponentReference {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference
+    src   "Dream UIComponent Reference"
+    text  "Dream UI 组件引用"
+    state machine
+}
+
+DreamUIComponentReference:HelperActor {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference:HelperActor
+    src   "Helper Actor"
+    text  "辅助 Actor"
+    state machine
+}
+
+DreamUIComponentReference:HelperClass {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference:HelperClass
+    src   "Helper Class"
+    text  "辅助 类"
+    state machine
+}
+
+DreamUIComponentReference:HelperComponentName {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference:HelperComponentName
+    src   "Helper Component Name"
+    text  "辅助 组件名称"
+    state machine
+}
+
+DreamUIComponentReference:TargetComp {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference:TargetComp
+    src   "Target Comp"
+    text  "目标 组件"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIComponentReference {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference
+    src   "For direct reference a ActorComponent"
+    text  "用于直接引用Actor组件"
+    state machine
+}
+
+DreamUIComponentReference:HelperActor {
+    at    Source/DreamGUI/Public/DreamUIComponentReference.h#DreamUIComponentReference:HelperActor
+    src   "Editor helper actor"
+    text  "编辑器辅助 Actor"
+    state machine
+}

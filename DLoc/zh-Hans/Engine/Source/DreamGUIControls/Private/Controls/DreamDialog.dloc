@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace DreamDialog
+
+DefaultCancel {
+    at    Source/DreamGUIControls/Private/Controls/DreamDialog.cpp
+    src   "Cancel"
+    // from the engine's zh-Hans
+    text  "取消"
+    state draft
+}
+
+DefaultConfirm {
+    at    Source/DreamGUIControls/Private/Controls/DreamDialog.cpp
+    src   "OK"
+    // from the engine's zh-Hans
+    text  "确定"
+    state draft
+}

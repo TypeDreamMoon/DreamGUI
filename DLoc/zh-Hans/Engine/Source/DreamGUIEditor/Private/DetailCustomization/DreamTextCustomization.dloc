@@ -1,0 +1,77 @@
+dloc 1
+culture zh-Hans
+namespace UITextCustomization
+
+WrappingGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Wrapping"
+    // from the engine's zh-Hans
+    text  "换行"
+    state draft
+}
+
+TypographyGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Typography"
+    text  "字体"
+    state machine
+}
+
+GameLanguage {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Game language"
+    text  "游戏语言"
+    state machine
+}
+
+MultipleLanguages {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}
+
+Language_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "The language the text is written in: the font's fallbacks meant for it are preferred, and the shaper draws its script the way that language does. Game language follows the game's current language."
+    text  "文本使用的语言。优先使用字体为此语言提供的备用字体，并且文本渲染器会根据该语言的规则进行渲染。游戏语言遵循游戏当前的语言设置。"
+    state machine
+}
+
+PaintGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Paint"
+    // from the engine's zh-Hans
+    text  "绘制"
+    state draft
+}
+
+RenderingGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Rendering"
+    // from the engine's zh-Hans
+    text  "渲染"
+    state draft
+}
+
+PresetMaterials_PropertyName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "PresetMaterials"
+    text  "预设材质"
+    state machine
+}
+
+PresetMaterials_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "Here list PresetMaterials from DreamUIFont, you can easily set these materials to OverrideMaterial."
+    text  "此处列出了 DreamUIFont字体中的 PresetMaterials（预设材质），你可以轻松地将这些材质设置到 OverrideMaterial（重载材质）。"
+    state machine
+}
+
+MaterialDomainErrorTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextCustomization.cpp
+    src   "OverrideMaterial should use Surface domain!"
+    text  "覆盖材质应使用 Surface 域！"
+    state machine
+}

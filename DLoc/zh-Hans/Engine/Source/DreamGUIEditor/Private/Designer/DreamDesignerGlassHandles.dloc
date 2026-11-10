@@ -1,0 +1,31 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerGlassHandles
+
+Name {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGlassHandles.cpp
+    src   "Glass"
+    text  "玻璃"
+    state machine
+}
+
+EdgeWidth {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGlassHandles.cpp
+    src   "Change Glass Edge Width"
+    text  "玻璃边框宽度"
+    state machine
+}
+
+LightAngle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGlassHandles.cpp
+    src   "Turn Glass Light"
+    text  "玻璃光照角度"
+    state machine
+}
+
+Corners {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGlassHandles.cpp
+    src   "Round Glass Corners"
+    text  "圆角玻璃"
+    state machine
+}

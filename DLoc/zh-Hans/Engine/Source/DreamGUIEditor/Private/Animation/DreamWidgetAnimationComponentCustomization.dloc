@@ -1,0 +1,48 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetAnimationComponentCustomization
+
+AnimationCategory {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+AnimationsValueText {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Animations"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+EditInDesignerTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Open this widget's own Blueprint and edit its animations there. Apply in the designer reloads this instance."
+    text  "打开此部件的蓝图，并在其中编辑其动画。在设计器中应用可重新加载此实例。"
+    state machine
+}
+
+EditInDesignerButtonText {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Edit Animations in Designer"
+    text  "在设计器中编辑动画"
+    state machine
+}
+
+FocusAnimationsTabButtonText {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Focus Tab"
+    // from the engine's zh-Hans
+    text  "聚焦选项卡"
+    state draft
+}
+
+OpenAnimationsTabButtonText {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationComponentCustomization.cpp
+    src   "Open Animations"
+    text  "打开动画选项卡"
+    state machine
+}

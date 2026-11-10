@@ -1,0 +1,44 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetFactory
+
+FontsSection {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIAssetFactory.cpp
+    src   "Fonts"
+    // from the engine's zh-Hans
+    text  "字体"
+    state draft
+}
+
+GraphicsSection {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIAssetFactory.cpp
+    src   "Graphics"
+    text  "图形"
+    state machine
+}
+
+RichTextSection {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIAssetFactory.cpp
+    src   "Rich Text"
+    // from the engine's zh-Hans
+    text  "多格式文本"
+    state draft
+}
+
+namespace UObjectDisplayNames
+
+DreamUIAssetFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIAssetFactory.cpp#DreamUIAssetFactory
+    src   "Dream UIAsset Factory"
+    text  "DreamGUI 资产工厂"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIAssetFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIAssetFactory.cpp#DreamUIAssetFactory
+    src   "What every DreamGUI asset is offered as in the Content Browser's Add menu: which section of the DreamGUI submenu,\nunder what label, with what tooltip.\n\nThe submenu used to be one flat list under the engine's Basic heading, sorted by the asset type names -- \"DreamUI\nFontData DistanceField\", \"DreamUI RichText Custom Style Data\" -- so the widget Blueprint, the asset an author makes\nmost, came last, the three fonts were split by the rich-text entries, and the tooltips were the classes' comments,\nwritten for programmers or missing. Every DreamGUI factory derives from this instead and says what its entry is.\n\nOnly the menu entry changes. The asset type names (FAssetTypeActions::GetName) stay what a tile, a filter and the\ndocs call the type; an entry is named inside a submenu that already says DreamGUI."
+    text  "每个DreamGUI资产在内容浏览器的“添加”菜单中的呈现方式：位于DreamGUI子菜单的哪个部分，\n使用什么标签，以及带什么工具提示。\n\n该子菜单过去是引擎Basic标题下的一个扁平列表，按资产类型名称排序——“DreamUI\nFontData DistanceField”、“DreamUI RichText Custom Style Data”——因此作者最常创建的资产（控件蓝图）排在\n最后，三种字体被富文本条目隔开，而工具提示则是为程序员编写的类注释，\n或者根本没有。现在每个DreamGUI工厂都改为派生自此类，并说明其条目是什么。\n\n只有菜单条目会改变。资产类型名称（FAssetTypeActions::GetName）仍是磁贴、筛选器和\n文档对该类型的称呼；条目是在已经标明DreamGUI的子菜单内命名的。"
+    state machine
+}

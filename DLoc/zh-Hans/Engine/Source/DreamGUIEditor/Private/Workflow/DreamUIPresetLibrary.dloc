@@ -1,0 +1,143 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIPresetLibrary
+
+EffectNoType {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "An effect preset starts with the effect's name: `Glass { ... }`, or `+ DreamMeshModifierWarp { ... }`."
+    text  "效果预设以效果的名称开头：`Glass { ... }`，或 `+ DreamMeshModifierWarp { ... }`。"
+    state machine
+}
+
+EffectDoesNotBuild {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The effect preset does not build."
+    text  "效果预设无法构建。"
+    state machine
+}
+
+EffectOneComponent {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "A behaviour's effect preset is one `+` line."
+    text  "一个行为的效果预设是一个 `+` 行。"
+    state machine
+}
+
+EffectNoObject {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "'{0}' is no effect a widget can have."
+    text  "'{0}' 不是一个组件可以拥有的效果。"
+    state machine
+}
+
+Cancelled {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "Nothing was made: the Save dialog was cancelled."
+    text  "未生成任何内容：保存对话已取消。"
+    state machine
+}
+
+BadPackage {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "'{0}' is not a content path an asset can be made in."
+    text  "'{0}' 不是一个可以创建资源的资源路径。"
+    state machine
+}
+
+ApplyPreset {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "Apply Preset '{0}'"
+    text  "应用预设 '{0}'。"
+    state machine
+}
+
+StyleUnreadable {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The style preset could not be read."
+    text  "样式预设无法读取。"
+    state machine
+}
+
+GradientUnreadable {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The gradient preset could not be read."
+    text  "渐变预设无法读取。"
+    state machine
+}
+
+NoGradientTarget {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "None of the widgets has a gradient to set: a text's face paint, or a gradient property."
+    text  "没有可设置渐变的组件：文本的表面纹理，或渐变属性。"
+    state machine
+}
+
+NoBehaviourSpelling {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "the .dui has no name for this behaviour"
+    text  "此行为在 .dui 文件中没有名称。"
+    state machine
+}
+
+NoEffectTarget {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "None of the widgets is a {0}."
+    text  "没有组件是 {0}。"
+    state machine
+}
+
+NoName {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "A text preset needs a name."
+    text  "文本预设需要一个名称。"
+    state machine
+}
+
+BadCss {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "Not a gradient: {0}"
+    text  "不是渐变：{0}"
+    state machine
+}
+
+GradientUnreadableSave {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The gradient preset could not be read."
+    text  "渐变预设无法读取。"
+    state machine
+}
+
+StyleUnreadableSave {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The style preset could not be read."
+    text  "样式预设无法读取。"
+    state machine
+}
+
+EffectsAreText {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "Effect presets are kept as text."
+    text  "特效预设以文本形式保存。"
+    state machine
+}
+
+GradientUnreadableText {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The gradient preset could not be read."
+    text  "渐变预设无法读取。"
+    state machine
+}
+
+StyleUnreadableText {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "The style preset could not be read."
+    text  "样式预设无法读取。"
+    state machine
+}
+
+DragPreset {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUIPresetLibrary.cpp
+    src   "Apply '{0}'"
+    text  "应用 '{0}'"
+    state machine
+}

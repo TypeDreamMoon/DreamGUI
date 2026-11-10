@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIScrollable {
+    at    Source/DreamGUI/Public/Core/Components/DreamUIScrollable.h#DreamUIScrollable
+    src   "Dream UIScrollable"
+    text  "DreamUI 可滚动组件"
+    state machine
+}

@@ -1,0 +1,397 @@
+dloc 1
+culture zh-Hans
+namespace DreamGradientCustomization
+
+MoveGradientStop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Move Gradient Stop"
+    // from the engine's zh-Hans
+    text  "移动梯度停止点"
+    state draft
+}
+
+EditGradientStops {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Edit Gradient Stops"
+    text  "编辑渐变停止点"
+    state machine
+}
+
+MultipleValues {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}
+
+PasteNotAGradient {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The clipboard does not hold a gradient: {0}"
+    text  "剪贴板中没有渐变：{0}"
+    state machine
+}
+
+ApplyPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Apply Gradient Preset {0}"
+    text  "应用渐变预设{0}"
+    state machine
+}
+
+SavedGradientAsset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Saved the gradient as {0}. Set a paint's Preset to it to keep following it as it changes."
+    text  "已将渐变保存为{0}。将绘制对象的预设设置为此项，即可在其更改时持续跟随。"
+    state machine
+}
+
+PresetNameHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Preset name, then Enter"
+    text  "预设名称，然后按 Enter"
+    state machine
+}
+
+PresetName_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Keep this gradient in the project settings under this name, as CSS (Project Settings > Plugins > Dream GUI > Gradient Presets): a rich text's <gradient=Name> finds it, and this menu offers it. A preset of the same name is replaced."
+    text  "将此渐变以此名称作为CSS保存在项目设置中（项目设置 > 插件 > Dream GUI > 渐变预设）：富文本的<gradient=Name></>会找到它，此菜单也会列出它。同名的预设将被替换。"
+    state machine
+}
+
+ReplacedProjectPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Replaced the project gradient preset {0}."
+    text  "已替换项目渐变预设{0}。"
+    state machine
+}
+
+SavedProjectPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Saved the project gradient preset {0}."
+    text  "已保存项目渐变预设{0}。"
+    state machine
+}
+
+ProjectPresets {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Project Presets"
+    text  "项目预设"
+    state machine
+}
+
+NoProjectPresets {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "None yet: save one below, or add them in Project Settings > Plugins > Dream GUI."
+    text  "暂无：在下方保存一个，或在 Project Settings > Plugins > Dream GUI 中添加。"
+    state machine
+}
+
+UnreadablePreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "\"{0}\" does not read as a gradient: {1}"
+    text  "“{0}”无法解析为渐变：{1}"
+    state machine
+}
+
+GradientAssets {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Gradient Assets"
+    text  "渐变资产"
+    state machine
+}
+
+PickGradientAsset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Gradient Asset"
+    text  "渐变资产"
+    state machine
+}
+
+PickGradientAsset_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Copy the gradient of one of the project's Dream Gradient assets. To keep following an asset as it is edited, set the paint's Preset to it instead."
+    text  "复制项目中的一个 Dream Gradient 资产的渐变。要跟踪资产的编辑，请将画笔的预设设置为该资产。"
+    state machine
+}
+
+SaveAsPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Save As Preset"
+    // from the engine's zh-Hans
+    text  "另存为预设"
+    state draft
+}
+
+SaveAsGradientAsset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Save as Gradient Asset..."
+    text  "另存为渐变资产..."
+    state machine
+}
+
+SaveAsGradientAsset_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Keep this gradient as a Dream Gradient asset, which paints can name as their Preset."
+    text  "将此渐变保存为 Dream Gradient 资产，画笔可以将其命名为预设。"
+    state machine
+}
+
+SaveAsProjectPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Save as Project Preset"
+    text  "另存为项目预设"
+    state machine
+}
+
+TypeNone {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "None"
+    // from the engine's zh-Hans
+    text  "无"
+    state draft
+}
+
+TypeLinear {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "线性"
+    state draft
+}
+
+TypeRadial {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+TypeConic {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Angle (Conic)"
+    text  "锥形"
+    state machine
+}
+
+TypeDiamond {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Diamond"
+    text  "菱形"
+    state machine
+}
+
+TypeCorners {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Four Corners"
+    text  "四角"
+    state machine
+}
+
+TypeReflected {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Reflected"
+    text  "反射"
+    state machine
+}
+
+TypePicker_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The kind of gradient: along a line, out from a centre, round it, in a diamond, out both ways from a line, or the four corners."
+    text  "渐变类型：沿直线、从中心向外、环绕、菱形、双向、或四角。"
+    state machine
+}
+
+TypeMultiple {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Multiple"
+    // from the engine's zh-Hans
+    text  "多个"
+    state draft
+}
+
+ChangeType {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Change Gradient Type"
+    text  "更改渐变类型"
+    state machine
+}
+
+CssHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "linear-gradient(180deg, #FFF3B0, #9C6A12)"
+    text  "linear-gradient(180deg, #FFF3B0, #9C6A12)"
+    state machine
+}
+
+Css_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The gradient as CSS: linear-, radial- and conic-gradient and their repeating- forms, with stops, angles, positions and `in oklab` or `in srgb-linear`; diamond-, corners- and reflecting- for what CSS has no word for. Type or paste one and press Enter. The same spelling a .dui file and a project preset use."
+    text  "渐变以 CSS 形式表示：线性渐变、径向渐变和锥形渐变，以及它们的重复形式，包括色点、角度、位置，以及 `in oklab` 或 `in srgb-linear`。此外，还有 diamond、corners 和 reflecting，这些在 CSS 中没有直接对应的词汇。在此处输入或粘贴渐变定义，然后按 Enter 键。相同的定义在 .dui 文件和项目预设中都适用。"
+    state machine
+}
+
+CssFilter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "CSS"
+    text  "CSS"
+    state machine
+}
+
+Css {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "CSS"
+    text  "CSS"
+    state machine
+}
+
+CssName_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The whole gradient in one line, to copy and paste."
+    text  "将渐变复制为 CSS。"
+    state machine
+}
+
+CopyCss_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Copy the gradient as CSS."
+    text  "将渐变复制为 CSS。"
+    state machine
+}
+
+PasteCss_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Paste a gradient written as CSS."
+    text  "粘贴以 CSS 形式编写的渐变。"
+    state machine
+}
+
+PickStop_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Pick stop {0}'s colour from the designer viewport, or anywhere on the screen."
+    text  "从设计器视口或屏幕上的任何位置选择第 {0} 个色点。"
+    state machine
+}
+
+PickStopColour {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Pick Gradient Stop Colour"
+    text  "拾取渐变停止点颜色"
+    state machine
+}
+
+StopsFilter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Stops"
+    text  "色点"
+    state machine
+}
+
+Stops {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Stops"
+    text  "色点"
+    state machine
+}
+
+Stops_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Colour marks above, opacity marks below; each pair is one stop and moves as one. Click to add a stop, drag to move it, double-click to pick its colour, right-click to type its position or remove it."
+    text  "上方为颜色标记，下方为不透明度标记；每对标记构成一个色点，它们作为一个整体移动。单击以添加色点，拖动以移动它，双击以选择其颜色，右键单击以输入其位置或删除它。"
+    state machine
+}
+
+Presets_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Paint with a preset -- one of the project's gradient assets, or of its presets in Project Settings > Plugins > Dream GUI -- or keep this gradient as one."
+    text  "使用预设进行绘制，可以是项目中的渐变资源，也可以是项目设置 > 插件 > Dream GUI 中的预设，或者将此渐变保存为一种资源。"
+    state machine
+}
+
+Presets {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Presets"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+FallbackSearch {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+FallbackHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Drawn as the two-colour gradient this was written with. Edit it here or with its handles in the viewport and it becomes these stops."
+    text  "以最初编写的两种颜色的渐变形式显示。在此处或在视口中的句柄处编辑它，它将转换为这些色点。"
+    state machine
+}
+
+StopList {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Stop List"
+    text  "色点列表"
+    state machine
+}
+
+StopList_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The stops one by one: positions as fractions of the gradient's length, colours sRGB with straight alpha. The first 16 are drawn."
+    text  "渐变点，按顺序排列：位置是渐变长度的比例，颜色是 sRGB 格式，包含透明度。前 16 个渐变点会被绘制。"
+    state machine
+}
+
+CssUnreadable {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "This is not a gradient CSS can write."
+    text  "这并不是 CSS 能够创建的渐变。"
+    state machine
+}
+
+SetGradientFromCss {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "Set Gradient from CSS"
+    text  "从 CSS 设置渐变"
+    state machine
+}
+
+PresetNameEmpty {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "A preset needs a name."
+    text  "预设需要一个名称。"
+    state machine
+}
+
+PresetNameTooLong {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "That name is too long."
+    text  "名称太长。"
+    state machine
+}
+
+PresetNameCharacters {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "A preset's name is what <gradient=Name> says: no spaces, and none of < > = / \"."
+    text  "预设的名称就是<gradient=Name></>中写的内容：不能有空格，也不能包含尖括号、等号、斜杠或双引号。"
+    state machine
+}
+
+NoPresetSettings {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The project settings have no gradient presets."
+    text  "项目设置中没有渐变预设。"
+    state machine
+}
+
+PresetNotSaved {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamGradientCustomization.cpp
+    src   "The preset is in use, but the project's DreamGUI config file could not be written: it will be gone next session."
+    text  "该预设正在使用，但无法写入项目的 DreamGUI 配置文件，下一次会话将不再可用。"
+    state machine
+}

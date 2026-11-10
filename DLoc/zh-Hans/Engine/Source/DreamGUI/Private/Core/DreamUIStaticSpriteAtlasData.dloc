@@ -1,0 +1,45 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIStaticSpriteAtlasData
+
+TransferSpriteWarning {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "Sprite: '{0}' was belongs to atlas: '{1}', do you want to transfer the Sprite to this atlas?"
+    text  "Sprite: '{0}' 属于图集: '{1}'，是否将该 Sprite 转移到此图集中？"
+    state machine
+}
+
+SpriteDataError {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "{0} Packing atlas for DreamUIStaticSpriteAtlasData: '{1}', but SpriteData is not valid in spriteArray at index {2}"
+    text  "{0} 正在打包 DreamUIStaticSpriteAtlasData 图集: '{1}'，但 spriteArray 中索引为 {2} 的 SpriteData 无效。"
+    state machine
+}
+
+SpriteDataTextureError {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "{0} Packing atlas for DreamGUIStaticSpriteAtlasData: '{1}', but SpriteData's texture is not valid of spriteData: '{2}'"
+    text  "{0} 正在打包 DreamGUIStaticSpriteAtlasData 图集: '{1}'，但 spriteData 中纹理无效: '{2}'。"
+    state machine
+}
+
+SpritePackingAtlasError {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "{0} Packing atlas for DreamUIStaticSpriteAtlasData: '{1}', but SpriteData's packingAtlas is not this one, spriteData '{2}', at index: {3}"
+    text  "{0} 正在打包 DreamUIStaticSpriteAtlasData 图集: '{1}'，但 SpriteData 的 packingAtlas 不是此图集，spriteData 为 '{2}'，索引为: {3}。"
+    state machine
+}
+
+AtlasSizeTooLargeError {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "{0} Package Sprite atlas fail! Atlas texture size {1} larger than {2}: {3}! Please remove some large size Sprite, or split to multiple atlas."
+    text  "{0} 打包 Sprite 图集失败！图集纹理大小 {1} 大于 {2}: {3}！请移除一些大尺寸的 Sprite，或拆分为多个图集。"
+    state machine
+}
+
+WrongTextureData {
+    at    Source/DreamGUI/Private/Core/DreamUIStaticSpriteAtlasData.cpp
+    src   "Cooking DreamUIStaticSpriteAtlasData:{0}, get wrong texture data in cache! You should manny click \"Pack Atlas\" button to build atlas texture!"
+    text  "正在处理 DreamUIStaticSpriteAtlasData:{0}，缓存中获取到的纹理数据错误！请多次点击“打包图集”按钮以重新生成图集纹理！"
+    state machine
+}

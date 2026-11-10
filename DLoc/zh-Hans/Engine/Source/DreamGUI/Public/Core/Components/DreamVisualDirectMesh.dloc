@@ -1,0 +1,33 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamVisualDirectMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h#DreamVisualDirectMesh
+    src   "Dream Visual Direct Mesh"
+    text  "Dream Visual Direct Mesh"
+    state machine
+}
+
+DreamVisualDirectMesh:PropertiesForMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h#DreamVisualDirectMesh:PropertiesForMaterial
+    src   "Properties for Material"
+    text  "材质属性"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamVisualDirectMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h#DreamVisualDirectMesh
+    src   "UI element that can update mesh data directly to DreamCanvas's mesh section. Each DreamVisualDirectMesh is considered as a draw-call.\nThis is mainly for custom mesh which have huge vertex data and change frequently, so that we can avoid the overhead of updating each visual element from DreamCanvas.\nOfficially use it for DreamStaticMesh and particle system.\n\nAn element may draw in several segments (GetSegmentCount): each is a draw call and a section of its own, in segment order,\nsupplied through OnSupplyMeshSegment. Segment 0 is also MeshSection, as it was when there was only one."
+    text  "可直接将网格数据更新到DreamCanvas网格分段的UI元素。每个DreamVisualDirectMesh都视为一次绘制调用。\n这主要用于顶点数据庞大且频繁变动的自定义网格，从而避免DreamCanvas逐个更新每个可视元素的开销。\n官方将其用于DreamStaticMesh和粒子系统。\n\n一个元素可以分多段绘制（GetSegmentCount）：每段都是一次绘制调用，也是独立的分段，按分段顺序，\n通过OnSupplyMeshSegment提供。分段0同时也是MeshSection，与只有一个分段时的情形一致。"
+    state machine
+}
+
+DreamVisualDirectMesh:PropertiesForMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h#DreamVisualDirectMesh:PropertiesForMaterial
+    src   "enable properties for material"
+    text  "启用材质相关属性"
+    state machine
+}

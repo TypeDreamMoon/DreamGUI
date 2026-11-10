@@ -1,0 +1,144 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamImage {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage
+    src   "Dream Image"
+    text  "Dream图像"
+    state machine
+}
+
+DreamImage:Brush {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:Brush
+    src   "Brush"
+    // from the engine's zh-Hans
+    text  "笔刷"
+    state draft
+}
+
+DreamImage:GetBrush:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:GetBrush:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamImage:SetBrush:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrush_DreamUISprite:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_DreamUISprite:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrush_Material:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_Material:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrush_SlateSprite:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_SlateSprite:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrush_Texture:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_Texture:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrushFillAmount:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFillAmount:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImage:SetBrushFromMaterial:InMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFromMaterial:InMaterial
+    src   "In Material"
+    // from the engine's zh-Hans
+    text  "输入材质"
+    state draft
+}
+
+DreamImage:SetBrushTintColor:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushTintColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamImage {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage
+    src   "DreamImage is render entry for Sprite & Texture & Material"
+    text  "DreamImage是Sprite、纹理和材质的渲染入口"
+    state machine
+}
+
+DreamImage:SetBrush_DreamUISprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_DreamUISprite
+    src   "If you keep using DreamUISpriteData brush in this DreamImage, then this function is better performance than SetBrush"
+    text  "如果在此DreamImage中持续使用DreamUISpriteData笔刷，则此函数的性能优于SetBrush"
+    state machine
+}
+
+DreamImage:SetBrush_Material {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_Material
+    src   "Takes a texture, which is what its name says it does not: SetBrushFromMaterial takes the material. Kept so that the Blueprints calling it still compile, and still do what they did."
+    text  "接受的是纹理而非笔刷，这与函数名所示的正好相反：SetBrushFromMaterial接受的是材质。保留它是为了让调用它的蓝图仍能编译，并且行为保持不变。"
+    state machine
+}
+
+DreamImage:SetBrush_SlateSprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_SlateSprite
+    src   "If you keep using SlateTextureAtlas brush in this DreamImage, then this function is better performance than SetBrush"
+    text  "如果在此DreamImage中继续使用SlateTextureAtlas纹理笔刷，则此函数的性能优于SetBrush"
+    state machine
+}
+
+DreamImage:SetBrushFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFillAmount
+    src   "How much of a Filled brush is shown, 0..1. Separate from SetBrush because a progress bar writes\nthis every frame and SetBrush copies the whole brush and re-runs the layout; this touches the\nvertices and nothing else."
+    text  "Filled笔刷显示的比例，0..1。它与SetBrush分开，因为进度条每帧都会写入\n此值，而SetBrush会复制整个笔刷并重新执行布局；此函数只修改\n顶点，不涉及其他内容。"
+    state machine
+}
+
+DreamImage:SetBrushFromMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFromMaterial
+    src   "Draws the brush with InMaterial, UMG's SetBrushFromMaterial. Null leaves the brush with nothing to draw."
+    text  "使用InMaterial材质（UMG的SetBrushFromMaterial）绘制笔刷。为空时笔刷没有可绘制的内容。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Image {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:GetBrush
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}

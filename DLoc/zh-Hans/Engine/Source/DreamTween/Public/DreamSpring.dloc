@@ -1,0 +1,189 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamSpringLibrary {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary
+    src   "Dream Spring Library"
+    text  "Dream Spring 库"
+    state machine
+}
+
+DreamSpringLibrary:IsSpringAtRest:Params {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest:Params
+    src   "Params"
+    // from the engine's zh-Hans
+    text  "参数"
+    state draft
+}
+
+DreamSpringLibrary:IsSpringAtRest:ReturnValue {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSpringLibrary:IsSpringAtRest:State {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest:State
+    src   "State"
+    // from the engine's zh-Hans
+    text  "状态"
+    state draft
+}
+
+DreamSpringLibrary:StepSpring:DeltaTime {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring:DeltaTime
+    src   "Delta Time"
+    // from the engine's zh-Hans
+    text  "差量时间"
+    state draft
+}
+
+DreamSpringLibrary:StepSpring:Params {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring:Params
+    src   "Params"
+    // from the engine's zh-Hans
+    text  "参数"
+    state draft
+}
+
+DreamSpringLibrary:StepSpring:ReturnValue {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSpringLibrary:StepSpring:State {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring:State
+    src   "State"
+    // from the engine's zh-Hans
+    text  "状态"
+    state draft
+}
+
+DreamSpringParams {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams
+    src   "Dream Spring Params"
+    text  "Dream Spring 参数"
+    state machine
+}
+
+DreamSpringParams:Damping {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:Damping
+    src   "Damping"
+    // from the engine's zh-Hans
+    text  "阻尼"
+    state draft
+}
+
+DreamSpringParams:Mass {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:Mass
+    src   "Mass"
+    // from the engine's zh-Hans
+    text  "质量"
+    state draft
+}
+
+DreamSpringParams:RestDistance {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:RestDistance
+    src   "Rest Distance"
+    text  "静止距离"
+    state machine
+}
+
+DreamSpringParams:RestVelocity {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:RestVelocity
+    src   "Rest Velocity"
+    text  "静止速度"
+    state machine
+}
+
+DreamSpringParams:Stiffness {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:Stiffness
+    src   "Stiffness"
+    // from the engine's zh-Hans
+    text  "刚度"
+    state draft
+}
+
+DreamSpringState {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringState
+    src   "Dream Spring State"
+    text  "Dream Spring 状态"
+    state machine
+}
+
+DreamSpringState:Target {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringState:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamSpringState:Value {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringState:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSpringState:Velocity {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringState:Velocity
+    src   "Velocity"
+    // from the engine's zh-Hans
+    text  "速度"
+    state draft
+}
+
+namespace UObjectCategory
+
+DreamTween|Spring {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest
+    src   "DreamTween|Spring"
+    text  "DreamTween|弹簧"
+    state machine
+}
+
+Spring {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:Mass
+    src   "Spring"
+    // from the engine's zh-Hans
+    text  "弹簧"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamSpringLibrary:StepSpring {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring
+    src   "Advance a spring by DeltaTime; returns true while it is still moving."
+    text  "按 DeltaTime 推进弹性，返回 true 表示弹性仍在运动。"
+    state machine
+}
+
+DreamSpringParams {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams
+    src   "A damped spring, the way UI motion libraries (CSS spring(), react-spring, Apple's) describe it:\nmass, stiffness, damping. There is no duration; the value moves toward its target and settles\nwhen both the distance and the velocity are under the rest thresholds. Because the state keeps\nits velocity, retargeting mid-flight is continuous -- the reason lyric players use springs."
+    text  "阻尼弹簧，与UI动效库（CSS spring()、react-spring、Apple的）的描述方式一致：\n质量、刚度、阻尼。它没有时长；值会向目标移动，并在距离和速度都低于静止阈值时\n稳定下来。由于状态会保留速度，在运动途中重新设定目标也是连续的——这正是歌词播放器\n使用弹簧的原因。"
+    state machine
+}
+
+DreamSpringParams:RestDistance {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:RestDistance
+    src   "Distance to the target under which the spring may come to rest."
+    text  "弹性达到静止状态的距离阈值。"
+    state machine
+}
+
+DreamSpringParams:RestVelocity {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringParams:RestVelocity
+    src   "Speed under which the spring may come to rest."
+    text  "弹性达到静止状态的速度阈值。"
+    state machine
+}

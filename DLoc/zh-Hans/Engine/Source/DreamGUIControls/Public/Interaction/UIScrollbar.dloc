@@ -1,0 +1,396 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EUIScrollbarDirectionType.BottomToTop {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#EUIScrollbarDirectionType:BottomToTop
+    src   "Bottom to Top"
+    text  "从下到上"
+    state machine
+}
+
+EUIScrollbarDirectionType.EUIScrollbarDirectionType_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#EUIScrollbarDirectionType:EUIScrollbarDirectionType_MAX
+    src   "EUIScrollbar Direction Type MAX"
+    text  "EUIScrollbar方向类型MAX"
+    state machine
+}
+
+EUIScrollbarDirectionType.LeftToRight {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#EUIScrollbarDirectionType:LeftToRight
+    src   "Left to Right"
+    text  "从左到右"
+    state machine
+}
+
+EUIScrollbarDirectionType.RightToLeft {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#EUIScrollbarDirectionType:RightToLeft
+    src   "Right to Left"
+    text  "从右到左"
+    state machine
+}
+
+EUIScrollbarDirectionType.TopToBottom {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#EUIScrollbarDirectionType:TopToBottom
+    src   "Top to Bottom"
+    text  "从上到下"
+    state machine
+}
+
+UIScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar
+    src   "UIScrollbar"
+    text  "UIScrollbar"
+    state machine
+}
+
+UIScrollbar:DirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:DirectionType
+    src   "Direction Type"
+    text  "方向类型"
+    state machine
+}
+
+UIScrollbar:GetDirectionType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetDirectionType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetEffectiveSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetEffectiveSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetHandle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetHandleAreaLength:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandleAreaLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetHandlePadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandlePadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetMinHandleSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetMinHandleSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetNavigationChangeInterval:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetNavigationChangeInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:Handle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+UIScrollbar:HandleArea {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:HandleArea
+    src   "Handle Area"
+    text  "滑块区域"
+    state machine
+}
+
+UIScrollbar:HandlePadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:HandlePadding
+    src   "Handle Padding"
+    text  "手柄填充"
+    state machine
+}
+
+UIScrollbar:IsHorizontal:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:IsHorizontal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollbar:MinHandleSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:MinHandleSize
+    src   "Min Handle Size"
+    text  "最小滑块大小"
+    state machine
+}
+
+UIScrollbar:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:NavigationChangeInterval
+    src   "Navigation Change Interval"
+    text  "导航变化间隔"
+    state machine
+}
+
+UIScrollbar:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UIScrollbar:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UIScrollbar:SetDirectionType:InDirection {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetDirectionType:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+UIScrollbar:SetHandle:InHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandle:InHandle
+    src   "In Handle"
+    // from the engine's zh-Hans
+    text  "在柄中"
+    state draft
+}
+
+UIScrollbar:SetHandlePadding:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandlePadding:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetMinHandleSize:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetMinHandleSize:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetNavigationChangeInterval:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetNavigationChangeInterval:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetSize:InSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetSize:InSize
+    src   "In Size"
+    // from the engine's zh-Hans
+    text  "输入尺寸"
+    state draft
+}
+
+UIScrollbar:SetValue:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValue:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetValueAndSize:FireEvent {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueAndSize:FireEvent
+    src   "Fire Event"
+    text  "触发事件"
+    state machine
+}
+
+UIScrollbar:SetValueAndSize:InSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueAndSize:InSize
+    src   "In Size"
+    // from the engine's zh-Hans
+    text  "输入尺寸"
+    state draft
+}
+
+UIScrollbar:SetValueAndSize:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueAndSize:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetValueWithoutNotify:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueWithoutNotify:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIScrollbar:Size {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+UIScrollbar:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollbarValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbarValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UIScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar
+    src   "A handle riding a track: a position from 0 to 1, and how much of the track the handle covers.\n\nTHE HANDLE'S RECT IS ABSOLUTE, NOT A RATIO ANCHOR\n-------------------------------------------------\nThis component used to place its handle by writing RATIO anchors on it, and that is the shape\nthis library has paid for five separate times: an anchor setter resolves the parent's span AT\nWRITE TIME, so on every frame that is not a full layout pass it reads a stretched track's zero\nSizeDelta rather than its arranged length, and the handle spends those frames collapsed onto the\ntrack's start. The progress bar's fill flickered as a dot for the same reason; the dropdown's\nlist opened at zero width for the same reason.\n\nSo the handle's rect is now absolute numbers off the handle area's resolved size, with the anchor\ncollapsed to a POINT on the area's start edge and the pivot on that same edge -- there is no span\nleft to resolve, so there is nothing to be stale about. UDreamScrollBar used to re-do exactly\nthis from outside, after the fact, through an event whose only job was to undo the base class's\nwork; that event and the UUIScrollbar subclass it lived on are both gone.\n\nTHE MINIMUM LENGTH BELONGS HERE\n-------------------------------\nA handle that would draw shorter than MinHandleSize is drawn at MinHandleSize -- and the DRAG\nSCALE is derived from the same number, which is the reason this lives in the component that owns\nboth. A handle drawn longer than the fraction it drags with would run at the wrong rate for the\nwhole of a long list, and every version of this that kept the floor at the control layer had to\nread the control's own rect to compute it, which is precisely the measurement that is unreliable\nbefore the first arrange.\n\nA bar with no scroll view is a value control in its own right. Point one at a UUIScrollView (see\nUDreamScrollBar) and both numbers become the view's: progress in, progress out.\n\nNOT A FOCUS TARGET, BY DEFAULT\n------------------------------\nNavigation does not land on a bar and Tab does not stop at it: bCanNavigateHere starts off, and the\nwidget the bar sits on is left unfocusable when it registers -- Slate's scroll bar cannot be focused\nat all, and a bar that took the pad's focus swallowed every press along its axis. The pointer drives\nit as before. A bar meant as a value control the pad steps (NavigationChangeInterval a press) turns\nbCanNavigateHere on before it registers; turned on later, its widget also needs SetIsFocusable(true)."
+    text  "滑块沿轨道移动：位置从0到1，并指示滑块覆盖轨道长度的比例。\n\n滑块的矩形采用绝对值，而非比例锚点\n-------------------------------------------------\n该组件过去通过给滑块写入RATIO锚点来放置它，而这就是\n本库已经付出过五次代价的那种写法：锚点设置器会在写入时\n解析父级的跨度，因此在任何不是完整布局传递的帧中，它读取的是被拉伸轨道的零\nSizeDelta，而不是其排列后的长度，滑块便会在这些帧里塌缩到\n轨道起点。进度条的填充物闪烁成一个小点，原因相同；下拉框的\n列表以零宽度打开，原因也相同。\n\n因此，现在滑块的矩形是基于滑块区域解析后尺寸的绝对数值，锚点\n塌缩为区域起始边上的一个点，轴心也位于同一条边上——没有跨度\n需要解析，也就没有任何会过期的内容。UDreamScrollBar过去正是\n在事后从外部通过一个事件重做这件事，而那个事件的唯一职责就是撤销基类的\n工作；那个事件以及它所在的UUIScrollbar子类都已移除。\n\n最小长度应归此处\n-------------------------------\n绘制长度短于MinHandleSize的滑块会按MinHandleSize绘制——而拖拽\n缩放由同一个数值推导，这正是它位于同时拥有\n二者的组件中的原因。滑块绘制得比它拖动所用的比例更长，会在\n整个长列表中以错误的速率移动，而每一个把下限留在控件层的版本都必须\n读取控件自身的矩形来计算它，而这恰恰是首次排列之前\n不可靠的测量。\n\n没有滚动视图的滚动条本身就是一个值控件。将它指向UUIScrollView（参见\nUDreamScrollBar），两个数值都会变成该视图的：进度输入，进度输出。\n\n默认不是焦点目标\n------------------------------\n导航不会落在滚动条上，Tab也不会停在它上面：bCanNavigateHere默认关闭，并且\n滚动条所在控件在注册时会被设为不可聚焦——Slate的滚动条根本无法\n获得焦点，而一个夺走手柄焦点的滚动条会吞掉沿其轴向的每一次按压。指针仍像\n以前一样驱动它。若滚动条是供手柄按步进调节的值控件（每按一次NavigationChangeInterval）\n则在注册前打开bCanNavigateHere；若之后才打开，其控件还需要SetIsFocusable(true)。"
+    state machine
+}
+
+UIScrollbar:ApplyValueToVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:ApplyValueToVisual
+    src   "Re-place the handle from the value and size held right now. Called for you on every change."
+    text  "根据当前保存的值和大小重新放置滑块。每次更改时自动调用。"
+    state machine
+}
+
+UIScrollbar:GetEffectiveSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetEffectiveSize
+    src   "Size, raised to whatever MinHandleSize asks for on the current track. What the handle draws."
+    text  "大小，在当前轨道上提升到MinHandleSize所要求的数值。即滑块实际绘制的尺寸。"
+    state machine
+}
+
+UIScrollbar:GetHandleAreaLength {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandleAreaLength
+    src   "The track's length along the bar's axis, or zero while the area is not resolvable yet."
+    text  "轨道沿滚动条轴向的长度；当区域尚不可解析时为零。"
+    state machine
+}
+
+UIScrollbar:GetSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetSize
+    src   "The AUTHORED fraction. What the handle actually covers is GetEffectiveSize."
+    text  "所设定的比例。滑块实际覆盖的比例由GetEffectiveSize决定。"
+    state machine
+}
+
+UIScrollbar:Handle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:Handle
+    src   "Handle can move inside it's parent"
+    text  "滑块可在其父级内移动。"
+    state machine
+}
+
+UIScrollbar:HandlePadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:HandlePadding
+    src   "How far the handle is inset from the area ACROSS the bar's axis -- the groove a real scroll bar\ndraws its pill in. Zero (the default) is the handle filling the track, which is what this\ncomponent has always drawn. It costs the handle nothing along its own axis: the travel and the\ndrag scale are the LENGTH's, and this is the thickness."
+    text  "手柄从条的轴线横向（ACROSS）方向区域内缩的距离——真实滚动条在其中\n绘制胶囊形的凹槽。零（默认值）表示手柄填满轨道，这也是此\n组件一直以来的绘制方式。它在手柄自身轴向上不产生任何开销：行程和\n拖动比例取决于长度，而这里的是厚度。"
+    state machine
+}
+
+UIScrollbar:IsHorizontal {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:IsHorizontal
+    src   "True for LeftToRight and RightToLeft. Everything axis-dependent in here asks this."
+    text  "LeftToRight 和 RightToLeft 时为 true。此处所有与轴相关的逻辑都会查询该值。"
+    state machine
+}
+
+UIScrollbar:MinHandleSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:MinHandleSize
+    src   "Floor on the handle's drawn length, in local units. Zero leaves Size alone, which is what a\nbar authored as a plain value control wants; anything positive is the \"you can still grab it\"\nminimum every real scroll bar has."
+    text  "手柄绘制长度的下限，使用局部单位。零表示保持 Size 不变，这正是以普通值\n控件创作的条所需要的；任何正值都是每个真实滚动条都有的“仍然抓得住”的\n最小值。"
+    state machine
+}
+
+UIScrollbar:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:NavigationChangeInterval
+    src   "When use navigation input to change the scroll value, each press will change value as NavigationChangeInterval."
+    text  "使用导航输入更改滚动值时，每次按下都会按 NavigationChangeInterval 更改值。"
+    state machine
+}
+
+UIScrollbar:SetHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandle
+    src   "The widget the value moves, and (through its PARENT) the area the value is measured against.\n\nPublic because a control that builds its own hierarchy has no details panel to be filled in\nfrom -- which is the entire reason UDreamScrollBar used to carry a UUIScrollbar subclass whose\nonly job was to reach these two fields from inside the class."
+    text  "值所移动的控件，以及（通过其 PARENT）值所测量所依据的区域。\n\n之所以公开，是因为自行构建层级的控件没有可用于填写的细节面板\n——这正是 UDreamScrollBar 过去要带一个 UUIScrollbar 子类的全部原因，该子类\n的唯一职责就是从类内部访问这两个字段。"
+    state machine
+}
+
+UIScrollbar:SetHandlePadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandlePadding
+    src   "Re-lays the handle at once: the inset is part of the rect this component is the only writer of."
+    text  "立即重新布局手柄：内缩是此组件唯一写入的矩形的一部分。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Scrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:ApplyValueToVisual
+    src   "DreamGUI-Scrollbar"
+    text  "DreamGUI-滚动条"
+    state machine
+}
+
+DreamGUI-Slider {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetNavigationChangeInterval
+    src   "DreamGUI-Slider"
+    text  "DreamGUI-滑块"
+    state machine
+}

@@ -1,0 +1,208 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPsdImportSettings {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings
+    src   "DreamGUI Layered Document Import"
+    text  "DreamGUI 分层文档导入"
+    state machine
+}
+
+DreamPsdImportSettings:bBakeLayerMasks {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bBakeLayerMasks
+    src   "Bake Layer Masks"
+    text  "烘焙图层遮罩"
+    state machine
+}
+
+DreamPsdImportSettings:bHandleContentBrowserImport {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bHandleContentBrowserImport
+    src   "Handle Content Browser Import"
+    text  "处理内容浏览器导入"
+    state machine
+}
+
+DreamPsdImportSettings:bImportHiddenLayers {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bImportHiddenLayers
+    src   "Import Hidden Layers"
+    text  "导入隐藏图层"
+    state machine
+}
+
+DreamPsdImportSettings:BlueprintPrefix {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:BlueprintPrefix
+    src   "Blueprint Prefix"
+    text  "蓝图前缀"
+    state machine
+}
+
+DreamPsdImportSettings:bNamingConventions {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bNamingConventions
+    src   "Naming Conventions"
+    text  "命名约定"
+    state machine
+}
+
+DreamPsdImportSettings:bRasterizeText {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bRasterizeText
+    src   "Rasterize Text"
+    text  "栅格化文本"
+    state machine
+}
+
+DreamPsdImportSettings:bTrimTransparentPixels {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bTrimTransparentPixels
+    src   "Trim Transparent Pixels"
+    text  "裁剪透明像素"
+    state machine
+}
+
+DreamPsdImportSettings:DefaultFont {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:DefaultFont
+    src   "Default Font"
+    // from the engine's zh-Hans
+    text  "Default Font"
+    state draft
+}
+
+DreamPsdImportSettings:FontMap {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:FontMap
+    src   "Font Map"
+    text  "字体映射"
+    state machine
+}
+
+DreamPsdImportSettings:MaskFeatherScale {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:MaskFeatherScale
+    src   "Mask Feather Scale"
+    text  "遮罩羽化比例"
+    state machine
+}
+
+DreamPsdImportSettings:MaxGradientTextureSize {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:MaxGradientTextureSize
+    src   "Max Gradient Texture Size"
+    text  "最大渐变纹理尺寸"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPsdImportSettings {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings
+    src   "How layered documents are imported into DreamGUI: Project Settings > Plugins > DreamGUI Layered Document Import."
+    text  "关于如何将分层文档导入到 DreamGUI：项目设置 > 插件 > DreamGUI 分层文档导入。"
+    state machine
+}
+
+DreamPsdImportSettings:bBakeLayerMasks {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bBakeLayerMasks
+    src   "Multiply a pixel layer's masks into its texture instead of making them a clip mask (fewer textures, nothing to edit)."
+    text  "将像素图层的蒙版合并到其纹理中，而不是将其用作裁剪蒙版（减少纹理数量，无需编辑）。"
+    state machine
+}
+
+DreamPsdImportSettings:bHandleContentBrowserImport {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bHandleContentBrowserImport
+    src   "Make the Content Browser's Import take .psd files as DreamUI widgets. Off by default: the engine imports a .psd as a\nflat texture, and that stays what Import does until this is on. The DreamGUI menu of a folder imports one either way."
+    text  "让内容浏览器的“导入”将.psd文件作为DreamUI控件导入。默认关闭：引擎会把.psd导入为\n平面纹理，在开启此项之前，“导入”保持这一行为。文件夹的DreamGUI菜单则无论是否开启都能导入。"
+    state machine
+}
+
+DreamPsdImportSettings:bImportHiddenLayers {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bImportHiddenLayers
+    src   "Import hidden layers (hidden); off, they are left out."
+    text  "导入隐藏图层（隐藏）；如果关闭，则不导入。"
+    state machine
+}
+
+DreamPsdImportSettings:BlueprintPrefix {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:BlueprintPrefix
+    src   "The widget Blueprint's name: this prefix and the document's name."
+    text  "小部件蓝图的名称：此前缀和文档名称。"
+    state machine
+}
+
+DreamPsdImportSettings:bNamingConventions {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bNamingConventions
+    src   "Read `!skip` (leave the layer out), `@Button` / `@Toggle` / `@Slider` (add that control) and `#9(l,t,r,b)` (nine-slice margins in pixels) in layer names."
+    text  "读取 `!skip`（跳过该图层）、`@Button` / `@Toggle` / `@Slider`（添加该控件）以及 `#9(l,t,r,b)`（像素中的九宫格边距）在图层名称中。"
+    state machine
+}
+
+DreamPsdImportSettings:bRasterizeText {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bRasterizeText
+    src   "Import text layers as images of their pixels, not as texts."
+    text  "将文本图层导入为像素图像，而不是文本。"
+    state machine
+}
+
+DreamPsdImportSettings:bTrimTransparentPixels {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bTrimTransparentPixels
+    src   "Cut transparent borders off each layer's texture and size its widget to what is left."
+    text  "裁剪每个图层的纹理中的透明边框，并将小部件的大小调整为剩余部分。"
+    state machine
+}
+
+DreamPsdImportSettings:DefaultFont {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:DefaultFont
+    src   "The font of a text whose face FontMap does not name. None: DreamGUI's default font."
+    text  "文本的字体，其字体面 `FontMap` 未命名的。 `None`：DreamGUI 的默认字体。"
+    state machine
+}
+
+DreamPsdImportSettings:FontMap {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:FontMap
+    src   "A face's PostScript name, as the document names it (\"Roboto-Bold\"), or a family (\"Roboto\"), to the DreamGUI font\nits texts use. A face with no entry takes DefaultFont, and the import lists it."
+    text  "字型的PostScript名称（按文档中的写法，如“Roboto-Bold”），或字族（如“Roboto”），\n映射到其文本所用的DreamGUI字体。没有对应条目的字型将使用DefaultFont，导入时会将其列出。"
+    state machine
+}
+
+DreamPsdImportSettings:MaskFeatherScale {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:MaskFeatherScale
+    src   "A feathered mask is blurred with a sigma of its feather times this."
+    text  "羽化蒙版会根据其羽化值乘以此值进行模糊。"
+    state machine
+}
+
+DreamPsdImportSettings:MaxGradientTextureSize {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:MaxGradientTextureSize
+    src   "The largest side of a texture a gradient is drawn into."
+    text  "渐变绘制的纹理的最大边长。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Masks {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bBakeLayerMasks
+    src   "Masks"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+Import {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bHandleContentBrowserImport
+    src   "Import"
+    // from the engine's zh-Hans
+    text  "导入"
+    state draft
+}
+
+Layers {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:bImportHiddenLayers
+    src   "Layers"
+    // from the engine's zh-Hans
+    text  "层"
+    state draft
+}
+
+Textures {
+    at    Source/DreamGUIPsd/Public/Import/DreamPsdImportSettings.h#DreamPsdImportSettings:MaxGradientTextureSize
+    src   "Textures"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}

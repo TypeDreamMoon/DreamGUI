@@ -1,0 +1,81 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamCanvasRenderTargetPreviewer {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer
+    src   "Dream Canvas Render Target Previewer"
+    text  "Dream Canvas 渲染目标预览器"
+    state machine
+}
+
+DreamCanvasRenderTargetPreviewer:Canvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:Canvas
+    src   "Canvas"
+    // from the engine's zh-Hans
+    text  "画布"
+    state draft
+}
+
+DreamCanvasRenderTargetPreviewer:GetPreviewCanvas:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:GetPreviewCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvasRenderTargetPreviewer:GetPreviewMaterial:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:GetPreviewMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvasRenderTargetPreviewer:Material {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:Material
+    src   "Material"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+DreamCanvasRenderTargetPreviewer:SetPreviewCanvas:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewCanvas:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvasRenderTargetPreviewer:SetPreviewMaterial:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamCanvasRenderTargetPreviewer {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer
+    src   "This component will grab canvas RenderTarget and display here.\nNOTE!!! This only valid when target Canvas RenderMode is set to RenderTarget."
+    text  "此组件将获取 Canvas 渲染目标并在此处显示。\n注意！！！仅当目标 Canvas 渲染模式设置为渲染目标时才有效。"
+    state machine
+}
+
+DreamCanvasRenderTargetPreviewer:SetPreviewCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewCanvas
+    src   "Which canvas's render target to display. Re-registers the change event and re-reads the texture."
+    text  "要显示的 Canvas 渲染目标。重新注册更改事件并重新读取纹理。"
+    state machine
+}
+
+DreamCanvasRenderTargetPreviewer:SetPreviewMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewMaterial
+    src   "Material the render target is drawn through, or null for the default. This is the hook\nUDreamRetainerBox uses for its effect material."
+    text  "绘制渲染目标所使用的材质，为null时使用默认材质。这是\nUDreamRetainerBox用于其效果材质的挂钩。"
+    state machine
+}

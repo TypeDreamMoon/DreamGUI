@@ -1,0 +1,363 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetBindingPath {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetBindingPath
+    src   "Dream Widget Binding Path"
+    text  "Dream控件绑定路径"
+    state machine
+}
+
+DreamWidgetBindingPath:Segments {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetBindingPath:Segments
+    src   "Segments"
+    // from the engine's zh-Hans
+    text  "Segments"
+    state draft
+}
+
+DreamWidgetEventBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding
+    src   "Dream Widget Event Binding"
+    text  "Dream控件事件绑定"
+    state machine
+}
+
+DreamWidgetEventBinding:BehaviourIndex {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:BehaviourIndex
+    src   "Behaviour Index"
+    text  "行为索引"
+    state machine
+}
+
+DreamWidgetEventBinding:EventName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:EventName
+    src   "Event Name"
+    // from the engine's zh-Hans
+    text  "事件名称"
+    state draft
+}
+
+DreamWidgetEventBinding:FunctionName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:FunctionName
+    src   "Function Name"
+    // from the engine's zh-Hans
+    text  "函数名称"
+    state draft
+}
+
+DreamWidgetEventBinding:SourceColumn {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:SourceColumn
+    src   "Source Column"
+    text  "源列"
+    state machine
+}
+
+DreamWidgetEventBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:SourceLine
+    src   "Source Line"
+    // from the engine's zh-Hans
+    text  "源线"
+    state draft
+}
+
+DreamWidgetEventBinding:Target {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamWidgetEventBinding:WidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:WidgetName
+    src   "Widget Name"
+    // from the engine's zh-Hans
+    text  "控件名称"
+    state draft
+}
+
+DreamWidgetPropertyBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding
+    src   "Dream Widget Property Binding"
+    text  "Dream控件属性绑定"
+    state machine
+}
+
+DreamWidgetPropertyBinding:bDependenciesComplete {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:bDependenciesComplete
+    src   "Dependencies Complete"
+    text  "依赖已完成"
+    state machine
+}
+
+DreamWidgetPropertyBinding:bDependenciesRecorded {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:bDependenciesRecorded
+    src   "Dependencies Recorded"
+    text  "依赖已记录"
+    state machine
+}
+
+DreamWidgetPropertyBinding:BehaviourIndex {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:BehaviourIndex
+    src   "Behaviour Index"
+    text  "行为索引"
+    state machine
+}
+
+DreamWidgetPropertyBinding:Dependencies {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:Dependencies
+    src   "Dependencies"
+    // from the engine's zh-Hans
+    text  "Dependencies"
+    state draft
+}
+
+DreamWidgetPropertyBinding:FunctionName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:FunctionName
+    src   "Function Name"
+    // from the engine's zh-Hans
+    text  "函数名称"
+    state draft
+}
+
+DreamWidgetPropertyBinding:NotifyField {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:NotifyField
+    src   "Notify Field"
+    text  "通知字段"
+    state machine
+}
+
+DreamWidgetPropertyBinding:PropertyName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:PropertyName
+    src   "Property Name"
+    // from the engine's zh-Hans
+    text  "属性名称"
+    state draft
+}
+
+DreamWidgetPropertyBinding:SetterName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:SetterName
+    src   "Setter Name"
+    text  "设置器名称"
+    state machine
+}
+
+DreamWidgetPropertyBinding:SourceColumn {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:SourceColumn
+    src   "Source Column"
+    text  "源列"
+    state machine
+}
+
+DreamWidgetPropertyBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:SourceLine
+    src   "Source Line"
+    // from the engine's zh-Hans
+    text  "源线"
+    state draft
+}
+
+DreamWidgetPropertyBinding:Target {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamWidgetPropertyBinding:WidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:WidgetName
+    src   "Widget Name"
+    // from the engine's zh-Hans
+    text  "控件名称"
+    state draft
+}
+
+EDreamWidgetBindingTarget.Behaviour {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Behaviour
+    src   "Behaviour"
+    // from the engine's zh-Hans
+    text  "行为"
+    state draft
+}
+
+EDreamWidgetBindingTarget.EDreamWidgetBindingTarget_MAX {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:EDreamWidgetBindingTarget_MAX
+    src   "EDream Widget Binding Target MAX"
+    text  "EDream控件绑定目标 MAX"
+    state machine
+}
+
+EDreamWidgetBindingTarget.Visual {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Visual
+    src   "Visual"
+    // from the engine's zh-Hans
+    text  "视觉效果"
+    state draft
+}
+
+EDreamWidgetBindingTarget.Widget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetBindingPath {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetBindingPath
+    src   "One member path a binding reads, from the user widget on: {Player, Health} for `Player.Health`. Every segment but the\nlast is an object member; the last is any member, or a no-argument function. See DreamUIBindingPath."
+    text  "绑定读取的一条成员路径，从用户控件开始：`Player.Health` 对应 {Player, Health}。除最后一段外，\n每段都是对象成员；最后一段可以是任意成员，也可以是无参函数。参见 DreamUIBindingPath。"
+    state machine
+}
+
+DreamWidgetEventBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding
+    src   "\"Route this event to this handler\", the `->` to the property binding's `<-`.\n\nThe arrows point the way the data flows: `Text <- GetTitle()` pulls a value out of a function,\n`OnClicked -> Confirm` pushes an event into one. Everything else is deliberately the same shape\nas FDreamWidgetPropertyBinding -- same widget naming, same target enum, same resolve walk -- so\nthe second kind of binding costs no second mental model.\n\nEventName is a DYNAMIC multicast delegate property on the target, because dynamic is the kind a\nUFUNCTION can be bound to by name and the kind that survives serialization; a plain multicast\ndelegate has neither property. FunctionName is a UFUNCTION on the user widget -- the compiler has\nchecked it exists and that its signature matches the delegate's, so the runtime binds without\nguessing."
+    text  "“将此事件路由到此处理程序”，与属性绑定的 `<-` 相对的 `->`。\n\n箭头指示数据流动的方向：`Text <- GetTitle()` 从函数中取出值，\n`OnClicked -> Confirm` 把事件推入函数。其余部分刻意与\nFDreamWidgetPropertyBinding 保持相同形态——相同的控件命名、相同的目标枚举、相同的解析过程——因此\n第二种绑定无需再建立一套心智模型。\n\nEventName 是目标上的 DYNAMIC 多播委托属性，因为 dynamic 正是\nUFUNCTION 可以按名称绑定、且能经受序列化的类型；普通多播\n委托两者都不具备。FunctionName 是用户控件上的 UFUNCTION——编译器已\n检查其存在并确认签名与委托匹配，因此运行时绑定无需\n猜测。"
+    state machine
+}
+
+DreamWidgetEventBinding:EventName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:EventName
+    src   "The dynamic multicast delegate property being listened to."
+    text  "正在监听的动态多播委托属性。"
+    state machine
+}
+
+DreamWidgetEventBinding:FunctionName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:FunctionName
+    src   "The UFUNCTION on the user widget the event calls."
+    text  "事件所调用的、用户控件上的 UFUNCTION。"
+    state machine
+}
+
+DreamWidgetEventBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:SourceLine
+    src   "Where the `->` that produced this was written, 1-based, 0 when it came from anywhere else --\nthe same field FDreamWidgetPropertyBinding carries and for the same reason, spelled out\nthere. This is the half DUI6004 and DUI6005 read: the handler's existence and its signature\ncan only be judged once the class exists, which is after the AST is gone."
+    text  "生成此处的 `->` 的书写位置，从 1 开始计数，来自其他位置时为 0——\n与 FDreamWidgetPropertyBinding 所携带的控件绑定字段相同，原因也相同，详见\n该处。这是 DUI6004 和 DUI6005 所读取的那一半：处理程序是否存在及其签名\n只能在类存在之后判断，而那时 AST 已经消失。"
+    state machine
+}
+
+DreamWidgetEventBinding:WidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetEventBinding:WidgetName
+    src   "The widget, by the variable name the compiler gave it."
+    text  "该控件，以编译器赋予它的变量名表示。"
+    state machine
+}
+
+DreamWidgetPropertyBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding
+    src   "\"Drive this property from this function\", resolved at compile time.\n\nThe counterpart of UMG's FDelegateRuntimeBinding, with one deliberate difference. UMG binds a\ncompanion delegate that the widget consults while it draws (FGetText next to Text), which needs\nevery bindable property in the runtime library to carry a delegate twin. Nothing here does, and\nadding one per property to buy an editor feature is the wrong trade: this evaluates in the other\ndirection instead -- call the function, hand the result to the object's own setter.\n\nGoing through the SETTER rather than writing the property is what makes that sound. A reflected\nwrite lands in memory and nothing repaints; SetText marks what SetText knows to mark. It also\nsettles what \"bindable\" means without a list to maintain: a property is bindable exactly when its\nobject already exposes a setter for it, which is the same as it being ready to change at runtime.\n\nEvery name here is resolved and checked by the compiler, so the runtime looks things up but never\nguesses -- a binding that cannot be honoured is a compile error, not a silent no-op."
+    text  "“用此函数驱动此属性”，在编译期解析。\n\nUMG 的 FDelegateRuntimeBinding 的对应物，但有一处刻意的不同。UMG 绑定一个\n伴随委托，由控件在绘制时查询（Text 旁边的 FGetText），这需要\n运行时库中每个可绑定属性都带一个委托孪生体。这里则不然，\n为换取一个编辑器功能而给每个属性都加一个委托并不划算：这里改为朝另一个\n方向求值——调用函数，把结果交给对象自己的 setter。\n\n之所以行得通，是因为走的是 SETTER 而不是直接写属性。反射式\n写入只落在内存里，什么都不会重绘；SetText 会标记 SetText 知道要标记的东西。这也\n顺带确定了“可绑定”的含义，且无需维护列表：一个属性可绑定，当且仅当它的\n对象已经为它暴露了 setter，这等同于它已准备好可在运行时更改。\n\n这里的每个名字都由编译器解析并检查，所以运行时只做查找，从不\n猜测——无法兑现的绑定是编译错误，而不是静默的空操作。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:bDependenciesComplete {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:bDependenciesComplete
+    src   "Nothing the source reads escapes Dependencies -- see FDreamUIProperty::bBindingDependenciesComplete."
+    text  "源读取的任何内容都不会脱离 Dependencies——参见 FDreamUIProperty::bBindingDependenciesComplete（绑定依赖项是否完整）。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:bDependenciesRecorded {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:bDependenciesRecorded
+    src   "The compiler recorded Dependencies. Empty Dependencies then mean a constant: evaluated once, never polled."
+    text  "编译器已记录 Dependencies。此时为空的 Dependencies 表示常量：只求值一次，从不轮询。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:BehaviourIndex {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:BehaviourIndex
+    src   "Which behaviour, when Target is Behaviour: its index in the widget's component array.\n\nBy position, because a behaviour is an instanced sub-object and the authored copy and the\ninstanced one share no name -- the same correspondence the designer's own component editing\nruns on."
+    text  "当 Target 为 Behaviour 时指定哪个行为：它在控件的组件数组中的索引。\n\n按位置指定，因为行为是实例化的子对象，创作副本与\n实例化副本不共享名称——设计器自身的组件编辑也建立在\n同样的对应关系上。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:Dependencies {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:Dependencies
+    src   "Every member path the source reads (FDreamUIProperty::BindingDependencies, recorded when the compiler lowered the\nexpression). With bDependenciesRecorded the run time watches these instead of looking FunctionName or NotifyField\nup as a field of the widget:\n - complete, and every hop announceable (DreamUIBindingPath::CanNotifyAlong from the widget's class): subscribed\n   through an FDreamUIBindingObserver, never polled;\n - otherwise: polled every frame, as every expression binding was before.\nEither way the binding is not evaluated while an object along any path is unset -- the target keeps the value it\nhad (the authored one, or the last one) rather than being reset by a chain that broke.\n\nNot recorded (an older compile, the designer's Bind button, a bare `F()`): the run time does what it always did."
+    text  "源读取的每条成员路径（FDreamUIProperty::BindingDependencies，在编译器降级\n表达式时记录）。设置 bDependenciesRecorded 后，运行时会监视这些路径，而不是把 FunctionName 或 NotifyField\n当作控件的字段来查找：\n - 完整，且每一跳都可通告（DreamUIBindingPath::CanNotifyAlong，自控件的类起）：通过\n   FDreamUIBindingObserver 订阅，从不轮询；\n - 否则：每帧轮询，与此前所有表达式绑定一样。\n无论哪种方式，只要任一路径上的某个对象未设置，该绑定都不会求值——目标保留它\n原有的值（创作时设定的值，或最后一次的值），而不会被一条断掉的链重置。\n\n未记录（较早的编译、设计器的 Bind 按钮、裸写 `F()`）：运行时一如既往。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:FunctionName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:FunctionName
+    src   "A no-argument function on the user widget whose return value feeds the setter."
+    text  "用户控件上的无参函数，其返回值送入 setter。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:NotifyField {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:NotifyField
+    src   "Set for the forward half of a `<->`: the FieldNotify VARIABLE this binding really reads\n(FunctionName is only its generated getter). The runtime subscribes to this field's\nbroadcasts instead of the getter's nonexistent one, and both the compiler and the builder\nprefer the property's silent `...WithoutNotify` setter when it exists -- pushing a value\nINTO a control must not fire the control's changed event back at the variable, and killing\nthe echo at the setter beats trusting every control to early-out on an equal value."
+    text  "在 `<->` 的正向一半中设置：此绑定真正读取的 FieldNotify 变量\n（FunctionName 只是它生成的 getter）。运行时订阅此字段的\n广播，而不是 getter 那个并不存在的广播；编译器和构建器\n在属性存在静默的 `...WithoutNotify` setter 时都优先使用它——把值\n推入控件绝不能反过来触发控件的变更事件并传回该变量，而在\nsetter 处消除回声，胜过指望每个控件在值相等时提前返回。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:PropertyName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:PropertyName
+    src   "The property being driven."
+    text  "被驱动的属性。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:SetterName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:SetterName
+    src   "Its setter, resolved by the compiler so the runtime does no name-guessing. None for the one property a binding\nwrites directly: a variable of a user widget (a component's `props` entry, a Blueprint variable with no SetX),\nwritten into the instance and announced through its FieldNotify field, which is what the component's own\nbindings on it listen to."
+    text  "它的 setter，由编译器解析，运行时不做任何名称猜测。只有绑定直接写入的那一种属性没有它：\n用户控件的一个变量（组件的 `props` 条目，没有 SetX 的蓝图变量），\n写入实例并通过其 FieldNotify 字段通告，组件自身对它上的\n绑定正是监听于此。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:SourceLine
+    src   "Where the `<-` that produced this was written: 1-based line and column, both 0 when it came\nfrom anywhere but a .dui (the designer's Bind button, a test building the struct by hand).\n\nCarried on the BINDING rather than looked up later because there is nothing to look it up\nfrom. The checks that need it -- DUI5004's two halves -- run inside the Blueprint compile,\nwhich has the resolved binding list and no AST: the file was parsed in an earlier stage and\nthe tree it produced is gone. Without this the diagnostic reaches VSCode with a location of\n(0,0), which the extension clamps to 1,1, and every binding mistake in a 300-line file\npoints at its first character.\n\nWITH_EDITORONLY_DATA because these ride into the generated class and so into a cooked build,\nwhere a line number in a source file that was never shipped is dead weight. Two plain ints\nrather than an FDreamUISourceLocation because that type is deliberately not a USTRUCT -- the\nAST it belongs to must stay free of UObject so the parser can run off the game thread.\n\nNOT part of operator==: two bindings that differ only in where they were typed are the same\nbinding, and the equality here answers \"is this the same route\", never \"is this the same\ntext\"."
+    text  "产生此绑定的那个 `<-` 的书写位置：行号和列号均从 1 起算；若来自\n.dui 之外的任何地方（设计器的 Bind 按钮、手工构建该结构的测试），则两者都为 0。\n\n它随 BINDING 一起携带，而不是事后查找，因为无处\n可查。需要它的检查——DUI5004 的两半——在蓝图编译中运行，\n那里只有已解析的绑定列表，没有 AST：文件在更早的阶段就已解析，\n其生成的树已经不在了。没有它，诊断到达 VSCode 时位置是\n(0,0)，扩展会把它夹取为 1,1，于是 300 行文件里的每个绑定错误\n都指向第一个字符。\n\nWITH_EDITORONLY_DATA，是因为这些数据会进入生成的类，从而进入烘焙后的构建，\n而那里，从未随包发布的源文件中的行号只是累赘。用两个普通 int\n而不是 FDreamUISourceLocation，是因为该类型刻意不是 USTRUCT——\n它所属的 AST 必须不涉及 UObject，这样解析器才能脱离游戏线程运行。\n\n不属于 operator== 的一部分：两个仅在书写位置上不同的绑定是同一个\n绑定，这里的相等判断回答的是“是否同一条路径”，而绝不是“是否同一段\n文本”。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:Target {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:Target
+    src   "Which object on that widget carries the property."
+    text  "该控件上承载此属性的对象。"
+    state machine
+}
+
+DreamWidgetPropertyBinding:WidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#DreamWidgetPropertyBinding:WidgetName
+    src   "The widget, by the variable name the compiler gave it -- its display name."
+    text  "该控件，按编译器赋予它的变量名——即它的显示名称。"
+    state machine
+}
+
+EDreamWidgetBindingTarget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget
+    src   "Which object on the widget a binding drives.\n\nA widget's interesting properties are mostly not on the widget: Text and FontSize belong to a\nUDreamText, which is the widget's VISUAL, and a behaviour has its own. The widget is only the\nthing that has a name, so the name alone does not say what to write to."
+    text  "绑定驱动的是控件上的哪个对象。\n\n控件上值得关注的属性大多并不在控件本身：Text 和 FontSize（字体大小）属于\nUDreamText，也就是控件的可视对象，而行为也有自己的对象。控件只是那个\n拥有名称的东西，所以仅凭名称无法说明要写入哪个对象。"
+    state machine
+}
+
+EDreamWidgetBindingTarget.Behaviour {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Behaviour
+    src   "One of its behaviours, by position in the widget's component array."
+    text  "它的某个行为，按其在控件组件数组中的位置指定。"
+    state machine
+}
+
+EDreamWidgetBindingTarget.Visual {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Visual
+    src   "Its visual -- where Text, FontSize, Sprite and most of what an author wants to bind live."
+    text  "它的可视对象——Text、FontSize（字体大小）、Sprite 以及作者想要绑定的大部分内容都在这里。"
+    state machine
+}
+
+EDreamWidgetBindingTarget.Widget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h#EDreamWidgetBindingTarget:Widget
+    src   "The widget itself."
+    text  "控件本身。"
+    state machine
+}

@@ -1,0 +1,32 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetPalette
+
+SearchHint {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetPalette.cpp
+    src   "Search elements"
+    // from the engine's zh-Hans
+    text  "搜索元素"
+    state draft
+}
+
+FavoriteToggleTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetPalette.cpp
+    src   "Keep this element in the Favorites group at the top of the palette."
+    text  "将此元素保存在调色板顶部的“收藏夹”组中。"
+    state machine
+}
+
+ControlRowTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetPalette.cpp
+    src   "{0}\nDouble-click to add a copy under the selected widget."
+    text  "{0}\n双击以在选定的控件下添加一个副本。"
+    state machine
+}
+
+BasicRowTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetPalette.cpp
+    src   "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it under that widget."
+    text  "{0}\n双击或拖动到“层级”控件上，以将其添加到该控件下。"
+    state machine
+}

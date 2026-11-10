@@ -1,0 +1,705 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPanelSlot {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot
+    src   "Panel Slot"
+    // from the engine's zh-Hans
+    text  "面板插槽"
+    state draft
+}
+
+DreamPanelSlot:AuthoredAnchorData {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:AuthoredAnchorData
+    src   "Authored Anchor Data"
+    text  "锚点数据"
+    state machine
+}
+
+DreamPanelSlot:AuthoredDesiredSizeFallback {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:AuthoredDesiredSizeFallback
+    src   "Authored Desired Size Fallback"
+    text  "首选尺寸"
+    state machine
+}
+
+DreamPanelSlot:bAutoSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bAutoSize
+    src   "Auto Size"
+    // from the engine's zh-Hans
+    text  "自动调整大小"
+    state draft
+}
+
+DreamPanelSlot:bFillEmptySpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bFillEmptySpace
+    src   "Fill Empty Space"
+    // from the engine's zh-Hans
+    text  "填充空白空间"
+    state draft
+}
+
+DreamPanelSlot:bForceNewLine {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bForceNewLine
+    src   "Force New Line"
+    // from the engine's zh-Hans
+    text  "强制换新行"
+    state draft
+}
+
+DreamPanelSlot:bHasAuthoredGeometry {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bHasAuthoredGeometry
+    src   "Has Authored Geometry"
+    text  "是否包含自定义几何体"
+    state machine
+}
+
+DreamPanelSlot:bLayoutGeometryApplied {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bLayoutGeometryApplied
+    src   "Layout Geometry Applied"
+    text  "是否应用布局几何体"
+    state machine
+}
+
+DreamPanelSlot:Column {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:Column
+    src   "Column"
+    // from the engine's zh-Hans
+    text  "列"
+    state draft
+}
+
+DreamPanelSlot:ColumnSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:ColumnSpan
+    src   "Column Span"
+    // from the engine's zh-Hans
+    text  "列跨度"
+    state draft
+}
+
+DreamPanelSlot:FillSpanWhenLessThan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:FillSpanWhenLessThan
+    src   "Fill Span when Less Than"
+    // from the engine's zh-Hans
+    text  "小于该值时填充跨度"
+    state draft
+}
+
+DreamPanelSlot:FillWeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:FillWeight
+    src   "Fill Weight"
+    text  "填充权重"
+    state machine
+}
+
+DreamPanelSlot:GetAlignment:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetAnchors:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAnchors:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetAutoSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAutoSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetLayer:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetLayout:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayout:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetOffsets:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetOffsets:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetPosition:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetZOrder:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetZOrder:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:HorizontalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:HorizontalAlignment
+    src   "Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "水平对齐"
+    state draft
+}
+
+DreamPanelSlot:LayoutGeometryControlMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:LayoutGeometryControlMask
+    src   "Layout Geometry Control Mask"
+    text  "布局几何体控制遮罩"
+    state machine
+}
+
+DreamPanelSlot:MaxDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:MaxDesiredSize
+    src   "Max Desired Size"
+    text  "最大期望尺寸"
+    state machine
+}
+
+DreamPanelSlot:MinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:MinDesiredSize
+    src   "Min Desired Size"
+    text  "最小期望尺寸"
+    state machine
+}
+
+DreamPanelSlot:NotifySlotChanged:Reason {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:NotifySlotChanged:Reason
+    src   "Reason"
+    // from the engine's zh-Hans
+    text  "原因"
+    state draft
+}
+
+DreamPanelSlot:Nudge {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:Nudge
+    src   "Nudge"
+    // from the engine's zh-Hans
+    text  "微调"
+    state draft
+}
+
+DreamPanelSlot:Padding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:Padding
+    src   "Padding"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamPanelSlot:Row {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:Row
+    src   "Row"
+    // from the engine's zh-Hans
+    text  "行"
+    state draft
+}
+
+DreamPanelSlot:RowSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:RowSpan
+    src   "Row Span"
+    // from the engine's zh-Hans
+    text  "行跨度"
+    state draft
+}
+
+DreamPanelSlot:SetAlignment:InAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAlignment:InAlignment
+    src   "In Alignment"
+    // from the engine's zh-Hans
+    text  "在对齐中"
+    state draft
+}
+
+DreamPanelSlot:SetAnchors:InAnchors {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAnchors:InAnchors
+    src   "In Anchors"
+    // from the engine's zh-Hans
+    text  "在锚中"
+    state draft
+}
+
+DreamPanelSlot:SetAutoSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAutoSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetColumn:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetColumn:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetColumnSpan:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetColumnSpan:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetFillEmptySpace:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillEmptySpace:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetFillSpanWhenLessThan:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillSpanWhenLessThan:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetFillWeight:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillWeight:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetHorizontalAlignment:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetHorizontalAlignment:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetLayer:InLayer {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetLayer:InLayer
+    src   "In Layer"
+    // from the engine's zh-Hans
+    text  "输入层"
+    state draft
+}
+
+DreamPanelSlot:SetLayout:InLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetLayout:InLayout
+    src   "In Layout"
+    // from the engine's zh-Hans
+    text  "输入布局"
+    state draft
+}
+
+DreamPanelSlot:SetMaxDesiredSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMaxDesiredSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetMaximum:InMaximumAnchors {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMaximum:InMaximumAnchors
+    src   "In Maximum Anchors"
+    // from the engine's zh-Hans
+    text  "在最大锚中"
+    state draft
+}
+
+DreamPanelSlot:SetMinDesiredSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMinDesiredSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetMinimum:InMinimumAnchors {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMinimum:InMinimumAnchors
+    src   "In Minimum Anchors"
+    // from the engine's zh-Hans
+    text  "在最小锚中"
+    state draft
+}
+
+DreamPanelSlot:SetNewLine:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetNewLine:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetNudge:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetNudge:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetOffsets:InOffsets {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetOffsets:InOffsets
+    src   "In Offsets"
+    text  "偏移量"
+    state machine
+}
+
+DreamPanelSlot:SetPadding:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetPadding:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetPosition:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetPosition:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamPanelSlot:SetRow:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetRow:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetRowSpan:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetRowSpan:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetSize:InSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetSize:InSize
+    src   "In Size"
+    // from the engine's zh-Hans
+    text  "输入尺寸"
+    state draft
+}
+
+DreamPanelSlot:SetSizeRule:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetSizeRule:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetVerticalAlignment:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetVerticalAlignment:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetZOrder:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetZOrder:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPanelSlot:SizeRule {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SizeRule
+    src   "Size Rule"
+    // from the engine's zh-Hans
+    text  "大小规则"
+    state draft
+}
+
+DreamPanelSlot:VerticalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:VerticalAlignment
+    src   "Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "垂直对齐"
+    state draft
+}
+
+DreamPanelSlot:ZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:ZOrder
+    src   "ZOrder"
+    // from the engine's zh-Hans
+    text  "ZOrder"
+    state draft
+}
+
+EDreamPanelHorizontalAlignment.Center {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelHorizontalAlignment:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamPanelHorizontalAlignment.EDreamPanelHorizontalAlignment_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelHorizontalAlignment:EDreamPanelHorizontalAlignment_MAX
+    src   "EDream Panel Horizontal Alignment MAX"
+    text  "水平对齐方式 (最大值)"
+    state machine
+}
+
+EDreamPanelHorizontalAlignment.Fill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelHorizontalAlignment:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+EDreamPanelHorizontalAlignment.Left {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelHorizontalAlignment:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamPanelHorizontalAlignment.Right {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelHorizontalAlignment:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamPanelSizeRule.Auto {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelSizeRule:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamPanelSizeRule.EDreamPanelSizeRule_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelSizeRule:EDreamPanelSizeRule_MAX
+    src   "EDream Panel Size Rule MAX"
+    text  "尺寸规则 (最大值)"
+    state machine
+}
+
+EDreamPanelSizeRule.Fill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelSizeRule:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+EDreamPanelVerticalAlignment.Bottom {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelVerticalAlignment:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamPanelVerticalAlignment.Center {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelVerticalAlignment:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamPanelVerticalAlignment.EDreamPanelVerticalAlignment_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelVerticalAlignment:EDreamPanelVerticalAlignment_MAX
+    src   "EDream Panel Vertical Alignment MAX"
+    text  "垂直对齐方式 (最大值)"
+    state machine
+}
+
+EDreamPanelVerticalAlignment.Fill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelVerticalAlignment:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+EDreamPanelVerticalAlignment.Top {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#EDreamPanelVerticalAlignment:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPanelSlot {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot
+    src   "UMG-style per-child layout data owned by the child widget."
+    text  "由子控件拥有的 UMG 风格的每个子项布局数据。"
+    state machine
+}
+
+DreamPanelSlot:AuthoredAnchorData {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:AuthoredAnchorData
+    src   "Authored rect preserved independently from the serialized rect currently produced by a panel pass."
+    text  "自定义矩形，与面板传递当前生成的序列化矩形独立保存。实际的自定义尺寸另行存储，因为拉伸锚点取决于父级尺寸。仅适用于 WrapBox，与 UMG 的 UWrapBoxSlot 相同：当此子项是其行的最后一个子项时，它会占用该行剩余的空间。其他任何子项在该行中都会忽略此设置。只有该行的最后一个子项才会读取此标志。"
+    state machine
+}
+
+DreamPanelSlot:AuthoredDesiredSizeFallback {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:AuthoredDesiredSizeFallback
+    src   "Actual authored size is stored separately because stretched anchors depend on the parent size."
+    text  "实际创作的尺寸单独存储，因为拉伸锚点依赖父级尺寸。"
+    state machine
+}
+
+DreamPanelSlot:bFillEmptySpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bFillEmptySpace
+    src   "WrapBox only, matching UMG's UWrapBoxSlot: when this child is the LAST one on its line, it takes\nwhatever room the line has left over. Asked by any other child on the line, it does nothing --\nSWrapBox reads the flag for the line's last child alone. Read by no other panel."
+    text  "仅限 WrapBox 插槽，与 UMG 的 UWrapBoxSlot 一致：当此子项是其所在行中的最后一个时，它会占据\n该行剩余的全部空间。该行上的其他子项询问此标志时不会有任何效果——\nSWrapBox 只读取行内最后一个子项的标志。其他面板都不会读取。"
+    state machine
+}
+
+DreamPanelSlot:bForceNewLine {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bForceNewLine
+    src   "WrapBox only, matching UMG's UWrapBoxSlot::bForceNewLine: begin a line at this child however much\nroom is left on the current one. The unconditional twin of FillSpanWhenLessThan, which only breaks\nonce the box is narrow; this is how a section heading stays at the head of its own row."
+    text  "仅限 WrapBox 插槽，与 UMG 的 UWrapBoxSlot::bForceNewLine 一致：无论当前行还剩多少\n空间，都从此子项开始新的一行。它是 FillSpanWhenLessThan 的无条件版本，后者只在\n框变窄时才换行；这样分区标题就能始终留在其所在行的行首。"
+    state machine
+}
+
+DreamPanelSlot:bLayoutGeometryApplied {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:bLayoutGeometryApplied
+    src   "Persists so an asset reloaded after Apply still knows that AnchorData contains arranged geometry."
+    text  "持久保存，使应用后重新加载的资产仍能知道 AnchorData 中存有已排布的锚点几何体。"
+    state machine
+}
+
+DreamPanelSlot:FillSpanWhenLessThan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:FillSpanWhenLessThan
+    src   "WrapBox only, matching UMG's UWrapBoxSlot: when the box's wrap width drops below this, give this\nchild a line to itself. Zero disables it. The classic use is a responsive list of cards that stops\nsharing rows once the panel is narrow enough that sharing would make everything unreadable."
+    text  "仅限 WrapBox 插槽，与 UMG 的 UWrapBoxSlot 一致：当框的换行宽度低于此值时，让此\n子项独占一行。零表示禁用。经典用法是响应式的卡片列表，当面板窄到共享行会让\n内容全部无法阅读时，就不再共享行。"
+    state machine
+}
+
+DreamPanelSlot:GetAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAlignment
+    src   "UMG's Alignment: where inside its own rect the widget's position refers to. This plugin's Pivot."
+    text  "UMG 的对齐：控件的位置在其自身矩形内所参照的位置。本插件中即枢轴点。"
+    state machine
+}
+
+DreamPanelSlot:GetLayer {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayer
+    src   "UMG's UGridSlot::Layer, which is this slot's ZOrder under its UMG name rather than a second number.\n\nA grid's layer and a slot's z-order state the same fact -- which children of the panel draw over\nwhich -- and UDreamLayoutContainerGridPanel already reorders its children by ZOrder, stably. Two\nstored numbers for one fact would only raise the question of which one wins."
+    text  "UMG 的 UGridSlot::Layer，它就是这个插槽的 ZOrder 在 UMG 中的名称，而不是另一个数值。\n\n网格的层和插槽的 Z 顺序表达的是同一件事——面板的哪些子项绘制在\n哪些之上——而 UDreamLayoutContainerGridPanel 已经按 ZOrder 稳定地重排其子项。同一个事实存两个\n数值，只会引出哪一个说了算的问题。"
+    state machine
+}
+
+DreamPanelSlot:GetLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayout
+    src   "UMG's UCanvasPanelSlot rect family, reading and writing the widget's own FDreamUIAnchorData.\n\nA canvas child here states its rect through its anchors, exactly as one does in UMG through\nFAnchorData -- so these are a second NAME for that data, never a second copy of it. Everything\nbelow goes straight to the widget's setters, which raise the right invalidation and keep the\nauthored-geometry snapshot in step; a slot that stored its own position would be the one thing\nguaranteed to disagree with the transform shown in the details panel.\n\nThe axis convention is this plugin's throughout: y points UP, anchors are measured from the\nbottom, and Alignment IS the pivot. UMG measures y downwards, so a literal port would have to\nnegate it -- and then SetPosition and SetAnchoredPosition would describe the same widget in two\nopposite languages. The names and the shapes are UMG's; the axes are the ones the details panel,\nthe .dui files and every other setter here already use.\n\nOffsets are the four edge insets from the anchor rect (UDreamWidget::GetAnchorOffset), which is\nUMG's meaning on a STRETCHED axis. On a point anchor UMG reuses Offsets.Right/Bottom to mean the\nsize instead; that reading lives on GetSize/SetSize here, and Offsets stays insets on both."
+    text  "UMG 的 UCanvasPanelSlot 矩形族，读写控件自身的 FDreamUIAnchorData。\n\n这里的画布子项通过其锚点声明矩形，与 UMG 中通过\nFAnchorData 声明完全一样——因此这些是那份数据的另一个名称，绝不是它的另一份副本。下面的内容\n都直接交给控件的 setter，由它们触发正确的失效并让\n创作几何体的快照保持同步；一个自己存储位置的插槽，恰恰是唯一必然与\n细节面板中显示的变换不一致的东西。\n\n坐标轴约定在本插件中始终如一：y 轴向上，锚点从\n底部度量，而对齐就是枢轴点。UMG 的 y 轴向下，所以照搬过来必须\n取反——那样 SetPosition 和 SetAnchoredPosition 就会用两种相反的语言描述同一个控件。\n名称和形式是 UMG 的；坐标轴则是细节面板、\n.dui 文件和这里其他所有 setter 早已使用的。\n\n偏移量是从锚点矩形量起的四个边缘内缩（UDreamWidget::GetAnchorOffset），这正是\nUMG 在拉伸轴上的含义。在点锚点上 UMG 复用 Offsets.Right/Bottom 表示\n尺寸；这种解读在这里位于 GetSize/SetSize 上，而 Offsets 在两种情况下都仍是内缩量。"
+    state machine
+}
+
+DreamPanelSlot:GetPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetPosition
+    src   "The offset of the widget's alignment point from its anchor -- UMG's Position on a point anchor."
+    text  "控件的对齐点相对于其锚点的偏移——即 UMG 在点锚点上的 Position。"
+    state machine
+}
+
+DreamPanelSlot:GetSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetSize
+    src   "The size a point anchor resolves to, and the size BEYOND the anchor span on a stretched one."
+    text  "点锚点解析得到的尺寸，以及拉伸锚点上超出锚点范围的尺寸。"
+    state machine
+}
+
+DreamPanelSlot:LayoutGeometryControlMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:LayoutGeometryControlMask
+    src   "Axes touched by the active layout pass. Zero on an applied legacy slot means all axes."
+    text  "当前布局过程所触及的轴。已应用的旧版插槽上为零表示所有轴。"
+    state machine
+}
+
+DreamPanelSlot:MinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:MinDesiredSize
+    src   "Floor and ceiling applied to whatever this child measures, per axis, zero meaning \"no opinion\".\n\nSizeBox has carried MinDesiredSize/MaxDesiredSize since the beginning, but SizeBox takes one\nchild, so constraining one item of a StackBox or one cell of a GridPanel meant wrapping it in a\nwhole extra panel. These say the same thing on the slot, where UMG's own per-slot minimums live.\nApplied at the single point every panel measures through (UDreamPanelLayoutBase::GetDesiredSize),\nso no panel needs to know about them and none can forget: min wins over max when they cross,\nmatching SizeBox, and neither one forces a size the way SizeBox's overrides do -- they bound the\nmeasurement, and the panel's own alignment and fill rules then do what they always did."
+    text  "按轴应用于此子项所测得的任何尺寸的下限和上限，零表示“不发表意见”。\n\nSizeBox 从一开始就带有 MinDesiredSize/MaxDesiredSize，但 SizeBox 只接受一个\n子项，所以要约束 StackBox 中的某一项或 GridPanel 中的某个单元格，就得把它包进\n一整个额外面板。这些属性在插槽上表达了同样的意思，也正是 UMG 自己按插槽设置的最小值所在之处。\n它们应用在每个面板都会经过的同一个测量点（UDreamPanelLayoutBase::GetDesiredSize）上，\n因此没有面板需要了解它们，也没有面板会遗漏：两者交叉时最小值优先于最大值，\n与 SizeBox 一致，而且两者都不会像 SizeBox 的覆盖值那样强制尺寸——它们只是限定\n测量结果，之后面板自身的对齐和填充规则照旧生效。"
+    state machine
+}
+
+DreamPanelSlot:NotifySlotChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:NotifySlotChanged
+    src   "Reason defaults to Measure, the safe answer. Alignment, size rule, fill weight and z-order pass\nArrange instead: none of them appear in any panel's MeasureLayout - checked one by one - so they\ncannot move a preferred size, only where this slot's widget ends up inside its own parent.\nPadding, the grid coordinates and bAutoSize all do appear there, and keep the default."
+    text  "Reason 默认取 Measure，这是稳妥的选择。对齐、尺寸规则、填充权重和 Z 序应改传\nArrange：它们都不出现在任何面板的 MeasureLayout 中——已逐一核对——因此无法移动\n首选尺寸，只决定此插槽的控件最终落在其父级内的哪个位置。\n填充、网格坐标和 bAutoSize 都会出现在那里，应保留默认值。"
+    state machine
+}
+
+DreamPanelSlot:Nudge {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:Nudge
+    src   "A fixed offset added to wherever the panel decided to put this child, in the panel's content space\n(x right, y down -- the same sense as Padding).\n\nUMG carries this on UGridSlot alone. Here it is applied at the single point every panel places a\nchild through (UDreamPanelLayoutBase::ApplyChildRect), so a stack, a wrap box and an overlay all\nhonour it without knowing it exists. It is deliberately invisible to MEASUREMENT: nudging a child\nmust not resize the panel around it, which is precisely why UMG calls it a nudge and not a position."
+    text  "在面板决定放置此子项的位置上叠加的固定偏移，位于面板的内容空间\n（x 向右，y 向下——与填充方向一致）。\n\nUMG 仅在 UGridSlot 插槽上提供此项。这里它在每个面板放置子项都会经过的唯一位置\n（UDreamPanelLayoutBase::ApplyChildRect）生效，因此 StackBox、WrapBox 和 Overlay 都\n无需知道它的存在便会遵循。它对测量刻意不可见：微调子项\n不得改变其周围面板的尺寸，这正是 UMG 称之为微调而非位置的原因。"
+    state machine
+}
+
+DreamPanelSlot:ZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:ZOrder
+    src   "Paint order among siblings, applied as a stable reorder (equal values keep sibling order).\nConsumed by Overlay and GridPanel always, and by CanvasPanel when SortChildrenByZOrder is on;\nevery other panel arranges strictly by sibling order and ignores this value."
+    text  "同级之间的绘制顺序，以稳定重排的方式应用（相同值保持同级顺序）。\nOverlay 和 GridPanel 始终使用，CanvasPanel 在 SortChildrenByZOrder 开启时使用；\n其他所有面板严格按同级顺序排列，忽略此值。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Slot|Canvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAlignment
+    src   "Slot|Canvas"
+    text  "插槽|Canvas"
+    state machine
+}
+
+Slot {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAutoSize
+    src   "Slot"
+    // from the engine's zh-Hans
+    text  "插槽"
+    state draft
+}

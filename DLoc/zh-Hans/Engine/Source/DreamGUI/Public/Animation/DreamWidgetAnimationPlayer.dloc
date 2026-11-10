@@ -1,0 +1,34 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetAnimationPlayer {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationPlayer.h#DreamWidgetAnimationPlayer
+    src   "DreamUI Widget Animation Player"
+    text  "DreamUI 控件动画播放器"
+    state machine
+}
+
+DreamWidgetAnimationPlayer:Ticker {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationPlayer.h#DreamWidgetAnimationPlayer:Ticker
+    src   "Ticker"
+    // from the engine's zh-Hans
+    text  "Ticker"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetAnimationPlayer {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationPlayer.h#DreamWidgetAnimationPlayer
+    src   "UDreamWidgetAnimationPlayer is used to actually \"play\" a widget animation at runtime.\n\nAlways created with a UDreamWidgetAnimationComponent as its outer, and that outer is what it\nplays for: the playback context is the component's widget whichever sequence is loaded -- an\nembedded UDreamWidgetAnimation or a standalone UDreamUISequence asset -- so bindings resolve\nagainst the widget hosting the player."
+    text  "UDreamWidgetAnimationPlayer 用于在运行时实际“播放”控件动画。\n\n它总是以 UDreamWidgetAnimationComponent 作为其 outer 创建，而该 outer 正是它播放的对象：\n播放上下文是组件的控件，无论加载的是哪个序列——\n内嵌的 UDreamWidgetAnimation 还是独立的 UDreamUISequence 资产——\n因此绑定会针对承载该播放器的控件解析。"
+    state machine
+}
+
+DreamWidgetAnimationPlayer:Ticker {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationPlayer.h#DreamWidgetAnimationPlayer:Ticker
+    src   "The ticker ticking this player (UseTicker), which it keeps alive while the player lives."
+    text  "该播放器使用的计时器（UseTicker），它在播放器存活期间保持其活动状态。"
+    state machine
+}

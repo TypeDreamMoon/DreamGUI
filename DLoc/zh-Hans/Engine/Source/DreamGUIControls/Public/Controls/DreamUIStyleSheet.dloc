@@ -1,0 +1,347 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIStyleSheet {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet
+    src   "Dream UIStyle Sheet"
+    text  "Dream UI 样式表"
+    state machine
+}
+
+DreamUIStyleSheet:Border {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Border
+    src   "Border"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+DreamUIStyleSheet:BorderVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:BorderVariants
+    src   "Border Variants"
+    text  "边框变体"
+    state machine
+}
+
+DreamUIStyleSheet:Button {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Button
+    src   "Button"
+    // from the engine's zh-Hans
+    text  "按钮"
+    state draft
+}
+
+DreamUIStyleSheet:ButtonVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ButtonVariants
+    src   "Button Variants"
+    text  "按钮变体"
+    state machine
+}
+
+DreamUIStyleSheet:Dialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Dialog
+    src   "Dialog"
+    // from the engine's zh-Hans
+    text  "对话框"
+    state draft
+}
+
+DreamUIStyleSheet:DialogVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:DialogVariants
+    src   "Dialog Variants"
+    text  "对话框变体"
+    state machine
+}
+
+DreamUIStyleSheet:Dropdown {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Dropdown
+    src   "Dropdown"
+    // from the engine's zh-Hans
+    text  "下拉"
+    state draft
+}
+
+DreamUIStyleSheet:DropdownVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:DropdownVariants
+    src   "Dropdown Variants"
+    text  "下拉菜单变体"
+    state machine
+}
+
+DreamUIStyleSheet:ExpandableArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ExpandableArea
+    src   "Expandable Area"
+    // from the engine's zh-Hans
+    text  "可扩展区域"
+    state draft
+}
+
+DreamUIStyleSheet:ExpandableAreaVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ExpandableAreaVariants
+    src   "Expandable Area Variants"
+    text  "可展开区域变体"
+    state machine
+}
+
+DreamUIStyleSheet:InputKeySelector {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:InputKeySelector
+    src   "Input Key Selector"
+    // from the engine's zh-Hans
+    text  "输入键选择器"
+    state draft
+}
+
+DreamUIStyleSheet:InputKeySelectorVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:InputKeySelectorVariants
+    src   "Input Key Selector Variants"
+    text  "输入键选择器变体"
+    state machine
+}
+
+DreamUIStyleSheet:List {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:List
+    src   "List"
+    // from the engine's zh-Hans
+    text  "列表"
+    state draft
+}
+
+DreamUIStyleSheet:ListVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ListVariants
+    src   "List Variants"
+    text  "列表变体"
+    state machine
+}
+
+DreamUIStyleSheet:MenuAnchor {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:MenuAnchor
+    src   "Menu Anchor"
+    // from the engine's zh-Hans
+    text  "菜单锚"
+    state draft
+}
+
+DreamUIStyleSheet:MenuAnchorVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:MenuAnchorVariants
+    src   "Menu Anchor Variants"
+    text  "菜单锚点变体"
+    state machine
+}
+
+DreamUIStyleSheet:ProgressBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ProgressBar
+    src   "Progress Bar"
+    // from the engine's zh-Hans
+    text  "进度条"
+    state draft
+}
+
+DreamUIStyleSheet:ProgressBarVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ProgressBarVariants
+    src   "Progress Bar Variants"
+    text  "进度条变体"
+    state machine
+}
+
+DreamUIStyleSheet:RadioButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RadioButton
+    src   "Radio Button"
+    // from the engine's zh-Hans
+    text  "单选按钮"
+    state draft
+}
+
+DreamUIStyleSheet:RadioButtonVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RadioButtonVariants
+    src   "Radio Button Variants"
+    text  "单选按钮变体"
+    state machine
+}
+
+DreamUIStyleSheet:RichText {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RichText
+    src   "Rich Text"
+    // from the engine's zh-Hans
+    text  "多格式文本"
+    state draft
+}
+
+DreamUIStyleSheet:RichTextVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RichTextVariants
+    src   "Rich Text Variants"
+    text  "多格式文本变体"
+    state machine
+}
+
+DreamUIStyleSheet:RingMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RingMenu
+    src   "Ring Menu"
+    text  "环形菜单"
+    state machine
+}
+
+DreamUIStyleSheet:RingMenuVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:RingMenuVariants
+    src   "Ring Menu Variants"
+    text  "环形菜单变体"
+    state machine
+}
+
+DreamUIStyleSheet:ScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ScrollBar
+    src   "Scroll Bar"
+    // from the engine's zh-Hans
+    text  "滚动条"
+    state draft
+}
+
+DreamUIStyleSheet:ScrollBarVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ScrollBarVariants
+    src   "Scroll Bar Variants"
+    text  "滚动条变体"
+    state machine
+}
+
+DreamUIStyleSheet:ScrollBox {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ScrollBox
+    src   "Scroll Box"
+    // from the engine's zh-Hans
+    text  "Scroll Box"
+    state draft
+}
+
+DreamUIStyleSheet:ScrollBoxVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ScrollBoxVariants
+    src   "Scroll Box Variants"
+    text  "滚动框变体"
+    state machine
+}
+
+DreamUIStyleSheet:Slider {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Slider
+    src   "Slider"
+    // from the engine's zh-Hans
+    text  "滑条"
+    state draft
+}
+
+DreamUIStyleSheet:SliderVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:SliderVariants
+    src   "Slider Variants"
+    text  "滑块变体"
+    state machine
+}
+
+DreamUIStyleSheet:SpinBox {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:SpinBox
+    src   "Spin Box"
+    // from the engine's zh-Hans
+    text  "旋转框"
+    state draft
+}
+
+DreamUIStyleSheet:SpinBoxVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:SpinBoxVariants
+    src   "Spin Box Variants"
+    text  "自增/减控件变体"
+    state machine
+}
+
+DreamUIStyleSheet:TabView {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TabView
+    src   "Tab View"
+    text  "标签页"
+    state machine
+}
+
+DreamUIStyleSheet:TabViewVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TabViewVariants
+    src   "Tab View Variants"
+    text  "标签页变体"
+    state machine
+}
+
+DreamUIStyleSheet:TextInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TextInput
+    src   "Text Input"
+    // from the engine's zh-Hans
+    text  "文本输入"
+    state draft
+}
+
+DreamUIStyleSheet:TextInputVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TextInputVariants
+    src   "Text Input Variants"
+    text  "文本输入框变体"
+    state machine
+}
+
+DreamUIStyleSheet:Throbber {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Throbber
+    src   "Throbber"
+    // from the engine's zh-Hans
+    text  "动态浏览图示"
+    state draft
+}
+
+DreamUIStyleSheet:ThrobberVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ThrobberVariants
+    src   "Throbber Variants"
+    text  "进度指示器变体"
+    state machine
+}
+
+DreamUIStyleSheet:TileView {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TileView
+    src   "Tile View"
+    // from the engine's zh-Hans
+    text  "瓦片视图"
+    state draft
+}
+
+DreamUIStyleSheet:TileViewVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TileViewVariants
+    src   "Tile View Variants"
+    text  "平铺视图变体"
+    state machine
+}
+
+DreamUIStyleSheet:Toggle {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:Toggle
+    src   "Toggle"
+    // from the engine's zh-Hans
+    text  "Toggle"
+    state draft
+}
+
+DreamUIStyleSheet:ToggleVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:ToggleVariants
+    src   "Toggle Variants"
+    text  "切换按钮变体"
+    state machine
+}
+
+DreamUIStyleSheet:TreeView {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TreeView
+    src   "Tree View"
+    // from the engine's zh-Hans
+    text  "树视图"
+    state draft
+}
+
+DreamUIStyleSheet:TreeViewVariants {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet:TreeViewVariants
+    src   "Tree View Variants"
+    text  "树视图变体"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIStyleSheet {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h#DreamUIStyleSheet
+    src   "One place where the project's controls agree on how to look.\n\nThe counterpart of a Slate style set, resolved the same way: at construction, by name. There is\nno runtime re-theme here and none intended -- what this buys is that changing the project's\naccent colour is one edit to one asset, instead of a visit to every screen that ever placed a\ntoggle. Per family it holds the default plus named variants (\"Danger\", \"Compact\"), which is the\nwhole of what a control needs to say about itself: which family, and optionally which name.\n\nA project without one is fine: the structs' own defaults are the built-in theme, and every\ncontrol falls back to them. So the plugin ships no asset -- there is nothing a default sheet\nwould say that the code does not already.\n\nPoint UDreamGUISettings::DefaultStyleSheet at the project's sheet to turn it on."
+    text  "项目中的控件就外观达成一致的地方。\n\n它是Slate样式集的对应物，解析方式也相同：在构造时按名称解析。这里\n没有运行时换肤，也不打算提供——它带来的是，修改项目的\n强调色只需编辑一个资产，而不必逐一造访每个曾放置\n开关的界面。每个族中保存默认项以及具名变体（“Danger”、“Compact”），这就是\n一个控件需要说明的全部内容：属于哪个族，以及可选的名称。\n\n没有样式表的项目也没问题：结构体自身的默认值就是内置主题，所有\n控件都会回退到这些默认值。因此插件不附带任何资产——默认样式表\n能表达的内容，代码里都已经有了。\n\n将UDreamGUISettings::DefaultStyleSheet指向项目的样式表即可启用。"
+    state machine
+}

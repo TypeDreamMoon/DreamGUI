@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerGestureInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface
+    src   "Dream Pointer Gesture Interface"
+    text  "Dream 指令手势接口"
+    state machine
+}
+
+DreamPointerGestureInterface:OnPointerPinch:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerPinch:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerGestureInterface:OnPointerPinch:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerPinch:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerGestureInterface:OnPointerSwipe:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerSwipe:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerGestureInterface:OnPointerSwipe:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerSwipe:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerGestureInterface:OnPointerPinch {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerPinch
+    src   "Two fingers moved together or apart. Called every frame the distance changes by more than the\nevent system's PinchMinDistanceChange.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "两指靠拢或分开。每当距离变化超过事件系统的 PinchMinDistanceChange 时，\n每帧调用。\n@return 是否允许事件冒泡？如果同一 Actor 所有组件上的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerGestureInterface:OnPointerSwipe {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerSwipe
+    src   "A finger travelled far enough, fast enough, in one direction and then left the glass. Called\nonce, on release.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "手指沿某一方向移动得足够远、足够快，然后离开玻璃。在释放时\n调用一次。\n@return 是否允许事件冒泡？如果同一 Actor 所有组件上的接口都返回 true，则事件可以冒泡。"
+    state machine
+}

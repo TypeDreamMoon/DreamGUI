@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+Dream2DLineChildrenAsPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.h#Dream2DLineChildrenAsPoints
+    src   "Dream 2DLine Children as Points"
+    text  "将 2D 线段的子对象视为点"
+    state machine
+}
+
+Dream2DLineChildrenAsPoints:CurrentPointArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.h#Dream2DLineChildrenAsPoints:CurrentPointArray
+    src   "Current Point Array"
+    text  "当前点数组"
+    state machine
+}
+
+namespace UObjectToolTips
+
+Dream2DLineChildrenAsPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.h#Dream2DLineChildrenAsPoints
+    src   "Collect U2DLineChildrenAsPointsChild, and use child's relative location as points to draw line"
+    text  "收集 U2DLineChildrenAsPointsChild，并使用子对象的相对位置作为点来绘制线段"
+    state machine
+}

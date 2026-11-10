@@ -1,0 +1,28 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetBlueprintActorFactory
+
+DisplayName {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintActorFactory.cpp
+    src   "DreamUI Widget"
+    text  "DreamUI 控件"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamWidgetBlueprintActorFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintActorFactory.cpp#DreamWidgetBlueprintActorFactory
+    src   "Dream Widget Blueprint Actor Factory"
+    text  "Dream 控件蓝图 Actor 工厂"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetBlueprintActorFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintActorFactory.cpp#DreamWidgetBlueprintActorFactory
+    src   "Dragging a DreamUI widget Blueprint into a level: spawn ADreamWorldWidgetActor and hand the\nBlueprint's generated class to its world widget component.\n\nThe actor is C++ now. It used to be whichever Blueprint the project settings named as the\nworld-space root, which meant the drop gesture depended on a content asset that had to ship, be\nfound by soft path, and carry the right components in its construction script -- and the render\nmode was baked into the choice of asset, so switching renderers meant respawning. One actor with\none component settles all of that: the renderer is a property on the component."
+    text  "将DreamUI控件蓝图拖入关卡：生成ADreamWorldWidgetActor，并将\n该蓝图生成的类交给它的世界控件组件。\n\n该Actor现在由C++实现。它以前是项目设置中指定为世界空间根的\n那个蓝图，这意味着拖放操作依赖于一个内容资产：它必须随包发布、能通过软路径找到，并在其构造脚本中包含正确的组件；\n而且渲染模式固化在资产的选择中，因此切换渲染器就意味着重新生成。\n一个Actor搭配一个组件便解决了这一切：\n渲染器是组件上的一个属性。"
+    state machine
+}

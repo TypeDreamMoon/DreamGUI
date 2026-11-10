@@ -1,0 +1,218 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetPlacement {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement
+    src   "Dream Widget Placement"
+    text  "控件放置位置"
+    state machine
+}
+
+DreamWidgetPlacement:AnchoredPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:AnchoredPosition
+    src   "Anchored Position"
+    text  "锚点位置"
+    state machine
+}
+
+DreamWidgetPlacement:AnchorMax {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:AnchorMax
+    src   "Anchor Max"
+    text  "最大锚点"
+    state machine
+}
+
+DreamWidgetPlacement:AnchorMin {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:AnchorMin
+    src   "Anchor Min"
+    text  "最小锚点"
+    state machine
+}
+
+DreamWidgetPlacement:bHadSlot {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bHadSlot
+    src   "Had Slot"
+    text  "已包含插槽"
+    state machine
+}
+
+DreamWidgetPlacement:bIgnoreLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bIgnoreLayout
+    src   "Ignore Layout"
+    text  "忽略布局"
+    state machine
+}
+
+DreamWidgetPlacement:bSlotAutoSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bSlotAutoSize
+    src   "Slot Auto Size"
+    text  "插槽自动调整大小"
+    state machine
+}
+
+DreamWidgetPlacement:bSlotFillEmptySpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bSlotFillEmptySpace
+    src   "Slot Fill Empty Space"
+    text  "插槽填充空白"
+    state machine
+}
+
+DreamWidgetPlacement:bSlotForceNewLine {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bSlotForceNewLine
+    src   "Slot Force New Line"
+    text  "插槽强制换行"
+    state machine
+}
+
+DreamWidgetPlacement:Parent {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:Parent
+    src   "Parent"
+    // from the engine's zh-Hans
+    text  "父项"
+    state draft
+}
+
+DreamWidgetPlacement:Pivot {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:Pivot
+    src   "Pivot"
+    // from the engine's zh-Hans
+    text  "枢轴点"
+    state draft
+}
+
+DreamWidgetPlacement:SiblingIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SiblingIndex
+    src   "Sibling Index"
+    text  "兄弟索引"
+    state machine
+}
+
+DreamWidgetPlacement:SizeDelta {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SizeDelta
+    src   "Size Delta"
+    text  "尺寸增量"
+    state machine
+}
+
+DreamWidgetPlacement:SlotColumn {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotColumn
+    src   "Slot Column"
+    text  "插槽列"
+    state machine
+}
+
+DreamWidgetPlacement:SlotColumnSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotColumnSpan
+    src   "Slot Column Span"
+    text  "插槽列跨度"
+    state machine
+}
+
+DreamWidgetPlacement:SlotFillSpanWhenLessThan {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotFillSpanWhenLessThan
+    src   "Slot Fill Span when Less Than"
+    text  "当值小于时插槽填充跨度"
+    state machine
+}
+
+DreamWidgetPlacement:SlotFillWeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotFillWeight
+    src   "Slot Fill Weight"
+    text  "插槽填充权重"
+    state machine
+}
+
+DreamWidgetPlacement:SlotHorizontalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotHorizontalAlignment
+    src   "Slot Horizontal Alignment"
+    text  "插槽水平对齐"
+    state machine
+}
+
+DreamWidgetPlacement:SlotMaxDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotMaxDesiredSize
+    src   "Slot Max Desired Size"
+    text  "插槽最大期望尺寸"
+    state machine
+}
+
+DreamWidgetPlacement:SlotMinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotMinDesiredSize
+    src   "Slot Min Desired Size"
+    text  "插槽最小期望尺寸"
+    state machine
+}
+
+DreamWidgetPlacement:SlotNudge {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotNudge
+    src   "Slot Nudge"
+    text  "插槽微调"
+    state machine
+}
+
+DreamWidgetPlacement:SlotPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotPadding
+    src   "Slot Padding"
+    // from the engine's zh-Hans
+    text  "插槽填充"
+    state draft
+}
+
+DreamWidgetPlacement:SlotRow {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotRow
+    src   "Slot Row"
+    text  "插槽行"
+    state machine
+}
+
+DreamWidgetPlacement:SlotRowSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotRowSpan
+    src   "Slot Row Span"
+    text  "插槽行跨度"
+    state machine
+}
+
+DreamWidgetPlacement:SlotSizeRule {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotSizeRule
+    src   "Slot Size Rule"
+    text  "插槽尺寸规则"
+    state machine
+}
+
+DreamWidgetPlacement:SlotVerticalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotVerticalAlignment
+    src   "Slot Vertical Alignment"
+    text  "插槽垂直对齐"
+    state machine
+}
+
+DreamWidgetPlacement:SlotZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotZOrder
+    src   "Slot ZOrder"
+    text  "插槽ZOrder"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetPlacement {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement
+    src   "Everything about where a widget sits that is destroyed by reparenting it, captured so it can be\nput back.\n\nThis exists because of one detail of how parenting works here: detaching a widget DESTROYS its\npanel slot, and re-attaching creates a fresh default one. So a widget lifted out to a drag layer\nand dropped back does not merely need its parent and sibling index restored -- it needs every\nauthored slot property restored too, or padding, alignment, fill weight, grid placement and\nauto-size all silently reset to defaults. That is the failure that looks like \"my layout broke\nitself when I dragged something\", and it is not obvious from the API that it can happen.\n\nAnything that temporarily moves a widget needs this: drag and drop, a reorder preview, a\nfull-screen zoom of a card, an item flying to an inventory slot. It is deliberately not part of\nthe drag system, because the need is \"move this somewhere and put it back\" and not \"drag\"."
+    text  "控件的摆放位置中所有会因重新指定父项而被销毁的信息，在此捕获以便之后能\n还原。\n\n之所以需要它，是因为这里的父子关系实现有一个细节：分离控件会销毁它的\n面板插槽，而重新附加会创建一个全新的默认插槽。因此，把控件取出到拖拽层\n再放回时，不仅需要恢复它的父项和同级索引，还需要恢复每一个\n编辑过的插槽属性，否则内边距、对齐、填充权重、网格位置和\n自动尺寸都会静默重置为默认值。这种故障看起来就像“我拖了一下，布局就自己坏了”，\n而从 API 上并不容易看出会发生这种事。\n\n任何会临时移动控件的功能都需要它：拖放、重排预览、卡片的\n整屏缩放、物品飞入物品栏插槽。它有意不属于\n拖拽系统，因为这里的需要是“把控件移到某处再放回去”，而不是“拖拽”。"
+    state machine
+}
+
+DreamWidgetPlacement:bHadSlot {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:bHadSlot
+    src   "False when the widget had no panel slot, so Restore does not fabricate one."
+    text  "当控件没有面板插槽时为 false，这样 Restore 就不会凭空创建一个。"
+    state machine
+}
+
+DreamWidgetPlacement:SlotMinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetPlacement.h#DreamWidgetPlacement:SlotMinDesiredSize
+    src   "The rest of the slot. These were missing rather than deliberately dropped: the struct's whole\nreason for existing is that a detach destroys the slot, and a per-slot minimum or a wrap-box line\nbreak is exactly as authored as the padding next to it."
+    text  "槽的其余部分。这些是遗漏的，而不是有意丢弃的：这个结构体存在的全部\n理由就是分离会销毁槽，而每槽最小值或 WrapBox 换行\n和旁边的内边距一样，都是作者明确设置的。"
+    state machine
+}

@@ -1,0 +1,98 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerSpring {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring
+    src   "Dream Tweener Spring"
+    text  "DreamTweener Spring"
+    state machine
+}
+
+DreamTweenerSpring:GetTarget:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:GetValue:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:GetVelocity:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetVelocity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:SetSpringParams:InParams {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetSpringParams:InParams
+    src   "In Params"
+    // from the engine's zh-Hans
+    text  "输入参数"
+    state draft
+}
+
+DreamTweenerSpring:SetSpringParams:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetSpringParams:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:SetTarget:InTarget {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetTarget:InTarget
+    src   "In Target"
+    // from the engine's zh-Hans
+    text  "In Target"
+    state draft
+}
+
+DreamTweenerSpring:SetTarget:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:SetVelocity:InVelocity {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetVelocity:InVelocity
+    src   "In Velocity"
+    // from the engine's zh-Hans
+    text  "在速度中"
+    state draft
+}
+
+DreamTweenerSpring:SetVelocity:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetVelocity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTweenerSpring {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring
+    src   "A tween driven by a spring instead of a clock: no duration, no ease. It pulls the value toward\nthe target every tick and completes when the spring is at rest. SetTarget may be called at any\ntime, including mid-flight -- the velocity carries over, which is what makes a list of lyric\nlines glide instead of restarting -- and at rest, which wakes the spring: a spring is held at\nrest by default (SetAutoKill(false)) rather than retired, so the handle stays good to retarget.\nKill it when it is no longer wanted, or SetAutoKill(true) before it starts to retire it at rest.\n // BlueprintType, unlike its siblings: every one of its setters below is already BlueprintCallable,\n// and a spring is steered AFTER it starts (SetTarget mid-flight is the whole point of it), so a\n// graph has to be able to hold one. The other tweener types are configured before they run and are\n// handed back as the base UDreamTweener, which is where their blueprint surface lives."
+    text  "由弹簧而非时钟驱动的补间：没有时长，没有缓动。它每个 tick 都把值拉向\n目标，并在弹簧静止时完成。SetTarget 可以在任何时间调用，\n包括飞行途中——速度会延续，这正是让一串歌词\n行滑动而不是重新开始的原因——也可以在静止时调用，此时会唤醒弹簧：弹簧默认\n保持静止（SetAutoKill(false)）而不是被退役，因此句柄仍然可以重新设定目标。\n不再需要时将其 Kill，或者在它启动前调用 SetAutoKill(true)，让它在静止时退役。\n // BlueprintType，与它的同类不同：下面每一个 setter 都已经是 BlueprintCallable，\n// 而且弹簧是在启动之后才被操纵的（飞行途中 SetTarget 正是它的意义所在），所以\n// 图表必须能够持有一个。其他补间类型在运行前就配置好，\n// 并以基类 UDreamTweener 的形式交回，它们的蓝图接口就在那里。"
+    state machine
+}
+
+DreamTweenerSpring:SetTarget {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetTarget
+    src   "Move the goal; the current velocity is kept. A spring held at rest wakes and goes to the new goal."
+    text  "移动目标；当前速度将被保留。 处于静止状态的弹簧会唤醒并移动到新的目标。"
+    state machine
+}

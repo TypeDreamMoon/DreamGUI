@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIActionBar
+
+PreviousTab {
+    at    Source/DreamGUIControls/Private/Interaction/DreamUIActionBar.cpp
+    src   "Previous tab"
+    text  "上一个选项卡"
+    state machine
+}
+
+NextTab {
+    at    Source/DreamGUIControls/Private/Interaction/DreamUIActionBar.cpp
+    src   "Next tab"
+    text  "下一个选项卡"
+    state machine
+}

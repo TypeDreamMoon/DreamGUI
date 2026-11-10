@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UITextureCustomization
+
+FillOrigin {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureCustomization.cpp
+    src   "    Fill Origin"
+    text  "    填充原点"
+    state machine
+}

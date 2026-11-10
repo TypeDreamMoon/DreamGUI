@@ -1,0 +1,196 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIStyleDialogBlending {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending
+    src   "Dream UIStyle Dialog Blending"
+    text  "Dream UIStyle对话框混合"
+    state machine
+}
+
+DreamUIStyleDialogBlending:BlendMode {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamUIStyleDialogBlending:Opacity {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamUIStyleDialogModel {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogModel
+    src   "Dream UIStyle Dialog Model"
+    text  "Dream UIStyle对话框模型"
+    state machine
+}
+
+DreamUIStyleDialogModel:Blending {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogModel:Blending
+    src   "Blending"
+    // from the engine's zh-Hans
+    text  "正在混合"
+    state draft
+}
+
+DreamUIStyleDialogModel:Style {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogModel:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+EDreamUIStyleDialogPage.BevelContour {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:BevelContour
+    src   "Bevel Contour"
+    text  "斜面等高线"
+    state machine
+}
+
+EDreamUIStyleDialogPage.BevelEmboss {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:BevelEmboss
+    src   "Bevel Emboss"
+    text  "浮雕"
+    state machine
+}
+
+EDreamUIStyleDialogPage.BevelTexture {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:BevelTexture
+    src   "Bevel Texture"
+    text  "斜面纹理"
+    state machine
+}
+
+EDreamUIStyleDialogPage.Blending {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:Blending
+    src   "Blending"
+    // from the engine's zh-Hans
+    text  "正在混合"
+    state draft
+}
+
+EDreamUIStyleDialogPage.ColorOverlay {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:ColorOverlay
+    src   "Color Overlay"
+    // from the engine's zh-Hans
+    text  "颜色覆层"
+    state draft
+}
+
+EDreamUIStyleDialogPage.DropShadow {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:DropShadow
+    src   "Drop Shadow"
+    text  "投影"
+    state machine
+}
+
+EDreamUIStyleDialogPage.EDreamUIStyleDialogPage_MAX {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:EDreamUIStyleDialogPage_MAX
+    src   "EDream UIStyle Dialog Page MAX"
+    text  "EDream UIStyle对话框页面MAX"
+    state machine
+}
+
+EDreamUIStyleDialogPage.GradientOverlay {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:GradientOverlay
+    src   "Gradient Overlay"
+    text  "渐变叠加"
+    state machine
+}
+
+EDreamUIStyleDialogPage.InnerGlow {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:InnerGlow
+    src   "Inner Glow"
+    text  "内发光"
+    state machine
+}
+
+EDreamUIStyleDialogPage.InnerShadow {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:InnerShadow
+    src   "Inner Shadow"
+    text  "内阴影"
+    state machine
+}
+
+EDreamUIStyleDialogPage.OuterGlow {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:OuterGlow
+    src   "Outer Glow"
+    text  "外发光"
+    state machine
+}
+
+EDreamUIStyleDialogPage.PatternOverlay {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:PatternOverlay
+    src   "Pattern Overlay"
+    text  "图案覆盖"
+    state machine
+}
+
+EDreamUIStyleDialogPage.Satin {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:Satin
+    src   "Satin"
+    text  "丝绸"
+    state machine
+}
+
+EDreamUIStyleDialogPage.Stroke {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage:Stroke
+    src   "Stroke"
+    // from the engine's zh-Hans
+    text  "笔划"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIStyleDialogBlending {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending
+    src   "The layer's own blending, on the style dialog's Blending Options page: its element's blend mode and its opacity. The page's\nother values -- the fill opacity, the scale of every size, the global light -- are the style's own."
+    text  "图层自身的混合，位于样式对话框的“混合选项”页：其元素的混合模式和不透明度。该页的\n其他值——填充不透明度、每个尺寸的缩放、全局光——属于样式自身。"
+    state machine
+}
+
+DreamUIStyleDialogBlending:BlendMode {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending:BlendMode
+    src   "The element's blend mode (its visual's BlendMode)."
+    text  "元素的混合模式（其视觉的BlendMode）。"
+    state machine
+}
+
+DreamUIStyleDialogBlending:Opacity {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending:Opacity
+    src   "The widget's opacity, its effects included (RenderOpacity)."
+    text  "控件的不透明度，包含其效果（RenderOpacity）。"
+    state machine
+}
+
+DreamUIStyleDialogModel {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogModel
+    src   "What the style dialog edits, as the details view sees it: the working style and the layer's blending. The parameters are\nshown as fields of this -- an effect's angle is Style.DropShadows[1].Angle, as it is a layer style's in a widget's details\n-- so an editor that finds its way about the style from a field (a light angle that turns the style's global light) works\nhere as it does there."
+    text  "样式对话框所编辑的内容，以细节视图所见的方式呈现：工作样式和图层的混合。这些参数\n作为此对象的字段显示——效果的角度是 Style.DropShadows[1].Angle，正如控件细节中图层样式的角度\n——因此，通过字段来定位样式的编辑器（例如旋转样式全局光的光照角度）在此处的\n工作方式与在那里相同。"
+    state machine
+}
+
+EDreamUIStyleDialogPage {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#EDreamUIStyleDialogPage
+    src   "One row of the style dialog's list: Blending Options, an effect, or one sub-page of the bevel."
+    text  "样式对话框列表中的一行：混合选项、某个效果，或斜面的某个子页。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"General Blending" {
+    at    Source/DreamGUIEditor/Public/Workflow/DreamUILayerStyleDialog.h#DreamUIStyleDialogBlending:BlendMode
+    src   "General Blending"
+    text  "通用混合"
+    state machine
+}

@@ -1,0 +1,971 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamScreenUISubsystem {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem
+    src   "Dream Screen UISubsystem"
+    text  "Dream Screen UI 子系统"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToPlayerScreen:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToPlayerScreen:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToPlayerScreen:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToPlayerScreen:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToPlayerScreen:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToPlayerScreen:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToViewport:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToViewport:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToViewport:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToViewport:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamScreenUISubsystem:CancelPageLoad:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CancelPageLoad:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:CancelPageLoad:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CancelPageLoad:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:ClearStack:bRemovePages {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ClearStack:bRemovePages
+    src   "Remove Pages"
+    // from the engine's zh-Hans
+    text  "移除页面"
+    state draft
+}
+
+DreamScreenUISubsystem:ClearStack:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ClearStack:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:CreateWidgetOnScreen:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:CreateWidgetOnScreen:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamScreenUISubsystem:CreateWidgetOnScreen:InWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamScreenUISubsystem:CreateWidgetOnScreen:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:ForgetPage:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ForgetPage:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:ForgetPage:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ForgetPage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetAllUINames:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetAllUINames:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetDreamScreenUISubsystem:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetDreamScreenUISubsystem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetDreamScreenUISubsystem:WorldContextObject {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetDreamScreenUISubsystem:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRoot:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRoot:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRoot:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRoot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:InUserIndex {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForWidget:InContextWidget {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForWidget:InContextWidget
+    src   "In Context Widget"
+    text  "上下文控件"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForWidget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetPageClass:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageClass:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:GetPageClass:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetPageHasCustomPlacement:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageHasCustomPlacement:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:GetPageHasCustomPlacement:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageHasCustomPlacement:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetPageState:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageState:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:GetPageState:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageState:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetRegisteredPageNames:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetRegisteredPageNames:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetScreenCanvas:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenCanvas:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetScreenCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetScreenPlayerIndices:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenPlayerIndices:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetScreenRoot:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenRoot:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetScreenRoot:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenRoot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetStackDepth:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetStackDepth:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetStackDepth:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetStackDepth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetTopUI:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetTopUI:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetTopUI:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetTopUI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetUI:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetUI:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:GetUI:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetUI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:GetUIStack:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetUIStack:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:GetUIStack:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetUIStack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:IsInViewport:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsInViewport:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:IsInViewport:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsInViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:IsUIInStack:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsUIInStack:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:IsUIInStack:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsUIInStack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:IsUIShowing:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsUIShowing:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:IsUIShowing:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:IsUIShowing:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:OnPageCreated {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnPageCreated
+    src   "On Page Created"
+    text  "页面创建时"
+    state machine
+}
+
+DreamScreenUISubsystem:OnPageHidden {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnPageHidden
+    src   "On Page Hidden"
+    text  "页面隐藏时"
+    state machine
+}
+
+DreamScreenUISubsystem:OnPageRemoved {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnPageRemoved
+    src   "On Page Removed"
+    // from the engine's zh-Hans
+    text  "On Page Removed"
+    state draft
+}
+
+DreamScreenUISubsystem:OnPageShown {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnPageShown
+    src   "On Page Shown"
+    text  "页面显示时"
+    state machine
+}
+
+DreamScreenUISubsystem:OnStackChanged {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnStackChanged
+    src   "On Stack Changed"
+    text  "堆栈改变时"
+    state machine
+}
+
+DreamScreenUISubsystem:PopToUI:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PopToUI:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:PopToUI:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PopToUI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:PopUI:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PopUI:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:PushPageAsync:bHidePrevious {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushPageAsync:bHidePrevious
+    src   "Hide Previous"
+    text  "隐藏上一个"
+    state machine
+}
+
+DreamScreenUISubsystem:PushPageAsync:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushPageAsync:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:PushPageAsync:OnComplete {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushPageAsync:OnComplete
+    src   "On Complete"
+    // from the engine's zh-Hans
+    text  "On Complete"
+    state draft
+}
+
+DreamScreenUISubsystem:PushUI:bHidePrevious {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushUI:bHidePrevious
+    src   "Hide Previous"
+    text  "隐藏上一个"
+    state machine
+}
+
+DreamScreenUISubsystem:PushUI:InCachePolicy {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushUI:InCachePolicy
+    src   "In Cache Policy"
+    text  "缓存策略"
+    state machine
+}
+
+DreamScreenUISubsystem:PushUI:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushUI:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:PushUI:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushUI:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:bHidePrevious {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:bHidePrevious
+    src   "Hide Previous"
+    text  "隐藏上一个"
+    state machine
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:InCachePolicy {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:InCachePolicy
+    src   "In Cache Policy"
+    text  "缓存策略"
+    state machine
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:InWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:RegisterPageClass:InCachePolicy {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterPageClass:InCachePolicy
+    src   "In Cache Policy"
+    text  "缓存策略"
+    state machine
+}
+
+DreamScreenUISubsystem:RegisterPageClass:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterPageClass:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:RegisterPageClass:InWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterPageClass:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamScreenUISubsystem:RegisterPageClass:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterPageClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:RegisterUI:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterUI:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:RegisterUI:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterUI:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:RegisterUI:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RegisterUI:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamScreenUISubsystem:RemoveFromViewport:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RemoveFromViewport:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:RemoveUI:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RemoveUI:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:ScreenRoots {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ScreenRoots
+    src   "Screen Roots"
+    text  "屏幕根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:SetPageHasCustomPlacement:bInCustomPlacement {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetPageHasCustomPlacement:bInCustomPlacement
+    src   "In Custom Placement"
+    text  "是否使用自定义布局"
+    state machine
+}
+
+DreamScreenUISubsystem:SetPageHasCustomPlacement:InRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetPageHasCustomPlacement:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamScreenUISubsystem:SetPageHasCustomPlacement:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetPageHasCustomPlacement:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:SetUIVisible:bVisible {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetUIVisible:bVisible
+    src   "Visible"
+    // from the engine's zh-Hans
+    text  "可见"
+    state draft
+}
+
+DreamScreenUISubsystem:SetUIVisible:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetUIVisible:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass:InOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass:InOwningPlayer
+    src   "In Owning Player"
+    text  "所属玩家"
+    state machine
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass:InWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenUISubsystem:UnregisterPageClass:bRemoveLoadedPage {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:UnregisterPageClass:bRemoveLoadedPage
+    src   "Remove Loaded Page"
+    text  "移除已加载的页面"
+    state machine
+}
+
+DreamScreenUISubsystem:UnregisterPageClass:InName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:UnregisterPageClass:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamUIScreenPageAsyncCallback__DelegateSignature:bSuccess {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenPageAsyncCallback__DelegateSignature:bSuccess
+    src   "Success"
+    // from the engine's zh-Hans
+    text  "成功"
+    state draft
+}
+
+DreamUIScreenPageAsyncCallback__DelegateSignature:Page {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenPageAsyncCallback__DelegateSignature:Page
+    src   "Page"
+    // from the engine's zh-Hans
+    text  "页面"
+    state draft
+}
+
+DreamUIScreenPageAsyncCallback__DelegateSignature:PageName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenPageAsyncCallback__DelegateSignature:PageName
+    src   "Page Name"
+    // from the engine's zh-Hans
+    text  "页面名称"
+    state draft
+}
+
+DreamUIScreenPageEvent__DelegateSignature:Page {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenPageEvent__DelegateSignature:Page
+    src   "Page"
+    // from the engine's zh-Hans
+    text  "页面"
+    state draft
+}
+
+DreamUIScreenPageEvent__DelegateSignature:PageName {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenPageEvent__DelegateSignature:PageName
+    src   "Page Name"
+    // from the engine's zh-Hans
+    text  "页面名称"
+    state draft
+}
+
+DreamUIScreenStackChangedEvent__DelegateSignature:NewTop {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenStackChangedEvent__DelegateSignature:NewTop
+    src   "New Top"
+    text  "新的顶层"
+    state machine
+}
+
+DreamUIScreenStackChangedEvent__DelegateSignature:PreviousTop {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamUIScreenStackChangedEvent__DelegateSignature:PreviousTop
+    src   "Previous Top"
+    text  "之前的顶层"
+    state machine
+}
+
+EDreamUIScreenPageCachePolicy.DestroyOnPop {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageCachePolicy:DestroyOnPop
+    src   "Destroy on Pop"
+    text  "销毁并弹出"
+    state machine
+}
+
+EDreamUIScreenPageCachePolicy.EDreamUIScreenPageCachePolicy_MAX {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageCachePolicy:EDreamUIScreenPageCachePolicy_MAX
+    src   "EDream UIScreen Page Cache Policy MAX"
+    text  "EDream UIScreen 页面缓存策略 最大值"
+    state machine
+}
+
+EDreamUIScreenPageCachePolicy.KeepAlive {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageCachePolicy:KeepAlive
+    src   "Keep Alive"
+    text  "保持活动"
+    state machine
+}
+
+EDreamUIScreenPageState.Active {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageState:Active
+    src   "Active"
+    // from the engine's zh-Hans
+    text  "Active"
+    state draft
+}
+
+EDreamUIScreenPageState.EDreamUIScreenPageState_MAX {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageState:EDreamUIScreenPageState_MAX
+    src   "EDream UIScreen Page State MAX"
+    text  "EDream UIScreen 页面状态 最大值"
+    state machine
+}
+
+EDreamUIScreenPageState.Inactive {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageState:Inactive
+    src   "Inactive"
+    // from the engine's zh-Hans
+    text  "Inactive"
+    state draft
+}
+
+EDreamUIScreenPageState.Loading {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageState:Loading
+    src   "Loading"
+    // from the engine's zh-Hans
+    text  "正在加载"
+    state draft
+}
+
+EDreamUIScreenPageState.Unloaded {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#EDreamUIScreenPageState:Unloaded
+    src   "Unloaded"
+    // from the engine's zh-Hans
+    text  "已卸载"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamScreenUISubsystem {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem
+    src   "UMG-style viewport page management, backed by one DreamUI screen-space root canvas PER LOCAL PLAYER.\n\nEvery verb here takes an optional owning player and answers about that player's screen; passing\nnothing means the first local player, which is the whole of a single-player game and is why none of\nthe existing call sites had to change. Split screen is then the ordinary case rather than a mode:\nplayer 1 and player 2 each get their own root canvas, laid out over and drawn in that player's part\nof the viewport (UDreamCanvas::SetViewportPlayerIndex), their own screen-space raycaster carrying\ntheir own UserIndex, and their own page stack, so a full-screen page pushed by one never covers the\nother. UMG draws the same line with AddToViewport (shared) versus AddToPlayerScreen (one player's\nlayer); the difference is that here there is no shared layer to fall back to, so AddToViewport is\nAddToPlayerScreen for whoever owns the widget."
+    text  "UMG 风格的视口页面管理，由每个本地玩家各一个 DreamUI 屏幕空间根画布支撑。\n\n这里的每个操作都接受一个可选的所属玩家，并针对该玩家的屏幕作答；不传\n则意味着第一个本地玩家，单人游戏里这就是全部，也是现有调用点都无需改动的原因。\n如此分屏便成了常规情况而非一种模式：\n玩家 1 和玩家 2 各自拥有根画布，布局并绘制在该玩家在视口中的区域之上\n（UDreamCanvas::SetViewportPlayerIndex），各自的屏幕空间射线检测器携带\n各自的 UserIndex，也各自拥有页面栈，因此一方压入的全屏页面绝不会遮住\n另一方。UMG 用 AddToViewport（共享）与 AddToPlayerScreen（单个玩家的\n层）划出同样的界线；区别在于这里没有可回退的共享层，所以 AddToViewport 就是\nAddToPlayerScreen，作用于拥有该控件的玩家。"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToPlayerScreen {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToPlayerScreen
+    src   "UMG's AddToPlayerScreen: put InRoot on ONE local player's screen rather than on whichever one it\nalready belonged to.\n\nThis is AddToViewport plus an owner: it points the widget at InOwningPlayer first, so everything\ndownstream -- which root it is parented to, which event system gives it focus, whose input it\nhears -- follows from the widget rather than from a parameter nobody remembers to pass."
+    text  "UMG 的 AddToPlayerScreen：把 InRoot 放到一个本地玩家的屏幕上，而不是放到它\n原本所属的那一个玩家的屏幕上。\n\n这是 AddToViewport（添加到视口）再加上一个所有者：它先把控件指向 InOwningPlayer，于是后续的一切\n——它被挂到哪个根下、由哪个事件系统赋予焦点、监听谁的输入——\n都跟随控件，而不是跟随一个没人记得传的参数。"
+    state machine
+}
+
+DreamScreenUISubsystem:AddToViewport {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToViewport
+    src   "Puts an existing widget on the screen at InSortOrder, and switches it on.\n\nSort orders of StackBaseSortOrder (1000) and up are reserved for the page stack, which\nrewrites its pages' sort orders on every refresh; a free-standing page placed in that band\ndraws in an undefined order against the stack and loses the argument on the next refresh.\nAsking for one logs a warning.\n\nThe screen it lands on is the widget's OWNING PLAYER's -- see AddToPlayerScreen, which is this\nwith the owner named."
+    text  "将现有控件按 InSortOrder 放到屏幕上，并启用它。\n\nStackBaseSortOrder（1000）及以上的排序值保留给页面栈，页面栈会在每次刷新时\n重写其页面的排序值；放在该区间内的独立页面与页面栈之间的绘制顺序不确定，\n并会在下次刷新时丢掉这个参数。\n请求该区间的排序值会记录一条警告。\n\n它落到的屏幕是控件所属玩家的屏幕——参见 AddToPlayerScreen，那是在此基础上\n指定了所有者的版本。"
+    state machine
+}
+
+DreamScreenUISubsystem:CreateWidgetOnScreen {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen
+    src   "Creates a widget of InWidgetClass and puts it on InOwningPlayer's screen.\n\nThe return pin takes the shape of InWidgetClass, so a graph reaches the class's own variables\nand functions without a Cast, the way UMG's Create Widget node does."
+    text  "创建 InWidgetClass 的控件，并将其放到 InOwningPlayer 的屏幕上。\n\n返回引脚采用 InWidgetClass 的形状，因此图表无需 Cast 即可访问该类的变量\n和函数，与 UMG 的 Create Widget 节点一样。"
+    state machine
+}
+
+DreamScreenUISubsystem:ForgetPage {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ForgetPage
+    src   "Stop tracking a page without destroying it: the name is freed, the stack drops it, the widget\nlives on wherever its caller puts it next.\n\nThis is the half UMG's RemoveFromParent has and RemoveFromViewport does not, and without it a\nwidget detached from the screen root by any other route left its name and its entry behind,\npointing at a page that is registered, alive and nowhere."
+    text  "停止跟踪某个页面但不销毁它：名称被释放，页面栈将其移除，控件\n继续存在于调用方之后放置它的任何地方。\n\n这是 UMG 的 RemoveFromParent 有而 RemoveFromViewport（从视口移除）没有的那一半；没有它，\n通过任何其他途径从屏幕根上拆下的控件都会留下它的名称和条目，\n指向一个已注册、仍然存活却哪儿都不在的页面。"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRoot {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRoot
+    src   "The screen root for InOwningPlayer (the first local player when null), creating it on demand."
+    text  "屏幕根目录，用于 InOwningPlayer（如果为空，则为第一个本地玩家），并在需要时创建它。"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex
+    src   "The screen root for a local player index -- the number an event, a raycaster and an event system\nall carry.\n\nThis is the entry point for anything driven by a POINTER: UDreamPointerEventData::UserIndex says\nwhich player that pointer belongs to, so a drag visual, a tooltip or a virtual cursor lands on\nthe screen of the player who is pointing rather than always on the first player's."
+    text  "某个本地玩家索引对应的屏幕根——事件、射线检测器和事件系统\n都会携带这个编号。\n\n这是任何由指针驱动的内容的入口：UDreamPointerEventData::UserIndex 指明\n该指针属于哪个玩家，因此拖拽视觉、工具提示或虚拟光标会落在\n正在指向的玩家的屏幕上，而不是总落在第一个玩家的屏幕上。"
+    state machine
+}
+
+DreamScreenUISubsystem:GetOrCreateScreenRootForWidget {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForWidget
+    src   "The screen root of whichever player InContextWidget belongs to, creating it on demand.\n\nWhat an overlay service -- a tooltip, a drag visual, a modal dim, a virtual cursor -- wants:\nthe overlay belongs on the same screen as the thing it is about, and the thing it is about\nknows its own player. Falls back to the first local player when the context is null."
+    text  "InContextWidget 这个控件属于哪个玩家，就返回哪个玩家的屏幕根，按需创建。\n\n这正是覆盖层服务——工具提示、拖拽视觉、模态遮罩、虚拟光标——所需要的：\n覆盖层应当与它所针对的对象处于同一屏幕，而它所针对的对象\n知道自己的玩家。上下文为空时回退到第一个本地玩家。"
+    state machine
+}
+
+DreamScreenUISubsystem:GetScreenPlayerIndices {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenPlayerIndices
+    src   "Every local player index that currently has a screen. Useful for iterating split-screen state."
+    text  "每个本地玩家索引，当前都有一个屏幕。对于迭代拆分屏幕状态很有用。"
+    state machine
+}
+
+DreamScreenUISubsystem:PopUI {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PopUI
+    src   "Pops the top page of InOwningPlayer's stack. One player popping never touches another's."
+    text  "从 InOwningPlayer 的堆栈中弹出顶层页面。一个玩家弹出操作不会影响其他玩家。"
+    state machine
+}
+
+DreamScreenUISubsystem:PushWidgetOfClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass
+    src   "Pushes a new page of InWidgetClass onto the stack. Return pin follows InWidgetClass.\n\nWith bHidePrevious, the pages below are switched off, not merely collapsed -- see SetUIVisible."
+    text  "将 InWidgetClass 的新控件页面压入栈中。返回引脚跟随 InWidgetClass。\n\n启用 bHidePrevious 时，下方的页面会被关闭，而不仅仅是折叠——参见 SetUIVisible。"
+    state machine
+}
+
+DreamScreenUISubsystem:RemoveFromViewport {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:RemoveFromViewport
+    src   "Takes a page off the screen and DESTROYS it. To keep the widget alive, use ForgetPage."
+    text  "从屏幕上移除一个页面并销毁它。要保留控件存活，请使用 ForgetPage。"
+    state machine
+}
+
+DreamScreenUISubsystem:ScreenRoots {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ScreenRoots
+    src   "One screen-space root canvas per local player. Keyed by local player index."
+    text  "每个本地玩家都有一个屏幕空间根目录。以本地玩家索引为键。"
+    state machine
+}
+
+DreamScreenUISubsystem:SetPageHasCustomPlacement {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetPageHasCustomPlacement
+    src   "Stop (or resume) forcing full-bleed geometry on one page.\n\nPages are laid out edge to edge and the stack re-applies that on every refresh, which is right\nfor a screen and wrong for a floating window. UDreamUserWidget::SetPositionInViewport and its\nthree companions call this for you; it is public so a plain widget placed by hand can say the\nsame thing. True when InRoot is a tracked page and the flag was applied."
+    text  "停止（或恢复）对单个页面强制使用满屏几何。\n\n页面按边到边布局，页面栈在每次刷新时都会重新应用这一点，这对\n全屏页面是正确的，对浮动窗口则是错误的。UDreamUserWidget::SetPositionInViewport（设置视口内位置）及其\n三个同类函数会替你调用它；它是公开的，以便手工放置的普通控件也能表达\n同样的意思。当 InRoot 是被跟踪的页面且标志已应用时返回 true。"
+    state machine
+}
+
+DreamScreenUISubsystem:SetUIVisible {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetUIVisible
+    src   "Shows or hides a page. Hiding switches it OFF as well as collapsing it: its behaviours run\nOnDisable, it stops ticking and its polled property bindings stop being evaluated, exactly as\na page the stack has covered does."
+    text  "显示或隐藏页面。隐藏会折叠页面，同时将其关闭：其行为会执行\nOnDisable，停止 Tick，其轮询的属性绑定也停止求值，与页面栈\n覆盖的页面完全一样。"
+    state machine
+}
+
+DreamScreenUISubsystem:ShowWidgetOfClass {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass
+    src   "Creates a widget of InWidgetClass, registers it under InName and shows it. Return pin follows InWidgetClass."
+    text  "创建 InWidgetClass 的控件，并将其注册并显示。返回值与 InWidgetClass 相同。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Screen {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:AddToPlayerScreen
+    src   "DreamGUI|Screen"
+    text  "DreamGUI | 屏幕"
+    state machine
+}
+
+DreamGUI|Screen|Pages {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CancelPageLoad
+    src   "DreamGUI|Screen|Pages"
+    text  "DreamGUI | 页面"
+    state machine
+}
+
+DreamGUI|Screen|Stack {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ClearStack
+    src   "DreamGUI|Screen|Stack"
+    text  "DreamGUI | 堆栈"
+    state machine
+}
+
+DreamGUI|Screen|Events {
+    at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:OnPageCreated
+    src   "DreamGUI|Screen|Events"
+    text  "DreamGUI | 事件"
+    state machine
+}

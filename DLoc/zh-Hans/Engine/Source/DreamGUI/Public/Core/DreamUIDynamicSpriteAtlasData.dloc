@@ -1,0 +1,162 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDynamicSpriteAtlasData {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData
+    src   "Dream UIDynamic Sprite Atlas Data"
+    text  "DreamUI动态Sprite图集数据"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:AtlasTextureArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:AtlasTextureArray
+    src   "Atlas Texture Array"
+    text  "图集纹理数组"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:PackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:PackingTag
+    src   "Packing Tag"
+    text  "打包标记"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:RenderSpriteArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:RenderSpriteArray
+    src   "Render Sprite Array"
+    text  "渲染Sprite数组"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:SpriteDataArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:SpriteDataArray
+    src   "Sprite Data Array"
+    text  "Sprite数据数组"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager
+    src   "Dream UIDynamic Sprite Atlas Manager"
+    text  "DreamUI动态Sprite图集管理器"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:AtlasMap {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:AtlasMap
+    src   "Atlas Map"
+    text  "图集映射"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag
+    src   "In Packing Tag"
+    text  "输入打包标记"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:InPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:InPackingTag
+    src   "In Packing Tag"
+    text  "输入打包标记"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:InPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:InPackingTag
+    src   "In Packing Tag"
+    text  "输入打包标记"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIDynamicSpriteAtlasData {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData
+    src   "Data container for dynamically generated Sprite atlas"
+    text  "动态生成的Sprite图集的数据容器"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:AtlasTextureArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:AtlasTextureArray
+    src   "AtlasTexture is the real texture for render"
+    text  "AtlasTexture是用于渲染的实际纹理"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:RenderSpriteArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:RenderSpriteArray
+    src   "collection of all objects that use this atlas to render. Object must implement IUISpriteRenderableInterface."
+    text  "使用此图集进行渲染的所有对象的集合。对象必须实现IUISpriteRenderableInterface。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasData:SpriteDataArray {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasData:SpriteDataArray
+    src   "Sprites packed into this atlas, in LEAST-RECENTLY-USED ORDER: oldest first, newest last.\nTouchSprite is what maintains that, and EvictUnusedSprites walks it from the front."
+    text  "打包到此图集中的Sprite，按最近最少使用顺序排列：最旧的在前，最新的在后。\nTouchSprite负责维护该顺序，EvictUnusedSprites则从前往后遍历。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager
+    src   "The dynamic sprite atlases, one per packing tag, shared by every world as the sprites they pack are.\n\nAn engine subsystem: the engine makes it and takes it down, and holds it for the collector. It used to be a\nrooted object in a static, which nothing ever unrooted -- it outlived every world and was only ever torn\ndown by the process going away."
+    text  "动态精灵图集，每个打包标签一个，与它们所打包的精灵一样由所有世界共享。\n\n引擎子系统：由引擎创建并销毁，并由引擎持有以供回收器回收。它曾经是静态变量中的\n一个根对象，从未被取消根引用——它比所有世界存活得更久，只有在进程退出时才会\n被销毁。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag
+    src   "Dispose and release atlas by PackingTag.\nThis will not dispose the DreamUISpriteData.\nDefault \"Main\" tag is not allowed to be disposed."
+    text  "按打包标签销毁并释放图集。\n这不会销毁 DreamUISpriteData。\n默认的“Main”标签不允许被销毁。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag
+    src   "Reclaim the space held by sprites of this tag that nothing is drawing any more, WITHOUT\ndisturbing the ones that are, and drop any page left empty.\n\nThis is the finer-grained neighbour of TrimAtlasByPackingTag, which can only act when the whole\ntag has gone quiet. It also runs by itself whenever a pack would otherwise have to add a page,\nso an application that never calls it still gets an atlas that recycles rather than only grows.\n\n@return how many sprites were evicted; they repack on their next use."
+    text  "回收不再被任何对象绘制的打包标签中精灵图所占用的空间，同时避免\n 影响正在使用的精灵图，并释放任何空闲的页面。\n\n这是 TrimAtlasByPackingTag 的更精细的替代方案，后者只能在整个\n标签都处于空闲状态时才能运行。它还会在每次打包操作可能需要添加页面时自动运行，\n因此，即使应用程序从未调用它，它仍然可以获得一个可以回收而不是只增长的图集。\n\n@return 释放的精灵图数量；它们将在下次使用时重新打包。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag
+    src   "Release the atlas pages of one packing tag IF nothing is drawing from them any more, and leave\nthe entry in place so the tag keeps its settings.\n\nThe dynamic atlas grows and never shrinks on its own: a rect is handed out by the bin pack and\nnever handed back, so a long session that shows many different sprites under one tag keeps\nadding pages. This is the explicit \"give the memory back\" call for the moments an application\nknows about -- a level transition, closing a UI that owned a tag's worth of sprites. Sprites of\nthat tag repack on their next use.\n\n@return true if pages were released. False means the tag is unknown, already empty, or still in use."
+    text  "如果已没有任何东西再从某个打包标签的图集页中绘制，就释放这些页，并保留\n该条目，使该标签保留其设置。\n\n动态图集只会增长，自身从不收缩：矩形由装箱过程分配出去后\n从不归还，因此在同一个标签下显示许多不同精灵的长时间会话会不断\n添加页。这是供应用程序已知时机使用的显式“归还内存”调用\n——关卡切换、关闭拥有某标签全部精灵的 UI。该标签的精灵\n会在下次使用时重新打包。\n\n@return 如果页已释放则为 true。false 表示标签未知、已为空或仍在使用中。"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases
+    src   "Run TrimAtlasByPackingTag over every tag. Returns how many atlases were released."
+    text  "对每个标签运行 TrimAtlasByPackingTag。返回释放的图集数量。"
+    state machine
+}

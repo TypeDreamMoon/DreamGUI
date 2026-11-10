@@ -1,0 +1,100 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUINavigationStack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack
+    src   "Dream UINavigation Stack"
+    text  "DreamUI 导航栈"
+    state machine
+}
+
+DreamUINavigationStack:GetActiveScope:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetActiveScope:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUINavigationStack:GetActiveScope:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetActiveScope:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationStack:GetEffectiveInputMode:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUINavigationStack:GetEffectiveInputMode:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationStack:HandleBack:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:HandleBack:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUINavigationStack:HandleBack:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:HandleBack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationStack:Scopes {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:Scopes
+    src   "Scopes"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUINavigationStack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack
+    src   "The order screens were opened in, per player, and the focus that goes with it.\n\nKept apart from the widget hierarchy on purpose: a dialog opened from a page belongs in front of\nthat page whether or not it is parented under it, and \"in front\" is a property of when it opened,\nnot of where it sits in the tree.\n\nEverything here is per user index. Split-screen players have their own stacks and their own focus,\nand one player opening a dialog must not move the other player's focus."
+    text  "按玩家记录屏幕的打开顺序，以及与之对应的焦点。\n\n特意与控件层级分开：从页面打开的对话框应位于该页面前面，\n无论它是否作为该页面的子项，而“在前面”是它何时打开的属性，\n而不是它在树中所处位置的属性。\n\n此处的一切都按用户索引区分。分屏玩家拥有各自的堆栈和各自的焦点，\n一个玩家打开对话框不得移动另一个玩家的焦点。"
+    state machine
+}
+
+DreamUINavigationStack:GetActiveScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetActiveScope
+    src   "Top of InUserIndex's stack, skipping any scope that has gone stale."
+    text  "InUserIndex 栈的顶部，跳过任何已失效的作用域。"
+    state machine
+}
+
+DreamUINavigationStack:GetEffectiveInputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode
+    src   "What player InUserIndex's keys and pad do now: their active scope's InputMode, else UDreamGUISettings::\nInputModeWithoutScope. What the key routing asks before it navigates, confirms or goes Back for the player -- and what\na project's own gameplay input asks to know whether a menu is up."
+    text  "InUserIndex 玩家的按键和手柄当前的作用：其活动作用域的 InputMode，否则为 UDreamGUISettings::\nInputModeWithoutScope。按键路由在为该玩家导航、确认或返回之前所查询的内容，以及\n项目自身的玩法输入用来判断是否有菜单打开时所查询的内容。"
+    state machine
+}
+
+DreamUINavigationStack:HandleBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:HandleBack
+    src   "Send Back down InUserIndex's stack. A field being edited swallows it first -- cancelling the edit\nis what the player means, not closing the screen out from under them. Then the player's top open\npopup, if there is one, closes and takes it (UDreamUIPopupLayer::HandleBack): a dropdown's list\ninside a dialog closes, not the dialog. Then each screen from the top down is offered it, and\ncloses if it neither handled it nor opted out of closing.\n@return true when something took it."
+    text  "将“返回”沿 InUserIndex 的栈向下传递。正在编辑的字段会先吞掉它——玩家想要的是取消编辑，\n而不是让屏幕在他们脚下关闭。然后该玩家最上层的已打开\n弹出层（如果有）会关闭并接收它（UDreamUIPopupLayer::HandleBack）：对话框内下拉框的列表\n会关闭，而不是对话框本身。接着从顶层向下依次提供给每个屏幕，\n若既未处理也未选择不关闭，则该屏幕关闭。\n@return 有对象接收时返回 true。"
+    state machine
+}
+
+DreamUINavigationStack:Scopes {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:Scopes
+    src   "Push order, all users interleaved. Tiny enough that filtering beats a map of arrays."
+    text  "压入顺序，所有用户交错排列。数据量很小，用过滤比用数组映射更高效。"
+    state machine
+}

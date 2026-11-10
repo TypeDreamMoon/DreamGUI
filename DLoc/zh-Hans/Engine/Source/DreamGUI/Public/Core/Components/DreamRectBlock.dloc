@@ -1,0 +1,2894 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRectBlock {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock
+    src   "Dream Rect Block"
+    text  "矩形块"
+    state machine
+}
+
+DreamRectBlock:bEnableBody {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableBody
+    src   "Enable Body"
+    text  "启用背景"
+    state machine
+}
+
+DreamRectBlock:bEnableBodyGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableBodyGradient
+    src   "Enable Body Gradient"
+    text  "启用背景渐变"
+    state machine
+}
+
+DreamRectBlock:bEnableBorder {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableBorder
+    src   "Enable Border"
+    text  "启用边框"
+    state machine
+}
+
+DreamRectBlock:bEnableBorderGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableBorderGradient
+    src   "Enable Border Gradient"
+    text  "启用边框渐变"
+    state machine
+}
+
+DreamRectBlock:bEnableInnerShadow {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableInnerShadow
+    src   "Enable Inner Shadow"
+    text  "启用内阴影"
+    state machine
+}
+
+DreamRectBlock:bEnableOuterShadow {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableOuterShadow
+    src   "Enable Outer Shadow"
+    text  "启用外阴影"
+    state machine
+}
+
+DreamRectBlock:bEnableRadialFill {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bEnableRadialFill
+    src   "Enable Radial Fill"
+    text  "启用径向填充"
+    state machine
+}
+
+DreamRectBlock:BodyAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColor
+    src   "Body Color"
+    // from the engine's zh-Hans
+    text  "形体颜色"
+    state draft
+}
+
+DreamRectBlock:BodyColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradient
+    src   "Body Gradient"
+    text  "背景渐变"
+    state machine
+}
+
+DreamRectBlock:BodyGradientAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyGradientAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyGradientAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyGradientAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyGradientAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenter {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenter
+    src   "Body Gradient Center"
+    text  "背景渐变中心"
+    state machine
+}
+
+DreamRectBlock:BodyGradientCenterTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenterTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenterTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenterTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenterTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyGradientCenterUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterUnitMode
+    src   "Body Gradient Center Unit Mode"
+    text  "背景渐变中心单位模式"
+    state machine
+}
+
+DreamRectBlock:BodyGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColor
+    src   "Body Gradient Color"
+    text  "背景渐变颜色"
+    state machine
+}
+
+DreamRectBlock:BodyGradientColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyGradientColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyGradientColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyGradientColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyGradientColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadius
+    src   "Body Gradient Radius"
+    text  "主体渐变半径"
+    state machine
+}
+
+DreamRectBlock:BodyGradientRadiusTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadiusTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadiusTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadiusTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadiusTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRadiusUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusUnitMode
+    src   "Body Gradient Radius Unit Mode"
+    text  "主体渐变半径单位模式"
+    state machine
+}
+
+DreamRectBlock:BodyGradientRotation {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotation
+    src   "Body Gradient Rotation"
+    text  "主体渐变旋转"
+    state machine
+}
+
+DreamRectBlock:BodyGradientRotationTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRotationTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRotationTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRotationTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BodyGradientRotationTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BodySpriteTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodySpriteTexture
+    src   "Body Sprite Texture"
+    text  "主体精灵纹理"
+    state machine
+}
+
+DreamRectBlock:BodyTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTexture
+    src   "Body Texture"
+    text  "主体纹理"
+    state machine
+}
+
+DreamRectBlock:BodyTextureDrawMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTextureDrawMode
+    src   "Body Texture Draw Mode"
+    text  "主体纹理绘制模式"
+    state machine
+}
+
+DreamRectBlock:BodyTextureMargin {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTextureMargin
+    src   "Body Texture Margin"
+    text  "主体纹理边距"
+    state machine
+}
+
+DreamRectBlock:BodyTextureMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTextureMode
+    src   "Body Texture Mode"
+    text  "主体纹理模式"
+    state machine
+}
+
+DreamRectBlock:BodyTextureScaleMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTextureScaleMode
+    src   "Body Texture Scale Mode"
+    text  "主体纹理缩放模式"
+    state machine
+}
+
+DreamRectBlock:BorderAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColor
+    src   "Border Color"
+    // from the engine's zh-Hans
+    text  "边界颜色"
+    state draft
+}
+
+DreamRectBlock:BorderColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradient
+    src   "Border Gradient"
+    text  "边框渐变"
+    state machine
+}
+
+DreamRectBlock:BorderGradientAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderGradientAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderGradientAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderGradientAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderGradientAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenter {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenter
+    src   "Border Gradient Center"
+    text  "边框渐变中心"
+    state machine
+}
+
+DreamRectBlock:BorderGradientCenterTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenterTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenterTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenterTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenterTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderGradientCenterUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterUnitMode
+    src   "Border Gradient Center Unit Mode"
+    text  "边框渐变中心单位模式"
+    state machine
+}
+
+DreamRectBlock:BorderGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColor
+    src   "Border Gradient Color"
+    text  "边框渐变颜色"
+    state machine
+}
+
+DreamRectBlock:BorderGradientColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderGradientColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderGradientColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderGradientColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderGradientColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadius
+    src   "Border Gradient Radius"
+    text  "边框渐变半径"
+    state machine
+}
+
+DreamRectBlock:BorderGradientRadiusTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadiusTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadiusTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadiusTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadiusTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRadiusUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusUnitMode
+    src   "Border Gradient Radius Unit Mode"
+    text  "边框渐变半径单位"
+    state machine
+}
+
+DreamRectBlock:BorderGradientRotation {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotation
+    src   "Border Gradient Rotation"
+    text  "边框渐变旋转"
+    state machine
+}
+
+DreamRectBlock:BorderGradientRotationTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRotationTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRotationTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRotationTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderGradientRotationTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidth
+    src   "Border Width"
+    // from the engine's zh-Hans
+    text  "边框宽度"
+    state draft
+}
+
+DreamRectBlock:BorderWidthTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:BorderWidthTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:BorderWidthTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:BorderWidthTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:BorderWidthTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:BorderWidthUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderWidthUnitMode
+    src   "Border Width Unit Mode"
+    text  "边框宽度单位"
+    state machine
+}
+
+DreamRectBlock:bRaycastSupportCornerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bRaycastSupportCornerRadius
+    src   "Raycast Support Corner Radius"
+    text  "射线投射支持角半径"
+    state machine
+}
+
+DreamRectBlock:bSoftEdge {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bSoftEdge
+    src   "Soft Edge"
+    // from the engine's zh-Hans
+    text  "软边缘"
+    state draft
+}
+
+DreamRectBlock:bUniformSetCornerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bUniformSetCornerRadius
+    src   "Uniform Set Corner Radius"
+    text  "统一设置角半径"
+    state machine
+}
+
+DreamRectBlock:CornerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadius
+    src   "Corner Radius"
+    // from the engine's zh-Hans
+    text  "角半径"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:CornerRadiusUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadiusUnitMode
+    src   "Corner Radius Unit Mode"
+    text  "角半径单位"
+    state machine
+}
+
+DreamRectBlock:DataRows {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:DataRows
+    src   "Data Rows"
+    text  "数据行"
+    state machine
+}
+
+DreamRectBlock:GetBodyColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientCenter:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientCenter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientCenterUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientCenterUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientRadius:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientRadiusUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientRadiusUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyGradientRotation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientRotation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodySpriteTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodySpriteTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyTextureDrawMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyTextureDrawMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyTextureMargin:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyTextureMargin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyTextureMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyTextureMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBodyTextureScaleMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyTextureScaleMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientCenter:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientCenter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientCenterUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientCenterUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientRadius:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientRadiusUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientRadiusUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderGradientRotation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientRotation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderWidth:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetBorderWidthUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderWidthUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetCornerRadius:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetCornerRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetCornerRadiusUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetCornerRadiusUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEffectiveBodyGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectiveBodyGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEffectiveBorderGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectiveBorderGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEffectsAsLayerStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectsAsLayerStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableBody:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableBody:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableBodyGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableBodyGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableBorder:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableBorder:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableBorderGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableBorderGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableInnerShadow:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableInnerShadow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableOuterShadow:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableOuterShadow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetEnableRadialFill:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEnableRadialFill:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowAngle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowBlur:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowBlur:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowBlurUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowBlurUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowDistance:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowDistance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowDistanceUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowDistanceUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetInnerShadowSizeUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetInnerShadowSizeUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowAngle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowBlur:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowBlur:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowBlurUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowBlurUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowDistance:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowDistance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowDistanceUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowDistanceUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetOuterShadowSizeUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetOuterShadowSizeUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetRadialFillAngle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetRadialFillAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetRadialFillCenter:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetRadialFillCenter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetRadialFillCenterUnitMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetRadialFillCenterUnitMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetRadialFillRotation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetRadialFillRotation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetRaycastSupportCornerRadius:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetRaycastSupportCornerRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetShapeBlendOperation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetShapeBlendOperation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:GetSoftEdge:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetSoftEdge:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngle
+    src   "Inner Shadow Angle"
+    text  "内阴影角度"
+    state machine
+}
+
+DreamRectBlock:InnerShadowAngleTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAngleTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAngleTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAngleTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowAngleTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlur {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlur
+    src   "Inner Shadow Blur"
+    text  "内阴影模糊"
+    state machine
+}
+
+DreamRectBlock:InnerShadowBlurTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlurTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlurTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlurTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlurTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowBlurUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurUnitMode
+    src   "Inner Shadow Blur Unit Mode"
+    text  "内阴影模糊单位"
+    state machine
+}
+
+DreamRectBlock:InnerShadowColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColor
+    src   "Inner Shadow Color"
+    text  "内阴影颜色"
+    state machine
+}
+
+DreamRectBlock:InnerShadowColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistance {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistance
+    src   "Inner Shadow Distance"
+    text  "内阴影距离"
+    state machine
+}
+
+DreamRectBlock:InnerShadowDistanceTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistanceTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistanceTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistanceTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistanceTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowDistanceUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceUnitMode
+    src   "Inner Shadow Distance Unit Mode"
+    text  "内阴影距离单位"
+    state machine
+}
+
+DreamRectBlock:InnerShadowSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSize
+    src   "Inner Shadow Size"
+    text  "内阴影大小"
+    state machine
+}
+
+DreamRectBlock:InnerShadowSizeTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:InnerShadowSizeTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:InnerShadowSizeTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:InnerShadowSizeTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:InnerShadowSizeTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:InnerShadowSizeUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeUnitMode
+    src   "Inner Shadow Size Unit Mode"
+    text  "内阴影大小单位"
+    state machine
+}
+
+DreamRectBlock:OuterShadowAlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngle
+    src   "Outer Shadow Angle"
+    text  "外阴影角度"
+    state machine
+}
+
+DreamRectBlock:OuterShadowAngleTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAngleTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAngleTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAngleTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowAngleTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlur {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlur
+    src   "Outer Shadow Blur"
+    text  "外阴影模糊"
+    state machine
+}
+
+DreamRectBlock:OuterShadowBlurTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlurTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlurTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlurTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlurTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowBlurUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurUnitMode
+    src   "Outer Shadow Blur Unit Mode"
+    text  "外阴影模糊单位"
+    state machine
+}
+
+DreamRectBlock:OuterShadowColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColor
+    src   "Outer Shadow Color"
+    text  "外阴影颜色"
+    state machine
+}
+
+DreamRectBlock:OuterShadowColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistance {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistance
+    src   "Outer Shadow Distance"
+    text  "外阴影距离"
+    state machine
+}
+
+DreamRectBlock:OuterShadowDistanceTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistanceTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistanceTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistanceTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistanceTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowDistanceUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceUnitMode
+    src   "Outer Shadow Distance Unit Mode"
+    text  "外阴影距离单位"
+    state machine
+}
+
+DreamRectBlock:OuterShadowSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSize
+    src   "Outer Shadow Size"
+    text  "外阴影大小"
+    state machine
+}
+
+DreamRectBlock:OuterShadowSizeTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:OuterShadowSizeTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:OuterShadowSizeTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:OuterShadowSizeTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:OuterShadowSizeTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:OuterShadowSizeUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeUnitMode
+    src   "Outer Shadow Size Unit Mode"
+    text  "外部阴影大小单位模式"
+    state machine
+}
+
+DreamRectBlock:RadialFillAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngle
+    src   "Radial Fill Angle"
+    text  "径向填充角度"
+    state machine
+}
+
+DreamRectBlock:RadialFillAngleTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:RadialFillAngleTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:RadialFillAngleTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:RadialFillAngleTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:RadialFillAngleTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenter {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenter
+    src   "Radial Fill Center"
+    text  "径向填充中心"
+    state machine
+}
+
+DreamRectBlock:RadialFillCenterTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenterTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenterTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenterTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenterTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:RadialFillCenterUnitMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterUnitMode
+    src   "Radial Fill Center Unit Mode"
+    text  "径向填充中心单位模式"
+    state machine
+}
+
+DreamRectBlock:RadialFillRotation {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotation
+    src   "Radial Fill Rotation"
+    text  "径向填充旋转角度"
+    state machine
+}
+
+DreamRectBlock:RadialFillRotationTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRectBlock:RadialFillRotationTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRectBlock:RadialFillRotationTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamRectBlock:RadialFillRotationTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRectBlock:RadialFillRotationTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRectBlock:RectBlockData {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RectBlockData
+    src   "Rect Block Data"
+    text  "矩形块数据"
+    state machine
+}
+
+DreamRectBlock:SetBodyColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradient:InGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradient:InGradient
+    src   "In Gradient"
+    text  "输入渐变"
+    state machine
+}
+
+DreamRectBlock:SetBodyGradientCenter:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientCenter:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradientCenterUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientCenterUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradientColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradientRadius:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientRadius:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradientRadiusUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientRadiusUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyGradientRotation:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyGradientRotation:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodySpriteTexture:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodySpriteTexture:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyTexture:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyTexture:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyTextureDrawMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyTextureDrawMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyTextureMargin:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyTextureMargin:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyTextureMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyTextureMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBodyTextureScaleMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBodyTextureScaleMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradient:InGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradient:InGradient
+    src   "In Gradient"
+    text  "输入渐变"
+    state machine
+}
+
+DreamRectBlock:SetBorderGradientCenter:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientCenter:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradientCenterUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientCenterUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradientColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradientRadius:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientRadius:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradientRadiusUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientRadiusUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderGradientRotation:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderGradientRotation:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderWidth:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderWidth:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetBorderWidthUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetBorderWidthUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetCornerRadius:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetCornerRadius:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetCornerRadiusUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetCornerRadiusUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEffectsFromLayerStyle:InStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEffectsFromLayerStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamRectBlock:SetEnableBody:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableBody:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableBodyGradient:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableBodyGradient:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableBorder:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableBorder:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableBorderGradient:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableBorderGradient:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableInnerShadow:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableInnerShadow:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableOuterShadow:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableOuterShadow:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetEnableRadialFill:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEnableRadialFill:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowAngle:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowBlur:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowBlur:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowBlurUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowBlurUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowDistance:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowDistance:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowDistanceUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowDistanceUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowSize:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowSize:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetInnerShadowSizeUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetInnerShadowSizeUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowAngle:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowBlur:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowBlur:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowBlurUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowBlurUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowColor:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowColor:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowDistance:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowDistance:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowDistanceUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowDistanceUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowSize:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowSize:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetOuterShadowSizeUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetOuterShadowSizeUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetRadialFillAngle:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetRadialFillAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetRadialFillCenter:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetRadialFillCenter:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetRadialFillCenterUnitMode:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetRadialFillCenterUnitMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetRadialFillRotation:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetRadialFillRotation:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetRaycastSupportCornerRadius:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetRaycastSupportCornerRadius:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetShapeBlendOperation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetShapeBlendOperation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:SetSoftEdge:value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetSoftEdge:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRectBlock:ShapeBlendOperation {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:ShapeBlendOperation
+    src   "Shape Blend Operation"
+    text  "形状混合操作"
+    state machine
+}
+
+DreamRectBlockData {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlockData
+    src   "Dream Rect Block Data"
+    text  "梦幻矩形块数据"
+    state machine
+}
+
+DreamRectBlockData:DefaultMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlockData:DefaultMaterial
+    src   "Default Material"
+    // from the engine's zh-Hans
+    text  "默认材质"
+    state draft
+}
+
+EDreamRectBlockTextureDrawMode.Border {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Border
+    src   "Border"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+EDreamRectBlockTextureDrawMode.Box {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Box
+    src   "Box"
+    // from the engine's zh-Hans
+    text  "盒体"
+    state draft
+}
+
+EDreamRectBlockTextureDrawMode.EDreamRectBlockTextureDrawMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:EDreamRectBlockTextureDrawMode_MAX
+    src   "EDream Rect Block Texture Draw Mode MAX"
+    text  "梦幻矩形块纹理绘制模式 最大值"
+    state machine
+}
+
+EDreamRectBlockTextureDrawMode.Image {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Image
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}
+
+EDreamRectBlockTextureMode.EDreamRectBlockTextureMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureMode:EDreamRectBlockTextureMode_MAX
+    src   "EDream Rect Block Texture Mode MAX"
+    text  "梦幻矩形块纹理模式 最大值"
+    state machine
+}
+
+EDreamRectBlockTextureMode.Sprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureMode:Sprite
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+EDreamRectBlockTextureMode.Texture {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureMode:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+EDreamRectBlockTextureScaleMode.EDreamRectBlockTextureScaleMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureScaleMode:EDreamRectBlockTextureScaleMode_MAX
+    src   "EDream Rect Block Texture Scale Mode MAX"
+    text  "梦幻矩形块纹理缩放模式 最大值"
+    state machine
+}
+
+EDreamRectBlockTextureScaleMode.Envelop {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureScaleMode:Envelop
+    src   "Envelop"
+    text  "覆盖"
+    state machine
+}
+
+EDreamRectBlockTextureScaleMode.FitIn {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureScaleMode:FitIn
+    src   "Fit In"
+    text  "适应"
+    state machine
+}
+
+EDreamRectBlockTextureScaleMode.Stretch {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureScaleMode:Stretch
+    src   "Stretch"
+    // from the engine's zh-Hans
+    text  "拉伸"
+    state draft
+}
+
+EDreamRectBlockUnitMode.EDreamRectBlockUnitMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockUnitMode:EDreamRectBlockUnitMode_MAX
+    src   "EDream Rect Block Unit Mode MAX"
+    text  "Dream Rect Block 单位模式 MAX"
+    state machine
+}
+
+EDreamRectBlockUnitMode.Percentage {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockUnitMode:Percentage
+    src   "%"
+    // from the engine's zh-Hans
+    text  "%"
+    state draft
+}
+
+EDreamRectBlockUnitMode.Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockUnitMode:Value
+    src   "V"
+    // from the engine's zh-Hans
+    text  "V"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamRectBlock {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock
+    src   "UV channel-\n            UV0: full 0~1 UV coordinate for calculate sdf\n            UV1: Default DreamCanvas use, check DreamCanvas\n            UV2: Body texture's coordinate\n            UV3: X- for RectBlock data coordinate"
+    text  "UV 通道-\n            UV0：用于计算 sdf 的完整 0~1 UV 坐标\n            UV1：DreamCanvas 默认使用，参见 DreamCanvas\n            UV2：主体纹理的坐标\n            UV3：X- 用于 RectBlock 数据坐标"
+    state machine
+}
+
+DreamRectBlock:BodyGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradient
+    src   "What the body is filled with in place of BodyColor while bEnableBodyGradient is on, times its texture: a gradient of up\nto FDreamGradient::MaxStops stops, linear, radial, angle (Conic), diamond, reflected or four corners -- the gradient a\ntext paints with, drawn from the same rows. With no stops it is the two-colour gradient rect blocks had before\n(BodyGradientColor at BodyGradientCenter to BodyColor at BodyGradientRadius, turned by BodyGradientRotation), as the two\nstops GetEffectiveBodyGradient makes of it; the first edit in the editor writes those stops here, and the .dui line it\nwrites takes the place of the two-colour lines."
+    text  "当bEnableBodyGradient开启时，用于替代BodyColor填充主体的内容，并与其纹理相乘：一个最多含FDreamGradient::MaxStops个色标的渐变，可为线性、径向、角度（锥形）、菱形、反射或四角——即\n文本绘制所用的渐变，由同一批数据行绘制。没有色标时，它就是矩形块此前的双色渐变\n（从BodyGradientCenter处的BodyGradientColor到BodyGradientRadius处的BodyColor，由BodyGradientRotation旋转），也就是\nGetEffectiveBodyGradient由此生成的两个色标；在编辑器中的首次编辑会把这些色标\n写入此处，其写入的.dui行\n将取代原来的双色行。"
+    state machine
+}
+
+DreamRectBlock:BodyGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColor
+    src   "The two-colour gradient's colour, centre (from the rect's bottom left), radius and turn, and the units of the two:\nread from what was written before BodyGradient had stops, and drawn while it has none. Not shown in the editor; their\nsetters are deprecated."
+    text  "双色渐变的颜色、中心（以矩形的左下角为基准）、半径和旋转角度，以及这两者的单位：\n从BodyGradient还没有色标时所写入的内容读取，并在其没有色标时绘制。不在编辑器中显示；其\nsetter已弃用。"
+    state machine
+}
+
+DreamRectBlock:BodyTextureMargin {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyTextureMargin
+    src   "The nine-slice margins, in TEXTURE pixels: how much of each edge keeps its own size instead of\nstretching. Ignored in Image mode.\n\nTexture pixels rather than a fraction, because that is the number an artist actually has -- a\nbutton skin's border is eight pixels wide in the file, and it stays eight whatever the texture\nis later resized to. The shader is handed both this and the fraction it works out to, because\nit cannot ask a texture how big it is without a fetch it does not otherwise need."
+    text  "九宫格边距，以纹理像素为单位：每条边有多少保持自身尺寸而不被\n拉伸。在Image模式下忽略。\n\n使用纹理像素而非比例，因为这才是美术实际拥有的数值——\n按钮皮肤在文件中的边框宽八像素，无论纹理\n之后被缩放到多大，它都保持八像素。着色器会同时收到这个值和它换算出的比例，因为\n着色器若不进行一次它本来并不需要的取值，就无法知道纹理有多大。"
+    state machine
+}
+
+DreamRectBlock:BorderGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradient
+    src   "What the border is drawn in place of BorderColor while bEnableBorderGradient is on: as BodyGradient is for the body."
+    text  "当bEnableBorderGradient开启时，用于替代BorderColor绘制边框的内容：与BodyGradient之于主体渐变的作用相同。"
+    state machine
+}
+
+DreamRectBlock:BorderGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColor
+    src   "The border's two-colour gradient, as BodyGradientColor and the rest are the body's."
+    text  "边框的双色渐变，正如 BodyGradientColor 等是主体的双色渐变。"
+    state machine
+}
+
+DreamRectBlock:bRaycastSupportCornerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bRaycastSupportCornerRadius
+    src   "When do raycast interaction, will the CornerRadius be considered? Only support RaycastType.Rect."
+    text  "进行射线检测交互时，是否考虑 CornerRadius？仅支持 RaycastType.Rect。"
+    state machine
+}
+
+DreamRectBlock:bSoftEdge {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:bSoftEdge
+    src   "Prevent edge aliasing, useful when in 3d."
+    text  "防止边缘锯齿，在 3D 场景中很有用。"
+    state machine
+}
+
+DreamRectBlock:CornerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:CornerRadius
+    src   "DreamGUI_Hidden on every *UnitMode below, the body's texture mode and texture, and bUniformSetCornerRadius: the\ndetails panel edits each on another property's row -- the unit button beside a value, the Texture/Sprite switch and\npicker heading the body's texture group, the lock on the corner radius (FDreamRectBlockCustomization)."
+    text  "下方每个*UnitMode、主体的纹理模式和纹理，以及bUniformSetCornerRadius上的DreamGUI_Hidden：\n细节面板会把它们各自编辑在另一个属性的行上——数值旁的单位按钮、位于主体纹理组顶部的Texture/Sprite开关与\n选择器，以及圆角半径上的锁定（FDreamRectBlockCustomization）。"
+    state machine
+}
+
+DreamRectBlock:DataRows {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:DataRows
+    src   "The rows this rect block's shape is uploaded into: its world's, for RectBlockData (see\nUDreamUIManagerWorldSubsystem::GetRectBlockDataRows), taken when it registers. Null while unregistered."
+    text  "此矩形块的形状所上传到的行：即其所在世界的行，用于RectBlockData（参见\nUDreamUIManagerWorldSubsystem::GetRectBlockDataRows），在注册时获取。未注册时为空。"
+    state machine
+}
+
+DreamRectBlock:GetBodyGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradient
+    src   "The body's gradient as written: with no stops, the two-colour one (GetEffectiveBodyGradient) is drawn."
+    text  "主体渐变按原样书写：没有色标时，绘制双色渐变（GetEffectiveBodyGradient）。"
+    state machine
+}
+
+DreamRectBlock:GetBodyGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradientColor
+    src   "The two-colour gradient's colour, centre (from the rect's bottom left), radius and turn -- or, once BodyGradient has\nstops, its first stop's colour, its centre, its radius and its angle, in the two-colour units."
+    text  "双色渐变的颜色、中心（从矩形左下角算起）、半径和旋转——或者，一旦BodyGradient有了\n色标，就是其第一个色标的颜色、中心、半径和角度，均以双色渐变的单位表示。"
+    state machine
+}
+
+DreamRectBlock:GetBorderGradientColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBorderGradientColor
+    src   "The border's, as GetBodyGradientColor and the rest are the body's."
+    text  "边框的渐变，正如GetBodyGradientColor及其余各项是主体的渐变。"
+    state machine
+}
+
+DreamRectBlock:GetEffectiveBodyGradient {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectiveBodyGradient
+    src   "The gradient the body is drawn with while bEnableBodyGradient is on: BodyGradient, or with no stops the two-colour\ngradient its old properties say, as two stops at its widget's size (MakeTwoColourGradient)."
+    text  "bEnableBodyGradient开启时绘制主体所用的渐变：BodyGradient；若没有色标，则为其旧属性\n所述的双色渐变，按控件尺寸作为两个色标（MakeTwoColourGradient）。"
+    state machine
+}
+
+DreamRectBlock:GetEffectsAsLayerStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectsAsLayerStyle
+    src   "Its own shadows, border and gradient written as a layer style: the outer shadow as a drop shadow, the inner shadow as an inner\nshadow, the border as an inside stroke (its gradient as the stroke's), the body gradient as a radial gradient overlay. The\nsame four effects, a second way to write them; the rect block draws them itself, and a layer style on its widget adds to them."
+    text  "将其自身的阴影、边框和渐变写为图层样式：外阴影作为投影，内阴影作为内\n阴影，边框作为内描边（其渐变作为描边的渐变），主体渐变作为径向渐变叠加。\n同样这四种效果，另一种写法；矩形块自己绘制它们，控件上的图层样式则叠加在其上。"
+    state machine
+}
+
+DreamRectBlock:SetEffectsFromLayerStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEffectsFromLayerStyle
+    src   "The reverse: InStyle's first drop shadow, inner shadow, stroke and gradient overlay written into this rect block's own\nshadows, border and gradient, each turned off where InStyle has none. What those cannot say -- a blend mode, a contour,\nnoise, a stroke outside the edge -- is dropped; the effects of other kinds are not read."
+    text  "反向操作：将InStyle的第一个投影、内阴影、描边和渐变叠加写入此矩形块自身的\n阴影、边框和渐变，InStyle没有的则各自关闭。这些属性无法表达的内容——混合模式、轮廓、\n噪波、边缘之外的描边——会被丢弃；其他类型的特效不会被读取。"
+    state machine
+}
+
+DreamRectBlock:SetSizeFromBodyTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetSizeFromBodyTexture
+    src   "Set size from current body texture or Sprite"
+    text  "根据当前主体纹理或Sprite设置尺寸"
+    state machine
+}
+
+DreamRectBlock:ShapeBlendOperation {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:ShapeBlendOperation
+    src   "How this rect block joins the shape its parent's shape blend group makes, when there is one (UDreamShapeBlendGroup)."
+    text  "当存在父级的形状混合组（UDreamShapeBlendGroup）时，此矩形块如何并入该组生成的形状。"
+    state machine
+}
+
+EDreamRectBlockTextureDrawMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode
+    src   "How a body texture's own edges survive being drawn at a size that is not its own -- Slate's\nESlateBrushDrawType, and the one thing FDreamUIFaceBrush could not say.\n\nNine-slice is done in the PIXEL SHADER, as a remap of the sampled UV, not as nine quads. A rect\nblock is one quad whose whole silhouette -- rounded corners, border, inner and outer shadow -- is\nsigned-distance work against that quad; cutting it into nine would mean nine SDFs that each know\nonly their own ninth, and the corner radius alone would be unrecoverable. Remapping the sample\ninstead leaves every one of those untouched and changes only which texel a body pixel reads."
+    text  "主体纹理自身的边缘在以非自身尺寸绘制时如何保留——即Slate的\nESlateBrushDrawType，以及笔刷接口FDreamUIFaceBrush唯一无法表达的一项。\n\n九宫格在像素着色器中完成，是对采样UV的重映射，而非九个四边形。矩形块\n是一个四边形，其整个轮廓——圆角、边框、内外阴影——都是针对该四边形的\n有符号距离计算；把它切成九块意味着九个SDF，每个只知道\n自己的那九分之一，单是圆角半径就无法还原。而重映射采样\n则让上述各项都不受影响，只改变主体像素读取哪个纹素。"
+    state machine
+}
+
+EDreamRectBlockTextureDrawMode.Border {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Border
+    src   "Nine-slice with the middle left out -- a frame drawn around whatever is behind it."
+    text  "去掉中部的九宫格——围绕其后方内容绘制的边框。"
+    state machine
+}
+
+EDreamRectBlockTextureDrawMode.Box {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Box
+    src   "Nine-slice: the margins keep their authored pixel size and only the middle stretches."
+    text  "九宫格：边距保持其创作时的像素尺寸，只有中部拉伸。"
+    state machine
+}
+
+EDreamRectBlockTextureDrawMode.Image {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockTextureDrawMode:Image
+    src   "The whole texture across the whole rect, scaled by the scale mode."
+    text  "整个纹理覆盖整个矩形区域，并根据缩放模式进行缩放。"
+    state machine
+}
+
+EDreamRectBlockUnitMode.Percentage {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockUnitMode:Percentage
+    src   "Percent with rect size from 0 to 100"
+    text  "百分比，相对于矩形大小，范围为 0 到 100。"
+    state machine
+}
+
+EDreamRectBlockUnitMode.Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#EDreamRectBlockUnitMode:Value
+    src   "Direct value"
+    text  "直接数值。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-ProceduralRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetBodyGradient
+    src   "DreamGUI-ProceduralRect"
+    text  "DreamGUI-ProceduralRect"
+    state machine
+}

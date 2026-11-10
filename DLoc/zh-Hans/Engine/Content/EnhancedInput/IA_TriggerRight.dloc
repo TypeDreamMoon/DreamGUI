@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace ""
+
+46AE610C4309AC09657FA387CEDEF9C3 {
+    at    Content/EnhancedInput/IA_TriggerRight.uasset#IA_TriggerRight.ActionDescription
+    src   "Right mouse button trigger"
+    text  "右键单击触发"
+    state machine
+}

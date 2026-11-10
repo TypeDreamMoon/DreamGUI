@@ -1,0 +1,1810 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamText {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText
+    src   "Dream Text"
+    text  "多格式文本"
+    state machine
+}
+
+DreamText:bAutoWrapText {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bAutoWrapText
+    src   "Auto Wrap Text"
+    // from the engine's zh-Hans
+    text  "自动包裹文本"
+    state draft
+}
+
+DreamText:bBestFit {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bBestFit
+    src   "Best Fit"
+    text  "自动调整"
+    state machine
+}
+
+DreamText:BestFitMinSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:BestFitMinSize
+    src   "Best Fit Min Size"
+    text  "自动调整最小尺寸"
+    state machine
+}
+
+DreamText:bLigatures {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bLigatures
+    src   "Ligatures"
+    text  "连字"
+    state machine
+}
+
+DreamText:bRichText {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bRichText
+    src   "Rich Text"
+    // from the engine's zh-Hans
+    text  "多格式文本"
+    state draft
+}
+
+DreamText:bStrikethrough {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bStrikethrough
+    src   "Strikethrough"
+    text  "删除线"
+    state machine
+}
+
+DreamText:bUnderline {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bUnderline
+    src   "Underline"
+    text  "下划线"
+    state machine
+}
+
+DreamText:bUseKerning {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bUseKerning
+    src   "Use Kerning"
+    text  "使用字间距"
+    state machine
+}
+
+DreamText:ClearTagColorOverride:InTagIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClearTagColorOverride:InTagIndex
+    src   "In Tag Index"
+    text  "标签索引"
+    state machine
+}
+
+DreamText:ClickHyperlink:InTagIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClickHyperlink:InTagIndex
+    src   "In Tag Index"
+    text  "标签索引"
+    state machine
+}
+
+DreamText:ClickHyperlink:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClickHyperlink:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:CreatedEmojiObjectArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:CreatedEmojiObjectArray
+    src   "Created Emoji Object Array"
+    text  "创建表情对象数组"
+    state machine
+}
+
+DreamText:CreatedRichTextImageObjectArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:CreatedRichTextImageObjectArray
+    src   "Created Rich Text Image Object Array"
+    text  "创建多格式文本图像对象数组"
+    state machine
+}
+
+DreamText:DynamicPixelsPerUnit {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:DynamicPixelsPerUnit
+    src   "Dynamic Pixels Per Unit"
+    text  "动态像素/单位"
+    state machine
+}
+
+DreamText:ExpandMeshSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ExpandMeshSize
+    src   "Expand Mesh Size"
+    text  "扩展网格尺寸"
+    state machine
+}
+
+DreamText:FacePaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FacePaintPhase
+    src   "Face Paint Phase"
+    text  "面部涂装阶段"
+    state machine
+}
+
+DreamText:FillProgress {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FillProgress
+    src   "Fill Progress"
+    text  "填充进度"
+    state machine
+}
+
+DreamText:FillSegments {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FillSegments
+    src   "Fill Segments"
+    text  "填充区域"
+    state machine
+}
+
+DreamText:FindHyperlinkByWorldPosition:InWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkByWorldPosition:InWorldPosition
+    src   "In World Position"
+    text  "世界坐标"
+    state machine
+}
+
+DreamText:FindHyperlinkByWorldPosition:OutId {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkByWorldPosition:OutId
+    src   "Out Id"
+    text  "输出 ID"
+    state machine
+}
+
+DreamText:FindHyperlinkByWorldPosition:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkByWorldPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:FindHyperlinkIndexByWorldPosition:InWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkIndexByWorldPosition:InWorldPosition
+    src   "In World Position"
+    text  "世界坐标"
+    state machine
+}
+
+DreamText:FindHyperlinkIndexByWorldPosition:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkIndexByWorldPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:FlowDirection {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FlowDirection
+    src   "Flow Direction"
+    // from the engine's zh-Hans
+    text  "流方向"
+    state draft
+}
+
+DreamText:Font {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Font
+    src   "Font"
+    // from the engine's zh-Hans
+    text  "字体"
+    state draft
+}
+
+DreamText:FontSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FontSize
+    src   "Font Size"
+    // from the engine's zh-Hans
+    text  "字体大小"
+    state draft
+}
+
+DreamText:FontSpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FontSpace
+    src   "Font Space"
+    text  "字体间距"
+    state machine
+}
+
+DreamText:FontStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FontStyle
+    src   "Font Style"
+    text  "字体样式"
+    state machine
+}
+
+DreamText:GetAutoWrapText:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetAutoWrapText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetBestFit:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetBestFit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetBestFitMinSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetBestFitMinSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetCharPropertyArray:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetCharPropertyArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetDynamicPixelsPerUnit:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetDynamicPixelsPerUnit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetExpandMeshSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetExpandMeshSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFacePaint:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFacePaint:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFacePaintPhase:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFacePaintPhase:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFillProgress:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFillProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFillSegments:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFillSegments:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFlowDirection:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFlowDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFont:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFont:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFontSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFontSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFontSpace:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFontSpace:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetFontStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetFontStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetGlowBoost:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetGlowBoost:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetHyperlinks:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetHyperlinks:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetLanguage:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetLanguage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetLastLineAlign:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetLastLineAlign:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetLigatures:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetLigatures:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetLineHeightPercentage:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetLineHeightPercentage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetMargin:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetMargin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetMinDesiredWidth:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetMinDesiredWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOutlinePaint:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOutlinePaint:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOutlinePaintPhase:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOutlinePaintPhase:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOverflowType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOverflowType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOverlayPaint:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOverlayPaint:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOverlayPaintPhase:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOverlayPaintPhase:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetOverrideMaterial:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetOverrideMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetPaintAngleOffset:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetPaintAngleOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetPaintCenterOffset:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetPaintCenterOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetPaintScale:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetPaintScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetParagraphHorizontalAlignment:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetParagraphHorizontalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetParagraphVerticalAlignment:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetParagraphVerticalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetPhraseWrap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetPhraseWrap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRenderedFontSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRenderedFontSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichText:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichTextCustomStyleData:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextCustomStyleData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichTextCustomTagArray:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextCustomTagArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichTextImageData:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextImageData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichTextImageTagArray:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextImageTagArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetRichTextTagFilterFlags:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextTagFilterFlags:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetSmallTextRaster:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetSmallTextRaster:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetStrikethrough:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetStrikethrough:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetTabSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTabSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetTagColorOverride:InTagIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTagColorOverride:InTagIndex
+    src   "In Tag Index"
+    text  "标签索引"
+    state machine
+}
+
+DreamText:GetTagColorOverride:OutColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTagColorOverride:OutColor
+    src   "Out Color"
+    // from the engine's zh-Hans
+    text  "输出颜色"
+    state draft
+}
+
+DreamText:GetTagColorOverride:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTagColorOverride:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetText:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetTextJustify:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTextJustify:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetTextStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTextStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetTextTransform:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTextTransform:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetUnderline:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetUnderline:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetUseKerning:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetUseKerning:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetVisibleCharCount:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetVisibleCharCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetWrappingPolicy:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetWrappingPolicy:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GetWrapTextAt:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetWrapTextAt:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:GlowBoost {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GlowBoost
+    src   "Glow Boost"
+    text  "发光增强"
+    state machine
+}
+
+DreamText:HAlign {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:HAlign
+    src   "HAlign"
+    // from the engine's zh-Hans
+    text  "H对齐"
+    state draft
+}
+
+DreamText:HasPerCharacterAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:HasPerCharacterAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:IsTextTruncated:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:IsTextTruncated:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:Language {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Language
+    src   "Language"
+    // from the engine's zh-Hans
+    text  "语言"
+    state draft
+}
+
+DreamText:LastLineAlign {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:LastLineAlign
+    src   "Last Line Align"
+    text  "最后一行对齐方式"
+    state machine
+}
+
+DreamText:LineHeightPercentage {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:LineHeightPercentage
+    src   "Line Height Percentage"
+    // from the engine's zh-Hans
+    text  "行高百分比"
+    state draft
+}
+
+DreamText:Margin {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Margin
+    src   "Margin"
+    // from the engine's zh-Hans
+    text  "边缘"
+    state draft
+}
+
+DreamText:MinDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:MinDesiredWidth
+    src   "Min Desired Width"
+    // from the engine's zh-Hans
+    text  "所需最小宽度"
+    state draft
+}
+
+DreamText:OnHyperlinkClickedBP {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OnHyperlinkClickedBP
+    src   "OnHyperlinkClicked"
+    text  "链接点击事件"
+    state machine
+}
+
+DreamText:OutlinePaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OutlinePaintPhase
+    src   "Outline Paint Phase"
+    text  "轮廓涂装阶段"
+    state machine
+}
+
+DreamText:OverflowType {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OverflowType
+    src   "Overflow Type"
+    text  "溢出类型"
+    state machine
+}
+
+DreamText:OverlayPaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OverlayPaintPhase
+    src   "Overlay Paint Phase"
+    text  "覆盖绘制阶段"
+    state machine
+}
+
+DreamText:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OverrideMaterial
+    src   "Override Material"
+    // from the engine's zh-Hans
+    text  "重载材质"
+    state draft
+}
+
+DreamText:PaintAngleOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:PaintAngleOffset
+    src   "Paint Angle Offset"
+    text  "绘制角度偏移"
+    state machine
+}
+
+DreamText:PhraseWrap {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:PhraseWrap
+    src   "Phrase Wrap"
+    text  "文本自动换行"
+    state machine
+}
+
+DreamText:RegisterPerCharacterAnimation:InAnimator {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RegisterPerCharacterAnimation:InAnimator
+    src   "In Animator"
+    text  "逐字动画"
+    state machine
+}
+
+DreamText:RichTextCustomStyleData {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextCustomStyleData
+    src   "Rich Text Custom Style Data"
+    text  "多格式文本自定义样式数据"
+    state machine
+}
+
+DreamText:RichTextImageData {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextImageData
+    src   "Rich Text Image Data"
+    text  "多格式文本图像数据"
+    state machine
+}
+
+DreamText:RichTextTagFilterFlags {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextTagFilterFlags
+    src   "Rich Text Tag Filter Flags"
+    text  "多格式文本标签过滤标志"
+    state machine
+}
+
+DreamText:SetAutoWrapText:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetAutoWrapText:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetBestFit:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetBestFit:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetBestFitMinSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetBestFitMinSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetDynamicPixelsPerUnit:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetDynamicPixelsPerUnit:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetExpandMeshSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetExpandMeshSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFacePaint:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFacePaint:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFacePaintPhase:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFacePaintPhase:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFillProgress:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFillProgress:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFillSegments:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFillSegments:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFlowDirection:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFlowDirection:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFont:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFont:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFontSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFontSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFontSpace:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFontSpace:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetFontStyle:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFontStyle:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetGlowBoost:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetGlowBoost:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetLanguage:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetLanguage:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetLastLineAlign:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetLastLineAlign:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetLigatures:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetLigatures:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetLineHeightPercentage:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetLineHeightPercentage:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetMargin:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetMargin:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetMinDesiredWidth:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetMinDesiredWidth:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOutlinePaint:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOutlinePaint:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOutlinePaintPhase:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOutlinePaintPhase:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOverflowType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOverflowType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOverlayBlend:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOverlayBlend:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOverlayPaint:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOverlayPaint:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOverlayPaintPhase:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOverlayPaintPhase:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetOverrideMaterial:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetOverrideMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetPaintAngleOffset:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintAngleOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetPaintBoxes:InHorizontal {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintBoxes:InHorizontal
+    src   "In Horizontal"
+    text  "水平方向"
+    state machine
+}
+
+DreamText:SetPaintBoxes:InVertical {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintBoxes:InVertical
+    src   "In Vertical"
+    text  "垂直方向"
+    state machine
+}
+
+DreamText:SetPaintCenterOffset:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintCenterOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetPaintScale:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetParagraphHorizontalAlignment:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetParagraphHorizontalAlignment:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetParagraphVerticalAlignment:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetParagraphVerticalAlignment:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetPhraseWrap:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPhraseWrap:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetRichText:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetRichText:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetRichTextCustomStyleData:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetRichTextCustomStyleData:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetRichTextImageData:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetRichTextImageData:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetRichTextTagFilterFlags:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetRichTextTagFilterFlags:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetSmallTextRaster:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetSmallTextRaster:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetStrikethrough:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetStrikethrough:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetTabSize:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTabSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetTagColorOverride:InColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTagColorOverride:InColor
+    src   "In Color"
+    // from the engine's zh-Hans
+    text  "在颜色中"
+    state draft
+}
+
+DreamText:SetTagColorOverride:InTagIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTagColorOverride:InTagIndex
+    src   "In Tag Index"
+    text  "标签索引"
+    state machine
+}
+
+DreamText:SetText:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetText:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetTextJustify:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTextJustify:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetTextStyle:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTextStyle:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetTextTransform:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTextTransform:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetUnderline:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetUnderline:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetUseKerning:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetUseKerning:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetWrappingPolicy:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetWrappingPolicy:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SetWrapTextAt:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetWrapTextAt:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamText:SmallTextRaster {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SmallTextRaster
+    src   "Small Text Raster"
+    text  "小字栅格"
+    state machine
+}
+
+DreamText:TabSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TabSize
+    src   "Tab Size"
+    text  "制表符大小"
+    state machine
+}
+
+DreamText:Text {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamText:TextJustify {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextJustify
+    src   "Text Justify"
+    // from the engine's zh-Hans
+    text  "文本对齐"
+    state draft
+}
+
+DreamText:TextStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextStyle
+    src   "Text Style"
+    // from the engine's zh-Hans
+    text  "文本样式"
+    state draft
+}
+
+DreamText:TextTransform {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextTransform
+    src   "Text Transform"
+    text  "文本变换"
+    state machine
+}
+
+DreamText:TryClickHyperlinkAtWorldPosition:InWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TryClickHyperlinkAtWorldPosition:InWorldPosition
+    src   "In World Position"
+    text  "世界坐标"
+    state machine
+}
+
+DreamText:TryClickHyperlinkAtWorldPosition:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TryClickHyperlinkAtWorldPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamText:UnregisterPerCharacterAnimation:InAnimator {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:UnregisterPerCharacterAnimation:InAnimator
+    src   "In Animator"
+    text  "逐字动画"
+    state machine
+}
+
+DreamText:VAlign {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:VAlign
+    src   "VAlign"
+    // from the engine's zh-Hans
+    text  "V对齐"
+    state draft
+}
+
+DreamText:WrappingPolicy {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:WrappingPolicy
+    src   "Wrapping Policy"
+    // from the engine's zh-Hans
+    text  "包裹规则"
+    state draft
+}
+
+DreamText:WrapTextAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:WrapTextAt
+    src   "Wrap Text At"
+    // from the engine's zh-Hans
+    text  "此处的包裹文本"
+    state draft
+}
+
+DreamTextHyperlinkEvent__DelegateSignature:Id {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamTextHyperlinkEvent__DelegateSignature:Id
+    src   "Id"
+    // from the engine's zh-Hans
+    text  "ID"
+    state draft
+}
+
+EDreamTextSmallTextRaster.Auto {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamTextSmallTextRaster.EDreamTextSmallTextRaster_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster:EDreamTextSmallTextRaster_MAX
+    src   "EDream Text Small Text Raster MAX"
+    text  "EDream 小文本光栅 MAX"
+    state machine
+}
+
+EDreamTextSmallTextRaster.Off {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster:Off
+    src   "Off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamText:bAutoWrapText {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bAutoWrapText
+    src   "Wrap the text even when the overflow policy is not VerticalOverflow -- UMG's AutoWrapText, which\nit keeps separate from its overflow policy for exactly this reason. With Ellipsis it is what\nturns a single elided line into a wrapped paragraph whose LAST visible line is elided; with\nTruncate, a paragraph cut off at the bottom of the box. VerticalOverflow always wraps, so this\nchanges nothing there."
+    text  "即使溢出策略不是 VerticalOverflow，也对文本换行——即 UMG 的 AutoWrapText，\nUMG 正是出于这个原因才把它与溢出策略分开。配合 Ellipsis 时，它会把单行省略\n变成整段换行，并且只对最后一行可见文本做省略；配合 Truncate 时，\n则是在框的底部截断段落。VerticalOverflow 总是换行，\n所以此项对它没有影响。"
+    state machine
+}
+
+DreamText:bBestFit {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bBestFit
+    src   "Shrink the font until the text fits the content box, uGUI's Best Fit. FontSize becomes the\nsize the text is allowed to reach rather than the size it is drawn at, and BestFitMinSize is\nhow small it may go before the text is simply allowed to overflow.\n\nNeither UMG nor Slate has an equivalent: their text is content-sized, so the box grows to the\ntext instead. Here the box is authored, which is exactly the case that needs this."
+    text  "缩小字体，直到文本能放进内容框，即 uGUI 的 Best Fit。FontSize 变成文本允许达到的\n大小，而不是绘制时所用的大小；BestFitMinSize 则是文本在被直接允许溢出之前可以\n缩小到的下限。\n\nUMG 和 Slate 都没有对应功能：它们的文本按内容调整大小，因此是框随文本变大。\n这里框是由用户指定的，而这正是需要此功能的场景。"
+    state machine
+}
+
+DreamText:bLigatures {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bLigatures
+    src   "Let the font join letters into its standard and contextual ligatures (\"fi\", \"ffl\"), as browsers do by default\n(Slate's default shaping of left-to-right text has none). The layout leaves them out on its own while FontSpace.X\nis not zero, which is the CSS rule, and so does a text whose characters something animates one by one (see\nRegisterPerCharacterAnimation): a ligature draws several characters as one glyph. Off, it also turns off the\nfont's contextual alternates in Latin, Greek and Cyrillic; scripts that need theirs to join keep them."
+    text  "让字体把字母组合为标准连字和上下文连字（“fi”、“ffl”），如同浏览器默认所为\n（Slate 对从左到右文本的默认塑形没有连字）。当 FontSpace.X 不为零时，布局会自行\n不使用连字，这是 CSS 的规则；字符被逐个动画的文本也是如此（见\nRegisterPerCharacterAnimation）：一个连字会把多个字符绘制成一个字形。关闭时，它还会关闭\n字体在拉丁文、希腊文和西里尔文中的上下文替代字形；需要靠这些替代字形连写的书写系统会保留它们。"
+    state machine
+}
+
+DreamText:bRichText {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bRichText
+    src   "rich text support, eg:\n<b>Bold</b>\n<i>Italic</i>\n<u>Underline</u>\n<s>Strikethrough</s>\n<size=48>Point size 48</size>\n<size=+18>Point size increased by 18</size>\n<size=-18>Point size decreased by 18</size>\n<color=yellow>Yellow text</color> names: black white gray/grey silver red green/lime blue orange\n    purple yellow cyan/aqua magenta/fuchsia maroon navy olive teal pink brown gold transparent\n<color=#0f0>, <color=#0f08>, <color=#00ff00>, <color=#00ff0080> hex, short or long, with or without alpha\n<color=rgb(0,255,0)>, <color=rgba(0,255,0,0.5)> the CSS functional forms; the alpha is 0..1 when\n    it is written with a decimal point, 0..255 otherwise\n<sup>Superscript</sup>\n<sub>Subscript</sub>\n<MyTag>Custom tag</MyTag> use any string as custom tag. custom tag can use for char selection (check TextAnimation usage), and for custom style (check RichTextCustomStyleData)\n<a=Buy>Clickable</a> a custom tag that can also be clicked: put a UUITextHyperlink on the widget\n    and it broadcasts UDreamText::OnHyperlinkClicked with the id\n<img=smile/> display a image with key \"smile\" which defined in RichTextImageData property, can be used for emoji\n<img=smile,24/> the same image 24 tall, as wide as its aspect ratio makes it; <img=smile,24,24/> sets both\n<img=smile,24,baseline/> where the image sits on its line: middle (the default, centred), baseline, top or bottom; an image taller than its line grows the line\n&lt; &gt; &amp; &quot; &apos; &nbsp; and &#1234; / &#x1F600; write a character the markup would\n    otherwise eat -- the only way to show a literal '<'. Plain text does NOT unescape, as in UMG."
+    text  "支持富文本，例如：\n<b>粗体</b>\n<i>斜体</i>\n<u>下划线</u>\n<s>删除线</s>\n<size=48>字号 48</size>\n<size=+18>字号增加 18</size>\n<size=-18>字号减少 18</size>\n<color=yellow>黄色文本</color> 颜色名：black white gray/grey silver red green/lime blue orange\n    purple yellow cyan/aqua magenta/fuchsia maroon navy olive teal pink brown gold transparent\n<color=#0f0>#0f0</color>、<color=#0f08>#0f08</color>、<color=#00ff00>#00ff00</color>、<color=#00ff0080>#00ff0080</color> 十六进制，短写或长写，带或不带 alpha\n<color=rgb(0,255,0)>rgb(0,255,0)</color>、<color=rgba(0,255,0,0.5)>rgba(0,255,0,0.5)</color> 是 CSS 函数式写法；alpha 以小数点书写时\n    为 0..1，否则为 0..255\n<sup>上标</sup>\n<sub>下标</sub>\n<MyTag>自定义标签</MyTag> 可用任意字符串作为自定义标签。自定义标签可用于字符选择（参见 TextAnimation 用法）以及自定义样式（参见 RichTextCustomStyleData）\n<a=Buy>可点击</a> 一种还可点击的自定义标签：在控件上放置 UUITextHyperlink，\n    它就会带着 id 广播 UDreamText::OnHyperlinkClicked\n<img=smile/> 显示键为“smile”的图像，该键在 RichTextImageData 属性中定义，可用于 emoji\n<img=smile,24/> 同一图像高 24，宽度按其宽高比确定；<img=smile,24,24/> 则同时设置两者\n<img=smile,24,baseline/> 图像在其行上的位置：middle（默认，居中）、baseline、top 或 bottom；比所在行更高的图像会把该行撑高\n&lt; &gt; &amp; &quot; &apos; &nbsp; 以及 &#1234; / &#x1F600; 用于写出标记本会\n    吞掉的字符——这是显示字面 '<' 的唯一方法。与 UMG 一样，纯文本不会进行反转义。"
+    state machine
+}
+
+DreamText:bStrikethrough {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bStrikethrough
+    src   "Strike the whole text through; `<s>` nests on top of it, as `<u>` does over bUnderline."
+    text  "为整段文本加删除线；`<s>...</s>` 可在此基础上嵌套，正如 `<u>...</u>` 可叠加在 bUnderline 之上。"
+    state machine
+}
+
+DreamText:bUnderline {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bUnderline
+    src   "Underline the whole text, the way UMG puts it on a text's style rather than only in markup.\nRich text's `<u>` still works and nests on top of it: a style is where the run starts, a tag is\nwhat it does from there."
+    text  "为整段文本加下划线，就像 UMG 把它设在文本样式上，而不只是写在标记里。\n富文本的 `<u>...</u>` 依然有效，并可在此基础上嵌套：样式是这段文本的起点，标签则是\n从那里开始起的作用。"
+    state machine
+}
+
+DreamText:bUseKerning {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:bUseKerning
+    src   "use font kerning for better text layout."
+    text  "使用字体字距调整，以获得更好的文本布局。"
+    state machine
+}
+
+DreamText:ClearTagColorOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClearTagColorOverride
+    src   "Give one tag back the colour its markup gives it."
+    text  "让某一个标签恢复其标记所指定的颜色。"
+    state machine
+}
+
+DreamText:ClearTagColorOverrides {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClearTagColorOverrides
+    src   "Give every tag back the colour its markup gives it."
+    text  "让所有标签恢复其标记所指定的颜色。"
+    state machine
+}
+
+DreamText:ClickHyperlink {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClickHyperlink
+    src   "Broadcasts OnHyperlinkClicked for the link at InTagIndex of GetRichTextCustomTagArray, as a click on it would: what\nthe pad's confirm on a link the focus is on does. False, broadcasting nothing, when no link is at that index."
+    text  "为 GetRichTextCustomTagArray 中 InTagIndex 处的链接广播 OnHyperlinkClicked，效果与点击该链接相同：\n即手柄在焦点所在的链接上按确认键时的行为。若该索引处没有链接，则返回 false，且不广播任何内容。"
+    state machine
+}
+
+DreamText:CreatedEmojiObjectArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:CreatedEmojiObjectArray
+    src   "created object for emoji"
+    text  "为 emoji 创建的对象"
+    state machine
+}
+
+DreamText:CreatedRichTextImageObjectArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:CreatedRichTextImageObjectArray
+    src   "created object for rich text image"
+    text  "为富文本图像创建的对象"
+    state machine
+}
+
+DreamText:DynamicPixelsPerUnit {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:DynamicPixelsPerUnit
+    src   "The amount of pixels per unit to use for dynamically created bitmap texture, such as BitmapFont.\nBut!!! Do not set this value too large if you already have large font size of DreamText, because that will result in extremely large texture!"
+    text  "动态创建的位图纹理（例如 BitmapFont）每单位使用的像素数。\n但！！！如果 DreamText 的字体大小已经很大，请不要将此值设置得太大，否则会生成极其巨大的纹理！"
+    state machine
+}
+
+DreamText:ExpandMeshSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ExpandMeshSize
+    src   "Expand character's rect area to generate bigger mesh, useful for effects of OverrideMaterial.\nOnly valid for SDF font. In pixels at the font's SampleFontSize, and at most the font's SDFRadius\nless 0.02 em: that is all the field a glyph's atlas cell holds, so a larger value draws the same."
+    text  "扩大字符的矩形区域以生成更大的网格，对 OverrideMaterial（重载材质）的效果很有用。\n仅对 SDF 字体有效。以像素为单位，基于字体的 SampleFontSize，且最多为字体的 SDFRadius\n减去 0.02 em：这就是字形图集单元所能容纳的全部空间，因此更大的值绘制效果相同。"
+    state machine
+}
+
+DreamText:FacePaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FacePaintPhase
+    src   "Where the face paint's gradient stands along its line, in fractions of its length (FDreamPaintAnimation::Phase): 1\nmoves it one whole gradient on. Animated -- keyed in Sequencer, tweened by UDreamTextPaintLibrary::PaintPhaseTo -- it\nwrites one pixel of the text's paint table: no repaint, no layout. Applies to the text's tag paints too."
+    text  "面绘制的渐变沿其所在行所处的位置，以行长度的比例表示（FDreamPaintAnimation::Phase）：1\n将其推进一整段渐变。可动画——在 Sequencer 中打关键帧、由 UDreamTextPaintLibrary::PaintPhaseTo 补间——它\n写入文本绘制表的一个像素：无需重绘，无需重新布局。同样适用于文本的标签绘制。"
+    state machine
+}
+
+DreamText:FillProgress {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FillProgress
+    src   "Fill progress of the whole text (per line), 0..1, for lyric-style reveals. Segments override it."
+    text  "整个文本（按行）的填充进度，0..1，用于歌词式显现。分段会将其重载。"
+    state machine
+}
+
+DreamText:FillSegments {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FillSegments
+    src   "Character runs with their own fill progress; see FDreamTextFillSegment."
+    text  "拥有各自填充进度的字符段；参见 FDreamTextFillSegment。"
+    state machine
+}
+
+DreamText:FindHyperlinkByWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkByWorldPosition
+    src   "The id of the hyperlink under a world-space point, if any. The clickable area is each character's\npainted quad opened up by a quarter of the font size, so the gaps between letters and the room\nabove the x-height belong to the link rather than falling through it."
+    text  "世界空间某点下超链接的 id（如果有）。可点击区域是每个字符的\n绘制四边形向外扩展字体大小的四分之一，因此字母之间的间隙以及\nx 字高上方的空间都属于该链接，而不会从中穿透。"
+    state machine
+}
+
+DreamText:FindHyperlinkIndexByWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkIndexByWorldPosition
+    src   "FindHyperlinkByWorldPosition's hit test, answering with the link's index in GetRichTextCustomTagArray rather\nthan its id -- two links may share an id -- or INDEX_NONE when no link is under the point."
+    text  "FindHyperlinkByWorldPosition 的命中测试，返回链接在 GetRichTextCustomTagArray 中的索引\n而不是其 id——两个链接可能共用一个 id——当该点下没有链接时返回 INDEX_NONE。"
+    state machine
+}
+
+DreamText:FlowDirection {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FlowDirection
+    src   "Which way the paragraph reads. Auto asks the bidi algorithm, which is what it always did."
+    text  "段落的阅读方向。Auto 会询问双向算法，这也是它一直以来的做法。"
+    state machine
+}
+
+DreamText:FontSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FontSize
+    src   "The font has the last word: a rasterizing font (bitmap, and the FreeType base) caps the size it\nwill render at GetFontSizeLimit(), 200 by default, and lays out at the cap. A distance-field font\nhas no cap, which is why this metadata's ceiling is the higher of the two."
+    text  "字体有最终决定权：光栅化字体（位图字体和 FreeType 基础字体）会将其\n渲染大小限制在 GetFontSizeLimit()（默认 200），并按该上限布局。距离场字体\n没有上限，因此此元数据的上限取两者中较高者。"
+    state machine
+}
+
+DreamText:GetHyperlinks {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetHyperlinks
+    src   "The `<a=Id>...</a>` ranges in this text, as character ranges with their ids. A hyperlink is a\ncustom tag that can also be clicked, so these are a filtered view of GetRichTextCustomTagArray."
+    text  "此文本中的 `<a=Id>...</a>` 范围，即带有各自 id 的字符范围。超链接是一种\n也可点击的自定义标签，因此这些是 GetRichTextCustomTagArray 的筛选视图。"
+    state machine
+}
+
+DreamText:GetRenderedFontSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRenderedFontSize
+    src   "The size Best Fit actually drew at, which is GetFontSize() when Best Fit is off."
+    text  "Best Fit 实际绘制时使用的字体大小，当 Best Fit 关闭时为 GetFontSize()。"
+    state machine
+}
+
+DreamText:GetTagColorOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTagColorOverride
+    src   "The colour a tag is drawn in instead of its own, when SetTagColorOverride put one in force."
+    text  "当 SetTagColorOverride 施加了重载时，标签改用该颜色绘制，而不再使用自身的颜色。"
+    state machine
+}
+
+DreamText:GlowBoost {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GlowBoost
+    src   "Glow boost of the whole text; segments override it."
+    text  "整段文本的辉光增强量；各段可重载此值。"
+    state machine
+}
+
+DreamText:HasPerCharacterAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:HasPerCharacterAnimation
+    src   "Whether anything registered through RegisterPerCharacterAnimation still animates this text's characters."
+    text  "通过 RegisterPerCharacterAnimation 注册的动画是否仍会驱动此文本的字符。"
+    state machine
+}
+
+DreamText:IsTextTruncated {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:IsTextTruncated
+    src   "indicating whether the text is Truncated or using Ellipsis"
+    text  "指示文本是被截断还是使用了省略号"
+    state machine
+}
+
+DreamText:Language {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Language
+    src   "The language the text is written in, as a culture name (\"ja\", \"zh-Hans\", \"en-US\"): the font's fallbacks meant for it\nare preferred (FDreamUIFontFallback::Cultures), and HarfBuzz picks the forms a script draws differently per language\n(locl). Empty, the default, is the game's current language. A rich text's <lang=xx>...</lang> overrides it for what\nthe tag encloses. Line breaking follows the game's culture whatever this says."
+    text  "文本所使用的语言，以文化名称表示（“ja”、“zh-Hans”、“en-US”）：会优先使用为该语言准备的字体回退项\n（FDreamUIFontFallback::Cultures），HarfBuzz 也会按语言选择文字的不同绘制形式\n（locl）。留空（默认值）表示游戏当前的语言。富文本的 <lang=xx>...</lang> 会对其包含的内容\n重载此设置。无论此项如何设置，换行都遵循游戏的文化设置。"
+    state machine
+}
+
+DreamText:LastLineAlign {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:LastLineAlign
+    src   "How a justified paragraph's last line, and a line a newline ends, align (HAlign Justify only)."
+    text  "两端对齐段落中最后一行以及由换行符结束的行的对齐方式（仅 HAlign Justify 适用）。"
+    state machine
+}
+
+DreamText:LineHeightPercentage {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:LineHeightPercentage
+    src   "Scales the distance from one line to the next, 1 being the font's own line height -- UMG's\nLineHeightPercentage. Only the gap between lines moves; the glyphs keep their size, so this\ntightens or opens up a paragraph without changing how big the letters are.\n\nFontSpace.Y is added on top and is a flat distance, which is the difference between the two:\none scales with the font, the other does not."
+    text  "缩放一行到下一行的距离，1 表示字体自身的行高——即 UMG 的\nLineHeightPercentage。只有行与行之间的间隙会移动，字形大小保持不变，因此这\n可以在不改变字母大小的前提下收紧或撑开段落。\n\nFontSpace.Y 会在此基础上额外附加，且是固定距离，这就是两者的区别：\n一个随字体缩放，另一个不随。"
+    state machine
+}
+
+DreamText:Margin {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:Margin
+    src   "Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin\nworks. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a\nmargin narrows the wrap width rather than just shifting the result.\n\nIt also grows what this text reports as its preferred size, so a parent that sizes itself to\nits content leaves room for the padding instead of squeezing it back out."
+    text  "控件矩形与其内部排布的文本之间的填充，工作方式与 UMG 文本的 Margin\n相同。文本的换行、对齐和溢出检测都基于矩形减去该值后的区域进行，因此\n边距会收窄换行宽度，而不只是平移结果。\n\n它还会增大此文本报告的期望尺寸，因此按内容调整自身大小的父级\n会为填充留出空间，而不会将其挤回去。"
+    state machine
+}
+
+DreamText:MinDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:MinDesiredWidth
+    src   "Floor under the width this text reports to a content-sized parent, UMG's MinDesiredWidth. Keeps a\nlabel that is momentarily short (a number counting down, a name that has not arrived) from\ncollapsing the row around it. Zero means no floor. It is a layout request only: nothing here\nclips or stretches the glyphs, and the text still draws inside whatever box the parent gives it."
+    text  "此文本向按内容调整大小的父级所报告宽度的下限，即 UMG 的 MinDesiredWidth。可避免\n短暂变短的标签（倒计时数字、尚未到达的名称）\n使其所在行塌缩。零表示没有下限。它只是布局请求：此处不会裁剪或拉伸字形，\n文本仍绘制在父级给定的框内。"
+    state machine
+}
+
+DreamText:OnHyperlinkClickedBP {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OnHyperlinkClickedBP
+    src   "Broadcast by TryClickHyperlinkAtWorldPosition; UUITextHyperlink is what routes pointer clicks into it."
+    text  "由 TryClickHyperlinkAtWorldPosition 广播；UUITextHyperlink 负责将指针点击路由到它。"
+    state machine
+}
+
+DreamText:OutlinePaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OutlinePaintPhase
+    src   "The same for the outline paint."
+    text  "轮廓绘制同理。"
+    state machine
+}
+
+DreamText:OverlayPaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OverlayPaintPhase
+    src   "The same for the overlay paint: what moves a shimmer band across (UDreamTextPaintLibrary::PlayShimmer runs it from -1 to 1)."
+    text  "叠加绘制同理：用于让微光带横向移动（UDreamTextPaintLibrary::PlayShimmer 会将其从 -1 运行到 1）。"
+    state machine
+}
+
+DreamText:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:OverrideMaterial
+    src   "Use a custom material to render this text"
+    text  "使用自定义材质来渲染此文本。"
+    state machine
+}
+
+DreamText:PaintAngleOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:PaintAngleOffset
+    src   "Degrees added to every paint's angle (a Linear's direction, a Conic's start, a Diamond's turn). One pixel of the paint table a change, as the phases."
+    text  "为每个笔触添加的角度（线性笔触的方向，锥形笔触的起始位置，菱形笔触的转动角度）。笔触表中的每个像素都会发生变化，就像相位一样。"
+    state machine
+}
+
+DreamText:PhraseWrap {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:PhraseWrap
+    src   "Keep CJK words together when wrapping, using ICU's dictionary -- CSS's `word-break: auto-phrase`.\nOnly matters with VerticalOverflow. Needs the packaged ICU data to include the CJK dictionary\n(Project Settings > Packaging > Internationalization Support: CJK, EFIGSCJK or All); without it\nthis quietly falls back to per-character breaks."
+    text  "使用 ICU 词典在换行时保持 CJK 词语完整——即 CSS 的 `word-break: auto-phrase`。\n仅在 VerticalOverflow 时有效。需要打包的 ICU 数据包含 CJK 词典\n（项目设置 > 打包 > 国际化支持：CJK、EFIGSCJK 或 All）；否则\n会静默回退为按字符换行。"
+    state machine
+}
+
+DreamText:RegisterPerCharacterAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RegisterPerCharacterAnimation
+    src   "Something that animates this text's characters one by one -- TextAnimation, which moves each glyph by its index in\nGetCharPropertyArray -- registers here for as long as it does so. A ligature draws several characters as one glyph,\nwhich would leave such an animator glyphs short, so the text lays out without ligatures while anything is\nregistered; and each character's underline and strikethrough are painted as pieces of its own, which the animator\nmoves with it, instead of one strip across a run. Registering the same animator twice counts once, and an animator\nthat is destroyed stops counting."
+    text  "逐个动画此文本字符的对象——TextAnimation，它按每个字形在\nGetCharPropertyArray 中的索引移动字形——在动画期间会在此注册。连字会把多个字符绘制成一个字形，\n这会使此类动画器缺字形，因此只要有对象注册，文本布局就不使用连字；\n并且每个字符的下划线和删除线都作为各自的片段绘制，由动画器\n随字符一起移动，而不是整段画一条线。同一动画器注册两次只计一次，已销毁的动画器\n停止计数。"
+    state machine
+}
+
+DreamText:RichTextCustomStyleData {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextCustomStyleData
+    src   "rich text custom style data for custom tag and rendering custom style"
+    text  "用于自定义标签和渲染自定义样式的富文本自定义样式数据。"
+    state machine
+}
+
+DreamText:RichTextImageData {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextImageData
+    src   "rich text image data for rendering image inside UIText"
+    text  "用于在 UIText 中渲染图像的富文本图像数据。"
+    state machine
+}
+
+DreamText:RichTextTagFilterFlags {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RichTextTagFilterFlags
+    src   "Flags to enable/disable rich text tag."
+    text  "用于启用/禁用富文本标签的标志。"
+    state machine
+}
+
+DreamText:SetFacePaint {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFacePaint
+    src   "PAINTS (FDreamTextPaint, the paint fields of FDreamTextStyle). Each setter does what SetTextStyle does with the one\nfield changed, at the least cost: a layer turned on or off, or the boxes, repaint the quads (their slots, UV4 and\ncolours); another gradient or preset for a layer still painting, and the overlay blend, write rows and the table\nonly -- another gradient row taken and the text's table written, with no repaint; nothing here lays the text out\nagain."
+    text  "绘制（FDreamTextPaint，即 FDreamTextStyle 的绘制字段）。每个 setter 都做 SetTextStyle 在只改动一个\n字段时所做的事，且代价最小：启用或关闭图层，或修改框，会重绘四边形（其槽位、UV4 和\n颜色）；为仍在绘制的图层换用另一个渐变或预设，以及叠加混合，只写入行和表\n—— 取另一渐变行并写入文本的表，不重绘；这里的任何操作都不会重新布局\n文本。"
+    state machine
+}
+
+DreamText:SetFacePaintPhase {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFacePaintPhase
+    src   "PAINT ANIMATION: what the text moves its paints by, one pixel of its paint table a change -- no repaint, no layout\n(a text whose material does not shade through MF_DreamUI_Shade, painted in its vertex colours, repaints instead)."
+    text  "绘制动画：文本移动其绘制所依据的量，绘制表每变化一个像素即为此值——不重绘、不重新布局\n（材质不通过 MF_DreamUI_Shade 着色、以顶点色绘制的文本则会重绘）。"
+    state machine
+}
+
+DreamText:SetFillProgress {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFillProgress
+    src   "Fill progress of every line, 0..1; glyphs inside a fill segment keep the segment's own value."
+    text  "每行的填充进度，范围为 0..1；填充段中的字形保留该段自己的值。"
+    state machine
+}
+
+DreamText:SetFillSegments {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetFillSegments
+    src   "Character runs that fill independently (a lyric line's words or syllables). Replaces the previous set."
+    text  "独立填充的字符行（歌词行的单词或音节）。替换之前的设置。"
+    state machine
+}
+
+DreamText:SetLanguage {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetLanguage
+    src   "A culture name, or empty for the game's current language; see Language."
+    text  "文化名称，或留空表示游戏当前语言；请参阅“语言”。"
+    state machine
+}
+
+DreamText:SetPaintBoxes {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintBoxes
+    src   "What the text's own paints are measured across, across and down (FDreamTextStyle::PaintBoxHorizontal, PaintBoxVertical)."
+    text  "文本自身绘制在横向和纵向上的测量依据（FDreamTextStyle::PaintBoxHorizontal、PaintBoxVertical）。"
+    state machine
+}
+
+DreamText:SetPaintCenterOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintCenterOffset
+    src   "Fractions of the box added to every paint's centre (and to a Linear's mid-point). Not saved."
+    text  "以框的比例加到每个绘制的中心（以及 Linear 的中点）。不保存。"
+    state machine
+}
+
+DreamText:SetPaintScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintScale
+    src   "Times every paint's Scale: above 1 stretches the gradients, below 1 squeezes them. Not saved."
+    text  "乘以每个绘制的 Scale：大于 1 拉伸渐变，小于 1 压缩渐变。不保存。"
+    state machine
+}
+
+DreamText:SetSmallTextRaster {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetSmallTextRaster
+    src   "A repaint, never a layout: coverage glyphs only replace quads."
+    text  "只重绘，绝不重新布局：覆盖字形只替换四边形。"
+    state machine
+}
+
+DreamText:SetTagColorOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTagColorOverride
+    src   "Draw the glyphs of one rich-text tag in InColor instead of the colour the markup gives them, until cleared --\nhow UUITextHyperlink shows a link hovered or pressed. InTagIndex indexes GetRichTextCustomTagArray (a link is a\ntag too). The colour is applied when the text is painted, so this repaints the text and never lays it out again.\nIt belongs to the tag at InTagIndex now: a layout that puts another tag at that index -- the text edited, a tag\nadded in front -- takes it off, rather than colour a tag nobody chose."
+    text  "用 InColor 绘制某个富文本标签的字形，而不是标记赋予它们的颜色，直到清除——\nUUITextHyperlink 就是这样显示悬停或按下的链接。InTagIndex 索引 GetRichTextCustomTagArray（链接也\n是一种标签）。颜色在文本绘制时应用，因此这只会重绘文本，绝不重新布局。\n它现在属于 InTagIndex 处的标签：若布局把另一个标签放到该索引——文本被编辑、前方插入了标签\n——就会将其移除，而不是给没人选择的标签上色。"
+    state machine
+}
+
+DreamText:SmallTextRaster {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SmallTextRaster
+    src   "Off keeps this text on its font's distance field at every size. Auto lets small sizes draw from hinted coverage\nglyphs where that can be exact (UDreamGUISettings::bSmallTextCoverage says where): crisper at 10-20 px, the same\nlayout, carets and selection."
+    text  "关闭时，此文本在任何字号下都使用字体的距离场。自动则允许小字号从可精确呈现的提示覆盖\n字形绘制（UDreamGUISettings::bSmallTextCoverage 决定在何处）：10-20 px 下更清晰，布局、\n光标和选区不变。"
+    state machine
+}
+
+DreamText:TabSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TabSize
+    src   "Tab stops, in spaces of the font at the text's size (plus letter spacing), from the line's start edge: CSS tab-size,\n8 as browsers have it. A tab narrower than half a space jumps to the next stop; 0 makes a tab take no room."
+    text  "制表位，以文本字号下字体的空格宽度（加上字距）为单位，从行的起始边缘算起：即 CSS tab-size，\n默认与浏览器一致为 8。小于半个空格的制表符跳到下一个制表位；0 使制表符不占空间。"
+    state machine
+}
+
+DreamText:TextJustify {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextJustify
+    src   "Where a justified line (HAlign Justify) gets its extra room: after word separators, between CJK characters, or everywhere."
+    text  "两端对齐的行（HAlign Justify）从何处获得额外空间：单词分隔符之后、CJK 字符之间，或任意位置。"
+    state machine
+}
+
+DreamText:TextStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextStyle
+    src   "Outline, underlay, glow and fill look, drawn by the built-in shader. Needs a distance-field font\n(OutlineMultiChannel source) and \"Use Built-in UI Shader\" on; has no effect with a custom material."
+    text  "由内置着色器绘制的轮廓、衬底、发光和填充效果。需要距离场字体\n（OutlineMultiChannel 源）并开启“Use Built-in UI Shader”；使用自定义材质时无效。"
+    state machine
+}
+
+DreamText:TextTransform {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TextTransform
+    src   "Case the text is drawn in. The Text property keeps what was authored; this is presentation only."
+    text  "绘制文本时使用的大小写。Text 属性保留原始内容；此项仅影响显示。"
+    state machine
+}
+
+DreamText:TryClickHyperlinkAtWorldPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TryClickHyperlinkAtWorldPosition
+    src   "Hit-tests the point and, on a hit, broadcasts OnHyperlinkClicked. True when a link was hit."
+    text  "对该点进行命中测试，命中时广播 OnHyperlinkClicked。命中链接时返回 true。"
+    state machine
+}
+
+DreamText:UnregisterPerCharacterAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:UnregisterPerCharacterAnimation
+    src   "The animator is done with this text's characters; see RegisterPerCharacterAnimation."
+    text  "动画器已完成对该文本字符的处理；请参阅 RegisterPerCharacterAnimation。"
+    state machine
+}
+
+DreamText:WrapTextAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:WrapTextAt
+    src   "Wrap the text at this width instead of at the content box's, UMG's WrapTextAt. Zero or less\nkeeps the content box, which is the usual case.\n\nWorth having separately because the box is also what the text is ALIGNED in: a narrower wrap\nwidth gives a narrow column of text that still centres over the full widget, which the box\nalone cannot express. It does not truncate -- Truncate and Ellipsis still measure against the\nbox, since what they are about is what fits on screen."
+    text  "按此宽度而非内容框宽度换行文本，即 UMG 的 WrapTextAt。为零或更小\n则保持内容框，这是常见情况。\n\n之所以单独设置，是因为内容框同时也是文本对齐的依据：较小的换行\n宽度会得到较窄的文本列，但仍会在整个控件上居中，这是单靠内容框\n无法表达的。它不会截断——Truncate 和 Ellipsis 仍按内容框\n测量，因为它们关心的是屏幕上能放下多少。"
+    state machine
+}
+
+DreamTextHyperlinkEvent__DelegateSignature {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamTextHyperlinkEvent__DelegateSignature
+    src   "A `<a=Id>` range was clicked; Id is what the markup named it."
+    text  "点击了 `<a=Id>...</a>` 范围；Id 是标记中为其指定的名称。"
+    state machine
+}
+
+EDreamTextSmallTextRaster {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster
+    src   "Whether a text may draw its small sizes from hinted coverage glyphs rather than from its font's distance field."
+    text  "文本是否可以使用提示覆盖字形来绘制小尺寸，而不是使用其字体的距离场。"
+    state machine
+}
+
+EDreamTextSmallTextRaster.Auto {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster:Auto
+    src   "Coverage glyphs wherever the project, the font and the text's situation allow (UDreamGUISettings::bSmallTextCoverage)."
+    text  "在项目、字体和文本显示条件允许的情况下，使用覆盖字形 (UDreamGUISettings::bSmallTextCoverage)。"
+    state machine
+}
+
+EDreamTextSmallTextRaster.Off {
+    at    Source/DreamGUI/Public/Core/Components/DreamText.h#EDreamTextSmallTextRaster:Off
+    src   "Always the distance field."
+    text  "始终使用距离场。"
+    state machine
+}

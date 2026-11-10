@@ -1,0 +1,83 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIContentBrowserExtensions
+
+SpriteActionsSubMenuLabel {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "DreamUISprite"
+    text  "精灵"
+    state machine
+}
+
+SpriteActionsSubMenuToolTip {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Sprite-related actions for this texture."
+    // from the engine's zh-Hans
+    text  "此纹理中Sprite相关的操作。"
+    state draft
+}
+
+FontActionsSubMenuLabel {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "DreamUIFont"
+    text  "字体操作"
+    state machine
+}
+
+FontActionsSubMenuToolTip {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "DreamUIFont-related actions for this prefab."
+    text  "此预制件的字体相关操作。"
+    state machine
+}
+
+ApplySpriteTextureSettings {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Apply Sprite Texture Settings"
+    text  "应用精灵纹理设置"
+    state machine
+}
+
+CreateSprite {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Create Sprite"
+    // from the engine's zh-Hans
+    text  "创建Sprite"
+    state draft
+}
+
+CreateSprite_Tooltip {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Create sprites from selected textures"
+    // from the engine's zh-Hans
+    text  "从选定的纹理创建sprite"
+    state draft
+}
+
+ConfigureTextureForSprites {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Apply Sprite Texture Settings"
+    text  "应用精灵纹理设置"
+    state machine
+}
+
+ConfigureTextureForSprites_Tooltip {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Set texture for sprite"
+    text  "设置精灵的纹理。"
+    state machine
+}
+
+CreateDreamUIFontDistanceField {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Create DreamUIFont DistanceField"
+    text  "创建 DreamUI 字体 Distance Field"
+    state machine
+}
+
+CreateDreamUIFontDistanceField_Tooltip {
+    at    Source/DreamGUIEditor/Private/ContentBrowserExtensions/DreamUIContentBrowserExtensions.cpp
+    src   "Create DreamUIFont DistanceField using this font-face."
+    text  "使用此字体创建DreamUIFont DistanceField。"
+    state machine
+}

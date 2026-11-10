@@ -1,0 +1,152 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenManager {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager
+    src   "Dream Tween Manager"
+    text  "Dream Tween 管理器"
+    state machine
+}
+
+DreamTweenManager:GetDreamTweenInstance:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:GetDreamTweenInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweenManager:GetDreamTweenInstance:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:GetDreamTweenInstance:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenManager:KillAllTweens:callComplete {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweens:callComplete
+    src   "Call Complete"
+    text  "Call Complete"
+    state machine
+}
+
+DreamTweenManager:KillAllTweensOnTarget:callComplete {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget:callComplete
+    src   "Call Complete"
+    text  "Call Complete"
+    state machine
+}
+
+DreamTweenManager:KillAllTweensOnTarget:TargetObject {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget:TargetObject
+    src   "Target Object"
+    // from the engine's zh-Hans
+    text  "目标Object"
+    state draft
+}
+
+DreamTweenManager:KillAllTweensOnTarget:WorldContextObject {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamTweenManager:ManualTick:DeltaTime {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:ManualTick:DeltaTime
+    src   "Delta Time"
+    // from the engine's zh-Hans
+    text  "差量时间"
+    state draft
+}
+
+DreamTweenManager:tweenerList {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:tweenerList
+    src   "Tweener List"
+    text  "Tweener列表"
+    state machine
+}
+
+DreamTweenTickHelperActor {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperActor
+    src   "Dream Tween Tick Helper Actor"
+    text  "Dream Tween 计时辅助器 Actor"
+    state machine
+}
+
+DreamTweenTickHelperActor:Target {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperActor:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamTweenTickHelperComponent {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperComponent
+    src   "Dream Tween Tick Helper Component"
+    text  "Dream Tween 计时辅助器 组件"
+    state machine
+}
+
+DreamTweenTickHelperComponent:Target {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperComponent:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamTweenTickHelperWorldSubsystem {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperWorldSubsystem
+    src   "Dream Tween Tick Helper World Subsystem"
+    text  "Dream Tween 计时辅助器 世界子系统"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTweenManager:DisableTick {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:DisableTick
+    src   "Disable default Tick function, so you can pause all tween or use CustomTick to do your own tick and use your own DeltaTime.\nThis will only pause the tick with current DreamTweenManager instance, so after load a new level, default Tick will work again, and you need to call DisableTick again if you want to disable tick."
+    text  "禁用默认的 Tick 函数，以便您可以暂停所有 tween 或使用 CustomTick 执行自己的计时，并使用自己的 DeltaTime。\n这只会暂停当前 DreamTweenManager 实例的计时，因此在加载新关卡后，默认的 Tick 将再次生效，并且如果您想禁用计时，则需要再次调用 DisableTick。"
+    state machine
+}
+
+DreamTweenManager:EnableTick {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:EnableTick
+    src   "Enable default Tick if it is disabled."
+    text  "如果已禁用，则启用默认的 Tick。"
+    state machine
+}
+
+DreamTweenManager:KillAllTweens {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweens
+    src   "Kill all tweens"
+    text  "结束所有 tween。"
+    state machine
+}
+
+DreamTweenManager:KillAllTweensOnTarget {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget
+    src   "Kill all tween animations created on TargetObject\n@param TargetObject The object which contains the tweener\n@param callComplete true- execute onComplete event."
+    text  "结束 TargetObject 上创建的所有 tween 动画。\n@param TargetObject 包含 tween 的对象。\n@param callComplete true- 执行 onComplete 事件。"
+    state machine
+}
+
+DreamTweenManager:tweenerList {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:tweenerList
+    src   "current active tweener collection"
+    text  "当前活动的 tween 集合。"
+    state machine
+}
+
+DreamTweenTickHelperWorldSubsystem {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenTickHelperWorldSubsystem
+    src   "This class is only for spawn ADreamTweenTickHelperActor for game world"
+    text  "此类仅用于在游戏世界中生成 ADreamTweenTickHelperActor。"
+    state machine
+}

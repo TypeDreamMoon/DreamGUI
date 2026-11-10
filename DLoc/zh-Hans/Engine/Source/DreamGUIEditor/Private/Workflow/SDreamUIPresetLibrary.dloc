@@ -1,0 +1,264 @@
+dloc 1
+culture zh-Hans
+namespace SDreamUIPresetLibrary
+
+OK {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "OK"
+    // from the engine's zh-Hans
+    text  "确定"
+    state draft
+}
+
+Cancel {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Cancel"
+    // from the engine's zh-Hans
+    text  "取消"
+    state draft
+}
+
+Gradients {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Gradients"
+    // from the engine's zh-Hans
+    text  "渐变"
+    state draft
+}
+
+Styles {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Styles"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+Effects {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Effects"
+    // from the engine's zh-Hans
+    text  "效果"
+    state draft
+}
+
+SaveSelectionTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Keep the selected widget's gradient, layer style or effect settings as a new preset on this shelf."
+    text  "将所选控件的渐变、图层样式或效果设置保存为新的预设，存储到此面板中。"
+    state machine
+}
+
+SaveSelection {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Save Selection"
+    text  "保存选择"
+    state machine
+}
+
+RefreshTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Read the shelf again."
+    text  "重新加载面板。"
+    state machine
+}
+
+Hint {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Double-click or drag a preset onto a widget. Right-click for more."
+    text  "双击或将预设拖动到控件上。右键单击以获取更多选项。"
+    state machine
+}
+
+Apply {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Apply to Selection"
+    // from the engine's zh-Hans
+    text  "应用到选项"
+    state draft
+}
+
+NothingSelected {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Select the widgets to apply the preset to."
+    text  "选择要应用预设的控件。"
+    state machine
+}
+
+SourceAsset {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Asset"
+    // from the engine's zh-Hans
+    text  "资产"
+    state draft
+}
+
+SourceProject {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Project"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+ApplySection {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Apply"
+    // from the engine's zh-Hans
+    text  "应用"
+    state draft
+}
+
+ApplyToSelection {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Apply to Selection"
+    // from the engine's zh-Hans
+    text  "应用到选项"
+    state draft
+}
+
+ApplyCopy {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Apply as a Copy"
+    text  "应用为副本"
+    state machine
+}
+
+ApplyCopyTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Write the asset's values onto the widgets instead of following the asset, so later edits of the asset leave them as they are."
+    text  "将资产的值写入控件，而不是跟踪资产，这样以后对资产的编辑不会影响这些控件。"
+    state machine
+}
+
+KeepSection {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Save As"
+    // from the engine's zh-Hans
+    text  "另存为"
+    state draft
+}
+
+SaveAsAsset {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Save as an Asset..."
+    text  "另存为资产..."
+    state machine
+}
+
+SaveAsAssetTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Make an asset of this preset, which widgets can follow."
+    text  "将此预设制作成一个资产，其他控件可以引用它。"
+    state machine
+}
+
+SaveAsText {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Save in the Project Settings..."
+    text  "保存到项目设置..."
+    state machine
+}
+
+SaveAsTextTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Keep a copy of this preset as text in the project settings."
+    text  "将此预设作为文本副本保存在项目设置中。"
+    state machine
+}
+
+TextPresetName {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Text Preset Name"
+    text  "文本预设名称"
+    state machine
+}
+
+ManageSection {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Preset"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+Browse {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Browse to Asset"
+    // from the engine's zh-Hans
+    text  "浏览至资产"
+    state draft
+}
+
+Remove {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "Remove from the Project Settings"
+    text  "从项目设置中移除"
+    state machine
+}
+
+SaveSelectionText {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "In the Project Settings..."
+    text  "在项目设置中..."
+    state machine
+}
+
+SaveSelectionTextTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "A text preset, kept in the project settings."
+    text  "一个文本预设，保存在项目设置中。"
+    state machine
+}
+
+SaveSelectionAsset {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "As an Asset..."
+    text  "作为资产..."
+    state machine
+}
+
+SaveSelectionAssetTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "A preset asset, which widgets can follow."
+    text  "一个预设资产，其他控件可以遵循。"
+    state machine
+}
+
+NothingToSave {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "'{0}' has no {1} to keep."
+    text  "'{0}' 没有可保存的 {1}。"
+    state machine
+}
+
+AGradient {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+AnEffect {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "effect"
+    // from the engine's zh-Hans
+    text  "效果"
+    state draft
+}
+
+AStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "layer style"
+    text  "图层样式"
+    state machine
+}
+
+NewTextPresetName {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUIPresetLibrary.cpp
+    src   "New Preset Name"
+    // from the engine's zh-Hans
+    text  "新预设名称"
+    state draft
+}

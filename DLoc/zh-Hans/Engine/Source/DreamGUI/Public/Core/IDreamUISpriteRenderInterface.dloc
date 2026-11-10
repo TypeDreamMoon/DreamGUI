@@ -1,0 +1,18 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISpriteRenderInterface {
+    at    Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h#DreamUISpriteRenderInterface
+    src   "Dream UISprite Render Interface"
+    text  "Dream UI 图像渲染接口"
+    state machine
+}
+
+DreamUISpriteRenderInterface:SpriteRenderGetSprite:ReturnValue {
+    at    Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h#DreamUISpriteRenderInterface:SpriteRenderGetSprite:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}

@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamPointerInputModule.h#DreamPointerInputModule
+    src   "Dream Pointer Input Module"
+    text  "Dream指针输入模块"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPointerInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamPointerInputModule.h#DreamPointerInputModule
+    src   "The pointer state machine: what one pointer's frame dispatches -- hover, press, release, click, double click,\nlong press, drag and drop, swipe -- given what its trace hit.\n\nEvery step dispatches through a player (UDreamUIInputUser), which keeps the state, counts the dispatch and\nbroadcasts. There used to be a second road through all of it, taken with no event system at all -- seventeen\nbranches by which a render-target surface drove its own synthesised pointer without broadcasts, a click run or a\nplayer; a surface is served by this same road now (IDreamUINestedSurface)."
+    text  "指针状态机：根据一次指针的追踪命中结果，决定该指针在一帧内派发什么——悬停、按下、释放、点击、双击、\n长按、拖放、滑动。\n\n每一步都通过一个播放器（UDreamUIInputUser）派发，它保存状态、统计派发次数并\n广播。过去这一切还存在第二条路径，完全不走事件系统——十七条\n分支，让渲染目标表面在不广播、不进行点击运行、也不经过\n播放器的情况下驱动自己合成的指针；现在表面也由同一条路径服务（IDreamUINestedSurface）。"
+    state machine
+}

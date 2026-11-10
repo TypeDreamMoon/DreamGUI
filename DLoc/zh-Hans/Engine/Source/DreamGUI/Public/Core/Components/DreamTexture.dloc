@@ -1,0 +1,241 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture
+    src   "Dream Texture"
+    text  "Dream 纹理"
+    state machine
+}
+
+DreamTexture:DrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:DrawType
+    src   "Draw Type"
+    text  "绘制类型"
+    state machine
+}
+
+DreamTexture:FillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:FillAmount
+    src   "Fill Amount"
+    text  "填充量"
+    state machine
+}
+
+DreamTexture:FillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:FillDirectionFlip
+    src   "Fill Direction Flip"
+    text  "填充方向翻转"
+    state machine
+}
+
+DreamTexture:FillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:FillMethod
+    src   "Fill Method"
+    // from the engine's zh-Hans
+    text  "填充方法"
+    state draft
+}
+
+DreamTexture:FillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:FillOrigin
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamTexture:fillOriginType_Radial180 {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:fillOriginType_Radial180
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamTexture:fillOriginType_Radial360 {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:fillOriginType_Radial360
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamTexture:fillOriginType_Radial90 {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:fillOriginType_Radial90
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamTexture:GetDrawType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetDrawType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetFillAmount:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillAmount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetFillDirectionFlip:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillDirectionFlip:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetFillMethod:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetFillOrigin:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillOrigin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetPixelsPerUnitMultiplier:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetPixelsPerUnitMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetSpriteInfo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetSpriteInfo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:GetUVRect:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetUVRect:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTexture:PixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:PixelsPerUnitMultiplier
+    src   "Pixels Per Unit Multiplier"
+    text  "像素/单位倍数"
+    state machine
+}
+
+DreamTexture:SetDrawType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetDrawType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetFillAmount:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillAmount:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetFillDirectionFlip:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillDirectionFlip:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetFillMethod:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillMethod:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetFillOrigin:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillOrigin:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetPixelsPerUnitMultiplier:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetPixelsPerUnitMultiplier:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetSpriteInfo:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetSpriteInfo:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SetUVRect:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetUVRect:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTexture:SpriteInfo {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamTexture:UVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:UVRect
+    src   "UVRect"
+    // from the engine's zh-Hans
+    text  "UV矩形"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTexture:FillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:FillOrigin
+    src   "DreamGUI_Hidden: edited through the Fill Origin row of the fill method, one of the three below."
+    text  "通过“填充原点”行编辑 DreamGUI_Hidden，这是三种填充方式之一。"
+    state machine
+}
+
+DreamTexture:PixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:PixelsPerUnitMultiplier
+    src   "Beside the draw type it applies to, rather than in a category of its own that is empty for the other draw types."
+    text  "在填充方法行的“像素/单位倍数”中编辑，以下三个选项之一。"
+    state machine
+}
+
+DreamTexture:UVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:UVRect
+    src   "Texture UV offset and scale info. Only get good result when DrawType is Normal"
+    text  "纹理 UV 偏移和缩放信息。仅当 DrawType 为 Normal 时才能获得良好效果。"
+    state machine
+}

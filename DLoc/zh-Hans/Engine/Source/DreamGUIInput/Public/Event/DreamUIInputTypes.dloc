@@ -1,0 +1,156 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIBaseEventDataDynamicDelegate__DelegateSignature:Data {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIBaseEventDataDynamicDelegate__DelegateSignature:Data
+    src   "Data"
+    // from the engine's zh-Hans
+    text  "数据"
+    state draft
+}
+
+DreamUIGamepadModelChangedDynamicDelegate__DelegateSignature:Model {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIGamepadModelChangedDynamicDelegate__DelegateSignature:Model
+    src   "Model"
+    // from the engine's zh-Hans
+    text  "模型"
+    state draft
+}
+
+DreamUIInputDeviceChangedDynamicDelegate__DelegateSignature:Device {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIInputDeviceChangedDynamicDelegate__DelegateSignature:Device
+    src   "Device"
+    // from the engine's zh-Hans
+    text  "设备"
+    state draft
+}
+
+DreamUIPointerInputChangedDynamicDelegate__DelegateSignature:InputType {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIPointerInputChangedDynamicDelegate__DelegateSignature:InputType
+    src   "Input Type"
+    // from the engine's zh-Hans
+    text  "输入类型"
+    state draft
+}
+
+DreamUIPointerInputChangedDynamicDelegate__DelegateSignature:PointID {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIPointerInputChangedDynamicDelegate__DelegateSignature:PointID
+    src   "Point ID"
+    // from the engine's zh-Hans
+    text  "点ID"
+    state draft
+}
+
+DreamUIRaycastHitDynamicDelegate__DelegateSignature:HitObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIRaycastHitDynamicDelegate__DelegateSignature:HitObject
+    src   "Hit Object"
+    // from the engine's zh-Hans
+    text  "命中Object"
+    state draft
+}
+
+DreamUIRaycastHitDynamicDelegate__DelegateSignature:HitResult {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIRaycastHitDynamicDelegate__DelegateSignature:HitResult
+    src   "Hit Result"
+    // from the engine's zh-Hans
+    text  "命中结果"
+    state draft
+}
+
+DreamUIRaycastHitDynamicDelegate__DelegateSignature:IsHit {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#DreamUIRaycastHitDynamicDelegate__DelegateSignature:IsHit
+    src   "Is Hit"
+    text  "是否命中"
+    state machine
+}
+
+EDreamUIGamepadModel.EDreamUIGamepadModel_MAX {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:EDreamUIGamepadModel_MAX
+    src   "EDream UIGamepad Model MAX"
+    text  "EDream UIGamepad Model MAX"
+    state machine
+}
+
+EDreamUIGamepadModel.Generic {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:Generic
+    src   "Generic"
+    // from the engine's zh-Hans
+    text  "泛型"
+    state draft
+}
+
+EDreamUIGamepadModel.PlayStation {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:PlayStation
+    src   "Play Station"
+    text  "PlayStation"
+    state machine
+}
+
+EDreamUIGamepadModel.Switch {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:Switch
+    src   "Switch"
+    // from the engine's zh-Hans
+    text  "切换"
+    state draft
+}
+
+EDreamUIGamepadModel.Xbox {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:Xbox
+    src   "Xbox"
+    text  "Xbox"
+    state machine
+}
+
+EDreamUIInputDevice.EDreamUIInputDevice_MAX {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIInputDevice:EDreamUIInputDevice_MAX
+    src   "EDream UIInput Device MAX"
+    text  "EDream UIInput Device MAX"
+    state machine
+}
+
+EDreamUIInputDevice.Gamepad {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIInputDevice:Gamepad
+    src   "Gamepad"
+    // from the engine's zh-Hans
+    text  "游戏手柄"
+    state draft
+}
+
+EDreamUIInputDevice.MouseAndKeyboard {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIInputDevice:MouseAndKeyboard
+    src   "Mouse and Keyboard"
+    text  "鼠标和键盘"
+    state machine
+}
+
+EDreamUIInputDevice.Touch {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIInputDevice:Touch
+    src   "Touch"
+    // from the engine's zh-Hans
+    text  "触摸"
+    state draft
+}
+
+namespace UObjectToolTips
+
+EDreamUIGamepadModel {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel
+    src   "Which pad the player is holding, for prompts that need to say A or Cross.\n\nDeliberately separate from EDreamUIInputDevice rather than more entries in it: the device answers\n\"which prompt table\", the model answers \"which glyph within it\", and folding the two together would\nrenumber an enum that is already saved in project assets. Generic is the honest answer whenever the\nplatform does not name the hardware, and every icon lookup falls back to it."
+    text  "玩家当前握持的手柄，用于需要显示 A 或 Cross 的提示。\n\n特意与 EDreamUIInputDevice 分开，而不是在其中增加更多条目：设备回答\n“使用哪张提示表”，型号回答“其中使用哪个字形”，把两者合并会导致\n这个已保存在项目资产中的枚举重新编号。若平台未指明硬件，Generic 就是最诚实的\n答案，所有图标查找都会回退到它。"
+    state machine
+}
+
+EDreamUIGamepadModel.Generic {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIGamepadModel:Generic
+    src   "A pad the platform did not name, or no pad at all. Xbox-style glyphs are the usual fallback."
+    text  "平台未命名的手柄，或没有手柄。通常使用 Xbox 风格的图标。"
+    state machine
+}
+
+EDreamUIInputDevice {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputTypes.h#EDreamUIInputDevice
+    src   "What the player last touched. Not what the game is configured for -- what their hands are on right\nnow, which is the only thing a key prompt can honestly be drawn from."
+    text  "玩家最近触碰的输入设备。不是游戏配置的设备，而是玩家此刻手上正在使用的东西，\n这也是按键提示唯一能如实依据的来源。"
+    state machine
+}

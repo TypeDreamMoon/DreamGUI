@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAnimEventTrack
+
+EventChannelName {
+    at    Source/DreamGUI/Private/Animation/DreamUIAnimEventTrack.cpp
+    src   "Event"
+    // from the engine's zh-Hans
+    text  "事件"
+    state draft
+}
+
+TrackName {
+    at    Source/DreamGUI/Private/Animation/DreamUIAnimEventTrack.cpp
+    src   "Events"
+    // from the engine's zh-Hans
+    text  "事件"
+    state draft
+}

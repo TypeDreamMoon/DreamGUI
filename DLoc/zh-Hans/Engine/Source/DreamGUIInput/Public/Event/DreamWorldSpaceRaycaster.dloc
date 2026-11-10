@@ -1,0 +1,259 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWorldSpaceRaycaster {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster
+    src   "Dream World Space Raycaster"
+    text  "Dream世界空间射线投射器"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:bHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:bHoldToDrag
+    src   "Hold to Drag"
+    text  "按住拖动"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:bOccludeByWorld {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:bOccludeByWorld
+    src   "Occlude by World"
+    text  "由世界遮挡"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:DragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:DragThreshold
+    src   "Drag Threshold"
+    text  "拖动阈值"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:GetDragThreshold:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetDragThreshold:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:GetHoldToDrag:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetHoldToDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:GetHoldToDragTime:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetHoldToDragTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:GetOccludeByWorld:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetOccludeByWorld:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:GetPointerSource:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetPointerSource:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:GetTraceChannel:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetTraceChannel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:HoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:HoldToDragTime
+    src   "Hold to Drag Time"
+    text  "按住拖动时间"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:PointerSource {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:PointerSource
+    src   "Pointer Source"
+    text  "指针来源"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:RayLength {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:RayLength
+    src   "Ray Length"
+    // from the engine's zh-Hans
+    text  "光线长度"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetDragThreshold:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetDragThreshold:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetHoldToDrag:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetHoldToDrag:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetHoldToDragTime:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetHoldToDragTime:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetOccludeByWorld:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetOccludeByWorld:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetPointerSource:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetPointerSource:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetRayLength:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetRayLength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:SetTraceChannel:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetTraceChannel:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWorldSpaceRaycaster:TraceChannel {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:TraceChannel
+    src   "Trace Channel"
+    // from the engine's zh-Hans
+    text  "检测通道"
+    state draft
+}
+
+EDreamWorldPointerSource.EDreamWorldPointerSource_MAX {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource:EDreamWorldPointerSource_MAX
+    src   "EDream World Pointer Source MAX"
+    text  "EDream世界指针来源 MAX"
+    state machine
+}
+
+EDreamWorldPointerSource.Mouse {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource:Mouse
+    src   "Mouse"
+    // from the engine's zh-Hans
+    text  "鼠标"
+    state draft
+}
+
+EDreamWorldPointerSource.ScreenCenter {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource:ScreenCenter
+    src   "Screen Center"
+    text  "屏幕中心"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWorldSpaceRaycaster {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster
+    src   "Pointer interaction with every world-space canvas ONE local player can reach.\n\nOne raycaster per player, not one per panel: the ray is aimed by that player's view, and which\ncanvases it can hit is answered by asking the manager for the world-space roots whose TraceChannel\nmatches. Adding, moving or destroying a panel is therefore nothing this component has to be told\nabout, and a panel is not required to carry an interaction component of its own.\n\nUDreamUIInputSubsystem::EnsureInteractionForPlayer creates one on a transient\n\"DreamInteractionHost_P%d\" actor for any player that needs it. Placing one by hand on any actor\noverrides that: the manager sees a world-space raycaster already speaking for that UserIndex and\nleaves it alone, so an authored raycaster with its own pointer source, ray length, world occlusion\nor drag behaviour is the one that runs."
+    text  "与一个本地玩家所能触及的每个世界空间画布进行指针交互。\n\n每个玩家一个射线投射器，而不是每个面板一个：射线由该玩家的视图瞄准，它能击中\n哪些画布，则通过向管理器询问 TraceChannel 匹配的世界空间根来回答。\n因此，添加、移动或销毁面板都不需要告知此组件，面板也不必\n自带交互组件。\n\nUDreamUIInputSubsystem::EnsureInteractionForPlayer 会为任何需要它的玩家在一个临时的\n“DreamInteractionHost_P%d”actor 上创建一个。在任何 actor 上手动放置一个\n会覆盖这一点：管理器看到已有世界空间射线投射器代表该 UserIndex，\n便不再插手，因此带有自己的指针来源、射线长度、世界遮挡\n或拖拽行为的自定义射线投射器才是实际运行的那个。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:bHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:bHoldToDrag
+    src   "hold press for a little while to entering drag mode"
+    text  "按住一段时间以进入拖动模式。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:bOccludeByWorld {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:bOccludeByWorld
+    src   "Trace the world as well as the panels, so that what the player cannot see past, the pointer cannot\nclick past -- and whatever the trace hits is pointed at.\n\nOne line trace per pointer per frame -- a single trace, which answers with the nearest blocking hit\nonly -- along the ray the panels are hit-tested with, on the collision channel TraceChannel stands\nfor: TraceTypeQuery1, the engine's Visibility channel, unless TraceChannel is changed. That hit\ncarries no widget. It wins on distance, so a panel behind it stops being pointed at; and the actor\nbehind it is sent the pointer's events -- enter, exit, down, up, click, double click, long press,\nscroll -- on itself and on any of its components that implement the pointer interfaces (see\nFDreamUIPointerWorldTarget).\nThat is how a render-target surface's UDreamUIRenderTargetInteraction gets its pointer: the\nsurface is a mesh in the world, and this trace is the only thing that ever reaches it. A wall\nimplements none of the interfaces and is only an occluder.\n\nWhat stops the pointer is whatever blocks that channel. On Visibility that is solid geometry -- a\nstatic mesh component's default BlockAllDynamic, a placed static mesh actor's BlockAll -- and not\na pawn's capsule or a character's mesh (the engine's Pawn, CharacterMesh and Spectator profiles\nignore Visibility), nor a trigger or a bare box, sphere or capsule component (Trigger ignores\nVisibility and a shape component's default OverlapAllDynamic only overlaps it; the trace is\nsingle, so overlapping is never occluding). The actor this raycaster rides on is skipped and\nnothing else is: a primitive that blocks the channel around the camera -- a pawn given a profile\nthat blocks Visibility, seen from inside -- is hit at distance zero, where the ray starts, and\ntakes every world-space panel away. Ride the raycaster on that pawn, or give the pawn a profile\nthat ignores the channel.\n\nOn by default. Off, a world pointer clicked straight through walls into panels the player could\nnot see -- one in the next room, one behind a pillar -- and never reached a render-target surface\nat all; and the raycaster UDreamUIInputSubsystem::EnsureInteractionForPlayer makes for a\nplayer is a default one, so a project that relied on it had both problems and no setting in sight\nto explain them. The price is that one trace per pointer per frame.\n\nTo turn it off, untick it on a raycaster of your own -- placed on any actor with the player's\nUserIndex, it replaces the automatic one (see the class comment) -- or call SetOccludeByWorld(false)\non whichever world-space raycaster the player has."
+    text  "除了面板之外也追踪世界，这样玩家看不穿的东西，指针也点不\n穿——而追踪命中的任何东西都会成为指针指向的对象。\n\n每帧每个指针执行一次线条追踪——单次追踪，只返回最近的阻挡命中\n——沿面板进行命中测试所用的射线，在 TraceChannel 所代表的碰撞通道\n上进行：除非更改 TraceChannel，否则就是 TraceTypeQuery1，即引擎的可视性通道。该命中\n不携带任何控件。它按距离取胜，因此位于其后的面板不再被指向；而位于其后的 actor\n会收到指针的事件——进入、离开、按下、抬起、单击、双击、长按、\n滚动——在它自身及其任何实现了指针接口的组件上（参见\nFDreamUIPointerWorldTarget）。\n渲染目标表面的 UDreamUIRenderTargetInteraction 就是这样获得指针的：该\n表面是世界中的一个网格体，而此追踪是唯一能到达它的东西。墙\n不实现任何接口，只是一个遮挡物。\n\n阻挡指针的是任何阻挡该通道的东西。在可视性上，那就是实体几何体——静态\n网格体组件默认的 BlockAllDynamic、放置的静态网格体 actor 的 BlockAll——而不是\npawn 的胶囊体或角色的网格体（引擎的 Pawn、CharacterMesh 和 Spectator 配置文件\n忽略可视性），也不是触发器或裸的盒体、球体或胶囊体组件（Trigger 忽略\n可视性，而形状组件默认的 OverlapAllDynamic 只与其重叠；追踪是\n单次的，因此重叠永远不会造成遮挡）。此射线投射器所依附的 actor 会被跳过，\n别的都不会：围绕摄像机阻挡该通道的图元——例如被赋予阻挡可视性配置文件的\npawn 从内部被观察时——会在射线起点的零距离处被命中，并\n夺走所有世界空间面板。请将射线投射器依附到该 pawn 上，或给该 pawn 一个\n忽略该通道的配置文件。\n\n默认开启。关闭后，世界指针会直接穿过墙壁点击玩家看不到的\n面板——隔壁房间里的一个、柱子后面的一个——并且完全无法到达渲染目标\n表面；而 UDreamUIInputSubsystem::EnsureInteractionForPlayer 为\n玩家创建的射线投射器是默认的，因此依赖它的项目会同时遇到这两个问题，却看不到\n任何可以解释它们的设置。代价是每个指针每帧一次追踪。\n\n要关闭它，请在你自己的射线投射器上取消勾选——把它放在任何带有该玩家\nUserIndex 的 actor 上，它会替换自动创建的那个（参见类注释）——或者对玩家\n所拥有的世界空间射线投射器调用 SetOccludeByWorld(false)。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:DragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:DragThreshold
+    src   "drag threshold, calculated in target's local space"
+    text  "拖动阈值，以目标对象的局部空间计算。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:HoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:HoldToDragTime
+    src   "hold press for \"holdToDragTime\" to entering drag mode"
+    text  "按住 \"holdToDragTime\" 进入拖动模式。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:RayLength {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:RayLength
+    src   "ray length for line trace hit"
+    text  "射线长度，用于线追踪命中检测。"
+    state machine
+}
+
+DreamWorldSpaceRaycaster:TraceChannel {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:TraceChannel
+    src   "Which world-space canvases this raycaster answers for: only roots whose own TraceChannel is the\nsame. With bOccludeByWorld (on by default) it is also the collision channel the occlusion trace\nuses, so \"what this pointer can touch\" and \"what can block it\" stay one setting: moving a pointer\nto another channel moves both, and its panels have to move with it."
+    text  "此射线投射器负责哪些世界空间画布：只有自身 TraceChannel 相同的\n根。配合 bOccludeByWorld（默认开启）时，它也是遮挡追踪\n所用的碰撞通道，因此“此指针能碰到什么”与“什么能阻挡它”是同一个设置：把指针\n移到另一个通道会同时移动两者，其面板也必须随之移动。"
+    state machine
+}
+
+EDreamWorldPointerSource {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource
+    src   "Where in the owning player's view a world-space pointer's ray is aimed."
+    text  "世界空间指针的射线在所属玩家视图中的瞄准位置。"
+    state machine
+}
+
+EDreamWorldPointerSource.Mouse {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource:Mouse
+    src   "Through the pointer's own screen position -- a mouse, a touch, a virtual cursor."
+    text  "通过指针自身的屏幕位置——鼠标、触摸或虚拟光标。"
+    state machine
+}
+
+EDreamWorldPointerSource.ScreenCenter {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#EDreamWorldPointerSource:ScreenCenter
+    src   "Through the middle of the view, wherever the pointer happens to be -- a first-person reticle."
+    text  "通过视图中央，无论指针恰好在哪里——第一人称准星。"
+    state machine
+}

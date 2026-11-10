@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerDoubleClickInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface
+    src   "Dream Pointer Double Click Interface"
+    text  "Dream 指针双击接口"
+    state machine
+}
+
+DreamPointerDoubleClickInterface:OnPointerDoubleClick:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDoubleClickInterface:OnPointerDoubleClick:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerDoubleClickInterface:OnPointerDoubleClick {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick
+    src   "Called at the second press on the same widget, with the same button, inside the event system's\nDoubleClickTime of the last click there and within the press raycaster's drag threshold of where\nthat click was pressed -- instead of OnPointerDown for that press.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "在同一控件上、使用同一按钮第二次按下时调用，前提是此次按下处于事件系统自上次在该处点击起的\nDoubleClickTime 之内，且位于按压射线检测器相对于该次点击按下位置的拖拽阈值范围内——\n此时将替代该次按下的 OnPointerDown 调用。\n@return 是否允许事件冒泡？如果同一 Actor 所有组件上的该接口都返回 true，则事件可以冒泡。"
+    state machine
+}

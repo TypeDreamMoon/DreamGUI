@@ -1,0 +1,169 @@
+dloc 1
+culture zh-Hans
+namespace UnrealEd
+
+ClickingOnActorsContextMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Actors (context menu)"
+    // from the engine's zh-Hans
+    text  "点击Actor（快捷菜单）"
+    state draft
+}
+
+ClickingOnActorsDouble-Click {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Actors (double-click)"
+    // from the engine's zh-Hans
+    text  "点击Actor（双击）"
+    state draft
+}
+
+ClickingOnActors {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Actors"
+    // from the engine's zh-Hans
+    text  "点击Actor"
+    state draft
+}
+
+Warning_ManyActorsToSelectOne {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "There are {0} selected actors. Selecting this actor will deselect them all. Are you sure?"
+    // from the engine's zh-Hans
+    text  "有{0}个选中的actor。选择此actor将取消选择所有actor。确认操作吗？"
+    state draft
+}
+
+Warning_ManyActors {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Warning: Many Actors"
+    // from the engine's zh-Hans
+    text  "警告：存在很多个Actor"
+    state draft
+}
+
+ClickingOnComponentContextMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Component (context menu)"
+    // from the engine's zh-Hans
+    text  "点击组件（快捷菜单）"
+    state draft
+}
+
+ClickingOnComponents {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Components"
+    // from the engine's zh-Hans
+    text  "点击组件"
+    state draft
+}
+
+ClickingOnBrushVertex {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Brush Vertex"
+    // from the engine's zh-Hans
+    text  "点击笔刷顶点"
+    state draft
+}
+
+ClickingOnStaticMeshVertex {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Clicking on Static Mesh Vertex"
+    // from the engine's zh-Hans
+    text  "点击静态网格体顶点"
+    state draft
+}
+
+SelectBrushFromSurface {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Select Brush from Surface"
+    // from the engine's zh-Hans
+    text  "从表面选择笔刷"
+    state draft
+}
+
+SelectSurfaces {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Select Surfaces"
+    // from the engine's zh-Hans
+    text  "选择表面"
+    state draft
+}
+
+ApplyMaterialToSelectedSurfaces {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Apply Material to Selected Surfaces"
+    // from the engine's zh-Hans
+    text  "应用材质到选中的表面"
+    state draft
+}
+
+ApplyMaterialToSurface {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Apply Material to Surface"
+    // from the engine's zh-Hans
+    text  "应用材质到表面"
+    state draft
+}
+
+SelectSurface {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Select Surface"
+    // from the engine's zh-Hans
+    text  "选择表面"
+    state draft
+}
+
+SelectBrushSurface {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Select Brush Surface"
+    // from the engine's zh-Hans
+    text  "选择笔刷表面"
+    state draft
+}
+
+LevelSocketClicked {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Level Socket Clicked"
+    // from the engine's zh-Hans
+    text  "点击的关卡插槽"
+    state draft
+}
+
+namespace ModalDialogs
+
+ManyActorsToSelectOneConfirm {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Continue Selection"
+    // from the engine's zh-Hans
+    text  "继续选择"
+    state draft
+}
+
+ManyActorsToSelectOneCancel {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Keep Current Selection"
+    // from the engine's zh-Hans
+    text  "保持当前选择"
+    state draft
+}
+
+namespace ClickHandlers
+
+SocketClickedNewPage {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Socket Clicked"
+    // from the engine's zh-Hans
+    text  "点击的插槽"
+    state draft
+}
+
+namespace ActorAttachmentError
+
+AttachmentsFailed {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerClickHandlers.cpp
+    src   "Attachments Failed!"
+    // from the engine's zh-Hans
+    text  "附加失败！"
+    state draft
+}

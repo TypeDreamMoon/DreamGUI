@@ -1,0 +1,366 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRichTextCustomStyleData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData
+    src   "Dream UIRich Text Custom Style Data"
+    text  "Dream UI多格式文本自定义样式数据"
+    state machine
+}
+
+DreamUIRichTextCustomStyleData:DataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:DataMap
+    src   "Data Map"
+    text  "数据映射"
+    state machine
+}
+
+DreamUIRichTextCustomStyleData:GetDataMap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:GetDataMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRichTextCustomStyleData:SetDataMap:InDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:SetDataMap:InDataMap
+    src   "In Data Map"
+    text  "数据映射"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData
+    src   "Dream UIRich Text Custom Style Item Data"
+    text  "Dream UI多格式文本自定义样式项数据"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:bold {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:bold
+    src   "Bold"
+    // from the engine's zh-Hans
+    text  "加粗"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:boldType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:boldType
+    src   "Bold Type"
+    text  "粗体类型"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:color {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:colorType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:colorType
+    src   "Color Type"
+    text  "颜色类型"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:italic {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:italic
+    src   "Italic"
+    // from the engine's zh-Hans
+    text  "斜体"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:italicType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:italicType
+    src   "Italic Type"
+    text  "斜体类型"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:paint {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:paint
+    src   "Paint"
+    // from the engine's zh-Hans
+    text  "绘制"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:paintType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:paintType
+    src   "Paint Type"
+    text  "填充类型"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:size {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:sizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:sizeType
+    src   "Size Type"
+    // from the engine's zh-Hans
+    text  "大小类型"
+    state draft
+}
+
+DreamUIRichTextCustomStyleItemData:strikethrough {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:strikethrough
+    src   "Strikethrough"
+    text  "删除线"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:strikethroughType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:strikethroughType
+    src   "Strikethrough Type"
+    text  "删除线类型"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:supOrSub {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:supOrSub
+    src   "Sup or Sub"
+    text  "上标或下标"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:underline {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:underline
+    src   "Underline"
+    text  "下划线"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:underlineType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:underlineType
+    src   "Underline Type"
+    text  "下划线类型"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_BoolType.EDreamUIRichTextCustomStyleData_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_BoolType:EDreamUIRichTextCustomStyleData_MAX
+    src   "EDream UIRich Text Custom Style Data MAX"
+    text  "EDream UI多格式文本自定义样式数据MAX"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_BoolType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_BoolType:KeepOrigin
+    src   "Keep Origin"
+    text  "保留原始"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_BoolType.Off {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_BoolType:Off
+    src   "Off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_BoolType.On {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_BoolType:On
+    src   "On"
+    // from the engine's zh-Hans
+    text  "开启"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_ColorType.EDreamUIRichTextCustomStyleData_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_ColorType:EDreamUIRichTextCustomStyleData_MAX
+    src   "EDream UIRich Text Custom Style Data MAX"
+    text  "EDream UI多格式文本自定义样式数据MAX"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_ColorType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_ColorType:KeepOrigin
+    src   "Keep Origin"
+    text  "保留原始"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_ColorType.Multiply {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_ColorType:Multiply
+    src   "Multiply"
+    // from the engine's zh-Hans
+    text  "乘"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_ColorType.Replace {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_ColorType:Replace
+    src   "Replace"
+    // from the engine's zh-Hans
+    text  "替换"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.EDreamUIRichTextCustomStyleData_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:EDreamUIRichTextCustomStyleData_MAX
+    src   "EDream UIRich Text Custom Style Data MAX"
+    text  "EDream UI多格式文本自定义样式数据MAX"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:KeepOrigin
+    src   "Keep Origin"
+    text  "保留原始"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.Set {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:Set
+    src   "Set"
+    // from the engine's zh-Hans
+    text  "设置"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_SizeType.EDreamUIRichTextCustomStyleData_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SizeType:EDreamUIRichTextCustomStyleData_MAX
+    src   "EDream UIRich Text Custom Style Data MAX"
+    text  "EDream UI多格式文本自定义样式数据MAX"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SizeType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SizeType:KeepOrigin
+    src   "Keep Origin"
+    text  "保留原始"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SizeType.SizeValue {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SizeType:SizeValue
+    src   "Size Value"
+    // from the engine's zh-Hans
+    text  "尺寸值"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_SizeType.SizeValueAsAdditional {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SizeType:SizeValueAsAdditional
+    src   "Size Value as Additional"
+    text  "大小值作为附加"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SupOrSubType.EDreamUIRichTextCustomStyleData_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SupOrSubType:EDreamUIRichTextCustomStyleData_MAX
+    src   "EDream UIRich Text Custom Style Data MAX"
+    text  "EDream UI多格式文本自定义样式数据MAX"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SupOrSubType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SupOrSubType:KeepOrigin
+    src   "Keep Origin"
+    text  "保留原始"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SupOrSubType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SupOrSubType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIRichTextCustomStyleData_SupOrSubType.Subscript {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SupOrSubType:Subscript
+    src   "Subscript"
+    text  "下标"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_SupOrSubType.Superscript {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_SupOrSubType:Superscript
+    src   "Superscript"
+    text  "上标"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIRichTextCustomStyleData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData
+    src   "For rich text on UIText.\nAdd your own string as tag and customize your own style."
+    text  "用于UIText上的多格式文本。\n添加你自己的字符串作为标签，并自定义你自己的样式。"
+    state machine
+}
+
+DreamUIRichTextCustomStyleData:SetDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:SetDataMap
+    src   "Replace every style at once, and tell the texts using this asset to lay out again."
+    text  "一次性替换所有样式，并让使用此资源的文本重新布局。"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:bold {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:bold
+    src   "What boldType and friends replaced. A style used to force all four flags, so a custom tag inside\na <b> turned the bold off again; there was no way to say \"leave it alone\". These are only still\nhere to carry an asset authored before the enums, and UpgradeLegacyBools folds them in on load."
+    text  "boldType及其同类项所取代的内容。该样式过去会强制设置全部四个标志，因此在<b>加粗</b>区间内插入的自定义标签\n又会把粗体关掉；没有办法表示“保持原样”。保留这些属性\n只是为了承载在枚举之前创建的资源，UpgradeLegacyBools会在加载时将它们合并进来。"
+    state machine
+}
+
+DreamUIRichTextCustomStyleItemData:paint {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleItemData:paint
+    src   "paintType Set: what the run is painted with -- its preset's gradient, or its gradient. Its bEnabled is not read."
+    text  "paintType为Set：该文本段用什么来绘制——其预设的渐变，或它自身的渐变。不读取其bEnabled。"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_BoolType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_BoolType
+    src   "Same three states size, colour and sup/sub already had, for the four font-style flags."
+    text  "与大小、颜色和上/下标已有的三种状态相同，只是用于四个字体样式标志。"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_PaintType {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType
+    src   "What a custom style does to the paint of the text it encloses (FDreamTextStyle::FacePaint, `<gradient>`)."
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.KeepOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:KeepOrigin
+    src   "Leave it: the paint of the tags around, or the text's own."
+    text  "保持原样：保留周围标签的样式，或文本本身的样式。"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:None
+    src   "No paint: the text inside is drawn in its colour, solid, even when the text itself is painted."
+    text  "无填充：内部文本以其自身颜色绘制，不透明，即使文本本身被填充。"
+    state machine
+}
+
+EDreamUIRichTextCustomStyleData_PaintType.Set {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:Set
+    src   "Paint with the entry's paint, measured across the run -- and `<gradient=ThisEntrysName>` anywhere finds it too."
+}

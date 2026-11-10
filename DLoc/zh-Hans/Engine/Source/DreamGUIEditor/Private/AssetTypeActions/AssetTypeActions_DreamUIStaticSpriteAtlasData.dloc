@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamUIStaticSpriteAtlasData
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamUIStaticSpriteAtlasData.cpp
+    src   "DreamUI Static Sprite Atlas Data"
+    text  "DreamUI 静态精灵图集数据"
+    state machine
+}

@@ -1,0 +1,89 @@
+dloc 1
+culture zh-Hans
+namespace DreamPanelSlotCustomization
+
+AlignLeft {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Left"
+    // from the engine's zh-Hans
+    text  "左对齐"
+    state draft
+}
+
+AlignHCenter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Horizontal Center"
+    text  "水平居中对齐"
+    state machine
+}
+
+AlignRight {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Right"
+    // from the engine's zh-Hans
+    text  "右对齐"
+    state draft
+}
+
+AlignHFill {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Fill Horizontally"
+    // from the engine's zh-Hans
+    text  "水平填充"
+    state draft
+}
+
+AlignTop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Top"
+    // from the engine's zh-Hans
+    text  "顶对齐"
+    state draft
+}
+
+AlignVCenter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Vertical Center"
+    text  "垂直居中对齐"
+    state machine
+}
+
+AlignBottom {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Align Bottom"
+    // from the engine's zh-Hans
+    text  "底对齐"
+    state draft
+}
+
+AlignVFill {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Fill Vertically"
+    // from the engine's zh-Hans
+    text  "垂直填充"
+    state draft
+}
+
+AutoSizeRule {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+FillSizeRule {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+Layer {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPanelSlotCustomization.cpp
+    src   "Layer"
+    // from the engine's zh-Hans
+    text  "层"
+    state draft
+}

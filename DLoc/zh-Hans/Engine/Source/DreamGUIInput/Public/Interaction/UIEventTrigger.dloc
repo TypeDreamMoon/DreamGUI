@@ -1,0 +1,270 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UIEventTrigger {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger
+    src   "UIEvent Trigger"
+    text  "UI事件触发器"
+    state machine
+}
+
+UIEventTrigger:AllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:AllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+UIEventTrigger:GetAllowEventBubbleUp:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:GetAllowEventBubbleUp:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIEventTrigger:OnPointerBeginDrag {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerBeginDrag
+    src   "On Pointer Begin Drag"
+    text  "鼠标按下开始拖动"
+    state machine
+}
+
+UIEventTrigger:OnPointerBeginDragBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerBeginDragBP
+    src   "OnPointerBeginDrag"
+    text  "鼠标按下开始拖动"
+    state machine
+}
+
+UIEventTrigger:OnPointerClick {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerClick
+    src   "On Pointer Click"
+    text  "鼠标点击"
+    state machine
+}
+
+UIEventTrigger:OnPointerClickBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerClickBP
+    src   "OnPointerClick"
+    text  "鼠标点击"
+    state machine
+}
+
+UIEventTrigger:OnPointerDeselect {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDeselect
+    src   "On Pointer Deselect"
+    text  "鼠标取消选择"
+    state machine
+}
+
+UIEventTrigger:OnPointerDeselectBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDeselectBP
+    src   "OnPointerDeselect"
+    text  "鼠标取消选择"
+    state machine
+}
+
+UIEventTrigger:OnPointerDoubleClick {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDoubleClick
+    src   "On Pointer Double Click"
+    text  "鼠标双击"
+    state machine
+}
+
+UIEventTrigger:OnPointerDoubleClickBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDoubleClickBP
+    src   "OnPointerDoubleClick"
+    text  "鼠标双击"
+    state machine
+}
+
+UIEventTrigger:OnPointerDown {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDown
+    src   "On Pointer Down"
+    text  "鼠标按下"
+    state machine
+}
+
+UIEventTrigger:OnPointerDownBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDownBP
+    src   "OnPointerDown"
+    text  "鼠标按下"
+    state machine
+}
+
+UIEventTrigger:OnPointerDrag {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDrag
+    src   "On Pointer Drag"
+    text  "鼠标拖动"
+    state machine
+}
+
+UIEventTrigger:OnPointerDragBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDragBP
+    src   "OnPointerDrag"
+    text  "OnPointerDrag"
+    state machine
+}
+
+UIEventTrigger:OnPointerDragDrop {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDragDrop
+    src   "On Pointer Drag Drop"
+    text  "OnPointerDragDrop"
+    state machine
+}
+
+UIEventTrigger:OnPointerDragDropBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDragDropBP
+    src   "OnPointerDragDrop"
+    text  "OnPointerDragDrop"
+    state machine
+}
+
+UIEventTrigger:OnPointerEndDrag {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerEndDrag
+    src   "On Pointer End Drag"
+    text  "OnPointerEndDrag"
+    state machine
+}
+
+UIEventTrigger:OnPointerEndDragBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerEndDragBP
+    src   "OnPointerEndDrag"
+    text  "OnPointerEndDrag"
+    state machine
+}
+
+UIEventTrigger:OnPointerEnter {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerEnter
+    src   "On Pointer Enter"
+    text  "OnPointerEnter"
+    state machine
+}
+
+UIEventTrigger:OnPointerEnterBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerEnterBP
+    src   "OnPointerEnter"
+    text  "OnPointerEnter"
+    state machine
+}
+
+UIEventTrigger:OnPointerExit {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerExit
+    src   "On Pointer Exit"
+    text  "OnPointerExit"
+    state machine
+}
+
+UIEventTrigger:OnPointerExitBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerExitBP
+    src   "OnPointerExit"
+    text  "OnPointerExit"
+    state machine
+}
+
+UIEventTrigger:OnPointerScroll {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerScroll
+    src   "On Pointer Scroll"
+    text  "OnPointerScroll"
+    state machine
+}
+
+UIEventTrigger:OnPointerScrollBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerScrollBP
+    src   "OnPointerScroll"
+    text  "OnPointerScroll"
+    state machine
+}
+
+UIEventTrigger:OnPointerSelect {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerSelect
+    src   "On Pointer Select"
+    text  "OnPointerSelect"
+    state machine
+}
+
+UIEventTrigger:OnPointerSelectBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerSelectBP
+    src   "OnPointerSelect"
+    text  "OnPointerSelect"
+    state machine
+}
+
+UIEventTrigger:OnPointerUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerUp
+    src   "On Pointer Up"
+    text  "On Pointer Up"
+    state machine
+}
+
+UIEventTrigger:OnPointerUpBP {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerUpBP
+    src   "OnPointerUp"
+    text  "OnPointerUp"
+    state machine
+}
+
+UIEventTrigger:SetAllowEventBubbleUp:Value {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:SetAllowEventBubbleUp:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIEventTriggerBaseEvent__DelegateSignature:Value {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTriggerBaseEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIEventTriggerPointerEvent__DelegateSignature:Value {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTriggerPointerEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UIEventTrigger {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger
+    src   "a helper component for quick register and setup DreamPointerEvent"
+    text  "用于快速注册和设置 DreamPointerEvent 的辅助组件。"
+    state machine
+}
+
+UIEventTrigger:AllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:AllowEventBubbleUp
+    src   "inherited events of this component can bubble up?"
+    text  "此组件继承的事件是否可向上冒泡？"
+    state machine
+}
+
+UIEventTrigger:GetAllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:GetAllowEventBubbleUp
+    src   "Whether the events this trigger receives carry on to whatever is behind it.\n\nReadable and writable because it is the only answer this component gives to UMG's per-call\n\"Handled / Unhandled\": every one of the thirteen handlers returns exactly this. A control that\nputs a trigger on itself has to be able to state it -- UDreamBorder does, as its\nbConsumeMouseEvents."
+    text  "此触发器接收到的事件是否继续传递到其后方的内容。\n\n可读可写，因为这是此组件对 UMG 每次调用的\n“已处理/未处理”给出的唯一答案：十三个处理程序全部返回此项。将触发器\n加在自身的控件必须能够声明这一点——UDreamBorder 通过其\nbConsumeMouseEvents 做到了。"
+    state machine
+}
+
+UIEventTrigger:OnPointerDoubleClick {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerDoubleClick
+    src   "The second press of a double click. The event system delivers it IN PLACE of that press's down,\nas Slate does, so a trigger that only listened for downs would never hear the second press at\nall -- this is where it arrives. The click at its release still comes through OnPointerClick."
+    text  "双击中的第二次按下。与 Slate 一样，事件系统会以本事件替代该次按下的\n按下事件进行传递，因此只监听按下事件的触发器永远收不到第二次按下——\n它正是从这里到达。释放时的点击仍会通过 OnPointerClick 传递。"
+    state machine
+}
+
+namespace UObjectCategory
+
+UIEventTrigger {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:GetAllowEventBubbleUp
+    src   "UIEventTrigger"
+    text  "UIEventTrigger"
+    state machine
+}

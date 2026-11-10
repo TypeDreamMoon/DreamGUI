@@ -1,0 +1,388 @@
+dloc 1
+culture zh-Hans
+namespace SDreamWidgetDesignerViewportToolbar
+
+CameraButton_3D {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "3D"
+    text  "3D"
+    state machine
+}
+
+CameraButton_2D {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "2D"
+    // from the engine's zh-Hans
+    text  "2D"
+    state draft
+}
+
+CameraSubmenuLabel {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Camera"
+    // from the engine's zh-Hans
+    text  "摄像机"
+    state draft
+}
+
+CameraSubmenuTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Camera options"
+    // from the engine's zh-Hans
+    text  "摄像机选项"
+    state draft
+}
+
+ViewportMode_3D {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "3D"
+    text  "3D"
+    state machine
+}
+
+ViewportMode_2D {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "2D"
+    // from the engine's zh-Hans
+    text  "2D"
+    state draft
+}
+
+PreviewCultureSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Preview Language"
+    // from the engine's zh-Hans
+    text  "浏览语言"
+    state draft
+}
+
+PreviewCultureSource {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Source (no preview)"
+    text  "源（无预览）"
+    state machine
+}
+
+PreviewCultureNoneAvailable {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "This project ships no game translations."
+    text  "此项目未附带任何游戏翻译。"
+    state machine
+}
+
+ScreenSizeSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Screen Size"
+    // from the engine's zh-Hans
+    text  "屏幕尺寸"
+    state draft
+}
+
+ScreenSizeRuleSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Size Rule"
+    // from the engine's zh-Hans
+    text  "大小规则"
+    state draft
+}
+
+SizeRuleCustom {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "自定义"
+    state draft
+}
+
+SizeRuleCustomTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "The canvas is the resolution picked above, or typed below."
+    text  "画布采用上方选择或下方输入的分辨率。"
+    state machine
+}
+
+SizeRuleFillScreen {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Fill Screen"
+    // from the engine's zh-Hans
+    text  "填充屏幕"
+    state draft
+}
+
+SizeRuleFillScreenTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "The canvas is the viewport, one design unit per pixel, and follows it as the window resizes. Picking it zooms to 1:1 so that is true straight away. The resolution you chose stays on the asset and comes back with Custom."
+    text  "画布即为视口，一个设计单位对应一个像素，并会随窗口大小调整而变化。选中此项会将缩放设为1:1，从而立即满足该条件。所选分辨率会保留在资产上，并在切回“自定义”时恢复。"
+    state machine
+}
+
+SizeRuleDesired {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Desired"
+    // from the engine's zh-Hans
+    text  "所需"
+    state draft
+}
+
+SizeRuleDesiredTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Size the canvas to what the root widget's UMG-compatible panel measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen. A root with no such panel measures nothing, and a canvas sized by a scaler rule is not this menu's to set."
+    text  "将画布调整为根控件中兼容UMG的面板所测量的大小，以便按自身尺寸制作提示框大小的预制件。仅在选择时应用一次。没有此类面板的根控件不会测量出任何大小，而由缩放规则决定大小的画布不在此菜单的设置范围内。"
+    state machine
+}
+
+ScreenSizeCustomSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Custom Size"
+    // from the engine's zh-Hans
+    text  "自定义大小"
+    state draft
+}
+
+CustomSizeWidth {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Width"
+    // from the engine's zh-Hans
+    text  "宽度"
+    state draft
+}
+
+CustomSizeHeight {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Height"
+    // from the engine's zh-Hans
+    text  "高度"
+    state draft
+}
+
+ScreenSizeToolsSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Tools"
+    // from the engine's zh-Hans
+    text  "工具"
+    state draft
+}
+
+FlipOrientation {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Flip Orientation"
+    // from the engine's zh-Hans
+    text  "翻转朝向"
+    state draft
+}
+
+FlipOrientationTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Swap the previewed device resolution's width and height."
+    text  "交换预览设备分辨率的宽度和高度。"
+    state machine
+}
+
+ShowResolutionGuides {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Show Resolution Guides"
+    text  "显示分辨率参考线"
+    state machine
+}
+
+ShowResolutionGuidesTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Overlay common device resolutions on the design canvas, like UMG's designer surface. Needs the designer overlay switched on."
+    text  "在设计画布上叠加常见设备分辨率，类似UMG的设计器界面。需要开启设计器叠加层。"
+    state machine
+}
+
+DesignerSnapLabel {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Snap"
+    // from the engine's zh-Hans
+    text  "对齐"
+    state draft
+}
+
+DesignerSnapTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Snap 2D designer movement and resize operations to the grid size next to this button."
+    text  "将2D设计器的移动和调整大小操作吸附到该按钮旁设置的网格大小。"
+    state machine
+}
+
+GridSizeSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Grid Size"
+    // from the engine's zh-Hans
+    text  "网格大小"
+    state draft
+}
+
+DesignerGridSizeTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "2D designer grid size, in design units."
+    text  "2D设计器网格大小，以设计单位表示。"
+    state machine
+}
+
+ZoomReadout3D {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+ZoomSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+ZoomToFit {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom to Fit"
+    // from the engine's zh-Hans
+    text  "缩放以匹配"
+    state draft
+}
+
+ZoomToFitTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Frame the whole design canvas. F frames the selection instead."
+    text  "框选整个设计画布。按F则改为框选当前选择。"
+    state machine
+}
+
+ZoomActualSize {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom 1:1"
+    text  "缩放 1:1"
+    state machine
+}
+
+ZoomActualSizeTip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "One design unit per screen pixel: the size the UI will really be."
+    text  "一个设计单位对应一个屏幕像素：即 UI 实际呈现的大小。"
+    state machine
+}
+
+ZoomLevelSection {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom Level"
+    text  "缩放级别"
+    state machine
+}
+
+ZoomPercentLabel {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Zoom %"
+    text  "缩放 %"
+    state machine
+}
+
+DesignerZoomTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "How much of a screen pixel one design unit covers, and how to reset it."
+    text  "一个设计单位占多少屏幕像素，以及如何重置。"
+    state machine
+}
+
+ScreenSizeTooltip_NoCanvas {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Design screen size: the device resolution to preview.\n\nThis prefab's root carries no DreamCanvas, so nothing scales it and the design canvas simply equals the device resolution. Add a canvas to the root to preview a scale rule."
+    text  "设计屏幕尺寸：要预览的设备分辨率。\n\n此预制体的根节点未携带 DreamCanvas，因此没有任何缩放，设计画布直接等于设备分辨率。为根节点添加画布即可预览缩放规则。"
+    state machine
+}
+
+DesignerGuidesTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Show 2D designer snapping guides while manipulating widgets."
+    text  "在操作控件时显示 2D 设计器吸附辅助线。"
+    state machine
+}
+
+DesignerRulersTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Rulers along the top and left of the viewport, in the design canvas's own units, with the cursor marked on each. Needs the designer overlay switched on."
+    text  "沿视口顶部和左侧显示的标尺，采用设计画布自身的单位，并在每条标尺上标出光标位置。需要开启设计器叠加层。"
+    state machine
+}
+
+LayoutDebugTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget. Needs the designer overlay switched on."
+    text  "显示所选控件的布局测量、排列、槽位、归属和裁剪诊断信息。需要开启设计器叠加层。"
+    state machine
+}
+
+RespectLocksTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Honour the designer locks. Switch it off to select and drag a locked widget without unlocking it; the locks themselves are left as they are."
+    text  "遵循设计器锁定。关闭后可在不解锁的情况下选择和拖动已锁定的控件；锁定本身保持不变。"
+    state machine
+}
+
+SafeZoneTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Draw the platform's title-safe area on the design canvas. Its own switch, so seeing it no longer means turning the device-resolution overlay on as well. A desktop that declares no safe area draws nothing; r.DebugSafeZone.TitleRatio is what makes one appear."
+    text  "在设计画布上绘制平台的标题安全区。它有自己的开关，因此查看它不再需要同时开启设备分辨率叠加层。未声明安全区的桌面平台不会绘制任何内容；r.DebugSafeZone.TitleRatio 可让安全区显示出来。"
+    state machine
+}
+
+ClipMasksTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Outline the clip mask of each selected widget that has one: the shape it cuts, a texture or pattern mask's rect, the layer below a widget that clips to it. Needs the designer overlay switched on."
+    text  "为每个具有裁剪蒙版的所选控件勾勒其轮廓：它裁出的形状、纹理或图案蒙版的矩形、被控件裁剪到其上的下方层。需要开启设计器叠加层。"
+    state machine
+}
+
+DesignerChromeTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Draw everything the editor puts over the prefab: the canvas boundary, selection outlines, handles, guides, layout diagnostics and readouts. Switch it off to see the prefab on its own; the gestures all still work."
+    text  "绘制编辑器在预制件上覆盖的所有内容：画布边界、选择轮廓、句柄、引导线、布局诊断和读数。 禁用它以查看预制件本身；所有手势仍然有效。"
+    state machine
+}
+
+RealtimeViewportTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Redraw the design viewport on every frame. Off, it redraws when the designer has something new to show -- a gesture, the pointer, a selection, a rebuild -- and otherwise four times a second, so an open designer nobody is touching stops rendering at the editor's frame rate. Animations playing in the preview draw at that slower rate while it is off."
+    text  "在每一帧重新绘制设计视图。 禁用后，只有在设计师有新内容要显示时（例如手势、指针、选择或重建），才会重新绘制；否则，每秒重新绘制四次，因此，如果打开的设计师没有被使用，则会以编辑器的帧率为基础进行渲染。 动画在预览中以较慢的速率播放，而当此选项关闭时。"
+    state machine
+}
+
+PreviewDPITooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Shrink the design canvas by the project's DPI curve, the way UMG's designer does. The curve is the project's own (Project Settings > User Interface), so this previews the application scale Slate will really apply at the chosen device resolution -- and it runs before the DreamCanvas scale rule, which is the order the runtime uses."
+    text  "通过项目的 DPI 曲线缩小设计画布，就像 UMG 的设计器所做的那样。 该曲线是项目的自有曲线（项目设置 > 用户界面），因此，这预览了 Slate 将在所选设备分辨率下实际应用的应用程序缩放比例，并且它在 DreamCanvas 缩放规则之前运行，这是运行时使用的顺序。"
+    state machine
+}
+
+PreviewCultureNone {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
+PreviewCultureTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Resolve the preview's text in another culture, the way UMG's Localization Preview does. Game text only -- the editor stays in your own language -- and it is switched off again when this designer closes."
+    text  "以类似于 UMG 的本地化预览的方式，在另一个文化中解析预览中的文本。 仅限游戏文本，编辑器保持您自己的语言，并且当此设计器关闭时，该选项将再次禁用。"
+    state machine
+}
+
+ArrangeLabel {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Arrange"
+    text  "对齐"
+    state machine
+}
+
+ArrangeTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerViewportToolbar.cpp
+    src   "Align or distribute the selected sibling widgets. Align needs two selected, Distribute three."
+    text  "对齐或分布所选的子控件。对齐需要选择两个控件，分布需要选择三个控件。"
+    state machine
+}

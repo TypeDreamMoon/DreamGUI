@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+LegacyBitmapFont {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataBitmapFactory.cpp
+    src   "Legacy Bitmap Font"
+    text  "传统位图字体"
+    state machine
+}
+
+LegacyBitmapFontToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataBitmapFactory.cpp
+    src   "A font rasterised from a face at each size it is drawn at. No longer developed: make a Distance Field Font instead."
+    text  "字体是根据每个尺寸的面进行栅格化的。已停止开发，请使用距离场字体。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIFontDataBitmapFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataBitmapFactory.cpp#DreamUIFontDataBitmapFactory
+    src   "Dream UIFont Data Bitmap Factory"
+    text  "DreamUI 字体数据位图工厂"
+    state machine
+}

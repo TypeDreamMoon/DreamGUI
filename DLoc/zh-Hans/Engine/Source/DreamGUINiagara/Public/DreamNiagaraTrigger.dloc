@@ -1,0 +1,272 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamNiagaraTrigger {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger
+    src   "Niagara Trigger"
+    text  "Niagara 触发器"
+    state machine
+}
+
+DreamNiagaraTrigger:ClickAddsProgress {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ClickAddsProgress
+    src   "Click Adds Progress"
+    text  "点击增加进度"
+    state machine
+}
+
+DreamNiagaraTrigger:FindSystem:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FindSystem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraTrigger:Fire:InAction {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:Fire:InAction
+    src   "In Action"
+    // from the engine's zh-Hans
+    text  "输入操作"
+    state draft
+}
+
+DreamNiagaraTrigger:FlightTarget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FlightTarget
+    src   "Flight Target"
+    text  "飞行目标"
+    state machine
+}
+
+DreamNiagaraTrigger:FlightTargetName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FlightTargetName
+    src   "Flight Target Name"
+    text  "飞行目标名称"
+    state machine
+}
+
+DreamNiagaraTrigger:OnClick {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:OnClick
+    src   "On Click"
+    text  "单击"
+    state machine
+}
+
+DreamNiagaraTrigger:OnEnter {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:OnEnter
+    src   "On Enter"
+    text  "进入时"
+    state machine
+}
+
+DreamNiagaraTrigger:OnExit {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:OnExit
+    src   "On Exit"
+    text  "退出时"
+    state machine
+}
+
+DreamNiagaraTrigger:OnProgressFull {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:OnProgressFull
+    src   "On Progress Full"
+    text  "进度完成时"
+    state machine
+}
+
+DreamNiagaraTrigger:ProgressWidget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ProgressWidget
+    src   "Progress Widget"
+    text  "进度控件"
+    state machine
+}
+
+DreamNiagaraTrigger:ProgressWidgetName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ProgressWidgetName
+    src   "Progress Widget Name"
+    text  "进度控件名称"
+    state machine
+}
+
+DreamNiagaraTrigger:SystemWidget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:SystemWidget
+    src   "System Widget"
+    text  "系统控件"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.Activate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:Activate
+    src   "Activate"
+    // from the engine's zh-Hans
+    text  "激活"
+    state draft
+}
+
+EDreamNiagaraTriggerAction.BurstAtCentre {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstAtCentre
+    src   "Burst at Centre"
+    text  "中心爆炸"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.BurstAtPointer {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstAtPointer
+    src   "Burst at Pointer"
+    text  "指向位置爆炸"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.BurstToTarget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstToTarget
+    src   "Burst to Target"
+    text  "向目标爆发"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.Deactivate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:Deactivate
+    src   "Deactivate"
+    // from the engine's zh-Hans
+    text  "停用"
+    state draft
+}
+
+EDreamNiagaraTriggerAction.EDreamNiagaraTriggerAction_MAX {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:EDreamNiagaraTriggerAction_MAX
+    src   "EDream Niagara Trigger Action MAX"
+    text  "EDream Niagara Trigger Action MAX"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.None {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamNiagaraTriggerAction.Restart {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:Restart
+    src   "Restart"
+    // from the engine's zh-Hans
+    text  "重启"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamNiagaraTrigger {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger
+    src   "Plays a widget's Niagara system on the widget's pointer events -- a click, the pointer coming in and going out -- and when a\nprogress the trigger watches fills: the wiring every UI effect needs, without a Blueprint. Put it on the widget that takes the\npointer; the system is the visual of SystemWidget, else of this widget or the first below it that has one."
+    text  "在控件的指针事件（点击、指针移入和移出）发生时，以及触发器监视的\n进度填满时，播放控件的Niagara系统：这是每个UI效果都需要的连接，无需蓝图。将它放在接收\n指针的控件上；该系统是SystemWidget的视觉，否则是此控件或其下方第一个拥有该系统的控件的视觉。"
+    state machine
+}
+
+DreamNiagaraTrigger:ClickAddsProgress {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ClickAddsProgress
+    src   "What a click adds to the progress (a charge bar): 0 adds nothing. A full bar starts again from 0 at the next click."
+    text  "点击为进度（充能条）增加多少：0表示不增加。满条后，下次点击时会从0重新开始。"
+    state machine
+}
+
+DreamNiagaraTrigger:FindSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FindSystem
+    src   "The Niagara system the trigger plays."
+    text  "触发器播放的Niagara系统。"
+    state machine
+}
+
+DreamNiagaraTrigger:Fire {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:Fire
+    src   "Does InAction now; a pointer action takes the last pointer position the trigger saw, else the centre."
+    text  "立即执行InAction；指针操作会采用触发器最近看到的指针位置，否则采用中心位置。"
+    state machine
+}
+
+DreamNiagaraTrigger:FlightTarget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FlightTarget
+    src   "Where BurstToTarget sends its particles."
+    text  "BurstToTarget将粒子发送到的位置。"
+    state machine
+}
+
+DreamNiagaraTrigger:FlightTargetName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FlightTargetName
+    src   "Found by its display name in the same tree, when FlightTarget is unset."
+    text  "当FlightTarget未设置时，在同一树中按其显示名称查找。"
+    state machine
+}
+
+DreamNiagaraTrigger:ProgressWidget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ProgressWidget
+    src   "A widget with a float Percent (a progress bar): when it reaches 1, OnProgressFull is done."
+    text  "带有浮点Percent的控件（进度条）：当其达到1时，执行OnProgressFull。"
+    state machine
+}
+
+DreamNiagaraTrigger:ProgressWidgetName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ProgressWidgetName
+    src   "Found by its display name in the same tree, when ProgressWidget is unset."
+    text  "当ProgressWidget未设置时，通过其显示名称在同一树中查找该控件。"
+    state machine
+}
+
+DreamNiagaraTrigger:SystemWidget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:SystemWidget
+    src   "The widget whose visual is the system; unset, this widget or the first below it with one."
+    text  "其视觉表现是该系统的控件；未设置时，为此控件或其下方第一个拥有该系统的控件。"
+    state machine
+}
+
+EDreamNiagaraTriggerAction {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction
+    src   "What a trigger does to its Niagara system."
+    text  "触发器对其Niagara系统执行的操作。"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.BurstAtCentre {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstAtCentre
+    src   "BurstAt the system widget's centre."
+    text  "在系统部件的中心位置触发爆炸。"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.BurstAtPointer {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstAtPointer
+    src   "BurstAt where the pointer is."
+    text  "在指针位置触发爆炸。"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.BurstToTarget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:BurstToTarget
+    src   "BurstTo the flight target, from the pointer."
+    text  "从指针位置向飞行目标触发爆炸。"
+    state machine
+}
+
+EDreamNiagaraTriggerAction.Restart {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#EDreamNiagaraTriggerAction:Restart
+    src   "Clears the particles and starts again."
+    text  "清除粒子并重新开始。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Niagara {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FindSystem
+    src   "DreamGUI-Niagara"
+    text  "DreamGUI-Niagara"
+    state machine
+}
+
+DreamGUI-Niagara|Progress {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:ProgressWidget
+    src   "DreamGUI-Niagara|Progress"
+    text  "DreamGUI-Niagara|Progress"
+    state machine
+}

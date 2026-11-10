@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPostProcessRenderElement_Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement_Text.h#DreamPostProcessRenderElement_Text
+    src   "Dream Post Process Render Element Text"
+    text  "Dream 后处理渲染元素文本"
+    state machine
+}
+
+DreamPostProcessRenderElement_Text:MaterialInstanceDynamic {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement_Text.h#DreamPostProcessRenderElement_Text:MaterialInstanceDynamic
+    src   "Material Instance Dynamic"
+    // from the engine's zh-Hans
+    text  "材质动态实例"
+    state draft
+}
+
+DreamPostProcessRenderElement_Text:PostProcess {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement_Text.h#DreamPostProcessRenderElement_Text:PostProcess
+    src   "Post Process"
+    // from the engine's zh-Hans
+    text  "后期处理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPostProcessRenderElement_Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement_Text.h#DreamPostProcessRenderElement_Text
+    src   "This component will grab post-process result image and display here.\nNOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and bUseFullSize is set to false.\nUV channel:\n            UV0 ~ UV2: Check DreamText\n            UV3: TextureCoordinate for sampling PostProcess RenderTarget"
+    text  "此组件将获取后处理结果图像并在此处显示。\n注意！！！ 这仅在目标后处理渲染类型设置为 RenderTarget 并且 bUseFullSize 设置为 false 时有效。\nUV 通道：\n            UV0 ~ UV2: 检查 DreamText\n            UV3: 用于采样后处理 RenderTarget 的纹理坐标"
+    state machine
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerFrame {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerFrame.h#DreamTweenerFrame
+    src   "Dream Tweener Frame"
+    text  "Dream Tweener 帧"
+    state machine
+}

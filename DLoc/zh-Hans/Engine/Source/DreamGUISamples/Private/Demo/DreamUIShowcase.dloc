@@ -1,0 +1,52 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIShowcase
+
+ShowcaseDialogTitle {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "确认操作"
+    text  "确认操作"
+    state machine
+}
+
+ShowcaseDialogMessage {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "这是一个 Native.Dialog：遮罩、面板、标题、正文，还有一排真正的 Native.Button。"
+    text  "这是一个 Native.Dialog：遮罩、面板、标题、正文，以及一排真正的 Native.Button。"
+    state machine
+}
+
+ShowcaseDialogCancel {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "取消"
+    text  "取消"
+    state machine
+}
+
+ShowcaseDialogConfirm {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "确定"
+    text  "确定"
+    state machine
+}
+
+NothingPlaying {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "Nothing playing"
+    text  "无播放内容"
+    state machine
+}
+
+NowPlaying {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "Now playing · {0} — {1}"
+    text  "正在播放 · {0} — {1}"
+    state machine
+}
+
+NoEvents {
+    at    Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp
+    src   "interact with anything below…"
+    text  "与下方内容交互..."
+    state machine
+}

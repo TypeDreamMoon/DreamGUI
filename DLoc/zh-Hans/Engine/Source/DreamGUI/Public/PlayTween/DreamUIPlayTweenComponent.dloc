@@ -1,0 +1,32 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIPlayTweenComponent {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent
+    src   "Dream UIPlay Tween Component"
+    text  "Dream UI 缓动组件"
+    state machine
+}
+
+DreamUIPlayTweenComponent:bPlayOnStart {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:bPlayOnStart
+    src   "Play on Start"
+    text  "开始播放"
+    state machine
+}
+
+DreamUIPlayTweenComponent:GetPlayTween:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:GetPlayTween:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTweenComponent:PlayTween {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:PlayTween
+    src   "Play Tween"
+    text  "播放缓动"
+    state machine
+}

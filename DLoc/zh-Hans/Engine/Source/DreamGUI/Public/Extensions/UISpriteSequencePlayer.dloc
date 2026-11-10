@@ -1,0 +1,87 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UISpriteSequencePlayer {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer
+    src   "UISprite Sequence Player"
+    text  "精灵序列播放器"
+    state machine
+}
+
+UISpriteSequencePlayer:bSnapSpriteSize {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:bSnapSpriteSize
+    src   "Snap Sprite Size"
+    text  "自动调整精灵大小"
+    state machine
+}
+
+UISpriteSequencePlayer:GetSnapSpriteSize:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:GetSnapSpriteSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISpriteSequencePlayer:GetSpriteSequence:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:GetSpriteSequence:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISpriteSequencePlayer:SetSnapSpriteSize:value {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SetSnapSpriteSize:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UISpriteSequencePlayer:SetSpriteSequence:value {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SetSpriteSequence:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UISpriteSequencePlayer:Sprite {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:Sprite
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+UISpriteSequencePlayer:SpriteSequence {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SpriteSequence
+    src   "Sprite Sequence"
+    text  "精灵序列"
+    state machine
+}
+
+namespace UObjectToolTips
+
+UISpriteSequencePlayer {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer
+    src   "Play Sprite sequence, need UISprite component."
+    text  "播放精灵序列，需要 UISprite 组件。"
+    state machine
+}
+
+UISpriteSequencePlayer:bSnapSpriteSize {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:bSnapSpriteSize
+    src   "should also set size to Sprite-data?"
+    text  "是否也应设置大小为精灵数据？"
+    state machine
+}
+
+UISpriteSequencePlayer:Sprite {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:Sprite
+    src   "No PostEditChangeProperty override. There was one, and its body was an empty `if (Property)` --\nso it did nothing except look like the sheet player's, which has real work to do (that one\nre-resolves its texture and puts the UV rect back when the preview is off). An override that\nonly calls Super is one more place a reader has to go and check."
+    text  "没有重写 PostEditChangeProperty。以前有一个，但它的函数体是空的 `if (Property)`——\n除了看起来和图集播放器的一样之外什么也没做，而那个播放器有实际工作要做（它在预览关闭时会\n重新解析纹理并还原 UV 矩形）。只调用 Super 的重写只是多了一处\n阅读者必须去查看的地方。"
+    state machine
+}

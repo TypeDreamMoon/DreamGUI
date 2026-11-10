@@ -1,0 +1,32 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerPointHandles
+
+LatticeName {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerPointHandleProviders.cpp
+    src   "Warp Lattice"
+    text  "扭曲网格"
+    state machine
+}
+
+MoveLatticePoint {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerPointHandleProviders.cpp
+    src   "Move Lattice Point"
+    text  "移动网格点"
+    state machine
+}
+
+PathName {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerPointHandleProviders.cpp
+    src   "Path Points"
+    // from the engine's zh-Hans
+    text  "路径点"
+    state draft
+}
+
+MovePathPoint {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerPointHandleProviders.cpp
+    src   "Move Path Point"
+    text  "移动路径点"
+    state machine
+}

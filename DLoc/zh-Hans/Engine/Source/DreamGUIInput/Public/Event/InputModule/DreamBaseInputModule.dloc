@@ -1,0 +1,40 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBaseInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule
+    src   "Dream Base Input Module"
+    text  "Dream 基础输入模块"
+    state machine
+}
+
+DreamBaseInputModule:EventSystem {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:EventSystem
+    src   "Event System"
+    text  "事件系统"
+    state machine
+}
+
+DreamBaseInputModule:RegisterInputModuleToEventSystem:TargetEventSystem {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:RegisterInputModuleToEventSystem:TargetEventSystem
+    src   "Target Event System"
+    text  "目标事件系统"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamBaseInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule
+    src   "Where a player's input comes in: the entry points an input source -- a preset actor's bindings, a test's driver --\ncalls, feeding the player behind the event system this is registered to.\nCall RegisterInputModuleToEventSystem to make this work. Only one InputModule is valid in the same time."
+    text  "玩家输入来源的入口：输入源（例如预设角色的绑定或测试驱动程序）通过事件系统将输入传递给玩家。请调用 RegisterInputModuleToEventSystem 使其生效。同一时间只能有一个有效的 InputModule。\n\n输入来源的入口，例如预设角色的绑定或测试驱动程序，通过事件系统将输入传递给玩家。调用 RegisterInputModuleToEventSystem 使其生效。同一时间只能有一个有效的 InputModule。"
+    state machine
+}
+
+DreamBaseInputModule:RegisterInputModuleToEventSystem {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:RegisterInputModuleToEventSystem
+    src   "Register this InputModule to a EventSystem. Only one InputModule is valid in the same time."
+    text  "将此 InputModule 注册到事件系统。同一时间只能有一个有效的 InputModule。"
+    state machine
+}

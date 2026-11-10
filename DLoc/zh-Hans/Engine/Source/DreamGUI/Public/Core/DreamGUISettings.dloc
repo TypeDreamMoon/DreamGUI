@@ -1,0 +1,1155 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGUISettings {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings
+    src   "Dream GUI"
+    text  "Dream GUI"
+    state machine
+}
+
+DreamGUISettings:BackKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:BackKeys
+    src   "Back Keys"
+    text  "返回键"
+    state machine
+}
+
+DreamGUISettings:bAutoVirtualCursorOnGamepad {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bAutoVirtualCursorOnGamepad
+    src   "Auto Virtual Cursor on Gamepad"
+    text  "游戏手柄自动虚拟光标"
+    state machine
+}
+
+DreamGUISettings:bFieldTextCorrection {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
+    src   "Field Text Correction"
+    text  "文本域自动校正"
+    state machine
+}
+
+DreamGUISettings:bFocusVisibleOnlyFromKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFocusVisibleOnlyFromKeys
+    src   "Focus Visible Only from Keys"
+    text  "仅通过按键显示焦点"
+    state machine
+}
+
+DreamGUISettings:bHideCursorOnGamepad {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bHideCursorOnGamepad
+    src   "Hide Cursor on Gamepad"
+    text  "游戏手柄隐藏光标"
+    state machine
+}
+
+DreamGUISettings:bMenusConsumeOutsideClick {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bMenusConsumeOutsideClick
+    src   "Menus Consume Outside Click"
+    text  "菜单捕获非点击事件"
+    state machine
+}
+
+DreamGUISettings:bSmallTextCorrection {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCorrection
+    src   "Small Text Correction"
+    text  "小文本校正"
+    state machine
+}
+
+DreamGUISettings:bSmallTextCoverage {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCoverage
+    src   "Small Text Coverage"
+    text  "小文本覆盖"
+    state machine
+}
+
+DreamGUISettings:bTabNavigation {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabNavigation
+    src   "Tab Navigation"
+    // from the engine's zh-Hans
+    text  "选项卡导航"
+    state draft
+}
+
+DreamGUISettings:bTabStartsTextEdit {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabStartsTextEdit
+    src   "Tab Starts Text Edit"
+    text  "Tab 键开始文本编辑"
+    state machine
+}
+
+DreamGUISettings:bTabWrapsAtScreenEnd {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabWrapsAtScreenEnd
+    src   "Tab Wraps at Screen End"
+    text  "Tab 键到达屏幕边缘时换行"
+    state machine
+}
+
+DreamGUISettings:bUsePlatformAcceptBack {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bUsePlatformAcceptBack
+    src   "Use Platform Accept Back"
+    text  "使用平台默认返回键"
+    state machine
+}
+
+DreamGUISettings:bUseSlateInputSource {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bUseSlateInputSource
+    src   "Use Slate Input Source"
+    text  "使用 Slate 输入源"
+    state machine
+}
+
+DreamGUISettings:ConfirmKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ConfirmKeys
+    src   "Confirm Keys"
+    text  "确认键"
+    state machine
+}
+
+DreamGUISettings:DefaultFont {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultFont
+    src   "Default Font"
+    // from the engine's zh-Hans
+    text  "Default Font"
+    state draft
+}
+
+DreamGUISettings:DefaultFrameRectSprite {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultFrameRectSprite
+    src   "Default Frame Rect Sprite"
+    text  "默认边框矩形精灵"
+    state machine
+}
+
+DreamGUISettings:DefaultRectBlockData {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultRectBlockData
+    src   "Default Rect Block Data"
+    text  "默认矩形块数据"
+    state machine
+}
+
+DreamGUISettings:DefaultRectBlockMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultRectBlockMaterial
+    src   "Default Rect Block Material"
+    text  "默认矩形块材质"
+    state machine
+}
+
+DreamGUISettings:DefaultStyleSheet {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultStyleSheet
+    src   "Default Style Sheet"
+    text  "默认样式表"
+    state machine
+}
+
+DreamGUISettings:DefaultUIMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultUIMaterial
+    src   "Default UIMaterial"
+    text  "默认 UI 材质"
+    state machine
+}
+
+DreamGUISettings:DefaultWhiteSolidSprite {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultWhiteSolidSprite
+    src   "Default White Solid Sprite"
+    text  "默认白色实心精灵"
+    state machine
+}
+
+DreamGUISettings:DefaultWhiteSolidTexture {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultWhiteSolidTexture
+    src   "Default White Solid Texture"
+    text  "默认白色实心纹理"
+    state machine
+}
+
+DreamGUISettings:DirectionKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DirectionKeys
+    src   "Direction Keys"
+    text  "方向键"
+    state machine
+}
+
+DreamGUISettings:EffectPresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:EffectPresets
+    src   "Effect Presets"
+    text  "特效预设"
+    state machine
+}
+
+DreamGUISettings:EventSystemActorClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:EventSystemActorClass
+    src   "Event System Actor Class"
+    text  "事件系统 Actor 类"
+    state machine
+}
+
+DreamGUISettings:ExtentKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ExtentKeys
+    src   "Extent Keys"
+    text  "范围键"
+    state machine
+}
+
+DreamGUISettings:GradientPresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:GradientPresets
+    src   "Gradient Presets"
+    text  "渐变预设"
+    state machine
+}
+
+DreamGUISettings:InputModeWithoutScope {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:InputModeWithoutScope
+    src   "Input Mode Without Scope"
+    text  "无作用域输入模式"
+    state machine
+}
+
+DreamGUISettings:ModalScrimColor {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ModalScrimColor
+    src   "Modal Scrim Color"
+    text  "模态遮罩颜色"
+    state machine
+}
+
+DreamGUISettings:NavigationSelectionClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:NavigationSelectionClass
+    src   "Navigation Selection Class"
+    text  "导航选择类"
+    state machine
+}
+
+DreamGUISettings:NextTabKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:NextTabKeys
+    src   "Next Tab Keys"
+    text  "下一标签键"
+    state machine
+}
+
+DreamGUISettings:PageKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PageKeys
+    src   "Page Keys"
+    text  "页面键"
+    state machine
+}
+
+DreamGUISettings:PresetControlFolder {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PresetControlFolder
+    src   "Preset Control Folder"
+    text  "预设控制文件夹"
+    state machine
+}
+
+DreamGUISettings:PreviousTabKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PreviousTabKeys
+    src   "Previous Tab Keys"
+    text  "上一标签键"
+    state machine
+}
+
+DreamGUISettings:ProjectSwatches {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ProjectSwatches
+    src   "Project Swatches"
+    text  "项目调色板"
+    state machine
+}
+
+DreamGUISettings:RenderTargetMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:RenderTargetMaterial
+    src   "Render Target Material"
+    text  "渲染目标材质"
+    state machine
+}
+
+DreamGUISettings:SlateInputConsumePolicy {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SlateInputConsumePolicy
+    src   "Slate Input Consume Policy"
+    text  "Slate 输入消费策略"
+    state machine
+}
+
+DreamGUISettings:SlateInputStickScrollSpeed {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SlateInputStickScrollSpeed
+    src   "Slate Input Stick Scroll Speed"
+    text  "Slate 输入手柄滚动速度"
+    state machine
+}
+
+DreamGUISettings:SmallTextContrast {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextContrast
+    src   "Small Text Contrast"
+    text  "小文本对比度"
+    state machine
+}
+
+DreamGUISettings:SmallTextEffectFace {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextEffectFace
+    src   "Small Text Effect Face"
+    text  "小文本效果面"
+    state machine
+}
+
+DreamGUISettings:SmallTextMaxPixelSize {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextMaxPixelSize
+    src   "Small Text Max Pixel Size"
+    text  "小文本最大像素尺寸"
+    state machine
+}
+
+DreamGUISettings:SmallTextRepaintBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextRepaintBudgetPerFrame
+    src   "Small Text Repaint Budget Per Frame"
+    text  "小文本每帧重绘预算"
+    state machine
+}
+
+DreamGUISettings:StylePresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:StylePresets
+    src   "Style Presets"
+    text  "样式预设"
+    state machine
+}
+
+DreamGUISettings:TabOrder {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TabOrder
+    src   "Tab Order"
+    text  "选项卡顺序"
+    state machine
+}
+
+DreamGUISettings:TextEffectPresetMaterials {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TextEffectPresetMaterials
+    src   "Text Effect Preset Materials"
+    text  "文本效果预设材质"
+    state machine
+}
+
+DreamGUISettings:TooltipDelaySeconds {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipDelaySeconds
+    src   "Tooltip Delay Seconds"
+    text  "工具提示延迟时间（秒）"
+    state machine
+}
+
+DreamGUISettings:TooltipFontSize {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipFontSize
+    src   "Tooltip Font Size"
+    text  "工具提示字体大小"
+    state machine
+}
+
+DreamGUISettings:TooltipMaxWidth {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipMaxWidth
+    src   "Tooltip Max Width"
+    text  "工具提示最大宽度"
+    state machine
+}
+
+DreamGUISettings:TooltipOffset {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipOffset
+    src   "Tooltip Offset"
+    text  "工具提示偏移量"
+    state machine
+}
+
+DreamGUISettings:VirtualCursorClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:VirtualCursorClass
+    src   "Virtual Cursor Class"
+    text  "虚拟光标类"
+    state machine
+}
+
+DreamGUISettings:VirtualCursorSpeed {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:VirtualCursorSpeed
+    src   "Virtual Cursor Speed"
+    text  "虚拟光标速度"
+    state machine
+}
+
+DreamUIDirectionKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey
+    src   "Dream UIDirection Key"
+    text  "Dream UI 方向键"
+    state machine
+}
+
+DreamUIDirectionKey:Direction {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey:Direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamUIDirectionKey:Key {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUIExtentKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIExtentKey
+    src   "Dream UIExtent Key"
+    text  "Dream UI 范围键"
+    state machine
+}
+
+DreamUIExtentKey:bToStart {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIExtentKey:bToStart
+    src   "To Start"
+    text  "起始位置"
+    state machine
+}
+
+DreamUIExtentKey:Key {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIExtentKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUIPageKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIPageKey
+    src   "Dream UIPage Key"
+    text  "Dream UI 页面键"
+    state machine
+}
+
+DreamUIPageKey:Key {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIPageKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUIPageKey:Pages {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIPageKey:Pages
+    src   "Pages"
+    // from the engine's zh-Hans
+    text  "页面"
+    state draft
+}
+
+DreamUISwatch {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch
+    src   "Dream UISwatch"
+    text  "Dream UI 调色板"
+    state machine
+}
+
+DreamUISwatch:Color {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUISwatch:Name {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+EDreamSmallTextEffectFace.Auto {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamSmallTextEffectFace.EDreamSmallTextEffectFace_MAX {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:EDreamSmallTextEffectFace_MAX
+    src   "EDream Small Text Effect Face MAX"
+    text  "EDream 小型文本效果面 (最大值)"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Field {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Field
+    src   "Field"
+    // from the engine's zh-Hans
+    text  "域"
+    state draft
+}
+
+EDreamSmallTextEffectFace.Hinted {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Hinted
+    src   "Hinted"
+    text  "已提示"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Unhinted {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Unhinted
+    src   "Unhinted"
+    text  "未提示"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.EDreamUIInputConsumePolicy_MAX {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:EDreamUIInputConsumePolicy_MAX
+    src   "EDream UIInput Consume Policy MAX"
+    text  "EDream UI 输入消费策略 (最大值)"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.Never {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:Never
+    src   "Never"
+    // from the engine's zh-Hans
+    text  "永不"
+    state draft
+}
+
+EDreamUIInputConsumePolicy.WhenHandled {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:WhenHandled
+    src   "When Handled"
+    text  "已处理时"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.WhenOverUI {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:WhenOverUI
+    src   "When Over UI"
+    text  "当鼠标悬停在UI元素上时"
+    state machine
+}
+
+EDreamUITabOrder.EDreamUITabOrder_MAX {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder:EDreamUITabOrder_MAX
+    src   "EDream UITab Order MAX"
+    text  "EDream UITab Order MAX"
+    state machine
+}
+
+EDreamUITabOrder.Hierarchy {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder:Hierarchy
+    src   "Hierarchy"
+    // from the engine's zh-Hans
+    text  "层级"
+    state draft
+}
+
+EDreamUITabOrder.LegacyGeometric {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder:LegacyGeometric
+    src   "Legacy Geometric"
+    text  "Legacy Geometric"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGUISettings {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings
+    src   "Every asset and class DreamGUI reaches for by itself, in one place a project can edit.\n\nThese used to be path literals passed to LoadObject at the point of use. A path literal is worse\nthan a hard reference: it creates no package dependency at all, so renaming or moving the asset\ncompiles clean and turns into a silent null at runtime. Soft pointers fix the rename half -- the\neditor fixes them up -- and they are a declared reference a tool can read.\n\nThey do NOT make the assets cookable. A soft pointer assigned to a native CDO produces no asset\nregistry dependency, because the CDO lives in /Script/DreamGUI rather than in a package the\nregistry scans. These assets survive a normal cook only because UE cooks all mounted content by\ndefault. What covers an explicit-package-list cook is the plugin's own Config/Game.ini, which puts\n/DreamGUI into DirectoriesToAlwaysCook -- it ships with the plugin, so a project gets it by\nenabling the plugin. See that file for why it is named Game.ini, and the constructor below.\n\nEverything is a fallback. A UDreamCanvas with its own DefaultMaterial set never reads this; the\nsettings only answer the question \"what should this be when nobody said\"."
+    text  "DreamGUI自己会用到的所有资产和类，集中在一个项目可以编辑的地方。\n\n它们过去是就地传给LoadObject的路径字面量。路径字面量比硬引用更糟：它根本不\n建立包依赖，因此重命名或移动资产后编译依然干净，运行时却变成静默的空值。\n软指针解决了重命名那一半——编辑器会自动修正——而且它是工具可以读取的\n声明式引用。\n\n它们并不能让资产可烘焙。赋给原生CDO的软指针不会产生资产\n注册表依赖，因为CDO位于/Script/DreamGUI，而不是注册表所扫描的包中。\n这些资产能通过普通烘焙，只是因为UE默认烘焙所有已挂载内容。\n应对显式包列表烘焙的是插件自带的Config/Game.ini，它把\n/DreamGUI放进DirectoriesToAlwaysCook——该文件随插件一同发布，所以项目只要启用插件就能得到它。\n该文件为何命名为Game.ini、以及下面的构造函数，都见该文件。\n\n一切都是回退值。自身设置了DefaultMaterial材质的UDreamCanvas从不读取这里；\n这些设置只回答一个问题：“没人指定时它该是什么”。"
+    state machine
+}
+
+DreamGUISettings:BackKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:BackKeys
+    src   "Keys that mean Back when nothing has bound an action to them."
+    text  "Keys that mean Back when nothing has bound an action to them."
+    state machine
+}
+
+DreamGUISettings:bAutoVirtualCursorOnGamepad {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bAutoVirtualCursorOnGamepad
+    src   "Show the virtual cursor whenever the physical device is a gamepad, hide it otherwise."
+    text  "Show the virtual cursor whenever the physical device is a gamepad, hide it otherwise."
+    state machine
+}
+
+DreamGUISettings:bFieldTextCorrection {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
+    src   "Run the face of distance-field text above SmallTextMaxPixelSize through the same coverage correction small text gets\n(the contrast and the linear-light blend), so its weight does not jump at the cut-off. Off by default until measured\nagainst Chrome. Drawn by the shaders: the canvases pass it with the font atlas's geometry (FontAtlasInfo.z negated)."
+    text  "让大于SmallTextMaxPixelSize的距离场文字表面经过与小字号文本相同的覆盖校正\n（对比度和线性光混合），使其字重在截断处不会突变。默认关闭，待与Chrome对比测量后再定。\n由着色器绘制：各画布随字体图集的几何数据一同传入（FontAtlasInfo.z取负）。"
+    state machine
+}
+
+DreamGUISettings:bFocusVisibleOnlyFromKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFocusVisibleOnlyFromKeys
+    src   "Draw the focus -- a control's Focused look and the focus ring -- only when keys or a pad put it there, as CSS's\n:focus-visible does: a clicked button is not drawn focused. Off: focus is always drawn."
+    text  "Draw the focus -- a control's Focused look and the focus ring -- only when keys or a pad put it there, as CSS's\n:focus-visible does: a clicked button is not drawn focused. Off: focus is always drawn."
+    state machine
+}
+
+DreamGUISettings:bHideCursorOnGamepad {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bHideCursorOnGamepad
+    src   "Hide the cursor while a player uses a pad, and show it again on the mouse -- where DreamGUI is what shows it (its UI-only input mode)."
+    text  "Hide the cursor while a player uses a pad, and show it again on the mouse -- where DreamGUI is what shows it (its UI-only input mode)."
+    state machine
+}
+
+DreamGUISettings:bMenusConsumeOutsideClick {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bMenusConsumeOutsideClick
+    src   "What a press outside an open menu -- a Dream Menu Anchor's, a menu anchor panel's, or a dropdown's list -- does besides\nclosing it. Off, the default, the press then reaches whatever is under the pointer, as Slate's menu stack lets it: the\nmenus close on the press and it goes on to the widget it landed on, so a menu left open never costs the player the\nclick they made elsewhere. A press on the menu's own trigger -- a dropdown's face -- closes the menu without opening it\nagain (UDreamMenuAnchor::ShouldOpenDueToClick). On: the press only closes the menu and goes no further, as DreamGUI's\nmenus did before. A single dropdown keeps the press whatever this says with UUIDropdown::bUseInteractionBlock."
+    text  "在打开的菜单之外按下时——无论是Dream菜单锚点、菜单锚点面板还是下拉框的列表——除了关闭它之外还会做什么。\n关闭（默认）时，按下会继续传递到指针下方的内容，正如Slate的菜单栈所做：菜单在按下时关闭，\n按下继续传给落到的控件，因此留着打开的菜单绝不会让玩家白费在别处的点击。在菜单自身的触发器\n（下拉框的正面）上按下时，会关闭菜单而不会再次打开它（UDreamMenuAnchor::ShouldOpenDueToClick）。\n开启：按下只关闭菜单，不再向下传递，与DreamGUI以前的菜单行为一致。单个下拉框无论此设置如何，\n都会用UUIDropdown::bUseInteractionBlock拦住按下。"
+    state machine
+}
+
+DreamGUISettings:bSmallTextCorrection {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCorrection
+    src   "Darken small distance-field text, in the spirit of FreeType's stem darkening and Skia's text contrast: at 12 screen\npixels per em and below a glyph's stems grow by 0.4 px and its edges get a little more contrast, fading to nothing\nat 24 pixels per em. A field's edge is a linear one-pixel ramp, which reads softer and lighter at those sizes than\nthe hinted bitmaps Slate and browsers draw. Larger text and the text effects (outline, glow, underlay) are drawn the\nsame either way. Applies to the built-in UI shader and to MF_DreamUI_Shade alike; a canvas takes a change when it\nnext rebuilds its draw calls."
+    text  "加深小字号的距离场文字，思路取自FreeType的竖干加粗和Skia的文字对比度：在每em 12屏幕像素及以下，\n字形的竖干加粗0.4 px，边缘对比度略有增加，到每em 24像素时逐渐消失。距离场的边缘是线性的单像素斜坡，\n在这些尺寸下看起来比Slate和浏览器绘制的带hinting的位图更柔和、更浅。\n更大的文字和文字效果（描边、辉光、衬底）无论开关都绘制相同。\n同时适用于内置UI着色器和MF_DreamUI_Shade；画布在下次重建其绘制调用时\n接受更改。"
+    state machine
+}
+
+DreamGUISettings:bSmallTextCoverage {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCoverage
+    src   "Draw small screen text of distance-field fonts from hinted coverage glyphs: each glyph rasterized for its pixel size\nwith FreeType's light hinting in four subpixel positions, placed on whole device pixels -- the crisp stems Chrome\nand Slate draw -- instead of from the field. Decided per glyph item at paint time, so layout, carets and selection\nare the same either way. Only where it can be exact: screen-space and render-target canvases, a render layer only\nonce it has held still for a few frames, a flat unrotated unmirrored uniformly scaled transform, no softness or\ndilate (outline, glow and underlay are drawn from the field under a coverage face, see SmallTextEffectFace), a\nmaterial that shades through MF_DreamUI_Shade, no modifier that moves vertices, pixel snapping not disabled. A font\ncan override this (its SmallTextCoverage), a text can opt out (UDreamText::SmallTextRaster)."
+    text  "用带hinting的覆盖字形绘制距离场字体的小字号屏幕文字：每个字形按其像素尺寸，\n以FreeType的轻度hinting在四个亚像素位置上光栅化，落在整数设备像素上——即Chrome\n和Slate绘制的清晰竖干——而不是取自距离场。在绘制时逐个字形项决定，因此布局、光标和选区\n两种方式都相同。仅在能够精确时才使用：屏幕空间和渲染目标画布；渲染层需静止数帧之后；\n变换为平面、未旋转、未镜像、等比缩放；无柔化或\n膨胀（描边、辉光和衬底由覆盖面之下的距离场绘制，见SmallTextEffectFace）；\n材质通过MF_DreamUI_Shade着色；没有移动顶点的修改器；未禁用像素对齐。字体\n可以覆盖此设置（其SmallTextCoverage），文本也可以退出（UDreamText::SmallTextRaster）。"
+    state machine
+}
+
+DreamGUISettings:bTabNavigation {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabNavigation
+    src   "Tab and Shift+Tab move the focus from control to control. Off: Tab is a key like any other, the game's."
+    text  "Tab 和 Shift+Tab 在控件之间移动焦点。关闭：Tab 与其他按键一样，归游戏所有。"
+    state machine
+}
+
+DreamGUISettings:bTabStartsTextEdit {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabStartsTextEdit
+    src   "A text field Tab lands on starts its edit, its text selected as the field says, as a browser's does."
+    text  "Tab 落入的文本字段会开始编辑，并按字段自己的设定选中其文本，与浏览器一致。"
+    state machine
+}
+
+DreamGUISettings:bTabWrapsAtScreenEnd {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabWrapsAtScreenEnd
+    src   "At the last control of a player's screen Tab goes round to the first, and Shift+Tab the other way. Popups and dialogs always go round."
+    text  "在玩家屏幕的最后一个控件上，Tab 会绕回第一个，Shift+Tab 则反向绕回。弹出窗口和对话框始终绕回。"
+    state machine
+}
+
+DreamGUISettings:bUsePlatformAcceptBack {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bUsePlatformAcceptBack
+    src   "The pad's confirm and Back are the platform's own (FPlatformInput::GetGamepadAcceptKey and GetGamepadBackKey, which a\nSwitch swaps): they are added to ConfirmKeys and BackKeys when the game runs, and a face button listed there that\nthe platform uses the other way is left out. Off: the tables as they are."
+    text  "手柄的确认和返回使用平台自身的按键（FPlatformInput::GetGamepadAcceptKey和GetGamepadBackKey，Switch会互换）：\n游戏运行时它们被加入ConfirmKeys和BackKeys，表中列出但平台反向使用的面键则被排除。\n关闭：表保持原样。"
+    state machine
+}
+
+DreamGUISettings:bUseSlateInputSource {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bUseSlateInputSource
+    src   "Hear input from Slate itself -- an input pre-processor, ahead of the game viewport -- instead of through the\npreset actor's bindings on the player controller. DreamGUI then answers in every input mode, the engine's own\nUI-only mode included, where the viewport ignores input and the controller hears nothing; and it can keep what\nit handled from the game (SlateInputConsumePolicy). The preset actors stand down while it is on. Off for now;\nit becomes the default in a later version."
+    text  "直接从Slate自身听取输入——作为输入预处理器，位于游戏视口之前——而不是通过\n预设Actor在玩家控制器上的绑定。这样DreamGUI能在所有输入模式下响应，包括引擎自带的\n仅UI模式（该模式下视口忽略输入，控制器什么也听不到）；并且它可以把已处理的输入\n拦下不传给游戏（SlateInputConsumePolicy）。开启时预设Actor会停用。目前关闭；\n后续版本中将成为默认值。"
+    state machine
+}
+
+DreamGUISettings:ConfirmKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ConfirmKeys
+    src   "Keys that confirm: press what has the focus."
+    text  "执行确认的按键：按下当前拥有焦点的控件。"
+    state machine
+}
+
+DreamGUISettings:DefaultFont {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultFont
+    src   "Font used by a UDreamText that has none set."
+    text  "未设置字体的 UDreamText 所使用的字体。"
+    state machine
+}
+
+DreamGUISettings:DefaultFrameRectSprite {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultFrameRectSprite
+    src   "Sprite for a nine-sliced frame rectangle."
+    text  "九宫格边框矩形使用的Sprite。"
+    state machine
+}
+
+DreamGUISettings:DefaultRectBlockData {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultRectBlockData
+    src   "Default data asset for UDreamRectBlock."
+    text  "UDreamRectBlock的默认数据资产。"
+    state machine
+}
+
+DreamGUISettings:DefaultRectBlockMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultRectBlockMaterial
+    src   "Default material for UDreamRectBlock."
+    text  "UDreamRectBlock的默认材质。"
+    state machine
+}
+
+DreamGUISettings:DefaultStyleSheet {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultStyleSheet
+    src   "The project's control style sheet -- one asset where every native control's default look\nlives. Unset is a supported state, not a missing one: controls then use their styles' own\nC++ defaults, which are the built-in theme.\n\nTyped as the sheet's base class: the sheet is the control library's, and the core does not\nname the control library's types. AllowedClasses keeps the picker to style sheets, and\nUDreamUIStyleSheet::GetProjectSheet does the cast. The config value is the asset's path either\nway, so a project's setting reads the same as before."
+    text  "项目的控件样式表——一个资产，其中存放每个原生控件的默认外观。\n未设置是一种受支持的状态，而不是缺失：此时控件使用其样式自身的\nC++默认值，即内置主题。\n\n类型设为样式表的基类：样式表属于控件库，核心并不\n引用控件库的类型。AllowedClasses把选择器限制为样式表，由\nUDreamUIStyleSheet::GetProjectSheet执行转换。无论哪种方式，配置值都是该资产的路径，\n因此项目的设置读法与之前相同。"
+    state machine
+}
+
+DreamGUISettings:DefaultUIMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultUIMaterial
+    src   "Default material for UI meshes -- images, and both bitmap and SDF text."
+    text  "UI网格体的默认材质——图像，以及位图文本和SDF文本。"
+    state machine
+}
+
+DreamGUISettings:DefaultWhiteSolidSprite {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultWhiteSolidSprite
+    src   "Sprite for a solid white fill -- the default appearance of a UDreamSprite."
+    text  "纯白填充使用的Sprite——UDreamSprite的默认外观。"
+    state machine
+}
+
+DreamGUISettings:DefaultWhiteSolidTexture {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultWhiteSolidTexture
+    src   "Texture behind DefaultWhiteSolidSprite, also used directly where a plain white pixel is needed."
+    text  "DefaultWhiteSolidSprite背后的纹理，在需要纯白像素的地方也会直接使用。"
+    state machine
+}
+
+DreamGUISettings:DirectionKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DirectionKeys
+    src   "Keys that move the focus, and which way. Tab is Next, and Prev with Shift held -- with neither Ctrl, Alt nor Cmd."
+    text  "移动焦点的按键及其方向。Tab为Next，按住Shift时为Prev——均不按Ctrl、Alt或Cmd。"
+    state machine
+}
+
+DreamGUISettings:EffectPresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:EffectPresets
+    src   "Effect settings kept as text, by name: an effect's node, `Glass { Refraction = 18  Frost = 0.25 }`, or a behaviour's\nline, `+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }`. Applied from the designer's preset library to a widget of\nthat effect (or, for a behaviour, any widget), they set the values they name and leave the others."
+    text  "以文本按名称保存的效果设置：效果节点，如`Glass { Refraction = 18  Frost = 0.25 }`，或行为的行，\n如`+ DreamMeshModifierWarp { Style = Arc  Bend = 60 }`。从设计器的预设库应用到该效果的控件（对于行为，\n则应用到任意控件）时，它们只设置所指名的值，其余保持不变。"
+    state machine
+}
+
+DreamGUISettings:EventSystemActorClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:EventSystemActorClass
+    src   "Spawned when a UI needs an event system and the level has none.\n\nA class rather than an asset because it is spawned: point it at the C++ preset, at one of the\npreset Blueprints, or at a project's own actor.\n\nThe only actor class DreamGUI still takes from a project. Root actors and pointer-source\nactors used to be named here too, one Blueprint per render mode; a world-space widget is an\nADreamWorldWidgetActor today and its raycaster is put on a transient per-player host with no\nclass to choose, so neither is a setting any more."
+    text  "当UI需要事件系统而关卡中没有时生成。\n\n使用类而不是资产，是因为它需要被生成：可以指向C++预设、某个预设蓝图，\n或项目自己的Actor。\n\n这是DreamGUI仍从项目获取的唯一Actor类。根Actor和指针源Actor以前也\n在这里指定，每种渲染模式一个蓝图；如今世界空间控件是ADreamWorldWidgetActor，\n其射线检测器被放在每玩家临时的宿主上，没有类可供选择，\n因此这两者都不再是设置项。"
+    state machine
+}
+
+DreamGUISettings:ExtentKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ExtentKeys
+    src   "Keys that scroll the container around the focus all the way: Home and End."
+    text  "将焦点所在的容器一直滚动到尽头的按键：Home和End。"
+    state machine
+}
+
+DreamGUISettings:GradientPresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:GradientPresets
+    src   "Gradients a rich text's `<gradient=Name>` finds by name, written as CSS (FDreamGradient::ParseCss), e.g. Gold =\n\"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)\". Looked up after the text's custom style entries and before\nthe name itself is read as CSS; the editor's gradient picker offers them beside the gradient assets."
+}
+
+DreamGUISettings:InputModeWithoutScope {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:InputModeWithoutScope
+    src   "What a player's keys and pad do while no navigation scope of theirs is active (see EDreamUIScopeInputMode). With no focus\nand no active scope, a navigation press looks for somewhere to land on that player's own screen-space canvases only."
+    text  "玩家没有激活任何导航作用域时，其按键和手柄的行为（参见 EDreamUIScopeInputMode）。在没有焦点\n也没有激活作用域时，导航按键只会在该玩家自己的屏幕空间画布上寻找落点。"
+    state machine
+}
+
+DreamGUISettings:ModalScrimColor {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ModalScrimColor
+    src   "Tint of the input-eating scrim behind a modal dialog."
+    text  "模态对话框背后拦截输入的遮罩的着色。"
+    state machine
+}
+
+DreamGUISettings:NavigationSelectionClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:NavigationSelectionClass
+    src   "Widget class spawned to show which widget navigation input has selected."
+    text  "生成后用于显示导航输入当前选中哪个控件的控件类。"
+    state machine
+}
+
+DreamGUISettings:PageKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PageKeys
+    src   "Keys that page the scrolling container around the focus, by screenfuls. The triggers page as Page Up and Page Down do."
+    text  "使焦点周围的滚动容器按整屏翻页的按键。扳机键的翻页效果与 Page Up 和 Page Down 相同。"
+    state machine
+}
+
+DreamGUISettings:PresetControlFolder {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PresetControlFolder
+    src   "Content folder the shipped control classes live in.\n\nA folder rather than a list because three places need it and they need it for different\nreasons: one builds a path into it, one is the base for the preset menu, and the palette\nexcludes it so presets do not show up twice."
+    text  "随附控件类所在的 Content 文件夹。\n\n这里用文件夹而不是列表，是因为有三处需要它，且各有各的理由：\n一处要在其中构建路径，一处作为预设菜单的基础，而调色板\n会排除它，以免预设出现两次。"
+    state machine
+}
+
+DreamGUISettings:PreviousTabKeys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PreviousTabKeys
+    src   "Keys that switch the player's active tab view to the previous tab, and to the next (IDreamUITabSwitchTarget); prompts show them on the action bar."
+    text  "将玩家的活动选项卡视图切换到上一个和下一个选项卡的按键（IDreamUITabSwitchTarget）；提示会将其显示在操作栏上。"
+    state machine
+}
+
+DreamGUISettings:ProjectSwatches {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ProjectSwatches
+    src   "The project's palette: colours the designer offers beside a colour, a click away, and adds to from there or from its\neyedropper. Kept with the project so that every author picks the same colours."
+    text  "项目的调色板：设计器在颜色旁一并提供、一次点击即可取用的颜色，也可以从那里或从它的\n取色器向其中添加。随项目一同保存，好让每位作者都选用相同的颜色。"
+    state machine
+}
+
+DreamGUISettings:RenderTargetMaterial {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:RenderTargetMaterial
+    src   "Material used when a widget renders through a render target."
+    text  "控件通过渲染目标渲染时所使用的材质。"
+    state machine
+}
+
+DreamGUISettings:SlateInputConsumePolicy {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SlateInputConsumePolicy
+    src   "With the Slate input source: what the UI keeps from the game. A key typed into a field being edited is always kept."
+    text  "使用 Slate 输入源时：UI 从游戏中保留哪些输入。在正在编辑的字段中键入的按键始终会保留。"
+    state machine
+}
+
+DreamGUISettings:SlateInputStickScrollSpeed {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SlateInputStickScrollSpeed
+    src   "With the Slate input source: how fast the right stick scrolls what has focus, in canvas units a second at full tilt."
+    text  "使用 Slate 输入源时：右摇杆滚动焦点内容的速度，以满推时每秒的画布单位计。"
+    state machine
+}
+
+DreamGUISettings:SmallTextContrast {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextContrast
+    src   "Skia's text contrast for coverage glyphs: how much the coverage of light-on-dark and dark-on-light text is boosted\nbefore it is blended, 1.0 as Chromium ships it. 0 blends the raw coverage, as Slate does. Below 16: it shares a\nvertex channel with a flag (DreamTextQuadCode::CoverageLinearTarget)."
+    text  "Skia 对覆盖率字形的文本对比度：在混合之前，深底亮字和亮底深字的覆盖率被提升多少，\n1.0 即 Chromium 的默认值。0 表示混合原始覆盖率，与 Slate 相同。低于 16：它会与一个标志共用\n顶点通道（DreamTextQuadCode::CoverageLinearTarget）。"
+    state machine
+}
+
+DreamGUISettings:SmallTextEffectFace {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextEffectFace
+    src   "How small text with an outline, a glow or an underlay draws from coverage glyphs; see EDreamSmallTextEffectFace."
+    text  "带描边、发光或底衬的小号文本如何使用覆盖率字形绘制；参见 EDreamSmallTextEffectFace。"
+    state machine
+}
+
+DreamGUISettings:SmallTextMaxPixelSize {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextMaxPixelSize
+    src   "Device pixels per em up to which small-text coverage glyphs are used; larger text draws from the field. A font can override it."
+    text  "使用小文本覆盖率字形时所允许的每 em 设备像素数上限；更大的文本从距离场绘制。字体可覆盖此值。"
+    state machine
+}
+
+DreamGUISettings:SmallTextRepaintBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:SmallTextRepaintBudgetPerFrame
+    src   "How many texts a world may repaint onto coverage glyphs in one frame once their device scale or their render layer has\nsettled: the rest wait for the next frames. Spreads the repaints of a screen whose labels all stop moving at once."
+    text  "当文本的设备缩放或渲染层稳定后，一个世界中每帧可有多少个文本重绘到覆盖率字形上：\n其余的都留待后续帧。用于分散一屏标签同时停止移动时的重绘。"
+    state machine
+}
+
+DreamGUISettings:StylePresets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:StylePresets
+    src   "Layer styles kept as text, by name: the lines of `.dui` a node's block takes -- a `+ DreamLayerStyle { ... }` line, and\nBlendMode and RenderOpacity when the style keeps the layer's blending. The designer's preset library shelves them\nbeside the style preset assets (UDreamLayerStylePreset) and applies them as a pasted layer style."
+    text  "以文本形式按名称保存的图层样式：节点块所接受的 `.dui` 行——一行 `+ DreamLayerStyle { ... }`，以及\n样式保留图层混合时所用的 BlendMode 和 RenderOpacity（不透明度）。设计器的预设库将它们摆放在\n样式预设资产（UDreamLayerStylePreset）旁边，并作为粘贴的图层样式应用。"
+    state machine
+}
+
+DreamGUISettings:TabOrder {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TabOrder
+    src   "What Tab walks; see EDreamUITabOrder."
+    text  "Tab 键遍历的内容；请参阅 EDreamUITabOrder。"
+    state machine
+}
+
+DreamGUISettings:TextEffectPresetMaterials {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TextEffectPresetMaterials
+    src   "Preset materials offered on a distance-field font, in the order they appear in the picker.\n\nAn array rather than four named entries because the picker shows whatever is here: a project\ncan drop one, reorder them, or add its own text effect without touching the plugin."
+    text  "距离场字体上提供的预设材质，按其在选择器中的显示顺序排列。\n\n使用数组而非四个具名条目，是因为选择器显示的就是这里的内容：项目\n可以删除其中一个、重新排序，或添加自己的文本效果，而无需改动插件。"
+    state machine
+}
+
+DreamGUISettings:TooltipDelaySeconds {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipDelaySeconds
+    src   "Seconds the pointer rests on a widget before its ToolTipText shows."
+    text  "指针在控件上停留多少秒后显示其 ToolTipText。"
+    state machine
+}
+
+DreamGUISettings:TooltipFontSize {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipFontSize
+    src   "Font size of the built-in text bubble."
+    text  "内置文本气泡的字体大小。"
+    state machine
+}
+
+DreamGUISettings:TooltipMaxWidth {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipMaxWidth
+    src   "Widest the built-in text bubble grows before the text wraps."
+    text  "内置文本气泡在文本换行前可达到的最大宽度。"
+    state machine
+}
+
+DreamGUISettings:TooltipOffset {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipOffset
+    src   "Bubble offset from the pointer, in canvas units, X right and Y up -- the default puts it\nbelow-right of the cursor. The tooltip flips to the pointer's other side when this side runs\nout of canvas."
+    text  "气泡相对指针的偏移，以画布为单位，X 向右、Y 向上——默认将其放在\n光标的右下方。当这一侧超出\n画布时，工具提示会翻转到指针的另一侧。"
+    state machine
+}
+
+DreamGUISettings:VirtualCursorClass {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:VirtualCursorClass
+    src   "Widget class drawn as the cursor. Empty draws the built-in square."
+    text  "用作光标绘制的控件类。为空时绘制内置方块。"
+    state machine
+}
+
+DreamGUISettings:VirtualCursorSpeed {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:VirtualCursorSpeed
+    src   "Cursor speed at full stick deflection, viewport pixels per second."
+    text  "摇杆完全偏转时的光标速度，单位为视口像素/秒。"
+    state machine
+}
+
+DreamUIDirectionKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey
+    src   "One row of the direction key table (UDreamGUISettings::DirectionKeys): a key and the way it moves the focus."
+    text  "方向键表中的一行（UDreamGUISettings::DirectionKeys）：一个按键及其移动焦点的方式。"
+    state machine
+}
+
+DreamUIDirectionKey:Direction {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey:Direction
+    src   "Next is Tab's: with Shift held it is Prev."
+    text  "Next 是 Tab 的方向：按住 Shift 时是 Prev。"
+    state machine
+}
+
+DreamUIExtentKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIExtentKey
+    src   "One row of the extent key table (UDreamGUISettings::ExtentKeys): a key that scrolls all the way to the start, or to the end."
+    text  "范围键表中的一行（UDreamGUISettings::ExtentKeys）：一个可一路滚动到开头或末尾的按键。"
+    state machine
+}
+
+DreamUIPageKey {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIPageKey
+    src   "One row of the page key table (UDreamGUISettings::PageKeys): a key and how many screenfuls it scrolls, negative back towards the start."
+    text  "分页键表中的一行（UDreamGUISettings::PageKeys）：一个按键，以及它滚动的屏数，负值表示向开头方向滚动。"
+    state machine
+}
+
+DreamUISwatch {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch
+    src   "One colour of the project's palette (UDreamGUISettings::ProjectSwatches)."
+    text  "项目调色板中的一种颜色（UDreamGUISettings::ProjectSwatches）。"
+    state machine
+}
+
+DreamUISwatch:Color {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch:Color
+    src   "sRGB with straight alpha, as a `.dui` writes a colour."
+    text  "sRGB 与直通 Alpha，即 `.dui` 写入颜色的方式。"
+    state machine
+}
+
+DreamUISwatch:Name {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch:Name
+    src   "What the palette calls it."
+    text  "调色板的名称。"
+    state machine
+}
+
+EDreamSmallTextEffectFace {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace
+    src   "How small text with effects (outline, glow, underlay) draws from coverage glyphs (UDreamGUISettings::bSmallTextCoverage):\nthe effects always come from the distance field, moved by the coverage face's snap so the two line up; this says what\nthe face is drawn from. Face softness and dilation keep a text on the field whatever this says."
+    text  "带效果（描边、发光、衬底）的小号文本如何从覆盖率字形绘制（UDreamGUISettings::bSmallTextCoverage）：\n效果始终来自距离场，并按覆盖率字形面的对齐偏移移动，使两者对齐；此项说明\n字形面依据什么绘制。无论此项如何设置，字形面的柔和度与膨胀都会让文本保持在距离场上。"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Auto {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Auto
+    src   "Hinted, but Unhinted for a glyph whose outline is under 2 device pixels, where Hinted's offset shows."
+    text  "用于在轮廓小于 2 个设备像素的 Glyph 上启用或禁用提示。提示的偏移量显示了这一点。"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Field {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Field
+    src   "The field, effects and face: a text with effects never draws from coverage, as before."
+    text  "字段、效果和面：带有效果的文本从不使用覆盖，如前所述。"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Hinted {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Hinted
+    src   "A hinted coverage glyph: the crispest face; its edges may stand up to half a pixel off the field's outline on thin outlines."
+    text  "启用的覆盖 Glyph：最清晰的面；其边缘可能在细轮廓上偏离字段轮廓半个像素。"
+    state machine
+}
+
+EDreamSmallTextEffectFace.Unhinted {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamSmallTextEffectFace:Unhinted
+    src   "An unhinted coverage glyph, the outline where the field has it: exact against the outline, a little softer than Hinted."
+    text  "未启用的覆盖 Glyph，轮廓与字段的轮廓相同：与轮廓精确对齐，比启用的轮廓柔和一些。"
+    state machine
+}
+
+EDreamUIInputConsumePolicy {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy
+    src   "What DreamGUI's input keeps from the game, with the Slate input source."
+    text  "DreamGUI 从游戏接收的输入，以及 Slate 接收的输入。"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.Never {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:Never
+    src   "Nothing: the game hears everything the UI hears, as it does through the preset actors."
+    text  "游戏听到 UI 听到的所有内容，就像它通过预设 Actor 那样。"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.WhenHandled {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:WhenHandled
+    src   "Only what a widget answers: a press on a widget that handles presses, and a key the UI took."
+    text  "仅当 Widget 响应时才接收：按下处理按键的 Widget，以及 UI 接收的键。"
+    state machine
+}
+
+EDreamUIInputConsumePolicy.WhenOverUI {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUIInputConsumePolicy:WhenOverUI
+    src   "A press, a release or a wheel turn over DreamGUI UI, and any key the UI took."
+    text  "在 DreamGUI UI 上的按下、释放或滚轮转动，以及 UI 接收的任何键。"
+    state machine
+}
+
+EDreamUITabOrder {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder
+    src   "What Tab and Shift+Tab walk (UDreamGUISettings::TabOrder)."
+    text  "Tab 和 Shift+Tab 所遍历的内容（UDreamGUISettings::TabOrder）。"
+    state machine
+}
+
+EDreamUITabOrder.Hierarchy {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder:Hierarchy
+    src   "The widget hierarchy, depth first, siblings by their Tab Index (UDreamWidget::TabIndex) and then in order: a sequence\nthat reverses exactly, as a browser's and Slate's do."
+    text  "控件层级，深度优先，同级先按 Tab Index（UDreamWidget::TabIndex）、再按顺序：一个可精确反向的序列，\n与浏览器和 Slate 的做法一样。"
+    state machine
+}
+
+EDreamUITabOrder.LegacyGeometric {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#EDreamUITabOrder:LegacyGeometric
+    src   "The nearest control to the right, else the nearest below -- what Tab did before this setting. Kept for one version."
+    text  "右侧最近的控件，如果不存在，则为下方最近的控件。这是 Tab 键之前的行为。已保留一个版本。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Virtual Cursor" {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bAutoVirtualCursorOnGamepad
+    src   "Virtual Cursor"
+    text  "虚拟光标"
+    state machine
+}
+
+Text {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCorrection
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+Navigation {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bTabNavigation
+    src   "Navigation"
+    // from the engine's zh-Hans
+    text  "导航"
+    state draft
+}
+
+Input {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bUseSlateInputSource
+    src   "Input"
+    // from the engine's zh-Hans
+    text  "输入"
+    state draft
+}
+
+Navigation|Keys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ConfirmKeys
+    src   "Navigation|Keys"
+    text  "导航|快捷键"
+    state machine
+}
+
+Assets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultFont
+    src   "Assets"
+    // from the engine's zh-Hans
+    text  "资产"
+    state draft
+}
+
+Materials {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:DefaultUIMaterial
+    src   "Materials"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+Actors {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:EventSystemActorClass
+    src   "Actors"
+    // from the engine's zh-Hans
+    text  "Actor"
+    state draft
+}
+
+Modal {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ModalScrimColor
+    src   "Modal"
+    text  "模态"
+    state machine
+}
+
+Editor {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PresetControlFolder
+    src   "Editor"
+    // from the engine's zh-Hans
+    text  "编辑器"
+    state draft
+}
+
+Editor|Palette {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:ProjectSwatches
+    src   "Editor|Palette"
+    text  "编辑器|调色板"
+    state machine
+}
+
+Editor|Presets {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:StylePresets
+    src   "Editor|Presets"
+    text  "编辑器|预设"
+    state machine
+}
+
+Tooltip {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:TooltipDelaySeconds
+    src   "Tooltip"
+    // from the engine's zh-Hans
+    text  "提示文本"
+    state draft
+}
+
+Keys {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUIDirectionKey:Key
+    src   "Keys"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+Palette {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamUISwatch:Name
+    src   "Palette"
+    // from the engine's zh-Hans
+    text  "控制板"
+    state draft
+}

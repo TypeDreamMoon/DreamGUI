@@ -1,0 +1,89 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIInputSubsystem {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem
+    src   "Dream UIInput Subsystem"
+    text  "Dream UI 输入子系统"
+    state machine
+}
+
+DreamUIInputSubsystem:CreatedEventSystemActors {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:CreatedEventSystemActors
+    src   "Created Event System Actors"
+    text  "创建的事件系统Actor"
+    state machine
+}
+
+DreamUIInputSubsystem:ImplicitEventSystems {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:ImplicitEventSystems
+    src   "Implicit Event Systems"
+    text  "隐式事件系统"
+    state machine
+}
+
+DreamUIInputSubsystem:InteractionHosts {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:InteractionHosts
+    src   "Interaction Hosts"
+    text  "交互主机"
+    state machine
+}
+
+DreamUIInputSubsystem:MapUserIndexToEventSystem {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:MapUserIndexToEventSystem
+    src   "Map User Index to Event System"
+    text  "将用户索引映射到事件系统"
+    state machine
+}
+
+DreamUIInputSubsystem:Users {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:Users
+    src   "Users"
+    text  "用户"
+    state machine
+}
+
+DreamUIInputTickFunction {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputTickFunction
+    src   "Dream UIInput Tick Function"
+    text  "Dream UI 输入计时函数"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIInputSubsystem {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem
+    src   "The input system's side of UDreamUIInputServices, one per world: what the core asks for, answered from the\nplayers' input, the action router and drag and drop.\n\nIt owns the world's players (UDreamUIInputUser) -- one for each local player, made when the world begins\nplay and whenever a player joins, taken down when one leaves or the world ends -- and runs their frames from\nits own tick function. It keeps the registry of the event systems placed for them, and the interaction\nobjects it had to create for a player: the transient host actor carrying that player's default raycasters,\nand the event system spawned from UDreamGUISettings::EventSystemActorClass.\n\nCreated in the same worlds as UDreamUIManagerWorldSubsystem, because every question the core asks here is\nabout a widget that manager registered."
+    text  "UDreamUIInputServices 中输入系统这一侧，每个世界一个：核心所请求的内容，由\n玩家输入、操作路由器和拖放来应答。\n\n它拥有该世界的玩家（UDreamUIInputUser）——每个本地玩家一个，在世界开始播放时以及\n每当有玩家加入时创建，在玩家离开或世界结束时销毁——并通过自己的 tick 函数运行它们的帧。\n它保存着为这些玩家放置的事件系统的注册表，以及它不得不为某个玩家创建的交互对象：\n承载该玩家默认射线投射器的瞬态宿主 Actor，\n以及由 UDreamGUISettings::EventSystemActorClass 生成的事件系统。\n\n与 UDreamUIManagerWorldSubsystem 在相同的世界中创建，因为核心在此处提出的每个问题都\n涉及该管理器注册的控件。"
+    state machine
+}
+
+DreamUIInputSubsystem:CreatedEventSystemActors {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:CreatedEventSystemActors
+    src   "The event system actors spawned from project settings, one per player that needed one."
+    text  "从项目设置生成的事件系统 Actor，每个需要它的玩家一个。"
+    state machine
+}
+
+DreamUIInputSubsystem:ImplicitEventSystems {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:ImplicitEventSystems
+    src   "See GetOrCreateImplicitEventSystem."
+    text  "请参阅 GetOrCreateImplicitEventSystem。"
+    state machine
+}
+
+DreamUIInputSubsystem:InteractionHosts {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputSubsystem:InteractionHosts
+    src   "One transient actor per local player, carrying whichever raycasters were created for them.\n\nPer PLAYER rather than per kind, so a player pointing at both a screen UI and a world-space panel has one\nhost with two raycasters on it instead of two actors that mean the same thing."
+    text  "每个本地玩家一个瞬态 Actor，承载为其创建的任何射线投射器。\n\n按玩家而非按类型划分，因此同时指向屏幕 UI 和世界空间面板的玩家只有一个\n宿主，上面带有两个射线投射器，而不是两个含义相同的 Actor。"
+    state machine
+}
+
+DreamUIInputTickFunction {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h#DreamUIInputTickFunction
+    src   "The world's input frame: every player's pipeline, once per frame, in player order.\n\nTG_PostPhysics, and ticking while the game is paused: after every player controller has run its input in\nTG_PrePhysics -- so a click queued there is dispatched in the same frame, whatever order the actors happen to\ntick in -- and before the UI manager lays out and draws, which the engine runs after the tick groups. The event\nsystem components used to tick in TG_PrePhysics beside the controllers, with no order declared between them: a\nclick went out this frame or the next depending on which ticked first."
+    text  "世界的输入帧：每个玩家的处理管线，每帧执行一次，按玩家顺序执行。\n\n在 TG_PostPhysics 中执行，且游戏暂停时也会 tick：在每个玩家控制器于\nTG_PrePhysics 中运行完输入之后——因此在那里排队的点击会在同一帧内派发，无论各 Actor 恰好以什么顺序\ntick——并且在 UI 管理器进行布局和绘制之前，而引擎是在 tick 组之后才运行这些。事件\n系统组件过去与控制器一起在 TG_PrePhysics 中 tick，两者之间未声明顺序：点击\n是在这一帧还是下一帧发出，取决于谁先 tick。"
+    state machine
+}

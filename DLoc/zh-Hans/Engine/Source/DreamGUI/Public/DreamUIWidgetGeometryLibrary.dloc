@@ -1,0 +1,641 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry
+    src   "Dream UIWidget Geometry"
+    text  "Dream UI 控件几何体"
+    state machine
+}
+
+DreamUIWidgetGeometry:AbsolutePosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:AbsolutePosition
+    src   "Absolute Position"
+    // from the engine's zh-Hans
+    text  "绝对位置"
+    state draft
+}
+
+DreamUIWidgetGeometry:AbsoluteSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:AbsoluteSize
+    src   "Absolute Size"
+    text  "绝对大小"
+    state machine
+}
+
+DreamUIWidgetGeometry:bHasAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:bHasAbsolute
+    src   "Has Absolute"
+    text  "是否使用绝对定位"
+    state machine
+}
+
+DreamUIWidgetGeometry:LocalSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:LocalSize
+    src   "Local Size"
+    text  "本地大小"
+    state machine
+}
+
+DreamUIWidgetGeometry:Widget {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary
+    src   "Dream UIWidget Geometry Library"
+    text  "Dream UI 控件几何体库"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InAbsoluteCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InAbsoluteCoordinate
+    src   "In Absolute Coordinate"
+    text  "绝对坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal:OutLocalCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal:OutLocalCoordinate
+    src   "Out Local Coordinate"
+    text  "本地坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport:InAbsoluteCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport:InAbsoluteCoordinate
+    src   "In Absolute Coordinate"
+    text  "绝对坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport:OutPixelPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport:OutPixelPosition
+    src   "Out Pixel Position"
+    text  "像素位置"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport:OutViewportPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport:OutViewportPosition
+    src   "Out Viewport Position"
+    text  "视口位置"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetAbsoluteSize:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetAbsoluteSize:OutAbsoluteSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize:OutAbsoluteSize
+    src   "Out Absolute Size"
+    text  "绝对大小"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetAbsoluteSize:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalSize:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalSize:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalSize:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalTopLeft:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalTopLeft:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalTopLeft:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalTopLeft:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetWidgetGeometry:InWidget {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetWidgetGeometry:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetWidgetGeometry:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetWidgetGeometry:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:IsUnderLocation:InAbsoluteCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:IsUnderLocation:InAbsoluteCoordinate
+    src   "In Absolute Coordinate"
+    text  "绝对坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:IsUnderLocation:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:IsUnderLocation:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:IsUnderLocation:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:IsUnderLocation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute:InLocalCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute:InLocalCoordinate
+    src   "In Local Coordinate"
+    text  "本地坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute:OutAbsoluteCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute:OutAbsoluteCoordinate
+    src   "Out Absolute Coordinate"
+    text  "输出绝对坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:InLocalCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:InLocalCoordinate
+    src   "In Local Coordinate"
+    text  "本地坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:OutPixelPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:OutPixelPosition
+    src   "Out Pixel Position"
+    text  "像素位置"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:OutViewportPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:OutViewportPosition
+    src   "Out Viewport Position"
+    text  "视口位置"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToViewport:InScreenPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport:InScreenPosition
+    src   "In Screen Position"
+    // from the engine's zh-Hans
+    text  "输入屏幕位置"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToViewport:OutViewportPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport:OutViewportPosition
+    src   "Out Viewport Position"
+    text  "视口位置"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:InScreenPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:InScreenPosition
+    src   "In Screen Position"
+    // from the engine's zh-Hans
+    text  "输入屏幕位置"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:OutAbsoluteCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:OutAbsoluteCoordinate
+    src   "Out Absolute Coordinate"
+    text  "输出绝对坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InScreenPosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InScreenPosition
+    src   "In Screen Position"
+    // from the engine's zh-Hans
+    text  "输入屏幕位置"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:OutLocalCoordinate {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:OutLocalCoordinate
+    src   "Out Local Coordinate"
+    text  "本地坐标"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InAbsoluteScalar {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InAbsoluteScalar
+    src   "In Absolute Scalar"
+    text  "输入绝对标量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:OutLocalScalar {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:OutLocalScalar
+    src   "Out Local Scalar"
+    text  "输出局部标量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:InLocalScalar {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:InLocalScalar
+    src   "In Local Scalar"
+    text  "输入局部标量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:OutAbsoluteScalar {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:OutAbsoluteScalar
+    src   "Out Absolute Scalar"
+    text  "输出绝对标量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InAbsoluteVector {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InAbsoluteVector
+    src   "In Absolute Vector"
+    text  "输入绝对向量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:OutLocalVector {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:OutLocalVector
+    src   "Out Local Vector"
+    text  "输出局部向量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:InGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:InGeometry
+    src   "In Geometry"
+    text  "几何体"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:InLocalVector {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:InLocalVector
+    src   "In Local Vector"
+    text  "输入局部向量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:OutAbsoluteVector {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:OutAbsoluteVector
+    src   "Out Absolute Vector"
+    text  "输出绝对向量"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry
+    src   "A widget's measured rect, and the handle every coordinate conversion below is asked through --\nthis framework's answer to Slate's FGeometry.\n\nFGeometry itself is no use here: it describes an SWidget's place inside a Slate window, and a\nDreamGUI widget is a mesh in a scene that may not be on a window at all. What a caller actually\nwants from one is the two things kept below -- how big the widget is in its own units, and where\nits rect lands in viewport pixels -- plus a way to move a point between those spaces, which is\nwhat the library does.\n\nTHREE SPACES, named the way UMG names them:\n  - LOCAL: the widget's own 2D space, origin at its BOTTOM-LEFT corner, X right, Y up, in widget\n    units. Bottom-left rather than Slate's top-left because every other normalized coordinate in\n    this framework (AnchorData.Pivot, RenderTransformPivot, the canvas's own conversions) already\n    puts zero at the bottom left, and being consistent inside the fork beats matching the other\n    engine on one axis.\n  - ABSOLUTE: viewport pixels, origin TOP-LEFT -- the same numbers a mouse position arrives in,\n    and the same space UDreamCanvas::ConvertPositionFromCanvasToViewport produces. Slate's\n    \"absolute\" is desktop pixels; in a game viewport the two differ only by the window's own\n    position, which nothing in this framework has a use for.\n  - VIEWPORT: absolute divided by the DPI scale, which is what UMG's LocalToViewport hands back\n    alongside the pixel position.\n\nbHasAbsolute is false for a widget whose rect cannot be placed in the viewport at all -- a\nworld-space canvas with no player camera to project through, a widget that is not under a canvas\nyet, a point behind the eye. Every conversion answers false in the same cases rather than\nreturning a plausible number from the wrong space."
+    text  "控件的实测矩形，也是下面每次坐标转换所经由的句柄——\n即本框架对 Slate 的 FGeometry 的对应实现。\n\nFGeometry 本身在这里派不上用场：它描述的是 SWidget 在 Slate 窗口中的位置，而\nDreamGUI 控件是场景中的一个网格，可能根本不在窗口上。调用方真正想从\n其中一个得到的，是下面保存的两样东西——控件以自身单位计的大小，以及它的矩形\n落在视口像素中的位置——外加一种在这些空间之间移动点的方法，而这正是该库\n所做的事。\n\n三个空间，按 UMG 的命名方式命名：\n  - LOCAL：控件自身的 2D 空间，原点在其左下角，X 向右，Y 向上，单位\n    为控件单位。采用左下角而非 Slate 的左上角，是因为本框架中其他所有归一化\n    坐标（AnchorData.Pivot（锚点、枢轴点）、RenderTransformPivot、画布自身的转换）\n    都已把零点放在左下角，而在分支内部保持一致，胜过在某个轴上与另一个\n    引擎对齐。\n  - ABSOLUTE：视口像素，原点在左上角——与鼠标位置传入时所用的数字相同，\n    也是 UDreamCanvas::ConvertPositionFromCanvasToViewport 所生成的空间。Slate 的\n    “absolute”是桌面像素；在游戏视口中，两者仅相差窗口自身的\n    位置，而本框架没有任何地方用得上它。\n  - VIEWPORT：绝对坐标除以 DPI 缩放，即 UMG 的 LocalToViewport 连同像素\n    位置一起返回的值。\n\n对于矩形完全无法放入视口的控件，bHasAbsolute 为 false——例如没有玩家摄像机\n可供投影的世界空间画布、尚未位于任何画布之下的控件、位于眼睛后方的点。\n在所有这类情况下，每个转换都返回 false，而不是从错误的空间里返回\n一个看似合理的数值。"
+    state machine
+}
+
+DreamUIWidgetGeometry:AbsolutePosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:AbsolutePosition
+    src   "The widget's rect corner in viewport pixels. Only meaningful while bHasAbsolute."
+    text  "控件的矩形角点在视口像素中的位置。仅在 bHasAbsolute 为 true 时有意义。"
+    state machine
+}
+
+DreamUIWidgetGeometry:AbsoluteSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:AbsoluteSize
+    src   "The widget's size in viewport pixels. Only meaningful while bHasAbsolute."
+    text  "控件在视口像素中的大小。仅在 bHasAbsolute 为 true 时有意义。"
+    state machine
+}
+
+DreamUIWidgetGeometry:bHasAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:bHasAbsolute
+    src   "False when this rect cannot be placed in the viewport. See the class comment."
+    text  "当此矩形无法放置在视口中时为false。请参阅类注释。"
+    state machine
+}
+
+DreamUIWidgetGeometry:LocalSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:LocalSize
+    src   "The widget's size in its own units -- UMG's GetLocalSize."
+    text  "控件以自身单位表示的大小——即UMG的GetLocalSize。"
+    state machine
+}
+
+DreamUIWidgetGeometry:Widget {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:Widget
+    src   "The widget this was read from. Everything else is a snapshot of it at that moment."
+    text  "读取此几何信息的控件。其余内容均为该控件在那一刻的快照。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary
+    src   "Coordinate conversions between a widget's own space, the viewport and the screen -- this\nframework's USlateBlueprintLibrary.\n\nEverything returns bool and writes its answer through an out-parameter, where UMG's equivalents\nreturn the value directly. That is deliberate and it is about world-space UI: a panel welded to a\nmachine in the level has no viewport position until a camera is pointed at it, and the honest\nanswers are \"here it is\" and \"nowhere\", not a number computed in the wrong space. A caller that\nignores the bool gets a zero, not a lie that looks like a position."
+    text  "控件自身空间、视口与屏幕之间的坐标转换——即本框架对应\nSlate 蓝图库的 USlateBlueprintLibrary。\n\n所有函数均返回 bool，并通过输出参数写出结果，而 UMG 中的对应函数\n直接返回值。这是有意为之，并且关乎世界空间 UI：焊接在关卡中某台机器上的面板，\n在摄像机对准它之前没有视口位置，诚实的答案只有“在这里”和“不在这里”，\n而不是在错误的空间中算出的数字。忽略 bool 的调用方\n得到的是零，而不是一个看起来像位置的谎言。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal
+    src   "A viewport pixel position, in the widget's own space. Assumes the point lies in the widget's plane."
+    text  "视口像素位置，位于控件自身空间中。假定该点位于控件所在平面内。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport
+    src   "Viewport pixels, as both pixels and DPI-scaled viewport coordinates. UMG's AbsoluteToViewport."
+    text  "视口像素，同时以像素和DPI缩放后的视口坐标表示。即UMG的AbsoluteToViewport。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetAbsoluteSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize
+    src   "The widget's size in viewport pixels. False when the rect cannot be placed in the viewport."
+    text  "控件以视口像素为单位的大小。当矩形无法放置在视口中时为false。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalSize
+    src   "The widget's size in its own units. Zero for a geometry that names no widget."
+    text  "控件以自身单位表示的大小。对于未指定任何控件的几何信息，该值为零。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalTopLeft {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalTopLeft
+    src   "The corner local coordinates are measured from, in the widget's own space.\n\nAlways zero, because LOCAL is defined with its origin at that corner -- the same thing UMG's\nGetLocalTopLeft answers for an ordinary widget. It exists so a graph written against UMG\nreads the same, and so the definition has somewhere to be stated."
+    text  "局部坐标所测量的角点，位于控件自身空间中。\n\n始终为零，因为LOCAL就是以该角点为原点定义的——UMG的\nGetLocalTopLeft对普通控件返回的也是同一个值。它存在的目的是让按UMG编写的图表\n读起来一致，也让这一定义有处可述。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:GetWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetWidgetGeometry
+    src   "Read a widget's geometry -- UMG's GetCachedGeometry, GetTickSpaceGeometry and\nGetPaintSpaceGeometry all at once.\n\nOne function rather than three because there is nothing here for the three to disagree about:\nUMG's split exists because Slate paints from a cached element list that can lag a tick behind\nthe arrangement, and DreamGUI arranges and builds its draw calls in the same pass."
+    text  "读取控件的几何信息——一次取得 UMG 的 GetCachedGeometry、GetTickSpaceGeometry 和\nGetPaintSpaceGeometry。\n\n用一个函数代替三个，是因为这里不存在三者会彼此不一致的情况：UMG 之所以拆分，\n是因为 Slate 从一个可能比排列慢一个 tick 的缓存元素列表绘制，\n而 DreamGUI 在同一遍中完成排列并构建绘制调用。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:IsUnderLocation {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:IsUnderLocation
+    src   "Is a viewport pixel position inside this widget's rect? UMG's IsUnderLocation."
+    text  "视口像素位置是否位于此控件的矩形内？即UMG的IsUnderLocation。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute
+    src   "A point in the widget's own space, in viewport pixels."
+    text  "控件自身空间中的点，以视口像素表示。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport
+    src   "A point in the widget's own space, as both viewport pixels and DPI-scaled viewport coordinates\n-- UMG's LocalToViewport, which hands back both for the same reason."
+    text  "一个点在控件自身的坐标系中，以视口像素和 DPI 缩放的视口坐标表示。\n-- UMG 的 LocalToViewport 函数，它同时返回这两种坐标，原因相同。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport
+    src   "A screen position as DPI-scaled viewport coordinates. UMG's ScreenToViewport."
+    text  "屏幕位置以 DPI 缩放的视口坐标表示。UMG 的 ScreenToViewport 函数。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute
+    src   "The same screen position in viewport pixels. Here the two are the same space, so this is identity."
+    text  "屏幕位置以视口像素表示。这里这两种坐标空间相同。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal
+    src   "A screen position -- what a mouse position or a world-to-screen projection gives you -- in the\nwidget's own space. UMG's ScreenToWidgetLocal."
+    text  "屏幕位置（鼠标位置或世界到屏幕投影所得到的位置），位于\n控件自身的空间中。对应UMG的ScreenToWidgetLocal。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute
+    src   "A LENGTH converted between the two spaces, with no origin involved -- UMG's\nScalar_LocalToAbsolute and friends.\n\nDerived from the rect rather than from a transform: the ratio of the widget's pixel size to its\nlocal size is exactly the scale a length is subject to, and taking it from the rect means a\ncanvas scaler, a render scale and a parent's scale are all already in it. Uniform on both axes\nis assumed, as it is in UMG, and the wider axis decides when they differ."
+    text  "在两个空间之间转换的长度，不涉及原点——即 UMG 的\nScalar_LocalToAbsolute 及其类似函数。\n\n由矩形而非变换推导：控件像素尺寸与其局部尺寸之比，正好是长度所受到的缩放比例，\n而从矩形取值意味着画布缩放器、渲染缩放以及父级缩放均已包含其中。\n假定两个轴上的缩放一致（与 UMG 中一样），\n不一致时由较宽的轴决定。"
+    state machine
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute
+    src   "A DIRECTION and length, per axis. UMG's Vector_LocalToAbsolute."
+    text  "方向和长度，每个轴一个。UMG 的 Vector_LocalToAbsolute 函数。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Geometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometry:Widget
+    src   "DreamGUI|Geometry"
+    text  "DreamGUI|几何体"
+    state machine
+}

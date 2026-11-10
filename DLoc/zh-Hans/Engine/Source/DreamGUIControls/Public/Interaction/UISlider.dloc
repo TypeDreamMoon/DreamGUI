@@ -1,0 +1,559 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EUISliderDirectionType.BottomToTop {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#EUISliderDirectionType:BottomToTop
+    src   "Bottom to Top"
+    text  "从下到上"
+    state machine
+}
+
+EUISliderDirectionType.EUISliderDirectionType_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#EUISliderDirectionType:EUISliderDirectionType_MAX
+    src   "EUISlider Direction Type MAX"
+    text  "EUISlider Direction Type MAX"
+    state machine
+}
+
+EUISliderDirectionType.LeftToRight {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#EUISliderDirectionType:LeftToRight
+    src   "Left to Right"
+    text  "从左到右"
+    state machine
+}
+
+EUISliderDirectionType.RightToLeft {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#EUISliderDirectionType:RightToLeft
+    src   "Right to Left"
+    text  "从右到左"
+    state machine
+}
+
+EUISliderDirectionType.TopToBottom {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#EUISliderDirectionType:TopToBottom
+    src   "Top to Bottom"
+    text  "从上到下"
+    state machine
+}
+
+UISlider {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider
+    src   "UISlider"
+    text  "UISlider"
+    state machine
+}
+
+UISlider:bControllerCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bControllerCaptured
+    src   "Controller Captured"
+    text  "控制器已捕获"
+    state machine
+}
+
+UISlider:bLocked {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bLocked
+    src   "Locked"
+    // from the engine's zh-Hans
+    text  "已锁定"
+    state draft
+}
+
+UISlider:bMouseCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bMouseCaptured
+    src   "Mouse Captured"
+    // from the engine's zh-Hans
+    text  "鼠标已捕获"
+    state draft
+}
+
+UISlider:DirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:DirectionType
+    src   "Direction Type"
+    text  "方向类型"
+    state machine
+}
+
+UISlider:Fill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+UISlider:FillArea {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:FillArea
+    src   "Fill Area"
+    text  "填充区域"
+    state machine
+}
+
+UISlider:GetDirectionType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetDirectionType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetFill:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetFill:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetHandle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetHandle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetMaxValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMaxValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetMinValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMinValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetMouseUsesStep:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMouseUsesStep:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetNavigationChangeInterval:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetNavigationChangeInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetRequiresControllerLock:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetRequiresControllerLock:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetStepSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetStepSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:GetWholeNumber:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetWholeNumber:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:Handle {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+UISlider:HandleArea {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:HandleArea
+    src   "Handle Area"
+    text  "滑块区域"
+    state machine
+}
+
+UISlider:IsControllerCaptured:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsControllerCaptured:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:IsLocked:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsLocked:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISlider:MaxValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:MaxValue
+    src   "Max Value"
+    // from the engine's zh-Hans
+    text  "最大值"
+    state draft
+}
+
+UISlider:MinValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:MinValue
+    src   "Min Value"
+    // from the engine's zh-Hans
+    text  "最小值"
+    state draft
+}
+
+UISlider:MouseUsesStep {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:MouseUsesStep
+    src   "Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "鼠标使用步"
+    state draft
+}
+
+UISlider:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:NavigationChangeInterval
+    src   "Navigation Change Interval"
+    text  "导航变化间隔"
+    state machine
+}
+
+UISlider:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UISlider:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UISlider:RequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:RequiresControllerLock
+    src   "Requires Controller Lock"
+    // from the engine's zh-Hans
+    text  "需要控制器锁定"
+    state draft
+}
+
+UISlider:SetControllerCaptured:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetControllerCaptured:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetDirectionType:InDirection {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetDirectionType:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+UISlider:SetFill:InFill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetFill:InFill
+    src   "In Fill"
+    text  "填充"
+    state machine
+}
+
+UISlider:SetHandle:InHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetHandle:InHandle
+    src   "In Handle"
+    // from the engine's zh-Hans
+    text  "在柄中"
+    state draft
+}
+
+UISlider:SetLocked:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetLocked:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetMaxValue:FireEvent {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMaxValue:FireEvent
+    src   "Fire Event"
+    text  "触发事件"
+    state machine
+}
+
+UISlider:SetMaxValue:InMaxValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMaxValue:InMaxValue
+    src   "In Max Value"
+    text  "最大值"
+    state machine
+}
+
+UISlider:SetMaxValue:KeepRelativeValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMaxValue:KeepRelativeValue
+    src   "Keep Relative Value"
+    text  "保持相对值"
+    state machine
+}
+
+UISlider:SetMinValue:FireEvent {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue:FireEvent
+    src   "Fire Event"
+    text  "触发事件"
+    state machine
+}
+
+UISlider:SetMinValue:InMinValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue:InMinValue
+    src   "In Min Value"
+    text  "最小值"
+    state machine
+}
+
+UISlider:SetMinValue:KeepRelativeValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue:KeepRelativeValue
+    src   "Keep Relative Value"
+    text  "保持相对值"
+    state machine
+}
+
+UISlider:SetMouseUsesStep:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMouseUsesStep:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetNavigationChangeInterval:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetNavigationChangeInterval:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetRequiresControllerLock:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetRequiresControllerLock:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetStepSize:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetStepSize:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetValue:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValue:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetValueWithoutNotify:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValueWithoutNotify:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:SetWholeNumbers:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetWholeNumbers:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UISlider:StepSize {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:StepSize
+    src   "Step Size"
+    // from the engine's zh-Hans
+    text  "步长"
+    state draft
+}
+
+UISlider:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UISlider:WholeNumbers {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:WholeNumbers
+    src   "Whole Numbers"
+    text  "整数"
+    state machine
+}
+
+UISliderValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISliderValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UISlider:bControllerCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bControllerCaptured
+    src   "Whether the gamepad currently holds this slider. Transient: a capture is a live gesture."
+    text  "手柄当前是否持有此滑块。瞬态：捕获是一次实时手势。"
+    state machine
+}
+
+UISlider:bLocked {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bLocked
+    src   "Shows its value and refuses to be moved -- UMG's Locked.\n\nA different thing from not being interactable, which is why it is a flag of its own: a\ndisabled slider is drawn in its Disabled colours and says \"not now\", a locked one looks\ncompletely ordinary and says \"this is what it is\". A volume bar during a cutscene is the\nsecond thing, not the first.\n\nIt gates INPUT only. SetValue keeps working, because a read-only slider that game code could\nnot write would have nothing to show."
+    text  "显示其值并拒绝被移动——即 UMG 的 Locked。\n\n这与不可交互是两回事，因此它自成一个标志：\n禁用的滑块以其 Disabled 颜色绘制，说的是“现在不行”；锁定的滑块看起来\n完全普通，说的是“它本来就是这样”。过场动画中的音量条属于\n后者，而非前者。\n\n它只拦截输入。SetValue 仍然有效，因为一个游戏代码无法\n写入的只读滑块将无从显示。"
+    state machine
+}
+
+UISlider:bMouseCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:bMouseCaptured
+    src   "Whether the pointer press being handled began a mouse capture -- SSlider's HasMouseCapture. Set\nby a press on an unlocked slider and cleared by the release that ends it, which is what keeps\nOnMouseCaptureBegin and OnMouseCaptureEnd in pairs: a press on a locked slider begins nothing,\nso its release ends nothing, and a lock that lands mid-drag still ends the capture already begun."
+    text  "正在处理的指针按下是否开启了一次鼠标捕获——即 SSlider 的 HasMouseCapture。由对未锁定滑块的按下设置，\n并由结束它的释放清除，这使 OnMouseCaptureBegin 与 OnMouseCaptureEnd 始终成对：对锁定滑块的按下不开启任何捕获，\n因此其释放也不结束任何捕获；而在拖动过程中生效的锁定\n仍会结束已经开始的捕获。"
+    state machine
+}
+
+UISlider:Fill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:Fill
+    src   "\"Fill\" can fill inside it's parent"
+    text  "“Fill”可以在其父项内填充"
+    state machine
+}
+
+UISlider:Handle {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:Handle
+    src   "Handle can move inside it's parent"
+    text  "滑块可在其父级内移动。"
+    state machine
+}
+
+UISlider:IsLocked {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsLocked
+    src   "See bLocked: input refused, look unchanged, SetValue unaffected."
+    text  "参见 bLocked：拒绝输入，外观不变，SetValue 不受影响。"
+    state machine
+}
+
+UISlider:MouseUsesStep {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:MouseUsesStep
+    src   "Quantise a mouse drag to StepSize. Off, a drag is continuous -- which is this library's default."
+    text  "将鼠标拖动按 StepSize 量化。关闭时拖动是连续的——这是本库的默认值。"
+    state machine
+}
+
+UISlider:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:NavigationChangeInterval
+    src   "When use navigation input to change the slider value, each press will change value as (MaxValue - MinValue) * NavigationChangeInterval."
+    text  "使用导航输入更改滑块值时，每次按键将按 (MaxValue - MinValue) * NavigationChangeInterval 更改值。"
+    state machine
+}
+
+UISlider:RequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:RequiresControllerLock
+    src   "A gamepad must CAPTURE this slider before its directions move the value -- UMG's\nRequiresControllerLock, and on for the same reason it is on there: a row of sliders the stick\nmoves THROUGH is unusable if the first slider swallows every left and right.\n\nThe capture is taken and released by the navigation TRIGGER (the key a focused control is\nactivated with), which arrives here as a pointer down carrying InputType Navigation. While\ncaptured the directions change the value; while not, they fall through to the navigation\nsearch and move focus to the next control."
+    text  "游戏手柄必须先 CAPTURE 此滑块，其方向才会改变值——即 UMG 的\nRequiresControllerLock，开启它的原因与那里相同：如果第一个滑块吞掉所有左右输入，\n摇杆所穿过的一排滑块就无法使用。\n\n捕获由导航 TRIGGER（激活焦点控件所用的按键）获取和释放，\n该触发在此以携带 InputType Navigation 的指针按下形式到达。捕获期间，\n方向会改变值；未捕获时，方向会落入导航搜索，\n将焦点移到下一个控件。"
+    state machine
+}
+
+UISlider:SetControllerCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetControllerCaptured
+    src   "The one writer of the capture flag, so the flag and the two events can never disagree."
+    text  "捕获标志的唯一写入者，因此该标志与两个事件永远不会不一致。"
+    state machine
+}
+
+UISlider:SetFill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetFill
+    src   "The parts and the direction, settable from code. All three properties are EditAnywhere, so the\ndesigner and .dui have always reached them by reflection while no caller could -- the same hole\nUUIToggle's transition target had. Each resets the cached area and re-applies, the way\nPostEditChangeProperty already does for an edit."
+    text  "部件与方向，可从代码设置。这三个属性都是 EditAnywhere，所以\n设计器和 .dui 一直通过反射访问它们，而没有任何调用方能够做到——这与\nUUIToggle 的过渡目标曾经的漏洞相同。每次设置都会重置缓存的区域并重新应用，正如\nPostEditChangeProperty 对编辑所做的那样。"
+    state machine
+}
+
+UISlider:SetMaxValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMaxValue
+    src   "@param       InMaxValue                      New value set for MaxValue\n@param       KeepRelativeValue       Keep percentage value, eg: if origin value is 0.25 from 0.0 to 1.0, then it will be 25.0 from 0.0 to 100.0, or be -7.5 from -10.0 to 0.0\n@param       FireEvent                       Should execute callback event?"
+    text  "@param       InMaxValue                      MaxValue 的新值\n@param       KeepRelativeValue       保持百分比值，例如：若原值为 0.0 到 1.0 范围内的 0.25，则它将变为 0.0 到 100.0 范围内的 25.0，或 -10.0 到 0.0 范围内的 -7.5\n@param       FireEvent                       是否执行回调事件？"
+    state machine
+}
+
+UISlider:SetMinValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue
+    src   "@param       InMinValue                      New value set for MinValue\n@param       KeepRelativeValue       Keep percentage value, eg: if origin value is 0.25 from 0.0 to 1.0, then it will be 25.0 from 0.0 to 100.0, or be -7.5 from -10.0 to 0.0\n@param       FireEvent                       Should execute callback event?"
+    text  "@param       InMinValue                      MinValue 的新值\n@param       KeepRelativeValue       保持百分比值，例如：若原值为 0.0 到 1.0 范围内的 0.25，则它将变为 0.0 到 100.0 范围内的 25.0，或 -10.0 到 0.0 范围内的 -7.5\n@param       FireEvent                       是否执行回调事件？"
+    state machine
+}
+
+UISlider:SetRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetRequiresControllerLock
+    src   "Turning it OFF releases a capture that is standing, so the lock cannot outlive its own rule."
+    text  "关闭它会释放当前持有的捕获，因此该锁定不会超出其自身的规则。"
+    state machine
+}
+
+UISlider:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValue
+    src   "@param       InValue                         New value set for Value"
+    text  "@param       InValue                         为 Value 设置的新值"
+    state machine
+}
+
+UISlider:SetWholeNumbers {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetWholeNumbers
+    src   "Settable, like the parts and the direction beside it and for the same reason: the property is\nEditAnywhere, so the designer and .dui have always reached it by reflection while no caller\ncould -- and a slider assembled in code (every UDreamSlider) is exactly such a caller.\n\nTurning it ON snaps the value it is holding, because a whole-number slider showing 2.5 is a\ncontrol disagreeing with its own rule."
+    text  "可设置，与旁边的部件和方向一样，原因也相同：该属性是\nEditAnywhere，所以设计器和 .dui 一直通过反射访问它，而没有任何调用方\n能够做到——而在代码中组装的滑块（每个 UDreamSlider）正是这样的调用方。\n\n开启它会将当前持有的值对齐到整数，因为显示 2.5 的整数滑块是一个\n与自身规则相矛盾的控件。"
+    state machine
+}
+
+UISlider:StepSize {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:StepSize
+    src   "The quantum a MOUSE drag moves the value in, while MouseUsesStep is on -- UMG's StepSize.\n\nDeliberately NOT the keyboard's: this library already states the navigation step as\nNavigationChangeInterval, a FRACTION of the range, and every slider authored against this\nplugin means that number when it says \"one press\". Re-pointing navigation at StepSize would\nsilently re-scale every one of them, so the two live side by side and each says which input it\ngoverns. StepSize is an ABSOLUTE value step; NavigationChangeInterval is a fraction."
+    text  "MouseUsesStep 开启时，鼠标拖拽移动值的量——即 UMG 的 StepSize。\n\n有意不用作键盘的步长：本库已将导航步长定义为\nNavigationChangeInterval，即范围的一个比例值，而针对此插件制作的每个滑块\n在说“一次按键”时指的都是那个数字。将导航改为指向 StepSize 会\n悄无声息地重新缩放所有这些滑块，因此两者并存，各自说明自己管辖哪种输入。\nStepSize 是绝对值步长；NavigationChangeInterval 是比例值。"
+    state machine
+}
+
+UISlider:WholeNumbers {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:WholeNumbers
+    src   "Whole numbers only: every value the slider takes -- dragged, stepped by navigation, set or authored --\nis rounded to the nearest whole number, so each one owns an equal stretch of the track."
+    text  "仅限整数：滑块接收的每个值——拖拽、通过导航步进、设置或编辑——\n都会舍入到最接近的整数，因此每个值在轨道上占据相同的一段。"
+    state machine
+}

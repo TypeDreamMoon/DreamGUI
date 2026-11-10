@@ -1,0 +1,707 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamClipMask {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask
+    src   "Dream Clip Mask"
+    text  "遮罩"
+    state machine
+}
+
+DreamClipMask:bInvert {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:bInvert
+    src   "Invert"
+    // from the engine's zh-Hans
+    text  "反转"
+    state draft
+}
+
+DreamClipMask:bReverse {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:bReverse
+    src   "Reverse"
+    // from the engine's zh-Hans
+    text  "倒回"
+    state draft
+}
+
+DreamClipMask:Channel {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Channel
+    src   "Channel"
+    // from the engine's zh-Hans
+    text  "通道"
+    state draft
+}
+
+DreamClipMask:Feather {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Feather
+    src   "Feather"
+    // from the engine's zh-Hans
+    text  "羽化"
+    state draft
+}
+
+DreamClipMask:Fill {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamClipMask:Frequency {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Frequency
+    src   "Frequency"
+    // from the engine's zh-Hans
+    text  "频率"
+    state draft
+}
+
+DreamClipMask:HitTest {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:HitTest
+    src   "Hit Test"
+    text  "碰撞检测"
+    state machine
+}
+
+DreamClipMask:InnerRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:InnerRatio
+    src   "Inner Ratio"
+    text  "内部分割比"
+    state machine
+}
+
+DreamClipMask:Offset {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Offset
+    src   "Offset"
+    // from the engine's zh-Hans
+    text  "偏移"
+    state draft
+}
+
+DreamClipMask:Pattern {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+DreamClipMask:Rotation {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Rotation
+    src   "Rotation"
+    // from the engine's zh-Hans
+    text  "旋转"
+    state draft
+}
+
+DreamClipMask:Roundness {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Roundness
+    src   "Roundness"
+    // from the engine's zh-Hans
+    text  "圆度"
+    state draft
+}
+
+DreamClipMask:Scale {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamClipMask:Seed {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Seed
+    src   "Seed"
+    // from the engine's zh-Hans
+    text  "种子"
+    state draft
+}
+
+DreamClipMask:Shape {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamClipMask:Sides {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Sides
+    src   "Sides"
+    // from the engine's zh-Hans
+    text  "侧边"
+    state draft
+}
+
+DreamClipMask:Softness {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Softness
+    src   "Softness"
+    // from the engine's zh-Hans
+    text  "柔软度"
+    state draft
+}
+
+DreamClipMask:Source {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Source
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
+DreamClipMask:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+DreamClipMask:Threshold {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Threshold
+    src   "Threshold"
+    // from the engine's zh-Hans
+    text  "阈值"
+    state draft
+}
+
+EDreamClipMaskChannel.Alpha {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Alpha
+    src   "Alpha"
+    // from the engine's zh-Hans
+    text  "透明度"
+    state draft
+}
+
+EDreamClipMaskChannel.Blue {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Blue
+    src   "Blue"
+    // from the engine's zh-Hans
+    text  "蓝色"
+    state draft
+}
+
+EDreamClipMaskChannel.EDreamClipMaskChannel_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:EDreamClipMaskChannel_MAX
+    src   "EDream Clip Mask Channel MAX"
+    text  "EDream裁剪遮罩通道MAX"
+    state machine
+}
+
+EDreamClipMaskChannel.Green {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Green
+    src   "Green"
+    // from the engine's zh-Hans
+    text  "绿色"
+    state draft
+}
+
+EDreamClipMaskChannel.Luminance {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Luminance
+    src   "Luminance"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+EDreamClipMaskChannel.Red {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Red
+    src   "Red"
+    // from the engine's zh-Hans
+    text  "红色"
+    state draft
+}
+
+EDreamClipMaskFill.EDreamClipMaskFill_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:EDreamClipMaskFill_MAX
+    src   "EDream Clip Mask Fill MAX"
+    text  "EDream裁剪遮罩填充MAX"
+    state machine
+}
+
+EDreamClipMaskFill.Fill {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+EDreamClipMaskFill.Fit {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Fit
+    src   "Fit"
+    // from the engine's zh-Hans
+    text  "匹配"
+    state draft
+}
+
+EDreamClipMaskFill.Stretch {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Stretch
+    src   "Stretch"
+    // from the engine's zh-Hans
+    text  "拉伸"
+    state draft
+}
+
+EDreamClipMaskFill.Tile {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Tile
+    src   "Tile"
+    // from the engine's zh-Hans
+    text  "瓦片"
+    state draft
+}
+
+EDreamClipMaskHitTest.Bounds {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest:Bounds
+    src   "Bounds"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+EDreamClipMaskHitTest.EDreamClipMaskHitTest_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest:EDreamClipMaskHitTest_MAX
+    src   "EDream Clip Mask Hit Test MAX"
+    text  "EDream裁剪遮罩命中测试MAX"
+    state machine
+}
+
+EDreamClipMaskHitTest.Mask {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest:Mask
+    src   "Mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+EDreamClipMaskPattern.Angular {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Angular
+    src   "Angular"
+    // from the engine's zh-Hans
+    text  "Angular"
+    state draft
+}
+
+EDreamClipMaskPattern.Blinds {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Blinds
+    src   "Blinds"
+    text  "百叶窗"
+    state machine
+}
+
+EDreamClipMaskPattern.Checker {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Checker
+    src   "Checker"
+    text  "棋盘"
+    state machine
+}
+
+EDreamClipMaskPattern.Diamond {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Diamond
+    src   "Diamond"
+    text  "Diamond"
+    state machine
+}
+
+EDreamClipMaskPattern.EDreamClipMaskPattern_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:EDreamClipMaskPattern_MAX
+    src   "EDream Clip Mask Pattern MAX"
+    text  "EDream裁剪遮罩图案MAX"
+    state machine
+}
+
+EDreamClipMaskPattern.Linear {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamClipMaskPattern.Noise {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Noise
+    src   "Noise"
+    // from the engine's zh-Hans
+    text  "噪声"
+    state draft
+}
+
+EDreamClipMaskPattern.Radial {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamClipMaskShape.EDreamClipMaskShape_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:EDreamClipMaskShape_MAX
+    src   "EDream Clip Mask Shape MAX"
+    text  "EDream裁剪遮罩形状MAX"
+    state machine
+}
+
+EDreamClipMaskShape.Ellipse {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Ellipse
+    src   "Ellipse"
+    // from the engine's zh-Hans
+    text  "椭圆"
+    state draft
+}
+
+EDreamClipMaskShape.Polygon {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Polygon
+    src   "Polygon"
+    // from the engine's zh-Hans
+    text  "多边形"
+    state draft
+}
+
+EDreamClipMaskShape.Rect {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Rect
+    src   "Rect"
+    // from the engine's zh-Hans
+    text  "矩形"
+    state draft
+}
+
+EDreamClipMaskShape.Ring {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Ring
+    src   "Ring"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamClipMaskShape.Star {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Star
+    src   "Star"
+    // from the engine's zh-Hans
+    text  "星形"
+    state draft
+}
+
+EDreamClipMaskSource.EDreamClipMaskSource_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:EDreamClipMaskSource_MAX
+    src   "EDream Clip Mask Source MAX"
+    text  "EDream裁剪遮罩源MAX"
+    state machine
+}
+
+EDreamClipMaskSource.None {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamClipMaskSource.Procedural {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:Procedural
+    src   "Procedural"
+    // from the engine's zh-Hans
+    text  "程序性"
+    state draft
+}
+
+EDreamClipMaskSource.Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamClipMask {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask
+    src   "A mask on a clipping widget's clip: a shape inscribed in the clip rect, feathered, multiplied by a texture's channel or\na procedural pattern mapped through a threshold, and optionally inverted. It clips the widget's whole subtree, on every\npath that draws it (the built-in shader, the UI materials, world space, render layers and perspective scopes), because\nit is evaluated in the clip's own frame -- the frame the clip rect is.\n\nA mask at its defaults is no mask: the clip is the plain rect it always was, costing nothing more (IsActive)."
+    text  "裁剪控件裁剪区域上的遮罩：一个内接于裁剪矩形的形状，带羽化，乘以纹理的某个通道或\n经阈值映射的程序化图案，并可选地反转。它会裁剪控件的整个子树，覆盖绘制它的每条\n路径（内置着色器、UI 材质、世界空间、渲染层和透视范围），因为\n它是在裁剪自身的坐标系中求值的——即裁剪矩形所在的坐标系。\n\n默认设置下的遮罩等同于没有遮罩：裁剪就是原本那个普通矩形，不会带来额外开销（IsActive）。"
+    state machine
+}
+
+DreamClipMask:bInvert {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:bInvert
+    src   "Shows what the mask hides and hides what it shows -- outside the clip rect included: a cut-out, such as a spotlight."
+    text  "显示遮罩所隐藏的内容，隐藏它所显示的内容——包括裁剪矩形之外的部分：即挖空效果，例如聚光灯。"
+    state machine
+}
+
+DreamClipMask:bReverse {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:bReverse
+    src   "Runs the texture's or pattern's value the other way: v becomes 1 - v before the threshold. A linear gradient from right\nto left, a radial one from the edge in, a clock wipe anticlockwise. Unlike Invert it leaves the shape and what is\noutside the clip rect alone."
+    text  "反转纹理或图案的值：在阈值处理之前，v 变为 1 - v。例如，从右到左的线性渐变、从边缘向内的径向渐变、逆时针的圆形渐变。与 Invert 不同，它保持形状以及遮罩裁剪矩形范围之外的内容不变。\n\n在默认状态下，遮罩是一个简单的矩形，不会产生额外的开销（IsActive）。"
+    state machine
+}
+
+DreamClipMask:Feather {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Feather
+    src   "Pixels over which the mask fades in from its edge. A Rect fades each side in over its own width, measured inwards;\nevery other shape uses Left for the whole outline, centred on it."
+    text  "遮罩从其边缘向内淡入的像素数。矩形每条边按自身的宽度向内淡入；\n其他形状对整个轮廓使用 Left，并以轮廓为中心。"
+    state machine
+}
+
+DreamClipMask:Frequency {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Frequency
+    src   "Stripes, squares or noise cells across the clip."
+    text  "纹理或图案的条纹、方块或噪声单元在遮罩范围内分布。"
+    state machine
+}
+
+DreamClipMask:InnerRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:InnerRatio
+    src   "A star's inner corners, or a ring's hole, as a share of the outer size."
+    text  "星形的内角或环形的孔径，表示相对于外径的比例。"
+    state machine
+}
+
+DreamClipMask:Offset {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Offset
+    src   "Moves the texture or pattern, in its own coordinates (1 is its whole width or height)."
+    text  "纹理或图案在自身坐标中的偏移量（1 表示其完整宽度或高度）。"
+    state machine
+}
+
+DreamClipMask:Rotation {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Rotation
+    src   "Degrees clockwise the texture or pattern is turned about the clip's centre: a linear gradient's angle."
+    text  "纹理或图案围绕遮罩中心的顺时针旋转角度（线性渐变的角度）。"
+    state machine
+}
+
+DreamClipMask:Roundness {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Roundness
+    src   "A polygon's corners rounded by this many pixels."
+    text  "多边形的角点圆角程度（以像素为单位）。"
+    state machine
+}
+
+DreamClipMask:Scale {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Scale
+    src   "The texture or pattern's scale: 2 shows it twice as large."
+    text  "纹理或图案的缩放比例（2 表示显示其两倍大小）。"
+    state machine
+}
+
+DreamClipMask:Sides {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Sides
+    src   "A polygon's sides, a star's points."
+    text  "多边形的边数，星形的顶点数。"
+    state machine
+}
+
+DreamClipMask:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Texture
+    src   "The mask texture. Two texture masks at most take effect along one chain of clips (the outermost two); a third is\nignored, with a warning. A draw call binds one texture per slot, so content under different mask textures is drawn\nin different draw calls."
+    text  "遮罩纹理。沿一条裁剪链最多只有两个纹理遮罩生效（最外层的两个）；第三个会被\n忽略并给出警告。一次绘制调用每个槽位绑定一个纹理，因此不同遮罩纹理下的内容会在\n不同的绘制调用中绘制。"
+    state machine
+}
+
+DreamClipMask:Threshold {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Threshold
+    src   "The source value v becomes saturate((v - Threshold + Softness) / (2 * Softness)): at 0.5 and 0.5, v as it is. A\nsmall Softness turns it into a cut at Threshold, and driving Threshold makes wipes and dissolves."
+    text  "源值 v 变为 saturate((v - Threshold + Softness) / (2 * Softness))：当 Threshold 和 Softness 均为 0.5 时，v 保持不变。较\n小的 Softness 会使其变为在 Threshold 处的硬切，而驱动 Threshold 可实现擦除和溶解。"
+    state machine
+}
+
+EDreamClipMaskChannel.Luminance {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskChannel:Luminance
+    src   "Rec. 709 luminance of the colour as the texture is sampled."
+    text  "采样纹理时颜色的 Rec. 709 亮度。"
+    state machine
+}
+
+EDreamClipMaskFill {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill
+    src   "How a mask texture is laid over the clip rect."
+    text  "遮罩纹理如何叠加到裁剪矩形上。"
+    state machine
+}
+
+EDreamClipMaskFill.Fill {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Fill
+    src   "As small as covers the rect, its aspect kept."
+    text  "保持宽高比，缩放到恰好覆盖矩形。"
+    state machine
+}
+
+EDreamClipMaskFill.Fit {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Fit
+    src   "As large as fits whole, its aspect kept; nothing outside it."
+    text  "保持宽高比，缩放到完整适应矩形；不超出矩形。"
+    state machine
+}
+
+EDreamClipMaskFill.Stretch {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Stretch
+    src   "Stretched to the clip rect."
+    text  "拉伸到裁剪矩形。"
+    state machine
+}
+
+EDreamClipMaskFill.Tile {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskFill:Tile
+    src   "At its own size in pixels, repeated."
+    text  "按自身像素尺寸重复。"
+    state machine
+}
+
+EDreamClipMaskHitTest {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest
+    src   "What a pointer hit inside a masked clip asks of the mask."
+    text  "遮罩裁剪内的指针命中如何查询遮罩。"
+    state machine
+}
+
+EDreamClipMaskHitTest.Bounds {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest:Bounds
+    src   "The clip rect, as without a mask: cheap, and blind to the mask."
+    text  "裁剪矩形，视同无遮罩：开销低，且无视遮罩。"
+    state machine
+}
+
+EDreamClipMaskHitTest.Mask {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskHitTest:Mask
+    src   "The mask: a point hits where the mask is at least one half. A texture is read only if it can be (a Texture2D whose pixels the CPU has); otherwise it counts as white."
+    text  "遮罩：仅当遮罩值至少为0.5时点才命中。仅当纹理可读取（像素可由CPU访问的Texture2D）时才读取；否则按白色处理。"
+    state machine
+}
+
+EDreamClipMaskPattern {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern
+    src   "A procedural mask's pattern. The gradients run 0 to 1 across the clip; the others repeat Frequency times across it."
+    text  "程序化遮罩的图案。渐变在整个裁剪范围内从0到1；其他图案在整个裁剪范围内重复Frequency次。"
+    state machine
+}
+
+EDreamClipMaskPattern.Angular {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Angular
+    src   "0 to 1 clockwise from twelve o'clock: a clock wipe."
+    text  "顺时针从十二点位置由0到1：时钟擦除。"
+    state machine
+}
+
+EDreamClipMaskPattern.Blinds {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Blinds
+    src   "0 to 1 across each of Frequency stripes."
+    text  "每条条纹内从0到1，共Frequency条。"
+    state machine
+}
+
+EDreamClipMaskPattern.Checker {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Checker
+    src   "0 and 1 in a checkerboard Frequency squares across."
+    text  "棋盘状图案，频率决定方格的间距。"
+    state machine
+}
+
+EDreamClipMaskPattern.Diamond {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Diamond
+    src   "0 at the centre to 1 at the middle of each side, in a diamond."
+    text  "菱形图案，从中心到各边的值从0到1渐变。"
+    state machine
+}
+
+EDreamClipMaskPattern.Linear {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Linear
+    src   "0 at the left edge to 1 at the right, turned by Rotation."
+    text  "线性图案，从左边缘到右边缘的值从0到1渐变，并受Rotation旋转角度影响。"
+    state machine
+}
+
+EDreamClipMaskPattern.Noise {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Noise
+    src   "Smooth value noise, Frequency cells across, Seed choosing which."
+    text  "平滑值噪声，频率决定噪声单元的大小，Seed用于选择噪声的初始值。"
+    state machine
+}
+
+EDreamClipMaskPattern.Radial {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskPattern:Radial
+    src   "0 at the centre to 1 at the middle of each side."
+    text  "径向图案，从中心到各边的值从0到1渐变。"
+    state machine
+}
+
+EDreamClipMaskShape {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape
+    src   "The shape a clip mask cuts: the clip rect itself (with the widget's clipping corner radius), or one inscribed in it."
+    text  "剪裁蒙版的形状：可以是矩形本身（带有小部件的角半径），也可以是内切的形状。"
+    state machine
+}
+
+EDreamClipMaskShape.Ellipse {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Ellipse
+    src   "The ellipse that touches the clip rect's four sides."
+    text  "与剪裁矩形的四个边相切的椭圆。"
+    state machine
+}
+
+EDreamClipMaskShape.Polygon {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Polygon
+    src   "A regular polygon fitted to the clip rect, a corner straight up."
+    text  "与剪裁矩形贴合的规则多边形，一个角朝上。"
+    state machine
+}
+
+EDreamClipMaskShape.Rect {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Rect
+    src   "The clip rect, rounded by the widget's Clipping Corner Radius."
+    text  "裁剪矩形，其角被小部件的角半径（Corner Radius）圆角化。"
+    state machine
+}
+
+EDreamClipMaskShape.Ring {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Ring
+    src   "An ellipse with an elliptical hole in its middle."
+    text  "一个带有椭圆孔的椭圆。"
+    state machine
+}
+
+EDreamClipMaskShape.Star {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskShape:Star
+    src   "A star fitted to the clip rect, a point straight up."
+    text  "与剪裁矩形贴合的星形，一个角朝上。"
+    state machine
+}
+
+EDreamClipMaskSource {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource
+    src   "What the mask's value comes from inside its shape."
+    text  "蒙版值来自其形状的内部。"
+    state machine
+}
+
+EDreamClipMaskSource.None {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:None
+    src   "The shape alone."
+    text  "仅为形状。"
+    state machine
+}
+
+EDreamClipMaskSource.Procedural {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:Procedural
+    src   "A pattern computed for each pixel: gradients, stripes, checks, noise."
+    text  "为每个像素计算出的图案：渐变、条纹、棋盘、噪声。"
+    state machine
+}
+
+EDreamClipMaskSource.Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#EDreamClipMaskSource:Texture
+    src   "A channel of a texture, laid over the clip rect."
+    text  "纹理的一个通道，覆盖在裁剪矩形上。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Clip Mask" {
+    at    Source/DreamGUI/Public/Core/DreamUIClipMask.h#DreamClipMask:Shape
+    src   "Clip Mask"
+    // from the engine's zh-Hans
+    text  "剪辑蒙版"
+    state draft
+}

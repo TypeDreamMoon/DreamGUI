@@ -1,0 +1,381 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UIToggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle
+    src   "UIToggle"
+    text  "UIToggle"
+    state machine
+}
+
+UIToggle:bAutoFindToggleGroupInParent {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:bAutoFindToggleGroupInParent
+    src   "Auto Find Toggle Group in Parent"
+    text  "自动查找父级中的切换组"
+    state machine
+}
+
+UIToggle:bIsOn {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:bIsOn
+    src   "Is On"
+    text  "是否开启"
+    state machine
+}
+
+UIToggle:CustomToggleTransition {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:CustomToggleTransition
+    src   "Custom Toggle Transition"
+    text  "自定义切换过渡"
+    state machine
+}
+
+UIToggle:GetIndexInGroup:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:GetOffColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOffColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:GetOnColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOnColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:GetToggleGroup:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetToggleGroup:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:GetToggleTransitionTarget:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetToggleTransitionTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggle:OffColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OffColor
+    src   "Off Color"
+    text  "关闭颜色"
+    state machine
+}
+
+UIToggle:OffImageBrush {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OffImageBrush
+    src   "Off Image Brush"
+    text  "关闭状态图像笔刷"
+    state machine
+}
+
+UIToggle:OnColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnColor
+    src   "On Color"
+    text  "开启颜色"
+    state machine
+}
+
+UIToggle:OnImageBrush {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnImageBrush
+    src   "On Image Brush"
+    text  "开启状态图像笔刷"
+    state machine
+}
+
+UIToggle:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UIToggle:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UIToggle:SetAutoFindToggleGroupInParent:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetAutoFindToggleGroupInParent:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIToggle:SetIsOn:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOn:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetIsOnWithoutNotify:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOnWithoutNotify:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetOffColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetOffColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetOnColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetOnColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetToggleGroup:InGroupComp {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleGroup:InGroupComp
+    src   "In Group Comp"
+    text  "所属组组件"
+    state machine
+}
+
+UIToggle:SetToggleTransitionTarget:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleTransitionTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetValue:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValue:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:SetValueWithoutNotify:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValueWithoutNotify:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIToggle:ToggleDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:ToggleDuration
+    src   "Toggle Duration"
+    text  "切换持续时间"
+    state machine
+}
+
+UIToggle:ToggleGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:ToggleGroup
+    src   "Toggle Group"
+    text  "切换组"
+    state machine
+}
+
+UIToggle:ToggleTransitionTarget {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:ToggleTransitionTarget
+    src   "Toggle Transition Target"
+    text  "切换过渡目标"
+    state machine
+}
+
+UIToggle:ToggleTransitionTweener {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:ToggleTransitionTweener
+    src   "Toggle Transition Tweener"
+    text  "切换过渡缓动器"
+    state machine
+}
+
+UIToggle:ToggleTransitionType {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:ToggleTransitionType
+    src   "Toggle Transition Type"
+    text  "切换过渡类型"
+    state machine
+}
+
+UIToggleTransition {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition
+    src   "UIToggle Transition"
+    text  "UIToggle过渡"
+    state machine
+}
+
+UIToggleTransition:GetToggleComponent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:GetToggleComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggleTransition:ReceiveToggleOff:InImmediateSet {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOff:InImmediateSet
+    src   "In Immediate Set"
+    text  "立即设置"
+    state machine
+}
+
+UIToggleTransition:ReceiveToggleOn:InImmediateSet {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOn:InImmediateSet
+    src   "In Immediate Set"
+    text  "立即设置"
+    state machine
+}
+
+UIToggleTransition:UIToggleComp {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:UIToggleComp
+    src   "UIToggle"
+    text  "UIToggle"
+    state machine
+}
+
+UIToggleValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UIToggle:bAutoFindToggleGroupInParent {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:bAutoFindToggleGroupInParent
+    src   "When Awake, if ToggleGroup is not set, enable this will find toggle group in parent component and up hierarchy."
+    text  "在Awake时，若未设置ToggleGroup，启用此项将在父组件及向上层级中查找切换组。"
+    state machine
+}
+
+UIToggle:GetIndexInGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup
+    src   "If this toggle added to a ToggleGroup, then return index in group. Return -1 if not add to ToggleGroup.\nIndex is sorted by flatten-hierarchy-index, from RootComponent(UIItem)."
+    text  "如果此切换控件已添加到ToggleGroup，则返回其在组中的索引。如果未添加到ToggleGroup，则返回-1。\n索引按扁平化层级索引排序，从根组件RootComponent(UIItem)开始。"
+    state machine
+}
+
+UIToggle:GetOnColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOnColor
+    src   "The two colours the checked transition moves between, the counterparts of UUISelectable's\nnormal/hovered/pressed setters. Same reason those exist: a toggle assembled by code rather than\nin a details panel has no other way to say what checked looks like."
+    text  "已选中过渡在两种颜色之间切换，对应UUISelectable的\n正常/悬停/按下设置器。它们存在的原因相同：由代码而非\n细节面板组装的切换控件，没有其他方式表明已选中状态的外观。"
+    state machine
+}
+
+UIToggle:OffColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OffColor
+    src   "Appearance when this is unchecked"
+    text  "未选中时的外观"
+    state machine
+}
+
+UIToggle:OffImageBrush {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OffImageBrush
+    src   "Appearance when this is unchecked"
+    text  "未选中时的外观"
+    state machine
+}
+
+UIToggle:OnColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnColor
+    src   "Appearance when this is checked"
+    text  "选中时的外观"
+    state machine
+}
+
+UIToggle:OnImageBrush {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:OnImageBrush
+    src   "Appearance when this is checked"
+    text  "选中时的外观"
+    state machine
+}
+
+UIToggle:SetAutoFindToggleGroupInParent {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetAutoFindToggleGroupInParent
+    src   "Settable because Awake reads it: a control assembled in code runs before Awake and could\nnever reach this EditAnywhere flag -- the same reflection-only hole every part reference had."
+    text  "之所以可设置，是因为Awake会读取它：由代码组装的控件在Awake之前运行，\n永远无法访问此EditAnywhere标志——这与每个部件引用都有的仅反射漏洞相同。"
+    state machine
+}
+
+UIToggle:SetIsOn {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOn
+    src   "Aliases in the spelling the binding system derives from the property: bIsOn's setter is\nSetIsOn by the naming rule, and until these existed a toggle could not be bound at all --\nFindDreamWidgetSetterFor found nothing and DUI5005 blamed the author."
+    text  "别名采用绑定系统从属性派生的拼写：按命名规则，bIsOn的设置器为\nSetIsOn；在这些别名存在之前，切换控件根本无法绑定——\nFindDreamWidgetSetterFor找不到任何内容，DUI5005会把责任归给作者。"
+    state machine
+}
+
+UIToggle:SetToggleTransitionTarget {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleTransitionTarget
+    src   "What the CHECKED transition tints -- deliberately a different visual from the hover one, see\nApplyValueToVisual.\n\nThe property is EditAnywhere, so the designer and .dui have always been able to reach it by\nreflection while no caller could. A toggle assembled in code has to name its own tick."
+    text  "已选中过渡所着色的对象——有意与悬停状态采用不同的视觉效果，参见\nApplyValueToVisual。\n\n该属性为EditAnywhere，因此设计器和.dui一直能够通过\n反射访问它，而调用方却不能。由代码组装的切换控件必须自行指定其勾选标记。"
+    state machine
+}
+
+UIToggle:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValue
+    src   "Set IsChecked value and send callback event"
+    text  "设置IsChecked值并发送回调事件"
+    state machine
+}
+
+UIToggle:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValueWithoutNotify
+    src   "Set IsChecked value and NOT send callback event"
+    text  "设置选中状态值，但不发送回调事件。"
+    state machine
+}
+
+UIToggleTransition:ReceiveToggleOff {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOff
+    src   "Called when UISelectableComponent's transition state = highlighted.\n@param InImmediateSet        set properties immediately or use tween animation. InImmediateSet is true when set initialize state."
+    text  "当UISelectableComponent组件的过渡状态 = 高亮时调用。\n@param InImmediateSet        立即设置属性或使用补间动画。设置初始化状态时InImmediateSet为true。"
+    state machine
+}
+
+UIToggleTransition:ReceiveToggleOn {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOn
+    src   "Called when UISelectableComponent's transition state = normal.\n@param InImmediateSet        set properties immediately or use tween animation. InImmediateSet is true when set initialize state."
+    text  "当UISelectableComponent组件的过渡状态 = 正常时调用。\n@param InImmediateSet        立即设置属性或使用补间动画。设置初始化状态时InImmediateSet为true。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Toggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup
+    src   "DreamGUI-Toggle"
+    text  "DreamGUI-Toggle"
+    state machine
+}

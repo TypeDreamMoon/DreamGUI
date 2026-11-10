@@ -1,0 +1,910 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamNiagaraBurstFinished__DelegateSignature:BurstId {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraBurstFinished__DelegateSignature:BurstId
+    src   "Burst Id"
+    text  "爆炸 ID"
+    state machine
+}
+
+DreamNiagaraRendererOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride
+    src   "Dream Niagara Renderer Override"
+    text  "Niagara 渲染器覆盖"
+    state machine
+}
+
+DreamNiagaraRendererOverride:BlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamNiagaraRendererOverride:bOverrideBlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:bOverrideBlendMode
+    src   "Override Blend Mode"
+    // from the engine's zh-Hans
+    text  "重载混合模式"
+    state draft
+}
+
+DreamNiagaraRendererOverride:Emitter {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Emitter
+    src   "Emitter"
+    // from the engine's zh-Hans
+    text  "发射器"
+    state draft
+}
+
+DreamNiagaraRendererOverride:Material {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Material
+    src   "Material"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+DreamNiagaraRendererOverride:Renderer {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Renderer
+    src   "Renderer"
+    // from the engine's zh-Hans
+    text  "Renderer"
+    state draft
+}
+
+DreamNiagaraRendererOverride:Shading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Shading
+    src   "Shading"
+    // from the engine's zh-Hans
+    text  "着色"
+    state draft
+}
+
+DreamNiagaraRendererOverride:Texture {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+DreamNiagaraSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem
+    src   "Niagara System"
+    // from the engine's zh-Hans
+    text  "Niagara系统"
+    state draft
+}
+
+DreamNiagaraSystem:Activate:bReset {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Activate:bReset
+    src   "Reset"
+    // from the engine's zh-Hans
+    text  "重设"
+    state draft
+}
+
+DreamNiagaraSystem:Advance:InSeconds {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Advance:InSeconds
+    src   "In Seconds"
+    // from the engine's zh-Hans
+    text  "In Seconds"
+    state draft
+}
+
+DreamNiagaraSystem:Advance:InStep {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Advance:InStep
+    src   "In Step"
+    // from the engine's zh-Hans
+    text  "输入步"
+    state draft
+}
+
+DreamNiagaraSystem:bAutoActivate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bAutoActivate
+    src   "Auto Activate"
+    // from the engine's zh-Hans
+    text  "自动启用"
+    state draft
+}
+
+DreamNiagaraSystem:bFlattenDepth {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bFlattenDepth
+    src   "Flatten Depth"
+    text  "扁平深度"
+    state machine
+}
+
+DreamNiagaraSystem:BlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamNiagaraSystem:bOverrideBlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bOverrideBlendMode
+    src   "Override Blend Mode"
+    // from the engine's zh-Hans
+    text  "重载混合模式"
+    state draft
+}
+
+DreamNiagaraSystem:bPaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bPaused
+    src   "Paused"
+    // from the engine's zh-Hans
+    text  "已暂停"
+    state draft
+}
+
+DreamNiagaraSystem:bTickWhenGamePaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bTickWhenGamePaused
+    src   "Tick when Game Paused"
+    text  "游戏暂停时继续运行"
+    state machine
+}
+
+DreamNiagaraSystem:BurstAt:InLocalPosition {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstAt:InLocalPosition
+    src   "In Local Position"
+    text  "本地位置"
+    state machine
+}
+
+DreamNiagaraSystem:BurstAt:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstAt:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:BurstComponents {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstComponents
+    src   "Burst Components"
+    text  "爆炸组件"
+    state machine
+}
+
+DreamNiagaraSystem:BurstTo:InLocalPosition {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstTo:InLocalPosition
+    src   "In Local Position"
+    text  "本地位置"
+    state machine
+}
+
+DreamNiagaraSystem:BurstTo:InTarget {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstTo:InTarget
+    src   "In Target"
+    // from the engine's zh-Hans
+    text  "In Target"
+    state draft
+}
+
+DreamNiagaraSystem:BurstTo:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:bWriteUIParameters {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bWriteUIParameters
+    src   "Write UIParameters"
+    text  "写入 UI 参数"
+    state machine
+}
+
+DreamNiagaraSystem:Component {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Component
+    src   "Component"
+    // from the engine's zh-Hans
+    text  "组件"
+    state draft
+}
+
+DreamNiagaraSystem:DefaultShading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:DefaultShading
+    src   "Default Shading"
+    text  "默认着色"
+    state machine
+}
+
+DreamNiagaraSystem:FixedTimeStep {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:FixedTimeStep
+    src   "Fixed Time Step"
+    // from the engine's zh-Hans
+    text  "固定时间步"
+    state draft
+}
+
+DreamNiagaraSystem:FlightSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:FlightSystem
+    src   "Flight System"
+    text  "飞行系统"
+    state machine
+}
+
+DreamNiagaraSystem:GetNiagaraComponent:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetNiagaraComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:GetSystem:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetSystem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:GetTimeDilation:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetTimeDilation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:IsActive:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:IsActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:IsPaused:ReturnValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:IsPaused:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:MaterialMap {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:MaterialMap
+    src   "Material Map"
+    // from the engine's zh-Hans
+    text  "材质贴图"
+    state draft
+}
+
+DreamNiagaraSystem:OnBurstFinished {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:OnBurstFinished
+    src   "On Burst Finished"
+    text  "爆炸完成时"
+    state machine
+}
+
+DreamNiagaraSystem:PixelsPerUnit {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:PixelsPerUnit
+    src   "Pixels Per Unit"
+    // from the engine's zh-Hans
+    text  "逐单元像素"
+    state draft
+}
+
+DreamNiagaraSystem:Plane {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Plane
+    src   "Plane"
+    // from the engine's zh-Hans
+    text  "平面"
+    state draft
+}
+
+DreamNiagaraSystem:RandomSeedOffset {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:RandomSeedOffset
+    src   "Random Seed Offset"
+    // from the engine's zh-Hans
+    text  "随机种子偏移"
+    state draft
+}
+
+DreamNiagaraSystem:RendererOverrides {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:RendererOverrides
+    src   "Renderer Overrides"
+    text  "渲染器覆盖"
+    state machine
+}
+
+DreamNiagaraSystem:SetBlendModeOverride:bInOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride:bInOverride
+    src   "In Override"
+    // from the engine's zh-Hans
+    text  "In Override"
+    state draft
+}
+
+DreamNiagaraSystem:SetBlendModeOverride:InBlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride:InBlendMode
+    src   "In Blend Mode"
+    // from the engine's zh-Hans
+    text  "输入混合模式"
+    state draft
+}
+
+DreamNiagaraSystem:SetDefaultShading:InShading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetDefaultShading:InShading
+    src   "In Shading"
+    text  "着色参数"
+    state machine
+}
+
+DreamNiagaraSystem:SetMaterialMap:InMap {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetMaterialMap:InMap
+    src   "In Map"
+    // from the engine's zh-Hans
+    text  "输入贴图"
+    state draft
+}
+
+DreamNiagaraSystem:SetPaused:bInPaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPaused:bInPaused
+    src   "In Paused"
+    // from the engine's zh-Hans
+    text  "在已暂停中"
+    state draft
+}
+
+DreamNiagaraSystem:SetPixelsPerUnit:InPixelsPerUnit {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPixelsPerUnit:InPixelsPerUnit
+    src   "In Pixels Per Unit"
+    text  "输入每单位像素数"
+    state machine
+}
+
+DreamNiagaraSystem:SetPlane:InPlane {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPlane:InPlane
+    src   "In Plane"
+    // from the engine's zh-Hans
+    text  "输入平面"
+    state draft
+}
+
+DreamNiagaraSystem:SetPointerPositionOverride:bInInside {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPointerPositionOverride:bInInside
+    src   "In Inside"
+    text  "输入内部"
+    state machine
+}
+
+DreamNiagaraSystem:SetPointerPositionOverride:InLocalPosition {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPointerPositionOverride:InLocalPosition
+    src   "In Local Position"
+    text  "本地位置"
+    state machine
+}
+
+DreamNiagaraSystem:SetRendererOverrides:InOverrides {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetRendererOverrides:InOverrides
+    src   "In Overrides"
+    text  "输入重载"
+    state machine
+}
+
+DreamNiagaraSystem:SetSystem:InSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetSystem:InSystem
+    src   "In System"
+    // from the engine's zh-Hans
+    text  "输入系统"
+    state draft
+}
+
+DreamNiagaraSystem:SetTimeDilation:InTimeDilation {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetTimeDilation:InTimeDilation
+    src   "In Time Dilation"
+    text  "输入时间膨胀"
+    state machine
+}
+
+DreamNiagaraSystem:SetVariableBool:bInValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableBool:bInValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableBool:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableBool:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableFloat:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableFloat:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableFloat:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableFloat:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableInt:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableInt:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableInt:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableInt:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableLinearColor:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableLinearColor:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableLinearColor:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableLinearColor:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableObject:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableObject:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableObject:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableObject:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableVec2:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec2:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableVec2:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec2:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableVec3:InName {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec3:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamNiagaraSystem:SetVariableVec3:InValue {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec3:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamNiagaraSystem:System {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:System
+    src   "System"
+    // from the engine's zh-Hans
+    text  "System"
+    state draft
+}
+
+DreamNiagaraSystem:TimeDilation {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:TimeDilation
+    src   "Time Dilation"
+    // from the engine's zh-Hans
+    text  "时间膨胀"
+    state draft
+}
+
+DreamNiagaraSystem:WarmupTime {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:WarmupTime
+    src   "Warmup Time"
+    // from the engine's zh-Hans
+    text  "暖场时间"
+    state draft
+}
+
+EDreamNiagaraPlane.EDreamNiagaraPlane_MAX {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane:EDreamNiagaraPlane_MAX
+    src   "EDream Niagara Plane MAX"
+    text  "EDream Niagara Plane MAX"
+    state machine
+}
+
+EDreamNiagaraPlane.XY {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane:XY
+    src   "XY"
+    // from the engine's zh-Hans
+    text  "XY"
+    state draft
+}
+
+EDreamNiagaraPlane.XZ {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane:XZ
+    src   "XZ"
+    // from the engine's zh-Hans
+    text  "XZ"
+    state draft
+}
+
+EDreamNiagaraShading.BuiltIn {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:BuiltIn
+    src   "Built In"
+    text  "内置"
+    state machine
+}
+
+EDreamNiagaraShading.Default {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:Default
+    src   "Default"
+    // from the engine's zh-Hans
+    text  "默认"
+    state draft
+}
+
+EDreamNiagaraShading.EDreamNiagaraShading_MAX {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:EDreamNiagaraShading_MAX
+    src   "EDream Niagara Shading MAX"
+    text  "EDream Niagara Shading MAX"
+    state machine
+}
+
+EDreamNiagaraShading.Material {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:Material
+    src   "Material"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamNiagaraRendererOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride
+    src   "One renderer's shading, set apart from the system's default."
+    text  "单个渲染器的着色，与系统的默认着色分开设置。"
+    state machine
+}
+
+DreamNiagaraRendererOverride:BlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:BlendMode
+    src   "The built-in shader's blend mode, in place of the one the particle material's blending gives."
+    text  "内置着色器的混合模式，用来替代粒子材质混合所提供的模式。"
+    state machine
+}
+
+DreamNiagaraRendererOverride:Emitter {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Emitter
+    src   "The emitter, by name."
+    text  "发射器，按名称指定。"
+    state machine
+}
+
+DreamNiagaraRendererOverride:Material {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Material
+    src   "The UI material, for Material shading, in place of MaterialMap's."
+    text  "用于材质着色的UI材质，替代MaterialMap的材质。"
+    state machine
+}
+
+DreamNiagaraRendererOverride:Renderer {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Renderer
+    src   "Which of the emitter's renderers, counting from 0 in the order the emitter lists them."
+    text  "发射器的哪个渲染器，按发射器列出它们的顺序从0开始计数。"
+    state machine
+}
+
+DreamNiagaraRendererOverride:Texture {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraRendererOverride:Texture
+    src   "The built-in shader's texture, in place of the particle material's."
+    text  "内置着色器使用的纹理，用来替代粒子材质的纹理。"
+    state machine
+}
+
+DreamNiagaraSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem
+    src   "A Niagara system drawn as part of a DreamGUI canvas.\n\nThe element owns a Niagara component it registers with its world but attaches to nothing, gives the scene no proxy for and\nkeeps out of Niagara's scalability: the component only simulates. Every frame the canvas sends its sections, the element waits for the\nsimulation's tick to finish, reads each renderer's particles through its bindings and writes them into a segment of its\nown -- one draw call per sprite or ribbon renderer, in Niagara's renderer order -- so the particles are clipped, masked,\nblended and grouped as every DreamGUI element is.\n\nThe simulation's units are the canvas's: one unit is PixelsPerUnit canvas units, on the plane Plane names. The component\nstands where the widget does on the canvas, so a local-space emitter moves with the widget and one in world space leaves its\nparticles behind on the canvas. CPU emitters with sprite and ribbon renderers are drawn; the rest are reported (see\nGetRendererInfo) and left out.\n\nReference: SourySK/NiagaraUIRenderer and liufei2008/LGUI_ParticleSystem (both MIT) were read for this design; the code is\nwritten anew."
+    text  "作为 DreamGUI 画布的一部分绘制的 Niagara 系统。\n\n该元素拥有一个 Niagara 组件，它将该组件注册到其世界中，但不附加到任何对象，也不为场景提供代理，\n并且不参与 Niagara 的可扩展性设置：该组件只进行模拟。画布每帧发送其分段时，元素等待\n模拟的 tick 完成，通过其绑定读取每个渲染器的粒子，并将其写入自己的\n分段——每个 sprite 或 ribbon 渲染器一次绘制调用，按 Niagara 的渲染器顺序——因此粒子会像每个 DreamGUI 元素一样被裁剪、遮罩、\n混合和分组。\n\n模拟的单位即画布的单位：一个单位等于 PixelsPerUnit 个画布单位，位于 Plane 指定的平面上。组件\n位于控件在画布上的位置，因此局部空间的发射器会随控件移动，而世界空间的发射器会把\n粒子留在画布上。带 sprite 和 ribbon 渲染器的 CPU 发射器会被绘制；其余会被报告（见\nGetRendererInfo）并略过。\n\n参考：本设计参考了 SourySK/NiagaraUIRenderer 和 liufei2008/LGUI_ParticleSystem（均为 MIT）；代码为\n重新编写。"
+    state machine
+}
+
+DreamNiagaraSystem:Activate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Activate
+    src   "Starts the simulation; with bReset, from the beginning even when it runs."
+    text  "启动模拟；使用 bReset 时，即使模拟正在运行也从开头开始。"
+    state machine
+}
+
+DreamNiagaraSystem:Advance {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Advance
+    src   "Runs the simulation InSeconds forward now, in steps of InStep seconds, whatever its pause: for a warm-up, a test or a\nscrub. The particles show the result at the next frame."
+    text  "立即将模拟向前推进 InSeconds，以 InStep 秒为步长，无论其是否暂停：用于预热、测试或\n逐帧拖动查看。粒子将在下一帧显示结果。"
+    state machine
+}
+
+DreamNiagaraSystem:bAutoActivate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bAutoActivate
+    src   "Starts by itself when the widget is registered."
+    text  "控件注册时自动启动。"
+    state machine
+}
+
+DreamNiagaraSystem:bFlattenDepth {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bFlattenDepth
+    src   "Draws every particle on the widget's plane, however far out of it the simulation put it."
+    text  "将每个粒子绘制在控件平面上，无论模拟将其置于离该平面多远的位置。"
+    state machine
+}
+
+DreamNiagaraSystem:bOverrideBlendMode {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bOverrideBlendMode
+    src   "Every renderer the built-in shader draws blends by BlendMode instead of by its material, unless its override says otherwise."
+    text  "内置着色器绘制的每个渲染器都按 BlendMode 而非其材质进行混合，除非其覆盖设置另有说明。"
+    state machine
+}
+
+DreamNiagaraSystem:bTickWhenGamePaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bTickWhenGamePaused
+    src   "The simulation runs while the game is paused, as UI does."
+    text  "游戏暂停时模拟仍会运行，与 UI 一样。"
+    state machine
+}
+
+DreamNiagaraSystem:BurstAt {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstAt
+    src   "Spawns the system once more at InLocalPosition (the widget's local space, in canvas units), beside the running one."
+    text  "在 InLocalPosition（控件的局部空间，以画布单位计）处再生成一次该系统，与正在运行的系统并存。"
+    state machine
+}
+
+DreamNiagaraSystem:BurstComponents {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstComponents
+    src   "The burst components, held for the collector."
+    text  "迸发组件，由收集器持有。"
+    state machine
+}
+
+DreamNiagaraSystem:BurstTo {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstTo
+    src   "Spawns the flight system (FlightSystem, the plugin's fly-to template when none is set) at InLocalPosition, its particles\nheading for InTarget's centre, which it follows as the target moves (User.DreamUI_TargetPosition). Returns the burst's id,\nwhich OnBurstFinished names when its particles are gone; INDEX_NONE when no burst was made."
+    text  "在 InLocalPosition 处生成飞行系统（FlightSystem，未设置时使用插件的 fly-to 模板），其粒子\n飞向 InTarget 的中心，并随目标移动而跟随该中心（User.DreamUI_TargetPosition）。返回迸发的 id，\n当粒子消失时 OnBurstFinished 会以此命名；未生成迸发时返回 INDEX_NONE。"
+    state machine
+}
+
+DreamNiagaraSystem:bWriteUIParameters {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bWriteUIParameters
+    src   "Writes the user parameters DreamGUI knows to every system that declares them (WidgetSizeParameter and the rest)."
+    text  "将DreamGUI所知的用户参数写入每个声明了这些参数的系统（控件大小参数WidgetSizeParameter等）。"
+    state machine
+}
+
+DreamNiagaraSystem:Deactivate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Deactivate
+    src   "Stops spawning; the particles there are live out their lives."
+    text  "停止生成；已存在的粒子会继续存活直至消亡。"
+    state machine
+}
+
+DreamNiagaraSystem:DefaultShading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:DefaultShading
+    src   "How the renderers are shaded, unless an override says otherwise."
+    text  "渲染器的着色方式，除非重载另有指定。"
+    state machine
+}
+
+DreamNiagaraSystem:FixedTimeStep {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:FixedTimeStep
+    src   "Steps of this many seconds instead of the frame's, as many as the frame's time holds (at most 8 a frame): the same\nparticles whatever the frame rate. 0 ticks with the frame."
+    text  "以该秒数作为步长而非帧时长，一帧内按帧时长可容纳的步数执行（每帧最多8步）：无论帧率如何，\n粒子表现一致。为0时随帧推进。"
+    state machine
+}
+
+DreamNiagaraSystem:FlightSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:FlightSystem
+    src   "Spawned by BurstTo; the plugin's fly-to template when none is set. Its renderers are drawn after the system's."
+    text  "由BurstTo生成；未设置时使用插件的飞行模板。其渲染器在系统之后绘制。"
+    state machine
+}
+
+DreamNiagaraSystem:GetNiagaraComponent {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetNiagaraComponent
+    src   "The component that simulates the system; null while the element is not registered with a world."
+    text  "模拟该系统的组件；当元素未注册到世界时为空。"
+    state machine
+}
+
+DreamNiagaraSystem:MaterialMap {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:MaterialMap
+    src   "The UI material each particle material is drawn with under Material shading. The editor's conversion fills it."
+    text  "在材质着色下绘制每个粒子材质所用的UI材质。由编辑器转换填充。"
+    state machine
+}
+
+DreamNiagaraSystem:OnBurstFinished {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:OnBurstFinished
+    src   "A burst's particles are all gone."
+    text  "一次爆发的粒子全部消亡。"
+    state machine
+}
+
+DreamNiagaraSystem:PixelsPerUnit {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:PixelsPerUnit
+    src   "Canvas units per simulation unit."
+    text  "每个模拟单位对应的画布单位数。"
+    state machine
+}
+
+DreamNiagaraSystem:RandomSeedOffset {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:RandomSeedOffset
+    src   "Added to every emitter's random seed: two widgets of one deterministic system made to differ."
+    text  "加到每个发射器的随机种子上：使同一确定性系统的两个控件有所差异。"
+    state machine
+}
+
+DreamNiagaraSystem:ResetSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:ResetSystem
+    src   "Clears every particle and starts again."
+    text  "清除所有粒子并重新开始。"
+    state machine
+}
+
+DreamNiagaraSystem:SetBlendModeOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride
+    src   "Every renderer the built-in shader draws blends by InBlendMode (bInOverride), unless its override says otherwise; or each by its material."
+    text  "内置着色器绘制的每个渲染器都按InBlendMode（bInOverride）混合，除非其重载另有指定；否则各按其材质混合。"
+    state machine
+}
+
+DreamNiagaraSystem:SetPaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPaused
+    src   "Pauses the simulation, its bursts included; the particles stay where they are."
+    text  "暂停模拟，其爆发也包括在内；粒子停留在原处。"
+    state machine
+}
+
+DreamNiagaraSystem:SetPointerPositionOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPointerPositionOverride
+    src   "Takes the pointer position given here instead of the pointer's (User.DreamUI_PointerPosition), until cleared. Local, canvas units."
+    text  "使用此处给定的指针位置，而不使用指针的位置（User.DreamUI_PointerPosition），直到清除为止。局部坐标，画布单位。"
+    state machine
+}
+
+DreamNiagaraSystem:SetSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetSystem
+    src   "The system. Setting it makes the simulation again, and activates it when the element activates by itself."
+    text  "系统。设置后会重新进行模拟，并在元素自行激活时激活它。"
+    state machine
+}
+
+DreamNiagaraSystem:System {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:System
+    src   "The system to simulate."
+    text  "要模拟的系统。"
+    state machine
+}
+
+DreamNiagaraSystem:TimeDilation {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:TimeDilation
+    src   "How fast the simulation's time runs against the world's."
+    text  "模拟时间相对于世界时间的运行速度。"
+    state machine
+}
+
+DreamNiagaraSystem:WarmupTime {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:WarmupTime
+    src   "Run this far ahead when the simulation starts, so that it opens full."
+    text  "模拟开始时预先运行这么久，使其一开始就处于饱满状态。"
+    state machine
+}
+
+EDreamNiagaraPlane {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane
+    src   "Which of the simulation's planes is the widget's."
+    text  "模拟的哪个平面与控件对应。"
+    state machine
+}
+
+EDreamNiagaraPlane.XY {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane:XY
+    src   "X is right, Y up, and Z out of the screen."
+    text  "X 为右，Y 为上，Z 为屏幕外。"
+    state machine
+}
+
+EDreamNiagaraPlane.XZ {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraPlane:XZ
+    src   "The simulation's X is the widget's right and Z its up: an effect made with gravity along -Z falls down the screen."
+    text  "模拟的 X 对应控件的右方向，Z 对应其上方：沿 -Z 方向施加重力制作的效果会沿屏幕向下落。"
+    state machine
+}
+
+EDreamNiagaraShading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading
+    src   "How a renderer's particles are shaded."
+    text  "渲染器的粒子如何着色。"
+    state machine
+}
+
+EDreamNiagaraShading.BuiltIn {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:BuiltIn
+    src   "DreamGUI's built-in shader, no material: the texture and the blend are taken from the particle material (its Texture\nparameter, else the first texture it samples; additive, modulate or alpha blending), each of which an override may set.\nClipped, masked and blended as any DreamGUI element is."
+    text  "DreamGUI的内置着色器，不使用材质：纹理和混合方式取自粒子材质（其Texture\n参数，否则取其采样的第一个纹理；加性、调制或Alpha混合），二者均可由覆盖设置。\n像任何DreamGUI元素一样被裁剪、遮罩和混合。"
+    state machine
+}
+
+EDreamNiagaraShading.Default {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:Default
+    src   "The system's default (UDreamNiagaraSystem::DefaultShading). Only for an override."
+    text  "系统的默认值（UDreamNiagaraSystem::DefaultShading）。仅用于覆盖。"
+    state machine
+}
+
+EDreamNiagaraShading.Material {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#EDreamNiagaraShading:Material
+    src   "A UI material: the override's, else the one MaterialMap gives for the particle material -- made for it by the editor's\nconversion, or by hand. Where there is none, the built-in shader draws the renderer."
+    text  "UI材质：使用覆盖指定的材质，否则使用MaterialMap为粒子材质提供的材质——由编辑器的\n转换生成，或手动制作。若没有，则由内置着色器绘制该渲染器。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Niagara|Time {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:bPaused
+    src   "DreamGUI-Niagara|Time"
+    text  "DreamGUI-Niagara|时间"
+    state machine
+}
+
+DreamGUI-Niagara|Shading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:DefaultShading
+    src   "DreamGUI-Niagara|Shading"
+    text  "DreamGUI-Niagara|着色"
+    state machine
+}
+
+DreamGUI-Niagara|Space {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Plane
+    src   "DreamGUI-Niagara|Space"
+    text  "DreamGUI-Niagara|空间"
+    state machine
+}

@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+K2Node_DreamUIPlayAnimation {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamUIPlayAnimation.h#K2Node_DreamUIPlayAnimation
+    src   "\"Play Animation with Finished event\": the async form of UDreamUserWidget::PlayAnimation, with a\nFinished exec pin. The node is nothing but a pointer at the proxy factory on\nUDreamUIAnimationPlayCallbackProxy; UK2Node_BaseAsyncTask builds the pins from that function's\nsignature and wires the proxy's delegates to the exec outputs."
+    text  "“播放动画并触发 Finished 事件”：控件方法 UDreamUserWidget::PlayAnimation 的异步形式，带有\nFinished 执行引脚。该节点只是指向\nUDreamUIAnimationPlayCallbackProxy 上代理工厂的指针；UK2Node_BaseAsyncTask 根据该函数的\n签名构建引脚，并将代理的委托连接到执行输出。"
+    state machine
+}
+
+K2Node_DreamUIPlayAnimationTimeRange {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_DreamUIPlayAnimation.h#K2Node_DreamUIPlayAnimationTimeRange
+    src   "The time-range form of the node above."
+    text  "与上一个节点相同的时域形式。"
+    state machine
+}

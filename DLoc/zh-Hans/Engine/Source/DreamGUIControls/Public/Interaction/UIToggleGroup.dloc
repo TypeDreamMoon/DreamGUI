@@ -1,0 +1,149 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UIToggleGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup
+    src   "UIToggle Group"
+    text  "切换组"
+    state machine
+}
+
+UIToggleGroup:bAllowNoneSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:bAllowNoneSelected
+    src   "Allow None Selected"
+    text  "允许无选定项"
+    state machine
+}
+
+UIToggleGroup:GetAllowNoneSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetAllowNoneSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggleGroup:GetSelectedItem:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetSelectedItem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggleGroup:GetToggleByIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleByIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+UIToggleGroup:GetToggleByIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleByIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggleGroup:GetToggleIndex:InComp {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleIndex:InComp
+    src   "In Comp"
+    text  "组件"
+    state machine
+}
+
+UIToggleGroup:GetToggleIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIToggleGroup:LastSelect {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:LastSelect
+    src   "Last Select"
+    text  "上次选择"
+    state machine
+}
+
+UIToggleGroup:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UIToggleGroup:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UIToggleGroup:SetAllowNoneSelected:InBool {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:SetAllowNoneSelected:InBool
+    src   "In Bool"
+    // from the engine's zh-Hans
+    text  "在布尔中"
+    state draft
+}
+
+UIToggleGroup:SetSelection:Target {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:SetSelection:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+UIToggleGroup:ToggleCollection {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:ToggleCollection
+    src   "Toggle Collection"
+    text  "切换集合"
+    state machine
+}
+
+UIToggleGroupValueChangedEvent__DelegateSignature:Index {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroupValueChangedEvent__DelegateSignature:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+namespace UObjectCategory
+
+DreamGUI-ToggleGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:ClearSelection
+    src   "DreamGUI-ToggleGroup"
+    text  "DreamGUI-ToggleGroup"
+    state machine
+}
+
+namespace UObjectToolTips
+
+UIToggleGroup:GetSelectedItem {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetSelectedItem
+    src   "Return current selected toggle item."
+    text  "返回当前选定的切换项。"
+    state machine
+}
+
+UIToggleGroup:GetToggleIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleIndex
+    src   "return toggle's index in this group. return -1 if not belong to this group."
+    text  "返回该切换组中的切换项索引。如果未属于该组，则返回 -1。"
+    state machine
+}
+
+UIToggleGroup:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:OnValueChangedBP
+    src   "Called when selection change of this toggle group. Parameter is selected toggle's index, or -1 if none selected."
+    text  "当此切换组的选择发生变化时调用。参数是所选切换项的索引，或如果未选择任何项，则为 -1。"
+    state machine
+}

@@ -1,0 +1,339 @@
+dloc 1
+culture zh-Hans
+namespace DreamRectBlockCustomization
+
+ViewportHandlesSearch {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Viewport Handles"
+    text  "视口句柄"
+    state machine
+}
+
+ViewportHandles {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Viewport Handles"
+    text  "视口句柄"
+    state machine
+}
+
+ViewportHandles_ToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Drag this gradient's ends and stops in the designer's viewport. The viewport shows one kind of handles at a time; Tab there steps through the others."
+    text  "在设计器的视口中拖动渐变的端点和停顿点。视口一次只显示一种类型的句柄；按 Tab 键可以切换到其他句柄。"
+    state machine
+}
+
+EditInViewport {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Edit in Viewport"
+    // from the engine's zh-Hans
+    text  "在视口中编辑"
+    state draft
+}
+
+Value_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Use direct value"
+    text  "使用直接数值"
+    state machine
+}
+
+Value {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "V"
+    // from the engine's zh-Hans
+    text  "V"
+    state draft
+}
+
+Percentage_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Use percentage of rect width and height"
+    text  "使用相对于矩形宽度和高度的百分比"
+    state machine
+}
+
+Percentage {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "%"
+    // from the engine's zh-Hans
+    text  "%"
+    state draft
+}
+
+CornerRadius {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "CornerRadius"
+    text  "圆角"
+    state machine
+}
+
+UniformSetCornerRadiusToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "When locked, corner radius will all set with x value"
+    text  "锁定时，所有圆角都将设置为 x 轴的值。"
+    state machine
+}
+
+EnableBody_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Body"
+    // from the engine's zh-Hans
+    text  "Body"
+    state draft
+}
+
+TO_TEXT(BodyColor##_Color) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Color)"
+    text  "TO_TEXT(颜色)"
+    state machine
+}
+
+BodyTexture_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+BodySpriteTexture_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+Texture_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Use texture"
+    text  "使用纹理"
+    state machine
+}
+
+Texture {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "T"
+    // from the engine's zh-Hans
+    text  "T"
+    state draft
+}
+
+Sprite_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Use sprite"
+    text  "使用精灵图"
+    state machine
+}
+
+Sprite {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "S"
+    // from the engine's zh-Hans
+    text  "S"
+    state draft
+}
+
+SnapSize_Button {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Snap Size"
+    text  "缩放比例"
+    state machine
+}
+
+TextureSnapSize_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "UIProceduralRect texture snap size"
+    text  "UI 过程矩形纹理缩放比例"
+    state machine
+}
+
+BodyTextureScaleMode_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Scale Mode"
+    // from the engine's zh-Hans
+    text  "缩放模式"
+    state draft
+}
+
+EnableBodyGradient_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+TO_TEXT(BodyGradient##_Gradient) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Gradient)"
+    text  "TO_TEXT(渐变)"
+    state machine
+}
+
+bEnableBorder_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Border"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+TO_TEXT(BorderWidth##_Width) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Width)"
+    text  "TO_TEXT(Width)"
+    state machine
+}
+
+TO_TEXT(BorderColor##_Color) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Color)"
+    text  "TO_TEXT(颜色)"
+    state machine
+}
+
+bEnableBorderGradient_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+BorderGradient_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+bEnableInnerShadow_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Inner Shadow"
+    text  "内阴影"
+    state machine
+}
+
+TO_TEXT(InnerShadowColor##_Color) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Color)"
+    text  "TO_TEXT(颜色)"
+    state machine
+}
+
+TO_TEXT(InnerShadowSize##_Size) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Size)"
+    text  "TO_TEXT(Size)"
+    state machine
+}
+
+TO_TEXT(InnerShadowBlur##_Blur) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Blur)"
+    text  "TO_TEXT(Blur)"
+    state machine
+}
+
+TO_TEXT(InnerShadowAngle##_Angle) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Angle)"
+    text  "TO_TEXT(Angle)"
+    state machine
+}
+
+TO_TEXT(InnerShadowDistance##_Distance) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Distance)"
+    text  "TO_TEXT(Distance)"
+    state machine
+}
+
+EnableOuterShadow_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Outer Shadow"
+    text  "外阴影"
+    state machine
+}
+
+TO_TEXT(OuterShadowColor##_Color) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Color)"
+    text  "TO_TEXT(颜色)"
+    state machine
+}
+
+TO_TEXT(OuterShadowSize##_Size) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Size)"
+    text  "TO_TEXT(Size)"
+    state machine
+}
+
+TO_TEXT(OuterShadowBlur##_Blur) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Blur)"
+    text  "TO_TEXT(Blur)"
+    state machine
+}
+
+TO_TEXT(OuterShadowAngle##_Angle) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Angle)"
+    text  "TO_TEXT(Angle)"
+    state machine
+}
+
+TO_TEXT(OuterShadowDistance##_Distance) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Distance)"
+    text  "TO_TEXT(Distance)"
+    state machine
+}
+
+EnableRadialFill_DisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Radial Fill"
+    text  "径向填充"
+    state machine
+}
+
+TO_TEXT(RadialFillCenter##_Center) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Center)"
+    text  "TO_TEXT(Center)"
+    state machine
+}
+
+TO_TEXT(RadialFillRotation##_Rotation) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Rotation)"
+    text  "TO_TEXT(Rotation)"
+    state machine
+}
+
+TO_TEXT(RadialFillAngle##_Angle) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "TO_TEXT(Angle)"
+    text  "TO_TEXT(Angle)"
+    state machine
+}
+
+TintColor {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Tint Color"
+    // from the engine's zh-Hans
+    text  "着色"
+    state draft
+}
+
+TintColorTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamRectBlockCustomization.cpp
+    src   "Known as \"Color\" property in other UI elements. This can tint all color of this UI element. Usually only set alpha value."
+    text  "在其他 UI 元素中，此属性被称为“颜色”。它可以为此 UI 元素的所有颜色通道设置值。通常仅设置 alpha 值。"
+    state machine
+}

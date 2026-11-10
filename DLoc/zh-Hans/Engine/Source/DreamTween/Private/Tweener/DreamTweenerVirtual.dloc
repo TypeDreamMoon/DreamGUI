@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerVirtual {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerVirtual.h#DreamTweenerVirtual
+    src   "Dream Tweener Virtual"
+    text  "DreamTweener 虚拟对象"
+    state machine
+}

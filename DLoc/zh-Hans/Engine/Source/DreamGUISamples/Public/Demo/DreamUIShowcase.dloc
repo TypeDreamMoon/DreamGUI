@@ -1,0 +1,397 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIControlsGalleryPanel {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel
+    src   "Dream UIControls Gallery Panel"
+    text  "Dream UI控件图库面板"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:bGalleryToggle {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:bGalleryToggle
+    src   "Gallery Toggle"
+    text  "图库切换"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:EventLines {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:EventLines
+    src   "Event Lines"
+    text  "事件线"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:GalleryClickTotal {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GalleryClickTotal
+    src   "Gallery Click Total"
+    text  "图库点击总数"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:GetEventLogText:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetEventLogText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:HandleGallerySpin:InValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:HandleGallerySpin:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:LogEvent:InLine {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:LogEvent:InLine
+    src   "In Line"
+    text  "行内"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:OnGalleryChipDropped:InOperation {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryChipDropped:InOperation
+    src   "In Operation"
+    // from the engine's zh-Hans
+    text  "输入运算"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:OnGalleryToggle:InValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryToggle:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:OnGalleryWheelPick:InIndex {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryWheelPick:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamUIControlsGalleryPanel:OnGalleryWheelPick:InTag {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryWheelPick:InTag
+    src   "In Tag"
+    // from the engine's zh-Hans
+    text  "在标签中"
+    state draft
+}
+
+DreamUIShowcaseDialog {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseDialog
+    src   "Dream UIShowcase Dialog"
+    text  "Dream UI演示对话框"
+    state machine
+}
+
+DreamUIShowcasePanel {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel
+    src   "Dream UIShowcase Panel"
+    text  "Dream UI演示面板"
+    state machine
+}
+
+DreamUIShowcasePanel:bMuted {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:bMuted
+    src   "Muted"
+    // from the engine's zh-Hans
+    text  "已静音"
+    state draft
+}
+
+DreamUIShowcasePanel:ConfirmCount {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:ConfirmCount
+    src   "Confirm Count"
+    text  "确认数量"
+    state machine
+}
+
+DreamUIShowcasePanel:DropCount {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:DropCount
+    src   "Drop Count"
+    text  "丢弃数量"
+    state machine
+}
+
+DreamUIShowcasePanel:GetFade:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetFade:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:GetHistory:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetHistory:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:GetNowPlaying:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetNowPlaying:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:GetTrackCount:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetTrackCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:GetVolume:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetVolume:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:HandleChipDropped:InOperation {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleChipDropped:InOperation
+    src   "In Operation"
+    // from the engine's zh-Hans
+    text  "输入运算"
+    state draft
+}
+
+DreamUIShowcasePanel:History {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:History
+    src   "History"
+    // from the engine's zh-Hans
+    text  "历史记录"
+    state draft
+}
+
+DreamUIShowcasePanel:IsMuted:ReturnValue {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:IsMuted:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIShowcasePanel:LastModalResult {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:LastModalResult
+    src   "Last Modal Result"
+    text  "上次模态结果"
+    state machine
+}
+
+DreamUIShowcasePanel:MasterVolume {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:MasterVolume
+    src   "Master Volume"
+    text  "主音量"
+    state machine
+}
+
+DreamUIShowcasePanel:ModalDialogClass {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:ModalDialogClass
+    src   "Modal Dialog Class"
+    text  "模态对话框类"
+    state machine
+}
+
+DreamUIShowcasePanel:PopulateDemoData:InTrackCount {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:PopulateDemoData:InTrackCount
+    src   "In Track Count"
+    text  "轨道数"
+    state machine
+}
+
+DreamUIShowcasePanel:Tracks {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:Tracks
+    src   "Tracks"
+    // from the engine's zh-Hans
+    text  "轨道"
+    state draft
+}
+
+DreamUIShowcaseTrack {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseTrack
+    src   "Dream UIShowcase Track"
+    text  "Dream UIShowcase 轨道"
+    state machine
+}
+
+DreamUIShowcaseTrack:Artist {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseTrack:Artist
+    src   "Artist"
+    text  "艺术家"
+    state machine
+}
+
+DreamUIShowcaseTrack:Label {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseTrack:Label
+    src   "Label"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamUIShowcaseTrack:Title {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseTrack:Title
+    src   "Title"
+    // from the engine's zh-Hans
+    text  "标题"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIControlsGalleryPanel {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel
+    src   "The native base for the ControlsGallery showcase .dui: one handler per input-control family,\nevery one of them appending to a short event log a binding displays live. The gallery's job is\nINPUT coverage -- click, toggle, drag, scroll, text, selection -- so what the class provides is\nobservation: every interaction leaves a line, and a walkthrough (or a human) reads the panel\nitself to see what fired."
+    text  "ControlsGallery 展示 .dui 的原生基类：每类输入控件对应一个处理程序，\n每个处理程序都向一份简短的事件日志追加记录，并由某个绑定实时显示。该展示面板的职责是\n覆盖输入——点击、切换、拖动、滚动、文本、选择——因此该类提供的是\n观察能力：每次交互都会留下一行记录，走查（或人工）读取面板本身，\n即可看到触发了什么。"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:bGalleryToggle {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:bGalleryToggle
+    src   "The `<->` target of the gallery's main toggle."
+    text  "展示面板主开关的 `<->` 目标。"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:GetEventLogText {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetEventLogText
+    src   "The last few events, newest first, one string a Text binding shows."
+    text  "最近几条事件，最新的在前，由 Text 绑定显示为一个字符串。"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:LogEvent {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:LogEvent
+    src   "Appends one line, newest first, keeping the log short."
+    text  "追加一行，最新的在前，并保持日志简短。"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:OnGalleryWheelPick {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryWheelPick
+    src   "The ring menu's commit. Logs the TAG, which is the whole point of an item carrying one."
+    text  "环形菜单的提交。会记录 TAG，而条目携带 TAG 的全部意义就在于此。"
+    state machine
+}
+
+DreamUIShowcaseDialog {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseDialog
+    src   "What the showcase's 弹窗 button opens: Native.Dialog with the demo's words already in it.\n\nA CLASS rather than a configured instance because that is the shape ShowModal takes -- the\nsubsystem instantiates the class itself, so anything a dialog is supposed to say has to be part of\nwhat the class IS. Three lines of constructor defaults are the whole subclass; everything else,\nincluding which result each button answers with, is UDreamDialog's."
+    text  "展示面板的弹窗按钮所打开的内容：Native.Dialog，其中已填入演示的文案。\n\n之所以是类而不是配置好的实例，是因为 ShowModal 采用的就是这种形式——子系统自己\n实例化该类，因此对话框要说的任何内容都必须属于该类本身。整个子类\n只有三行构造函数默认值；其余一切，包括每个按钮返回哪个结果，\n都来自 UDreamDialog。"
+    state machine
+}
+
+DreamUIShowcasePanel {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel
+    src   "The native base for the MediaConsole showcase .dui: every variable and function that file binds\nagainst, in one place a Blueprint can parent. It exists so the language demo exercises real\nbindings -- `<->` onto bMuted, expressions over IsMuted()/GetFade(), `each` over both a variable\n(Tracks) and a function (GetHistory()) -- without asking the author to first build a data model\nin Blueprint."
+    text  "MediaConsole 展示 .dui 的原生基类：该文件所绑定的所有变量和函数\n都集中在一处，蓝图可以以此为父类。它的存在是为了让语言演示练习真实\n绑定——对 bMuted 使用 `<->`、对 IsMuted()/GetFade() 使用表达式、对变量\n(Tracks) 和函数 (GetHistory()) 都使用 `each`——而无需让作者先在蓝图中\n构建数据模型。"
+    state machine
+}
+
+DreamUIShowcasePanel:bMuted {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:bMuted
+    src   "The `<->` target of the mute toggle: the toggle writes here, code writes move the toggle."
+    text  "静音开关的 `<->` 目标：开关写入这里，代码写入时开关随之移动。"
+    state machine
+}
+
+DreamUIShowcasePanel:GetFade {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetFade
+    src   "1 while audible, 0 while muted: the number expressions dim the console by."
+    text  "有声时为 1，静音时为 0：数字表达式据此将控制台调暗。"
+    state machine
+}
+
+DreamUIShowcasePanel:GetHistory {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetHistory
+    src   "The `each Entry in GetHistory()` function source."
+    text  "`each Entry in GetHistory()` 函数的源。"
+    state machine
+}
+
+DreamUIShowcasePanel:HandleChipDropped {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleChipDropped
+    src   "`OnDropAccepted -> HandleChipDropped` on the drop well: counts landed chips."
+    text  "拖放区上的 `OnDropAccepted -> HandleChipDropped`：统计落入的筹码。"
+    state machine
+}
+
+DreamUIShowcasePanel:HandleOpenModal {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleOpenModal
+    src   "`OnClickBP -> HandleOpenModal`: shows ModalDialogClass through the modal subsystem."
+    text  "`OnClickBP -> HandleOpenModal`：通过模态子系统显示 ModalDialogClass。"
+    state machine
+}
+
+DreamUIShowcasePanel:LastModalResult {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:LastModalResult
+    src   "How the last modal closed, for a walkthrough to assert on."
+    text  "上一次模态窗口是如何关闭的，供演练断言使用。"
+    state machine
+}
+
+DreamUIShowcasePanel:MasterVolume {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:MasterVolume
+    src   "Driven by code (or a future slider); the readout bar mirrors it through an expression."
+    text  "由代码（或未来的滑块）驱动；读数条通过表达式与之同步。"
+    state machine
+}
+
+DreamUIShowcasePanel:ModalDialogClass {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:ModalDialogClass
+    src   "What HandleOpenModal shows. Defaults to UDreamUIShowcaseDialog, which is the only reason the\ngallery's 弹窗 button does anything: it was a TSubclassOf nobody ever filled in, so the click\nreached the subsystem, found no class, logged a line and stopped. Still overridable -- unset,\nthe click logs instead of opening nothing."
+    text  "HandleOpenModal 显示的内容。默认为 UDreamUIShowcaseDialog，这也是画廊的弹窗\n按钮唯一能起作用的原因：它原本是一个从未被填过的 TSubclassOf，因此点击\n到达子系统后找不到类，记录一行日志便停止了。仍可覆盖——未设置时，\n点击只会记录日志，而不是什么也不打开。"
+    state machine
+}
+
+DreamUIShowcasePanel:PopulateDemoData {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:PopulateDemoData
+    src   "Fill Tracks and the history with recognizable demo rows."
+    text  "用可识别的演示行填充 Tracks 和历史记录。"
+    state machine
+}
+
+DreamUIShowcasePanel:Tracks {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:Tracks
+    src   "The `each Track in Tracks` variable source. Holds UDreamUIShowcaseTrack instances."
+    text  "`each Track in Tracks` 变量的源。保存 UDreamUIShowcaseTrack 实例。"
+    state machine
+}
+
+DreamUIShowcaseTrack {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcaseTrack
+    src   "One row of showcase data: the object shape `each` iterates. Members are read by name through\nreflection (FDreamUIEachAdapter), so what a .dui writes as `Track.Title` is literally this\nUPROPERTY. `Label` doubles as the member the history list shows -- one item class for both\nlists keeps the demo's data model in one place."
+    text  "展示数据的一行：`each` 迭代的对象结构。成员通过反射（FDreamUIEachAdapter）按名称读取，\n因此 .dui 中写的 `Track.Title` 实际上就是这个\nUPROPERTY。`Label` 同时充当历史记录列表所显示的成员——两个列表共用一个项类，\n使演示的数据模型集中在一处。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Showcase {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetFade
+    src   "Showcase"
+    text  "展示"
+    state machine
+}

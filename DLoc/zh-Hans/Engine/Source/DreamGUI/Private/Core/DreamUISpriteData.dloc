@@ -1,0 +1,24 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUISpriteData
+
+PackageSprite_AtlasSize_Warning {
+    at    Source/DreamGUI/Private/Core/DreamUISpriteData.cpp
+    src   "{0} Can't pack sprite texture:{1}!\nTry reduce sprite texture size, or maybe don't use it as sprite.\nAlso remember to dispose unused atlas by call function DisposeAtlasByPackingTag from {2}."
+    text  "{0} 无法打包精灵纹理：{1}！\n请尝试减小精灵纹理的大小，或者可能不要将其用作精灵。\n另外，请记住通过调用 {2} 中的 DisposeAtlasByPackingTag 函数来释放未使用的图集。"
+    state machine
+}
+
+CreateDreamUISpriteData_Size_Warning {
+    at    Source/DreamGUI/Private/Core/DreamUISpriteData.cpp
+    src   "{0} Target texture width or height is too large! Consider use DreamImage to render this texture."
+    text  "{0} 目标纹理的宽度或高度过大！请考虑使用 DreamImage 渲染此纹理。"
+    state machine
+}
+
+MissingDefaultContent {
+    at    Source/DreamGUI/Private/Core/DreamUISpriteData.cpp
+    src   "{0} Load default Sprite error! Missing some content of DreamGUI plugin, reinstall this plugin may fix the issue."
+    text  "{0} 加载默认精灵时出错！缺少 DreamGUI 插件的一些内容，重新安装此插件可能可以解决问题。"
+    state machine
+}

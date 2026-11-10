@@ -1,0 +1,201 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+Dream2DLineRendererBase {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase
+    src   "Dream 2DLine Renderer Base"
+    text  "Dream 2D 线段渲染器 基础"
+    state machine
+}
+
+Dream2DLineRendererBase:bEndCapSizeAffectByLineWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:bEndCapSizeAffectByLineWidth
+    src   "End Cap Size Affect by Line Width"
+    text  "端盖大小受线宽影响"
+    state machine
+}
+
+Dream2DLineRendererBase:EndType {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:EndType
+    src   "End Type"
+    // from the engine's zh-Hans
+    text  "末端类型"
+    state draft
+}
+
+Dream2DLineRendererBase:GetEndType:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetEndType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+Dream2DLineRendererBase:GetLineWidth:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetLineWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+Dream2DLineRendererBase:GetLineWidthOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetLineWidthOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+Dream2DLineRendererBase:LineWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidth
+    src   "Line Width"
+    // from the engine's zh-Hans
+    text  "行宽度"
+    state draft
+}
+
+Dream2DLineRendererBase:LineWidthOffset {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthOffset
+    src   "Line Width Offset"
+    text  "线宽偏移"
+    state machine
+}
+
+Dream2DLineRendererBase:LineWidthTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+Dream2DLineRendererBase:LineWidthTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+Dream2DLineRendererBase:LineWidthTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+Dream2DLineRendererBase:LineWidthTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+Dream2DLineRendererBase:LineWidthTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+Dream2DLineRendererBase:SetEndType:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetEndType:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+Dream2DLineRendererBase:SetLineWidth:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetLineWidth:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+Dream2DLineRendererBase:SetLineWidthOffset:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetLineWidthOffset:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+EDream2DLineRenderer_EndType.Cap {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:Cap
+    src   "Cap"
+    // from the engine's zh-Hans
+    text  "上限"
+    state draft
+}
+
+EDream2DLineRenderer_EndType.ConnectStartAndEnd {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:ConnectStartAndEnd
+    src   "Connect Start and End"
+    text  "连接起点和终点"
+    state machine
+}
+
+EDream2DLineRenderer_EndType.EDream2DLineRenderer_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:EDream2DLineRenderer_MAX
+    src   "EDream 2DLine Renderer MAX"
+    text  "EDream 2D 线段渲染器 最大值"
+    state machine
+}
+
+EDream2DLineRenderer_EndType.None {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+namespace UObjectToolTips
+
+Dream2DLineRendererBase {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase
+    src   "Render line use given points."
+    text  "使用给定的点渲染线段。"
+    state machine
+}
+
+Dream2DLineRendererBase:bEndCapSizeAffectByLineWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:bEndCapSizeAffectByLineWidth
+    src   "When EndType is Cap, if LineWidth bigger or smaller than Sprite's width, then cap size will scale with it."
+    text  "当端类型为“盖”时，如果线宽大于或小于精灵的宽度，则端盖大小会随之缩放。"
+    state machine
+}
+
+Dream2DLineRendererBase:EndType {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:EndType
+    src   "Draw extra quad at start and end."
+    text  "在起点和终点绘制额外的四边形。"
+    state machine
+}
+
+Dream2DLineRendererBase:LineWidthOffset {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthOffset
+    src   "This will slide line's width from left to right."
+    text  "这会从左向右滑动线宽。"
+    state machine
+}
+
+EDream2DLineRenderer_EndType.Cap {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:Cap
+    src   "Draw a cap at start and end."
+    text  "在起点和终点绘制盖。"
+    state machine
+}
+
+EDream2DLineRenderer_EndType.ConnectStartAndEnd {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#EDream2DLineRenderer_EndType:ConnectStartAndEnd
+    src   "Connect start and end with a line"
+    text  "用线连接起点和终点"
+    state machine
+}

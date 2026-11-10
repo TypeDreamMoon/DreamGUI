@@ -1,0 +1,31 @@
+dloc 1
+culture zh-Hans
+namespace DreamUILayerStyleSnippet
+
+Empty {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSnippet.cpp
+    src   "There is nothing to read."
+    text  "没有内容可读。"
+    state machine
+}
+
+DoesNotBuild {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSnippet.cpp
+    src   "These lines do not build."
+    text  "这些行无法编译。"
+    state machine
+}
+
+HasChildren {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSnippet.cpp
+    src   "These lines declare widgets; a layer style is a block of values."
+    text  "这些行声明了控件；图层样式是一组值。"
+    state machine
+}
+
+NoParts {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSnippet.cpp
+    src   "These lines hold no layer style, blend mode or mask."
+    text  "这些行不包含任何图层样式、混合模式或遮罩。"
+    state machine
+}

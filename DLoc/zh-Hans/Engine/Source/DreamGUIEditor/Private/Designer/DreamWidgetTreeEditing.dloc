@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetTreeEditing
+
+DuplicateSynthesised {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetTreeEditing.cpp
+    src   "'{0}' inside it is built by the file rather than written in it; copy the block in the text instead"
+    text  "'{0}' 内部的内容是由文件生成的，而不是直接编写的；请复制文本中的代码块。"
+    state machine
+}
+
+TextRootIsTheFiles {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetTreeEditing.cpp
+    src   "a .dui holds exactly one root, and a new one would be a different file"
+    text  "一个 .dui 文件只包含一个根节点，如果添加新的根节点，则会创建一个新的文件。"
+    state machine
+}

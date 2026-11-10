@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerDetails
+
+TextAuthoredBanner {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDesignerDetails.cpp
+    src   "This hierarchy is authored in {0}. Layout, slot and style values are edited here and written back to the file; structure, names and bindings are written in the text, and edits to anything greyed out would be lost at the next compile."
+    text  "此层级结构由 {0} 创建。布局、槽和样式的值在此处编辑并写入文件；结构、名称和绑定在文本中定义，对任何灰色区域的修改将在下次编译时丢失。"
+    state machine
+}

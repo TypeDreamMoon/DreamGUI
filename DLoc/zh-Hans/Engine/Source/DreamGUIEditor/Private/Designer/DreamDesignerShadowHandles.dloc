@@ -1,0 +1,25 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerShadowHandles
+
+Name {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerShadowHandles.cpp
+    src   "Shadows"
+    // from the engine's zh-Hans
+    text  "阴影"
+    state draft
+}
+
+StyleName {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerShadowHandles.cpp
+    src   "Style Shadows"
+    text  "样式阴影"
+    state machine
+}
+
+MoveShadow {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerShadowHandles.cpp
+    src   "Move Shadow"
+    text  "移动阴影"
+    state machine
+}

@@ -1,0 +1,595 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamDropdown {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown
+    src   "Dream Dropdown"
+    text  "下拉菜单"
+    state machine
+}
+
+DreamDropdown:AddOption:InOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:AddOption:InOption
+    src   "In Option"
+    text  "选项"
+    state machine
+}
+
+DreamDropdown:ArrowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ArrowNode
+    src   "Arrow Node"
+    text  "箭头节点"
+    state machine
+}
+
+DreamDropdown:bHasDownArrow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:bHasDownArrow
+    src   "Has Down Arrow"
+    // from the engine's zh-Hans
+    text  "拥有向下箭头"
+    state draft
+}
+
+DreamDropdown:bTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:bTabCommitsHighlightedRow
+    src   "Tab Commits Highlighted Row"
+    text  "选项卡选中项高亮"
+    state machine
+}
+
+DreamDropdown:CaptionNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:CaptionNode
+    src   "Caption Node"
+    text  "标题节点"
+    state machine
+}
+
+DreamDropdown:DropdownBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:DropdownBehaviour
+    src   "Dropdown Behaviour"
+    text  "下拉菜单行为"
+    state machine
+}
+
+DreamDropdown:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamDropdown:FindOptionIndex:InOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:FindOptionIndex:InOption
+    src   "In Option"
+    text  "选项"
+    state machine
+}
+
+DreamDropdown:FindOptionIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:FindOptionIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetHasDownArrow:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetHasDownArrow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetItemTemplateClass:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetItemTemplateClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetMaxVisibleItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetMaxVisibleItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetOptionAtIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionAtIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamDropdown:GetOptionAtIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionAtIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetOptionCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetOptions:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptions:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetSelectedIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetSelectedOption:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedOption:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetTabCommitsHighlightedRow:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetTabCommitsHighlightedRow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:IsOpen:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:IsOpen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:ItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ItemTemplateClass
+    src   "Item Template Class"
+    text  "项目模板类"
+    state machine
+}
+
+DreamDropdown:ItemTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ItemTemplateNode
+    src   "Item Template Node"
+    text  "项目模板节点"
+    state machine
+}
+
+DreamDropdown:ListNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ListNode
+    src   "List Node"
+    text  "列表节点"
+    state machine
+}
+
+DreamDropdown:MaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:MaxVisibleItems
+    src   "Max Visible Items"
+    text  "最大显示项数"
+    state machine
+}
+
+DreamDropdown:OnClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnClosed
+    src   "On Closed"
+    // from the engine's zh-Hans
+    text  "On Closed"
+    state draft
+}
+
+DreamDropdown:OnItemGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnItemGenerated
+    src   "On Item Generated"
+    text  "项目生成事件"
+    state machine
+}
+
+DreamDropdown:OnOpening {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnOpening
+    src   "On Opening"
+    // from the engine's zh-Hans
+    text  "打开时"
+    state draft
+}
+
+DreamDropdown:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnSelectionChanged
+    src   "On Selection Changed"
+    // from the engine's zh-Hans
+    text  "选择已变化时"
+    state draft
+}
+
+DreamDropdown:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamDropdown:OptionIcons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OptionIcons
+    src   "Option Icons"
+    text  "选项图标"
+    state machine
+}
+
+DreamDropdown:Options {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:Options
+    src   "Options"
+    // from the engine's zh-Hans
+    text  "选项"
+    state draft
+}
+
+DreamDropdown:RemoveOption:InOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RemoveOption:InOption
+    src   "In Option"
+    text  "选项"
+    state machine
+}
+
+DreamDropdown:RemoveOption:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RemoveOption:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDropdown:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SelectedIndex
+    src   "Selected Index"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamDropdown:SetHasDownArrow:bInHasDownArrow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetHasDownArrow:bInHasDownArrow
+    src   "In Has Down Arrow"
+    text  "输入是否有下箭头"
+    state machine
+}
+
+DreamDropdown:SetItemTemplateClass:InItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetItemTemplateClass:InItemTemplateClass
+    src   "In Item Template Class"
+    text  "输入项模板类"
+    state machine
+}
+
+DreamDropdown:SetMaxVisibleItems:InMaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetMaxVisibleItems:InMaxVisibleItems
+    src   "In Max Visible Items"
+    text  "输入最大可见项数"
+    state machine
+}
+
+DreamDropdown:SetOptionIcons:InIcons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptionIcons:InIcons
+    src   "In Icons"
+    text  "输入图标"
+    state machine
+}
+
+DreamDropdown:SetOptions:InOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptions:InOptions
+    src   "In Options"
+    // from the engine's zh-Hans
+    text  "In Options"
+    state draft
+}
+
+DreamDropdown:SetSelectedIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamDropdown:SetSelectedOption:InOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedOption:InOption
+    src   "In Option"
+    text  "选项"
+    state machine
+}
+
+DreamDropdown:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamDropdown:SetTabCommitsHighlightedRow:bInTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetTabCommitsHighlightedRow:bInTabCommitsHighlightedRow
+    src   "In Tab Commits Highlighted Row"
+    text  "输入Tab提交高亮行"
+    state machine
+}
+
+DreamDropdown:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamDropdownChangedEvent__DelegateSignature:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdownChangedEvent__DelegateSignature:SelectedIndex
+    src   "Selected Index"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamDropdownItemEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdownItemEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamDropdownItemEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdownItemEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamDropdown {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown
+    src   "A dropdown whose hierarchy is code, not an asset.\n\nThe largest of the preset Blueprints -- sixteen widgets -- reduced to what UUIDropdown actually\nreads: a face with a caption, a list root that Show() positions and animates, and inside it a\ncontent column holding one templated row. The behaviour duplicates that row per option, so the\ntemplate is authored once, inactive, and never drawn itself.\n\nThe row carries the toggle arrangement the library keeps arriving at: hover tints the row's own\nface, the selection mark is a separate visual, because one visual cannot hold two transitions.\n\nOptions are plain texts here rather than the behaviour's text+brush pairs: the common case, and\nthe control's job is to be the common case. A consumer needing per-option icons talks to\nDropdownBehaviour directly.\n\nWhere there is no tween manager to fade the list -- a world with no game instance, which is the\ndesigner's preview and a headless test -- it opens and closes at once, at its end opacity, rather\nthan waiting on a fade that will never run."
+    text  "层级由代码而非资源构成的下拉框。\n\n预设蓝图中最庞大的一个——十六个控件——被精简为UUIDropdown实际\n读取的内容：一个带标题的面板，一个由Show()定位并播放动画的列表根节点，其内部是\n一个承载单个模板行的内容列。行为会按每个选项复制该行，因此\n模板只编写一次、处于非活动状态，且自身从不被绘制。\n\n该行采用本库一贯的开关布局：悬停为行自身的\n面板着色，选中标记则是另一个独立视觉元素，因为一个视觉元素无法承载两种过渡。\n\n这里的选项是纯文本，而非行为所用的文本+画刷对：这是常见情形，\n而该控件的职责就是应对常见情形。需要为每个选项提供图标的调用方请直接与\nDropdownBehaviour交互。\n\n在没有补间管理器可用于淡化列表时——即没有游戏实例的世界，也就是\n设计器预览和无头测试——它会立即以最终不透明度打开和关闭，而不是\n等待一段永远不会运行的淡化。"
+    state machine
+}
+
+DreamDropdown:AddOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:AddOption
+    src   "The option list, one call at a time -- UMG's combo box API, which is what a screen building its\noptions from game data actually uses.\n\nEvery one of them re-pushes, because the rows the player sees are BUILT from this array: an\noption added without a push is data the open list has never heard of. FText rather than FString\nthroughout, because an option is something a player reads and this framework localizes text by\ncarrying FText all the way rather than by converting at the end."
+    text  "选项列表，一次调用处理一个——UMG组合框的API，也正是从游戏数据构建选项的\n界面实际使用的接口。\n\n它们每一个都会重新推送，因为玩家看到的行是由这个数组构建出来的：添加\n选项而不推送，该数据对已打开的列表来说就是从未存在过的。全程使用FText而非FString，\n因为选项是玩家要阅读的内容，而本框架的本地化方式是自始至终传递FText，\n而不是在最后再做转换。"
+    state machine
+}
+
+DreamDropdown:bHasDownArrow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:bHasDownArrow
+    src   "Whether the face draws its own arrow glyph -- UMG's HasDownArrow. Off is for a face that says\n\"open me\" some other way (an icon of its own, a border)."
+    text  "面板是否绘制自己的箭头字形——即UMG的HasDownArrow。关闭适用于以其他方式表达“打开我”的\n面板（自带的图标、边框）。"
+    state machine
+}
+
+DreamDropdown:bTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:bTabCommitsHighlightedRow
+    src   "Tab or Shift+Tab in the open list chooses the row the player is on, then the list closes and the Tab moves on past\nthe dropdown -- what an HTML select does. Off, Tab only closes the list and chooses nothing. Tab never walks the rows:\nthe arrow keys and the pad do that."
+    text  "在打开的列表中按Tab或Shift+Tab会选择玩家当前所在的行，随后列表关闭，Tab继续越过\n下拉框向前移动——这正是HTML select的行为。关闭时，Tab只会关闭列表，不选择任何内容。Tab从不逐行移动：\n那是方向键和手柄的工作。"
+    state machine
+}
+
+DreamDropdown:ClearOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ClearOptions
+    src   "The options and their icons, both. The selection is ClearSelection's business, not this one's."
+    text  "选项及其图标，两者都清除。选中项是ClearSelection的职责，不是这个的。"
+    state machine
+}
+
+DreamDropdown:ClearSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ClearSelection
+    src   "Selects nothing at all -- index -1, which is what the control already spells \"none\"."
+    text  "完全不选中任何项——索引-1，也就是该控件本身表示“无”的值。"
+    state machine
+}
+
+DreamDropdown:FindOptionIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:FindOptionIndex
+    src   "Compared by MEANING (FText::EqualTo), so a localized option matches across cultures. -1 for none."
+    text  "按含义比较（FText::EqualTo），因此本地化后的选项可跨文化区域匹配。-1 表示无。"
+    state machine
+}
+
+DreamDropdown:GetOptionAtIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionAtIndex
+    src   "Empty text for an index nobody offers, rather than a read off the end."
+    text  "对无人提供的索引返回空文本，而不是越界读取。"
+    state machine
+}
+
+DreamDropdown:GetSelectedOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedOption
+    src   "The selected option's text, or empty while nothing is selected."
+    text  "所选选项的文本，未选择任何项时为空。"
+    state machine
+}
+
+DreamDropdown:IsOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:IsOpen
+    src   "Whether the list is up. Mirrored from the behaviour's own visibility seam rather than kept by\nwhoever opened it, so a list closed by a click elsewhere is not still \"open\" here."
+    text  "列表是否展开。镜像自行为自身的可见性接口，而非由\n打开它的一方保存，因此被别处点击关闭的列表在这里不会仍为“展开”。"
+    state machine
+}
+
+DreamDropdown:ItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ItemTemplateClass
+    src   "An option row's CONTENT, authored elsewhere: one instance of this class is created inside\nevery item widget, filling it, and the built-in label steps aside. The row's face, its check\nmark, its hover and its selection stay the control's, so a template only has to draw an option.\n\nMade per ITEM rather than pooled, because a dropdown rebuilds its list on every open rather\nthan recycling rows; OnItemGenerated fires alongside, and is where a consumer fills it.\n\nNull (the default) is the built-in label row. Instancing a user widget needs a world, so with\nnone this quietly stays the built-in row rather than producing half a list. Exactly the bargain\nUDreamListViewBase::RowTemplateClass makes, in the same words."
+    text  "选项行的内容，由别处编写：每个项控件内部都会创建该类的一个实例来\n填充它，内置标签则让位。行的外观、对勾、\n悬停与选中状态仍归控件所有，因此模板只需绘制一个选项。\n\n按项创建而非池化，因为下拉框每次打开都会重建列表，而不是\n复用行；OnItemGenerated同时触发，使用者在此填充。\n\nNull（默认值）即内置标签行。实例化用户控件需要一个world，所以\n没有world时会安静地保留内置行，而不是产出半个列表。与\nUDreamListViewBase::RowTemplateClass的取舍完全一致，措辞也相同。"
+    state machine
+}
+
+DreamDropdown:MaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:MaxVisibleItems
+    src   "How many rows the open list shows at most. The list is always exactly as tall as its visible\nrows -- rows-times-row-height, no more -- and past this many the rest scroll: the cap is a\ncount because that is how a designer thinks about a dropdown, not in pixels."
+    text  "展开的列表最多显示多少行。列表高度始终恰好等于其可见\n行——行数乘以行高，不多一分——超过该数量后其余部分滚动：上限用行数\n表示，因为设计师就是这样考虑下拉框的，而不是用像素。"
+    state machine
+}
+
+DreamDropdown:OnClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnClosed
+    src   "The list closed, whether by a choice or by a click elsewhere."
+    text  "列表已关闭，无论是通过选择还是通过点击别处。"
+    state machine
+}
+
+DreamDropdown:OnItemGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnItemGenerated
+    src   "One per option row, as the list is built. The hook for a consumer whose options are richer\nthan a word but who would rather not author a whole class: everything under the row is\nreachable from here by display name. The dropdown's counterpart of the list's OnRowGenerated."
+    text  "列表构建时每个选项行触发一次。面向这样的使用者：选项比一个词更丰富\n但又不愿编写整个类——行下的所有内容都可从此处按显示名称\n访问。相当于列表的 OnRowGenerated 在下拉框中的对应物。"
+    state machine
+}
+
+DreamDropdown:OnOpening {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnOpening
+    src   "The list is opening -- UMG's OnOpening, and the moment to refresh the options from.\n\nFired from the behaviour's Show, which is the moment the list appears: its rows are already built\nthen, and options written from a handler here rebuild them at once, before the list is sized and\nplaced -- so they are the ones the player sees."
+    text  "列表正在打开——即 UMG 的 OnOpening，也是刷新选项的时机。\n\n由行为的 Show 触发，那正是列表出现的时刻：此时其行已构建完成，\n从此处的处理程序写入的选项会立即重建它们，且在列表完成尺寸计算与\n放置之前——因此玩家看到的就是这些选项。"
+    state machine
+}
+
+DreamDropdown:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnSelectionChanged
+    src   "Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it."
+    text  "从行为转发而来，因此使用方绑定的是控件本身，而不是它的某个部件。"
+    state machine
+}
+
+DreamDropdown:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamDropdown:OptionIcons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:OptionIcons
+    src   "A picture per option, index-matched to Options -- the same parallel-array idiom TabLabels and\nTabEnabled use, and for the same reason: a struct per option would make the common case (no\nicons at all) cost an array literal the language cannot write.\n\nA sprite or a texture, by the rule every face in this library follows. A missing or null entry\nis no icon, so a short list is an ordinary state."
+    text  "每个选项一张图片，与 Options 按下标对应——与 TabLabels 和\nTabEnabled 使用相同的平行数组惯例，原因也相同：每个选项一个结构体会让\n常见情形（完全没有图标）付出该语言写不出的数组字面量代价。\n\n精灵或纹理，遵循本库中每个外观都遵循的规则。缺失或为 null 的条目\n即没有图标，因此较短的列表是正常状态。"
+    state machine
+}
+
+DreamDropdown:Options {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:Options
+    src   "BlueprintReadOnly rather than a BlueprintSetter pair, and for the reason UDreamDialog::Buttons\nis: the options are what the open list is BUILT from, so a Blueprint writing this array in\nplace changed the data and left the list showing the old copy. SetOptions is the way in. The\ndesigner and .dui still author it directly, where PostEditChangeProperty re-pushes."
+    text  "用 BlueprintReadOnly 而不是一对 BlueprintSetter，原因与 UDreamDialog::Buttons\n相同：选项是展开列表构建所依据的数据，因此蓝图就地写入此数组只会\n改动数据，让列表仍显示旧副本。SetOptions 才是正规入口。\n设计器和 .dui 仍可直接编写它，此时 PostEditChangeProperty 会重新推送。"
+    state machine
+}
+
+DreamDropdown:RefreshOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RefreshOptions
+    src   "Rebuild the rows from the current options. For a caller who edited the array in place."
+    text  "从当前选项重建各行。供就地编辑了数组的调用方使用。"
+    state machine
+}
+
+DreamDropdown:RemoveOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RemoveOption
+    src   "False when no option matched, as UMG's returns. Takes the matching icon with it."
+    text  "没有匹配的选项时返回 false，与 UMG 的返回一致。会一并移除匹配的图标。"
+    state machine
+}
+
+DreamDropdown:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SelectedIndex
+    src   "Authored selection in; mirror of the behaviour's out. -1 is none."
+    text  "编辑时写入的选中项；镜像自行为的输出。-1 表示无。"
+    state machine
+}
+
+DreamDropdown:SetItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetItemTemplateClass
+    src   "Rebuilds the rows: what a row IS comes from this class, so a bare write would change nothing."
+    text  "重建各行：行本身由该类决定，因此直接写入不会产生任何变化。"
+    state machine
+}
+
+DreamDropdown:SetMaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetMaxVisibleItems
+    src   "How many rows the open list shows at most, re-pushed at once.\n\nA setter because the cap is read only by the style push, which is what turns a row COUNT into\nthe list's pixel height -- so a runtime write onto the variable moved a number nothing read\nuntil something else happened to restyle."
+    text  "打开的列表最多显示多少行，立即重新推送。\n\n使用setter是因为该上限只由样式推送读取，而正是样式推送把行的\n数量转换为列表的像素高度——因此运行时直接写入该变量只会改动一个无人读取的数字，\n直到其他操作触发重新设置样式。"
+    state machine
+}
+
+DreamDropdown:SetOptionIcons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptionIcons
+    src   "Replace the per-option pictures and re-push the list, so an open one changes under the pointer."
+    text  "替换每个选项的图片并重新推送列表，使已展开的列表在指针下即时变化。"
+    state machine
+}
+
+DreamDropdown:SetOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptions
+    src   "Replace the options: an open list is rebuilt and re-placed at once, a closed one when it next opens."
+    text  "替换选项：已展开的列表会立即重建并重新布局，已关闭的列表则在下次展开时处理。"
+    state machine
+}
+
+DreamDropdown:SetSelectedOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedOption
+    src   "Selects the option with that text. An option nobody offers changes nothing."
+    text  "选中具有该文本的选项。没有任何选项提供的文本不会产生变化。"
+    state machine
+}
+
+DreamDropdown:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamDropdown:SetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetTabCommitsHighlightedRow
+    src   "See bTabCommitsHighlightedRow. Pushed to the behaviour at once, so an open list answers the next Tab by it."
+    text  "参见 bTabCommitsHighlightedRow。立即推送到行为，因此已展开的列表在下一次按 Tab 时即按此处理。"
+    state machine
+}
+
+DreamDropdown:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Dropdown {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:AddOption
+    src   "Dropdown"
+    // from the engine's zh-Hans
+    text  "下拉"
+    state draft
+}

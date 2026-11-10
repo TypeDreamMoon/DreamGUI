@@ -1,0 +1,689 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamAdjustment {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment
+    src   "Dream Adjustment"
+    text  "梦境调整"
+    state machine
+}
+
+DreamAdjustment:bColorize {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bColorize
+    src   "Colorize"
+    text  "着色"
+    state machine
+}
+
+DreamAdjustment:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamAdjustment:BlueMix {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:BlueMix
+    src   "Blue Mix"
+    text  "蓝色混合"
+    state machine
+}
+
+DreamAdjustment:Blues {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Blues
+    src   "Blues"
+    // from the engine's zh-Hans
+    text  "布鲁斯"
+    state draft
+}
+
+DreamAdjustment:bMonochrome {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bMonochrome
+    src   "Monochrome"
+    text  "单色"
+    state machine
+}
+
+DreamAdjustment:bPreserveLuminosity {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bPreserveLuminosity
+    src   "Preserve Luminosity"
+    text  "保留亮度"
+    state machine
+}
+
+DreamAdjustment:bReverse {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bReverse
+    src   "Reverse"
+    // from the engine's zh-Hans
+    text  "倒回"
+    state draft
+}
+
+DreamAdjustment:Brightness {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Brightness
+    src   "Brightness"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+DreamAdjustment:Contrast {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Contrast
+    src   "Contrast"
+    // from the engine's zh-Hans
+    text  "对比度"
+    state draft
+}
+
+DreamAdjustment:Curve {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Curve
+    src   "Curve"
+    // from the engine's zh-Hans
+    text  "曲线"
+    state draft
+}
+
+DreamAdjustment:Cyans {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Cyans
+    src   "Cyans"
+    text  "青色"
+    state machine
+}
+
+DreamAdjustment:Density {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Density
+    src   "Density"
+    // from the engine's zh-Hans
+    text  "密度"
+    state draft
+}
+
+DreamAdjustment:Exposure {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Exposure
+    src   "Exposure"
+    // from the engine's zh-Hans
+    text  "曝光"
+    state draft
+}
+
+DreamAdjustment:ExposureGamma {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:ExposureGamma
+    src   "Exposure Gamma"
+    text  "曝光伽马"
+    state machine
+}
+
+DreamAdjustment:ExposureOffset {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:ExposureOffset
+    src   "Exposure Offset"
+    text  "曝光偏移"
+    state machine
+}
+
+DreamAdjustment:FilterColor {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:FilterColor
+    src   "Filter Color"
+    // from the engine's zh-Hans
+    text  "过滤颜色"
+    state draft
+}
+
+DreamAdjustment:Gamma {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Gamma
+    src   "Gamma"
+    // from the engine's zh-Hans
+    text  "伽玛"
+    state draft
+}
+
+DreamAdjustment:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamAdjustment:GreenMix {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:GreenMix
+    src   "Green Mix"
+    text  "绿色混合"
+    state machine
+}
+
+DreamAdjustment:Greens {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Greens
+    src   "Greens"
+    text  "绿色"
+    state machine
+}
+
+DreamAdjustment:Highlights {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Highlights
+    src   "Highlights"
+    // from the engine's zh-Hans
+    text  "高亮"
+    state draft
+}
+
+DreamAdjustment:Hue {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Hue
+    src   "Hue"
+    // from the engine's zh-Hans
+    text  "色调"
+    state draft
+}
+
+DreamAdjustment:InputBlack {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:InputBlack
+    src   "Input Black"
+    text  "输入黑色"
+    state machine
+}
+
+DreamAdjustment:InputWhite {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:InputWhite
+    src   "Input White"
+    text  "输入白色"
+    state machine
+}
+
+DreamAdjustment:Intensity {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Intensity
+    src   "Intensity"
+    // from the engine's zh-Hans
+    text  "强度"
+    state draft
+}
+
+DreamAdjustment:Lightness {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Lightness
+    src   "Lightness"
+    // from the engine's zh-Hans
+    text  "Lightness"
+    state draft
+}
+
+DreamAdjustment:LookupTable {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:LookupTable
+    src   "Lookup Table"
+    text  "查找表"
+    state machine
+}
+
+DreamAdjustment:Magentas {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Magentas
+    src   "Magentas"
+    text  "品红"
+    state machine
+}
+
+DreamAdjustment:MasterCurve {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:MasterCurve
+    src   "Master Curve"
+    text  "主曲线"
+    state machine
+}
+
+DreamAdjustment:Midtones {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Midtones
+    src   "Midtones"
+    // from the engine's zh-Hans
+    text  "中间色调"
+    state draft
+}
+
+DreamAdjustment:MixConstants {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:MixConstants
+    src   "Mix Constants"
+    text  "混合常量"
+    state machine
+}
+
+DreamAdjustment:OutputBlack {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:OutputBlack
+    src   "Output Black"
+    text  "输出黑色"
+    state machine
+}
+
+DreamAdjustment:OutputWhite {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:OutputWhite
+    src   "Output White"
+    text  "输出白色"
+    state machine
+}
+
+DreamAdjustment:PosterizeLevels {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:PosterizeLevels
+    src   "Posterize Levels"
+    text  "分级"
+    state machine
+}
+
+DreamAdjustment:RedMix {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:RedMix
+    src   "Red Mix"
+    text  "红色混合"
+    state machine
+}
+
+DreamAdjustment:Reds {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Reds
+    src   "Reds"
+    text  "红色"
+    state machine
+}
+
+DreamAdjustment:Saturation {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Saturation
+    src   "Saturation"
+    // from the engine's zh-Hans
+    text  "饱和度"
+    state draft
+}
+
+DreamAdjustment:Shadows {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Shadows
+    src   "Shadows"
+    // from the engine's zh-Hans
+    text  "阴影"
+    state draft
+}
+
+DreamAdjustment:ThresholdLevel {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:ThresholdLevel
+    src   "Threshold Level"
+    text  "阈值"
+    state machine
+}
+
+DreamAdjustment:TintColor {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:TintColor
+    src   "Tint Color"
+    // from the engine's zh-Hans
+    text  "着色"
+    state draft
+}
+
+DreamAdjustment:TintStrength {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:TintStrength
+    src   "Tint Strength"
+    // from the engine's zh-Hans
+    text  "Tint Strength"
+    state draft
+}
+
+DreamAdjustment:Type {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Type
+    src   "Type"
+    // from the engine's zh-Hans
+    text  "类型"
+    state draft
+}
+
+DreamAdjustment:Vibrance {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Vibrance
+    src   "Vibrance"
+    // from the engine's zh-Hans
+    text  "震动"
+    state draft
+}
+
+DreamAdjustment:VibranceSaturation {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:VibranceSaturation
+    src   "Vibrance Saturation"
+    text  "鲜艳度与饱和度"
+    state machine
+}
+
+DreamAdjustment:Yellows {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Yellows
+    src   "Yellows"
+    text  "黄色"
+    state machine
+}
+
+EDreamAdjustmentType.BlackAndWhite {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:BlackAndWhite
+    src   "Black and White"
+    text  "黑白"
+    state machine
+}
+
+EDreamAdjustmentType.BrightnessContrast {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:BrightnessContrast
+    src   "Brightness Contrast"
+    text  "亮度对比"
+    state machine
+}
+
+EDreamAdjustmentType.ChannelMixer {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:ChannelMixer
+    src   "Channel Mixer"
+    text  "通道混合器"
+    state machine
+}
+
+EDreamAdjustmentType.ColorBalance {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:ColorBalance
+    src   "Color Balance"
+    // from the engine's zh-Hans
+    text  "Color Balance"
+    state draft
+}
+
+EDreamAdjustmentType.Curves {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Curves
+    src   "Curves"
+    // from the engine's zh-Hans
+    text  "曲线"
+    state draft
+}
+
+EDreamAdjustmentType.EDreamAdjustmentType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:EDreamAdjustmentType_MAX
+    src   "EDream Adjustment Type MAX"
+    text  "调整类型最大值"
+    state machine
+}
+
+EDreamAdjustmentType.Exposure {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Exposure
+    src   "Exposure"
+    // from the engine's zh-Hans
+    text  "曝光"
+    state draft
+}
+
+EDreamAdjustmentType.GradientMap {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:GradientMap
+    src   "Gradient Map"
+    text  "渐变映射"
+    state machine
+}
+
+EDreamAdjustmentType.HueSaturation {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:HueSaturation
+    src   "Hue Saturation"
+    text  "色相饱和度"
+    state machine
+}
+
+EDreamAdjustmentType.Invert {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Invert
+    src   "Invert"
+    // from the engine's zh-Hans
+    text  "反转"
+    state draft
+}
+
+EDreamAdjustmentType.Levels {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Levels
+    src   "Levels"
+    // from the engine's zh-Hans
+    text  "关卡"
+    state draft
+}
+
+EDreamAdjustmentType.LookupTable {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:LookupTable
+    src   "Lookup Table"
+    text  "查找表"
+    state machine
+}
+
+EDreamAdjustmentType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamAdjustmentType.PhotoFilter {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:PhotoFilter
+    src   "Photo Filter"
+    text  "照片滤镜"
+    state machine
+}
+
+EDreamAdjustmentType.Posterize {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Posterize
+    src   "Posterize"
+    text  "色阶"
+    state machine
+}
+
+EDreamAdjustmentType.Threshold {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Threshold
+    src   "Threshold"
+    // from the engine's zh-Hans
+    text  "阈值"
+    state draft
+}
+
+EDreamAdjustmentType.Vibrance {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Vibrance
+    src   "Vibrance"
+    // from the engine's zh-Hans
+    text  "震动"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamAdjustment {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment
+    src   "One operation of an adjustment layer (UDreamAdjustmentLayer): its type, and the parameters that type reads. Colours and\nvalues are encoded (sRGB), as the blend modes are: the operations work on what the screen shows."
+    text  "调整图层的一个操作：其类型以及该类型读取的参数。颜色和\n值采用 sRGB 编码，混合模式为：操作作用于屏幕上显示的内容。"
+    state machine
+}
+
+DreamAdjustment:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bEnabled
+    src   "Off, it is left out, as a hidden adjustment is."
+    text  "禁用，不显示，作为隐藏的调整。"
+    state machine
+}
+
+DreamAdjustment:bMonochrome {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bMonochrome
+    src   "Every channel the red output's mix: grey."
+    text  "每个通道的红色输出混合：灰色。"
+    state machine
+}
+
+DreamAdjustment:bPreserveLuminosity {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:bPreserveLuminosity
+    src   "The colour balance and the photo filter keep each colour's luminosity."
+    text  "色彩平衡和照片滤镜保持每个颜色的亮度。"
+    state machine
+}
+
+DreamAdjustment:Curve {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Curve
+    src   "Each channel's curve: R, G and B of a colour curve asset (its A is not read -- a new colour curve's alpha is a constant\n1). A channel with no keys, or no asset, is left as it is."
+    text  "各通道的曲线：颜色曲线资源的 R、G、B（不读取其 A——新颜色曲线的 alpha 为常量\n1）。没有关键点或没有资源的通道保持原样。"
+    state machine
+}
+
+DreamAdjustment:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Gradient
+    src   "Looked up along the gradient's stops from its first (black) to its last (white); its type and angle are not used."
+    text  "沿渐变从第一个色标（黑色）到最后一个色标（白色）进行查找；不使用其类型和角度。"
+    state machine
+}
+
+DreamAdjustment:Hue {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Hue
+    src   "Degrees the hue is turned; with Colorize, the hue every colour is given (0 to 360)."
+    text  "色相旋转的度数；使用着色时，为每个颜色赋予的色相（0 到 360）。"
+    state machine
+}
+
+DreamAdjustment:Lightness {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Lightness
+    src   "-1 black, 0 as it is, 1 white."
+    text  "-1 为黑色，0 保持原样，1 为白色。"
+    state machine
+}
+
+DreamAdjustment:LookupTable {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:LookupTable
+    src   "16 slices of 16 by 16 side by side (256 by 16), blue choosing the slice; read as it is, so leave sRGB off for an encoded table."
+    text  "16 个 16×16 切片并排（256×16），由蓝色通道选择切片；按原样读取，因此对已编码的表请关闭 sRGB。"
+    state machine
+}
+
+DreamAdjustment:MasterCurve {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:MasterCurve
+    src   "The master curve, applied to every channel before its own; none leaves them as they are."
+    text  "主曲线，在每个通道自身的曲线之前应用；未设置主曲线时各通道保持原样。"
+    state machine
+}
+
+DreamAdjustment:RedMix {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:RedMix
+    src   "Each output channel's mix of the red, green and blue inputs, plus its constant."
+    text  "每个输出通道对红、绿、蓝输入的混合，再加上其常量。"
+    state machine
+}
+
+DreamAdjustment:Saturation {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Saturation
+    src   "-1 grey, 0 as it is, 1 twice as saturated; with Colorize, the saturation every colour is given (0 to 1)."
+    text  "-1 为灰色，0 保持原样，1 为两倍饱和度；使用着色时，为每个颜色赋予的饱和度（0 到 1）。"
+    state machine
+}
+
+DreamAdjustment:Shadows {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Shadows
+    src   "Each -1 to 1: towards cyan or red, magenta or green, yellow or blue."
+    text  "每项 -1 到 1：分别偏向青色或红色、品红或绿色、黄色或蓝色。"
+    state machine
+}
+
+DreamAdjustment:TintColor {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:TintColor
+    src   "The tint's colour, given the grey's luminosity, and how much of it."
+    text  "色调的颜色，取灰度的亮度，以及色调的用量。"
+    state machine
+}
+
+EDreamAdjustmentType {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType
+    src   "What an adjustment does to the colours it is given. The numbers are DreamUIAdjust.ush's DREAMUI_ADJUST_*; only appended to."
+    text  "调整对其接收到的颜色所做的处理。数值为 DreamUIAdjust.ush 的 DREAMUI_ADJUST_*；只在其后追加。"
+    state machine
+}
+
+EDreamAdjustmentType.BlackAndWhite {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:BlackAndWhite
+    src   "Grey, each primary and each pair of primaries weighted, optionally tinted."
+    text  "灰度，对每个原色和每对原色加权，可选着色。"
+    state machine
+}
+
+EDreamAdjustmentType.BrightnessContrast {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:BrightnessContrast
+    src   "Brightness shifts every channel; contrast turns the line about middle grey."
+    text  "亮度调整每个通道；对比度调整图像的中间灰调。"
+    state machine
+}
+
+EDreamAdjustmentType.ChannelMixer {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:ChannelMixer
+    src   "Each output channel a mix of the three inputs and a constant."
+    text  "每个输出通道是三个输入和常数的混合。"
+    state machine
+}
+
+EDreamAdjustmentType.ColorBalance {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:ColorBalance
+    src   "Shifts towards red, green or blue in the shadows, the midtones and the highlights."
+    text  "在阴影、中间调和高光区域，分别向红色、绿色或蓝色偏移。"
+    state machine
+}
+
+EDreamAdjustmentType.Curves {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Curves
+    src   "A curve for each channel (a colour curve asset's R, G and B), after a master curve."
+    text  "每个通道使用一条曲线（颜色曲线资产的 R、G 和 B），在主曲线之后。"
+    state machine
+}
+
+EDreamAdjustmentType.Exposure {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Exposure
+    src   "Stops of light, an offset and a gamma, in linear light."
+    text  "线性光中的光圈数、偏移量和伽马值。"
+    state machine
+}
+
+EDreamAdjustmentType.GradientMap {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:GradientMap
+    src   "The luminosity looked up along a gradient."
+    text  "亮度沿渐变查找。"
+    state machine
+}
+
+EDreamAdjustmentType.HueSaturation {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:HueSaturation
+    src   "The hue turned, the saturation scaled, the lightness raised or lowered; or every colour given one hue (Colorize)."
+    text  "色相旋转，饱和度缩放，亮度升高或降低；或者将所有颜色设置为一种色相（Colorize）。"
+    state machine
+}
+
+EDreamAdjustmentType.Levels {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Levels
+    src   "The input range stretched to the output range, with a gamma between."
+    text  "输入范围扩展到输出范围，中间带有伽马值。"
+    state machine
+}
+
+EDreamAdjustmentType.LookupTable {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:LookupTable
+    src   "A lookup table texture in the engine's colour grading layout (256 by 16): the catch-all."
+    text  "引擎颜色校正布局中的查找表纹理（256x16）：通用方案。"
+    state machine
+}
+
+EDreamAdjustmentType.PhotoFilter {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:PhotoFilter
+    src   "A colour filter over the lens: multiplied in at a density."
+    text  "镜头上的颜色滤镜：以一定密度进行乘法混合。"
+    state machine
+}
+
+EDreamAdjustmentType.Posterize {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Posterize
+    src   "Each channel cut to a number of levels."
+    text  "每个通道被截断到一定数量的级别。"
+    state machine
+}
+
+EDreamAdjustmentType.Threshold {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Threshold
+    src   "White where the luminosity reaches the level, black below."
+    text  "当亮度达到级别时，显示白色，低于级别时显示黑色。"
+    state machine
+}
+
+EDreamAdjustmentType.Vibrance {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#EDreamAdjustmentType:Vibrance
+    src   "Saturation raised most where there is least of it, then raised alike."
+    text  "饱和度在颜色最少的地方增加最多，然后在其他地方均匀增加。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Adjustment {
+    at    Source/DreamGUI/Public/Core/DreamUIAdjustment.h#DreamAdjustment:Type
+    src   "Adjustment"
+    // from the engine's zh-Hans
+    text  "调整"
+    state draft
+}

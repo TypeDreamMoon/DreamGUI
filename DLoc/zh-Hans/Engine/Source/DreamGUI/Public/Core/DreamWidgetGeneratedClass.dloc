@@ -1,0 +1,84 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetGeneratedClass {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass
+    src   "Dream Widget Generated Class"
+    text  "Dream控件生成类"
+    state machine
+}
+
+DreamWidgetGeneratedClass:DesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:DesignSize
+    src   "Design Size"
+    text  "设计尺寸"
+    state machine
+}
+
+DreamWidgetGeneratedClass:EachBindings {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:EachBindings
+    src   "Each Bindings"
+    text  "逐项绑定"
+    state machine
+}
+
+DreamWidgetGeneratedClass:EventBindings {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:EventBindings
+    src   "Event Bindings"
+    text  "事件绑定"
+    state machine
+}
+
+DreamWidgetGeneratedClass:PropertyBindings {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:PropertyBindings
+    src   "Property Bindings"
+    // from the engine's zh-Hans
+    text  "属性绑定"
+    state draft
+}
+
+DreamWidgetGeneratedClass:ViewModelSlots {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:ViewModelSlots
+    src   "View Model Slots"
+    text  "视图模型插槽"
+    state machine
+}
+
+DreamWidgetGeneratedClass:WidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:WidgetTree
+    src   "Widget Tree"
+    // from the engine's zh-Hans
+    text  "控件树"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetGeneratedClass {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass
+    src   "The class a DreamUI hierarchy compiles into -- UMG's UWidgetBlueprintGeneratedClass, for DreamUI.\n\nIt carries the authored hierarchy as a template on the class itself, which is the whole point: a\nprefab's hierarchy lived in a binary blob that only its own deserializer could read, so it could\nnever be a type. Here it is an ordinary object graph hanging off the class, instanced per instance\nby FObjectInstancingGraph like any other archetype."
+    text  "DreamUI层级编译成的类——即UMG的UWidgetBlueprintGeneratedClass，也就是DreamUI的控件蓝图生成类。\n\n它把编辑好的层级作为模板保存在类自身上，这正是关键所在：以往预制体的层级\n存放在只有其自身反序列化器才能读取的二进制块中，因此永远无法成为一种类型。\n而在这里，它只是挂在类上的一棵普通对象图，和任何其他原型对象一样，由FObjectInstancingGraph\n按实例逐一实例化。"
+    state machine
+}
+
+DreamWidgetGeneratedClass:DesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:DesignSize
+    src   "Persistent, and deliberately NOT DuplicateTransient where the tree above is. The tree is dropped\non duplication because the copy is about to be handed a freshly generated one; this is a plain\nvalue the compiler copies from the Blueprint's designer data, and a duplicate that never reaches\nthe compiler -- a class copied for reinstancing, above all -- would otherwise fall back to the\ndefault canvas and resize every world-space host built from it."
+    text  "Persistent，并且刻意不设为 DuplicateTransient，而上方的控件树则设为 DuplicateTransient。复制时会丢弃控件树，\n因为副本即将获得一个新生成的控件树；而这是一个普通\n值，由编译器从蓝图的设计器数据中复制，否则，一个永远不会到达\n编译器的副本——尤其是为重新实例化而复制的类——会回退到\n默认画布，并调整由它构建的每个世界空间宿主的大小。"
+    state machine
+}
+
+DreamWidgetGeneratedClass:PropertyBindings {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:PropertyBindings
+    src   "Persistent and DuplicateTransient for the same reasons as WidgetTree."
+    text  "原因与控件树WidgetTree相同：持久保存并标记为DuplicateTransient。"
+    state machine
+}
+
+DreamWidgetGeneratedClass:WidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetGeneratedClass.h#DreamWidgetGeneratedClass:WidgetTree
+    src   "Persistent -- this is the class's data. DuplicateTransient because a duplicated class is about to\nbe recompiled and will be handed a freshly generated tree; carrying the old one over would leave\na copy pointing at an archetype nobody owns. Same reasoning as UMG's."
+    text  "持久保存——这是类自身的数据。标记为DuplicateTransient，是因为复制出的类即将\n重新编译，并会收到一棵新生成的树；把旧的树带过去会让副本\n指向一个无人拥有的原型对象。理由与UMG相同。"
+    state machine
+}

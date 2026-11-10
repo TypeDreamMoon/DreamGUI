@@ -1,0 +1,149 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierLongShadow {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow
+    src   "LongShadow"
+    text  "长阴影"
+    state machine
+}
+
+DreamMeshModifierLongShadow:bMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:bMultiplySourceAlpha
+    src   "Multiply Source Alpha"
+    text  "是否混合源 Alpha"
+    state machine
+}
+
+DreamMeshModifierLongShadow:bUseGradientColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:bUseGradientColor
+    src   "Use Gradient Color"
+    text  "使用渐变颜色"
+    state machine
+}
+
+DreamMeshModifierLongShadow:GetGradientColor:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetGradientColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GetMultiplySourceAlpha:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetMultiplySourceAlpha:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GetShadowColor:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetShadowColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GetShadowSegments:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetShadowSegments:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GetShadowSize:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetShadowSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GetUseGradientColor:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GetUseGradientColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:GradientColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:GradientColor
+    src   "Gradient Color"
+    text  "渐变颜色"
+    state machine
+}
+
+DreamMeshModifierLongShadow:SetGradientColor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetGradientColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:SetMultiplySourceAlpha:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetMultiplySourceAlpha:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:SetShadowColor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetShadowColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:SetShadowSegment:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetShadowSegment:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:SetShadowSize:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetShadowSize:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:SetUseGradientColor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:SetUseGradientColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierLongShadow:ShadowColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:ShadowColor
+    src   "Shadow Color"
+    // from the engine's zh-Hans
+    text  "阴影颜色"
+    state draft
+}
+
+DreamMeshModifierLongShadow:ShadowSegment {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:ShadowSegment
+    src   "Shadow Segment"
+    text  "阴影分段"
+    state machine
+}
+
+DreamMeshModifierLongShadow:ShadowSize {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h#DreamMeshModifierLongShadow:ShadowSize
+    src   "Shadow Size"
+    text  "阴影大小"
+    state machine
+}

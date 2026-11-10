@@ -1,0 +1,63 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+EDreamShapeBlendOperation {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation
+    src   "How a rect block joins the shape its shape blend group makes (UDreamShapeBlendGroup)."
+    text  "矩形块与其形状混合组的形状连接方式 (UDreamShapeBlendGroup)。"
+    state machine
+}
+
+EDreamShapeBlendOperation.Intersect {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Intersect
+    src   "Keeps only where it and the shape meet."
+    text  "仅保留矩形块与形状重叠的部分。"
+    state machine
+}
+
+EDreamShapeBlendOperation.Subtract {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Subtract
+    src   "Cuts itself out of the shape, smoothly."
+    text  "平滑地将矩形块从形状中裁剪出来。"
+    state machine
+}
+
+EDreamShapeBlendOperation.Union {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Union
+    src   "Melts into the shape."
+    text  "平滑地将矩形块融入形状。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+EDreamShapeBlendOperation.EDreamShapeBlendOperation_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:EDreamShapeBlendOperation_MAX
+    src   "EDream Shape Blend Operation MAX"
+    text  "EDream Shape Blend Operation MAX"
+    state machine
+}
+
+EDreamShapeBlendOperation.Intersect {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Intersect
+    src   "Intersect"
+    text  "相交"
+    state machine
+}
+
+EDreamShapeBlendOperation.Subtract {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Subtract
+    src   "Subtract"
+    // from the engine's zh-Hans
+    text  "减"
+    state draft
+}
+
+EDreamShapeBlendOperation.Union {
+    at    Source/DreamGUI/Public/Core/DreamUIShapeBlend.h#EDreamShapeBlendOperation:Union
+    src   "Union"
+    // from the engine's zh-Hans
+    text  "联合"
+    state draft
+}

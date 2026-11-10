@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUITextInputTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITextInputTarget.h#DreamUITextInputTarget
+    src   "Dream UIText Input Target"
+    text  "Dream UI 文本输入目标"
+    state machine
+}

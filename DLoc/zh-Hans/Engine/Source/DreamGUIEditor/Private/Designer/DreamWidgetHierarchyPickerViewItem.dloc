@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetHierarchyPickerViewItem
+
+WidgetMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetHierarchyPickerViewItem.cpp
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+ComponentsMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetHierarchyPickerViewItem.cpp
+    src   "Components"
+    // from the engine's zh-Hans
+    text  "组件"
+    state draft
+}

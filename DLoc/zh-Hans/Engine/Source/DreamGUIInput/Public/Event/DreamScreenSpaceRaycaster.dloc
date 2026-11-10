@@ -1,0 +1,169 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamScreenSpaceRaycaster {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster
+    src   "Dream Screen Space Raycaster"
+    text  "Dream 屏幕空间射线投射器"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:bHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:bHoldToDrag
+    src   "Hold to Drag"
+    text  "按住拖动"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:DragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:DragThreshold
+    src   "Drag Threshold"
+    text  "拖动阈值"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:GetDragThreshold:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetDragThreshold:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:GetHoldToDrag:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetHoldToDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:GetHoldToDragTime:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetHoldToDragTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:GetRootCanvas:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetRootCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:HoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:HoldToDragTime
+    src   "Hold to Drag Time"
+    text  "按住拖动时间"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:RayLength {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:RayLength
+    src   "Ray Length"
+    // from the engine's zh-Hans
+    text  "光线长度"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:SetDragThreshold:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetDragThreshold:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:SetHoldToDrag:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetHoldToDrag:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:SetHoldToDragTime:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetHoldToDragTime:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:SetRayLength:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetRayLength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamScreenSpaceRaycaster:SetRootCanvas:InRootCanvas {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetRootCanvas:InRootCanvas
+    src   "In Root Canvas"
+    text  "根画布"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamScreenSpaceRaycaster {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster
+    src   "Perform a raycaster interaction for ScreenSpaceUI.\nThis component should be placed on a actor which have a DreamCanvas, and RenderMode should set to ScreenSpaceOverlay."
+    text  "执行 ScreenSpaceUI 的射线投射交互。\n此组件应放置在具有 DreamCanvas 的 Actor 上，并且渲染模式应设置为 ScreenSpaceOverlay。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:bHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:bHoldToDrag
+    src   "hold press for a little while to entering drag mode"
+    text  "按住一段时间以进入拖动模式。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:DragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:DragThreshold
+    src   "drag threshold, calculated in target's local space"
+    text  "拖动阈值，以目标对象的局部空间计算。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare
+    src   "DragThresholdSquare taken into the pointer's own units: the authored threshold is in canvas units\nand the pointer is measured in viewport pixels, which differ by exactly the root canvas's scale.\nThis is what ShouldStartDrag compares against."
+    text  "将DragThresholdSquare换算为指针自身的单位：所设阈值以画布为单位，\n而指针以视口像素计量，两者正好相差根画布的缩放。\nShouldStartDrag比较的正是该值。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:HoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:HoldToDragTime
+    src   "hold press for \"holdToDragTime\" to entering drag mode"
+    text  "按住 \"holdToDragTime\" 进入拖动模式。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:RayLength {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:RayLength
+    src   "ray length for line trace hit"
+    text  "射线长度，用于线追踪命中检测。"
+    state machine
+}
+
+DreamScreenSpaceRaycaster:SetRootCanvas {
+    at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:SetRootCanvas
+    src   "Bind the screen-space root used for projection and hit testing."
+    text  "绑定用于投影和命中检测的屏幕空间根。"
+    state machine
+}

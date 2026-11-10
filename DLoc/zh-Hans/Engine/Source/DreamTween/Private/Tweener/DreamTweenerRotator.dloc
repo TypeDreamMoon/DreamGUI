@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerRotator {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerRotator.h#DreamTweenerRotator
+    src   "Dream Tweener Rotator"
+    text  "DreamTweener 旋转器"
+    state machine
+}

@@ -1,0 +1,298 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIPopupLayer {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer
+    src   "Dream UIPopup Layer"
+    text  "Dream UI弹出层"
+    state machine
+}
+
+DreamUIPopupLayer:Elevate:InWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUIPopupLayer:Elevate:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPopupLayer:Restore:InWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Restore:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+EDreamPopupDismissReason.Back {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Back
+    src   "Back"
+    // from the engine's zh-Hans
+    text  "后方"
+    state draft
+}
+
+EDreamPopupDismissReason.EDreamPopupDismissReason_MAX {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:EDreamPopupDismissReason_MAX
+    src   "EDream Popup Dismiss Reason MAX"
+    text  "EDream Popup Dismiss Reason MAX"
+    state machine
+}
+
+EDreamPopupDismissReason.Explicit {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Explicit
+    src   "Explicit"
+    // from the engine's zh-Hans
+    text  "明确"
+    state draft
+}
+
+EDreamPopupDismissReason.OpenerLost {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:OpenerLost
+    src   "Opener Lost"
+    text  "打开者丢失"
+    state machine
+}
+
+EDreamPopupDismissReason.OutsideClick {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:OutsideClick
+    src   "Outside Click"
+    text  "外部单击"
+    state machine
+}
+
+EDreamPopupDismissReason.ParentClosed {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:ParentClosed
+    src   "Parent Closed"
+    text  "父级关闭"
+    state machine
+}
+
+EDreamPopupDismissReason.Replaced {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Replaced
+    src   "Replaced"
+    // from the engine's zh-Hans
+    text  "替换"
+    state draft
+}
+
+EDreamPopupDismissReason.Tab {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Tab
+    src   "Tab"
+    // from the engine's zh-Hans
+    text  "选项卡"
+    state draft
+}
+
+EDreamPopupDismissReason.WorldTeardown {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:WorldTeardown
+    src   "World Teardown"
+    text  "世界销毁"
+    state machine
+}
+
+EDreamPopupOutsideClick.Consume {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:Consume
+    src   "Consume"
+    // from the engine's zh-Hans
+    text  "消耗"
+    state draft
+}
+
+EDreamPopupOutsideClick.EDreamPopupOutsideClick_MAX {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:EDreamPopupOutsideClick_MAX
+    src   "EDream Popup Outside Click MAX"
+    text  "EDream Popup Outside Click MAX"
+    state machine
+}
+
+EDreamPopupOutsideClick.Ignore {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:Ignore
+    src   "Ignore"
+    // from the engine's zh-Hans
+    text  "忽略"
+    state draft
+}
+
+EDreamPopupOutsideClick.PassThrough {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:PassThrough
+    src   "Pass Through"
+    // from the engine's zh-Hans
+    text  "通过"
+    state draft
+}
+
+EDreamPopupTabBehavior.CloseAndContinue {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior:CloseAndContinue
+    src   "Close and Continue"
+    text  "关闭并继续"
+    state machine
+}
+
+EDreamPopupTabBehavior.Cycle {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior:Cycle
+    src   "Cycle"
+    // from the engine's zh-Hans
+    text  "循环"
+    state draft
+}
+
+EDreamPopupTabBehavior.EDreamPopupTabBehavior_MAX {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior:EDreamPopupTabBehavior_MAX
+    src   "EDream Popup Tab Behavior MAX"
+    text  "EDream Popup Tab Behavior MAX"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIPopupLayer {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer
+    src   "The top layer transient UI is lifted to: dropdown lists and menus, as a per-player menu stack (Push, Dismiss).\nElevate and Restore are the lift alone, kept for owners that manage the rest themselves; the paragraphs below describe\nthem, and Push's comment describes what the stack adds: focus return, outside clicks, Back, nesting, and following the\nopener after every frame's layout passes (UDreamUIManagerWorldSubsystem::GetOnLayoutPassesFinished).\n\nUMG's combo list lives in the Slate menu stack -- a popup is not a child of the control that\nopened it, which is what keeps it from being clipped by an ancestor's bounds or counted by an\nancestor's layout. This is that idea for a mesh UI, kept deliberately small: the popup STAYS the\nwidget it already was, and the layer only moves it.\n\nElevate reparents the widget under the root it goes up to with its world position kept, so whatever\npositioning its owner ran while it was still a child -- UUIDropdown::Show anchors its list\nagainst the face -- survives the move pixel for pixel. Restore hands it back to the parent it\ncame from; owners that re-position on every open (Show does) need nothing else.\n\nThe root is the player's screen root for UI on a screen. For a tree drawn into the level -- a panel in world space, a\ncanvas drawn into a target a mesh shows -- it is the top of that tree: its popups stay on it, drawn above its content\nin its own plane, as UMG's widget component keeps its menus in its own window (SVirtualWindow::OnQueryPopupMethod\nanswers UseCurrentWindow). Outside presses, Back, the focus and following the opener work there as on a screen.\n\nWhat Elevate alone does not do: outside clicks, focus, nesting of menus, or following a moving\nanchor while open. Push does all four."
+    text  "顶层瞬态 UI 会提升到：下拉列表与菜单，作为每个玩家的菜单栈（Push、Dismiss）。\nElevate 与 Restore 只负责提升本身，留给自行管理其余部分的拥有者使用；下面的段落介绍\n它们，而 Push 的注释说明了这个栈额外提供的内容：焦点返回、外部单击、返回、嵌套，以及\n每帧布局过程结束后跟随打开者（UDreamUIManagerWorldSubsystem::GetOnLayoutPassesFinished）。\n\nUMG 的组合框列表位于 Slate 菜单栈中——弹出层并不是打开它的那个控件的子项，\n正因如此它不会被祖先的边界裁剪，也不会被祖先的布局计入。\n本功能就是把这一思路用于网格 UI，并刻意保持精简：弹出层仍是\n它原本的那个控件，层只是移动它。\n\nElevate 会在保持世界位置不变的前提下，把控件重新挂到它所提升到的根之下，因此\n其拥有者在它还是子项时所做的任何定位——UUIDropdown::Show 会把它的列表\n锚定在表面上——都会在移动后逐像素保留。Restore 将它交还给\n它来自的父项；每次打开都会重新定位的拥有者（Show 就是如此）无需再做别的。\n\n对于屏幕上的 UI，根就是玩家的屏幕根。对于绘制到关卡中的树——世界空间中的面板、\n绘制到网格所显示目标的画布——根就是那棵树的顶部：它的弹出层留在其上，绘制在内容之上，\n位于自身平面内，正如 UMG 的控件组件把菜单保留在自己的窗口中（SVirtualWindow::OnQueryPopupMethod\n返回 UseCurrentWindow）。外部按下、返回、焦点以及跟随打开者，在这里与在屏幕上一样工作。\n\n仅靠 Elevate 做不到的是：外部单击、焦点、菜单嵌套，以及在打开期间\n跟随移动的锚点。Push 四项全做。"
+    state machine
+}
+
+DreamUIPopupLayer:Elevate {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate
+    src   "Lift InWidget to the top of the root it goes up to, keeping where it is seen: its player's screen root, or -- when\nInWidget's tree is drawn into the level -- the top of that tree. Safe to call on a widget\nalready lifted (a re-open re-anchored it under its owner first only if it was restored, so a\nsecond Elevate with no Restore in between is a no-op). Returns false when there is no root\nto lift to."
+    text  "将 InWidget 提升到它所提升到的根的顶部，并保持其可见位置不变：该玩家的屏幕根，或者——\n当 InWidget 的树绘制到关卡中时——那棵树的顶部。对已经提升过的控件\n调用是安全的（只有在它被 Restore 过之后，重新打开才会先把它重新锚定到其拥有者之下，因此\n中间没有 Restore 的第二次 Elevate 不会产生任何效果）。没有可提升到的根时\n返回 false。"
+    state machine
+}
+
+DreamUIPopupLayer:Restore {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Restore
+    src   "Hand a lifted widget back to the parent Elevate took it from, at the place among its children it had. One still\nopen on the stack (Push) is dismissed first, as its owner closing it would be.\n\nIt goes home as it left: the panel slot it had there is made again with the values it had (Elevate kept a copy --\nsee GetHomeSlot), and the canvas Push sorted it with is undone -- removed when Push added it, its own sorting given\nback when it had one already."
+    text  "把已提升的控件交还给 Elevate 取走它的那个父项，并放回它在子项中原先的位置。仍留在\n栈上打开的那个（Push）会先被关闭，与其拥有者将其关闭时一样。\n\n它按离开时的样子回家：它在那里原有的面板插槽会用当时的数值重新创建（Elevate 保存了一份副本——\n参见 GetHomeSlot），Push 对它做的画布排序会被撤销——画布是 Push 添加的则移除，本来就有则\n恢复其自身的排序。"
+    state machine
+}
+
+EDreamPopupDismissReason {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason
+    src   "Why a popup closed, as its owner's dismissed callback is told."
+    text  "弹出窗口关闭的原因，将告知其所有者的关闭回调。"
+    state machine
+}
+
+EDreamPopupDismissReason.Back {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Back
+    src   "Back or Escape, with it on top of its player's popups."
+    text  "当它位于其玩家的弹出窗口最上层时，按下返回键或 Esc。"
+    state machine
+}
+
+EDreamPopupDismissReason.Explicit {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Explicit
+    src   "Its owner closed it (UDreamUIPopupLayer::Dismiss): a row chosen, a toggle, code."
+    text  "其所有者将其关闭（UDreamUIPopupLayer::Dismiss）：选中某一行、切换开关或代码调用。"
+    state machine
+}
+
+EDreamPopupDismissReason.OpenerLost {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:OpenerLost
+    src   "Its opener stopped being usable: destroyed, out of play, inactive, hidden or no longer interactable."
+    text  "其打开者变得不可用：被销毁、离开游戏、处于非活动状态、被隐藏或不再可交互。"
+    state machine
+}
+
+EDreamPopupDismissReason.OutsideClick {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:OutsideClick
+    src   "A press landed outside it."
+    text  "在其外部按下。"
+    state machine
+}
+
+EDreamPopupDismissReason.ParentClosed {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:ParentClosed
+    src   "Its parent popup closed, which closes its children first."
+    text  "其父弹出窗口关闭，这会先关闭其子项。"
+    state machine
+}
+
+EDreamPopupDismissReason.Replaced {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Replaced
+    src   "Another popup took its place: a new top-level popup of the same player, or a sibling under the same parent. Also a\nmodal shown for the player (UDreamUIModalSubsystem), which comes up in front of all of their popups and closes them."
+    text  "另一个弹出层取代了它：同一玩家的新顶层弹出层，或同一父级下的同级项。还有为玩家显示的\n模态（UDreamUIModalSubsystem），它会出现在该玩家的所有弹出层之前并关闭它们。"
+    state machine
+}
+
+EDreamPopupDismissReason.Tab {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:Tab
+    src   "Tab or Shift+Tab, in a popup that closes on Tab (EDreamPopupTabBehavior::CloseAndContinue): every popup of the player\nclosed, top down, and the Tab goes on from the bottom one's opener. An owner commits what was highlighted, as a\ndropdown with bTabCommitsHighlightedRow does. Appended."
+    text  "在按下 Tab 即关闭的弹出层（EDreamPopupTabBehavior::CloseAndContinue）中按 Tab 或 Shift+Tab：该玩家的所有弹出层\n自上而下关闭，Tab 从最底层弹出层的打开者继续。拥有者会提交高亮项，如同带\nbTabCommitsHighlightedRow 的下拉列表那样。追加。"
+    state machine
+}
+
+EDreamPopupDismissReason.WorldTeardown {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupDismissReason:WorldTeardown
+    src   "The world is coming down."
+    text  "世界正在销毁。"
+    state machine
+}
+
+EDreamPopupOutsideClick {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick
+    src   "What a press outside an open popup -- and outside its child popups -- does to it."
+    text  "在打开的弹出窗口及其子弹出窗口外部按下时，对它执行的操作。"
+    state machine
+}
+
+EDreamPopupOutsideClick.Consume {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:Consume
+    src   "Dismisses it, and the press goes no further: what DreamGUI's dropdowns and menus always did."
+    text  "将其关闭，且该按下事件不再传递：这是 DreamGUI 的下拉列表和菜单一直以来的行为。"
+    state machine
+}
+
+EDreamPopupOutsideClick.Ignore {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:Ignore
+    src   "Nothing: it stays open until its owner, Back, its parent or its opener closes it."
+    text  "不执行任何操作：它会保持打开，直到其所有者、返回键、其父级或其打开者将其关闭。"
+    state machine
+}
+
+EDreamPopupOutsideClick.PassThrough {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupOutsideClick:PassThrough
+    src   "Dismisses it, and the press then reaches whatever is under the pointer, as Slate's menus let it."
+    text  "点击外部区域可关闭，然后鼠标点击会传递到其下方的元素，就像 Slate 中的菜单一样。"
+    state machine
+}
+
+EDreamPopupTabBehavior {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior
+    src   "What Tab does inside an open popup (FDreamPopupParams::TabBehavior)."
+    text  "Tab 键在打开的弹出窗口中的行为 (FDreamPopupParams::TabBehavior)。"
+    state machine
+}
+
+EDreamPopupTabBehavior.CloseAndContinue {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior:CloseAndContinue
+    src   "Tab closes the player's popups (EDreamPopupDismissReason::Tab), gives the focus back to the opener and takes its step from there: dropdown lists and menus."
+    text  "Tab 键关闭玩家的弹出窗口 (EDreamPopupDismissReason::Tab)，将焦点返回到触发者，并继续执行后续操作：例如下拉列表和菜单。"
+    state machine
+}
+
+EDreamPopupTabBehavior.Cycle {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#EDreamPopupTabBehavior:Cycle
+    src   "Tab goes round the popup's own controls, as in a dialog: it never leaves."
+    text  "Tab 键在弹出窗口的控件之间循环，就像在对话框中一样：它不会离开弹出窗口。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Popup {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate
+    src   "DreamGUI|Popup"
+    text  "DreamGUI|Popup"
+    state machine
+}

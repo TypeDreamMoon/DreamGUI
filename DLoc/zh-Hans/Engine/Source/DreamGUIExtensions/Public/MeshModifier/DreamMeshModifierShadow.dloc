@@ -1,0 +1,82 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierShadow {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow
+    src   "Shadow"
+    // from the engine's zh-Hans
+    text  "阴影"
+    state draft
+}
+
+DreamMeshModifierShadow:bMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:bMultiplySourceAlpha
+    src   "Multiply Source Alpha"
+    text  "是否混合源 Alpha"
+    state machine
+}
+
+DreamMeshModifierShadow:GetMultiplySourceAlpha:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:GetMultiplySourceAlpha:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierShadow:GetShadowColor:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:GetShadowColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierShadow:GetShadowOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:GetShadowOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierShadow:SetMultiplySourceAlpha:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:SetMultiplySourceAlpha:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierShadow:SetShadowColor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:SetShadowColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierShadow:SetShadowOffset:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:SetShadowOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierShadow:ShadowColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:ShadowColor
+    src   "Shadow Color"
+    // from the engine's zh-Hans
+    text  "阴影颜色"
+    state draft
+}
+
+DreamMeshModifierShadow:ShadowOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h#DreamMeshModifierShadow:ShadowOffset
+    src   "Shadow Offset"
+    // from the engine's zh-Hans
+    text  "阴影偏移"
+    state draft
+}

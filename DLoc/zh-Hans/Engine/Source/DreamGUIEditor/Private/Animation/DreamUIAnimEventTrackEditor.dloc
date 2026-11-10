@@ -1,0 +1,24 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAnimEventTrackEditor
+
+AddEventTrack {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUIAnimEventTrackEditor.cpp
+    src   "DreamUI Event"
+    text  "DreamUI 事件"
+    state machine
+}
+
+AddEventTrackTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUIAnimEventTrackEditor.cpp
+    src   "A row of named triggers, broadcast through the sequence component's On Animation Event while the animation plays."
+    text  "一排命名触发器，在动画播放时通过序列组件的 On Animation Event 广播。"
+    state machine
+}
+
+AddEventTrack_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUIAnimEventTrackEditor.cpp
+    src   "Add DreamUI Event Track"
+    text  "添加 DreamUI 事件轨道"
+    state machine
+}

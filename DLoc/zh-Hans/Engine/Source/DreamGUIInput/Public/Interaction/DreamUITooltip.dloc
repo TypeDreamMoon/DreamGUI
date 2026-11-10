@@ -1,0 +1,172 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUITooltipSourceInterface {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface
+    src   "Dream UITooltip Source Interface"
+    text  "Dream UITooltip源接口"
+    state machine
+}
+
+DreamUITooltipSourceInterface:GetTooltipWidgetClass:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface:GetTooltipWidgetClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUITooltipSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem
+    src   "Dream UITooltip Subsystem"
+    text  "Dream UITooltip子系统"
+    state machine
+}
+
+DreamUITooltipSubsystem:Get:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:Get:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUITooltipSubsystem:Get:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:Get:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUITooltipSubsystem:HideTooltipForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltipForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUITooltipSubsystem:ShowTooltipFor:InSource {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:ShowTooltipFor:InSource
+    src   "In Source"
+    // from the engine's zh-Hans
+    text  "输入源"
+    state draft
+}
+
+DreamUITooltipSubsystem:UserStates {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:UserStates
+    src   "User States"
+    text  "用户状态"
+    state machine
+}
+
+DreamUITooltipUserState {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState
+    src   "Dream UITooltip User State"
+    text  "Dream UITooltip用户状态"
+    state machine
+}
+
+DreamUITooltipUserState:BubbleText {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:BubbleText
+    src   "Bubble Text"
+    text  "气泡文本"
+    state machine
+}
+
+DreamUITooltipUserState:CustomTooltip {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:CustomTooltip
+    src   "Custom Tooltip"
+    text  "自定义工具提示"
+    state machine
+}
+
+DreamUITooltipUserState:TooltipHolder {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:TooltipHolder
+    src   "Tooltip Holder"
+    text  "工具提示持有者"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUITooltipSourceInterface:GetTooltipWidgetClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface:GetTooltipWidgetClass
+    src   "The user widget class to show as this widget's tooltip. Null means \"use ToolTipText\"."
+    text  "要用作此控件工具提示的用户控件类。为null表示“使用ToolTipText”。"
+    state machine
+}
+
+DreamUITooltipSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem
+    src   "Renders ToolTipText. The field, its localization and its FieldNotify entry all existed; nothing in the framework\never DREW one until this.\n\nOne service per world, one tooltip per player, driven by the players' own events rather than per-widget opt-in:\nhover-enter arms a dwell timer, the timer shows a bubble (or the widget class the source's interface names), the\nbubble follows the live pointer, and exit / press / drag / input-type change hides it. The bubble lives on its\nown canvas above the screen stack's sort band and is raycast-disabled throughout -- a tooltip that can steal the\npointer hides itself forever. Each player's tooltip is theirs: a second player's hover neither moves nor hides\nthe first player's bubble. Within a player it follows one pointer, the one that last arrived at something with a\ntooltip; another of the player's pointers passing over nothing leaves it alone. A finger is never that pointer, as a\ntouch is never Slate's cursor: a tap or a held finger brings no bubble up, a finger dragged onto a widget arms none,\nand a finger's press only takes down a bubble that is up and restarts its dwell."
+    text  "渲染ToolTipText。该字段、其本地化及其FieldNotify条目一直存在；在此之前，框架中\n从未绘制过它。\n\n每个世界一个服务，每个玩家一个工具提示，由玩家自身的事件驱动，而非每个控件单独启用：\n悬停进入会启动停留计时器，计时器显示气泡（或源的接口所指定的控件类），\n气泡跟随实时指针，而退出/按下/拖动/输入类型变化会将其隐藏。气泡位于自己的\n画布上，处于屏幕堆栈排序带之上，并且全程禁用射线检测——会抢走\n指针的工具提示会永远隐藏自己。每个玩家的工具提示归其自己：第二个玩家的悬停既不会移动也不会隐藏\n第一个玩家的气泡。在一个玩家内部，它只跟随一个指针，即最后到达带有\n工具提示的对象的那个指针；该玩家的其他指针经过空白处不会影响它。手指永远不是那个指针，正如\n触摸永远不是Slate的光标：轻点或按住手指不会弹出气泡，手指被拖到控件上不会启动任何计时，\n而手指按下只会关闭已经弹出的气泡并重新开始其停留计时。"
+    state machine
+}
+
+DreamUITooltipSubsystem:HideTooltip {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltip
+    src   "Hide whatever is showing for every player and restart their dwells. For code that just changed what is under the pointer."
+    text  "隐藏每个玩家当前显示的所有内容并重新开始他们的停留计时。适用于刚刚改变了指针下方内容的代码。"
+    state machine
+}
+
+DreamUITooltipSubsystem:HideTooltipForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltipForUser
+    src   "Hide player InUserIndex's tooltip and restart their dwell."
+    text  "隐藏玩家InUserIndex的工具提示并重新开始其停留计时。"
+    state machine
+}
+
+DreamUITooltipSubsystem:ShowTooltipFor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:ShowTooltipFor
+    src   "Show InSource's tooltip right now, to the player who owns InSource, as though its dwell had just elapsed.\nDoes nothing for a source that offers neither ToolTipText nor a tooltip widget class."
+    text  "立即向拥有InSource的玩家显示InSource的工具提示，就像其停留计时刚刚到期一样。\n对于既不提供ToolTipText也不提供工具提示控件类的源，此操作不做任何事。"
+    state machine
+}
+
+DreamUITooltipSubsystem:UserStates {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:UserStates
+    src   "Each player's tooltip, by player index."
+    text  "每个玩家的提示文本，按玩家索引排序。"
+    state machine
+}
+
+DreamUITooltipUserState {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState
+    src   "One player's tooltip: what its dwell is armed for, and the bubble showing for it."
+    text  "一个玩家的提示文本：其激活状态和显示的提示框。"
+    state machine
+}
+
+DreamUITooltipUserState:BubbleText {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:BubbleText
+    src   "The built-in bubble's text visual, when the text path is showing."
+    text  "内置提示框的文本显示，当文本路径显示时。"
+    state machine
+}
+
+DreamUITooltipUserState:CustomTooltip {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:CustomTooltip
+    src   "The instanced custom tooltip, when the interface path is showing."
+    text  "实例化的自定义提示框，当界面路径显示时。"
+    state machine
+}
+
+DreamUITooltipUserState:TooltipHolder {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipUserState:TooltipHolder
+    src   "The positioned widget: its own canvas, raycast-disabled, parented to the host."
+    text  "定位的控件：其自身的画布，禁用射线投射，父级为宿主。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Tooltip {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:Get
+    src   "DreamGUI|Tooltip"
+    text  "DreamGUI|Tooltip"
+    state machine
+}

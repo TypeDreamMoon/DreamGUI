@@ -1,0 +1,176 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRing {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing
+    src   "Dream Ring"
+    text  "梦境环"
+    state machine
+}
+
+DreamRing:CurrentPointArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:CurrentPointArray
+    src   "Current Point Array"
+    text  "当前点数组"
+    state machine
+}
+
+DreamRing:EndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngle
+    src   "End Angle"
+    // from the engine's zh-Hans
+    text  "结束角"
+    state draft
+}
+
+DreamRing:EndAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRing:EndAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRing:EndAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamRing:EndAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRing:EndAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRing:GetEndAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetEndAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRing:GetSegment:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetSegment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRing:GetStartAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetStartAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRing:Segment {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:Segment
+    src   "Segment"
+    // from the engine's zh-Hans
+    text  "分段"
+    state draft
+}
+
+DreamRing:SetEndAngle:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetEndAngle:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+DreamRing:SetSegment:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetSegment:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+DreamRing:SetStartAngle:newValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetStartAngle:newValue
+    src   "New Value"
+    // from the engine's zh-Hans
+    text  "新值"
+    state draft
+}
+
+DreamRing:StartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngle
+    src   "Start Angle"
+    // from the engine's zh-Hans
+    text  "开始角"
+    state draft
+}
+
+DreamRing:StartAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamRing:StartAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamRing:StartAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamRing:StartAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamRing:StartAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamRing:Segment {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:Segment
+    src   "line segment"
+    text  "线段"
+    state machine
+}

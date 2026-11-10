@@ -1,0 +1,59 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIEachAdapter {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter
+    src   "Dream UIEach Adapter"
+    text  "Dream UIEach适配器"
+    state machine
+}
+
+DreamUIEachAdapter:Items {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:Items
+    src   "Items"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamUIEachAdapter:Owner {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:Owner
+    src   "Owner"
+    // from the engine's zh-Hans
+    text  "拥有者"
+    state draft
+}
+
+DreamUIEachAdapter:View {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:View
+    src   "View"
+    // from the engine's zh-Hans
+    text  "视图"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIEachAdapter {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter
+    src   "The data source an `each` block becomes: it feeds the host's recyclable view its item count and,\nper cell, applies the block's item bindings -- read the member off the item object, push it\nthrough the target's setter, addressed inside the cell's cloned subtree by display name.\n\nOwned by the user widget that resolved the binding; one adapter per `each`. Refresh() re-reads\nthe source (function call or array property, both by reflection, on the user widget or -- with a\nSourcePath -- on the object the path reaches) and tells the view; the OWNER calls it when the source\nannounces a change, or anything along its path does.\n\nPer cell, beside the values: a watcher on the cell's item, so a member the item announces is written\nonto that cell alone when it changes, and the routes of the block's `-> Item.Func` lines, so the\ncell's button calls the cell's item. SetCell moves both when the view recycles a cell for another\nrow -- the old item's routes off, then the new item's on (FDreamUIEntryRows, the core's half of it,\nshared with `for`)."
+    text  "`each` 块所对应的数据源：它为宿主的可回收视图提供条目数，并按\n单元格应用该块的条目绑定——从条目对象上读取成员，将其经过\n目标的 setter 写入，在单元格的克隆子树内按显示名寻址。\n\n由解析该绑定的用户控件持有；每个 `each` 一个适配器。Refresh() 重新读取\n源（函数调用或数组属性，均通过反射，作用于用户控件，或在指定\nSourcePath 时作用于路径所到达的对象）并通知视图；当源或路径上任一\n环节宣告变更时，由 OWNER 调用它。\n\n每个单元格除值之外还有：单元格条目的监视器，使条目宣告的成员变更时只写入\n该单元格；以及块中 `-> Item.Func` 行的路由，使\n单元格的按钮调用单元格自身的条目。视图将单元格复用于另一\n行时，SetCell 会同时迁移两者——先解除旧条目的路由，再挂上新条目的\n路由（FDreamUIEntryRows，核心侧的那一半，与 `for` 共用）。"
+    state machine
+}
+
+DreamUIEachAdapter:Refresh {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:Refresh
+    src   "Re-read the source and update the view. Safe to call any time after Initialize."
+    text  "重新读取源并更新视图。在 Initialize 之后任何时间调用都是安全的。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Each {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:Refresh
+    src   "DreamGUI|Each"
+    text  "DreamGUI|Each"
+    state machine
+}

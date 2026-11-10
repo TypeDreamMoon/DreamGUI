@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGradientAsset {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset
+    src   "Dream Gradient"
+    text  "渐变资源"
+    state machine
+}
+
+DreamGradientAsset:GetGradient:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:GetGradient:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamGradientAsset:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamGradientAsset:SetGradient:InGradient {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:SetGradient:InGradient
+    src   "In Gradient"
+    text  "输入渐变"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGradientAsset {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset
+    src   "A gradient kept as an asset, for a project's shared looks: gold titles, a rarity's colours, a shimmer band. A text's\npaint names one as its Preset (FDreamTextPaint) and paints with its gradient; a rich-text tag names one through a\ncustom style's entry. Editing it repaints nothing: every text painting with it keeps its gradient row, which is written\nagain (OnGradientChanged).\n\nGradients a project would rather keep as text live in the project settings instead (UDreamGUISettings::GradientPresets)."
+    text  "作为资源保存的渐变，用于项目共享的外观：金色标题、稀有度配色、微光条带。文本的\n绘制会把其中一个指定为预设(FDreamTextPaint)，并用其渐变绘制；富文本标签则通过\n自定义样式的条目指定其中一个。编辑它不会重绘任何内容：每个用它绘制的文本都会\n保留其渐变行，该行会被重新写入(OnGradientChanged)。\n\n项目更希望以文本形式保留的渐变则存放在项目设置中(UDreamGUISettings::GradientPresets)。"
+    state machine
+}
+
+DreamGradientAsset:SetGradient {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:SetGradient
+    src   "Replace the gradient, and tell every text painting with it (OnGradientChanged)."
+    text  "替换渐变，并通知所有使用该渐变的文本 (OnGradientChanged)。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Paint {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:GetGradient
+    src   "DreamGUI|Paint"
+    text  "DreamGUI|绘制"
+    state machine
+}

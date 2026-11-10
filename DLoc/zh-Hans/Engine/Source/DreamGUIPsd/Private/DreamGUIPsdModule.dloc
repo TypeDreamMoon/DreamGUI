@@ -1,0 +1,60 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIPsd
+
+Imported {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Imported {0}"
+    // from the engine's zh-Hans
+    text  "已导入{0}"
+    state draft
+}
+
+NotImported {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "The layered document was not imported"
+    text  "分层文档导入失败。"
+    state machine
+}
+
+PickDocument {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Import a layered document as a DreamUI widget"
+    text  "将分层文档导入为 DreamUI 控件。"
+    state machine
+}
+
+DreamGUISection {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "DreamGUI"
+    text  "DreamGUI 资源"
+    state machine
+}
+
+ImportLayeredDocument {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Import Layered Document as DreamUI Widget..."
+    text  "将分层文档导入为 DreamUI 控件..."
+    state machine
+}
+
+ImportLayeredDocumentTip {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Read a .psd or .psb and make a DreamUI widget Blueprint of its layers, a .dui and textures."
+    text  "读取 .psd 或 .psb 文件，并创建其图层的 DreamUI 控件 蓝图、.dui 文件和纹理。"
+    state machine
+}
+
+ReimportLayeredDocument {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Reimport Layered Document"
+    text  "重新导入分层文档。"
+    state machine
+}
+
+ReimportLayeredDocumentTip {
+    at    Source/DreamGUIPsd/Private/DreamGUIPsdModule.cpp
+    src   "Import the document again into the .dui it made: the importer's lines are rewritten, everything you added is kept. Only for a Blueprint a layered document import made."
+    text  "将文档再次导入到其创建的 .dui 文件中：导入器的代码将被重写，您添加的所有内容都将被保留。仅适用于分层文档导入的 蓝图。"
+    state machine
+}

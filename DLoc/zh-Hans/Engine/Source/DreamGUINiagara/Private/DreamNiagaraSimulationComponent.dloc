@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamNiagaraSimulationComponent {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraSimulationComponent.h#DreamNiagaraSimulationComponent
+    src   "Dream Niagara Simulation Component"
+    text  "Dream Niagara 模拟组件"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamNiagaraSimulationComponent {
+    at    Source/DreamGUINiagara/Private/DreamNiagaraSimulationComponent.h#DreamNiagaraSimulationComponent
+    src   "What a NiagaraSystem visual simulates its system with: a Niagara component the scene is given no proxy for, so nothing of\nit is ever drawn in the world. DreamGUI draws its particles, on the canvas.\n\nTurning a plain component's rendering off does not keep it out of the picture: Niagara hands that flag to the component's\nproxy only as the component ticks, and the proxy made when the component is activated draws the frame before -- a burst's\nwhole system, lit, in the world behind the UI."
+    text  "NiagaraSystem 可视化用什么来模拟其系统：一个没有向场景提供代理的 Niagara 组件，因此它的任何内容都不会\n绘制在世界中。DreamGUI 在画布上绘制其粒子。\n\n关闭普通组件的渲染并不能让它不出现在画面中：Niagara 只在组件 tick 时把该标志传给组件的\n代理，而组件激活时创建的代理绘制的是上一帧——一次 burst 的\n整个系统，带光照，出现在 UI 背后的世界里。"
+    state machine
+}

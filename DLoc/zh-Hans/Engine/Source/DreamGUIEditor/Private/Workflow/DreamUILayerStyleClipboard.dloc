@@ -1,0 +1,154 @@
+dloc 1
+culture zh-Hans
+namespace DreamUILayerStyleClipboard
+
+NoSpelling {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "the .dui has no name for a layer style"
+    text  "该.dui文件中没有图层样式的名称"
+    state machine
+}
+
+PartStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+PartBlending {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "blend mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+PartMask {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+PartSeparator {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   ", "
+    // from the engine's zh-Hans
+    text  ", "
+    state draft
+}
+
+LayerStyleSection {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}
+
+EditLayerStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Layer Style..."
+    text  "图层样式..."
+    state machine
+}
+
+EditLayerStyleTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Edit the selected widgets' layer style in the Layer Style dialog: every effect, previewed on the widgets, written when you press OK."
+    text  "在“图层样式”对话框中编辑所选控件的图层样式：每个效果都会在控件上预览，按下“确定”后写入。"
+    state machine
+}
+
+CopyLayerStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Copy Layer Style"
+    text  "复制图层样式"
+    state machine
+}
+
+CopyLayerStyleTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Copy the selected widget's layer style -- and its blend mode and mask, as Copy Includes says -- as lines of .dui. Paste them onto other widgets, in this Blueprint or another, or into a .dui."
+    text  "将所选控件的图层样式（以及“复制包含”所指定的混合模式和蒙版）复制为.dui中的行。再将其粘贴到其他控件上（此蓝图或其他蓝图中），或粘贴到.dui中。"
+    state machine
+}
+
+PasteLayerStyleParts {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Paste Layer Style ({0})"
+    text  "粘贴图层样式({0})"
+    state machine
+}
+
+PasteLayerStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Paste Layer Style"
+    text  "粘贴图层样式"
+    state machine
+}
+
+PasteLayerStyleTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Write the copied layer style onto every selected widget, in one undo step: each widget's own layer style, added where it has none, and the blend mode and mask when the copy carries them."
+    text  "将复制的图层样式写入每个所选控件，作为一步撤销：各控件自身的图层样式会在其没有时添加，若复制内容带有混合模式和蒙版，则一并写入。"
+    state machine
+}
+
+CopyIncludes {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Copy Includes"
+    text  "复制包含"
+    state machine
+}
+
+CopyIncludesTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "What Copy Layer Style takes along with the style. Remembered for next time."
+    text  "复制图层样式时随样式一并复制的内容。会记住以供下次使用。"
+    state machine
+}
+
+IncludeBlending {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Blend Mode and Opacity"
+    text  "混合模式和不透明度"
+    state machine
+}
+
+IncludeBlendingTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "The element's blend mode and the widget's opacity."
+    text  "元素的混合模式以及控件的不透明度。"
+    state machine
+}
+
+IncludeMask {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Mask and Clipping"
+    text  "遮罩和裁剪"
+    state machine
+}
+
+IncludeMaskTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "The widget's clip, its corner radius and margin, its clip mask, and clip-to-layer-below."
+    text  "控件的裁剪、圆角半径和边距、裁剪遮罩以及是否裁剪到下层。"
+    state machine
+}
+
+PasteLayerStyles {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Paste Layer Style onto Widgets"
+    text  "粘贴图层样式到控件"
+    state machine
+}
+
+PasteLayerStyleTx {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleClipboard.cpp
+    src   "Paste Layer Style"
+    text  "粘贴图层样式"
+    state machine
+}

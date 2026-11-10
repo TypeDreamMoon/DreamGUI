@@ -1,0 +1,1434 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+EDreamScrollCoordinateMode {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode
+    src   "EDreamUIScrollDestination and EDreamUIScrollWhenFocusChanges used to be declared here, and moved to\nDreamScrollTypes.h when the layout container needed to speak them too: a behaviour and a layout\ncontainer cannot include each other, and the question is neither one's property."
+    text  "EDreamUIScrollDestination 和 EDreamUIScrollWhenFocusChanges 过去在此处声明，后来布局容器也需要用到它们，\n便移到了 DreamScrollTypes.h：行为与布局容器\n不能互相包含，而这个问题也不属于任何一方的属性。"
+    state machine
+}
+
+EDreamScrollCoordinateMode.AnchoredPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode:AnchoredPosition
+    src   "RectTransform-style offset that remains stable across anchors and pivots."
+    text  "RectTransform 风格的偏移，在不同锚点和轴心之间保持稳定。"
+    state machine
+}
+
+EDreamScrollCoordinateMode.RelativeLocation {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode:RelativeLocation
+    src   "Backward-compatible raw component location used by legacy DreamGUI prefabs."
+    text  "向后兼容的原始组件位置，供旧版 DreamGUI 预制体使用。"
+    state machine
+}
+
+UIScrollView:AllowEventBubbleUp {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:AllowEventBubbleUp
+    src   "inherited events of this component can bubble up?"
+    text  "此组件继承的事件是否可向上冒泡？"
+    state machine
+}
+
+UIScrollView:AnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:AnalogMouseWheelKey
+    src   "The analog key that acts as this view's mouse wheel -- UMG's AnalogMouseWheelKey.\n\nInvalid (the default) means \"whatever the input preset already routes here\", which is the right\nstick on both axes and therefore exactly today's behaviour. Naming a key narrows it to that key:\nthe preset only binds the right stick's two axes, so a view that names one of them scrolls from\nthat axis alone, and a view that names anything else scrolls from a binding the project adds."
+    text  "充当此视图鼠标滚轮的模拟键——即 UMG 的 AnalogMouseWheelKey。\n\n无效（默认值）表示“输入预设已经路由到这里的任何输入”，也就是两个轴上的右摇杆，\n因而与当前行为完全一致。指定某个键会将其收窄到该键：预设只绑定右摇杆的两个轴，\n因此指定其中一个轴的视图仅从该轴滚动，而指定其他任何键的视图\n则从项目添加的绑定滚动。"
+    state machine
+}
+
+UIScrollView:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAllowOverscroll
+    src   "Whether the content may be pulled past an end and spring back -- UMG's AllowOverscroll.\n\nOff does NOT mean OutOfRangeDamper is zero for good: the damper stays the author's number and\nthis is the switch in front of it, so turning overscroll back on restores whatever feel was\ntuned. Everything that reads the damper goes through GetEffectiveOutOfRangeDamper."
+    text  "内容是否可以被拉过末端并弹回——即 UMG 的 AllowOverscroll。\n\n关闭并不表示 OutOfRangeDamper 永久为零：阻尼值仍是作者设定的数字，\n这只是它前面的开关，因此重新开启过卷会恢复此前调好的手感。\n所有读取阻尼的地方都经过 GetEffectiveOutOfRangeDamper。"
+    state machine
+}
+
+UIScrollView:bAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAllowRightClickDragScrolling
+    src   "Whether a drag with the RIGHT button scrolls this view -- UMG's bAllowRightClickDragScrolling.\nOff leaves the right button to whatever wants it for a context menu. On, the drag scrolls from\nthe press, the move that crossed the drag threshold included, as SScrollBox's does; the left\nbutton and a finger start scrolling from where the drag was recognised."
+    text  "使用右键拖动是否滚动此视图——即 UMG 的 bAllowRightClickDragScrolling。\n关闭时，右键留给任何需要它打开上下文菜单的地方。开启时，拖动从按下时就开始滚动，\n包括越过拖动阈值的那次移动，与 SScrollBox 的行为一致；左键和手指\n则从识别出拖动的位置开始滚动。"
+    state machine
+}
+
+UIScrollView:bAnimateTouchScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAnimateTouchScrolling
+    src   "Whether a TOUCH drag eases to a stop like the wheel does -- UMG's bInEnableTouchAnimatedScrolling.\n\nSeparate from bAnimateWheelScrolling because a finger already carries its own momentum: gliding\na gesture that was never discrete is a second ease on top of the one the player made."
+    text  "触摸拖动是否像滚轮一样缓动停止——即 UMG 的 bInEnableTouchAnimatedScrolling。\n\n与 bAnimateWheelScrolling 分开，因为手指本身已带有惯性：让一个从来不是离散的手势滑行，\n是在玩家自己做出的缓动之上再加一层缓动。"
+    state machine
+}
+
+UIScrollView:bAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAnimateWheelScrolling
+    src   "A wheel notch GLIDES to its destination instead of teleporting -- UMG's AnimateWheelScrolling.\n\nOff by default, which is the behaviour every existing view already has: turning it on for\neveryone would change how every list in every project reads under the wheel. It uses the same\neasing ScrollTo does, so a notch and a programmatic scroll move the content one way."
+    text  "滚轮的一格会滑行到目标位置，而不是瞬移——即 UMG 的 AnimateWheelScrolling。\n\n默认关闭，这也是每个现有视图已经具有的行为：如果对所有人开启，\n会改变每个项目中每个列表在滚轮下的手感。它使用与 ScrollTo 相同的缓动，\n因此滚轮的一格和程序化滚动会以相同方式移动内容。"
+    state machine
+}
+
+UIScrollView:bBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bBackPadScrolling
+    src   "A whole window of empty space BEFORE the content, so the first item can be scrolled all the way\nto the trailing edge -- UMG's BackPadScrolling, and Slate's arithmetic (a full view, not half).\n\nBoth pads move the point the offset is measured from, which is why GetStartAlignedPosition owns\nthem rather than each caller adding its own term: the ranges, the progress and the reveal maths\nall read that one function, so they cannot disagree about where zero is."
+    text  "在内容之前留出整整一屏的空白，使第一个项可以一直滚动到尾部边缘——即 UMG 的 BackPadScrolling，\n采用 Slate 的算法（一整屏，而非半屏）。\n\n两个填充都会移动偏移量的测量原点，因此由 GetStartAlignedPosition 统一处理，\n而不是让每个调用方各自增加一项：范围、进度和显现计算\n都读取同一个函数，所以它们不会对零点位置产生分歧。"
+    state machine
+}
+
+UIScrollView:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bEnableTouchScrolling
+    src   "Whether a TOUCH drag scrolls this view -- UMG's bEnableTouchScrolling. A mouse drag is unaffected."
+    text  "触摸拖动是否滚动此视图——即 UMG 的 bEnableTouchScrolling。鼠标拖动不受影响。"
+    state machine
+}
+
+UIScrollView:bFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bFrontPadScrolling
+    src   "A whole window of empty space AFTER the content -- UMG's FrontPadScrolling."
+    text  "在内容之后留出整整一屏的空白——即 UMG 的 FrontPadScrolling。"
+    state machine
+}
+
+UIScrollView:bIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bIsGamepadScrollingEnabled
+    src   "The same switch for the analog stick -- UMG's bIsGamepadScrollingEnabled.\n\nRead by FDreamUINavigationScroll beside AnalogMouseWheelKey: the key says which axis reaches\nthis view, and this says whether any does."
+    text  "模拟摇杆的同类开关——即 UMG 的 bIsGamepadScrollingEnabled。\n\n由 FDreamUINavigationScroll 与 AnalogMouseWheelKey 一同读取：该键指明哪个轴到达\n此视图，而此项指明是否有轴到达。"
+    state machine
+}
+
+UIScrollView:bIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bIsPointerScrollingEnabled
+    src   "The master switch over POINTER scrolling -- UMG's bIsPointerScrollingEnabled.\n\nThe wheel AND the drag together, because they are one gesture set: a view that answers the\nwheel but not the drag is one whose scroll bar is the only way down. Asked in front of the\nper-gesture switches, which are about WHICH pointer gesture rather than whether any of them."
+    text  "指针滚动的总开关——即 UMG 的 bIsPointerScrollingEnabled。\n\n滚轮和拖拽一起管，因为它们属于同一组手势：只响应滚轮而不响应拖拽的视图，\n滚动条就成了唯一的下拉途径。此开关位于各手势开关之前，\n后者关心的是用哪一种指针手势，而不是是否启用其中任一种。"
+    state machine
+}
+
+UIScrollView:CanScrollInSmallSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollInSmallSize
+    src   "When Content size is smaller than Content's parent size, can we still drag it (and have it spring back)?\n\nOff by default, as UMG's scroll box holds its offset at zero while its bar is not needed: content that fits\ncannot be pulled past its ends, neither by the drag nor by the fling after it, and a drag over a view with\nnothing to scroll on either axis is handed on to whatever is behind it. On, content that fits can be dragged\nout of place and springs back when let go."
+    text  "当 Content 尺寸小于 Content 的父级尺寸时，是否仍可拖拽它（并在松手后弹回）？\n\n默认关闭，因为 UMG 的滚动框在不需要滚动条时会把偏移量保持为零：放得下的内容\n无法被拖过两端，拖拽和其后的甩动都不行；在任一轴上都没有可滚动内容的视图上拖拽，\n事件会传递给其后面的对象。开启后，放得下的内容可以被拖离原位，\n并在松手时弹回。"
+    state machine
+}
+
+UIScrollView:CanScrollOnAxis {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollOnAxis
+    src   "True when this view scrolls on that axis AND there is something to scroll."
+    text  "当此视图在该轴上可滚动，且确实有可滚动的内容时为真。"
+    state machine
+}
+
+UIScrollView:CanScrollWidgetIntoView {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollWidgetIntoView
+    src   "True when InChild sits inside this view and a scroll would bring more of it into sight."
+    text  "当 InChild 位于此视图内，且滚动能让它更多部分进入视野时为真。"
+    state machine
+}
+
+UIScrollView:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ConsumeMouseWheel
+    src   "Whether a wheel event this view acted on is swallowed here or handed to an outer scrolling\nancestor -- UMG's ConsumeMouseWheel.\n\nWhenScrollingPossible is what this component has always done: it scrolls and consumes while\nthere is somewhere left to go, and hands the event on once it is at a limit, which is what makes\na list inside a scrolling page behave. Never stops the wheel driving this view at all; Always\nkeeps the event even at a limit, so the page behind never moves."
+    text  "此视图处理过的滚轮事件是在此处被吞掉，还是交给外层可滚动的祖先——\nUMG 的 ConsumeMouseWheel。\n\nWhenScrollingPossible 是此组件一直以来的行为：只要还有可去的地方，它就滚动并吞掉事件；\n一旦到达边界，就把事件传递出去，这正是滚动页面内的列表\n能正常工作的原因。Never 完全不会阻止滚轮驱动此视图；\nAlways 即使到达边界也保留事件，因此后面的页面永远不会移动。"
+    state machine
+}
+
+UIScrollView:Content {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Content
+    src   "Content can move inside it's parent area."
+    text  "Content 可以在其父级区域内移动。"
+    state machine
+}
+
+UIScrollView:CoordinateMode {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CoordinateMode
+    src   "Coordinate contract used to move Content. AnchoredPosition is recommended for layout-managed content."
+    text  "用于移动 Content 的坐标约定。对于由布局管理的内容，建议使用基于锚点的 AnchoredPosition。"
+    state machine
+}
+
+UIScrollView:DecelerateRate {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:DecelerateRate
+    src   "Determines how quickly the contents stop moving. A value of 0 means the movement will never slow down, larger value will stop the movement faster."
+    text  "决定内容停止移动的速度。值为 0 表示移动永不减速，值越大，移动停止得越快。"
+    state machine
+}
+
+UIScrollView:EndInertialScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:EndInertialScrolling
+    src   "Drop the fling, keeping the position -- UMG's EndInertialScrolling.\n\nThe spring is deliberately left armed when the content is out of range: a rubber band pulled\nopen is not inertia, and abandoning it there would leave the content parked outside its own\nrange with nothing left to walk it back."
+    text  "终止甩动并保持当前位置——UMG的EndInertialScrolling。\n\n当内容超出范围时，弹簧会被有意保持启用：被拉开的橡皮筋并不是惯性，\n若此时放弃它，内容就会停在自己的范围之外，\n再也没有东西能把它带回来。"
+    state machine
+}
+
+UIScrollView:FlipDirectionInSmallSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:FlipDirectionInSmallSize
+    src   "When Content size is smaller than Content's parent size, rest it against the END edge instead of the start."
+    text  "当 Content 尺寸小于 Content 父级尺寸时，让其贴靠末端边缘而不是起始边缘。"
+    state machine
+}
+
+UIScrollView:GetConsumePointerInput {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetConsumePointerInput
+    src   "Whether a pointer event this view handled is swallowed -- UMG's bConsumePointerInput, which is\nthe inverse of the AllowEventBubbleUp this component was written with. One stored bit, asked\nboth ways round, rather than two that can disagree."
+    text  "此视图处理过的指针事件是否被吞掉——UMG的bConsumePointerInput，它是此组件编写时所用\nAllowEventBubbleUp的反面。只存一个位，用两种方式提问，\n而不是两个可能互相矛盾的位。"
+    state machine
+}
+
+UIScrollView:GetContentSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetContentSize
+    src   "The scrolled content's size. Zero when this view is not wired up yet."
+    text  "被滚动内容的尺寸。此视图尚未接好时为零。"
+    state machine
+}
+
+UIScrollView:GetContentViewport {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetContentViewport
+    src   "The window: the content's PARENT. This component never stores a viewport of its own -- which\nis also why the name is not GetViewport: UUIScrollViewWithScrollbar has one of those, and it\nmeans an authored widget the bars shrink rather than the rect the content slides inside."
+    text  "窗口：即内容的父项。此组件从不存储自己的视口——这也是名称不是GetViewport的原因：\nUUIScrollViewWithScrollbar有一个视口，它指的是滚动条会缩小的制作好的控件，\n而不是内容在其中滑动的矩形。"
+    state machine
+}
+
+UIScrollView:GetHorizontalRange {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetHorizontalRange
+    src   "Get Content's position range in horizontal."
+    text  "获取内容在水平方向上的位置范围。"
+    state machine
+}
+
+UIScrollView:GetOverscrollOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOverscrollOffset
+    src   "Signed distance past an end, per axis, in the reading direction: negative before the start,\npositive past the end, zero in range -- SScrollBox::GetOverscrollOffset's answer. Always zero\nwhile overscroll is off, because there is then nothing that could be out there."
+    text  "按轴计算、沿阅读方向超出末端的带符号距离：起点之前为负，\n超出末端为正，在范围内为零——即SScrollBox::GetOverscrollOffset的返回值。\n过度滚动关闭时始终为零，因为此时范围外不可能有任何内容。"
+    state machine
+}
+
+UIScrollView:GetOverscrollPercentage {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOverscrollPercentage
+    src   "The same distance as a PERCENTAGE of the window on that axis, which is what UMG reports."
+    text  "同一距离在该轴上占窗口的百分比，即UMG所报告的值。"
+    state machine
+}
+
+UIScrollView:GetScrollableExtent {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollableExtent
+    src   "How far there is to go, per axis: max(0, content - viewport). Zero on an axis that fits."
+    text  "按轴计算还可滚动的距离：max(0, content - viewport)。在内容刚好放得下的轴上为零。"
+    state machine
+}
+
+UIScrollView:GetScrollOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollOffset
+    src   "How far the window has travelled from the content's start edge, in local units: X rightward,\nY DOWNWARD. The reading direction on both axes, which is why neither one is inverted here and\nthe two progress values mean the same thing as each other."
+    text  "窗口从内容起始边缘移动了多远，以本地单位计：X向右，\nY向下。两轴均沿阅读方向，因此这里两者都没有反转，\n两个进度值的含义彼此相同。"
+    state machine
+}
+
+UIScrollView:GetVerticalRange {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetVerticalRange
+    src   "Get Content's position range in vertical."
+    text  "获取内容在垂直方向上的位置范围。"
+    state machine
+}
+
+UIScrollView:GetViewportSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetViewportSize
+    src   "The window's own size -- the content's parent rect. Zero when this view is not wired up yet."
+    text  "窗口自身的大小——即内容父项的矩形。此视图尚未连接时为零。"
+    state machine
+}
+
+UIScrollView:GlideToScrollOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GlideToScrollOffset
+    src   "SetScrollOffset that glides there over InDuration seconds, with the easing ScrollTo uses: the same offset, clamped\nthe same way, other axes left alone; 0 or less jumps, as SetScrollOffset does. Anything that moves the content\nmeanwhile -- a drag, a wheel notch, a setter, another glide -- stops it where it got to. IsScrolling stays true\nuntil it lands, so a list's OnListViewFinishedScrolling is said once, after it."
+    text  "在InDuration秒内平滑滑到该位置的SetScrollOffset，使用ScrollTo所用的缓动：偏移量相同，以相同方式钳制，\n其他轴不受影响；0或更小则直接跳转，与SetScrollOffset一样。期间任何移动内容的操作\n——拖拽、滚轮一格、某个设置函数、另一次滑动——都会让它停在当前到达的位置。IsScrolling在抵达前保持为true，\n因此列表的OnListViewFinishedScrolling会在其之后仅触发一次。"
+    state machine
+}
+
+UIScrollView:IsScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:IsScrolling
+    src   "True while momentum, a spring-back or a glide (ScrollTo, ScrollWidgetIntoView, GlideToScrollOffset, an animated\nwheel notch) still has the content moving -- UMG's GetIsScrolling."
+    text  "当惯性、回弹或滑动（ScrollTo、ScrollWidgetIntoView、GlideToScrollOffset、带动画的一格\n滚轮等滚动控件的动作）仍在移动内容时为true——即UMG的GetIsScrolling。"
+    state machine
+}
+
+UIScrollView:KeepProgress {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:KeepProgress
+    src   "Keep progress value when content position and size change.\ntrue- keep progress value and change content's position and size to fit progress.\nfalse- keep the offset, and let the progress follow from it."
+    text  "内容位置和大小变化时保持进度值。\ntrue——保持进度值，并改变内容的位置和大小以匹配进度。\nfalse——保持偏移量，让进度随之变化。"
+    state machine
+}
+
+UIScrollView:NavigationDestination {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:NavigationDestination
+    src   "Where a revealed widget is meant to END UP -- UMG's NavigationDestination, consulted by\nScrollWidgetIntoView and therefore by every navigation move (FDreamUINavigationScroll)."
+    text  "被显示的控件最终应到达的位置——即UMG的NavigationDestination，由\nScrollWidgetIntoView查询，因而也被每一次导航移动查询（FDreamUINavigationScroll）。"
+    state machine
+}
+
+UIScrollView:NavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:NavigationScrollPadding
+    src   "How much of the window to keep clear around a revealed widget, in local units -- UMG's\nNavigationScrollPadding. Stops a row landing flush against the edge with its neighbour cut in\nhalf beside it, which is the only cue a player has that the list continues."
+    text  "在被显示的控件周围要留出多少窗口空间作为填充，以本地单位计——即 UMG 的\nNavigationScrollPadding。可避免某一行紧贴边缘、相邻项在旁边被裁掉一半，\n而那正是玩家判断列表仍有后续的唯一线索。"
+    state machine
+}
+
+UIScrollView:OnlyOneDirection {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OnlyOneDirection
+    src   "If allow Horizontal and Vertical both, then only allow one direction drag at the same time."
+    text  "如果同时允许水平和垂直方向，则同一时间只允许沿一个方向拖动。"
+    state machine
+}
+
+UIScrollView:OutOfRangeDamper {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OutOfRangeDamper
+    src   "Decrease movement value when drag content out of range. A value of 0 means not allowed out of range. A value of 1 means no damp effect."
+    text  "拖动内容超出范围时减小移动值。值为0表示不允许超出范围，值为1表示无阻尼效果。"
+    state machine
+}
+
+UIScrollView:Progress {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Progress
+    src   "progress, 0--1, x for horizontal, y for vertical"
+    text  "进度，0--1，x为水平方向，y为垂直方向"
+    state machine
+}
+
+UIScrollView:RangeHelper {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:RangeHelper
+    src   "Content's parent"
+    text  "内容的父级"
+    state machine
+}
+
+UIScrollView:RectRangeChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:RectRangeChanged
+    src   "scroll range change(eg content or content's parent size change), use this to recalculate range"
+    text  "滚动范围变化（例如内容或内容父级尺寸变化），用于重新计算范围"
+    state machine
+}
+
+UIScrollView:RestrictRectArea {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:RestrictRectArea
+    src   "Limit Content inside Viewport's rect area, if out-of-range then move it back."
+    text  "将内容限制在视口矩形区域内，超出范围时将其移回。"
+    state machine
+}
+
+UIScrollView:ScrollBy {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollBy
+    src   "SetScrollOffset(GetScrollOffset() + InDelta), which is what a wheel notch and a key press are."
+    text  "SetScrollOffset(GetScrollOffset() + InDelta)，即一次滚轮刻度或一次按键所执行的操作。"
+    state machine
+}
+
+UIScrollView:ScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollSensitivity
+    src   "Local units travelled per mouse-wheel notch. 40 is what UDreamLayoutContainerScrollBox already\nuses for the same gesture; the 1.0 this shipped with was a MULTIPLIER on the raw axis value,\nwhich meant one unit per notch and a wheel that visibly did nothing."
+    text  "每个鼠标滚轮刻度移动的本地单位数。UDreamLayoutContainerScrollBox对相同手势已经使用40；\n此前发布的1.0是对原始轴值的乘数，\n这意味着每个刻度只有一个单位，滚轮看起来毫无效果。"
+    state machine
+}
+
+UIScrollView:ScrollTo {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollTo
+    src   "Try to scroll the scrollview so the child can sit at center. Will clamp it in valid range.\n@param InChild Target child actor.\n@param InEaseAnimation true-use tween animation to make smooth scroll, false-immediate set.\n@param InAnimationDuration Animation duration if InEaseAnimation = true."
+    text  "尝试滚动滚动视图，使子项居中。会将其限制在有效范围内。\n@param InChild 目标子Actor。\n@param InEaseAnimation true-使用补间动画实现平滑滚动，false-立即设置。\n@param InAnimationDuration 当 InEaseAnimation = true 时的动画时长。"
+    state machine
+}
+
+UIScrollView:ScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWhenFocusChanges
+    src   "What this view does when user focus lands inside it -- UMG's ScrollWhenFocusChanges. Read by\nFDreamUINavigationScroll, which is the only thing that reveals a widget because focus moved."
+    text  "当用户焦点落在其中时此视图的行为——即UMG的ScrollWhenFocusChanges。由\nFDreamUINavigationScroll读取，它是唯一因焦点移动而显示控件的东西。"
+    state machine
+}
+
+UIScrollView:ScrollWidgetIntoView {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView
+    src   "Scroll the least distance that brings InChild fully inside the viewport, and nothing at all when\nit is already there. ScrollTo always centres, which reads badly under directional navigation:\nstepping one row down would heave the whole list to put that row in the middle.\n\n@param InDestination Where the child ends up. Configured (the default) leaves it to this view's\n                     own NavigationDestination, which is what every caller meant before the\n                     parameter existed.\n@param InPadding     How much of the window to keep clear around it. Negative leaves it to this\n                     view's NavigationScrollPadding, for the same reason.\n@return true when the content position actually moved."
+    text  "以最小距离滚动，使InChild完全位于视口内，若它已在那里则完全不滚动。ScrollTo始终居中，这在方向导航下\n效果很差：向下移动一行会把整个列表拽动，\n好让该行位于中间。\n\n@param InDestination 子项最终的位置。Configured（默认值）交由此视图自身的\n                     NavigationDestination，这也是该参数出现之前\n                     所有调用者的本意。\n@param InPadding     在其周围保留多少窗口空间作为填充。负值出于同样的原因\n                     交由此视图的NavigationScrollPadding决定。\n@return 当内容位置实际发生移动时返回true。"
+    state machine
+}
+
+UIScrollView:SetScrollDelta {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollDelta
+    src   "Manually scroll it with delta value, in CONTENT-POSITION units (Y up, the engine's sign)."
+    text  "使用增量值手动滚动，单位为内容位置单位（Y 向上，即引擎的符号约定）。"
+    state machine
+}
+
+UIScrollView:SetScrollOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollOffset
+    src   "Clamped to the extent on every axis this view scrolls; axes it does not scroll are left alone."
+    text  "在此视图滚动的每个轴上都会被限制到内容范围内；不滚动的轴则保持不变。"
+    state machine
+}
+
+UIScrollView:SetScrollProgress {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollProgress
+    src   "Manually scroll it with progress value (from 0 to 1)."
+    text  "使用进度值（0 到 1 之间）手动滚动。"
+    state machine
+}
+
+UIScrollView:SetScrollValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollValue
+    src   "Manually scroll it with absolute value. The value will be applyed to Content's position."
+    text  "使用绝对值手动滚动。该值将应用于内容的位置。"
+    state machine
+}
+
+UIScrollView:WheelProgressStep {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelProgressStep
+    src   "If greater than zero, mouse wheel input advances by this normalized progress instead of local units."
+    text  "如果大于零，鼠标滚轮输入将通过此归一化进度值进行滚动，而不是本地单位。"
+    state machine
+}
+
+UIScrollView:WheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelScrollAnimationDuration
+    src   "How long one animated notch takes. Ignored while bAnimateWheelScrolling is off."
+    text  "一格动画滚动所需的时间。bAnimateWheelScrolling 关闭时忽略。"
+    state machine
+}
+
+UIScrollView:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelScrollMultiplier
+    src   "A plain multiplier on whatever one wheel notch already travels -- UMG's WheelScrollMultiplier,\nand the reason it is a second number beside ScrollSensitivity rather than folded into it:\nScrollSensitivity is the DISTANCE a notch covers (local units, or a progress fraction when\nWheelProgressStep is set), and this scales it. A project that wants \"the same feel, twice as\nfast\" writes 2 here and leaves the distance alone, which is what the list controls already mean\nby the same name."
+    text  "对一格滚轮已经移动的距离施加的简单倍率——即UMG的WheelScrollMultiplier，\n也是它作为ScrollSensitivity旁边第二个数值、而非并入其中的原因：\nScrollSensitivity是一格滚轮覆盖的距离（本地单位，或设置WheelProgressStep时的进度比例），\n此项则对这个距离进行缩放。想要“相同手感、速度翻倍”的项目\n在这里写2并保持距离不变，\n这也是列表控件中同名参数的含义。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+EDreamScrollCoordinateMode.AnchoredPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode:AnchoredPosition
+    src   "Anchored Position"
+    text  "锚点位置"
+    state machine
+}
+
+EDreamScrollCoordinateMode.EDreamScrollCoordinateMode_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode:EDreamScrollCoordinateMode_MAX
+    src   "EDream Scroll Coordinate Mode MAX"
+    text  "EDream 滚动坐标模式 最大值"
+    state machine
+}
+
+EDreamScrollCoordinateMode.RelativeLocation {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#EDreamScrollCoordinateMode:RelativeLocation
+    src   "Relative Location"
+    // from the engine's zh-Hans
+    text  "相对位置"
+    state draft
+}
+
+UIScrollView {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView
+    src   "UIScroll View"
+    text  "UI 滚动视图"
+    state machine
+}
+
+UIScrollView:AllowEventBubbleUp {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:AllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+UIScrollView:AnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:AnalogMouseWheelKey
+    src   "Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Analog Mouse Wheel Key"
+    state draft
+}
+
+UIScrollView:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAllowOverscroll
+    src   "Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "允许过度滚动"
+    state draft
+}
+
+UIScrollView:bAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAllowRightClickDragScrolling
+    src   "Allow Right Click Drag Scrolling"
+    // from the engine's zh-Hans
+    text  "允许点击右键拖动滚动"
+    state draft
+}
+
+UIScrollView:bAnimateTouchScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAnimateTouchScrolling
+    src   "Animate Touch Scrolling"
+    text  "动画触摸滚动"
+    state machine
+}
+
+UIScrollView:bAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bAnimateWheelScrolling
+    src   "Animate Wheel Scrolling"
+    // from the engine's zh-Hans
+    text  "动画滚轮滚动"
+    state draft
+}
+
+UIScrollView:bBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bBackPadScrolling
+    src   "Back Pad Scrolling"
+    // from the engine's zh-Hans
+    text  "背填充滚动"
+    state draft
+}
+
+UIScrollView:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bEnableTouchScrolling
+    src   "Enable Touch Scrolling"
+    // from the engine's zh-Hans
+    text  "启用触摸滚动"
+    state draft
+}
+
+UIScrollView:bFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bFrontPadScrolling
+    src   "Front Pad Scrolling"
+    // from the engine's zh-Hans
+    text  "前填充滚动"
+    state draft
+}
+
+UIScrollView:bIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bIsGamepadScrollingEnabled
+    src   "Is Gamepad Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "是否游戏手柄滚动已启用"
+    state draft
+}
+
+UIScrollView:bIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:bIsPointerScrollingEnabled
+    src   "Is Pointer Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "是否启用指针滚动"
+    state draft
+}
+
+UIScrollView:CanScrollInSmallSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollInSmallSize
+    src   "Can Scroll in Small Size"
+    text  "在小尺寸下可滚动"
+    state machine
+}
+
+UIScrollView:CanScrollOnAxis:bInHorizontalAxis {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollOnAxis:bInHorizontalAxis
+    src   "In Horizontal Axis"
+    text  "水平轴"
+    state machine
+}
+
+UIScrollView:CanScrollOnAxis:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollOnAxis:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:CanScrollWidgetIntoView:InChild {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollWidgetIntoView:InChild
+    src   "In Child"
+    // from the engine's zh-Hans
+    text  "在子项中"
+    state draft
+}
+
+UIScrollView:CanScrollWidgetIntoView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollWidgetIntoView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ConsumeMouseWheel
+    src   "Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "消耗鼠标滚轮"
+    state draft
+}
+
+UIScrollView:Content {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Content
+    src   "Content"
+    // from the engine's zh-Hans
+    text  "内容"
+    state draft
+}
+
+UIScrollView:ContentParent {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ContentParent
+    src   "Content Parent"
+    text  "内容父级"
+    state machine
+}
+
+UIScrollView:CoordinateMode {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CoordinateMode
+    src   "Coordinate Mode"
+    text  "坐标模式"
+    state machine
+}
+
+UIScrollView:DecelerateRate {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:DecelerateRate
+    src   "Decelerate Rate"
+    text  "减速率"
+    state machine
+}
+
+UIScrollView:FlipDirectionInSmallSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:FlipDirectionInSmallSize
+    src   "Flip Direction in Small Size"
+    text  "小尺寸翻转方向"
+    state machine
+}
+
+UIScrollView:GetAllowOverscroll:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetAllowOverscroll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetAllowRightClickDragScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetAllowRightClickDragScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetAnalogMouseWheelKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetAnalogMouseWheelKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetAnimateTouchScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetAnimateTouchScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetAnimateWheelScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetAnimateWheelScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetBackPadScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetBackPadScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetCanScrollInSmallSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetCanScrollInSmallSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetConsumeMouseWheel:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetConsumeMouseWheel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetConsumePointerInput:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetConsumePointerInput:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetContent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetContentSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetContentSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetContentViewport:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetContentViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetCoordinateMode:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetCoordinateMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetDecelerateRate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetDecelerateRate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetEnableTouchScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetEnableTouchScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetFrontPadScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetFrontPadScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetGamepadScrollingEnabled:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetGamepadScrollingEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetHorizontal:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetHorizontal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetHorizontalRange:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetHorizontalRange:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetNavigationDestination:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetNavigationDestination:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetNavigationScrollPadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetNavigationScrollPadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetOnlyOneDirection:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOnlyOneDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetOutOfRangeDamper:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOutOfRangeDamper:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetOverscrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOverscrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetOverscrollPercentage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetOverscrollPercentage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetPointerScrollingEnabled:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetPointerScrollingEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetRestrictRectArea:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetRestrictRectArea:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetScrollableExtent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollableExtent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetScrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetScrollProgress:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetScrollSensitivity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollSensitivity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetScrollWhenFocusChanges:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetScrollWhenFocusChanges:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetVelocity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetVelocity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetVertical:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetVertical:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetVerticalRange:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetVerticalRange:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetViewportSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetViewportSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetWheelProgressStep:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetWheelProgressStep:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetWheelScrollAnimationDuration:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetWheelScrollAnimationDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GetWheelScrollMultiplier:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetWheelScrollMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:GlideToScrollOffset:InDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GlideToScrollOffset:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+UIScrollView:GlideToScrollOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GlideToScrollOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+UIScrollView:Horizontal {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Horizontal
+    src   "Horizontal"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+UIScrollView:IsScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:IsScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:KeepProgress {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:KeepProgress
+    src   "Keep Progress"
+    text  "保持进度"
+    state machine
+}
+
+UIScrollView:NavigationDestination {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:NavigationDestination
+    src   "Navigation Destination"
+    // from the engine's zh-Hans
+    text  "导航目标"
+    state draft
+}
+
+UIScrollView:NavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:NavigationScrollPadding
+    src   "Navigation Scroll Padding"
+    // from the engine's zh-Hans
+    text  "导航滚动填充"
+    state draft
+}
+
+UIScrollView:OnlyOneDirection {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OnlyOneDirection
+    src   "Only One Direction"
+    text  "单向滚动"
+    state machine
+}
+
+UIScrollView:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UIScrollView:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UIScrollView:OutOfRangeDamper {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:OutOfRangeDamper
+    src   "Out Of Range Damper"
+    text  "超出范围阻尼"
+    state machine
+}
+
+UIScrollView:Progress {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Progress
+    src   "Progress"
+    // from the engine's zh-Hans
+    text  "进度"
+    state draft
+}
+
+UIScrollView:RangeHelper {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:RangeHelper
+    src   "Range Helper"
+    text  "范围辅助器"
+    state machine
+}
+
+UIScrollView:RestrictRectArea {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:RestrictRectArea
+    src   "Restrict Rect Area"
+    text  "限制矩形区域"
+    state machine
+}
+
+UIScrollView:ScrollBy:InDelta {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollBy:InDelta
+    src   "In Delta"
+    text  "步进高亮增量"
+    state machine
+}
+
+UIScrollView:ScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollSensitivity
+    src   "Scroll Sensitivity"
+    text  "滚动灵敏度"
+    state machine
+}
+
+UIScrollView:ScrollTo:InAnimationDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollTo:InAnimationDuration
+    src   "In Animation Duration"
+    text  "动画持续时间"
+    state machine
+}
+
+UIScrollView:ScrollTo:InChild {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollTo:InChild
+    src   "In Child"
+    // from the engine's zh-Hans
+    text  "在子项中"
+    state draft
+}
+
+UIScrollView:ScrollTo:InEaseAnimation {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollTo:InEaseAnimation
+    src   "In Ease Animation"
+    text  "缓动动画"
+    state machine
+}
+
+UIScrollView:ScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWhenFocusChanges
+    src   "Scroll when Focus Changes"
+    // from the engine's zh-Hans
+    text  "聚焦变化时滚动"
+    state draft
+}
+
+UIScrollView:ScrollWidgetIntoView:InAnimationDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:InAnimationDuration
+    src   "In Animation Duration"
+    text  "动画持续时间"
+    state machine
+}
+
+UIScrollView:ScrollWidgetIntoView:InChild {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:InChild
+    src   "In Child"
+    // from the engine's zh-Hans
+    text  "在子项中"
+    state draft
+}
+
+UIScrollView:ScrollWidgetIntoView:InDestination {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:InDestination
+    src   "In Destination"
+    // from the engine's zh-Hans
+    text  "输入目的地"
+    state draft
+}
+
+UIScrollView:ScrollWidgetIntoView:InEaseAnimation {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:InEaseAnimation
+    src   "In Ease Animation"
+    text  "缓动动画"
+    state machine
+}
+
+UIScrollView:ScrollWidgetIntoView:InPadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:InPadding
+    src   "In Padding"
+    // from the engine's zh-Hans
+    text  "在填充中"
+    state draft
+}
+
+UIScrollView:ScrollWidgetIntoView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:ScrollWidgetIntoView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIScrollView:SetAllowOverscroll:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetAllowOverscroll:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetAllowRightClickDragScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetAllowRightClickDragScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetAnalogMouseWheelKey:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetAnalogMouseWheelKey:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetAnimateTouchScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetAnimateTouchScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetAnimateWheelScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetAnimateWheelScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetBackPadScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetBackPadScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetCanScrollInSmallSize:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetCanScrollInSmallSize:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetConsumeMouseWheel:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetConsumeMouseWheel:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetConsumePointerInput:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetConsumePointerInput:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetContent:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetContent:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetCoordinateMode:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetCoordinateMode:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetDecelerateRate:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetDecelerateRate:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetEnableTouchScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetEnableTouchScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetFrontPadScrolling:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetFrontPadScrolling:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetGamepadScrollingEnabled:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetGamepadScrollingEnabled:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetHorizontal:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetHorizontal:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetKeepProgress:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetKeepProgress:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetNavigationDestination:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetNavigationDestination:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetNavigationScrollPadding:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetNavigationScrollPadding:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetOnlyOneDirection:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetOnlyOneDirection:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetOutOfRangeDamper:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetOutOfRangeDamper:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetPointerScrollingEnabled:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetPointerScrollingEnabled:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetRestrictRectArea:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetRestrictRectArea:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetScrollDelta:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollDelta:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetScrollOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+UIScrollView:SetScrollProgress:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollProgress:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetScrollSensitivity:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollSensitivity:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetScrollValue:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollValue:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetScrollWhenFocusChanges:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetScrollWhenFocusChanges:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetVelocity:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetVelocity:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetVertical:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetVertical:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetWheelProgressStep:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetWheelProgressStep:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetWheelScrollAnimationDuration:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetWheelScrollAnimationDuration:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:SetWheelScrollMultiplier:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetWheelScrollMultiplier:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIScrollView:Vertical {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:Vertical
+    src   "Vertical"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+UIScrollView:WheelProgressStep {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelProgressStep
+    src   "Wheel Progress Step"
+    text  "滚轮进度步进"
+    state machine
+}
+
+UIScrollView:WheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelScrollAnimationDuration
+    src   "Wheel Scroll Animation Duration"
+    text  "滚轮滚动动画时长"
+    state machine
+}
+
+UIScrollView:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:WheelScrollMultiplier
+    src   "Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "滚轮滚动乘数"
+    state draft
+}
+
+UIScrollViewHelper {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollViewHelper
+    src   "UIScroll View Helper"
+    text  "UIScrollView 辅助器"
+    state machine
+}
+
+UIScrollViewHelper:TargetComp {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollViewHelper:TargetComp
+    src   "Target Comp"
+    text  "目标 组件"
+    state machine
+}
+
+UIScrollViewValueChangedEvent__DelegateSignature:InVector2 {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollViewValueChangedEvent__DelegateSignature:InVector2
+    src   "In Vector 2"
+    text  "输入向量 2"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-ScrollView {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollOnAxis
+    src   "DreamGUI-ScrollView"
+    text  "DreamGUI-ScrollView"
+    state machine
+}

@@ -1,0 +1,573 @@
+dloc 1
+culture zh-Hans
+namespace UIItemComponentDetails
+
+CopyProps {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Copy all properties"
+    text  "复制所有属性"
+    state machine
+}
+
+CopyProps_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "You copy all properties of this object then paste it to others"
+    text  "复制此对象的全部属性，然后将其粘贴到其他对象。"
+    state machine
+}
+
+PasteProps {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Paste all properties"
+    text  "粘贴所有属性"
+    state machine
+}
+
+PasteProps_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "You paste all properties of copied object to this"
+    text  "将复制对象的全部属性粘贴到此对象。"
+    state machine
+}
+
+PasteProps_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Paste All Properties"
+    text  "粘贴所有属性"
+    state machine
+}
+
+AnchorIsControlledByLayout {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Anchor is controlled by layout"
+    text  "锚点由布局控制"
+    state machine
+}
+
+ChangeAnchor_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Change anchor"
+    text  "更改锚点"
+    state machine
+}
+
+CanvasSizeCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Canvas"
+    // from the engine's zh-Hans
+    text  "画布"
+    state draft
+}
+
+DesignScreenSizeRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Design Screen Size"
+    // from the engine's zh-Hans
+    text  "设计屏幕大小"
+    state draft
+}
+
+DesignScreenSize {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Design Screen Size"
+    // from the engine's zh-Hans
+    text  "设计屏幕大小"
+    state draft
+}
+
+DesignScreenSizeTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "The screen resolution this prefab is designed for. Same as the toolbar's screen-size menu."
+    text  "此预制件设计的屏幕分辨率。与工具栏中的屏幕尺寸菜单相同。"
+    state machine
+}
+
+CanvasSizeRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Canvas Size"
+    // from the engine's zh-Hans
+    text  "Canvas Size"
+    state draft
+}
+
+CanvasSize {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Canvas Size"
+    // from the engine's zh-Hans
+    text  "Canvas Size"
+    state draft
+}
+
+CanvasSizeTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "The design canvas after the root canvas's scale rule. A prefab loaded without a parent widget (a world-space presenter) sizes its root to this."
+    text  "根画布缩放规则之后的画布尺寸。没有父控件（世界空间显示器）的预制件会将其根元素的大小设置为此处的值。"
+    state machine
+}
+
+LayoutCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Layout"
+    // from the engine's zh-Hans
+    text  "布局"
+    state draft
+}
+
+BehaviorCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Behavior"
+    // from the engine's zh-Hans
+    text  "行为"
+    state draft
+}
+
+AppearanceCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Appearance"
+    // from the engine's zh-Hans
+    text  "外观"
+    state draft
+}
+
+AccessibilityCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Accessibility"
+    // from the engine's zh-Hans
+    text  "可访问性"
+    state draft
+}
+
+WidgetActive {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Active"
+    // from the engine's zh-Hans
+    text  "Active"
+    state draft
+}
+
+Focusable {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Is Focusable"
+    // from the engine's zh-Hans
+    text  "为可聚焦"
+    state draft
+}
+
+TabStop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Is Tab Stop"
+    text  "是否为焦点对象"
+    state machine
+}
+
+AccessibleBehavior {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Behavior"
+    // from the engine's zh-Hans
+    text  "行为"
+    state draft
+}
+
+ClippingGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Clipping"
+    // from the engine's zh-Hans
+    text  "裁剪"
+    state draft
+}
+
+UniformSetCornerRadiusToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "When locked, corner radius will all set with x value"
+    text  "锁定时，所有圆角都将设置为 x 轴的值。"
+    state machine
+}
+
+ArrangedByBanner_Filter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Arranged By"
+    text  "按排列方式"
+    state machine
+}
+
+IgnoreLayoutDisplayName {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Ignore Layout"
+    text  "忽略布局"
+    state machine
+}
+
+IgnoreLayoutTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Opt this widget out of its parent layout's arrangement: the panel will neither position nor size it (its authored anchors apply), and panels that arrange content — including Scroll Box — will skip it entirely. Leftover from the old UIScrollView content workflow on many widgets; clear it unless you really mean it."
+    text  "使此控件脱离其父级布局的排列：面板既不会定位也不会调整其大小（其定义的锚点生效），并且包含滚动框在内的排列内容的面板将完全跳过它。这是许多控件上旧的 UIScrollView 内容工作流程的遗留物；除非您确实需要它，否则请清除它。"
+    state machine
+}
+
+Anchor {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Anchor"
+    // from the engine's zh-Hans
+    text  "锚点"
+    state draft
+}
+
+AnchorPresets {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Anchor Presets"
+    text  "锚点预设"
+    state machine
+}
+
+AnchorPresetsHelperKeys {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Shift: Also set pivot\t\tCtrl or Alt: Also set position"
+    text  "Shift：同时设置轴心\t\tCtrl 或 Alt：同时设置位置"
+    state machine
+}
+
+AnchorsGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Anchors"
+    // from the engine's zh-Hans
+    text  "锚点"
+    state draft
+}
+
+ControlledByLayoutTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "This property is controlled by layout"
+    text  "此属性由布局控制"
+    state machine
+}
+
+AnchorsRawData {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "AnchorsRawData"
+    text  "锚点原始数据"
+    state machine
+}
+
+AnchorRawDataWarning {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Normally do not edit these!"
+    text  "通常不要编辑这些！"
+    state machine
+}
+
+PanelCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Panel"
+    // from the engine's zh-Hans
+    text  "面板"
+    state draft
+}
+
+LayoutPlaceholder {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Placeholder"
+    text  "占位符"
+    state machine
+}
+
+SelfLayoutCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Self Layout"
+    text  "自身布局"
+    state machine
+}
+
+PanelSlotType {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Panel"
+    // from the engine's zh-Hans
+    text  "面板"
+    state draft
+}
+
+SlotCategoryFormat {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Slot ({0})"
+    // from the engine's zh-Hans
+    text  "插槽（{0}）"
+    state draft
+}
+
+VisualPlaceholder {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Placeholder"
+    text  "占位符"
+    state machine
+}
+
+NavigationCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Navigation"
+    // from the engine's zh-Hans
+    text  "导航"
+    state draft
+}
+
+AddNavigationRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Navigation"
+    // from the engine's zh-Hans
+    text  "导航"
+    state draft
+}
+
+AddNavigationButton {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Add Navigation Rules"
+    text  "添加导航规则"
+    state machine
+}
+
+AddNavigationButtonTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Give this widget its own per-direction navigation rules -- Escape, Stop, Wrap, Explicit or Custom -- the way UMG's Navigation panel does. A widget with rules takes part in gamepad navigation without needing a UISelectable."
+    text  "让此控件拥有自己的各方向导航规则（Escape、Stop、Wrap、Explicit 或 Custom），与 UMG 的 Navigation 面板相同。带有规则的控件无需 UISelectable 即可参与游戏手柄导航。"
+    state machine
+}
+
+AddNavigation_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Add Navigation Rules"
+    text  "添加导航规则"
+    state machine
+}
+
+PasteAnchor_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Paste DreamGUI Anchor"
+    text  "粘贴 DreamGUI 锚点"
+    state machine
+}
+
+ArrangedByBannerFormat {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Arranged by {0} — the greyed-out values below are layout results, not yours to edit. Edit the Panel Slot or the layout's own properties instead."
+    text  "由{0}排列——下方灰显的值是布局结果，不应由你编辑。请改为编辑面板插槽或布局自身的属性。"
+    state machine
+}
+
+AnchorLeft {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+AnchorCenter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+AnchorRight {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+AnchorCustom {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "自定义"
+    state draft
+}
+
+AnchorStretch {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Stretch"
+    // from the engine's zh-Hans
+    text  "拉伸"
+    state draft
+}
+
+AnchorBottom {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+AnchorMiddle {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Middle"
+    // from the engine's zh-Hans
+    text  "中"
+    state draft
+}
+
+AnchorTop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+AnchoredPositionX {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "PosY"
+    text  "PosY"
+    state machine
+}
+
+AnchoredLeft {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+AnchoredPositionY {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "PosZ"
+    text  "PosZ"
+    state machine
+}
+
+AnchoredTop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+Width {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Width"
+    // from the engine's zh-Hans
+    text  "宽度"
+    state draft
+}
+
+AnchoredRight {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+Height {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Height"
+    // from the engine's zh-Hans
+    text  "高度"
+    state draft
+}
+
+AnchoredBottom {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+AnchorError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Error"
+    // from the engine's zh-Hans
+    text  "错误"
+    state draft
+}
+
+AnchoredPositionX_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Horizontal anchored position. Related function: {0} / {1}."
+    text  "水平对齐位置。相关函数：{0} / {1}。"
+    state machine
+}
+
+AnchoredLeft_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Calculated distance to parent's left anchor point. Related function: {0} / {1}."
+    text  "计算到父级左侧锚点的距离。相关函数：{0} / {1}。"
+    state machine
+}
+
+AnchoredPositionY_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Vertical anchored position. Related function: {0} / {1}."
+    text  "垂直对齐位置。相关函数：{0} / {1}。"
+    state machine
+}
+
+AnchoredTop_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Calculated distance to parent's top anchor point. Related function: {0} / {1}."
+    text  "计算到父级顶部锚点的距离。相关函数：{0} / {1}。"
+    state machine
+}
+
+Width_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Horizontal size. Related function: {0} / {1}."
+    text  "水平尺寸。相关函数：{0} / {1}。"
+    state machine
+}
+
+AnchoredRight_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Calculated distance to parent's right anchor point. Related function: {0} / {1}."
+    text  "计算到父级右侧锚点的距离。相关函数：{0} / {1}。"
+    state machine
+}
+
+Height_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Vertical size. Related function: {0} / {1}"
+    text  "垂直尺寸。相关函数：{0} / {1}"
+    state machine
+}
+
+AnchoredBottom_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Calculated distance to parent's bottom anchor point. Related function: {0} / {1}."
+    text  "计算到父级底部锚点的距离。相关函数：{0} / {1}。"
+    state machine
+}
+
+ChangeAnchor_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Change DreamGUI Anchor"
+    text  "更改 DreamGUI 锚点"
+    state machine
+}
+
+ChangeWidgetAnchor_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Change Widget Anchor"
+    text  "更改控件锚点"
+    state machine
+}
+
+SlideChangeWidgetAnchor_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Change Widget Anchor"
+    text  "更改控件锚点"
+    state machine
+}
+
+namespace PropertyEditor
+
+MultipleValues {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetCustomization.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}

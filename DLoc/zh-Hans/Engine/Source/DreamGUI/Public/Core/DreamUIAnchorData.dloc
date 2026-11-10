@@ -1,0 +1,55 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAnchorData {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData
+    src   "Dream UIAnchor Data"
+    text  "Dream UI 锚点数据"
+    state machine
+}
+
+DreamUIAnchorData:AnchoredPosition {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData:AnchoredPosition
+    src   "Anchored Position"
+    text  "锚点位置"
+    state machine
+}
+
+DreamUIAnchorData:AnchorMax {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData:AnchorMax
+    src   "Anchor Max"
+    text  "最大锚点"
+    state machine
+}
+
+DreamUIAnchorData:AnchorMin {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData:AnchorMin
+    src   "Anchor Min"
+    text  "最小锚点"
+    state machine
+}
+
+DreamUIAnchorData:Pivot {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData:Pivot
+    src   "Pivot"
+    // from the engine's zh-Hans
+    text  "枢轴点"
+    state draft
+}
+
+DreamUIAnchorData:SizeDelta {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData:SizeDelta
+    src   "Size Delta"
+    text  "尺寸增量"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIAnchorData {
+    at    Source/DreamGUI/Public/Core/DreamUIAnchorData.h#DreamUIAnchorData
+    src   "UI rect transform anchor data"
+    text  "UI 矩形变换锚点数据"
+    state machine
+}

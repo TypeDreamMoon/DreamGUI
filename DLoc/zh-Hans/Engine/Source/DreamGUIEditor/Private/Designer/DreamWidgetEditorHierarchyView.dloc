@@ -1,0 +1,236 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetEditorHierarchyView
+
+SearchWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Search Widgets"
+    // from the engine's zh-Hans
+    text  "搜索控件"
+    state draft
+}
+
+Edit {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Edit"
+    // from the engine's zh-Hans
+    text  "编辑"
+    state draft
+}
+
+Wrap {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Wrap"
+    // from the engine's zh-Hans
+    text  "包裹"
+    state draft
+}
+
+WrapWithSubMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Wrap With..."
+    // from the engine's zh-Hans
+    text  "包裹……"
+    state draft
+}
+
+WrapWithSubMenuTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Group the selected widgets under a new container widget inserted at their position; they keep their layout. The chosen panel then arranges them."
+    text  "将所选控件归组到在其原位置插入的新容器控件下；它们保持原有布局。随后由所选面板排列它们。"
+    state machine
+}
+
+WrapWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+WrapWidgetTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "A wrapper with no panel at all: the children keep the places they are in."
+    text  "一种完全不含面板的包装器：子级保持它们当前所在的位置。"
+    state machine
+}
+
+UnwrapWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Unwrap"
+    // from the engine's zh-Hans
+    text  "解包"
+    state draft
+}
+
+UnwrapWidgetTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Take this widget out from between its parent and its children. The children keep their order and land where it stood; it is then deleted."
+    text  "将此控件从其父级与子级之间取出。子级保持原有顺序并落到它原来所在的位置；随后该控件会被删除。"
+    state machine
+}
+
+Replace {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Replace"
+    // from the engine's zh-Hans
+    text  "替换"
+    state draft
+}
+
+ReplaceWithSubMenu {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Replace With..."
+    // from the engine's zh-Hans
+    text  "替换为……"
+    state draft
+}
+
+ReplaceWithSubMenuTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Swap the panel arranging this widget's children. Unlike UMG, the widget itself is untouched -- its name, place, slot, components and children all stay put; only the layout container changes."
+    text  "更换用于排列此控件子级的面板。与UMG不同，控件本身不受影响——其名称、位置、槽、组件和子级均保持不变；只有布局容器发生变化。"
+    state machine
+}
+
+DesignerSection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Designer"
+    // from the engine's zh-Hans
+    text  "设计器"
+    state draft
+}
+
+HideInDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Hide in Designer"
+    text  "在设计器中隐藏"
+    state machine
+}
+
+ShowInDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Show in Designer"
+    text  "在设计器中显示"
+    state machine
+}
+
+HideInDesignerTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Take the selected widgets out of the design surface. They still exist and still run; they are simply not drawn and cannot be clicked while hidden."
+    text  "将所选控件从设计界面中移除。它们仍然存在并照常运行；只是在隐藏期间不会被绘制，也无法被点击。"
+    state machine
+}
+
+LockInDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Lock"
+    // from the engine's zh-Hans
+    text  "锁定"
+    state draft
+}
+
+UnlockInDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Unlock"
+    // from the engine's zh-Hans
+    text  "解锁"
+    state draft
+}
+
+LockInDesignerTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Stop the selected widgets being picked or dragged on the design surface. Their children go with them."
+    text  "阻止所选控件在设计界面上被拾取或拖拽。其子级也会随之一起。"
+    state machine
+}
+
+FindWidgetReferences {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Find References"
+    // from the engine's zh-Hans
+    text  "查找引用"
+    state draft
+}
+
+FindWidgetReferencesTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Search this Blueprint's graphs for nodes that name this widget, and report which other assets use its class."
+    text  "在此蓝图的图表中搜索命名此控件的节点，并报告还有哪些资产使用了它的类。"
+    state machine
+}
+
+FocusSelection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Focus Selection"
+    // from the engine's zh-Hans
+    text  "聚焦选项"
+    state draft
+}
+
+FocusSelectionTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Frame the selected widgets in the design viewport. The same thing the F key does."
+    text  "在设计视口中框选所选控件。与按F键的效果相同。"
+    state machine
+}
+
+DreamUISource {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "DreamUI Source"
+    text  "DreamUI 源代码"
+    state machine
+}
+
+RevealInVSCode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Reveal in VS Code"
+    text  "在 VS Code 中打开"
+    state machine
+}
+
+RevealInVSCodeTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Put the VS Code cursor on the line of the .dui that declares this widget, opening the DreamUI workspace first if VS Code is not running."
+    text  "将VS Code光标定位到声明此控件的.dui行；如果VS Code未运行，则先打开DreamUI工作区。"
+    state machine
+}
+
+Expansion {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Expansion"
+    // from the engine's zh-Hans
+    text  "展开"
+    state draft
+}
+
+CollapseAll {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Collapse All"
+    // from the engine's zh-Hans
+    text  "折叠所有"
+    state draft
+}
+
+CollapseAllTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Collapse every widget in the tree."
+    text  "折叠树中的所有控件。"
+    state machine
+}
+
+ExpandAll {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Expand All"
+    // from the engine's zh-Hans
+    text  "展开所有"
+    state draft
+}
+
+ExpandAllTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetEditorHierarchyView.cpp
+    src   "Expand every widget in the tree."
+    text  "展开树中的所有组件。"
+    state machine
+}

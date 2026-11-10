@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+DistanceFieldFont {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataDistanceFieldFactory.cpp
+    src   "Distance Field Font"
+    text  "距离场字体"
+    state machine
+}
+
+DistanceFieldFontToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataDistanceFieldFactory.cpp
+    src   "A font drawn from distance fields of a font face: sharp at any size, with outlines and shadows. The font to make."
+    text  "一种从字体轮廓图绘制而成的字体：在任何尺寸下都清晰锐利，并具有轮廓和阴影。要创建的字体。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIFontDataDistanceFieldFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontDataDistanceFieldFactory.cpp#DreamUIFontDataDistanceFieldFactory
+    src   "Dream UIFont Data Distance Field Factory"
+    text  "DreamUI 字体数据 距离场工厂"
+    state machine
+}

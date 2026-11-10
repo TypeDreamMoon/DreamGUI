@@ -1,0 +1,216 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierTextAnimation_PositionWaveProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty
+    src   "PositionWave Property (UI Effect TextAnimation)"
+    text  "位置波形属性 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PositionWaveProperty:Position {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PositionWaveProperty:SetPosition:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:SetPosition:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave
+    src   "Dream Mesh Modifier Text Animation Property with Wave"
+    text  "带波形的 Dream 网格修改器文本动画属性"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:FlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:FlipDirection
+    src   "Flip Direction"
+    text  "翻转方向"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:Frequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:Frequency
+    src   "Frequency"
+    // from the engine's zh-Hans
+    text  "频率"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:SetSpeed:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:SetSpeed:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:Speed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:Speed
+    src   "Speed"
+    // from the engine's zh-Hans
+    text  "速度"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:TextObject {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:TextObject
+    src   "Text Object"
+    text  "文本对象"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty
+    src   "RotationWave Property (UI Effect TextAnimation)"
+    text  "旋转波形属性 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty:Rotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:Rotator
+    src   "Rotator"
+    // from the engine's zh-Hans
+    text  "旋转"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty:SetRotator:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:SetRotator:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty
+    src   "ScaleWave Property (UI Effect TextAnimation)"
+    text  "缩放波形属性 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty:Scale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty:SetScale:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:SetScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierTextAnimation_PositionWaveProperty:Position {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:Position
+    src   "Max position value for sin wave. Sin function generate values from -1 to 1, so the result will be from -position to position."
+    text  "正弦波的最大位置值。正弦函数生成从 -1 到 1 的值，因此结果将从 -位置到位置。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:FlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:FlipDirection
+    src   "Flip move speed direction of the wave."
+    text  "翻转波形的移动速度方向。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:Frequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:Frequency
+    src   "Higher frequency will generate smaller wavelength."
+    text  "频率越高，生成的波长越短。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency
+    src   "Frequency and Speed are two different numbers -- one sets the wavelength along the string of\ncharacters, the other how fast the wave travels along it -- and this pair used to read and\nwrite Speed under the Frequency name, leaving Frequency with no accessor at all. Corrected\nhere rather than left alone, because a getter that returns the wrong property cannot be worked\naround by a caller who knows about it.\n\nThe counter-intuitive part is that this is a silent change for anyone who was calling\nSetFrequency: the node still exists and still compiles, and now moves a different property.\nAuthored content is unaffected either way -- both properties are EditAnywhere and serialise\nindependently, so nothing on disk changes meaning -- and the alternative, renaming the pair to\nmatch what it did, breaks those call sites instead while leaving the real Frequency\nunreachable. Only Blueprint call sites are in question, and the pair is reachable from\nBlueprint only by pulling an instanced property out of a text animation's array and casting it."
+    text  "Frequency和Speed是两个不同的数值——一个设置沿字符串\n的波长，另一个设置波沿其传播的速度——而这组属性过去以Frequency之名读\n写Speed，导致Frequency完全没有访问器。此处\n予以修正，而非放任不管，因为返回错误属性的getter函数无法被知晓\n内情的调用方绕过。\n\n反直觉之处在于，对任何调用\nSetFrequency的人来说这是一次静默变更：该节点仍然存在且仍可编译，但现在移动的是另一个属性。\n已有内容无论如何都不受影响——两个属性都是EditAnywhere且独立\n序列化，因此磁盘上没有任何内容的含义发生变化——而另一种做法，即重命名这组属性以\n匹配其实际行为，反而会破坏那些调用点，同时让真正的Frequency\n不可访问。只有蓝图调用点存在问题，而这组属性从\n蓝图只能通过从文本动画的数组中取出实例化属性并转换来访问。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:Speed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:Speed
+    src   "Move speed of the wave."
+    text  "波形的移动速度。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty:Rotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:Rotator
+    src   "Max rotator value for sin wave. Sin function generate values from -1 to 1, so the result will be from -rotator to rotator."
+    text  "正弦波的最大旋转器值。正弦函数生成从 -1 到 1 的值，因此结果将从 -旋转器到旋转器。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty:Scale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:Scale
+    src   "Max scale value for sin wave. Sin function generate values from -1 to 1, so the result will be from -scale to scale."
+    text  "正弦波的最大缩放值。正弦函数生成从 -1 到 1 的值，因此结果将从 -缩放值到缩放值。"
+    state machine
+}

@@ -1,0 +1,369 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUINavigationScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope
+    src   "Dream UINavigation Scope"
+    text  "导航范围"
+    state machine
+}
+
+DreamUINavigationScope:bActivateWhenEnabled {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bActivateWhenEnabled
+    src   "Activate when Enabled"
+    text  "启用时激活"
+    state machine
+}
+
+DreamUINavigationScope:bCloseOnBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bCloseOnBack
+    src   "Close on Back"
+    text  "点击返回按钮关闭"
+    state machine
+}
+
+DreamUINavigationScope:bConfineNavigation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bConfineNavigation
+    src   "Confine Navigation"
+    text  "限制导航"
+    state machine
+}
+
+DreamUINavigationScope:bIsScopeActive {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bIsScopeActive
+    src   "Is Scope Active"
+    text  "是否激活"
+    state machine
+}
+
+DreamUINavigationScope:bRestoreLastFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bRestoreLastFocus
+    src   "Restore Last Focus"
+    text  "恢复上次焦点"
+    state machine
+}
+
+DreamUINavigationScope:DesiredFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:DesiredFocusTarget
+    src   "Desired Focus Target"
+    text  "目标焦点"
+    state machine
+}
+
+DreamUINavigationScope:GetActivateWhenEnabled:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetActivateWhenEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetCloseOnBack:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetCloseOnBack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetConfineNavigation:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetConfineNavigation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetDesiredFocusTarget:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetDesiredFocusTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetInputMode:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetInputMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetRememberedFocus:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetRememberedFocus:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetRestoreLastFocus:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetRestoreLastFocus:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetUserIndex:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetUserIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:HandleBackAction:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:HandleBackAction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:InputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:InputMode
+    src   "Input Mode"
+    // from the engine's zh-Hans
+    text  "输入模式"
+    state draft
+}
+
+DreamUINavigationScope:IsScopeActive:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:IsScopeActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:OnScopeActivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:OnScopeActivated
+    src   "On Scope Activated"
+    text  "范围激活时"
+    state machine
+}
+
+DreamUINavigationScope:OnScopeDeactivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:OnScopeDeactivated
+    src   "On Scope Deactivated"
+    text  "范围停用时"
+    state machine
+}
+
+DreamUINavigationScope:RememberedFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:RememberedFocus
+    src   "Remembered Focus"
+    text  "记住的焦点"
+    state machine
+}
+
+DreamUINavigationScope:ResolveFocusTarget:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ResolveFocusTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:SetActivateWhenEnabled:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetActivateWhenEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetCloseOnBack:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetCloseOnBack:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetConfineNavigation:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetConfineNavigation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetDesiredFocusTarget:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetDesiredFocusTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetInputMode:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetInputMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetRestoreLastFocus:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetRestoreLastFocus:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetUserIndex:Value {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetUserIndex:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUINavigationScope:UserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUINavigationScopeActivationEvent__DelegateSignature:Scope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScopeActivationEvent__DelegateSignature:Scope
+    src   "Scope"
+    // from the engine's zh-Hans
+    text  "Scope"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUINavigationScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope
+    src   "A screen, panel or dialog as far as navigation is concerned: the unit that can be pushed in front\nof what came before, take focus, and give it back on the way out.\n\nDreamGUI could restrict navigation to a subtree, but there was nothing that remembered where focus\nhad been. Open a submenu and come back and focus fell to whichever selectable happened to have\nregistered first -- registration order, invisible to the designer and different in a packaged build\nthan in the editor. A scope keeps that answer: where focus should start, and where it was when the\nscope last handed control away.\n\nPush order is the stack, not the widget hierarchy, so a dialog opened from a page correctly sits in\nfront of it whether or not it is parented under it."
+    text  "就导航而言，一个屏幕、面板或对话框：它是可以被推到先前内容之前的单位，\n它会取得焦点，并在退出时归还焦点。\n\nDreamGUI 可以把导航限制在某个子树内，但没有任何东西记住焦点曾位于何处。\n打开一个子菜单再返回，焦点会落到恰好最先注册的那个可选项上——\n注册顺序对设计者不可见，而且在打包版本中与编辑器中不同。\n作用域保存了这一答案：焦点应从何处开始，\n以及作用域上次交出控制权时焦点在何处。\n\n入栈顺序取决于栈，而不是控件层级，因此从某个页面打开的对话框\n会正确地处于该页面之前，无论它是否以该页面为父级。"
+    state machine
+}
+
+DreamUINavigationScope:ActivateScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ActivateScope
+    src   "Push this scope: it takes focus, and the scope under it remembers where focus was."
+    text  "推入此作用域：它取得焦点，其下层作用域会记住焦点原先的位置。"
+    state machine
+}
+
+DreamUINavigationScope:bActivateWhenEnabled {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bActivateWhenEnabled
+    src   "Push as soon as the widget goes live. Off for a scope a Blueprint opens and closes itself."
+    text  "控件一生效就推入。对于由蓝图自行打开和关闭的作用域，请关闭此项。"
+    state machine
+}
+
+DreamUINavigationScope:bCloseOnBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bCloseOnBack
+    src   "Close when Back reaches this screen and nothing handled it. Off for a root screen, which Back\nshould pass straight through rather than shutting down the UI."
+    text  "当返回键到达此屏幕且无人处理时关闭。对于根屏幕请关闭此项，返回键应直接\n穿过它，而不是关闭整个 UI。"
+    state machine
+}
+
+DreamUINavigationScope:bConfineNavigation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bConfineNavigation
+    src   "While this is the top scope, directional navigation cannot reach anything outside it. Navigation\nonly -- a pointer can still click straight through to what is behind, which is what UIEventBlocker\nis for; conflating the two here would silently take the mouse away from a scope that only wanted\nto keep the gamepad in."
+    text  "当此作用域位于栈顶时，方向导航无法到达其外部的任何内容。仅限导航——\n指针仍可直接点击到其后面的内容，这正是 UIEventBlocker\n的用途；若在此把两者混为一谈，就会悄悄地把鼠标从一个只想\n保留手柄输入的作用域中夺走。"
+    state machine
+}
+
+DreamUINavigationScope:bRestoreLastFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bRestoreLastFocus
+    src   "Come back to where focus was last time rather than to the authored target."
+    text  "返回到上次焦点所在的位置，而不是作者指定的目标。"
+    state machine
+}
+
+DreamUINavigationScope:DeactivateScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:DeactivateScope
+    src   "Pop this scope. Focus returns to whatever the scope below it remembered."
+    text  "弹出此作用域。焦点返回到其下层作用域所记住的位置。"
+    state machine
+}
+
+DreamUINavigationScope:DesiredFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:DesiredFocusTarget
+    src   "Where focus starts. Empty means the first navigable control inside this scope."
+    text  "焦点的起始位置。为空表示此作用域内第一个可导航的控件。"
+    state machine
+}
+
+DreamUINavigationScope:GetInputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetInputMode
+    src   "What the player's keys and pad do while this is their active scope; see EDreamUIScopeInputMode."
+    text  "当此作用域为玩家的活动作用域时，玩家的按键和手柄所执行的操作；参见 EDreamUIScopeInputMode。"
+    state machine
+}
+
+DreamUINavigationScope:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetUserIndex
+    src   "The player this scope belongs to: UserIndex when it names one, else the player who owns the scope's widget (UDreamWidget::GetOwningPlayerIndex)."
+    text  "此作用域所属的玩家：若 UserIndex 指定了玩家，则为其值，否则为拥有该作用域控件的玩家（UDreamWidget::GetOwningPlayerIndex）。"
+    state machine
+}
+
+DreamUINavigationScope:HandleBackAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:HandleBackAction
+    src   "Deal with Back yourself -- discard an edit, step back a page, ask for confirmation.\n@return true to stop Back going any further down the stack. Returning false lets it reach this\n        scope's close behaviour, and then the screen underneath."
+    text  "自行处理返回键——放弃编辑、后退一页、请求确认。\n@return true 表示阻止返回键继续沿栈向下传递。返回 false 则让它到达此\n        作用域的关闭行为，然后再到达其下方的屏幕。"
+    state machine
+}
+
+DreamUINavigationScope:InputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:InputMode
+    src   "What the player's keys and pad do while this is their active scope: All and Menu keep DreamGUI's navigation, confirm\nand Back; Game turns them off, for a HUD that should not be walked onto during play. See EDreamUIScopeInputMode."
+    text  "当此作用域为玩家的活动作用域时，玩家的按键和手柄所执行的操作：All 和 Menu 保留 DreamGUI 的导航、确认\n和返回；Game 会将其关闭，适用于游玩期间不应被导航进入的 HUD。参见 EDreamUIScopeInputMode。"
+    state machine
+}
+
+DreamUINavigationScope:OnScopeActivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:OnScopeActivated
+    src   "Fired after the stack has pushed/popped this scope, not when the call is made."
+    text  "在栈已推入/弹出此作用域之后触发，而不是在发起调用时触发。"
+    state machine
+}
+
+DreamUINavigationScope:ReceiveScopeActivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ReceiveScopeActivated
+    src   "Named like AActor's ReceiveActorBeginOverlap next to OnActorBeginOverlap, and for the same\nreason: the Angelscript binder strips \"Receive\" off a BlueprintImplementableEvent, so a\n\"ReceiveOnScopeActivated\" would land on the script name \"OnScopeActivated\" and collide with the\ndelegate above (asNAME_TAKEN, which then fails the property registration and turns every\ncommandlet run into \"Failure - 8 error(s)\"). The DisplayName keeps the Blueprint override list\nreading the same as before."
+    text  "命名方式与 AActor 的 ReceiveActorBeginOverlap 之于 OnActorBeginOverlap 相同，\n原因也一样：Angelscript 绑定器会从 BlueprintImplementableEvent 上去掉“Receive”，因此\n“ReceiveOnScopeActivated”会落到脚本名“OnScopeActivated”上，并与上面的委托冲突\n（asNAME_TAKEN，随后属性注册失败，\n每次运行 commandlet 都变成“Failure - 8 error(s)”）。\nDisplayName 让蓝图的覆盖列表读起来和以前一样。"
+    state machine
+}
+
+DreamUINavigationScope:ResolveFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ResolveFocusTarget
+    src   "Where focus belongs when this scope takes over: the remembered spot if it is still usable and\nrestoring is on, then the authored target, then the first navigable control inside the scope."
+    text  "此作用域接管时焦点应落在何处：若记忆位置仍可用且\n已开启还原，则用记忆位置，然后是作者指定的目标，最后是作用域内第一个可导航控件。"
+    state machine
+}
+
+DreamUINavigationScope:SetDesiredFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetDesiredFocusTarget
+    src   "Defined in the .cpp, unlike its neighbours, because assigning to a TWeakObjectPtr needs the\npointee to be COMPLETE -- the operator has to prove the conversion -- and UUISelectable is only\nforward declared here. The getter can stay inline: Get() returns T* and never asks.\n\nIt compiled inline for a long time on borrowed completeness: some neighbour in the same unity\nblob included UISelectable.h, so the definition happened to be in scope. Deleting an unrelated\nset of files reshuffled the blobs and it stopped being. Including the header here would fix it\ntoo, and would hand that include to everyone who includes this one."
+    text  "与邻近项不同，该函数定义在 .cpp 中，因为给 TWeakObjectPtr 赋值需要\n被指向的类型是 COMPLETE 的——运算符必须证明该转换——而这里 UUISelectable 只有\n前向声明。getter 可以保持内联：Get() 返回 T*，从不做此要求。\n\n它曾长期借由别处提供的完整性以内联方式编译：同一个 unity blob 中\n某个邻近文件包含了 UISelectable.h，于是该定义恰好处于作用域内。删除一组\n不相关的文件重新打乱了 blob，它便不再如此。在此处包含该头文件同样可以修复，\n但也会把该包含传递给所有包含本文件的文件。"
+    state machine
+}
+
+DreamUINavigationScope:SetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetUserIndex
+    src   "-1: the owning player."
+    text  "-1：拥有此控件的玩家。"
+    state machine
+}
+
+DreamUINavigationScope:UserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:UserIndex
+    src   "Which player's focus this scope governs; matches the event system's user index. -1, the default: the player who owns\nthe scope's widget, so a screen on player 2's half of a split screen is player 2's without saying so."
+    text  "此作用域管理哪个玩家的焦点；与事件系统的用户索引一致。-1（默认值）：拥有\n该作用域控件的玩家，因此分屏中玩家2那半边的界面自然属于玩家2，无需另行指定。"
+    state machine
+}

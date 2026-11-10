@@ -1,0 +1,96 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerViewportClient
+
+AutoKeyLayoutDriven {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Position not keyed: the widget is placed by its parent's layout panel. Animate Render Translation instead."
+    text  "位置未绑定：控件由其父级布局面板放置。请修改渲染平移动画。"
+    state machine
+}
+
+SafeZoneGuide {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "safe area"
+    text  "安全区域"
+    state machine
+}
+
+DesignerRotateWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Rotate Widget"
+    text  "旋转控件"
+    state machine
+}
+
+DesignerTransformWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Transform Widgets"
+    text  "变换控件"
+    state machine
+}
+
+MoveWidget {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Move Widget"
+    // from the engine's zh-Hans
+    text  "移动控件"
+    state draft
+}
+
+MoveTransaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Move Elements"
+    // from the engine's zh-Hans
+    text  "移动元素"
+    state draft
+}
+
+RotateTransaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Rotate Elements"
+    // from the engine's zh-Hans
+    text  "旋转元素"
+    state draft
+}
+
+ScaleTransaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Scale Elements"
+    // from the engine's zh-Hans
+    text  "缩放元素"
+    state draft
+}
+
+TranslateRotateZTransaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Translate/RotateZ Elements"
+    // from the engine's zh-Hans
+    text  "平移/旋转Z元素"
+    state draft
+}
+
+TranslateRotate2D {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Translate/Rotate2D Elements"
+    // from the engine's zh-Hans
+    text  "平移/旋转2D元素"
+    state draft
+}
+
+NudgeTransaction {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "Nudge Elements"
+    // from the engine's zh-Hans
+    text  "微调元素"
+    state draft
+}
+
+namespace DreamWidgetDesigner
+
+ShippedImageOutline {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerViewportClient.cpp
+    src   "shipped"
+    text  "已发布"
+    state machine
+}

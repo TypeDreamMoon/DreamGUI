@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerClickInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface
+    src   "Dream Pointer Click Interface"
+    text  "梦境指针点击接口"
+    state machine
+}
+
+DreamPointerClickInterface:OnPointerClick:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface:OnPointerClick:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerClickInterface:OnPointerClick:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface:OnPointerClick:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerClickInterface:OnPointerClick {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface:OnPointerClick
+    src   "Called when a click event occurs.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当发生点击事件时调用。\n@return 是否允许事件冒泡？如果同一Actor的所有组件的接口都返回true，则事件可以冒泡。"
+    state machine
+}

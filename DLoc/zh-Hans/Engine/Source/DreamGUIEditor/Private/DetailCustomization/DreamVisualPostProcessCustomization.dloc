@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UIPostProcessRenderableCustomization
+
+MaskTexture {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamVisualPostProcessCustomization.cpp
+    src   "MaskTexture"
+    text  "遮罩纹理"
+    state machine
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerMaterialVector {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerMaterialVector.h#DreamTweenerMaterialVector
+    src   "Dream Tweener Material Vector"
+    text  "Dream Tweener 材质向量"
+    state machine
+}

@@ -1,0 +1,1531 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+DreamUIAnimationDynamicEvent__DelegateSignature {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationDynamicEvent__DelegateSignature
+    src   "What BindToAnimationStarted / BindToAnimationFinished take: UMG's FWidgetAnimationDynamicEvent."
+    text  "BindToAnimationStarted / BindToAnimationFinished 接受的参数：UMG 控件的 FWidgetAnimationDynamicEvent。"
+    state machine
+}
+
+DreamUIAnimationEventBinding {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationEventBinding
+    src   "A delegate waiting on one animation's Started or Finished; see BindToAnimationEvent."
+    text  "等待某个动画的 Started 或 Finished 的委托；参见 BindToAnimationEvent。"
+    state machine
+}
+
+DreamUIAnimationHandle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationHandle
+    src   "One playing instance of an animation. PlayAnimation hands one back; every per-instance call\n(pause, stop, reverse, seek, speed, loops) takes it. Cheap to copy, safe to keep: once the\ninstance ends the handle simply stops being valid."
+    text  "一个动画的一个播放实例。PlayAnimation 会返回一个；每个按实例的调用\n（暂停、停止、反向、跳转、速度、循环）都以它作为参数。复制开销小，可安全保留：一旦\n实例结束，句柄就直接失效。"
+    state machine
+}
+
+DreamUIAnimationObjectEvent__DelegateSignature {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationObjectEvent__DelegateSignature
+    src   "The animation whose instance just started, or just ended (naturally or by Stop)."
+    text  "其实例刚刚开始或刚刚结束（自然结束或通过 Stop 结束）的动画。"
+    state machine
+}
+
+DreamUIAnimEventDelegate__DelegateSignature {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimEventDelegate__DelegateSignature
+    src   "Fired by a DreamUI Event track key while an animation plays."
+    text  "在动画播放期间由 DreamUI 事件轨道关键帧触发。"
+    state machine
+}
+
+DreamWidgetAnimationComponent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent
+    src   "Movie scene animation embedded within DreamUIPrefab.\n\nThe playback API mirrors UUserWidget's, with one deliberate difference: an animation can play\nseveral instances at once here, so the per-instance calls take the handle PlayAnimation returned\nrather than the animation object. The \"...Of\" and Find calls are the bridge for a caller that\nonly has the object."
+    text  "嵌入在 DreamUIPrefab 控件中的影片场景动画。\n\n播放 API 与 UUserWidget 的一致，但有一处刻意的区别：这里的动画可以同时播放\n多个实例，因此按实例的调用接受 PlayAnimation 返回的句柄，\n而不是动画对象。“...Of”和 Find 系列调用是为只持有动画对象的调用方\n搭的桥。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:ActiveSequencePlayers {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ActiveSequencePlayers
+    src   "Players created by PlayAnimation. Kept alive independently for concurrent playback."
+    text  "由 PlayAnimation 创建的播放器。为并发播放而独立保持存活。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AnimationCallbacks {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AnimationCallbacks
+    src   "Delegates bound through BindToAnimationEvent and its two named forms."
+    text  "通过 BindToAnimationEvent 及其两个具名形式绑定的委托。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AutoPlayNumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayNumLoopsToPlay
+    src   "Total plays for the auto-played instance. Zero or less loops indefinitely."
+    text  "自动播放实例的总播放次数。为零或更少时无限循环。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AutoPlayPlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayPlaybackSpeed
+    src   "Play rate for the auto-played instance."
+    text  "自动播放实例的播放速率。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AutoPlayStartTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayStartTime
+    src   "Seconds into the animation that the auto-played instance starts from."
+    text  "自动播放实例从动画的第几秒开始。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAffectedByGamePause {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAffectedByGamePause
+    src   "Every animation this component plays: keep going while the game is paused.\n\nThe tween side has had this per tween all along (UDreamTweener::affectByGamePause) and a pause\nmenu that animates itself away is the ordinary case for it; the Sequencer side simply had no\nswitch. Off means the engine's own \"tick this client while paused\" path, which also hands the\nplayer the clock that keeps running while paused."
+    text  "此组件播放的每个动画：游戏暂停时继续播放。\n\n补间一侧一直按补间提供此项（UDreamTweener::affectByGamePause），而自行播放动画退场的\n暂停菜单正是它的常见情形；Sequencer 一侧则根本没有开关。关闭表示走引擎自带的\n“暂停时仍对此客户端执行 tick”路径，该路径还会把暂停期间持续走的时钟交给\n播放器。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAffectedByTimeDilation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAffectedByTimeDilation
+    src   "Every animation this component plays: follow Global Time Dilation.\n\nThe delta the sequence tick manager hands out is already dilated, so this is on by default and a\nbullet-time effect slows the HUD with everything else. Off divides the dilation back out, which\nis the tween side's affectByTimeDilation -- and what a menu that must stay responsive wants."
+    text  "此组件播放的每个动画：跟随全局时间膨胀。\n\n序列计时管理器给出的增量已经过膨胀，因此默认开启；\n子弹时间效果会让HUD随其他内容一起变慢。关闭会将膨胀除回去，也就是补间侧的affectByTimeDilation——\n这正是需要保持响应的菜单所需要的。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAutoPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAutoPlay
+    src   "Play one of this component's animations as soon as the widget comes alive."
+    text  "控件激活后立即播放此组件的一个动画。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAutoPlayRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAutoPlayRestoreState
+    src   "Put every property the auto-played instance touched back as it was when the instance ends."
+    text  "自动播放的实例结束时，将它改动过的每个属性恢复原样。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bDynamicWeighting {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bDynamicWeighting
+    src   "Every animation this component plays: allow per-instance weights (SetAnimationWeight).\n\nOff by default because the blend channel it turns on is not free, and an animation that is\nnever weighted does not need one."
+    text  "此组件播放的每个动画：允许按实例设置权重（SetAnimationWeight）。\n\n默认关闭，因为它开启的混合通道并非无代价，而一个\n从不设置权重的动画并不需要它。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:BindToAnimationEvent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationEvent
+    src   "The general form of the two above."
+    text  "以上两项的通用形式。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:BindToAnimationFinished {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationFinished
+    src   "Called when an instance of the animation ends, naturally or by Stop. Unbind with the same delegate."
+    text  "当动画实例自然结束或被Stop停止时调用。使用同一个委托解除绑定。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:BindToAnimationStarted {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationStarted
+    src   "Called when an instance of the animation starts. Unbind with the same delegate."
+    text  "当动画实例开始时调用。使用同一个委托解除绑定。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bPauseAtEnd {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bPauseAtEnd
+    src   "Every animation this component plays: hold the last frame instead of ending."
+    text  "此组件播放的每个动画：保持最后一帧而不结束。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bPlaybackSettingsMigrated {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bPlaybackSettingsMigrated
+    src   "True once PostLoad has read PlaybackSettings across, so a second load does not re-read it."
+    text  "一旦PostLoad已完整读取PlaybackSettings就为true，因此第二次加载不会再次读取。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:ClearAnimationWeight {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ClearAnimationWeight
+    src   "Drops a weight set by SetAnimationWeight, returning the instance to writing its values whole."
+    text  "丢弃由SetAnimationWeight设置的权重，使实例恢复为完整写入其值。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:CurrentSequenceIndex {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:CurrentSequenceIndex
+    src   "Which of this component's animations Auto Play starts."
+    text  "自动播放启动此组件中的哪个动画。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:FindAnimationInstance {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:FindAnimationInstance
+    src   "The newest live (playing or paused) instance of an animation, or an invalid handle."
+    text  "动画最新的活动（播放中或暂停）实例，或无效句柄。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:FlushAnimations {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:FlushAnimations
+    src   "Applies any evaluation still queued for this component's instances before returning."
+    text  "在返回之前，将此组件的所有实例中排队的任何评估应用。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:GetAnimationCurrentTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetAnimationCurrentTime
+    src   "Seconds into the animation; zero for a handle that is no longer live."
+    text  "动画的当前时间（以秒为单位）；如果句柄不再有效，则为零。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:HasPlayingAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:HasPlayingAnimation
+    src   "True if any instance of the animation is currently playing."
+    text  "如果当前正在播放任何动画实例，则返回 true。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:InitSequencePlayer {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:InitSequencePlayer
+    src   "Init SequencePlayer with current sequence."
+    text  "使用当前序列初始化 SequencePlayer。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:IsAnimationPlayingForward {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPlayingForward
+    src   "True while the instance runs towards its end; false when reversed."
+    text  "如果实例正在向其结束运行，则返回 true；否则返回 false（反向运行）。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:IsAnyAnimationPlaying {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnyAnimationPlaying
+    src   "True if any instance of any animation on this component is playing."
+    text  "如果此组件上的任何动画实例正在播放，则返回 true。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:OnAnimationEvent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationEvent
+    src   "Fired by a DreamUI Event track key while an animation of this component plays."
+    text  "当此组件上的动画播放时，由 DreamUI 事件轨道上的键触发。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:OnAnimationFinished {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationFinished
+    src   "Any instance of any animation on this component ended, naturally or by Stop."
+    text  "此组件上的任何动画实例已结束，无论是自然结束还是通过 Stop 停止。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:OnAnimationStarted {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationStarted
+    src   "Any instance of any animation on this component started."
+    text  "此组件上的任何动画实例已开始。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PauseAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimation
+    src   "@return the time the instance was at when paused, in seconds; feed it back to PlayAnimation's StartAtTime to resume from there."
+    text  "在暂停时，返回实例的时间（以秒为单位）；将其反馈到 PlayAnimation 的 StartAtTime 参数以恢复播放。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PauseAnimationsOf {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimationsOf
+    src   "Pauses every live instance of the animation. @return the paused time of the newest one, in seconds."
+    text  "暂停此动画的所有活动实例。返回最新的实例的暂停时间（以秒为单位）。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PlayAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation
+    src   "Plays a new instance of an animation without interrupting the ones already running. The\nform the compiler's generated animation variables feed: a graph drags the animation in\ninstead of naming it with a string that goes stale on rename. Accepts this component's\nembedded animations and its standalone sequence assets alike.\n@param StartAtTime Seconds into the animation to start from; for a reverse play, seconds before its end.\n@param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG; so does any negative number, for callers who spell \"forever\" as -1."
+    text  "播放动画的一个新实例，不中断已在运行的实例。\n这是编译器生成的动画变量所馈送的形式：图表将动画拖入，\n而不是用一个在重命名后就会失效的字符串来命名它。接受此组件\n内嵌的动画及其独立的序列资产。\n@param StartAtTime 从动画的第几秒开始播放；对于反向播放，指其结束前几秒。\n@param NumLoopsToPlay 播放动画的总次数。为零时无限循环，与 UMG 一致；任何负数也是如此，供将“永远”写作 -1 的调用方使用。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PlayAnimationForward {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationForward
+    src   "Plays an animation forward relative to its current state: an instance already running or\npaused turns around from where it is, otherwise a new one starts from the beginning. The\n\"panel slides out on click, slides back on the next click\" idiom, exactly as in UMG."
+    text  "相对于当前状态正向播放动画：已在运行或\n已暂停的实例从当前位置转向，否则新实例从头开始。\n即“点击时面板滑出，下次点击时滑回”的惯用法，与 UMG 完全一致。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PlayAnimationReverse {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationReverse
+    src   "The reverse half of PlayAnimationForward: turns a live instance around, or starts one from the end."
+    text  "反向播放动画，将正在运行的实例反转，或从末尾开始播放一个实例。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange
+    src   "Plays an animation and stops it at EndAtTime rather than at its end.\n@param EndAtTime Absolute seconds into the animation where playback ends. Zero or less means the animation's own end."
+    text  "播放动画，并在 EndAtTime 处停止，而不是在动画结束时停止。\n@param EndAtTime 动画播放结束的绝对秒数。零或更小的值表示动画本身的结束。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PlaybackSettings {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlaybackSettings
+    src   "The settings struct this component used to expose whole. Kept so assets authored against it\nstill load, read once by PostLoad into the properties above, and never written again."
+    text  "此组件过去整体公开的设置结构体。保留它是为了让针对它创作的资产\n仍能加载，由 PostLoad 读取一次到上述属性中，此后不再写入。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation
+    src   "------------------------------------------------------------------------------ queue\n\nThe same operations, deferred to the end of this frame's sequence evaluation. Safe to call\nfrom inside an animation's own Started / Finished / event callbacks, where playing or\nstopping immediately would re-enter the evaluation that is delivering the callback."
+    text  "------------------------------------------------------------------------------ queue\n\n相同的操作，但推迟到本帧序列求值结束时执行。可以安全地从动画自身的\nStarted / Finished / 事件回调内部调用，因为在那里立即播放或\n停止会重新进入正在派发该回调的求值过程。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:ResumeAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ResumeAnimation
+    src   "Continues a paused instance in the direction it was going."
+    text  "继续暂停的实例，并沿其原始方向播放。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SequenceAssets {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SequenceAssets
+    src   "Standalone animation assets this component can also play, addressed by asset name."
+    text  "此组件还可以播放的独立的动画资源，通过资源名称进行引用。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetAffectedByGamePause {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAffectedByGamePause
+    src   "Whether this component's animations stop while the game is paused. The runtime form of the\nauthored flag; it applies to instances started AFTER it, because which clock a player follows\nis settled when the player is initialized."
+    text  "此组件的动画在游戏暂停时是否停止。这是创作标志的运行时形式；\n它仅对在其之后启动的实例生效，因为播放器遵循哪个时钟\n在播放器初始化时便已确定。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetAffectedByTimeDilation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAffectedByTimeDilation
+    src   "Whether this component's animations follow Global Time Dilation; see SetAffectedByGamePause."
+    text  "确定此组件的动画是否遵循全局时间缩放；请参阅 SetAffectedByGamePause。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetAnimationCurrentTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationCurrentTime
+    src   "Jumps the instance to a time in seconds without changing whether it is playing."
+    text  "将实例跳转到秒数，而不会更改其是否正在播放。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetAnimationWeight {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationWeight
+    src   "Scales everything this instance writes, so two instances can blend instead of fighting.\n\nThe engine multiplies every blendable value the instance produces by this weight; two instances\nof the same animation at 0.5 each land halfway between their two results rather than the later\none simply overwriting the earlier. Needs Dynamic Weighting on (this component's own flag, or\nthe animation asset's), which is why the flag exists -- without it the engine has no blend\nchannel to apply a weight through and the value is whatever the last writer said.\n@param Weight Usually 0..1. Not clamped: the engine does not clamp it either."
+    text  "缩放此实例写入的所有内容，使两个实例可以混合而不是相互争抢。\n\n引擎会将实例产生的每个可混合值乘以该权重；同一动画的两个实例\n各取 0.5 时，结果会落在两者结果的正中间，而不是后一个简单\n覆盖前一个。需要开启动态加权（此组件自身的标志，或\n动画资产的标志），这正是该标志存在的原因——没有它，引擎就没有可施加权重的混合\n通道，值将取决于最后一个写入者。\n@param Weight 通常为 0..1。不做钳制：引擎也不会对它做钳制。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetDynamicWeighting {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetDynamicWeighting
+    src   "Whether instances of this component's animations can be weighted; see SetAnimationWeight."
+    text  "是否允许此组件动画实例进行加权；请参阅 SetAnimationWeight。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetNumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetNumLoopsToPlay
+    src   "Changes how many times a live instance plays in total. Zero or less loops indefinitely."
+    text  "更改动画实例的总播放次数。零或负数表示无限循环。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetSequenceByDisplayName {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByDisplayName
+    src   "Find animation in SequenceArray by Name, then set it to SequencePlayer"
+    text  "通过名称在 SequenceArray 中查找动画，然后将其设置为 SequencePlayer。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SetSequenceByIndex {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByIndex
+    src   "Find animation in SequenceArray by Index, then set it to SequencePlayer."
+    text  "在 SequenceArray 中通过索引查找动画，然后将其设置为 SequencePlayer。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SparePlayers {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SparePlayers
+    src   "Players whose instance ended, kept to play their animation's next instance (DreamUI.Animation.ReusePlayers). A new\nplayer is initialized for its sequence, which registers it with the world's sequence tick manager -- a walk of every\nplayer registered there -- and sets up its instance of the sequence, and one torn down is walked for again to be\nunregistered: a wall of thousands of widgets starting and ending an animation together paid for it quadratically, in\nthe frame they started and the frame they ended. A kept player stays registered and set up, and costs a frame only\nthe tick manager's look at a player that is not playing. At most a few for each component (MaxSparePlayers); torn\ndown with the component."
+    text  "实例已结束的播放器，保留下来用于播放其动画的下一个实例（DreamUI.Animation.ReusePlayers）。新建的\n播放器会为其序列初始化，这会将它注册到世界的序列计时管理器——需遍历在其中注册的每个\n播放器——并为其设置序列实例；而被销毁的播放器还需再次遍历以\n注销：成千上万个控件同时开始和结束一个动画时，在它们开始的那一帧和结束的那一帧\n为此付出了二次方的代价。保留的播放器保持注册和已设置状态，每帧的开销仅是\n计时管理器对一个未在播放的播放器的一次查看。每个组件至多保留几个（MaxSparePlayers）；随组件\n一同销毁。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:StopAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:StopAnimation
+    src   "Ends the instance where it is. Its Finished delegates fire, the same as a natural end."
+    text  "结束当前动画实例。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:StopAnimationsOf {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:StopAnimationsOf
+    src   "Stops every live instance of the animation."
+    text  "停止所有正在运行的动画实例。"
+    state machine
+}
+
+DreamWidgetAnimationComponent:TickIntervalSeconds {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:TickIntervalSeconds
+    src   "Every animation this component plays: seconds between evaluations. Zero evaluates every frame."
+    text  "此组件播放的每个动画：评估之间的秒数。零表示每帧评估。"
+    state machine
+}
+
+EDreamUIAnimationEvent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationEvent
+    src   "The two moments of an animation instance a bound delegate can wait for."
+    text  "动画实例的两个时刻，绑定委托可以等待。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIAnimationEventBinding {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationEventBinding
+    src   "Dream UIAnimation Event Binding"
+    text  "Dream UI 动画事件绑定"
+    state machine
+}
+
+DreamUIAnimationEventBinding:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationEventBinding:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamUIAnimationEventBinding:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationEventBinding:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamUIAnimationEventBinding:Event {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationEventBinding:Event
+    src   "Event"
+    // from the engine's zh-Hans
+    text  "事件"
+    state draft
+}
+
+DreamUIAnimationHandle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationHandle
+    src   "Dream UIAnimation Handle"
+    text  "Dream UI 动画句柄"
+    state machine
+}
+
+DreamUIAnimationHandle:Player {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationHandle:Player
+    src   "Player"
+    // from the engine's zh-Hans
+    text  "播放器"
+    state draft
+}
+
+DreamUIAnimationObjectEvent__DelegateSignature:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationObjectEvent__DelegateSignature:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamUIAnimEventDelegate__DelegateSignature:EventName {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimEventDelegate__DelegateSignature:EventName
+    src   "Event Name"
+    // from the engine's zh-Hans
+    text  "事件名称"
+    state draft
+}
+
+DreamWidgetAnimationComponent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent
+    src   "DreamUI Widget Animation Component"
+    text  "Dream UI 控件动画组件"
+    state machine
+}
+
+DreamWidgetAnimationComponent:ActiveSequencePlayers {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ActiveSequencePlayers
+    src   "Active Sequence Players"
+    // from the engine's zh-Hans
+    text  "活跃序列播放器"
+    state draft
+}
+
+DreamWidgetAnimationComponent:AnimationCallbacks {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AnimationCallbacks
+    src   "Animation Callbacks"
+    // from the engine's zh-Hans
+    text  "动画回调"
+    state draft
+}
+
+DreamWidgetAnimationComponent:AutoPlayNumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayNumLoopsToPlay
+    src   "Auto Play Num Loops to Play"
+    text  "自动播放循环次数"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AutoPlayPlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayPlaybackSpeed
+    src   "Auto Play Playback Speed"
+    text  "自动播放播放速度"
+    state machine
+}
+
+DreamWidgetAnimationComponent:AutoPlayStartTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:AutoPlayStartTime
+    src   "Auto Play Start Time"
+    text  "自动播放开始时间"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAffectedByGamePause {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAffectedByGamePause
+    src   "Affected by Game Pause"
+    text  "受游戏暂停影响"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bAffectedByTimeDilation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAffectedByTimeDilation
+    src   "Affected by Time Dilation"
+    // from the engine's zh-Hans
+    text  "受时间膨胀影响"
+    state draft
+}
+
+DreamWidgetAnimationComponent:bAutoPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAutoPlay
+    src   "Auto Play"
+    // from the engine's zh-Hans
+    text  "自动播放"
+    state draft
+}
+
+DreamWidgetAnimationComponent:bAutoPlayRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAutoPlayRestoreState
+    src   "Auto Play Restore State"
+    text  "自动播放恢复状态"
+    state machine
+}
+
+DreamWidgetAnimationComponent:bDynamicWeighting {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bDynamicWeighting
+    src   "Dynamic Weighting"
+    // from the engine's zh-Hans
+    text  "动态加权"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationEvent:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationEvent:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationEvent:AnimationEvent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationEvent:AnimationEvent
+    src   "Animation Event"
+    // from the engine's zh-Hans
+    text  "动画事件"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationEvent:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationEvent:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationFinished:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationFinished:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationFinished:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationFinished:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationStarted:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationStarted:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:BindToAnimationStarted:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BindToAnimationStarted:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamWidgetAnimationComponent:bPauseAtEnd {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bPauseAtEnd
+    src   "Pause at End"
+    // from the engine's zh-Hans
+    text  "末尾处暂停"
+    state draft
+}
+
+DreamWidgetAnimationComponent:bPlaybackSettingsMigrated {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bPlaybackSettingsMigrated
+    src   "Playback Settings Migrated"
+    text  "播放设置已迁移"
+    state machine
+}
+
+DreamWidgetAnimationComponent:BroadcastAnimationEvent:EventName {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:BroadcastAnimationEvent:EventName
+    src   "Event Name"
+    // from the engine's zh-Hans
+    text  "事件名称"
+    state draft
+}
+
+DreamWidgetAnimationComponent:ClearAnimationWeight:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ClearAnimationWeight:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:CurrentSequenceIndex {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:CurrentSequenceIndex
+    src   "Current Sequence Index"
+    text  "当前序列索引"
+    state machine
+}
+
+DreamWidgetAnimationComponent:FindAnimationInstance:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:FindAnimationInstance:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:FindAnimationInstance:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:FindAnimationInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetAnimationCurrentTime:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetAnimationCurrentTime:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetAnimationCurrentTime:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetAnimationCurrentTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetCurrentSequence:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetCurrentSequence:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetCurrentSequenceIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetCurrentSequenceIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequenceArray:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequenceByDisplayName:InName {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByDisplayName:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequenceByDisplayName:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByDisplayName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequenceByIndex:InIndex {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequenceByIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:GetSequencePlayer:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequencePlayer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:HasPlayingAnimation:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:HasPlayingAnimation:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:HasPlayingAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:HasPlayingAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAffectedByGamePause:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAffectedByGamePause:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAffectedByTimeDilation:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAffectedByTimeDilation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPaused:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPaused:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPaused:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPaused:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPlaying:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPlaying:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPlaying:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPlaying:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPlayingForward:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPlayingForward:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnimationPlayingForward:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnimationPlayingForward:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsAnyAnimationPlaying:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAnyAnimationPlaying:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:IsDynamicWeighting:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsDynamicWeighting:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:OnAnimationEvent {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationEvent
+    src   "On Animation Event"
+    text  "动画事件"
+    state machine
+}
+
+DreamWidgetAnimationComponent:OnAnimationFinished {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationFinished
+    src   "On Animation Finished"
+    text  "动画完成事件"
+    state machine
+}
+
+DreamWidgetAnimationComponent:OnAnimationStarted {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:OnAnimationStarted
+    src   "On Animation Started"
+    text  "动画开始事件"
+    state machine
+}
+
+DreamWidgetAnimationComponent:PauseAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PauseAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PauseAnimationsOf:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimationsOf:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PauseAnimationsOf:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PauseAnimationsOf:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimation:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimation:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:Name {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationByDisplayName:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationForward:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationForward:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationForward:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationForward:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationForward:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationForward:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationForward:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationForward:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationReverse:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationReverse:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationReverse:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationReverse:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationReverse:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationReverse:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationReverse:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationReverse:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:EndAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:EndAtTime
+    src   "End at Time"
+    // from the engine's zh-Hans
+    text  "结束时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlayAnimationTimeRange:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationTimeRange:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:PlaybackSettings {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlaybackSettings
+    src   "Playback Settings"
+    // from the engine's zh-Hans
+    text  "播放设置"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePauseAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePauseAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimation:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimation:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:bRestoreState {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:bRestoreState
+    src   "Restore State"
+    // from the engine's zh-Hans
+    text  "恢复状态"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:EndAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:EndAtTime
+    src   "End at Time"
+    // from the engine's zh-Hans
+    text  "结束时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:PlayMode {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:PlayMode
+    src   "Play Mode"
+    // from the engine's zh-Hans
+    text  "播放模式"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:StartAtTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueuePlayAnimationTimeRange:StartAtTime
+    src   "Start at Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:QueueStopAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:QueueStopAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:ResumeAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ResumeAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:ReverseAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:ReverseAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SequenceArray {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SequenceArray
+    src   "Sequence Array"
+    text  "序列数组"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SequenceAssets {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SequenceAssets
+    src   "Sequence Assets"
+    text  "序列资产"
+    state machine
+}
+
+DreamWidgetAnimationComponent:SequencePlayer {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SequencePlayer
+    src   "Sequence Player"
+    // from the engine's zh-Hans
+    text  "序列播放器"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAffectedByGamePause:bValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAffectedByGamePause:bValue
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAffectedByTimeDilation:bValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAffectedByTimeDilation:bValue
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAnimationCurrentTime:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationCurrentTime:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAnimationCurrentTime:InTime {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationCurrentTime:InTime
+    src   "In Time"
+    // from the engine's zh-Hans
+    text  "输入时间"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAnimationWeight:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationWeight:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetAnimationWeight:Weight {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetAnimationWeight:Weight
+    src   "Weight"
+    // from the engine's zh-Hans
+    text  "权重"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetDynamicWeighting:bValue {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetDynamicWeighting:bValue
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetNumLoopsToPlay:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetNumLoopsToPlay:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetNumLoopsToPlay:NumLoopsToPlay {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetNumLoopsToPlay:NumLoopsToPlay
+    src   "Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "要播放的循环数"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetPlaybackSpeed:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetPlaybackSpeed:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetPlaybackSpeed:PlaybackSpeed {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetPlaybackSpeed:PlaybackSpeed
+    src   "Playback Speed"
+    // from the engine's zh-Hans
+    text  "播放速度"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetSequenceByDisplayName:InName {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByDisplayName:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SetSequenceByIndex:InIndex {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamWidgetAnimationComponent:SparePlayers {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SparePlayers
+    src   "Spare Players"
+    text  "备用播放器"
+    state machine
+}
+
+DreamWidgetAnimationComponent:StopAnimation:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:StopAnimation:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamWidgetAnimationComponent:StopAnimationsOf:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:StopAnimationsOf:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:TickIntervalSeconds {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:TickIntervalSeconds
+    src   "Tick Interval Seconds"
+    text  "间隔时间（秒）"
+    state machine
+}
+
+DreamWidgetAnimationComponent:UnbindAllFromAnimationFinished:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindAllFromAnimationFinished:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:UnbindAllFromAnimationStarted:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindAllFromAnimationStarted:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:UnbindFromAnimationFinished:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindFromAnimationFinished:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:UnbindFromAnimationFinished:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindFromAnimationFinished:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamWidgetAnimationComponent:UnbindFromAnimationStarted:Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindFromAnimationStarted:Animation
+    src   "Animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+DreamWidgetAnimationComponent:UnbindFromAnimationStarted:Delegate {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:UnbindFromAnimationStarted:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+EDreamUIAnimationEvent.EDreamUIAnimationEvent_MAX {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationEvent:EDreamUIAnimationEvent_MAX
+    src   "EDream UIAnimation Event MAX"
+    text  "Dream UI 动画事件 (最大值)"
+    state machine
+}
+
+EDreamUIAnimationEvent.Finished {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationEvent:Finished
+    src   "Finished"
+    // from the engine's zh-Hans
+    text  "已完成"
+    state draft
+}
+
+EDreamUIAnimationEvent.Started {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationEvent:Started
+    src   "Started"
+    // from the engine's zh-Hans
+    text  "已开始"
+    state draft
+}
+
+EDreamUIAnimationPlayMode.EDreamUIAnimationPlayMode_MAX {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationPlayMode:EDreamUIAnimationPlayMode_MAX
+    src   "EDream UIAnimation Play Mode MAX"
+    text  "Dream UI 动画播放模式 (最大值)"
+    state machine
+}
+
+EDreamUIAnimationPlayMode.Forward {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationPlayMode:Forward
+    src   "Forward"
+    // from the engine's zh-Hans
+    text  "快进"
+    state draft
+}
+
+EDreamUIAnimationPlayMode.Reverse {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#EDreamUIAnimationPlayMode:Reverse
+    src   "Reverse"
+    // from the engine's zh-Hans
+    text  "倒回"
+    state draft
+}
+
+namespace UObjectCategory
+
+DreamUI|Animation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamUIAnimationHandle:Player
+    src   "DreamUI|Animation"
+    text  "DreamUI | 动画"
+    state machine
+}
+
+Playback {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:bAutoPlay
+    src   "Playback"
+    // from the engine's zh-Hans
+    text  "回放"
+    state draft
+}

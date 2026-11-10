@@ -1,0 +1,318 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamParkedWidgetEntry {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamParkedWidgetEntry
+    src   "Dream Parked Widget Entry"
+    text  "Dream 控件挂起项"
+    state machine
+}
+
+DreamParkedWidgetEntry:ParkedAtSeconds {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamParkedWidgetEntry:ParkedAtSeconds
+    src   "Parked at Seconds"
+    text  "挂起时间"
+    state machine
+}
+
+DreamParkedWidgetEntry:Widget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamParkedWidgetEntry:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUIManagerWorldSubsystem {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem
+    src   "Dream UIManager World Subsystem"
+    text  "Dream UI 管理器世界子系统"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:AllCanvasArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:AllCanvasArray
+    src   "All Canvas Array"
+    text  "所有 Canvas 数组"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:AllCultureChangedArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:AllCultureChangedArray
+    src   "All Culture Changed Array"
+    text  "所有文化变更数组"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:AllRaycasterArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:AllRaycasterArray
+    src   "All Raycaster Array"
+    text  "所有 Raycaster 数组"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:AllSelectableArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:AllSelectableArray
+    src   "All Selectable Array"
+    text  "所有 Selectable 数组"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:DreamUIBehavioursForStart {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:DreamUIBehavioursForStart
+    src   "Dream UIBehaviours for Start"
+    text  "Dream UI 行为启动"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:DreamUIBehavioursForTick {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:DreamUIBehavioursForTick
+    src   "Dream UIBehaviours for Tick"
+    text  "Dream UI 行为更新"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:DreamUIBehavioursNeedToRemoveFromTick {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:DreamUIBehavioursNeedToRemoveFromTick
+    src   "Dream UIBehaviours Need to Remove from Tick"
+    text  "需要从更新中移除的 Dream UI 行为"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:FreeRoots {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:FreeRoots
+    src   "Free Roots"
+    text  "空闲根节点"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:LayoutDirtyWidgetArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:LayoutDirtyWidgetArray
+    src   "Layout Dirty Widget Array"
+    text  "布局脏控件数组"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:PaintRows {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:PaintRows
+    src   "Paint Rows"
+    text  "绘制行"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:ParkedWidgets {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:ParkedWidgets
+    src   "Parked Widgets"
+    text  "暂存控件"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RectBlockDataRows {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RectBlockDataRows
+    src   "Rect Block Data Rows"
+    text  "矩形块数据行"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent:InItem {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamUIManagerWorldSubsystem:RegisteredWidgets {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisteredWidgets
+    src   "Registered Widgets"
+    text  "已注册控件"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RenderLayerTable {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RenderLayerTable
+    src   "Render Layer Table"
+    text  "渲染层表"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:Selection {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:Selection
+    src   "Selection"
+    // from the engine's zh-Hans
+    text  "选项"
+    state draft
+}
+
+DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent:InItem {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamUISelection {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection
+    src   "Dream UISelection"
+    text  "Dream UISelection"
+    state machine
+}
+
+DreamUISelection:DeselectWidget:Widget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:DeselectWidget:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUISelection:GetInstance:InWorld {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:GetInstance:InWorld
+    src   "In World"
+    // from the engine's zh-Hans
+    text  "输入世界"
+    state draft
+}
+
+DreamUISelection:GetInstance:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:GetInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISelection:SelectedComponentArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectedComponentArray
+    src   "Selected Component Array"
+    text  "所选组件数组"
+    state machine
+}
+
+DreamUISelection:SelectedWidgetArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectedWidgetArray
+    src   "Selected Widget Array"
+    text  "所选控件数组"
+    state machine
+}
+
+DreamUISelection:SelectWidget:Widget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectWidget:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+EDreamInteractionKind.EDreamInteractionKind_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#EDreamInteractionKind:EDreamInteractionKind_MAX
+    src   "EDream Interaction Kind MAX"
+    text  "EDream Interaction Kind MAX"
+    state machine
+}
+
+EDreamInteractionKind.Screen {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#EDreamInteractionKind:Screen
+    src   "Screen"
+    // from the engine's zh-Hans
+    text  "屏幕"
+    state draft
+}
+
+EDreamInteractionKind.World {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#EDreamInteractionKind:World
+    src   "World"
+    // from the engine's zh-Hans
+    text  "世界"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamParkedWidgetEntry {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamParkedWidgetEntry
+    src   "A widget that has been created but not yet added to anything -- the state a UMG-style\nCreateWidget hands back. The manager holds it for two reasons: it is the GC anchor (nothing\nelse references a parentless widget), and holding it in a named, countable place is what makes\n\"created and then forgotten\" a visible leak rather than a silent one."
+    text  "已创建但尚未添加到任何东西上的控件——即 UMG 风格的\nCreateWidget 返回的状态。管理器持有它有两个原因：它是 GC 锚点（没有\n其他对象引用无父级的控件），而把它放在一个有名称、可计数的位置，正是让\n“创建后即被遗忘”成为可见泄漏而非无声泄漏的原因。"
+    state machine
+}
+
+DreamParkedWidgetEntry:ParkedAtSeconds {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamParkedWidgetEntry:ParkedAtSeconds
+    src   "Seconds on the world clock, for the optional never-attached diagnostic."
+    text  "世界时钟上的秒数，用于可选的“从未附加”诊断。"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:AllSelectableArray {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:AllSelectableArray
+    src   "Every registered selectable, as the behaviour it is. The navigation scan and the input system walk\nit; neither needs the core to know the selectable class, which belongs to the input system."
+    text  "每个已注册的可选择对象，以其行为本身的形式存在。导航扫描和输入系统都会遍历\n它；两者都不需要核心知道可选择类，那属于输入系统。"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:FreeRoots {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:FreeRoots
+    src   "The roots of registered trees nothing but this manager holds: made with no host (CreateDreamWidget\nwith no parent, a Blueprint's ConstructWidget, a test's widget made straight in the world), or taken\noff their parent while registered. The pool is the manager's to empty -- on attach, on destroy, and\nat the world's teardown -- and nothing in it is reported as a leak."
+    text  "仅由本管理器持有的已注册树的根：没有宿主的（CreateDreamWidget\n无父级、蓝图的 ConstructWidget、测试直接在世界中创建的控件），或在注册期间\n从其父级移除的。该池由管理器负责清空——附加时、销毁时以及\n世界清理时——池中任何内容都不会被报告为泄漏。"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:PaintRows {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:PaintRows
+    src   "See CreatePaintRows: the rows, the manager's, and never saved, duplicated or copied, as the rect block rows."
+    text  "See CreatePaintRows: the rows, the manager's, and never saved, duplicated or copied, as the rect block rows."
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RectBlockDataRows {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RectBlockDataRows
+    src   "See GetRectBlockDataRows."
+    text  "See GetRectBlockDataRows."
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RegisteredWidgets {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisteredWidgets
+    src   "Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --\nthe component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the\ntrees no host holds."
+    text  "所有已注册控件均为弱引用：注册并不代表拥有。树由其宿主保持存活——\n即创建它的组件、子系统或预览——并由宿主释放；没有宿主的树\n参见 FreeRoots。"
+    state machine
+}
+
+DreamUIManagerWorldSubsystem:RenderLayerTable {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RenderLayerTable
+    src   "See GetRenderLayerTable."
+    text  "See GetRenderLayerTable."
+    state machine
+}
+
+DreamUISelection:DeselectWidget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:DeselectWidget
+    src   "Counterpart of SelectWidget: without one, a Ctrl+click can only ever add."
+    text  "与 SelectWidget 相反：如果没有该功能，Ctrl+单击只能添加控件。"
+    state machine
+}
+
+DreamUISelection:GetInstance {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:GetInstance
+    src   "Scriptable so editor automation (the unreal-bridge) can drive the designer's selection."
+    text  "可脚本化，以便编辑器自动化（unreal-bridge）可以驱动设计者的选择。"
+    state machine
+}
+
+EDreamInteractionKind {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#EDreamInteractionKind
+    src   "Which kind of pointer a player needs a raycaster for. See UDreamUIInputServices::EnsureInteractionForPlayer."
+    text  "玩家需要射线投射器来确定哪种类型的指针。请参阅 UDreamUIInputServices::EnsureInteractionForPlayer。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Editor {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:DeselectWidget
+    src   "DreamGUI|Editor"
+    text  "DreamGUI|Editor"
+    state machine
+}

@@ -1,0 +1,414 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+DreamCustomWidgetNavigationDelegate__DelegateSignature {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamCustomWidgetNavigationDelegate__DelegateSignature
+    src   "Returns the widget focus should move to, or null for \"nowhere\"."
+    text  "返回焦点应移动到的控件，若为“无处”则返回 null。"
+    state machine
+}
+
+DreamWidgetNavigation {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation
+    src   "Per-widget navigation rules -- the panel UMG puts on every UWidget and this framework had nowhere.\n\nBefore this, every navigation rule lived on UUISelectable: a widget without one could hold focus\n(UDreamWidget::SetFocus and bIsFocusable have always existed) and then could not be navigated away\nfrom, to, or past, because the pipeline resolves a move by walking up from the focused widget\nlooking for a component that implements IDreamNavigationInterface and only UUISelectable did. A\nborder, a panel, a custom image with a click handler -- anything that is focusable without being a\nbutton -- was outside navigation entirely.\n\nThis is that component, carrying nothing but the rules, so any widget can join by having one. Put\nit on a widget that already has a UUISelectable too: a rule set here outranks the selectable's own\nper-direction mode, which keeps \"which component answers first\" from being a question anyone has\nto care about.\n\nReachable from Blueprint and from the details panel; UDreamWidget::GetOrCreateNavigation is the\none-liner for code that wants to set a rule on a widget that has no navigation yet."
+    text  "逐控件导航规则——UMG 为每个 UWidget 提供的面板，而本框架此前无处安放。\n\n在此之前，所有导航规则都位于 UUISelectable 上：没有该组件的控件也能持有焦点\n（UDreamWidget::SetFocus 和 bIsFocusable 一直存在），而随后却无法从它导航离开、\n导航到它或越过它，因为管线在解析一次移动时，会从持有焦点的控件向上查找\n实现了 IDreamNavigationInterface 的组件，而只有 UUISelectable 做到了。边框、\n面板、带点击处理程序的自定义图像——任何可聚焦却并非按钮的东西\n——都完全在导航之外。\n\n这就是那个组件，只承载规则，因此任何控件只要拥有它就能加入。\n也可以把它放在已经有 UUISelectable 的控件上：在这里设置的规则优先于 selectable 自身的\n逐方向模式，这样“哪个组件先应答”就不再是\n需要任何人操心的问题。\n\n可从蓝图和细节面板访问；UDreamWidget::GetOrCreateNavigation 是\n为尚无导航的控件设置规则的代码的一行式写法。"
+    state machine
+}
+
+DreamWidgetNavigation:bCanNavigateHere {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:bCanNavigateHere
+    src   "Can navigation land here? Independent of the rules above, which are about leaving.\n\nDefaults to true, and is and-ed with the widget being focusable, visible and interactable --\nthe questions UUISelectable asks of itself, so a navigation-only widget and a button are judged\nalike. A widget whose bIsFocusable was turned off is no landing spot for either: SetFocus refuses it."
+    text  "导航可以落在这里吗？与上述关于离开的规则无关。\n\n默认值为 true，并与控件是否可聚焦、可见且可交互进行与运算——\n这些正是 UUISelectable 对自身提出的问题，因此仅有导航的控件和按钮会得到\n相同的判定。bIsFocusable 被关闭的控件对两者都不是落点：SetFocus 会拒绝它。"
+    state machine
+}
+
+DreamWidgetNavigation:HasAnyRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasAnyRule
+    src   "True when any of the six directions was given a rule. What decides who answers a move."
+    text  "当六个方向中任意一个被设置了规则时为 true。决定由谁应答一次移动。"
+    state machine
+}
+
+DreamWidgetNavigation:HasRuleFor {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasRuleFor
+    src   "True when the author said something about InDirection -- anything but the Escape default.\n\nThis is what makes co-existing with UUISelectable unambiguous: an untouched block means \"I have\nno opinion\", and the selectable's own mode is left to answer."
+    text  "当作者对 InDirection 做了设置时为 true——只要不是默认的 Escape。\n\n正是这一点让与 UUISelectable 的共存毫无歧义：未改动的块表示“我没有意见”，\n由 selectable 自身的模式来应答。"
+    state machine
+}
+
+DreamWidgetNavigation:SetAllNavigationRules {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetAllNavigationRules
+    src   "The same rule in all six directions at once -- UMG's SetAllNavigationRules.\n\nInWidgetToFocus is only meaningful for Explicit, where it names a widget inside this widget's\nown tree; it is written for every direction regardless, exactly as UMG does, so that switching\nthe rule to Explicit afterwards finds the name already there."
+    text  "一次性为全部六个方向设置相同的规则——即 UMG 的 SetAllNavigationRules。\n\nInWidgetToFocus 仅对 Explicit 有意义，此时它指定的是此控件自身\n树中的某个控件；但无论如何它都会写入每个方向，与 UMG 的做法完全一致，这样之后\n把规则切换为 Explicit 时，名称已经在那里了。"
+    state machine
+}
+
+DreamWidgetNavigation:SetCustomDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetCustomDelegate
+    src   "Sets the rule to Custom and binds InDelegate."
+    text  "将规则设为 Custom 并绑定 InDelegate。"
+    state machine
+}
+
+DreamWidgetNavigation:SetExplicitTarget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetExplicitTarget
+    src   "Sets the rule to Explicit and points it at InTarget. Null clears back to Escape."
+    text  "将规则设为 Explicit 并指向 InTarget。为 null 时恢复为 Escape。"
+    state machine
+}
+
+DreamWidgetNavigation:SetNavigationRuleCustomBoundary {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetNavigationRuleCustomBoundary
+    src   "Bind a delegate that is asked only at the edge -- UMG's SetNavigationRuleCustomBoundary.\n\nSame delegate slot as SetCustomDelegate; the rule is what decides whether it is asked for every\nmove or only for the one that leaves the area. An unbound delegate clears back to Escape, as\nthe plain custom setter does, so \"unbind\" never leaves a rule pointing at nothing."
+    text  "绑定一个只在边缘处才会被询问的委托——即 UMG 的 SetNavigationRuleCustomBoundary。\n\n与 SetCustomDelegate 使用相同的委托槽位；由规则决定它是每次\n移动都被询问，还是只在离开区域的移动时被询问。未绑定的委托会恢复为 Escape，与\n普通的自定义设置函数一样，因此“解绑”绝不会让规则指向空。"
+    state machine
+}
+
+DreamWidgetNavigationData {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData
+    src   "One direction's rule and whatever that rule needs to answer. Mirrors UMG's FWidgetNavigationData."
+    text  "一个方向的规则，以及该规则为该控件应答所需的一切。对应 UMG 的 FWidgetNavigationData。"
+    state machine
+}
+
+DreamWidgetNavigationData:CustomDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:CustomDelegate
+    src   "For Custom. Not editable: a delegate is bound from code or a Blueprint graph, never typed in."
+    text  "用于 Custom。不可编辑：委托从代码或蓝图图表中绑定，绝不手动输入。"
+    state machine
+}
+
+DreamWidgetNavigationData:WidgetToFocus {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:WidgetToFocus
+    src   "For Explicit: the display name of the widget to focus, resolved inside this widget's own tree.\n\nA NAME as well as a pointer because a text-authored .dui can only give a property an asset path,\nnever a sibling in the live tree -- the same limitation UISelectable's transition target ran\ninto. The pointer wins when both are set."
+    text  "用于 Explicit：要聚焦的控件的显示名称，在此控件自身的树中解析。\n\n既用名称也用指针，因为文本编写的 .dui 只能给属性一个资产路径，\n永远无法给出活动树中的同级项——UISelectable 的过渡目标也曾遇到\n同样的限制。两者都设置时，指针优先。"
+    state machine
+}
+
+EDreamUINavigationRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule
+    src   "What one direction does, per widget. The same five answers UMG's EUINavigationRule gives, and for\nthe same reasons -- this framework already copies UMG's class model, so navigation authoring that\nlooked different would be a second thing to learn for no gain."
+    text  "每个控件在某个方向上的行为。与UMG的EUINavigationRule给出的五种答案相同，原因也相同——\n本框架已经沿用了UMG的类模型，所以如果导航的编写方式看起来不一样，\n那就成了第二件要学的东西，毫无收益。"
+    state machine
+}
+
+EDreamUINavigationRule.Custom {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Custom
+    src   "Ask the delegate. For lists and grids, where the answer is a computation and not a link."
+    text  "询问委托。用于列表和网格，这类地方的答案是计算出来的，而不是一条链接。"
+    state machine
+}
+
+EDreamUINavigationRule.CustomBoundary {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:CustomBoundary
+    src   "Run the ordinary scan, and ask the delegate only when the move would LEAVE the surrounding\nnavigation area -- UMG's CustomBoundary.\n\nThe difference from Custom is which moves the delegate hears about. Custom is asked for every\nmove in that direction, so a list's own row-to-row stepping has to be written into it as well.\nCustomBoundary is asked only at the edge, which is the interesting case and usually the only\none an author has an answer for: \"when Down runs off the bottom of this page, go to the next\npage\" leaves the scan to do the rows.\n\nLast in the enum on purpose: the values above it are serialized in existing assets."
+    text  "执行常规扫描，只有当移动会离开所在的\n导航区域时才询问委托——即UMG的CustomBoundary。\n\n与Custom的区别在于委托会收到哪些移动。Custom会针对该方向上的每一次\n移动被询问，所以列表自身的行间步进也必须写进去。\nCustomBoundary只在边缘处被询问，而这正是有意思的情形，通常也是\n编写者唯一有答案的情形：“当Down从本页底部跑出去时，转到下一\n页”，把行的事情留给扫描。\n\n故意放在枚举最后：它上面的值已在现有资产中序列化。"
+    state machine
+}
+
+EDreamUINavigationRule.Escape {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Escape
+    src   "The default: let the framework's directional scan answer, including out of this area."
+    text  "默认：由框架的方向扫描给出答案，包括移出此区域的情况。"
+    state machine
+}
+
+EDreamUINavigationRule.Explicit {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Explicit
+    src   "Go exactly here, whatever the geometry says."
+    text  "无论几何布局如何，都精确跳到这里。"
+    state machine
+}
+
+EDreamUINavigationRule.Stop {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Stop
+    src   "The edge. Focus stays where it is."
+    text  "边缘。焦点保持在原处。"
+    state machine
+}
+
+EDreamUINavigationRule.Wrap {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Wrap
+    src   "Come back in on the far side of the surrounding navigation area."
+    text  "从所在导航区域的另一侧回来。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamCustomWidgetNavigationDelegate__DelegateSignature:Direction {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamCustomWidgetNavigationDelegate__DelegateSignature:Direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamCustomWidgetNavigationDelegate__DelegateSignature:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamCustomWidgetNavigationDelegate__DelegateSignature:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetNavigation {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation
+    src   "DreamUI Navigation"
+    text  "DreamUI导航"
+    state machine
+}
+
+DreamWidgetNavigation:bCanNavigateHere {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:bCanNavigateHere
+    src   "Can Navigate Here"
+    text  "能否导航至此"
+    state machine
+}
+
+DreamWidgetNavigation:Down {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Down
+    src   "Down"
+    // from the engine's zh-Hans
+    text  "下移"
+    state draft
+}
+
+DreamWidgetNavigation:HasAnyRule:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasAnyRule:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetNavigation:HasRuleFor:InDirection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasRuleFor:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamWidgetNavigation:HasRuleFor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasRuleFor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetNavigation:Left {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+DreamWidgetNavigation:Next {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Next
+    src   "Next"
+    // from the engine's zh-Hans
+    text  "Next"
+    state draft
+}
+
+DreamWidgetNavigation:Previous {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Previous
+    src   "Previous"
+    // from the engine's zh-Hans
+    text  "上个"
+    state draft
+}
+
+DreamWidgetNavigation:Right {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+DreamWidgetNavigation:SetAllNavigationRules:InRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetAllNavigationRules:InRule
+    src   "In Rule"
+    // from the engine's zh-Hans
+    text  "输入规则"
+    state draft
+}
+
+DreamWidgetNavigation:SetAllNavigationRules:InWidgetToFocus {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetAllNavigationRules:InWidgetToFocus
+    src   "In Widget to Focus"
+    // from the engine's zh-Hans
+    text  "在要聚焦的控件中"
+    state draft
+}
+
+DreamWidgetNavigation:SetCustomDelegate:InDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetCustomDelegate:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamWidgetNavigation:SetCustomDelegate:InDirection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetCustomDelegate:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamWidgetNavigation:SetExplicitTarget:InDirection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetExplicitTarget:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamWidgetNavigation:SetExplicitTarget:InTarget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetExplicitTarget:InTarget
+    src   "In Target"
+    // from the engine's zh-Hans
+    text  "In Target"
+    state draft
+}
+
+DreamWidgetNavigation:SetNavigationRuleCustomBoundary:InDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetNavigationRuleCustomBoundary:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamWidgetNavigation:SetNavigationRuleCustomBoundary:InDirection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetNavigationRuleCustomBoundary:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamWidgetNavigation:SetRule:InDirection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetRule:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamWidgetNavigation:SetRule:InRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetRule:InRule
+    src   "In Rule"
+    // from the engine's zh-Hans
+    text  "输入规则"
+    state draft
+}
+
+DreamWidgetNavigation:Up {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:Up
+    src   "Up"
+    // from the engine's zh-Hans
+    text  "上移"
+    state draft
+}
+
+DreamWidgetNavigationData {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData
+    src   "Dream Widget Navigation Data"
+    text  "Dream控件导航数据"
+    state machine
+}
+
+DreamWidgetNavigationData:CustomDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:CustomDelegate
+    src   "Custom Delegate"
+    // from the engine's zh-Hans
+    text  "自定义委托"
+    state draft
+}
+
+DreamWidgetNavigationData:Rule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:Rule
+    src   "Rule"
+    // from the engine's zh-Hans
+    text  "规则"
+    state draft
+}
+
+DreamWidgetNavigationData:Widget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamWidgetNavigationData:WidgetToFocus {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigationData:WidgetToFocus
+    src   "Widget to Focus"
+    // from the engine's zh-Hans
+    text  "要聚焦的控件"
+    state draft
+}
+
+EDreamUINavigationRule.Custom {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Custom
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "Custom"
+    state draft
+}
+
+EDreamUINavigationRule.CustomBoundary {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:CustomBoundary
+    src   "Custom Boundary"
+    // from the engine's zh-Hans
+    text  "自定义边界"
+    state draft
+}
+
+EDreamUINavigationRule.EDreamUINavigationRule_MAX {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:EDreamUINavigationRule_MAX
+    src   "EDream UINavigation Rule MAX"
+    text  "EDream UINavigation Rule MAX"
+    state machine
+}
+
+EDreamUINavigationRule.Escape {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Escape
+    src   "Escape"
+    // from the engine's zh-Hans
+    text  "Escape"
+    state draft
+}
+
+EDreamUINavigationRule.Explicit {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Explicit
+    src   "Explicit"
+    // from the engine's zh-Hans
+    text  "明确"
+    state draft
+}
+
+EDreamUINavigationRule.Stop {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "Stop"
+    state draft
+}
+
+EDreamUINavigationRule.Wrap {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#EDreamUINavigationRule:Wrap
+    src   "Wrap"
+    // from the engine's zh-Hans
+    text  "包裹"
+    state draft
+}

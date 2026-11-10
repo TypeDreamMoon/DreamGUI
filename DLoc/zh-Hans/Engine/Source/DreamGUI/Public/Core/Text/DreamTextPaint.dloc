@@ -1,0 +1,702 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGradient {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient
+    src   "Dream Gradient"
+    text  "渐变资源"
+    state machine
+}
+
+DreamGradient:Angle {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamGradient:Center {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+DreamGradient:Interpolation {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Interpolation
+    src   "Interpolation"
+    // from the engine's zh-Hans
+    text  "插值"
+    state draft
+}
+
+DreamGradient:Offset {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Offset
+    src   "Offset"
+    // from the engine's zh-Hans
+    text  "偏移"
+    state draft
+}
+
+DreamGradient:Radius {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Radius
+    src   "Radius"
+    // from the engine's zh-Hans
+    text  "半径"
+    state draft
+}
+
+DreamGradient:Scale {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamGradient:Shape {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamGradient:Size {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamGradient:Spread {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Spread
+    src   "Spread"
+    // from the engine's zh-Hans
+    text  "传播"
+    state draft
+}
+
+DreamGradient:Stops {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Stops
+    src   "Stops"
+    text  "停止点"
+    state machine
+}
+
+DreamGradient:Type {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Type
+    src   "Type"
+    // from the engine's zh-Hans
+    text  "类型"
+    state draft
+}
+
+DreamGradientStop {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop
+    src   "Dream Gradient Stop"
+    text  "渐变停止"
+    state machine
+}
+
+DreamGradientStop:Color {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamGradientStop:Position {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamTextPaint {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint
+    src   "Dream Text Paint"
+    text  "文本绘制"
+    state machine
+}
+
+DreamTextPaint:bEnabled {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamTextPaint:Gradient {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamTextPaint:Preset {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint:Preset
+    src   "Preset"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+EDreamPaintInterpolation.EDreamPaintInterpolation_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:EDreamPaintInterpolation_MAX
+    src   "EDream Paint Interpolation MAX"
+    text  "插值方式 (最大值)"
+    state machine
+}
+
+EDreamPaintInterpolation.Linear {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamPaintInterpolation.Oklab {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:Oklab
+    src   "Oklab"
+    text  "Oklab"
+    state machine
+}
+
+EDreamPaintInterpolation.SRGB {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:SRGB
+    src   "SRGB"
+    // from the engine's zh-Hans
+    text  "SRGB"
+    state draft
+}
+
+EDreamPaintRadialShape.Circle {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialShape:Circle
+    src   "Circle"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamPaintRadialShape.EDreamPaintRadialShape_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialShape:EDreamPaintRadialShape_MAX
+    src   "EDream Paint Radial Shape MAX"
+    text  "径向形状 (最大值)"
+    state machine
+}
+
+EDreamPaintRadialShape.Ellipse {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialShape:Ellipse
+    src   "Ellipse"
+    // from the engine's zh-Hans
+    text  "椭圆"
+    state draft
+}
+
+EDreamPaintRadialSize.ClosestCorner {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:ClosestCorner
+    src   "Closest Corner"
+    text  "离角落最近"
+    state machine
+}
+
+EDreamPaintRadialSize.ClosestSide {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:ClosestSide
+    src   "Closest Side"
+    text  "离边沿最近"
+    state machine
+}
+
+EDreamPaintRadialSize.EDreamPaintRadialSize_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:EDreamPaintRadialSize_MAX
+    src   "EDream Paint Radial Size MAX"
+    text  "径向大小 (最大值)"
+    state machine
+}
+
+EDreamPaintRadialSize.Explicit {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:Explicit
+    src   "Explicit"
+    // from the engine's zh-Hans
+    text  "明确"
+    state draft
+}
+
+EDreamPaintRadialSize.FarthestCorner {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:FarthestCorner
+    src   "Farthest Corner"
+    text  "离角落最远"
+    state machine
+}
+
+EDreamPaintRadialSize.FarthestSide {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:FarthestSide
+    src   "Farthest Side"
+    text  "离边沿最远"
+    state machine
+}
+
+EDreamPaintSpread.EDreamPaintSpread_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:EDreamPaintSpread_MAX
+    src   "EDream Paint Spread MAX"
+    text  "扩散 (最大值)"
+    state machine
+}
+
+EDreamPaintSpread.Pad {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Pad
+    src   "Pad"
+    text  "填充"
+    state machine
+}
+
+EDreamPaintSpread.Reflect {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Reflect
+    src   "Reflect"
+    text  "反射"
+    state machine
+}
+
+EDreamPaintSpread.Repeat {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Repeat
+    src   "Repeat"
+    // from the engine's zh-Hans
+    text  "重复"
+    state draft
+}
+
+EDreamPaintType.Conic {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Conic
+    src   "Conic"
+    text  "锥形"
+    state machine
+}
+
+EDreamPaintType.Corners {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Corners
+    src   "Corners"
+    // from the engine's zh-Hans
+    text  "角落"
+    state draft
+}
+
+EDreamPaintType.Diamond {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Diamond
+    src   "Diamond"
+    text  "Diamond"
+    state machine
+}
+
+EDreamPaintType.EDreamPaintType_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:EDreamPaintType_MAX
+    src   "EDream Paint Type MAX"
+    text  "EDream绘画类型MAX"
+    state machine
+}
+
+EDreamPaintType.Linear {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamPaintType.None {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamPaintType.Radial {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamPaintType.Reflected {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Reflected
+    src   "Reflected"
+    text  "Reflected"
+    state machine
+}
+
+EDreamTextOverlayBlend.Add {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend:Add
+    src   "Add"
+    // from the engine's zh-Hans
+    text  "添加"
+    state draft
+}
+
+EDreamTextOverlayBlend.EDreamTextOverlayBlend_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend:EDreamTextOverlayBlend_MAX
+    src   "EDream Text Overlay Blend MAX"
+    text  "EDream文本叠加混合MAX"
+    state machine
+}
+
+EDreamTextOverlayBlend.Normal {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend:Normal
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+EDreamTextPaintBox.ContentBox {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:ContentBox
+    src   "Content Box"
+    text  "内容框"
+    state machine
+}
+
+EDreamTextPaintBox.EDreamTextPaintBox_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:EDreamTextPaintBox_MAX
+    src   "EDream Text Paint Box MAX"
+    text  "EDream文本绘制框MAX"
+    state machine
+}
+
+EDreamTextPaintBox.Glyph {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Glyph
+    src   "Glyph"
+    // from the engine's zh-Hans
+    text  "字形"
+    state draft
+}
+
+EDreamTextPaintBox.Line {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Line
+    src   "Line"
+    // from the engine's zh-Hans
+    text  "行"
+    state draft
+}
+
+EDreamTextPaintBox.Run {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Run
+    src   "Run"
+    // from the engine's zh-Hans
+    text  "运行"
+    state draft
+}
+
+EDreamTextPaintBox.TextBlock {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:TextBlock
+    src   "Text Block"
+    // from the engine's zh-Hans
+    text  "文本块"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamGradient {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient
+    src   "A gradient, the way CSS spells one: what a paint paints with.\n\nTHE REFERENCE EVALUATION. DreamUIPaint.ush and Evaluate compute the same thing, in float, from a vertex's UV4 = (u, v):\nu 0 at the box's left edge and 1 at its right, v 0 at its TOP and 1 at its bottom (CSS's way up); A the box's width over\nits height for a single box (TextBlock or ContentBox on both axes), 1 for every other box, whose angles are then measured\nin the unit square (exact at 0, 90, 180 and 270 degrees); and the text's animation N (FDreamPaintAnimation). Lengths are\nin units of the box's height: a point is p = ((u - cx) * A, v - cy) from a centre c.\n 1. The gradient parameter t:\n    - Linear: c = (0.5, 0.5) + N.CenterOffset. a = radians(Angle + N.AngleOffset), d = (sin a, -cos a),\n      t = dot(p, d) / max(|A sin a| + |cos a|, 1e-6) + 0.5: CSS's gradient line, magic corners included.\n    - Radial: c = Center + N.CenterOffset. The side distances sx = |cx| * A or |1 - cx| * A and sy = |cy| or |1 - cy|\n      (distances, so a centre outside the box measures to its sides as CSS does), the smaller of each pair for Closest*,\n      the larger for Farthest*. Ellipse: radii (sx, sy) for *Side and sqrt(2) * (sx, sy) for *Corner (CSS: the corner's\n      ellipse keeps the side's aspect); Explicit (Radius.X * A, Radius.Y). Circle: the smaller (Closest*) or larger\n      (Farthest*) of sx and sy for *Side, sqrt(sx^2 + sy^2) for *Corner, Radius.X * A for Explicit. p turned as a\n      Diamond's is, q below, and t = length(q / R), each radius at least 1e-6: an ellipse turned by Angle (a circle, and\n      an ellipse at the default 180 degrees, as CSS draws them).\n    - Conic: c as Radial. t = frac((atan2(p.x, -p.y) in degrees - (Angle + N.AngleOffset)) / 360): 0 up, clockwise.\n    - Diamond: c and the radii as Radial (Ellipse radii for both shapes); p turned by -(Angle + N.AngleOffset) degrees,\n      with a = radians(Angle + N.AngleOffset) that is q = (p.x cos a + p.y sin a, -p.x sin a + p.y cos a) (v runs down,\n      so a positive Angle turns the diamond clockwise); t = |q.x| / Rx + |q.y| / Ry.\n    - Reflected: c as Radial, d and the length as Linear's: t = 2 |dot(p, d)| / max(|A sin a| + |cos a|, 1e-6).\n    - Corners: no t; the colour is the first four stops mixed bilinearly at (saturate(u), saturate(v)), premultiplied in\n      the Interpolation space, the last stop standing in for any of the four that is missing.\n frac(x) is x - floor(x) throughout, negative x included, as HLSL's frac is.\n 2. Scale and move: S = Scale * N.ScaleMultiplier (at least 1e-4), o = Offset + N.Phase. Linear:\n    t = (t - 0.5) / S + 0.5 - o. Radial, Conic, Diamond, Reflected: t = t / S - o.\n 3. Spread, over the span from the first stop's position a to the last's b (as Pad when b - a <= 0): Pad leaves t;\n    Repeat t = a + frac((t - a) / (b - a)) * (b - a); Reflect s = (t - a) / (b - a), s = 1 - |frac(s / 2) * 2 - 1|,\n    t = a + s * (b - a).\n 4. Stops: t at or before the first position takes the first colour, at or after the last the last; otherwise the\n    segment [p_i, p_i+1) holding t, mixed by (t - p_i) / max(p_i+1 - p_i, 1e-9). A hard edge (p_i == p_i+1) belongs\n    to the later segment. Colours are mixed premultiplied, in the Interpolation space.\n 5. Out: un-premultiplied (0 where alpha is 0), turned into linear light, and clamped at 0: straight linear RGB, alpha.\nStops as packed: positions in order, each at least the one before (CSS's fix-up); the first MaxStops only; colours\npremultiplied and already in the Interpolation space (SRGB: the encoded values; Linear: decoded; Oklab: decoded, then\nOklab), so the shader mixes without converting.\nAs packed, too: an enum value out of its range reads as its first value (a Type out of range as None), a number that is\nnot finite as the field's default, a stop position that is not finite as the one before it (the first: 0). The sRGB\ntransfer is the exact one (DreamUIText_DecodeSrgb); Oklab is Ottosson's, through linear sRGB."
+    text  "一种渐变，按CSS的写法：即绘画（paint）所使用的内容。\n\n参考求值。DreamUIPaint.ush与Evaluate对同一事物以float计算，输入为顶点的UV4 = (u, v)：\nu在框左边缘为0、右边缘为1，v在顶部为0、底部为1（CSS的方向朝上）；A在单个框（双轴上的TextBlock或ContentBox）中为\n宽除以高，其他所有框为1，此时角度在单位正方形中度量\n（在0、90、180和270度处精确）；文本的动画N（FDreamPaintAnimation）。长度以\n框高为单位：点为p = ((u - cx) * A, v - cy)，相对于中心c。\n 1. 渐变参数t：\n    - 线性：c = (0.5, 0.5) + N.CenterOffset。a = radians(Angle + N.AngleOffset)，d = (sin a, -cos a)，\n      t = dot(p, d) / max(|A sin a| + |cos a|, 1e-6) + 0.5：CSS的渐变线，包含神奇角点。\n    - 径向：c = Center + N.CenterOffset。边距sx = |cx| * A或|1 - cx| * A，sy = |cy|或|1 - cy|\n      （距离，因此框外的中心与CSS一样度量到各边），Closest*取每对中较小者，\n      Farthest*取较大者。椭圆：*Side的半径为(sx, sy)，*Corner为sqrt(2) * (sx, sy)（CSS：角点的\n      椭圆保持边的宽高比）；Explicit为(Radius.X * A, Radius.Y)。圆：*Side取sx与sy中较小者（Closest*）或较大者\n      （Farthest*），*Corner为sqrt(sx^2 + sy^2)，Explicit为Radius.X * A。p按\n      菱形的方式旋转，q见下文，t = length(q / R)，各半径至少为1e-6：即按Angle旋转的椭圆（圆，以及\n      默认180度时的椭圆，与CSS绘制一致）。\n    - 锥形：c同径向。t = frac((atan2(p.x, -p.y)的角度值 - (Angle + N.AngleOffset)) / 360)：0向上，顺时针。\n    - 菱形：c与半径同径向（两种形状均使用椭圆半径）；p按-(Angle + N.AngleOffset)度旋转，\n      其中a = radians(Angle + N.AngleOffset)，即q = (p.x cos a + p.y sin a, -p.x sin a + p.y cos a)（v向下，\n      因此正Angle使菱形顺时针旋转）；t = |q.x| / Rx + |q.y| / Ry。\n    - 反射：c同径向，d与长度同线性：t = 2 |dot(p, d)| / max(|A sin a| + |cos a|, 1e-6)。\n    - 四角：无t；颜色为前四个色标在(saturate(u), saturate(v))处双线性混合，在\n      Interpolation空间中预乘，缺失的四个角由最后一个色标代替。\n frac(x)始终为x - floor(x)，包括负数x，与HLSL的frac一致。\n 2. 缩放与移动：S = Scale * N.ScaleMultiplier（至少1e-4），o = Offset + N.Phase。线性：\n    t = (t - 0.5) / S + 0.5 - o。径向、锥形、菱形、反射：t = t / S - o。\n 3. 扩展（Spread），在从第一个色标位置a到最后一个位置b的跨度上（当b - a <= 0时按Pad处理）：Pad保持t不变；\n    Repeat t = a + frac((t - a) / (b - a)) * (b - a)；Reflect s = (t - a) / (b - a)，s = 1 - |frac(s / 2) * 2 - 1|，\n    t = a + s * (b - a)。\n 4. 色标：t等于或早于第一个位置时取第一个颜色，等于或晚于最后一个位置时取最后一个颜色；否则取\n    包含t的区间[p_i, p_i+1)，按(t - p_i) / max(p_i+1 - p_i, 1e-9)混合。硬边（p_i == p_i+1）\n    属于后一个区间。颜色以预乘方式在Interpolation空间中混合。\n 5. 输出：解除预乘（alpha为0处为0），转换为线性光，并在0处钳制：非预乘线性RGB、alpha。\n色标的打包方式：位置按顺序，每个不小于前一个（CSS的修正）；仅使用前MaxStops个；颜色\n已预乘且已处于Interpolation空间（SRGB：编码值；Linear：解码值；Oklab：解码后再\n转为Oklab），因此着色器混合时无需转换。\n同样按打包方式：超出范围的枚举值读取为其第一个值（类型超出范围按None处理），非有限\n数值读取为字段默认值，非有限的色标位置读取为前一个位置（第一个为0）。sRGB\n转换使用精确转换（DreamUIText_DecodeSrgb）；Oklab为Ottosson的转换，经线性sRGB。"
+    state machine
+}
+
+DreamGradient:Angle {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Angle
+    src   "Degrees, as CSS measures them: 0 points up, clockwise, 180 -- the default -- down. A Linear's and a Reflected's\ndirection, a Conic's start, a Radial ellipse's and a Diamond's turn."
+    text  "角度，按CSS的度量方式：0指向上方，顺时针，180（默认值）指向下方。线性和反射的\n方向、锥形的起点、径向椭圆和菱形的旋转。"
+    state machine
+}
+
+DreamGradient:Center {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Center
+    src   "A Radial's, Conic's, Diamond's or Reflected's centre, as fractions of the box from its top left: CSS's `at x% y%`."
+    text  "径向、锥形、菱形或反射的中心，以从框左上角起的比例表示：CSS的`at x% y%`。"
+    state machine
+}
+
+DreamGradient:Offset {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Offset
+    src   "How far it is moved along its line, as a fraction of its length; a text's phase adds to it."
+    text  "沿其直线移动的距离，以其长度的比例表示；文本的相位会叠加到该值上。"
+    state machine
+}
+
+DreamGradient:Radius {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Radius
+    src   "Size Explicit: the radii as fractions of the box's width and height; a circle's is X, of the width."
+    text  "Size为Explicit时：半径以框宽和框高的比例表示；圆形的半径为X，即按宽度计算。"
+    state machine
+}
+
+DreamGradient:Scale {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Scale
+    src   "How long the gradient is as a multiple of its natural length: about its middle for a Linear, about its start for the others."
+    text  "渐变长度相对于其自然长度的倍数：Linear 以其中心为准，其他类型以其起点为准。"
+    state machine
+}
+
+DreamGradient:Stops {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradient:Stops
+    src   "The colours. The first MaxStops are used; positions out of order are taken as CSS takes them, each at least the one before."
+    text  "颜色。使用前 MaxStops 个；位置乱序时按 CSS 的方式处理，每个位置都不小于前一个。"
+    state machine
+}
+
+DreamGradientStop {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop
+    src   "One colour of a gradient, where it sits along it."
+    text  "渐变中的一个颜色，以及它在渐变上的位置。"
+    state machine
+}
+
+DreamGradientStop:Color {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop:Color
+    src   "sRGB-encoded with straight alpha, like every colour of a text."
+    text  "以 sRGB 编码并使用非预乘 Alpha，与文本的所有颜色一样。"
+    state machine
+}
+
+DreamGradientStop:Position {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamGradientStop:Position
+    src   "Where along the gradient, as a fraction of its length: 0 its start, 1 its end; beyond either too, as CSS lets a stop\nsit outside the box. Two stops at one place make a hard edge."
+    text  "在渐变上的位置，为其长度的分数：0 为起点，1 为终点；也可以超出两端，因为 CSS 允许色标\n位于框外。两个色标位于同一位置会形成硬边。"
+    state machine
+}
+
+DreamTextPaint {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint
+    src   "One layer of a text's paint: on or off, and what it paints with."
+    text  "文本绘制的一层：是否启用，以及用什么绘制。"
+    state machine
+}
+
+DreamTextPaint:Preset {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint:Preset
+    src   "A shared gradient to paint with in place of Gradient; null paints Gradient."
+    text  "用于代替 Gradient 进行绘制的共享渐变；为 null 时绘制 Gradient。"
+    state machine
+}
+
+EDreamPaintInterpolation {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation
+    src   "The colour space stops are mixed in, alpha premultiplied in every one of them."
+    text  "色标混合所用的颜色空间，其中 Alpha 均为预乘。"
+    state machine
+}
+
+EDreamPaintInterpolation.Linear {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:Linear
+    src   "Linear light: `in srgb-linear`."
+    text  "线性光：`in srgb-linear`。"
+    state machine
+}
+
+EDreamPaintInterpolation.Oklab {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:Oklab
+    src   "Perceptually even: `in oklab`."
+    text  "感知均匀：`in oklab`。"
+    state machine
+}
+
+EDreamPaintInterpolation.SRGB {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintInterpolation:SRGB
+    src   "The sRGB-encoded values, CSS's default: `in srgb`."
+    text  "sRGB 编码的值，CSS 的默认值：`in srgb`。"
+    state machine
+}
+
+EDreamPaintRadialShape {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialShape
+    src   "A Radial's (and a Diamond's) ending shape: CSS's `ellipse` or `circle`."
+    text  "Radial（以及 Diamond）的结束形状：CSS 的 `ellipse` 或 `circle`。"
+    state machine
+}
+
+EDreamPaintRadialSize {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize
+    src   "How big a Radial's (and a Diamond's) ending shape is: CSS's size keywords, or Radius."
+    text  "径向渐变（以及菱形渐变）的结束形状大小：CSS的尺寸关键字，或Radius。"
+    state machine
+}
+
+EDreamPaintRadialSize.Explicit {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:Explicit
+    src   "FDreamGradient::Radius."
+    text  "FDreamGradient::Radius（渐变半径）。"
+    state machine
+}
+
+EDreamPaintRadialSize.FarthestCorner {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintRadialSize:FarthestCorner
+    src   "Through the corner of the box farthest from the centre: CSS's default."
+    text  "穿过距中心最远的框角：CSS的默认值。"
+    state machine
+}
+
+EDreamPaintSpread {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread
+    src   "What a gradient does beyond its first and last stop."
+    text  "渐变在第一个和最后一个色标之外的表现。"
+    state machine
+}
+
+EDreamPaintSpread.Pad {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Pad
+    src   "The end colours carry on: CSS's gradients."
+    text  "末端颜色延续：CSS的渐变。"
+    state machine
+}
+
+EDreamPaintSpread.Reflect {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Reflect
+    src   "The span runs back and forth."
+    text  "区间来回折返。"
+    state machine
+}
+
+EDreamPaintSpread.Repeat {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintSpread:Repeat
+    src   "The span from the first stop to the last starts again: CSS's repeating-*-gradient."
+    text  "从第一个色标到最后一个色标的区间重新开始：CSS的repeating-*-gradient。"
+    state machine
+}
+
+EDreamPaintType {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType
+    src   "What kind of gradient a paint is. Values are what a gradient row holds (DREAMUI_PAINT_TYPE_* in DreamUIText.ush)."
+    text  "一个绘制对象采用哪种渐变。取值即渐变行保存的内容（DreamUIText.ush中的DREAMUI_PAINT_TYPE_*）。"
+    state machine
+}
+
+EDreamPaintType.Conic {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Conic
+    src   "Around Center, clockwise from Angle: CSS conic-gradient, an image editor's angle gradient."
+    text  "绕中心，从角度起顺时针：CSS conic-gradient，即图像编辑器的角度渐变。"
+    state machine
+}
+
+EDreamPaintType.Corners {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Corners
+    src   "The first four stops' colours at the box's corners -- top left, top right, bottom left, bottom right -- mixed across\nit: TextMeshPro's four-corner gradient. Positions, Spread, Scale, Offset and the phase do not apply."
+    text  "前四个色标的颜色位于框的角上——左上、右上、左下、右下——并在整个\n框内混合：TextMeshPro的四角渐变。位置、扩散、缩放、偏移和相位均不适用。"
+    state machine
+}
+
+EDreamPaintType.Diamond {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Diamond
+    src   "Outward from Center in a diamond, |x| / Rx + |y| / Ry, the radii as a Radial's, turned by Angle. Not in CSS."
+    text  "从中心向外呈菱形，|x| / Rx + |y| / Ry，半径与径向渐变的相同，并按角度旋转。CSS中没有。"
+    state machine
+}
+
+EDreamPaintType.Linear {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Linear
+    src   "Along a line through the box's centre at Angle: CSS linear-gradient."
+    text  "沿穿过框中心、成一定角度的直线：CSS linear-gradient。"
+    state machine
+}
+
+EDreamPaintType.None {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:None
+    src   "Nothing: the layer keeps its solid colour."
+    text  "无：图层保持其纯色。"
+    state machine
+}
+
+EDreamPaintType.Radial {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Radial
+    src   "Outward from Center to the ending shape Shape and Size give, an ellipse turned by Angle: CSS radial-gradient."
+    text  "从Center向外延伸至Shape和Size给出的终止形状，即一个按Angle旋转的椭圆：CSS radial-gradient。"
+    state machine
+}
+
+EDreamPaintType.Reflected {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamPaintType:Reflected
+    src   "Away from a line through Center across Angle, both ways alike: 0 on the line, 1 as far from it as a Linear's ends are\nfrom its middle -- an image editor's reflected gradient. Not in CSS."
+    text  "从穿过Center、沿Angle方向的直线向两侧对称延伸：直线上为0，距直线越远值越大，最远相当于Linear两端距其中点的距离——图像编辑器的反射渐变。\nCSS中没有此类型。"
+    state machine
+}
+
+EDreamTextOverlayBlend {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend
+    src   "How a text's overlay paint is mixed onto its face."
+    text  "文本的叠加绘制如何混合到其字面上。"
+    state machine
+}
+
+EDreamTextOverlayBlend.Add {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend:Add
+    src   "Added to the face, times the overlay's alpha: a highlight that never darkens."
+    text  "加到字面上，乘以叠加的alpha：只提亮、永不变暗的高光。"
+    state machine
+}
+
+EDreamTextOverlayBlend.Normal {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextOverlayBlend:Normal
+    src   "Over the face by the overlay's alpha."
+    text  "按叠加的alpha覆盖到字面上。"
+    state machine
+}
+
+EDreamTextPaintBox {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox
+    src   "What a text's gradient is measured across on one axis -- the box a vertex's UV4 runs from 0 to 1 over. Each axis has\nits own (FDreamTextStyle::PaintBoxHorizontal, PaintBoxVertical), as TextMeshPro maps its textures per axis."
+    text  "文本的渐变在某一轴上所横跨的范围——即顶点的UV4从0到1所对应的盒子。\n每个轴各有自己的设置（FDreamTextStyle::PaintBoxHorizontal、PaintBoxVertical），如同TextMeshPro按轴映射其纹理。"
+    state machine
+}
+
+EDreamTextPaintBox.ContentBox {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:ContentBox
+    src   "The content box: the widget's rect less Margin."
+    text  "内容盒：控件的矩形减去Margin。"
+    state machine
+}
+
+EDreamTextPaintBox.Glyph {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Glyph
+    src   "Each glyph on its own: its advance box horizontally, its face's ascent to descent vertically. Letters of one size share their bands."
+    text  "每个字形单独计算：水平方向为其前进盒，垂直方向为其字面的上伸到下降范围。同一字号的字母共享其条带。"
+    state machine
+}
+
+EDreamTextPaintBox.Line {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Line
+    src   "Each line on its own: across its runs horizontally, its line box vertically."
+    text  "每行单独计算：水平方向横跨其各段，垂直方向为其行盒。"
+    state machine
+}
+
+EDreamTextPaintBox.Run {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Run
+    src   "A rich-text tag's run: its pieces on every line laid end to end horizontally (CSS's `box-decoration-break: slice`),\nits ascent to descent vertically. What a tag paint (`<gradient=Name>`) is always measured across."
+}
+
+EDreamTextPaintBox.TextBlock {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:TextBlock
+    src   "The text as a block: the content box's width by the lines' height, first line's top to last line's bottom -- CSS's background box of a block."
+    text  "将文本视为一个块：宽度取内容盒宽度，高度取各行高度，从首行顶部到末行底部——即CSS中块的背景盒。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Paint {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#DreamTextPaint:bEnabled
+    src   "Paint"
+    // from the engine's zh-Hans
+    text  "绘制"
+    state draft
+}

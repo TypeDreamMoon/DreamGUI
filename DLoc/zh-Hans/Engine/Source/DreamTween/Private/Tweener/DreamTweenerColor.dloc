@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerColor {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerColor.h#DreamTweenerColor
+    src   "Dream Tweener Color"
+    text  "Dream Tweener 颜色"
+    state machine
+}

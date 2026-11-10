@@ -1,0 +1,2410 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayerEffects {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects
+    src   "Dream Layer Effects"
+    text  "图层效果"
+    state machine
+}
+
+DreamLayerEffects:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamLayerEffects:BevelEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:BevelEmboss
+    src   "Bevel Emboss"
+    text  "浮雕"
+    state machine
+}
+
+DreamLayerEffects:ColorOverlays {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:ColorOverlays
+    src   "Color Overlays"
+    text  "颜色覆盖"
+    state machine
+}
+
+DreamLayerEffects:DropShadows {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:DropShadows
+    src   "Drop Shadows"
+    text  "投影"
+    state machine
+}
+
+DreamLayerEffects:FillOpacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:FillOpacity
+    src   "Fill Opacity"
+    text  "填充不透明度"
+    state machine
+}
+
+DreamLayerEffects:GlobalLightAltitude {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:GlobalLightAltitude
+    src   "Global Light Altitude"
+    text  "全局光照高度"
+    state machine
+}
+
+DreamLayerEffects:GlobalLightAngle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:GlobalLightAngle
+    src   "Global Light Angle"
+    text  "全局光照角度"
+    state machine
+}
+
+DreamLayerEffects:GradientOverlays {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:GradientOverlays
+    src   "Gradient Overlays"
+    text  "渐变覆盖"
+    state machine
+}
+
+DreamLayerEffects:InnerGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:InnerGlow
+    src   "Inner Glow"
+    text  "内发光"
+    state machine
+}
+
+DreamLayerEffects:InnerShadows {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:InnerShadows
+    src   "Inner Shadows"
+    text  "内阴影"
+    state machine
+}
+
+DreamLayerEffects:OuterGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:OuterGlow
+    src   "Outer Glow"
+    text  "外发光"
+    state machine
+}
+
+DreamLayerEffects:PatternOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:PatternOverlay
+    src   "Pattern Overlay"
+    text  "图案覆盖"
+    state machine
+}
+
+DreamLayerEffects:Satin {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:Satin
+    src   "Satin"
+    text  "丝绸"
+    state machine
+}
+
+DreamLayerEffects:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamLayerEffects:Strokes {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:Strokes
+    src   "Strokes"
+    text  "描边"
+    state machine
+}
+
+DreamStyleBevelEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss
+    src   "Dream Style Bevel Emboss"
+    text  "梦幻风格斜面"
+    state machine
+}
+
+DreamStyleBevelEmboss:Altitude {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Altitude
+    src   "Altitude"
+    // from the engine's zh-Hans
+    text  "Altitude"
+    state draft
+}
+
+DreamStyleBevelEmboss:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamStyleBevelEmboss:bContourAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bContourAntiAliased
+    src   "Contour Anti Aliased"
+    text  "轮廓抗锯齿"
+    state machine
+}
+
+DreamStyleBevelEmboss:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleBevelEmboss:bGlossAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bGlossAntiAliased
+    src   "Gloss Anti Aliased"
+    text  "高光抗锯齿"
+    state machine
+}
+
+DreamStyleBevelEmboss:bTextureInvert {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bTextureInvert
+    src   "Texture Invert"
+    // from the engine's zh-Hans
+    text  "纹理反转"
+    state draft
+}
+
+DreamStyleBevelEmboss:bUseContour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bUseContour
+    src   "Use Contour"
+    text  "使用轮廓"
+    state machine
+}
+
+DreamStyleBevelEmboss:bUseGlobalLight {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bUseGlobalLight
+    src   "Use Global Light"
+    text  "使用全局光照"
+    state machine
+}
+
+DreamStyleBevelEmboss:bUseTexture {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bUseTexture
+    src   "Use Texture"
+    text  "使用纹理"
+    state machine
+}
+
+DreamStyleBevelEmboss:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleBevelEmboss:ContourRange {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:ContourRange
+    src   "Contour Range"
+    text  "轮廓范围"
+    state machine
+}
+
+DreamStyleBevelEmboss:Depth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Depth
+    src   "Depth"
+    // from the engine's zh-Hans
+    text  "深度"
+    state draft
+}
+
+DreamStyleBevelEmboss:Direction {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamStyleBevelEmboss:GlossContour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:GlossContour
+    src   "Gloss Contour"
+    text  "高光轮廓"
+    state machine
+}
+
+DreamStyleBevelEmboss:HighlightColor {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:HighlightColor
+    src   "Highlight Color"
+    // from the engine's zh-Hans
+    text  "高亮颜色"
+    state draft
+}
+
+DreamStyleBevelEmboss:HighlightMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:HighlightMode
+    src   "Highlight Mode"
+    // from the engine's zh-Hans
+    text  "高亮模式"
+    state draft
+}
+
+DreamStyleBevelEmboss:HighlightOpacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:HighlightOpacity
+    src   "Highlight Opacity"
+    text  "高光不透明度"
+    state machine
+}
+
+DreamStyleBevelEmboss:ShadowColor {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:ShadowColor
+    src   "Shadow Color"
+    // from the engine's zh-Hans
+    text  "阴影颜色"
+    state draft
+}
+
+DreamStyleBevelEmboss:ShadowMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:ShadowMode
+    src   "Shadow Mode"
+    text  "阴影模式"
+    state machine
+}
+
+DreamStyleBevelEmboss:ShadowOpacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:ShadowOpacity
+    src   "Shadow Opacity"
+    text  "阴影不透明度"
+    state machine
+}
+
+DreamStyleBevelEmboss:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleBevelEmboss:Soften {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Soften
+    src   "Soften"
+    // from the engine's zh-Hans
+    text  "柔化"
+    state draft
+}
+
+DreamStyleBevelEmboss:Style {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamStyleBevelEmboss:Technique {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Technique
+    src   "Technique"
+    text  "技术"
+    state machine
+}
+
+DreamStyleBevelEmboss:Texture {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+DreamStyleBevelEmboss:TextureDepth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:TextureDepth
+    src   "Texture Depth"
+    text  "纹理深度"
+    state machine
+}
+
+DreamStyleColorOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay
+    src   "Dream Style Color Overlay"
+    text  "梦幻风格颜色覆盖"
+    state machine
+}
+
+DreamStyleColorOverlay:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleColorOverlay:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleColorOverlay:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleColorOverlay:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleContour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContour
+    src   "Dream Style Contour"
+    text  "梦幻风格轮廓"
+    state machine
+}
+
+DreamStyleContour:Points {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContour:Points
+    src   "Points"
+    // from the engine's zh-Hans
+    text  "点"
+    state draft
+}
+
+DreamStyleContour:Shape {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContour:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamStyleContourPoint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint
+    src   "Dream Style Contour Point"
+    text  "梦幻风格轮廓点"
+    state machine
+}
+
+DreamStyleContourPoint:bCorner {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint:bCorner
+    src   "Corner"
+    // from the engine's zh-Hans
+    text  "角"
+    state draft
+}
+
+DreamStyleContourPoint:Input {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint:Input
+    src   "Input"
+    // from the engine's zh-Hans
+    text  "输入"
+    state draft
+}
+
+DreamStyleContourPoint:Output {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint:Output
+    src   "Output"
+    // from the engine's zh-Hans
+    text  "输出"
+    state draft
+}
+
+DreamStyleDropShadow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow
+    src   "Dream Style Drop Shadow"
+    text  "梦幻风格投影"
+    state machine
+}
+
+DreamStyleDropShadow:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamStyleDropShadow:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bAntiAliased
+    src   "Anti Aliased"
+    text  "抗锯齿"
+    state machine
+}
+
+DreamStyleDropShadow:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleDropShadow:bLayerKnocksOut {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bLayerKnocksOut
+    src   "Layer Knocks Out"
+    text  "图层遮挡"
+    state machine
+}
+
+DreamStyleDropShadow:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleDropShadow:bUseGlobalLight {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bUseGlobalLight
+    src   "Use Global Light"
+    text  "使用全局光照"
+    state machine
+}
+
+DreamStyleDropShadow:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleDropShadow:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleDropShadow:Distance {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Distance
+    src   "Distance"
+    // from the engine's zh-Hans
+    text  "距离"
+    state draft
+}
+
+DreamStyleDropShadow:Noise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Noise
+    src   "Noise"
+    // from the engine's zh-Hans
+    text  "噪声"
+    state draft
+}
+
+DreamStyleDropShadow:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleDropShadow:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleDropShadow:Spread {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Spread
+    src   "Spread"
+    // from the engine's zh-Hans
+    text  "传播"
+    state draft
+}
+
+DreamStyleGradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient
+    src   "Dream Style Gradient"
+    text  "梦幻风格渐变"
+    state machine
+}
+
+DreamStyleGradient:ColorStops {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient:ColorStops
+    src   "Color Stops"
+    text  "颜色停止点"
+    state machine
+}
+
+DreamStyleGradient:OpacityStops {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient:OpacityStops
+    src   "Opacity Stops"
+    text  "不透明度节点"
+    state machine
+}
+
+DreamStyleGradient:Smoothness {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient:Smoothness
+    src   "Smoothness"
+    // from the engine's zh-Hans
+    text  "光滑度"
+    state draft
+}
+
+DreamStyleGradientColorStop {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop
+    src   "Dream Style Gradient Color Stop"
+    text  "渐变颜色节点"
+    state machine
+}
+
+DreamStyleGradientColorStop:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleGradientColorStop:Location {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Location
+    src   "Location"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamStyleGradientColorStop:Midpoint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Midpoint
+    src   "Midpoint"
+    // from the engine's zh-Hans
+    text  "中点"
+    state draft
+}
+
+DreamStyleGradientFill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill
+    src   "Dream Style Gradient Fill"
+    text  "渐变填充"
+    state machine
+}
+
+DreamStyleGradientFill:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamStyleGradientFill:bAlignWithLayer {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:bAlignWithLayer
+    src   "Align with Layer"
+    text  "与图层对齐"
+    state machine
+}
+
+DreamStyleGradientFill:bDither {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:bDither
+    src   "Dither"
+    text  "抖动"
+    state machine
+}
+
+DreamStyleGradientFill:bReverse {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:bReverse
+    src   "Reverse"
+    // from the engine's zh-Hans
+    text  "倒回"
+    state draft
+}
+
+DreamStyleGradientFill:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamStyleGradientFill:Offset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Offset
+    src   "Offset"
+    // from the engine's zh-Hans
+    text  "偏移"
+    state draft
+}
+
+DreamStyleGradientFill:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamStyleGradientFill:Type {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Type
+    src   "Type"
+    // from the engine's zh-Hans
+    text  "类型"
+    state draft
+}
+
+DreamStyleGradientOpacityStop {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOpacityStop
+    src   "Dream Style Gradient Opacity Stop"
+    text  "渐变不透明度节点"
+    state machine
+}
+
+DreamStyleGradientOpacityStop:Location {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOpacityStop:Location
+    src   "Location"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamStyleGradientOpacityStop:Midpoint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOpacityStop:Midpoint
+    src   "Midpoint"
+    // from the engine's zh-Hans
+    text  "中点"
+    state draft
+}
+
+DreamStyleGradientOpacityStop:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOpacityStop:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleGradientOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay
+    src   "Dream Style Gradient Overlay"
+    text  "渐变叠加"
+    state machine
+}
+
+DreamStyleGradientOverlay:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleGradientOverlay:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleGradientOverlay:Fill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamStyleGradientOverlay:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleInnerGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow
+    src   "Dream Style Inner Glow"
+    text  "梦幻风格内发光"
+    state machine
+}
+
+DreamStyleInnerGlow:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:bAntiAliased
+    src   "Anti Aliased"
+    text  "抗锯齿"
+    state machine
+}
+
+DreamStyleInnerGlow:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleInnerGlow:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleInnerGlow:Choke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Choke
+    src   "Choke"
+    text  "遮断"
+    state machine
+}
+
+DreamStyleInnerGlow:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleInnerGlow:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleInnerGlow:Fill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamStyleInnerGlow:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamStyleInnerGlow:Jitter {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Jitter
+    src   "Jitter"
+    // from the engine's zh-Hans
+    text  "抖动"
+    state draft
+}
+
+DreamStyleInnerGlow:Noise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Noise
+    src   "Noise"
+    // from the engine's zh-Hans
+    text  "噪声"
+    state draft
+}
+
+DreamStyleInnerGlow:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleInnerGlow:Range {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Range
+    src   "Range"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+DreamStyleInnerGlow:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleInnerGlow:Source {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Source
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
+DreamStyleInnerGlow:Technique {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Technique
+    src   "Technique"
+    text  "技术"
+    state machine
+}
+
+DreamStyleInnerShadow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow
+    src   "Dream Style Inner Shadow"
+    text  "梦幻风格内阴影"
+    state machine
+}
+
+DreamStyleInnerShadow:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamStyleInnerShadow:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:bAntiAliased
+    src   "Anti Aliased"
+    text  "抗锯齿"
+    state machine
+}
+
+DreamStyleInnerShadow:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleInnerShadow:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleInnerShadow:bUseGlobalLight {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:bUseGlobalLight
+    src   "Use Global Light"
+    text  "使用全局光照"
+    state machine
+}
+
+DreamStyleInnerShadow:Choke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Choke
+    src   "Choke"
+    text  "遮断"
+    state machine
+}
+
+DreamStyleInnerShadow:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleInnerShadow:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleInnerShadow:Distance {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Distance
+    src   "Distance"
+    // from the engine's zh-Hans
+    text  "距离"
+    state draft
+}
+
+DreamStyleInnerShadow:Noise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Noise
+    src   "Noise"
+    // from the engine's zh-Hans
+    text  "噪声"
+    state draft
+}
+
+DreamStyleInnerShadow:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleInnerShadow:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleOuterGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow
+    src   "Dream Style Outer Glow"
+    text  "梦幻风格外发光"
+    state machine
+}
+
+DreamStyleOuterGlow:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:bAntiAliased
+    src   "Anti Aliased"
+    text  "抗锯齿"
+    state machine
+}
+
+DreamStyleOuterGlow:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleOuterGlow:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleOuterGlow:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleOuterGlow:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleOuterGlow:Fill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamStyleOuterGlow:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamStyleOuterGlow:Jitter {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Jitter
+    src   "Jitter"
+    // from the engine's zh-Hans
+    text  "抖动"
+    state draft
+}
+
+DreamStyleOuterGlow:Noise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Noise
+    src   "Noise"
+    // from the engine's zh-Hans
+    text  "噪声"
+    state draft
+}
+
+DreamStyleOuterGlow:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleOuterGlow:Range {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Range
+    src   "Range"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+DreamStyleOuterGlow:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleOuterGlow:Spread {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Spread
+    src   "Spread"
+    // from the engine's zh-Hans
+    text  "传播"
+    state draft
+}
+
+DreamStyleOuterGlow:Technique {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Technique
+    src   "Technique"
+    text  "技术"
+    state machine
+}
+
+DreamStylePatternFill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill
+    src   "Dream Style Pattern Fill"
+    text  "图案填充"
+    state machine
+}
+
+DreamStylePatternFill:bLinkWithLayer {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:bLinkWithLayer
+    src   "Link with Layer"
+    text  "与图层关联"
+    state machine
+}
+
+DreamStylePatternFill:Offset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Offset
+    src   "Offset"
+    // from the engine's zh-Hans
+    text  "偏移"
+    state draft
+}
+
+DreamStylePatternFill:Pattern {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+DreamStylePatternFill:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamStylePatternOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay
+    src   "Dream Style Pattern Overlay"
+    text  "图层样式图案叠加"
+    state machine
+}
+
+DreamStylePatternOverlay:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStylePatternOverlay:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStylePatternOverlay:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStylePatternOverlay:Pattern {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+DreamStyleSatin {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin
+    src   "Dream Style Satin"
+    text  "图层样式丝绸效果"
+    state machine
+}
+
+DreamStyleSatin:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamStyleSatin:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:bAntiAliased
+    src   "Anti Aliased"
+    text  "抗锯齿"
+    state machine
+}
+
+DreamStyleSatin:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleSatin:bInvert {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:bInvert
+    src   "Invert"
+    // from the engine's zh-Hans
+    text  "反转"
+    state draft
+}
+
+DreamStyleSatin:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleSatin:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleSatin:Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Contour
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+DreamStyleSatin:Distance {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Distance
+    src   "Distance"
+    // from the engine's zh-Hans
+    text  "距离"
+    state draft
+}
+
+DreamStyleSatin:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleSatin:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamStyleStroke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke
+    src   "Dream Style Stroke"
+    text  "图层样式描边"
+    state machine
+}
+
+DreamStyleStroke:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStyleStroke:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamStyleStroke:bOverprint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:bOverprint
+    src   "Overprint"
+    text  "覆印"
+    state machine
+}
+
+DreamStyleStroke:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamStyleStroke:Fill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+DreamStyleStroke:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+DreamStyleStroke:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStyleStroke:Pattern {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+DreamStyleStroke:Position {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamStyleStroke:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+EDreamStyleBevelDirection.Down {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelDirection:Down
+    src   "Down"
+    // from the engine's zh-Hans
+    text  "下移"
+    state draft
+}
+
+EDreamStyleBevelDirection.EDreamStyleBevelDirection_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelDirection:EDreamStyleBevelDirection_MAX
+    src   "EDream Style Bevel Direction MAX"
+    text  "斜面方向最大值"
+    state machine
+}
+
+EDreamStyleBevelDirection.Up {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelDirection:Up
+    src   "Up"
+    // from the engine's zh-Hans
+    text  "上移"
+    state draft
+}
+
+EDreamStyleBevelStyle.EDreamStyleBevelStyle_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:EDreamStyleBevelStyle_MAX
+    src   "EDream Style Bevel Style MAX"
+    text  "斜面样式最大值"
+    state machine
+}
+
+EDreamStyleBevelStyle.Emboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:Emboss
+    src   "Emboss"
+    text  "浮雕"
+    state machine
+}
+
+EDreamStyleBevelStyle.InnerBevel {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:InnerBevel
+    src   "Inner Bevel"
+    text  "内斜面"
+    state machine
+}
+
+EDreamStyleBevelStyle.OuterBevel {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:OuterBevel
+    src   "Outer Bevel"
+    text  "外斜面"
+    state machine
+}
+
+EDreamStyleBevelStyle.PillowEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:PillowEmboss
+    src   "Pillow Emboss"
+    text  "枕式浮雕"
+    state machine
+}
+
+EDreamStyleBevelStyle.StrokeEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:StrokeEmboss
+    src   "Stroke Emboss"
+    text  "描边浮雕"
+    state machine
+}
+
+EDreamStyleBevelTechnique.ChiselHard {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:ChiselHard
+    src   "Chisel Hard"
+    text  "硬雕刻"
+    state machine
+}
+
+EDreamStyleBevelTechnique.ChiselSoft {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:ChiselSoft
+    src   "Chisel Soft"
+    text  "软雕刻"
+    state machine
+}
+
+EDreamStyleBevelTechnique.EDreamStyleBevelTechnique_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:EDreamStyleBevelTechnique_MAX
+    src   "EDream Style Bevel Technique MAX"
+    text  "EDream Style 倒角技术"
+    state machine
+}
+
+EDreamStyleBevelTechnique.Smooth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:Smooth
+    src   "Smooth"
+    // from the engine's zh-Hans
+    text  "平滑"
+    state draft
+}
+
+EDreamStyleContourShape.Cone {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Cone
+    src   "Cone"
+    // from the engine's zh-Hans
+    text  "COne"
+    state draft
+}
+
+EDreamStyleContourShape.ConeInverted {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:ConeInverted
+    src   "Cone Inverted"
+    text  "倒锥"
+    state machine
+}
+
+EDreamStyleContourShape.CoveDeep {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:CoveDeep
+    src   "Cove Deep"
+    text  "深凹"
+    state machine
+}
+
+EDreamStyleContourShape.CoveShallow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:CoveShallow
+    src   "Cove Shallow"
+    text  "浅凹"
+    state machine
+}
+
+EDreamStyleContourShape.Custom {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Custom
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "Custom"
+    state draft
+}
+
+EDreamStyleContourShape.EDreamStyleContourShape_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:EDreamStyleContourShape_MAX
+    src   "EDream Style Contour Shape MAX"
+    text  "EDream Style 轮廓形状"
+    state machine
+}
+
+EDreamStyleContourShape.Gaussian {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Gaussian
+    src   "Gaussian"
+    // from the engine's zh-Hans
+    text  "高斯"
+    state draft
+}
+
+EDreamStyleContourShape.HalfRound {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:HalfRound
+    src   "Half Round"
+    text  "半圆"
+    state machine
+}
+
+EDreamStyleContourShape.Linear {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamStyleContourShape.Ring {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Ring
+    src   "Ring"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamStyleContourShape.RingDouble {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RingDouble
+    src   "Ring Double"
+    text  "双环"
+    state machine
+}
+
+EDreamStyleContourShape.RollingSlope {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RollingSlope
+    src   "Rolling Slope"
+    text  "滚动斜面"
+    state machine
+}
+
+EDreamStyleContourShape.RoundedSteps {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RoundedSteps
+    src   "Rounded Steps"
+    text  "圆角阶梯"
+    state machine
+}
+
+EDreamStyleContourShape.Sawtooth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Sawtooth
+    src   "Sawtooth"
+    text  "锯齿"
+    state machine
+}
+
+EDreamStyleGlowFill.Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowFill:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+EDreamStyleGlowFill.EDreamStyleGlowFill_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowFill:EDreamStyleGlowFill_MAX
+    src   "EDream Style Glow Fill MAX"
+    text  "EDream Style Glow Fill MAX"
+    state machine
+}
+
+EDreamStyleGlowFill.Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowFill:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+EDreamStyleGlowSource.Center {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamStyleGlowSource.Edge {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource:Edge
+    src   "Edge"
+    // from the engine's zh-Hans
+    text  "边缘"
+    state draft
+}
+
+EDreamStyleGlowSource.EDreamStyleGlowSource_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource:EDreamStyleGlowSource_MAX
+    src   "EDream Style Glow Source MAX"
+    text  "EDream Style Glow Source MAX"
+    state machine
+}
+
+EDreamStyleGradientType.Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+EDreamStyleGradientType.Diamond {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Diamond
+    src   "Diamond"
+    text  "Diamond"
+    state machine
+}
+
+EDreamStyleGradientType.EDreamStyleGradientType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:EDreamStyleGradientType_MAX
+    src   "EDream Style Gradient Type MAX"
+    text  "EDream样式渐变类型MAX"
+    state machine
+}
+
+EDreamStyleGradientType.Linear {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamStyleGradientType.Radial {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamStyleGradientType.Reflected {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Reflected
+    src   "Reflected"
+    text  "Reflected"
+    state machine
+}
+
+EDreamStyleStrokeFill.Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokeFill:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+EDreamStyleStrokeFill.EDreamStyleStrokeFill_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokeFill:EDreamStyleStrokeFill_MAX
+    src   "EDream Style Stroke Fill MAX"
+    text  "EDream样式描边填充MAX"
+    state machine
+}
+
+EDreamStyleStrokeFill.Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokeFill:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+EDreamStyleStrokeFill.Pattern {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokeFill:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+EDreamStyleStrokePosition.Center {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokePosition:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamStyleStrokePosition.EDreamStyleStrokePosition_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokePosition:EDreamStyleStrokePosition_MAX
+    src   "EDream Style Stroke Position MAX"
+    text  "EDream样式描边位置MAX"
+    state machine
+}
+
+EDreamStyleStrokePosition.Inside {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokePosition:Inside
+    src   "Inside"
+    // from the engine's zh-Hans
+    text  "Inside"
+    state draft
+}
+
+EDreamStyleStrokePosition.Outside {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleStrokePosition:Outside
+    src   "Outside"
+    text  "Outside"
+    state machine
+}
+
+EDreamStyleTechnique.EDreamStyleTechnique_MAX {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleTechnique:EDreamStyleTechnique_MAX
+    src   "EDream Style Technique MAX"
+    text  "EDream Style Technique MAX"
+    state machine
+}
+
+EDreamStyleTechnique.Precise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleTechnique:Precise
+    src   "Precise"
+    text  "Precise"
+    state machine
+}
+
+EDreamStyleTechnique.Softer {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleTechnique:Softer
+    src   "Softer"
+    text  "Softer"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamLayerEffects {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects
+    src   "A whole layer style. The effects that can be there more than once are arrays, drawn in order: a later one over an earlier\none. From the bottom up a styled layer is drawn: drop shadows, the outer glow, the layer itself (at FillOpacity), the\npattern overlay, gradient overlays, colour overlays, the satin, the inner glow, inner shadows, strokes, the bevel and\nemboss. The drop shadows and the outer glow lie behind the layer; everything from the overlays up lies on it, where it\nhas alpha, and blends with it by its own mode."
+    text  "一个完整的图层样式。可存在多个的效果为数组，按顺序绘制：后一个绘制在前一个\n之上。带样式的图层自下而上绘制：投影、外发光、图层本身（位于 FillOpacity，即填充不透明度）、\n图案叠加、渐变叠加、颜色叠加、光泽、内发光、内阴影、描边、斜面和\n浮雕。投影和外发光位于图层之后；从叠加往上的一切都位于图层之上，即其\n有 alpha 的位置，并按各自的模式与图层混合。"
+    state machine
+}
+
+DreamLayerEffects:FillOpacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:FillOpacity
+    src   "The layer's own pixels' opacity; its effects keep theirs."
+    text  "图层本身的像素透明度；其效果保持各自的透明度。"
+    state machine
+}
+
+DreamLayerEffects:GlobalLightAngle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:GlobalLightAngle
+    src   "The light every effect that uses the global light takes, degrees."
+    text  "所有使用全局光的效果所采用的光照角度，单位为度。"
+    state machine
+}
+
+DreamLayerEffects:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:Scale
+    src   "Every size and distance of every effect, times this: an editor's \"scale effects\"."
+    text  "每个效果的每个尺寸和距离都乘以该值：即编辑器的“缩放效果”。"
+    state machine
+}
+
+DreamStyleBevelEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss
+    src   "The layer's edge raised or pressed in, lit from an angle and a height: a highlight on one side, a shadow on the other."
+    text  "图层边缘被凸起或压下，从一个角度和高度受光：一侧为高光，另一侧为阴影。"
+    state machine
+}
+
+DreamStyleBevelEmboss:Altitude {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Altitude
+    src   "How high the light is, degrees: 90 straight above."
+    text  "光照的高度，单位为度：90表示正上方。"
+    state machine
+}
+
+DreamStyleBevelEmboss:bUseContour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bUseContour
+    src   "Reshape the slope itself by Contour."
+    text  "通过等高线重塑斜面本身。"
+    state machine
+}
+
+DreamStyleBevelEmboss:bUseTexture {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bUseTexture
+    src   "Bump the surface with a pattern."
+    text  "用图案使表面凸起。"
+    state machine
+}
+
+DreamStyleBevelEmboss:ContourRange {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:ContourRange
+    src   "How much of the slope Contour plays over."
+    text  "等高线在斜面上的作用范围。"
+    state machine
+}
+
+DreamStyleBevelEmboss:Depth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Depth
+    src   "How steep the slope is: 1 is 100%."
+    text  "斜面的陡峭程度：1即100%。"
+    state machine
+}
+
+DreamStyleBevelEmboss:GlossContour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:GlossContour
+    src   "How the lit slope's brightness is reshaped: a ring makes it look metallic."
+    text  "受光斜面的亮度如何被重塑：环形轮廓会使其呈现出金属质感。"
+    state machine
+}
+
+DreamStyleBevelEmboss:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Size
+    src   "How wide the slope is."
+    text  "斜面的宽度。"
+    state machine
+}
+
+DreamStyleBevelEmboss:Soften {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:Soften
+    src   "How much the slope is blurred."
+    text  "斜面的模糊程度。"
+    state machine
+}
+
+DreamStyleBevelEmboss:TextureDepth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:TextureDepth
+    src   "How deep the pattern's bumps are: 1 is 100%, negative presses them in."
+    text  "图案凸起的深度：1 表示 100%，负值表示向内凹陷。"
+    state machine
+}
+
+DreamStyleColorOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay
+    src   "The layer filled with one colour."
+    text  "填充颜色的图层。"
+    state machine
+}
+
+DreamStyleContour:Points {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContour:Points
+    src   "Custom: the curve's points, by Input; a curve of fewer than two is Linear."
+    text  "自定义：曲线的点，通过输入；曲线的点数少于两个时，为线性。"
+    state machine
+}
+
+DreamStyleContourPoint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint
+    src   "A point of a custom contour: where the falloff Input maps to Output, both 0..1."
+    text  "自定义曲线的一个点：输入映射到输出的位置，范围均为 0..1。"
+    state machine
+}
+
+DreamStyleContourPoint:bCorner {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint:bCorner
+    src   "A corner: the curve bends here instead of passing through smoothly."
+    text  "拐点：曲线在此处弯曲，而不是平滑通过。"
+    state machine
+}
+
+DreamStyleDropShadow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow
+    src   "A shadow cast behind the layer, away from the light."
+    text  "阴影投射在图层后面，远离光源。"
+    state machine
+}
+
+DreamStyleDropShadow:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Angle
+    src   "Where the light comes from, degrees: the shadow falls the other way."
+    text  "光源方向，以度数为单位：阴影朝相反方向。"
+    state machine
+}
+
+DreamStyleDropShadow:bAntiAliased {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bAntiAliased
+    src   "The contour's table read between its samples (on), or at the nearest (off)."
+    text  "在样本之间读取轮廓表（启用），或读取最近的样本（禁用）。"
+    state machine
+}
+
+DreamStyleDropShadow:bLayerKnocksOut {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bLayerKnocksOut
+    src   "The layer hides its own shadow where it covers it, even where the layer is see-through."
+    text  "图层隐藏其自身阴影，即使图层是透明的。"
+    state machine
+}
+
+DreamStyleDropShadow:bUseGlobalLight {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bUseGlobalLight
+    src   "Take the angle from the style's global light."
+    text  "从样式的全局光照中获取角度。"
+    state machine
+}
+
+DreamStyleDropShadow:Noise {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Noise
+    src   "Grain in the shadow's alpha."
+    text  "阴影的 alpha 值中的噪点。"
+    state machine
+}
+
+DreamStyleDropShadow:Size {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Size
+    src   "How far it reaches out past the shape."
+    text  "它向形状外延伸的距离。"
+    state machine
+}
+
+DreamStyleDropShadow:Spread {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:Spread
+    src   "How much of Size is solid before it fades: 0 all of it fades, 1 a hard edge Size out."
+    text  "Size 中有多少部分是实心的、之后才开始淡出：0 表示全部淡出，1 表示一直实心到 Size 边缘的硬边。"
+    state machine
+}
+
+DreamStyleGradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient
+    src   "A style's gradient, as an image editor keeps one: colour stops and opacity stops apart, each pair of neighbours with a\nmidpoint. Interpolated in sRGB-encoded values, as the editor does."
+    text  "样式的渐变，与图像编辑器保存渐变的方式相同：颜色色标与不透明度色标分开，\n每对相邻色标各有一个中点。按 sRGB 编码值插值，与编辑器的做法一致。"
+    state machine
+}
+
+DreamStyleGradient:Smoothness {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradient:Smoothness
+    src   "The editor's smoothness, kept so that a gradient read from a file can be written back as it was. Not drawn: every\ngradient is interpolated as at 0%, linearly between stops (after the midpoint)."
+    text  "编辑器的平滑度，保留它是为了让从文件读入的渐变能按原样写回。不参与绘制：\n所有渐变都按 0% 的平滑度、在色标之间（中点之后）线性插值。"
+    state machine
+}
+
+DreamStyleGradientColorStop {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop
+    src   "A colour stop of a style's gradient."
+    text  "样式渐变的一个颜色色标。"
+    state machine
+}
+
+DreamStyleGradientColorStop:Color {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Color
+    src   "sRGB-encoded; its alpha is not read (opacity has stops of its own)."
+    text  "sRGB 编码；其 Alpha 不被读取（不透明度有自己的色标）。"
+    state machine
+}
+
+DreamStyleGradientColorStop:Location {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Location
+    src   "Along the gradient, 0..1."
+    text  "沿渐变方向的位置，0..1。"
+    state machine
+}
+
+DreamStyleGradientColorStop:Midpoint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Midpoint
+    src   "Where between this stop and the next their colours are half and half, as a fraction of the way."
+    text  "在此色标与下一个色标之间两种颜色各占一半的位置，以两者间距的比例表示。"
+    state machine
+}
+
+DreamStyleGradientFill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill
+    src   "A gradient laid across the layer: a gradient overlay's, a stroke's, a glow's gradient is only the gradient."
+    text  "横跨图层铺开的渐变：对于渐变叠加、描边和发光，其渐变仅由该渐变决定。"
+    state machine
+}
+
+DreamStyleGradientFill:Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Angle
+    src   "Degrees: 0 left to right, 90 bottom to top."
+    text  "角度：0 为从左到右，90 为从下到上。"
+    state machine
+}
+
+DreamStyleGradientFill:bAlignWithLayer {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:bAlignWithLayer
+    src   "Laid across the layer's rect (on), or across what the layer draws as its effects see it (off): a group's picture, a text's\nglyphs. The same for a rect block, whose shape is its rect."
+    text  "沿图层的矩形范围铺设（开启），或沿效果所见图层绘制的内容铺设（关闭）：组的图片、文本的\n字形。矩形块同样如此，其形状即其矩形。"
+    state machine
+}
+
+DreamStyleGradientFill:bDither {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:bDither
+    src   "A little noise on the gradient, against banding."
+    text  "在渐变上添加少量噪点，以减轻色带。"
+    state machine
+}
+
+DreamStyleGradientFill:Offset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Offset
+    src   "Where its centre is moved to, as fractions of the layer's width and height, +Y down."
+    text  "中心移动到的位置，以图层宽度和高度的比例表示，+Y向下。"
+    state machine
+}
+
+DreamStyleGradientFill:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientFill:Scale
+    src   "How long the gradient is as a fraction of the layer's extent along it."
+    text  "渐变长度占图层沿渐变方向范围的比例。"
+    state machine
+}
+
+DreamStyleGradientOpacityStop {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOpacityStop
+    src   "An opacity stop of a style's gradient."
+    text  "样式中渐变的一个不透明度色标。"
+    state machine
+}
+
+DreamStyleGradientOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay
+    src   "The layer filled with a gradient."
+    text  "用渐变填充的图层。"
+    state machine
+}
+
+DreamStyleInnerGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow
+    src   "A glow inside the layer's edge, or out from its middle."
+    text  "图层边缘内侧或从中心向外发出的发光。"
+    state machine
+}
+
+DreamStyleInnerGlow:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:Gradient
+    src   "Fill Gradient: from where the glow comes from (0) to its end (1)."
+    text  "填充渐变：从发光的起点（0）到其终点（1）。"
+    state machine
+}
+
+DreamStyleInnerShadow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow
+    src   "A shadow inside the layer's edge, as if the layer were a hole."
+    text  "图层边缘内侧的阴影，如同图层是一个孔洞。"
+    state machine
+}
+
+DreamStyleInnerShadow:Choke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:Choke
+    src   "How much of Size is solid before it fades, in from the edge."
+    text  "从边缘向内，Size中在渐隐前保持实心的比例。"
+    state machine
+}
+
+DreamStyleOuterGlow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow
+    src   "A glow round the outside of the layer's edge."
+    text  "图层边缘外侧周围的发光。"
+    state machine
+}
+
+DreamStyleOuterGlow:Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Gradient
+    src   "Fill Gradient: from the shape (0) out to the glow's end (1)."
+    text  "填充渐变：从形状（0）到发光的终点（1）。"
+    state machine
+}
+
+DreamStyleOuterGlow:Jitter {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Jitter
+    src   "Fill Gradient: how much the gradient is shaken along itself, pixel by pixel."
+    text  "填充渐变：渐变沿自身逐像素抖动的幅度。"
+    state machine
+}
+
+DreamStyleOuterGlow:Range {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:Range
+    src   "How much of the falloff the contour plays over: at 1 all of it; lower, the glow stays solid further out."
+    text  "轮廓覆盖衰减的比例：为1时覆盖全部；值越小，光晕在越靠外处保持实心。"
+    state machine
+}
+
+DreamStylePatternFill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill
+    src   "A pattern laid across the layer, tiled."
+    text  "铺在图层上的平铺图案。"
+    state machine
+}
+
+DreamStylePatternFill:bLinkWithLayer {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:bLinkWithLayer
+    src   "Moves with the layer (on), or stays where it is on the canvas (off)."
+    text  "随图层移动（开），或在画布上保持原位（关）。"
+    state machine
+}
+
+DreamStylePatternFill:Offset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Offset
+    src   "Where the pattern's first texel is, in units from the layer's top left."
+    text  "图案的第一个像素位于图层左上角的单位坐标处。"
+    state machine
+}
+
+DreamStylePatternFill:Scale {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Scale
+    src   "A texel of the pattern is this many units."
+    text  "图案的单个像素的单位尺寸。"
+    state machine
+}
+
+DreamStylePatternOverlay {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay
+    src   "The layer filled with a tiled pattern."
+    text  "用平铺的图案填充图层。"
+    state machine
+}
+
+DreamStyleSatin {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin
+    src   "Silky inner shading: the layer's shape, shifted both ways along an angle and blurred, where the two differ."
+    text  "丝绸般柔和的内部阴影：图层的形状，沿着角度方向向两边偏移并模糊，两者的差异。"
+    state machine
+}
+
+DreamStyleStroke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke
+    src   "A line along the layer's edge: outside it, inside it, or centred on it."
+    text  "图层边缘的线条：位于边缘外部、内部或居中。"
+    state machine
+}
+
+DreamStyleStroke:bOverprint {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:bOverprint
+    src   "Kept so a style read from a file can be written back as it was; drawn as off."
+    text  "保留样式，以便从文件中读取的样式可以写回原始状态；绘制时禁用。"
+    state machine
+}
+
+EDreamStyleBevelStyle.Emboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:Emboss
+    src   "Raised across the edge, half in and half out."
+    text  "在边缘处凸起，一半位于内部，一半位于外部。"
+    state machine
+}
+
+EDreamStyleBevelStyle.InnerBevel {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:InnerBevel
+    src   "Raised inside the edge."
+    text  "在边缘内部凸起。"
+    state machine
+}
+
+EDreamStyleBevelStyle.OuterBevel {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:OuterBevel
+    src   "Raised outside the edge, over what is behind."
+    text  "在边缘外部凸起，覆盖在后面的内容上。"
+    state machine
+}
+
+EDreamStyleBevelStyle.PillowEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:PillowEmboss
+    src   "Pressed into what is behind along the edge."
+    text  "沿着边缘向后压入。"
+    state machine
+}
+
+EDreamStyleBevelStyle.StrokeEmboss {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelStyle:StrokeEmboss
+    src   "On the layer's stroke (its first enabled one); without a stroke, nothing."
+    text  "位于图层的笔触上（其第一个启用的笔触）；如果没有笔触，则无效果。"
+    state machine
+}
+
+EDreamStyleBevelTechnique.ChiselHard {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:ChiselHard
+    src   "A hard, straight slope."
+    text  "一个硬的、笔直的斜面。"
+    state machine
+}
+
+EDreamStyleBevelTechnique.ChiselSoft {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:ChiselSoft
+    src   "A straight slope, softened."
+    text  "一个笔直的斜面，但有所柔化。"
+    state machine
+}
+
+EDreamStyleBevelTechnique.Smooth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleBevelTechnique:Smooth
+    src   "Rounded."
+    text  "圆角。"
+    state machine
+}
+
+EDreamStyleContourShape {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape
+    src   "A contour: how an effect's falloff, 0 at its far end to 1 at the shape, is reshaped before it becomes an alpha."
+    text  "轮廓：描述效果的衰减如何被重塑，从远端为 0 到形状为 1。"
+    state machine
+}
+
+EDreamStyleContourShape.Cone {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Cone
+    src   "Up to the middle and down again: a ring that peaks halfway."
+    text  "先下降到中间，然后上升：一个在中间达到峰值。"
+    state machine
+}
+
+EDreamStyleContourShape.ConeInverted {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:ConeInverted
+    src   "Down to the middle and up again."
+    text  "先上升到中间，然后下降。"
+    state machine
+}
+
+EDreamStyleContourShape.CoveDeep {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:CoveDeep
+    src   "Low for long, rising late and steeply."
+    text  "开始时较低，然后延迟上升且陡峭。"
+    state machine
+}
+
+EDreamStyleContourShape.CoveShallow {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:CoveShallow
+    src   "Low at first, rising late."
+    text  "开始时较低，然后延迟上升。"
+    state machine
+}
+
+EDreamStyleContourShape.Custom {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Custom
+    src   "The points of Custom."
+    text  "自定义的点。"
+    state machine
+}
+
+EDreamStyleContourShape.Gaussian {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Gaussian
+    src   "An S: slow at both ends."
+    text  "在两端都较慢的 S 形。"
+    state machine
+}
+
+EDreamStyleContourShape.HalfRound {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:HalfRound
+    src   "A quarter circle: rising early, flat at the top."
+    text  "一个四分之一圆：早期上升，顶部平坦。"
+    state machine
+}
+
+EDreamStyleContourShape.Linear {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Linear
+    src   "The falloff as it is."
+    text  "效果的原始衰减。"
+    state machine
+}
+
+EDreamStyleContourShape.Ring {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Ring
+    src   "A rounded bump."
+    text  "一个圆形的凸起。"
+    state machine
+}
+
+EDreamStyleContourShape.RingDouble {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RingDouble
+    src   "Two rounded bumps."
+    text  "两个圆形的凸起。"
+    state machine
+}
+
+EDreamStyleContourShape.RollingSlope {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RollingSlope
+    src   "A ramp with a ripple on it."
+    text  "一个带有波纹的斜坡。"
+    state machine
+}
+
+EDreamStyleContourShape.RoundedSteps {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:RoundedSteps
+    src   "Four steps with rounded risers."
+    text  "四个带有圆角的台阶。"
+    state machine
+}
+
+EDreamStyleContourShape.Sawtooth {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleContourShape:Sawtooth
+    src   "Three teeth."
+    text  "三个齿。"
+    state machine
+}
+
+EDreamStyleGlowFill {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowFill
+    src   "What a glow is filled with."
+    text  "发光区域的填充方式。"
+    state machine
+}
+
+EDreamStyleGlowFill.Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowFill:Gradient
+    src   "Its gradient, from the shape out (an outer glow) or in (an inner glow)."
+    text  "渐变效果，从形状外部向内（外发光）或从内部向外（内发光）。"
+    state machine
+}
+
+EDreamStyleGlowSource {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource
+    src   "Where an inner glow comes from."
+    text  "内发光的光源位置。"
+    state machine
+}
+
+EDreamStyleGlowSource.Center {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource:Center
+    src   "Out from the middle."
+    text  "从中心发光。"
+    state machine
+}
+
+EDreamStyleGlowSource.Edge {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGlowSource:Edge
+    src   "In from the edge."
+    text  "从边缘发光。"
+    state machine
+}
+
+EDreamStyleGradientType {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType
+    src   "How a gradient fill is laid across the layer."
+    text  "渐变填充在图层上的铺设方式。"
+    state machine
+}
+
+EDreamStyleGradientType.Angle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Angle
+    src   "Round the centre, from the angle."
+    text  "从中心向角方向渐变。"
+    state machine
+}
+
+EDreamStyleGradientType.Diamond {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Diamond
+    src   "Out from the centre in a diamond."
+    text  "从中心向外呈菱形分布。"
+    state machine
+}
+
+EDreamStyleGradientType.Linear {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Linear
+    src   "Along a line at the angle."
+    text  "沿一条线，从指定角度分布。"
+    state machine
+}
+
+EDreamStyleGradientType.Radial {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Radial
+    src   "Out from the centre."
+    text  "从中心向外分布。"
+    state machine
+}
+
+EDreamStyleGradientType.Reflected {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleGradientType:Reflected
+    src   "Out both ways from a line through the centre."
+    text  "沿穿过中心的线，双向分布。"
+    state machine
+}
+
+EDreamStyleTechnique {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#EDreamStyleTechnique
+    src   "Softer: a blur's falloff. Precise: the distance from the shape, as it is."
+    text  "柔和：类似于模糊效果的衰减。精确：是与形状的距离。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Layer Style" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamLayerEffects:bEnabled
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}
+
+"Bevel and Emboss" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleBevelEmboss:bEnabled
+    src   "Bevel and Emboss"
+    text  "压印"
+    state machine
+}
+
+"Color Overlay" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleColorOverlay:bEnabled
+    src   "Color Overlay"
+    // from the engine's zh-Hans
+    text  "颜色覆层"
+    state draft
+}
+
+Contour {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleContourPoint:Input
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+"Drop Shadow" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleDropShadow:bEnabled
+    src   "Drop Shadow"
+    text  "投影"
+    state machine
+}
+
+Gradient {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientColorStop:Location
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+"Gradient Overlay" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleGradientOverlay:bEnabled
+    src   "Gradient Overlay"
+    text  "渐变叠加"
+    state machine
+}
+
+"Inner Glow" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerGlow:bEnabled
+    src   "Inner Glow"
+    text  "内发光"
+    state machine
+}
+
+"Inner Shadow" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleInnerShadow:bEnabled
+    src   "Inner Shadow"
+    text  "内阴影"
+    state machine
+}
+
+"Outer Glow" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleOuterGlow:bEnabled
+    src   "Outer Glow"
+    text  "外发光"
+    state machine
+}
+
+Pattern {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternFill:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+"Pattern Overlay" {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStylePatternOverlay:bEnabled
+    src   "Pattern Overlay"
+    text  "图案叠加"
+    state machine
+}
+
+Satin {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleSatin:bEnabled
+    src   "Satin"
+    text  "缎面效果"
+    state machine
+}
+
+Stroke {
+    at    Source/DreamGUI/Public/Core/DreamLayerStyleTypes.h#DreamStyleStroke:bEnabled
+    src   "Stroke"
+    // from the engine's zh-Hans
+    text  "笔划"
+    state draft
+}

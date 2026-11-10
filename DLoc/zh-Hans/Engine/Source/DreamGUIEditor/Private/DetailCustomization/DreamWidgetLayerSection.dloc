@@ -1,0 +1,165 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetLayerSection
+
+TurnOffComponent {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Turn Layer Effect Off"
+    text  "关闭图层效果"
+    state machine
+}
+
+TurnOnComponent {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Turn Layer Effect On"
+    text  "启用图层效果"
+    state machine
+}
+
+ComponentSwitchTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "On adds one to a widget that has none. Off turns it off and keeps its settings."
+    text  "启用时，如果组件不存在，则添加一个；禁用时，则禁用该组件并保留其设置。"
+    state machine
+}
+
+EditComponent {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Edit..."
+    // from the engine's zh-Hans
+    text  "编辑……"
+    state draft
+}
+
+NoMask {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "None"
+    // from the engine's zh-Hans
+    text  "无"
+    state draft
+}
+
+Opacity {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+BlendMode {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+MaskSettings {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Mask Settings"
+    // from the engine's zh-Hans
+    text  "遮罩设置"
+    state draft
+}
+
+PickMaskShape {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Set Mask Shape"
+    text  "设置遮罩形状。"
+    state machine
+}
+
+Mask {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+MaskTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "A shape this widget and everything under it are cut to, with a feathered edge, a texture or a pattern. Picking one makes the widget clip to its bounds."
+    text  "此小部件及其下方的所有内容都将被裁剪成指定的形状，并带有柔化边缘、纹理或图案。选择一个形状，使小部件裁剪到其边界。"
+    state machine
+}
+
+NoMaskTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "No mask: the mask put back to its defaults."
+    text  "无遮罩：遮罩将恢复到默认设置。"
+    state machine
+}
+
+LayerStyle {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}
+
+LayerStyleTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Drop shadows, glows, a bevel, strokes and overlays, drawn round what this widget draws."
+    text  "绘制此小部件所绘制内容的阴影、发光、边角、描边和叠加效果。"
+    state machine
+}
+
+EditStyleTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Open the Layer Style dialog: every effect, previewed on the widgets, written when you press OK."
+    text  "打开图层样式对话框：所有效果都可以在小部件上预览，并在您按下“确定”时保存。"
+    state machine
+}
+
+LayerGroup {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Layer Group"
+    // from the engine's zh-Hans
+    text  "层组"
+    state draft
+}
+
+LayerGroupTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Makes this widget and everything under it one layer: faded, blended and masked as one."
+    text  "将此小部件及其下方的所有内容合并为一个图层：淡出、混合和遮罩。"
+    state machine
+}
+
+EditGroupTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Open the layer group's own settings"
+    text  "打开图层组的设置。"
+    state machine
+}
+
+GroupMode {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Group Mode"
+    // from the engine's zh-Hans
+    text  "分组模式"
+    state draft
+}
+
+EffectsHeader {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Effects ({0})"
+    text  "效果 ({0})"
+    state machine
+}
+
+EyeTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Turn this effect off or on, to compare with and without it. Saved like any other setting."
+    text  "启用或禁用此效果，以便进行比较。该设置将与其他设置一起保存。"
+    state machine
+}
+
+OpenEffectTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetLayerSection.cpp
+    src   "Open its settings"
+    text  "打开其设置。"
+    state machine
+}

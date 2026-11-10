@@ -1,0 +1,259 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UITextHyperlink {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink
+    src   "UIText Hyperlink"
+    text  "UIText超链接"
+    state machine
+}
+
+UITextHyperlink:bAllowEventBubbleUpWhenNoLinkHit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bAllowEventBubbleUpWhenNoLinkHit
+    src   "Allow Event Bubble Up when No Link Hit"
+    text  "未命中链接时允许事件冒泡"
+    state machine
+}
+
+UITextHyperlink:bLinksAreFocusStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bLinksAreFocusStops
+    src   "Links Are Focus Stops"
+    text  "链接为焦点停靠点"
+    state machine
+}
+
+UITextHyperlink:bUseHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bUseHoverColor
+    src   "Use Hover Color"
+    text  "使用悬停颜色"
+    state machine
+}
+
+UITextHyperlink:bUsePressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bUsePressedColor
+    src   "Use Pressed Color"
+    text  "使用按下颜色"
+    state machine
+}
+
+UITextHyperlink:GetHoverColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetHoverColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetLinksAreFocusStops:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinksAreFocusStops:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetLinkStop:InTagIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinkStop:InTagIndex
+    src   "In Tag Index"
+    text  "标签索引"
+    state machine
+}
+
+UITextHyperlink:GetLinkStop:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinkStop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetPressedColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetPressedColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetTextVisual:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetTextVisual:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetUseHoverColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetUseHoverColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:GetUsePressedColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetUsePressedColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UITextHyperlink:HoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:HoverColor
+    src   "Hover Color"
+    // from the engine's zh-Hans
+    text  "Hover Color"
+    state draft
+}
+
+UITextHyperlink:LinkStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:LinkStops
+    src   "Link Stops"
+    text  "链接停靠点"
+    state machine
+}
+
+UITextHyperlink:PressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:PressedColor
+    src   "Pressed Color"
+    text  "按下颜色"
+    state machine
+}
+
+UITextHyperlink:SetHoverColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetHoverColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:SetLinksAreFocusStops:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetLinksAreFocusStops:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:SetPressedColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetPressedColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:SetTextVisual:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetTextVisual:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:SetUseHoverColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetUseHoverColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:SetUsePressedColor:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetUsePressedColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UITextHyperlink:TextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:TextVisual
+    src   "Text Visual"
+    text  "文本视觉"
+    state machine
+}
+
+namespace UObjectToolTips
+
+UITextHyperlink {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink
+    src   "Makes the `<a=Id>...</a>` ranges of a rich text clickable.\n\nThe text visual holds the ranges -- a hyperlink is a custom tag that can be clicked -- but a visual\nnever sees pointer events; a behaviour does. So this is the piece between them: it takes the click's\nworld point, asks the text which link is under it, and broadcasts. A click that lands on the text but\nnot on a link is not this component's, so the event bubbles up as if nothing were here.\n\nIt can also colour the link under the pointer while it is hovered and while it is pressed, the way\nUMG's hyperlink decorator styles its hovered and pressed states. Both are off by default. The colour\nis the text's tag colour override, which is applied when the text is painted, so a link lighting up\ncosts a repaint and never a layout.\n\nPut it on the same widget as the UDreamText (it finds the visual itself), and give the widget\nsomething that raises clicks at all -- the event system needs a raycast target, the same way a\nUUIButton does.\n\nEach link is also a stop for the keys and the pad, as UMG's is: the hyperlink decorator draws a link\nas an SHyperlink, which is an SButton (Slate/Public/Widgets/Input/SHyperlink.h), focusable like any\nbutton (SButton's IsFocusable). In a game, while bLinksAreFocusStops is on, every link drawn gets a\nstop of its own over its glyphs -- a child widget with a button on it, which the D-pad and Tab reach\nwhere the link is drawn, the focus ring is drawn around, and whose confirm announces the link. A link\nin a disabled text is a disabled button: passed over, and the confirm announces nothing."
+    text  "使富文本中 `<a=Id>...</a>` 的范围可被点击。\n\n文本视觉保存这些范围——超链接是一个可点击的自定义标签——但视觉元素\n从不接收指针事件；接收它的是行为。所以这个组件是两者之间的桥梁：它取点击的\n世界坐标，向文本询问该点之下是哪个链接，然后进行广播。落在文本上但\n没落在链接上的点击不属于此组件，因此事件会像此处空无一物那样向上冒泡。\n\n它还能在指针下的链接被悬停和被按下时为其着色，方式与\nUMG 的超链接装饰器设置悬停和按下状态相同。两者默认关闭。颜色\n是文本的标签颜色覆盖，在绘制文本时应用，所以链接亮起\n只需一次重绘，绝不触发布局。\n\n把它放在与 UDreamText 相同的控件上（它会自己找到视觉元素），并让该控件\n拥有能引发点击的东西——事件系统需要一个射线检测目标，就像\nUUIButton 那样。\n\n每个链接也和 UMG 的一样，是键盘和手柄的焦点停靠点：超链接装饰器把链接绘制为\nSHyperlink，即一个 SButton（Slate/Public/Widgets/Input/SHyperlink.h），可像任何\n按钮一样聚焦（SButton 的 IsFocusable）。在游戏中，当 bLinksAreFocusStops 开启时，绘制的每个链接都会\n在其字形上获得自己的焦点停靠点——一个带按钮的子控件，方向键和 Tab 可以到达\n链接绘制的位置，焦点环围绕它绘制，其确认键会播报该链接。禁用文本中的链接\n就是一个禁用的按钮：会被跳过，确认键什么也不播报。"
+    state machine
+}
+
+UITextHyperlink:bAllowEventBubbleUpWhenNoLinkHit {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bAllowEventBubbleUpWhenNoLinkHit
+    src   "Let the click bubble up when it did not land on a link. False keeps every click on the text,\nwhich is what a text inside a button does NOT want: the button would stop working."
+    text  "点击未落在链接上时让其向上冒泡。False 会把所有点击都留在文本上，\n而这正是按钮内的文本所不希望的：按钮会失效。"
+    state machine
+}
+
+UITextHyperlink:bLinksAreFocusStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bLinksAreFocusStops
+    src   "Each link drawn is a stop for Tab, the D-pad and the stick, its confirm announcing the link -- UMG's hyperlink is an\nSButton, focusable as any button is. Off: the keys and the pad pass the links by, and only a pointer follows them."
+    text  "绘制的每个链接都是 Tab、方向键和摇杆的停靠点，其确认键会播报该链接——UMG 的超链接是一个\nSButton，可像任何按钮一样聚焦。关闭：键盘和手柄会跳过链接，只有指针会跟随它们。"
+    state machine
+}
+
+UITextHyperlink:bUseHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bUseHoverColor
+    src   "Draw the link under the pointer in HoverColor while it is there. Off: links look the same hovered or not."
+    text  "指针位于链接上时，用 HoverColor 绘制该链接。关闭：链接悬停与否看起来都一样。"
+    state machine
+}
+
+UITextHyperlink:bUsePressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:bUsePressedColor
+    src   "Draw the link a press went down on in PressedColor until the press comes up, wherever the pointer goes in\nbetween, as a browser shows a link :active. Off: a press changes nothing about how the link looks."
+    text  "按下时所在的链接会以 PressedColor 绘制，直到松开为止，无论期间指针移到何处，\n如同浏览器显示 :active 的链接那样。关闭：按下不会改变链接的外观。"
+    state machine
+}
+
+UITextHyperlink:GetLinkStop {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinkStop
+    src   "The stop over the link at InTagIndex of the text's GetRichTextCustomTagArray -- the widget the keys and the pad focus\nfor it -- or null while it has none (outside a game, with bLinksAreFocusStops off, or a link not drawn)."
+    text  "The stop over the link at InTagIndex of the text's GetRichTextCustomTagArray -- the widget the keys and the pad focus\nfor it -- or null while it has none (outside a game, with bLinksAreFocusStops off, or a link not drawn)."
+    state machine
+}
+
+UITextHyperlink:GetTextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetTextVisual
+    src   "The text this reads its links from: the widget's own text visual unless one is set here."
+    text  "The text this reads its links from: the widget's own text visual unless one is set here."
+    state machine
+}
+
+UITextHyperlink:HoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:HoverColor
+    src   "What the hovered link is drawn in, in place of the colour its markup gives it."
+    text  "当鼠标悬停时，链接将以 HoverColor 绘制，取代其标记指定的颜色。关闭：链接在悬停或未悬停时外观相同。"
+    state machine
+}
+
+UITextHyperlink:LinkStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:LinkStops
+    src   "The stops, each a child of the text's widget with a button on it, ignored by layout and never hit by a pointer: the\npointer reaches the links through the text itself. Paired by position with LinkStopTagIndices."
+    text  "这些停靠点，每个都是文本控件的子项，上面带有一个按钮，不参与布局，也永远不会被指针命中：\n指针是通过文本本身来触达链接的。按位置与 LinkStopTagIndices 一一配对。"
+    state machine
+}
+
+UITextHyperlink:PressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:PressedColor
+    src   "What the pressed link is drawn in, in place of the colour its markup gives it."
+    text  "当链接被按下时，它将以 PressedColor 绘制，取代其标记指定的颜色。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Hyperlink {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetHoverColor
+    src   "DreamGUI-Hyperlink"
+    text  "DreamGUI-Hyperlink"
+    state machine
+}

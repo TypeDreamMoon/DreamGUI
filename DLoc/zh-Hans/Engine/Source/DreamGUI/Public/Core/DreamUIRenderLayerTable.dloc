@@ -1,0 +1,27 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRenderLayerTable {
+    at    Source/DreamGUI/Public/Core/DreamUIRenderLayerTable.h#DreamUIRenderLayerTable
+    src   "Dream UIRender Layer Table"
+    text  "Dream UI 渲染层表"
+    state machine
+}
+
+DreamUIRenderLayerTable:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIRenderLayerTable.h#DreamUIRenderLayerTable:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIRenderLayerTable {
+    at    Source/DreamGUI/Public/Core/DreamUIRenderLayerTable.h#DreamUIRenderLayerTable
+    src   "Where a world's render layers stand on their canvases, for the GPU: a row a layer, holding the layer's transform to its\ncanvas, in a texture every vertex shader that draws a canvas's batches reads (DreamUIRenderLayer.ush). An element of a\nlayer keeps its vertices relative to the layer, and its widget-property record names the layer's row; so a draw call\nholds the elements of any number of layers, and a layer that moves writes its row and nothing else.\n\nRow 0 is no layer's and is never handed out: a record holding 0 is an element of no layer, which the shaders place where\nit is without reading the table.\n\nThreads: a canvas acquires and releases rows on the game thread, where the table also flushes, once a frame, after the\ncanvases placed their layers (UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall). In between, a canvas may write and\nread the rows it holds from any thread, several canvases at once: each row is its own layer's, and nothing else moves\nthe rows while that goes on."
+    text  "世界的渲染层在其画布上的位置（供GPU使用）：每个层一行，保存该层到其\n画布的变换，位于每个绘制画布批次的顶点着色器都会读取的纹理中（DreamUIRenderLayer.ush）。层的一个\n元素将其顶点保持为相对于该层，其控件属性记录中标明该层所在的行；因此一个绘制调用\n可包含任意数量层的元素，而移动的层只写入其行，不写其他内容。\n\n行0不属于任何层，也永远不会被分配：保存0的记录表示一个不属于任何层的元素，着色器会将其放置在\n其所在处，而不读取该表。\n\n线程：画布在游戏线程上获取和释放行，表也在游戏线程上刷新，每帧一次，在\n画布放置好其层之后（UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall）。在此期间，画布可以从任意线程写入和\n读取其持有的行，且可同时有多个画布：每一行属于各自的层，在此期间没有其他操作会\n移动这些行。"
+    state machine
+}

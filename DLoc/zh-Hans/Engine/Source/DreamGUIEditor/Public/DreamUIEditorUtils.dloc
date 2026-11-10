@@ -1,0 +1,45 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIEditorUtils
+
+MultipleComponentInOneActorNotAllowed {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "Multiple {0} component in one actor is not allowed!"
+    text  "一个 Actor 中不允许存在多个 {0} 组件！"
+    state machine
+}
+
+MultiComponentNotAllowed_Tips {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "MultiComponentNotAllowed_Tips"
+    text  "多组件不允许提示"
+    state machine
+}
+
+RequireComponentRow {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "RequireComponent"
+    text  "所需组件"
+    state machine
+}
+
+RequireComponentTip {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "This component require {0} component on widget!"
+    text  "此组件需要在 Widget 上拥有 {0} 组件！"
+    state machine
+}
+
+ErrorInfoTextRow {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "ErrorInfoText"
+    text  "ErrorInfoText"
+    state machine
+}
+
+WarningInfoTextRow {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorUtils.h
+    src   "WarningInfoText"
+    text  "WarningInfoText"
+    state machine
+}

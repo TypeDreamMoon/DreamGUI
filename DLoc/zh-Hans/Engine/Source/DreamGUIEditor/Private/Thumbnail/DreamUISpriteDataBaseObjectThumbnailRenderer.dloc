@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISpriteDataBaseObjectThumbnailRenderer {
+    at    Source/DreamGUIEditor/Private/Thumbnail/DreamUISpriteDataBaseObjectThumbnailRenderer.h#DreamUISpriteDataBaseObjectThumbnailRenderer
+    src   "Dream UISprite Data Base Object Thumbnail Renderer"
+    text  "Dream UI 绘图对象数据基础对象缩略图渲染器"
+    state machine
+}

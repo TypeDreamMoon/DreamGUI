@@ -1,0 +1,56 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISequence {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence
+    src   "Dream UISequence"
+    text  "Dream UI序列"
+    state machine
+}
+
+DreamUISequence:BindingReferences {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence:BindingReferences
+    src   "Binding References"
+    // from the engine's zh-Hans
+    text  "绑定引用"
+    state draft
+}
+
+DreamUISequence:MovieScene {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence:MovieScene
+    src   "Movie Scene"
+    // from the engine's zh-Hans
+    text  "影片场景"
+    state draft
+}
+
+DreamUISequence:PreviewWidgetClass {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence:PreviewWidgetClass
+    src   "Preview Widget Class"
+    text  "预览控件类"
+    state machine
+}
+
+DreamUISequence:RootBindingGuid {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence:RootBindingGuid
+    src   "Root Binding Guid"
+    text  "根绑定 GUID"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUISequence {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence
+    src   "A DreamGUI animation as a standalone asset.\n\nThe embedded UDreamWidgetAnimation lives inside one widget's sequence component and can be\nplayed only there. This asset form exists so a Level Sequence can play the same animation as an\nordinary subsequence -- scrubbing, time-warping and blending included -- and so one animation can\nbe reused across widget classes.\n\nBindings are FMovieSceneBindingReferences carrying UDreamUIWidgetBinding entries: a root binding\n(empty path) plus per-widget display-name paths. Child possessables are parented to the root and\nparent contexts are significant, so resolving the root against a different presenter re-roots the\nwhole tree -- which is exactly what UDreamUISequenceSection's binding override does.\n\nBindings resolve by NAME against whatever tree they are given, so one animation can drive the\npreview here, a live instance at runtime, and any other instance of the class -- the same thing\nthat made the embedded animations work on a class model at all."
+    text  "作为独立资源的 DreamGUI 动画。\n\n内嵌的 UDreamWidgetAnimation 位于某个控件的序列组件中，只能\n在那里播放。此资源形式的存在，是为了让关卡序列能像\n普通子序列一样播放同一动画——包括擦洗、时间扭曲和混合——同时也让一个动画可以\n跨控件类复用。\n\n绑定是携带 UDreamUIWidgetBinding 条目的 FMovieSceneBindingReferences：\n一个根绑定（空路径）加每个控件的显示名称路径。子可拥有项以根为父，\n父级上下文很重要，因此用不同的呈现器解析根会重新确定整棵树的根——\n这正是 UDreamUISequenceSection 的绑定覆盖所做的事。\n\n绑定按名称解析给定的任意树，因此一个动画可以驱动\n此处的预览、运行时的活动实例以及该类的任何其他实例——这也正是\n内嵌动画能作用于类模型的原因。"
+    state machine
+}
+
+DreamUISequence:PreviewWidgetClass {
+    at    Source/DreamGUI/Public/Animation/DreamUISequence.h#DreamUISequence:PreviewWidgetClass
+    src   "The widget class this animation is authored against. The standalone editor instantiates it as a\npreview tree so the bindings resolve and scrubbing shows the real thing; playback through a\ncomponent or a subsequence override ignores it entirely."
+    text  "此动画所面向的控件类。独立编辑器会将其实例化为预览树，\n以便绑定能够解析、擦洗时显示真实内容；通过组件或子序列覆盖\n进行的播放则会完全忽略它。"
+    state machine
+}

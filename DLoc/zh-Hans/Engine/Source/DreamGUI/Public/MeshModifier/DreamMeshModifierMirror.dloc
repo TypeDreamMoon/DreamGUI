@@ -1,0 +1,82 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierMirror {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror
+    src   "Mirror"
+    // from the engine's zh-Hans
+    text  "镜像"
+    state draft
+}
+
+DreamMeshModifierMirror:bMirrorHorizontally {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:bMirrorHorizontally
+    src   "Mirror Horizontally"
+    // from the engine's zh-Hans
+    text  "水平镜像"
+    state draft
+}
+
+DreamMeshModifierMirror:bMirrorVertically {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:bMirrorVertically
+    src   "Mirror Vertically"
+    // from the engine's zh-Hans
+    text  "垂直镜像"
+    state draft
+}
+
+DreamMeshModifierMirror:GetMirrorHorizontally:ReturnValue {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:GetMirrorHorizontally:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierMirror:GetMirrorVertically:ReturnValue {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:GetMirrorVertically:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierMirror:SetMirrorHorizontally:Value {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:SetMirrorHorizontally:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierMirror:SetMirrorVertically:Value {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:SetMirrorVertically:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierMirror {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror
+    src   "Mirrors a visual's mesh about the centre of its widget's rect -- left to right, top to bottom, or both -- and\nleaves the widget, its rect and its children where they are.\n\nWhat UMG's border flips its background with for a right-to-left culture: SBorder draws its brush through a render\ntransform of scale (-1, 1) about the brush's centre, so the brush is mirrored and nothing it holds is.\nUDreamLayoutContainerBorder makes one of these for its bFlipForRightToLeftFlowDirection.\n\nThe vertices are reflected with their texture coordinates kept, so whatever the visual draws -- a sprite, a sliced\nframe, a rect with uneven corners -- is drawn reflected. A reflection through one axis turns every triangle over, so\nthe triangles are rewound as well, or a material that culls its back faces would draw nothing."
+    text  "围绕视觉对象控件矩形的中心镜像其网格——从左到右、从上到下或同时两者——并\n保持控件、其矩形及其子项位置不变。\n\nUMG 的边框在从右到左的文化中翻转背景时用的就是这个：SBorder 通过一个围绕画刷中心、缩放为 (-1, 1) 的渲染\n变换来绘制其画刷，因此画刷被镜像，而画刷中的内容不会被镜像。\nUDreamLayoutContainerBorder 为其 bFlipForRightToLeftFlowDirection 创建一个这样的修饰器。\n\n顶点被反射，同时保留其纹理坐标，因此视觉对象绘制的任何内容——精灵、切片\n边框、角不规则的矩形——都以反射后的方式绘制。经过一个轴的反射会翻转每个三角形，因此\n三角形也会重新绕序，否则剔除背面的材质将什么都绘制不出来。"
+    state machine
+}
+
+DreamMeshModifierMirror:bMirrorHorizontally {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:bMirrorHorizontally
+    src   "Reflect left to right, about the rect's vertical centre line."
+    text  "沿矩形的垂直中心线从左到右反射。"
+    state machine
+}
+
+DreamMeshModifierMirror:bMirrorVertically {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:bMirrorVertically
+    src   "Reflect top to bottom, about the rect's horizontal centre line."
+    text  "沿矩形的水平中心线从上到下反射。"
+    state machine
+}

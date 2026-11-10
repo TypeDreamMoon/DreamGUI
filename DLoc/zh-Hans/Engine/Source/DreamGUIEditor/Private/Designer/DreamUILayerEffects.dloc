@@ -1,0 +1,195 @@
+dloc 1
+culture zh-Hans
+namespace DreamUILayerEffects
+
+StyleEmpty {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "No effect turned on"
+    text  "未启用任何效果"
+    state machine
+}
+
+Mask {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+MaskDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "{0} mask on its clip"
+    text  "{0} 蒙版应用于其剪辑"
+    state machine
+}
+
+ClipToBelow {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Clip to Layer Below"
+    text  "裁剪到下层"
+    state machine
+}
+
+ClipToBelowDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Shown only where the layer below is drawn"
+    text  "仅在下层绘制的位置显示"
+    state machine
+}
+
+BlendName {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Blend: {0}"
+    text  "混合模式: {0}"
+    state machine
+}
+
+BlendDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "How this element blends with what is drawn behind it"
+    text  "此元素与绘制在其背后的内容混合的方式"
+    state machine
+}
+
+PostProcessDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Changes what is drawn behind it"
+    text  "更改绘制在其背后的内容"
+    state machine
+}
+
+ParticlesDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "A Niagara system drawn on the canvas"
+    text  "在画布上绘制的 Niagara 系统"
+    state machine
+}
+
+LayerStyle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}
+
+StyleFollowsPreset {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Follows the preset {0}: turn its effects off on the preset, or detach the style from it."
+    text  "遵循预设 {0}：关闭预设上的效果，或将其样式从预设中分离。"
+    state machine
+}
+
+LayerGroup {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Layer Group"
+    // from the engine's zh-Hans
+    text  "层组"
+    state draft
+}
+
+GroupDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "{0}, {1}, opacity {2}"
+    text  "{0}, {1}, 透明度 {2}"
+    state machine
+}
+
+ShapeBlendDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Its children's shapes melt into one"
+    text  "其子元素的形状融合成一个"
+    state machine
+}
+
+TransitionDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "{0} at {1}"
+    text  "{0} at {1}"
+    state machine
+}
+
+TriggerDetail {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Bursts particles when the widget is clicked or entered"
+    text  "点击或进入小部件时，产生粒子效果。"
+    state machine
+}
+
+TurnOff {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Turn Layer Effect Off"
+    text  "关闭图层效果"
+    state machine
+}
+
+TurnOn {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Turn Layer Effect On"
+    text  "启用图层效果"
+    state machine
+}
+
+KindStyle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+KindGroup {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Group"
+    // from the engine's zh-Hans
+    text  "分组"
+    state draft
+}
+
+KindMask {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+KindBlend {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Blend"
+    // from the engine's zh-Hans
+    text  "混合"
+    state draft
+}
+
+KindWarp {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Warp"
+    // from the engine's zh-Hans
+    text  "扭曲"
+    state draft
+}
+
+KindParticles {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Particles"
+    // from the engine's zh-Hans
+    text  "粒子"
+    state draft
+}
+
+KindEffect {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Effect"
+    // from the engine's zh-Hans
+    text  "效果"
+    state draft
+}
+
+EditProperty {
+    at    Source/DreamGUIEditor/Private/Designer/DreamUILayerEffects.cpp
+    src   "Edit Property"
+    // from the engine's zh-Hans
+    text  "编辑属性"
+    state draft
+}

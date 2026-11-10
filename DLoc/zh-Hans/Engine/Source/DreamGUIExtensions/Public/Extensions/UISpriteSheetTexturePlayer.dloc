@@ -1,0 +1,103 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UISpriteSheetTexturePlayer {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer
+    src   "UISprite Sheet Texture Player"
+    text  "UI 纹理序列播放器"
+    state machine
+}
+
+UISpriteSheetTexturePlayer:GetHeightCount:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:GetHeightCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:GetWidthCount:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:GetWidthCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:HeightCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:HeightCount
+    src   "Height Count"
+    // from the engine's zh-Hans
+    text  "身高计数"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:SetHeightCount:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetHeightCount:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:SetWidthCount:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetWidthCount:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+UISpriteSheetTexturePlayer:WidthCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:WidthCount
+    src   "Width Count"
+    // from the engine's zh-Hans
+    text  "宽度计数"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UISpriteSheetTexturePlayer {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer
+    src   "Play spritesheet texture, need UITexture component."
+    text  "播放纹理序列，需要 UITexture 组件。"
+    state machine
+}
+
+UISpriteSheetTexturePlayer:HeightCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:HeightCount
+    src   "Sprite element count of vertical direction in texture."
+    text  "纹理垂直方向上的精灵元素数量。"
+    state machine
+}
+
+UISpriteSheetTexturePlayer:SetHeightCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetHeightCount
+    src   "Takes effect at once: the cell size and the cycle length are both re-derived."
+    text  "立即生效：单元格大小和循环长度都会重新计算。"
+    state machine
+}
+
+UISpriteSheetTexturePlayer:SetWidthCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetWidthCount
+    src   "Takes effect at once: the cell size and the cycle length are both re-derived."
+    text  "立即生效：单元格大小和循环长度都会重新计算。"
+    state machine
+}
+
+UISpriteSheetTexturePlayer:WidthCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:WidthCount
+    src   "Sprite element count of horizontal direction in texture."
+    text  "纹理水平方向上的精灵元素数量。"
+    state machine
+}

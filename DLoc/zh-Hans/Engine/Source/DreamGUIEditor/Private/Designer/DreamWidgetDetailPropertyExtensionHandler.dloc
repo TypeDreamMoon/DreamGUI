@@ -1,0 +1,18 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDetailPropertyExtensionHandler
+
+PickColour {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDetailPropertyExtensionHandler.cpp
+    src   "Pick Colour"
+    text  "选择颜色"
+    state machine
+}
+
+None {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDetailPropertyExtensionHandler.cpp
+    src   "None"
+    // from the engine's zh-Hans
+    text  "无"
+    state draft
+}

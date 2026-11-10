@@ -1,0 +1,81 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel
+    src   "Dream View Model"
+    text  "Dream视图模型"
+    state machine
+}
+
+DreamViewModel:IsDesignTimeInstance:ReturnValue {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:IsDesignTimeInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamViewModel:K2_AddFieldValueChangedDelegate:Delegate {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_AddFieldValueChangedDelegate:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamViewModel:K2_AddFieldValueChangedDelegate:FieldId {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_AddFieldValueChangedDelegate:FieldId
+    src   "Field Id"
+    // from the engine's zh-Hans
+    text  "字段Id"
+    state draft
+}
+
+DreamViewModel:K2_BroadcastFieldValueChanged:FieldId {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_BroadcastFieldValueChanged:FieldId
+    src   "Field Id"
+    // from the engine's zh-Hans
+    text  "字段Id"
+    state draft
+}
+
+DreamViewModel:K2_RemoveFieldValueChangedDelegate:Delegate {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_RemoveFieldValueChangedDelegate:Delegate
+    src   "Delegate"
+    // from the engine's zh-Hans
+    text  "委托"
+    state draft
+}
+
+DreamViewModel:K2_RemoveFieldValueChangedDelegate:FieldId {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_RemoveFieldValueChangedDelegate:FieldId
+    src   "Field Id"
+    // from the engine's zh-Hans
+    text  "字段Id"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel
+    src   "The convenient base for a view model: a UObject that announces its fields.\n\nNot required. A `viewmodels` entry may name any UObject class, and any class implementing INotifyFieldValueChanged\n-- UE's own UMVVMViewModelBase included -- is subscribed to the same way. What this base adds is the plumbing such\na class would otherwise write itself: the delegate store (FDreamFieldNotificationDelegates), a descriptor that\ncovers Blueprint and UnrealSharp subclasses (both are UBlueprintGeneratedClass, whose FieldNotifies it walks) as\nwell as C++ ones (UHT generates their descriptor on top of this one), a world through its outer, and the design-time\nflag.\n\nA view model never references the widgets that show it. Bindings subscribe to it; it does not know they exist."
+    text  "视图模型的便捷基类：一个会通告自身字段的 UObject。\n\n并非必需。`viewmodels` 条目可以指定任意 UObject 类，任何实现了 INotifyFieldValueChanged\n的类——包括 UE 自带的 UMVVMViewModelBase——都会以同样的方式被订阅。此基类额外提供的是\n这类类原本需要自己编写的管道代码：委托存储（FDreamFieldNotificationDelegates）、一个描述符\n覆盖蓝图与 UnrealSharp 子类（二者都是 UBlueprintGeneratedClass，会遍历其 FieldNotifies）以及\nC++ 类（UHT 在此基类之上生成它们的描述符）、通过其 outer 获取的世界，以及设计时\n标志。\n\n视图模型从不引用显示它的控件。绑定订阅它；它并不知道这些绑定的存在。"
+    state machine
+}
+
+DreamViewModel:IsDesignTimeInstance {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:IsDesignTimeInstance
+    src   "True on an instance the designer's preview made for a `= new` entry: no game is running, no subsystem a game\nwould set up exists. A view model that reaches into the game in its initialization checks this first."
+    text  "在设计器预览为 `= new` 条目创建的实例上为 true：此时没有游戏在运行，也不存在游戏\n会创建的任何子系统。在初始化时访问游戏的视图模型会先检查此项。"
+    state machine
+}
+
+DreamViewModel:K2_BroadcastFieldValueChanged {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_BroadcastFieldValueChanged
+    src   "Announce a field whose value changed without passing through a broadcasting setter: a C++ member written in bulk,\na value computed from others (`GoldText` after `Gold` changed)."
+    text  "通告某个字段的值已改变，且未经过会广播的 setter：例如批量写入的 C++ 成员、\n由其他值计算得出的值（`Gold` 变化后的 `GoldText`）。"
+    state machine
+}

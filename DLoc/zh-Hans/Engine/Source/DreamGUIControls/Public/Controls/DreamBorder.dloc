@@ -1,0 +1,478 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBorder {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder
+    src   "Dream Border"
+    text  "Dream边框"
+    state machine
+}
+
+DreamBorder:bConsumeMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:bConsumeMouseEvents
+    src   "Consume Mouse Events"
+    text  "消耗鼠标事件"
+    state machine
+}
+
+DreamBorder:bReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:bReportMouseEvents
+    src   "Report Mouse Events"
+    text  "上报鼠标事件"
+    state machine
+}
+
+DreamBorder:BrushColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:BrushColor
+    src   "Brush Color"
+    // from the engine's zh-Hans
+    text  "笔刷颜色"
+    state draft
+}
+
+DreamBorder:ContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:ContentColorAndOpacity
+    src   "Content Color and Opacity"
+    // from the engine's zh-Hans
+    text  "内容颜色和不透明度"
+    state draft
+}
+
+DreamBorder:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:ContentNode
+    src   "Content Node"
+    text  "内容节点"
+    state machine
+}
+
+DreamBorder:EventTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:EventTrigger
+    src   "Event Trigger"
+    text  "事件触发器"
+    state machine
+}
+
+DreamBorder:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamBorder:GetBrush:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrush:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetBrushColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrushColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetConsumeMouseEvents:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetConsumeMouseEvents:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetContentColorAndOpacity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentColorAndOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetContentNode:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentNode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetEventTrigger:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetEventTrigger:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetHorizontalAlignment:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetHorizontalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetPadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetPadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetReportMouseEvents:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetReportMouseEvents:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:GetVerticalAlignment:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetVerticalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBorder:HorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:HorizontalAlignment
+    src   "Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "水平对齐"
+    state draft
+}
+
+DreamBorder:OnMouseButtonDownEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseButtonDownEvent
+    src   "On Mouse Button Down Event"
+    // from the engine's zh-Hans
+    text  "发生鼠标键按下事件时"
+    state draft
+}
+
+DreamBorder:OnMouseButtonUpEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseButtonUpEvent
+    src   "On Mouse Button Up Event"
+    // from the engine's zh-Hans
+    text  "发生鼠标键弹起事件时"
+    state draft
+}
+
+DreamBorder:OnMouseDoubleClickEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseDoubleClickEvent
+    src   "On Mouse Double Click Event"
+    // from the engine's zh-Hans
+    text  "发生鼠标键双击事件时"
+    state draft
+}
+
+DreamBorder:OnMouseMoveEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseMoveEvent
+    src   "On Mouse Move Event"
+    // from the engine's zh-Hans
+    text  "发生鼠标移动事件时"
+    state draft
+}
+
+DreamBorder:SetBrush:InBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrush:InBrush
+    src   "In Brush"
+    // from the engine's zh-Hans
+    text  "在笔刷中"
+    state draft
+}
+
+DreamBorder:SetBrushColor:InBrushColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushColor:InBrushColor
+    src   "In Brush Color"
+    // from the engine's zh-Hans
+    text  "在笔刷颜色中"
+    state draft
+}
+
+DreamBorder:SetBrushFromSprite:InSprite {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromSprite:InSprite
+    src   "In Sprite"
+    text  "输入精灵"
+    state machine
+}
+
+DreamBorder:SetBrushFromTexture:InTexture {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromTexture:InTexture
+    src   "In Texture"
+    // from the engine's zh-Hans
+    text  "输入纹理"
+    state draft
+}
+
+DreamBorder:SetConsumeMouseEvents:bInConsumeMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetConsumeMouseEvents:bInConsumeMouseEvents
+    src   "In Consume Mouse Events"
+    text  "输入消耗鼠标事件"
+    state machine
+}
+
+DreamBorder:SetContentColorAndOpacity:InContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetContentColorAndOpacity:InContentColorAndOpacity
+    src   "In Content Color and Opacity"
+    // from the engine's zh-Hans
+    text  "在内容颜色和不透明度中"
+    state draft
+}
+
+DreamBorder:SetHorizontalAlignment:InHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetHorizontalAlignment:InHorizontalAlignment
+    src   "In Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "在水平对齐中"
+    state draft
+}
+
+DreamBorder:SetPadding:InPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetPadding:InPadding
+    src   "In Padding"
+    // from the engine's zh-Hans
+    text  "在填充中"
+    state draft
+}
+
+DreamBorder:SetReportMouseEvents:bInReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetReportMouseEvents:bInReportMouseEvents
+    src   "In Report Mouse Events"
+    text  "输入上报鼠标事件"
+    state machine
+}
+
+DreamBorder:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamBorder:SetVerticalAlignment:InVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetVerticalAlignment:InVerticalAlignment
+    src   "In Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "在垂直对齐中"
+    state draft
+}
+
+DreamBorder:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamBorder:VerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:VerticalAlignment
+    src   "Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "垂直对齐"
+    state draft
+}
+
+DreamBorderPointerEvent__DelegateSignature:PointerEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorderPointerEvent__DelegateSignature:PointerEvent
+    src   "Pointer Event"
+    // from the engine's zh-Hans
+    text  "指针事件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamBorder {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder
+    src   "A border whose hierarchy is code, not an asset: a face, a padding, and a hole to put things in.\n\nUMG's Border is a single-child panel that draws a brush behind whatever it holds, and this library\nalready offers that SHAPE as a palette panel -- an overlay carrying an image visual. This is the\nCONTROL spelling, and the difference is the one that runs through this whole family: a panel's\nbrush, colour and padding are authored per instance, and a control's come from the project style\nsheet, so restyling a project's boxes is one edit rather than one per box.\n\nSEVERAL CHILDREN, deliberately, where UMG's border takes one. The face carries an overlay, so a\n`Native.Border { A B }` stacks A under B with both filling the padded area -- which is what an\noverlay means and what a reader of those two lines expects. UDreamScrollBox's content slot makes\nthe same call for the same reason; a hole that took exactly one child would send every second\nchild somewhere invisible.\n\nThe outline is part of the face rather than a second widget: UDreamRectBlock draws a border of its\nown, so BorderThickness and BorderColor are pushed into the rect and cost no node. Zero thickness\nis UMG's plain border, which is what the style ships."
+    text  "层级由代码而非资产定义的边框：一个表面、一段内边距，以及一个用来放东西的洞。\n\nUMG的Border是只容纳单个子项的面板，会在其承载的内容之后绘制笔刷，而本库\n已经以调色板面板的形式提供了那种外形——一个承载图像视觉的叠加层。这里是\n控件的写法，其中的区别贯穿整个家族：面板的笔刷、颜色和内边距\n按实例逐个编写，控件的这些则来自项目样式表，\n因此重设项目中方框的样式只需改一处，而不必每个方框改一次。\n\n这里刻意支持多个子项，而UMG的border只接受一个。表面承载一个叠加层，因此\n`Native.Border { A B }`会把A叠放在B之下，两者都填满内边距区域——这既是\n叠加层的本意，也是读这两行代码的人的预期。UDreamScrollBox的内容槽\n出于同样的理由做了同样的取舍；一个只接受恰好一个子项的洞，会把每隔一个\n子项都送到看不见的地方。\n\n轮廓属于表面本身，而不是第二个控件：UDreamRectBlock会自己绘制边框，\n因此BorderThickness和BorderColor被推入rect中，不额外消耗节点。厚度为零时\n就是UMG的普通边框，样式默认提供的也正是这种。"
+    state machine
+}
+
+DreamBorder:bConsumeMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:bConsumeMouseEvents
+    src   "Whether a reported pointer event stops here -- this framework's spelling of UMG's Handled.\n\nTrue (the default, and the event trigger's own) is Handled: the click is this border's and\nnothing behind it hears about it. False is Unhandled: the border listens and lets the event\ncarry on, which is what a decorative frame over a clickable thing wants."
+    text  "上报的指针事件是否在此停下——本框架对UMG中Handled的写法。\n\nTrue（默认值，也是事件触发器自身的取值）表示Handled：这次点击属于此边框，\n其后的任何对象都收不到。False表示Unhandled：边框只监听，让事件\n继续传递，这正是可点击对象之上的装饰性外框所需要的。"
+    state machine
+}
+
+DreamBorder:bReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:bReportMouseEvents
+    src   "Whether this border reports the pointer -- UMG's four mouse events, off by default.\n\nOff costs nothing: no component is made at all. It is off rather than on because a border that\nstarts listening is a border that starts CONSUMING (see bConsumeMouseEvents), and every border\nalready in a project would quietly stop letting clicks through to whatever is behind it.\n\nThe face is already a raycast target, so turning this on changes what LISTENS, not what is hit."
+    text  "此边框是否上报指针——即UMG的四个鼠标事件，默认关闭。\n\n关闭不产生任何开销：根本不会创建组件。默认关闭而不是开启，是因为开始监听的边框\n也会开始消耗（见bConsumeMouseEvents），而项目中已有的每个边框\n都会悄无声息地不再让点击穿透到其后的对象。\n\n表面本身已经是射线检测目标，因此开启此项改变的是谁在监听，而不是谁被命中。"
+    state machine
+}
+
+DreamBorder:BrushColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:BrushColor
+    src   "A tint over the style's background colour -- UMG's BrushColor, which is a tint over SBorder's\nbrush for the same reason: the style says what a border looks like, and this says what is\nhappening to this one right now. White is no opinion."
+    text  "对样式背景色的着色——即UMG的BrushColor，它同样是对SBorder笔刷的着色：\n样式决定边框长什么样，而它说明此刻这个边框正发生什么。\n白色表示不作任何表态。"
+    state machine
+}
+
+DreamBorder:ContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:ContentColorAndOpacity
+    src   "A tint over the CONTENT -- UMG's ContentColorAndOpacity, colour and alpha both, and never over\nthe border's own face.\n\nIt is the hole's content tint (UDreamWidget::SetContentTint): every visual below the hole is\nmultiplied by it, in linear space, on its way to the screen, as SCompoundWidget blends its\nColorAndOpacity into the style its children paint with. Nothing inside is written to -- what\nthe host authored there is left as authored, and a white tint changes nothing -- and the\ncontent's RenderOpacity is left free for whatever fades it."
+    text  "对内容的着色——即UMG的ContentColorAndOpacity，颜色与Alpha同时生效，且绝不作用于\n边框自身的表面。\n\n它是控件上这个洞的内容着色（UDreamWidget::SetContentTint）：洞之下的每个可视元素在\n送往屏幕的途中都会在线性空间中乘以它，正如SCompoundWidget把它的ColorAndOpacity\n混合进子级绘制所用的样式。内部内容不会被写入——宿主在其中编写的内容保持原样，\n白色着色不改变任何东西——内容的RenderOpacity（不透明度）\n则留给任何使其淡出的逻辑自由使用。"
+    state machine
+}
+
+DreamBorder:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:ContentNode
+    src   "The hole. Whatever a host nests on this control ends up here."
+    text  "洞。宿主嵌套到此控件上的任何内容最终都会落在这里。"
+    state machine
+}
+
+DreamBorder:EventTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:EventTrigger
+    src   "The listener, while there is one. Transient: a component is remade with the tree, not loaded."
+    text  "监听者，仅在存在时才有。瞬态：组件随树重建，而不是加载而来。"
+    state machine
+}
+
+DreamBorder:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:FaceNode
+    src   "The face: what draws the brush, the tint and the outline, and what clips to the rounding."
+    text  "表面：绘制笔刷、着色和轮廓的部分，也是按圆角裁剪的部分。"
+    state machine
+}
+
+DreamBorder:GetBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrush
+    src   "The face's skin, read from the style in effect."
+    text  "表面的皮肤，从当前生效的样式中读取。"
+    state machine
+}
+
+DreamBorder:GetContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentNode
+    src   "Where things go. Parent into this, or nest in `.dui`, and the padding holds them off the edge."
+    text  "内容放置的位置。把父级设为此处，或在 `.dui` 中嵌套，内边距会把它们挡在边缘之内。"
+    state machine
+}
+
+DreamBorder:GetEventTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetEventTrigger
+    src   "The listener on the face, or null while bReportMouseEvents is off."
+    text  "表面上的监听者；当 bReportMouseEvents 关闭时为 null。"
+    state machine
+}
+
+DreamBorder:GetPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetPadding
+    src   "What holds the content off the edge, read from the style in EFFECT rather than from the field\nbeside it -- so a border driven by the project sheet answers the number it is actually drawn\nwith rather than the one this instance happens to be carrying."
+    text  "把内容挡在边缘之外的值，从当前生效的样式中读取，而不是读取旁边的字段——\n因此由项目样式表驱动的边框给出的是它实际绘制所用的数值，\n而不是这个实例碰巧携带的数值。"
+    state machine
+}
+
+DreamBorder:HorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:HorizontalAlignment
+    src   "Where the content sits inside the padded area -- UMG's HorizontalAlignment / VerticalAlignment.\n\nOn the CONTROL rather than in the style, because it is layout rather than look: two borders in\none project sharing a sheet routinely hold different things, and where a thing sits is that\nthing's business. Fill is what this control has always arranged, so an existing border does not\nmove."
+    text  "内容在有内边距的区域内的位置——即UMG的水平与垂直对齐（HorizontalAlignment / VerticalAlignment）。\n\n放在控件上而不是样式中，因为这是布局而非外观：同一项目中共享样式表的两个边框\n常常容纳不同的内容，而内容摆在哪里是该内容自己的事。\nFill是这个控件一贯采用的排列方式，因此已有的边框\n不会移位。"
+    state machine
+}
+
+DreamBorder:OnMouseButtonDownEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseButtonDownEvent
+    src   "The four moments UMG's border speaks, re-broadcast from the pointer system.\n\nSilent unless bReportMouseEvents is on -- binding alone does not wake them, because a control\ncannot tell when a Blueprint binds and guessing wrong would mean creating the component (and\nconsuming clicks) for every border in every project."
+    text  "UMG边框会发出的四个时刻，由指针系统重新广播。\n\n除非开启bReportMouseEvents，否则保持静默——仅靠绑定不会唤醒它们，因为控件\n无法得知蓝图何时绑定，而猜错就意味着要为每个项目中的每个边框都创建该组件（并\n吞掉点击）。"
+    state machine
+}
+
+DreamBorder:OnMouseDoubleClickEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseDoubleClickEvent
+    src   "The second press of a double click, and the fourth, and the sixth -- said at that PRESS, and in\nplace of OnMouseButtonDownEvent for it, which is how UBorder reports one: Slate routes the second\npress to OnMouseButtonDoubleClick and never to OnMouseButtonDown, so a double click here is one\nbutton down, one double click and two button ups.\n\nThe event system decides what counts as a double (its DoubleClickTime, the same widget and button,\nand a second press within the pointer's drag threshold of the first); this re-broadcasts that\ndecision rather than making a second one that could disagree with it."
+    text  "双击的第二次按下、第四次按下和第六次按下——在该次按下时发出，并\n代替该次的OnMouseButtonDownEvent，这正是UBorder报告双击的方式：Slate会把第二次\n按下路由到OnMouseButtonDoubleClick，而绝不会路由到OnMouseButtonDown，所以这里的双击是\n一次按下、一次双击和两次抬起。\n\n事件系统决定什么算作双击（它的DoubleClickTime、同一控件和同一按键，\n以及第二次按下落在指针拖拽阈值之内）；这里只是重新广播该决定，\n而不是另做一次可能与之相悖的判断。"
+    state machine
+}
+
+DreamBorder:OnMouseMoveEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:OnMouseMoveEvent
+    src   "Pointer MOTION over the border, which this system reports as the drag it is part of."
+    text  "指针在边框上移动，本系统将其作为所属拖动的一部分上报。"
+    state machine
+}
+
+DreamBorder:SetBrushFromSprite {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromSprite
+    src   "The other thing a face brush takes: an atlas sprite. UMG has no call for it because Slate has\nno atlas; here it is the cheaper of the two, so leaving it unreachable would make the\nexpensive road the only one a caller could find."
+    text  "表面笔刷可接受的另一种资源：图集精灵。UMG没有对应的调用，因为Slate\n没有图集；在这里它是两者中开销较小的一种，若让它无从触达，就会让\n开销较大的那条路成为调用方唯一能找到的路。"
+    state machine
+}
+
+DreamBorder:SetBrushFromTexture {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromTexture
+    src   "The common case of the above, and the one UMG spells: put this texture on the face and leave\nevery other thing about the brush where it was."
+    text  "上述情形的常见用法，也是UMG所提供的那一个：将此纹理放到表面，并让\n笔刷的其他一切保持原样。"
+    state machine
+}
+
+DreamBorder:SetContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetContentColorAndOpacity
+    src   "See the property: colour and alpha both tint everything inside, and nothing of the face."
+    text  "参见该属性：颜色和Alpha都会为内部的一切着色，而完全不影响表面。"
+    state machine
+}
+
+DreamBorder:SetPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetPadding
+    src   "Every appearance setter below edits THIS INSTANCE'S style and re-pushes, because the padding,\nthe brush and the rest are one quantity and the style is where it lives -- a second copy on the\ncontrol is how a control and its style learn to disagree.\n\nWhich means they show up when this instance's style is what is in effect: StyleSource Inline,\nor Override with that field ticked, or a project with no sheet at all. Under a sheet they are\nwrites to a value the sheet is overruling, and the getters above say so by answering the\nresolved number."
+    text  "以下每个外观设置函数编辑的都是本实例的样式并重新推送，因为内边距、\n笔刷及其余内容是一个整体，而样式正是它所在之处——在控件上再存一份副本，\n正是控件与其样式产生分歧的由来。\n\n这意味着只有当生效的是本实例的样式时，它们才会显现：StyleSource为Inline，\n或为Override（重载）且勾选了该字段，或项目根本没有样式表。在样式表之下，它们\n写入的是被样式表覆盖的值，上面的获取函数也正是通过返回解析后的\n数值来说明这一点。"
+    state machine
+}
+
+DreamBorder:SetReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetReportMouseEvents
+    src   "Makes or unmakes the listener on the face. Off destroys it, so an off border costs nothing."
+    text  "在表面上创建或移除监听器。关闭时会销毁它，因此关闭状态的边框没有任何开销。"
+    state machine
+}
+
+DreamBorder:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamBorder:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect."
+    text  "本实例自身的外观。只要StyleSource如此指定且样式表\n确实存在，项目样式表就优先；项目中没有任何样式表时，这里就是实际生效的外观。"
+    state machine
+}
+
+DreamBorderPointerEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorderPointerEvent__DelegateSignature
+    src   "A pointer moment on a border, carrying the whole event -- which button, where, how many clicks.\n\nIts own type rather than UUIEventTrigger's: a consumer binds to the CONTROL, and a delegate named\nafter the component the control happens to use inside itself would leak that choice into every\nBlueprint that listens.\n\nUMG's four mouse events hand back an FEventReply, so a handler decides per call whether the event\ncarries on to whatever is behind. Nothing in this event system asks a handler that question: an\nelement says once, for all its events, whether they bubble (UUIEventTrigger::AllowEventBubbleUp).\nSo the reply becomes a property here -- bConsumeMouseEvents -- and the events are plain multicasts,\nwhich is also what lets several listeners share one border."
+    text  "边框上的一次指针事件，携带完整的事件信息——哪个按键、在哪里、点击了几次。\n\n它使用自己的类型而非UUIEventTrigger的类型：使用者绑定的是控件本身，而一个以控件内部恰好使用的组件命名的委托，\n会把这一选择泄漏到每个\n监听的蓝图中。\n\nUMG的四个鼠标事件会返回FEventReply，因此处理函数每次调用都要决定事件\n是否继续传递给后面的对象。本事件系统不向处理函数提出这个问题：元素\n一次性为其所有事件声明是否冒泡（UUIEventTrigger::AllowEventBubbleUp）。\n因此回复在这里变成了一个属性——bConsumeMouseEvents——而事件则是普通的多播，\n也正是这样多个监听者可以共享同一个边框。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Border {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrush
+    src   "Border"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerFloat {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerFloat.h#DreamTweenerFloat
+    src   "Dream Tweener Float"
+    text  "DreamTweener浮点数"
+    state machine
+}

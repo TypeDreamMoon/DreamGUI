@@ -1,0 +1,262 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamStandaloneInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule
+    src   "Dream Standalone Input Module"
+    text  "Dream 独立输入模块"
+    state machine
+}
+
+DreamStandaloneInputModule:bOverrideMousePosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:bOverrideMousePosition
+    src   "Override Mouse Position"
+    text  "重载鼠标位置"
+    state machine
+}
+
+DreamStandaloneInputModule:GetMousePosition:OutMousePos {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetMousePosition:OutMousePos
+    src   "Out Mouse Pos"
+    text  "鼠标位置"
+    state machine
+}
+
+DreamStandaloneInputModule:GetOverrideMousePosition:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetOverrideMousePosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStandaloneInputModule:GetTouchPointerID:InTouchID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetTouchPointerID:InTouchID
+    src   "In Touch ID"
+    text  "触摸点 ID"
+    state machine
+}
+
+DreamStandaloneInputModule:GetTouchPointerID:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetTouchPointerID:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStandaloneInputModule:InputMouseMove:InMousePosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputMouseMove:InMousePosition
+    src   "In Mouse Position"
+    text  "鼠标位置"
+    state machine
+}
+
+DreamStandaloneInputModule:InputNavigation:InDirection {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputNavigation:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamStandaloneInputModule:InputNavigation:InPointerID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputNavigation:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamStandaloneInputModule:InputNavigation:InPressOrRelease {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputNavigation:InPressOrRelease
+    src   "In Press or Release"
+    text  "按下或释放"
+    state machine
+}
+
+DreamStandaloneInputModule:InputScroll:InAxisValue {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputScroll:InAxisValue
+    src   "In Axis Value"
+    text  "轴值"
+    state machine
+}
+
+DreamStandaloneInputModule:InputScroll:InPointerID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputScroll:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchMoved:InTouchID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchMoved:InTouchID
+    src   "In Touch ID"
+    text  "触摸点 ID"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchMoved:InTouchPointPosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchMoved:InTouchPointPosition
+    src   "In Touch Point Position"
+    text  "触摸点位置"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchTrigger:InTouchID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchTrigger:InTouchID
+    src   "In Touch ID"
+    text  "触摸点 ID"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchTrigger:InTouchPointPosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchTrigger:InTouchPointPosition
+    src   "In Touch Point Position"
+    text  "触摸点位置"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchTrigger:InTouchPress {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchTrigger:InTouchPress
+    src   "In Touch Press"
+    text  "触摸按下"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTrigger:InMouseButtonType {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTrigger:InMouseButtonType
+    src   "In Mouse Button Type"
+    text  "鼠标按键类型"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTrigger:InMousePosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTrigger:InMousePosition
+    src   "In Mouse Position"
+    text  "鼠标位置"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTrigger:InTriggerPress {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTrigger:InTriggerPress
+    src   "In Trigger Press"
+    text  "触发器按下"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTriggerForNavigation:InPointerID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTriggerForNavigation:InPointerID
+    src   "In Pointer ID"
+    text  "指针ID"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTriggerForNavigation:InTriggerPress {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTriggerForNavigation:InTriggerPress
+    src   "In Trigger Press"
+    text  "触发器按下"
+    state machine
+}
+
+DreamStandaloneInputModule:SetOverrideMousePosition:bInOverride {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:SetOverrideMousePosition:bInOverride
+    src   "In Override"
+    // from the engine's zh-Hans
+    text  "In Override"
+    state draft
+}
+
+DreamStandaloneInputModule:SetOverridePointerPosition:InPosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:SetOverridePointerPosition:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamStandaloneInputModule {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule
+    src   "Common standalone platform input, or mouse input.\n\nPresses, releases and wheel turns are queued on the player and dispatched on the player's next frame, in the\norder they arrived; moves and navigation are state the next frame reads."
+    text  "通用的独立平台输入，或鼠标输入。\n\n按下、释放和滚轮转动会排队到玩家，并在玩家的下一帧按到达顺序派发；\n移动和导航则是下一帧读取的状态。"
+    state machine
+}
+
+DreamStandaloneInputModule:GetMousePosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetMousePosition
+    src   "Where the mouse is on the game viewport, in its pixels -- as the viewport itself reckons it, so off the viewport\nwhenever the cursor is not on it: (-1,-1) once it has left or with no viewport at all, and the position past the\nleft or top edge while a drag the viewport captured is out there. A position off the viewport is over nothing.\nThe substituted pointer while SetOverrideMousePosition is on."
+    text  "鼠标在游戏视口中的位置，以像素为单位——按视口自身的计算方式，因此只要光标不在视口上，\n该位置就在视口外：光标离开或完全没有视口时为 (-1,-1)；当视口捕获的拖拽位于视口外时，该位置会越过左边缘或上边缘。\n视口外的位置之上没有任何内容。\nSetOverrideMousePosition（重载鼠标位置）开启时为替换后的指针。"
+    state machine
+}
+
+DreamStandaloneInputModule:GetTouchPointerID {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetTouchPointerID
+    src   "The pointer id finger InTouchID is tracked under: 100 plus the finger, so that no finger is the mouse."
+    text  "手指 InTouchID 所跟踪的指针 id：100 加上该手指，因此任何手指都不是鼠标。"
+    state machine
+}
+
+DreamStandaloneInputModule:InputMouseMove {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputMouseMove
+    src   "see \"bOverrideMousePosition\" property"
+    text  "参见 \"bOverrideMousePosition\"（重载鼠标位置）属性"
+    state machine
+}
+
+DreamStandaloneInputModule:InputNavigation {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputNavigation
+    src   "input for gamepad or keyboard navigation"
+    text  "用于游戏手柄或键盘导航的输入"
+    state machine
+}
+
+DreamStandaloneInputModule:InputScroll {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputScroll
+    src   "input for scroll\n@param       InAxisValue             Use a 2d vector for scroll value. For mouse scroll just fill X&Y with mouse scroll value; For touchpad input use X for horizontal and Y for vertical.\n@param       InPointerID             Which pointer scrolled. Defaults to the mouse; a touchpad gesture bound to\n                                                     its own pointer can say so rather than scrolling whatever pointer 0 hovers."
+    text  "用于滚动的输入\n@param       InAxisValue             使用二维向量表示滚动值。鼠标滚动只需用鼠标滚动值填充 X 和 Y；触摸板输入时 X 表示水平方向，Y 表示垂直方向。\n@param       InPointerID             哪个指针发生了滚动。默认为鼠标；绑定到\n                                                     自身指针的触摸板手势可以指明这一点，而不是滚动指针 0 所悬停的对象。"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchMoved {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchMoved
+    src   "input for touch point moved"
+    text  "用于触摸点移动的输入"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTouchTrigger {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTouchTrigger
+    src   "input for touch press and release. InTouchID is the finger; its pointer is GetTouchPointerID(InTouchID)."
+    text  "用于触摸按下和释放的输入。InTouchID 是手指；其指针为 GetTouchPointerID(InTouchID)。"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTrigger {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTrigger
+    src   "input for mouse press and release"
+    text  "用于鼠标按下和释放的输入"
+    state machine
+}
+
+DreamStandaloneInputModule:InputTriggerForNavigation {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTriggerForNavigation
+    src   "input for gamepad or keyboard press and release"
+    text  "用于游戏手柄或键盘按下和释放的输入"
+    state machine
+}
+
+DreamStandaloneInputModule:SetOverrideMousePosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:SetOverrideMousePosition
+    src   "While on, the pointer position comes from SetOverridePointerPosition rather than the OS mouse: GetMousePosition\nanswers with the override, so every caller that routes through it -- the event system actor's clicks and moves\nincluded -- follows the substituted pointer for free. This is the virtual-cursor seam."
+    text  "启用后，指针位置来自 SetOverridePointerPosition 而非操作系统鼠标：GetMousePosition\n以重载后的位置作答，因此所有经由它路由的调用方——包括事件系统 Actor 的点击和移动——\n都会自动跟随替换后的指针。这是虚拟光标的接缝。"
+    state machine
+}
+
+DreamStandaloneInputModule:SetOverridePointerPosition {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:SetOverridePointerPosition
+    src   "Move the substituted pointer. Pushes the position into the pointer pipeline when overriding."
+    text  "移动替换后的指针。处于重载状态时，将位置推入指针管线。"
+    state machine
+}

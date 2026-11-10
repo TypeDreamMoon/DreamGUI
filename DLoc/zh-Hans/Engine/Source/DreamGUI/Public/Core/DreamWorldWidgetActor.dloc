@@ -1,0 +1,42 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWorldWidgetActor {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor
+    src   "DreamUI World Widget Actor"
+    text  "DreamUI 世界控件 实体"
+    state machine
+}
+
+DreamWorldWidgetActor:GetWidgetComponent:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor:GetWidgetComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetActor:WidgetComponent {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor:WidgetComponent
+    src   "Widget Component"
+    // from the engine's zh-Hans
+    text  "控件组件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWorldWidgetActor {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor
+    src   "An actor that is nothing but a world-space DreamUI hierarchy: what dragging a hierarchy class into\na level produces.\n\nC++ rather than a Blueprint in the plugin's content, which is what this replaces. A root asset\ncould not be changed without re-saving content every project had already placed, there was one per\nrenderer -- so switching renderer meant swapping the actor's class -- and the component it carried\nwas reachable only through that asset."
+    text  "一个仅由世界空间DreamUI层级结构构成的Actor：将层级类拖入\n关卡后生成的就是它。\n\n插件内容中使用的是C++类而非蓝图，而蓝图正是它所替换的。根资产\n若不重新保存每个项目已放置的内容就无法更改；每个\n渲染器各有一个——因此切换渲染器就意味着更换该Actor的类——而且它携带的\n组件只能通过该资产访问。"
+    state machine
+}
+
+DreamWorldWidgetActor:WidgetComponent {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor:WidgetComponent
+    src   "The root component: everything this actor is."
+    text  "根组件：该实体包含的所有内容。"
+    state machine
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamUITimelineWriteBack
+
+NotAFileTimeline {
+    at    Source/DreamGUIEditor/Private/Text/DreamUITimelineWriteBack.cpp
+    src   "this animation is not a 'timeline' block of a .dui"
+    text  "此动画不是 `.dui` 文件的“时间线”块。"
+    state machine
+}

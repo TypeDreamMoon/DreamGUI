@@ -1,0 +1,40 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerGradientHandles
+
+BodyGradient {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGradientHandles.cpp
+    src   "Body Gradient"
+    text  "主体渐变"
+    state machine
+}
+
+BorderGradient {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGradientHandles.cpp
+    src   "Border Gradient"
+    text  "边框渐变"
+    state machine
+}
+
+AddStop {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGradientHandles.cpp
+    src   "Add Gradient Stop"
+    // from the engine's zh-Hans
+    text  "添加梯度停止点"
+    state draft
+}
+
+MoveStop {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGradientHandles.cpp
+    src   "Move Gradient Stop"
+    // from the engine's zh-Hans
+    text  "移动梯度停止点"
+    state draft
+}
+
+MovePoint {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerGradientHandles.cpp
+    src   "Move Gradient"
+    text  "移动渐变点"
+    state machine
+}

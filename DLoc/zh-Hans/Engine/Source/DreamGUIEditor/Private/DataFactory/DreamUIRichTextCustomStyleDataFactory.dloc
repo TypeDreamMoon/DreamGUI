@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+RichTextStyles {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextCustomStyleDataFactory.cpp
+    src   "Rich Text Styles"
+    text  "多格式文本样式"
+    state machine
+}
+
+RichTextStylesToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextCustomStyleDataFactory.cpp
+    src   "Tags for rich text: each names a style -- colour, size, font, effects -- for the text the tag wraps."
+    text  "用于多格式文本的标签，每个标签定义一种样式，例如颜色、大小、字体和效果，以应用于标签包裹的文本。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIRichTextCustomStyleDataFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextCustomStyleDataFactory.cpp#DreamUIRichTextCustomStyleDataFactory
+    src   "Dream UIRich Text Custom Style Data Factory"
+    text  "DreamUI多格式文本自定义样式数据工厂"
+    state machine
+}

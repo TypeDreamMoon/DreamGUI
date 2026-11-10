@@ -1,0 +1,363 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamStaticMesh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh
+    src   "Dream Static Mesh"
+    text  "Dream静态网格体"
+    state machine
+}
+
+DreamStaticMesh:GetMeshCache:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetMeshCache:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStaticMesh:GetOrCreateDynamicMaterialInstance:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetOrCreateDynamicMaterialInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStaticMesh:GetRenderMaterial:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetRenderMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStaticMesh:GetReplaceMaterial:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetReplaceMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStaticMesh:GetVertexColorType:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetVertexColorType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStaticMesh:MeshCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:MeshCache
+    src   "Mesh Cache"
+    text  "网格体缓存"
+    state machine
+}
+
+DreamStaticMesh:ReplaceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:ReplaceMaterial
+    src   "Replace Material"
+    text  "替换材质"
+    state machine
+}
+
+DreamStaticMesh:SetMesh:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetMesh:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStaticMesh:SetReplaceMaterial:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetReplaceMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStaticMesh:SetVertexColorType:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetVertexColorType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStaticMesh:VertexColorType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:VertexColorType
+    src   "Vertex Color Type"
+    text  "顶点颜色类型"
+    state machine
+}
+
+DreamUIStaticMeshCacheData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData
+    src   "Dream UIStatic Mesh Cache Data"
+    text  "Dream UI静态网格体缓存数据"
+    state machine
+}
+
+DreamUIStaticMeshCacheData:IndexData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:IndexData
+    src   "Index Data"
+    // from the engine's zh-Hans
+    text  "索引数据"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:Material {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:Material
+    src   "Material"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:MeshAsset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:MeshAsset
+    src   "Mesh Asset"
+    // from the engine's zh-Hans
+    text  "网格体资产"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:MeshBounds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:MeshBounds
+    src   "Mesh Bounds"
+    // from the engine's zh-Hans
+    text  "网格体边界"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:SourceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:SourceMaterial
+    src   "Source Material"
+    // from the engine's zh-Hans
+    text  "源材质"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:VertexData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:VertexData
+    src   "Vertex Data"
+    // from the engine's zh-Hans
+    text  "顶点数据"
+    state draft
+}
+
+DreamUIStaticMeshVertex {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex
+    src   "Dream UIStatic Mesh Vertex"
+    text  "Dream UI静态网格体顶点"
+    state machine
+}
+
+DreamUIStaticMeshVertex:Color {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUIStaticMeshVertex:Position {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIStaticMeshVertex:TangentX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:TangentX
+    src   "Tangent X"
+    // from the engine's zh-Hans
+    text  "切线X"
+    state draft
+}
+
+DreamUIStaticMeshVertex:TangentZ {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:TangentZ
+    src   "Tangent Z"
+    text  "切线Z"
+    state machine
+}
+
+DreamUIStaticMeshVertex:UV0 {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:UV0
+    src   "UV0"
+    // from the engine's zh-Hans
+    text  "UV0"
+    state draft
+}
+
+DreamUIStaticMeshVertex:UV1 {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:UV1
+    src   "UV1"
+    // from the engine's zh-Hans
+    text  "UV1"
+    state draft
+}
+
+DreamUIStaticMeshVertex:UV2 {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:UV2
+    src   "UV2"
+    // from the engine's zh-Hans
+    text  "UV2"
+    state draft
+}
+
+DreamUIStaticMeshVertex:UV3 {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshVertex:UV3
+    src   "UV3"
+    // from the engine's zh-Hans
+    text  "UV3"
+    state draft
+}
+
+EDreamStaticMeshVertexColorType.EDreamStaticMeshVertexColorType_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:EDreamStaticMeshVertexColorType_MAX
+    src   "EDream Static Mesh Vertex Color Type MAX"
+    text  "EDream静态网格体顶点颜色类型MAX"
+    state machine
+}
+
+EDreamStaticMeshVertexColorType.MultiplyWithUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:MultiplyWithUIColor
+    src   "Multiply with UIColor"
+    text  "与UIColor相乘"
+    state machine
+}
+
+EDreamStaticMeshVertexColorType.NotAffectByUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:NotAffectByUIColor
+    src   "Not Affect by UIColor"
+    text  "不受UIColor影响"
+    state machine
+}
+
+EDreamStaticMeshVertexColorType.ReplaceByUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:ReplaceByUIColor
+    src   "Replace by UIColor"
+    text  "由UIColor替换"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamStaticMesh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh
+    src   "render a StaticMesh as UI element"
+    text  "将StaticMesh渲染为UI元素。"
+    state machine
+}
+
+DreamStaticMesh:GetMeshCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetMeshCache
+    src   "return 'MeshCache' property"
+    text  "返回“MeshCache”属性。"
+    state machine
+}
+
+DreamStaticMesh:GetOrCreateDynamicMaterialInstance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetOrCreateDynamicMaterialInstance
+    src   "return current rendering DynamicMaterialInstance, or create one if not valid."
+    text  "返回当前用于渲染的DynamicMaterialInstance（动态材质实例），如果无效则创建一个。"
+    state machine
+}
+
+DreamStaticMesh:GetRenderMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetRenderMaterial
+    src   "Get actual rendering material. If 'ReplaceMaterial' is valid then return 'ReplaceMaterial', or return the mesh's default material."
+    text  "获取实际的渲染材质。如果“ReplaceMaterial”有效，则返回“ReplaceMaterial”，否则返回网格的默认材质。"
+    state machine
+}
+
+DreamStaticMesh:GetReplaceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetReplaceMaterial
+    src   "Get the 'ReplaceMaterial' property"
+    text  "获取'ReplaceMaterial'材质属性"
+    state machine
+}
+
+DreamUIStaticMeshCacheData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData
+    src   "Cache StaticMesh for use in DreamUI's DreamStaticMesh. Since we cannot read StaticMesh data in runtime, we must create this object and assign 'MeshAsset' property in editor."
+    text  "为DreamUI的DreamStaticMesh缓存StaticMesh。由于无法在运行时读取StaticMesh数据，因此必须在编辑器中创建此对象，并设置'MeshAsset'资产属性。"
+    state machine
+}
+
+DreamUIStaticMeshCacheData:IndexData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:IndexData
+    src   "@see GetIndexData()"
+    // from the engine's zh-Hans
+    text  "@ 参见 GetIndexData()"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:Material {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:Material
+    src   "@see GetMaterial()"
+    // from the engine's zh-Hans
+    text  "@see GetMaterial()"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:MeshAsset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:MeshAsset
+    src   "The mesh data asset from which the vector art is sourced"
+    // from the engine's zh-Hans
+    text  "向量图源自的网格体数据资产"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:SourceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:SourceMaterial
+    src   "The material which we are using, or the material from with the MIC was constructed."
+    // from the engine's zh-Hans
+    text  "将要使用的材质，或用以构建MIC的材质。"
+    state draft
+}
+
+DreamUIStaticMeshCacheData:VertexData {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:VertexData
+    src   "@see GetVertexData()"
+    // from the engine's zh-Hans
+    text  "@see GetVertexData()"
+    state draft
+}
+
+EDreamStaticMeshVertexColorType.MultiplyWithUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:MultiplyWithUIColor
+    src   "Multiply mesh's vertex color with DreamGUI's color parameter"
+    text  "使用 DreamGUI 的颜色参数乘以网格的顶点颜色。"
+    state machine
+}
+
+EDreamStaticMeshVertexColorType.NotAffectByUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:NotAffectByUIColor
+    src   "Use mesh's vertex color only, not consider DreamGUI's color parameter"
+    text  "仅使用网格的顶点颜色，不考虑 DreamGUI 的颜色参数。"
+    state machine
+}
+
+EDreamStaticMeshVertexColorType.ReplaceByUIColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#EDreamStaticMeshVertexColorType:ReplaceByUIColor
+    src   "Replace mesh's vertex color by DreamGUI's color parameter"
+    text  "使用 DreamGUI 的颜色参数替换网格的顶点颜色。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Vector Art" {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamUIStaticMeshCacheData:MeshAsset
+    src   "Vector Art"
+    // from the engine's zh-Hans
+    text  "向量艺术"
+    state draft
+}

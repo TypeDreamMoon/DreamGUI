@@ -1,0 +1,340 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamInvalidationBox {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox
+    src   "Dream Invalidation Box"
+    text  "Dream失效框"
+    state machine
+}
+
+DreamInvalidationBox:bCanCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:bCanCache
+    src   "Can Cache"
+    // from the engine's zh-Hans
+    text  "可缓存"
+    state draft
+}
+
+DreamInvalidationBox:GetCachedCanvas:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCachedCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInvalidationBox:GetCanCache:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCanCache:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInvalidationBox:SetCanCache:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:SetCanCache:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRetainerBox {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox
+    src   "Dream Retainer Box"
+    text  "Dream保留框"
+    state machine
+}
+
+DreamRetainerBox:bRetainRendering {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:bRetainRendering
+    src   "Retain Rendering"
+    text  "保留渲染"
+    state machine
+}
+
+DreamRetainerBox:DisplayVisual {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:DisplayVisual
+    src   "Display Visual"
+    text  "显示视觉"
+    state machine
+}
+
+DreamRetainerBox:EffectMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:EffectMaterial
+    src   "Effect Material"
+    // from the engine's zh-Hans
+    text  "效果材质"
+    state draft
+}
+
+DreamRetainerBox:GetEffectMaterial:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetEffectMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetGroupBlendMode:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetGroupBlendMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetGroupRenderOpacity:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetGroupRenderOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetPhase:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetPhase:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetPhaseCount:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetPhaseCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetRetainedCanvas:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainedCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GetRetainRendering:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainRendering:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRetainerBox:GroupBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GroupBlendMode
+    src   "Group Blend Mode"
+    text  "组混合模式"
+    state machine
+}
+
+DreamRetainerBox:GroupRenderOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GroupRenderOpacity
+    src   "Group Render Opacity"
+    text  "组渲染不透明度"
+    state machine
+}
+
+DreamRetainerBox:Phase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:Phase
+    src   "Phase"
+    // from the engine's zh-Hans
+    text  "相位"
+    state draft
+}
+
+DreamRetainerBox:PhaseCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:PhaseCount
+    src   "Phase Count"
+    // from the engine's zh-Hans
+    text  "相位数"
+    state draft
+}
+
+DreamRetainerBox:SetEffectMaterial:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetEffectMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRetainerBox:SetGroupBlendMode:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupBlendMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRetainerBox:SetGroupRenderOpacity:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupRenderOpacity:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRetainerBox:SetRenderingPhase:InPhase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRenderingPhase:InPhase
+    src   "In Phase"
+    // from the engine's zh-Hans
+    text  "在相位中"
+    state draft
+}
+
+DreamRetainerBox:SetRenderingPhase:InPhaseCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRenderingPhase:InPhaseCount
+    src   "In Phase Count"
+    text  "输入阶段计数"
+    state machine
+}
+
+DreamRetainerBox:SetRetainRendering:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRetainRendering:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamRetainerBox:TextureParameterName {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:TextureParameterName
+    src   "Texture Parameter Name"
+    // from the engine's zh-Hans
+    text  "纹理参数名称"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamInvalidationBox {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox
+    src   "Holds a subtree's draw-call list until something says otherwise.\n\nUMG's UInvalidationBox caches Slate draw elements for a subtree and rebuilds them on\nInvalidateCache(). DreamGUI's equivalent of \"the cached draw elements\" is the canvas's draw-call\nlist -- which geometry was batched with which, in what order, into which sections -- so that is\nwhat this holds.\n\nIt does NOT freeze the picture: the cheap per-frame vertex refresh still runs, so widgets that only\nmove, recolour or animate keep updating. What is deferred is the re-batching, which is the\nexpensive half and the half a structurally static subtree does not need. A rebuild asked for while\ncached is remembered, not dropped, and happens as soon as the cache is invalidated."
+    text  "保存子树的绘制调用列表，直到有别的操作改变这一点。\n\nUMG的UInvalidationBox会为子树缓存Slate绘制元素，并在\nInvalidateCache()时重建。DreamGUI中“缓存的绘制元素”对应的是画布的绘制调用\n列表——哪些几何体与哪些合批、按什么顺序、进入哪些分段——所以这里保存的\n就是它。\n\n它并不会冻结画面：每帧开销很小的顶点刷新仍会执行，所以只做移动、改色或\n动画的控件仍会持续更新。被推迟的是重新合批，而这是开销较大的那一半，\n也是结构静态的子树并不需要的那一半。缓存期间请求的重建会被记住而非丢弃，\n并在缓存失效时立即执行。"
+    state machine
+}
+
+DreamInvalidationBox:GetCachedCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCachedCanvas
+    src   "The canvas this box caches, if the widget has one."
+    text  "此框所缓存的画布（如果该控件有画布）。"
+    state machine
+}
+
+DreamInvalidationBox:InvalidateCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:InvalidateCache
+    src   "Rebuild the subtree's draw-calls at the next update. Mirrors UInvalidationBox::InvalidateCache."
+    text  "在下次更新时重建子树的绘制调用。对应UInvalidationBox::InvalidateCache。"
+    state machine
+}
+
+DreamInvalidationBox:SetCanCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:SetCanCache
+    src   "false is a plain pass-through: the canvas rebuilds whenever it goes dirty, as it always did."
+    text  "false表示纯粹直通：画布一旦变脏就重建，与以往一样。"
+    state machine
+}
+
+DreamRetainerBox {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox
+    src   "Renders the widget's subtree into a texture and re-uses that texture on the frames in between.\n\nThe same idea as UMG's URetainerBox, and deliberately the same vocabulary: Phase / PhaseCount to\nspread re-renders across frames, RequestRender() to force one, SetRetainRendering(false) to fall\nback to drawing live, an effect material applied to the retained texture.\n\nWhat it is built on, rather than beside: a DreamGUI canvas can already render to its own target\n(bForceRenderToTarget) and already knows how to be asked for exactly one update\n(RenderTargetUpdateMode::WhenRequest + RequestUpdateForRenderTarget). This behaviour is the policy\non top -- when to ask -- plus the group compositing below. It requires a UDreamCanvas on the same\nwidget and configures it; it does not invent a second retained-rendering path.\n\nTwo consequences worth knowing:\n\n- The retained subtree is its own draw-call boundary. PrepareDrawCallBatchingData skips a child\n  canvas with bForceRenderToTarget, so nothing inside a retainer batches with anything outside it.\n  That is the point (its vertices are not re-assembled at all on a retained frame), not a cost.\n\n- GroupRenderOpacity is what per-widget RenderOpacity cannot be. Fading a subtree with\n  RenderOpacity multiplies every element's alpha individually, so overlapping children show\n  through each other on the way out. Retained, the subtree is composited first and the group alpha\n  is applied once to the result -- exactly why UMG tells you to reach for a RetainerBox to fade a\n  group.\n\n- The retained texture is put down through the composite a layer group's goes through\n  (UDreamLayerGroup, FDreamUICompositeDesc::bExternal): by GroupBlendMode, at GroupRenderOpacity,\n  through the clip DisplayVisual's widget is drawn with -- its own mask included. With an effect\n  material it is drawn through that material instead, as a textured quad, as it always was."
+    text  "将控件的子树渲染到一张纹理，并在其间的帧上复用该纹理。\n\n与UMG的URetainerBox思路相同，且刻意沿用同一套词汇：用Phase / PhaseCount把重新渲染\n分散到多帧，用RequestRender()强制渲染一次，用SetRetainRendering(false)回退到\n实时绘制，以及对保留纹理应用效果材质。\n\n它是建立在既有机制之上，而不是另起一套：DreamGUI的画布本来就能渲染到自己的目标\n(bForceRenderToTarget)，也本来就知道如何被要求只更新一次\n(RenderTargetUpdateMode::WhenRequest + RequestUpdateForRenderTarget)。此行为是在其之上\n的策略——何时去请求——再加上下面的组合成。它要求同一控件上存在UDreamCanvas并对其\n进行配置；它不会另造一条保留渲染的路径。\n\n有两点后果值得了解：\n\n- 保留的子树自成绘制调用边界。PrepareDrawCallBatchingData会跳过带\n  bForceRenderToTarget的子画布，因此保留框内的任何内容都不会与框外的内容合批。\n  这正是目的（在保留帧上它的顶点根本不会重新组装），而不是代价。\n\n- GroupRenderOpacity即组不透明度，能做到逐控件RenderOpacity做不到的事。用\n  RenderOpacity淡出一个子树会逐个乘以每个元素的alpha，于是重叠的子级在淡出时\n  会互相透出。保留后，子树先被合成，组不透明度只对结果应用一次——\n  这正是UMG告诉你在淡出一组控件时\n  要去找RetainerBox的原因。\n\n- 保留纹理的下发走的是层组所用的同一条合成路径\n  (UDreamLayerGroup, FDreamUICompositeDesc::bExternal)：按GroupBlendMode、以GroupRenderOpacity，\n  经由绘制DisplayVisual控件所用的裁剪——包括它自己的遮罩。若使用效果材质，\n  则改为通过该材质绘制，作为带纹理的四边形，与以往一样。"
+    state machine
+}
+
+DreamRetainerBox:DisplayVisual {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:DisplayVisual
+    src   "The element that draws the retained texture.\n\nIt has to live OUTSIDE the retained subtree -- usually on a sibling widget -- because everything\ninside the subtree is what is being drawn INTO the texture. That is a property rather than\nsomething conjured here: a retainer that built its own display element would have to invent a\nwidget and a place in the hierarchy for it, and where that element sits is a layout decision.\nLeave it empty and the retaining still happens; nothing shows it, and a warning says so once."
+    text  "绘制保留纹理的元素。\n\n它必须位于保留子树之外——通常放在同级控件上——因为子树内的一切\n正是被绘制到纹理里的内容。这是作为属性存在的，而不是在这里凭空变出来的：\n一个自建显示元素的保留框就得为它发明一个控件以及在层级中的位置，\n而该元素放在哪里属于布局决策。留空则保留仍会发生；只是没有东西显示它，\n并会给出一次警告。"
+    state machine
+}
+
+DreamRetainerBox:GetRetainedCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainedCanvas
+    src   "The canvas this retainer drives, if the widget has one."
+    text  "此保留框所驱动的画布（若该控件有画布的话）。"
+    state machine
+}
+
+DreamRetainerBox:GroupBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GroupBlendMode
+    src   "How the retained texture blends with what is behind it (EDreamUIBlendMode)."
+    text  "保留纹理与其后方内容的混合方式（EDreamUIBlendMode）。"
+    state machine
+}
+
+DreamRetainerBox:GroupRenderOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GroupRenderOpacity
+    src   "Applied once to the composited subtree."
+    text  "对合成后的子树应用一次。"
+    state machine
+}
+
+DreamRetainerBox:Phase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:Phase
+    src   "Which frame of the cycle this retainer redraws on."
+    text  "此保留框在循环的哪一帧重绘。"
+    state machine
+}
+
+DreamRetainerBox:PhaseCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:PhaseCount
+    src   "Length of the cycle, in frames. 1 redraws every frame."
+    text  "循环的长度，以帧为单位。为1时每帧都重绘。"
+    state machine
+}
+
+DreamRetainerBox:RequestRender {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:RequestRender
+    src   "Redraw the retained texture on the next update, whatever the phase says. Mirrors URetainerBox::RequestRender."
+    text  "无论阶段如何设置，都在下次更新时重绘保留纹理。与URetainerBox::RequestRender行为一致。"
+    state machine
+}
+
+DreamRetainerBox:SetEffectMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetEffectMaterial
+    src   "Material the retained texture is drawn through; the texture arrives in TextureParameterName."
+    text  "绘制保留纹理时使用的材质；纹理通过TextureParameterName传入。"
+    state machine
+}
+
+DreamRetainerBox:SetGroupBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupBlendMode
+    src   "How the retained texture blends with what is behind it. Changing it redraws nothing but the composite."
+    text  "保留纹理与其后方内容的混合方式。更改此项只会重绘合成结果，不会重绘其他内容。"
+    state machine
+}
+
+DreamRetainerBox:SetGroupRenderOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupRenderOpacity
+    src   "Opacity applied once to the composited subtree, not to each element in it."
+    text  "对合成后的子树整体应用一次的不透明度，而不是对其中每个元素分别应用。"
+    state machine
+}
+
+DreamRetainerBox:SetRenderingPhase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRenderingPhase
+    src   "Which frame of the cycle this retainer redraws on. Clamped into [0, PhaseCount)."
+    text  "此保留框在循环的哪一帧重绘。会被限制在[0, PhaseCount)范围内。"
+    state machine
+}
+
+DreamRetainerBox:SetRetainRendering {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRetainRendering
+    src   "false draws the subtree live every frame, as if this behaviour were not here."
+    text  "为false时每帧实时绘制该子树，就像此行为不存在一样。"
+    state machine
+}
+
+DreamRetainerBox:TextureParameterName {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:TextureParameterName
+    src   "Texture parameter on EffectMaterial the retained texture is bound to. UMG calls this the same thing."
+    text  "保留纹理所绑定的效果材质（EffectMaterial）上的纹理参数。UMG中也是同样的名称。"
+    state machine
+}

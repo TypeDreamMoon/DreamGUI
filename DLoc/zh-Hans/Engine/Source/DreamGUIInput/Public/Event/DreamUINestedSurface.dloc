@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUINestedSurface {
+    at    Source/DreamGUIInput/Public/Event/DreamUINestedSurface.h#DreamUINestedSurface
+    src   "Dream UINested Surface"
+    text  "Dream UI 嵌套表面"
+    state machine
+}

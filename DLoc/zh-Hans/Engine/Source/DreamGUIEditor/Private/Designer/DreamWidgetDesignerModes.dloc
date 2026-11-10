@@ -1,0 +1,92 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerModes
+
+DesignerMode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Designer"
+    // from the engine's zh-Hans
+    text  "设计器"
+    state draft
+}
+
+GraphMode {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Graph"
+    // from the engine's zh-Hans
+    text  "图"
+    state draft
+}
+
+WorkspaceMenu_DreamWidgetDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "DreamUI Designer"
+    text  "DreamUI 设计器"
+    state machine
+}
+
+ViewportTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Viewport"
+    // from the engine's zh-Hans
+    text  "视口"
+    state draft
+}
+
+HierarchyTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Hierarchy"
+    // from the engine's zh-Hans
+    text  "层级"
+    state draft
+}
+
+PaletteTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Palette"
+    // from the engine's zh-Hans
+    text  "控制板"
+    state draft
+}
+
+DetailsTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Details"
+    // from the engine's zh-Hans
+    text  "细节"
+    state draft
+}
+
+AnimationsTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Animations"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+CompilerResultsTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Compiler Results"
+    // from the engine's zh-Hans
+    text  "编译器结果"
+    state draft
+}
+
+PresetsTab {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Presets"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+namespace Sequencer
+
+SequencerMainGraphEditorTitle {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerModes.cpp
+    src   "Sequencer Curves"
+    // from the engine's zh-Hans
+    text  "Sequencer曲线"
+    state draft
+}

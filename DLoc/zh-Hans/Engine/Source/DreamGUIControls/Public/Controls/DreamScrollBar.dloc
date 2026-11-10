@@ -1,0 +1,599 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar
+    src   "Dream Scroll Bar"
+    text  "Dream滚动条"
+    state machine
+}
+
+DreamScrollBar:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:AcceptedMouseButtons
+    src   "Accepted Mouse Buttons"
+    text  "接受的鼠标按键"
+    state machine
+}
+
+DreamScrollBar:ArrowEndBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowEndBehaviour
+    src   "Arrow End Behaviour"
+    text  "箭头结束行为"
+    state machine
+}
+
+DreamScrollBar:ArrowEndGlyphNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowEndGlyphNode
+    src   "Arrow End Glyph Node"
+    text  "箭头结束字形节点"
+    state machine
+}
+
+DreamScrollBar:ArrowEndNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowEndNode
+    src   "Arrow End Node"
+    text  "箭头结束节点"
+    state machine
+}
+
+DreamScrollBar:ArrowStartBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStartBehaviour
+    src   "Arrow Start Behaviour"
+    text  "箭头开始行为"
+    state machine
+}
+
+DreamScrollBar:ArrowStartGlyphNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStartGlyphNode
+    src   "Arrow Start Glyph Node"
+    text  "箭头开始字形节点"
+    state machine
+}
+
+DreamScrollBar:ArrowStartNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStartNode
+    src   "Arrow Start Node"
+    text  "箭头开始节点"
+    state machine
+}
+
+DreamScrollBar:ArrowStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStepSize
+    src   "Arrow Step Size"
+    text  "箭头步进大小"
+    state machine
+}
+
+DreamScrollBar:bAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bAlwaysShowScrollbar
+    src   "Always Show Scrollbar"
+    // from the engine's zh-Hans
+    text  "固定显示滚动条"
+    state draft
+}
+
+DreamScrollBar:bAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bAlwaysShowScrollbarTrack
+    src   "Always Show Scrollbar Track"
+    // from the engine's zh-Hans
+    text  "固定显示滚动条轨道"
+    state draft
+}
+
+DreamScrollBar:BarBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:BarBehaviour
+    src   "Bar Behaviour"
+    text  "滚动条行为"
+    state machine
+}
+
+DreamScrollBar:bShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bShowArrows
+    src   "Show Arrows"
+    text  "显示箭头"
+    state machine
+}
+
+DreamScrollBar:Direction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamScrollBar:GetAcceptedMouseButtons:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAcceptedMouseButtons:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetAlwaysShowScrollbar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAlwaysShowScrollbar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetAlwaysShowScrollbarTrack:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAlwaysShowScrollbarTrack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetArrowStepSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetArrowStepSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetDirection:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetHandleSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetHandleSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetMinHandleLength:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetMinHandleLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetNavigationChangeInterval:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetNavigationChangeInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetScrollView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetScrollView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetShowArrows:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetShowArrows:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:HandleNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:HandleNode
+    src   "Handle Node"
+    text  "手柄节点"
+    state machine
+}
+
+DreamScrollBar:HandleSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:HandleSize
+    src   "Handle Size"
+    // from the engine's zh-Hans
+    text  "柄大小"
+    state draft
+}
+
+DreamScrollBar:IsHorizontal:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:IsHorizontal:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBar:MinHandleLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:MinHandleLength
+    src   "Min Handle Length"
+    text  "最小手柄长度"
+    state machine
+}
+
+DreamScrollBar:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:NavigationChangeInterval
+    src   "Navigation Change Interval"
+    text  "导航变化间隔"
+    state machine
+}
+
+DreamScrollBar:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+DreamScrollBar:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamScrollBar:ScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ScrollView
+    src   "Scroll View"
+    text  "滚动视图"
+    state machine
+}
+
+DreamScrollBar:SetAcceptedMouseButtons:InAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAcceptedMouseButtons:InAcceptedMouseButtons
+    src   "In Accepted Mouse Buttons"
+    text  "传入的可接受鼠标按键"
+    state machine
+}
+
+DreamScrollBar:SetAlwaysShowScrollbar:bInAlwaysShow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbar:bInAlwaysShow
+    src   "In Always Show"
+    text  "始终显示"
+    state machine
+}
+
+DreamScrollBar:SetAlwaysShowScrollbarTrack:bInAlwaysShow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbarTrack:bInAlwaysShow
+    src   "In Always Show"
+    text  "始终显示"
+    state machine
+}
+
+DreamScrollBar:SetArrowStepSize:InStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetArrowStepSize:InStep
+    src   "In Step"
+    // from the engine's zh-Hans
+    text  "输入步"
+    state draft
+}
+
+DreamScrollBar:SetDirection:InDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetDirection:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamScrollBar:SetHandleSize:InFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetHandleSize:InFraction
+    src   "In Fraction"
+    text  "比例"
+    state machine
+}
+
+DreamScrollBar:SetMinHandleLength:InLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetMinHandleLength:InLength
+    src   "In Length"
+    // from the engine's zh-Hans
+    text  "输入长度"
+    state draft
+}
+
+DreamScrollBar:SetNavigationChangeInterval:InInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetNavigationChangeInterval:InInterval
+    src   "In Interval"
+    // from the engine's zh-Hans
+    text  "输入间隔"
+    state draft
+}
+
+DreamScrollBar:SetScrollView:InView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetScrollView:InView
+    src   "In View"
+    // from the engine's zh-Hans
+    text  "In View"
+    state draft
+}
+
+DreamScrollBar:SetShowArrows:bInShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetShowArrows:bInShowArrows
+    src   "In Show Arrows"
+    text  "显示箭头"
+    state machine
+}
+
+DreamScrollBar:SetState:bInCollapseIfNecessary {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetState:bInCollapseIfNecessary
+    src   "In Collapse if Necessary"
+    text  "必要时折叠"
+    state machine
+}
+
+DreamScrollBar:SetState:InOffsetFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetState:InOffsetFraction
+    src   "In Offset Fraction"
+    // from the engine's zh-Hans
+    text  "在偏移部分中"
+    state draft
+}
+
+DreamScrollBar:SetState:InThumbSizeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetState:InThumbSizeFraction
+    src   "In Thumb Size Fraction"
+    // from the engine's zh-Hans
+    text  "在缩略图大小部分中"
+    state draft
+}
+
+DreamScrollBar:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamScrollBar:SetValue:InValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValue:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamScrollBar:SetValueWithoutNotify:InValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValueWithoutNotify:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamScrollBar:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamScrollBar:TrackNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:TrackNode
+    src   "Track Node"
+    text  "跟踪节点"
+    state machine
+}
+
+DreamScrollBar:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamScrollBarValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBarValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar
+    src   "A scroll bar whose hierarchy is code, not an asset.\n\nTwo nodes: a track, and a handle inside it. BP_HorizontalScrollbar and BP_VerticalScrollbar are two\nassets because an asset cannot branch on a property; this is one control because code can, and\nDirection is the only thing they disagreed about. The handle's parent IS the track, which is what\nthe behaviour measures the value against -- a scroll bar handle rides the whole track (unlike a\nslider's, which is inset by its own size), because its LENGTH already shrinks the travel.\n\nWHAT THIS CLASS STOPPED DOING\n-----------------------------\nIt used to carry a UUIScrollbar SUBCLASS and re-place the handle itself, because the component\nwrote ratio anchors and exposed neither Handle nor DirectionType to anything but a details panel.\nAll three of those are fixed at the source now: UUIScrollbar places the handle with absolute\ngeometry, takes both writes through public setters, and owns the minimum-length floor together\nwith the drag scale it has to agree with. What is left here is what a control is for -- style,\nproperties a designer and a `<->` binding can reach, and the link to a scroll view.\n\nA bar with no scroll view is a value control in its own right: its value is a position from 0 to 1\nand HandleSize is how much of the track the handle covers. Point it at a UUIScrollView and both\nnumbers become the view's -- progress in, progress out -- which is how the standalone bar drives a\nscroll box.\n\nClicking the track off the handle puts the handle's CENTRE where the track was clicked, clamped to\nthe ends, and a drag from that press carries on from there -- SScrollBar's behaviour. Until this was\nchecked against the 5.8 source a track click paged one handle length toward the pointer (Unity's\nbehaviour), so existing screens now jump where they used to step.\n\nNeither the track nor the arrows are a place the pad's navigation lands or Tab stops, which is how\nSScrollBar behaves: the track's UUIScrollbar starts with bCanNavigateHere off (see its class comment)\nand the arrows are made the same in WireParts. The keys and the stick scroll whatever the bar\nfollows through the focused control instead."
+    text  "层级由代码而非资产构成的滚动条。\n\n两个节点：一条轨道，以及轨道内的滑块。BP_HorizontalScrollbar 和 BP_VerticalScrollbar 是两个\n资产，因为资产无法按属性分支；而这是一个控件，因为代码可以分支，且\nDirection 是它们唯一有分歧的地方。滑块的父级就是轨道，行为正是以此为基准衡量数值——\n滚动条的滑块走完整条轨道（不像滑动条的滑块会按自身尺寸内缩），因为其 LENGTH\n已经缩短了行程。\n\n本类不再做的事\n-----------------------------\n它过去带有一个 UUIScrollbar 子类并自行重新放置滑块，因为该组件\n写入比例锚点，且除细节面板外不向任何地方暴露 Handle 或 DirectionType。\n这三项现在都在源头修好了：UUIScrollbar 以绝对几何放置滑块，\n通过公开 setter 接受这两处写入，并连同它必须与之保持一致的拖动缩放一起\n掌管最小长度下限。这里剩下的就是控件该有的东西——样式、\n设计师和 `<->` 绑定能够访问的属性，以及到滚动视图的链接。\n\n没有滚动视图的滚动条本身就是一个数值控件：它的值是 0 到 1 之间的位置，\nHandleSize 是滑块覆盖轨道的比例。把它指向 UUIScrollView，两个\n数字就都变成视图的——进度输入，进度输出——独立滚动条正是这样驱动\n滚动框的。\n\n在滑块之外点击轨道，会把滑块的中心放到点击处，并钳制\n在两端；从该次按下开始的拖动会从那里继续——这是 SScrollBar 的行为。在对照\n5.8 源码核实之前，点击轨道会向指针方向平移一个滑块长度（Unity 的\n行为），所以现有界面的行为从原来的步进变成了现在的跳转。\n\n轨道和箭头都不是手柄导航会落点、Tab 会停住的地方，这正是\nSScrollBar 的行为：轨道的 UUIScrollbar 初始时 bCanNavigateHere 为关（见其类注释），\n箭头在 WireParts 中也被设为相同。按键和摇杆改为通过聚焦的控件\n滚动该滚动条所跟随的内容。"
+    state machine
+}
+
+DreamScrollBar:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:AcceptedMouseButtons
+    src   "WHICH mouse buttons move this bar -- a bitmask over EDreamUIMouseButtonType, the left button alone\nby default, which is SScrollBar's rule: its OnMouseButtonDown answers EKeys::LeftMouseButton and\nnothing else, so a right drag on the handle or a right click on the track leaves the bar where it\nis and goes on to whatever is behind it. The two arrows answer the same buttons.\n\nUMG has no knob for this; widen it for a bar that should also answer another button. A touch is\nnot a mouse button and always counts. Pushed onto the bar's UUIScrollbar and the two arrow\nbuttons -- UUISelectable::AcceptedMouseButtons is what they consult, the same field UDreamButton\nnarrows. In .dui it is a number, one bit per EDreamUIMouseButtonType value: 1 is Left, 4 is Right,\n5 is both."
+    text  "哪些鼠标按键可以移动此滚动条——基于 EDreamUIMouseButtonType 的位掩码，默认只有左键，\n这是 SScrollBar 的规则：它的 OnMouseButtonDown 只响应 EKeys::LeftMouseButton，\n除此之外什么都不响应，因此在滑块上右键拖动或在轨道上右键单击都会让滚动条留在\n原处，并把事件继续传给其后面的对象。两个箭头响应同样的按键。\n\nUMG 没有对应的开关；如果滚动条还应响应其他按键，就把这个范围放宽。触摸\n不是鼠标按键，始终计入。该值会推送到滚动条的 UUIScrollbar 和两个箭头\n按钮上——UUISelectable::AcceptedMouseButtons 正是它们查询的字段，也是 UDreamButton\n收窄的同一字段。在 .dui 中它是一个数字，每个 EDreamUIMouseButtonType 值对应一位：1 是左键，4 是右键，\n5 是两者。"
+    state machine
+}
+
+DreamScrollBar:ArrowStartNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStartNode
+    src   "The step buttons. Present in the built-in tree and asleep until bShowArrows wakes them."
+    text  "步进按钮。存在于内置树中，在 bShowArrows 唤醒它们之前处于休眠状态。"
+    state machine
+}
+
+DreamScrollBar:ArrowStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ArrowStepSize
+    src   "How far one arrow click moves the value, as a fraction of the whole range."
+    text  "单击一次箭头使值移动的距离，以整个范围的比例表示。"
+    state machine
+}
+
+DreamScrollBar:bAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bAlwaysShowScrollbar
+    src   "Whether the bar stays put with nothing to scroll -- UMG's bAlwaysShowScrollbar.\n\nTrue, not UMG's false: this bar has always drawn whatever it was placed into, and an existing\nscreen whose bar quietly vanished the moment its list fitted would be a layout that changed\nunder everyone. Only a bar ATTACHED to a scroll view can hide itself -- a bare bar is a value\ncontrol, and it has no \"nothing to scroll\" to be in."
+    text  "在无可滚动内容时滚动条是否保持显示——即 UMG 的 bAlwaysShowScrollbar。\n\n为真，而不是 UMG 的假：此滚动条一直都会绘制它所放置的任何内容，而一个\n现有界面如果其滚动条在列表刚好放得下的那一刻悄然消失，那就是所有人脚下\n被改动的布局。只有附加到滚动视图的滚动条才能隐藏自己——独立的滚动条\n是数值控件，它没有可供处于其中的“无可滚动内容”状态。"
+    state machine
+}
+
+DreamScrollBar:bAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bAlwaysShowScrollbarTrack
+    src   "Whether the TRACK survives the bar hiding itself -- UMG's bAlwaysShowScrollbarTrack, and the\ngroove a desktop scroll bar leaves behind when its thumb has nothing to say.\n\nOnly consulted while bAlwaysShowScrollbar is off and the attached view fits: then the bar stays\non screen with its HANDLE asleep, rather than the whole bar going and the layout reflowing."
+    text  "滚动条隐藏自身时轨道是否保留——即 UMG 的 bAlwaysShowScrollbarTrack，\n也就是桌面滚动条在其滑块无事可说时留下的那道凹槽。\n\n仅在 bAlwaysShowScrollbar 为关且所附加的视图内容放得下时才会参考：此时滚动条\n留在屏幕上而滑块休眠，而不是整条滚动条消失、布局重排。"
+    state machine
+}
+
+DreamScrollBar:bShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:bShowArrows
+    src   "A step button at each end of the track -- the desktop scroll bar's arrows.\n\nOff by default, which is what this bar has always drawn and what a touch-first or console UI\nwants; on, an arrow is pinned to each end, the track is inset between them so the handle never\ntravels underneath one, and a click steps the value by ArrowStepSize."
+    text  "轨道两端的步进按钮——即桌面滚动条的箭头。\n\n默认关闭，这也是此滚动条一直以来绘制的方式，符合触控优先或主机 UI\n的需求；开启后，箭头会固定在两端，轨道在二者之间内缩，因此滑块永远不会\n移动到箭头下方，单击会按 ArrowStepSize 步进数值。"
+    state machine
+}
+
+DreamScrollBar:Direction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Direction
+    src   "Which way it runs, and which end is zero. One property instead of two Blueprint assets."
+    text  "运行方向，以及哪一端为零。用一个属性代替两个蓝图资产。"
+    state machine
+}
+
+DreamScrollBar:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetStyle
+    src   "By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct."
+    text  "按值而非按引用：UFUNCTION 返回值必须是值，而样式是一个小型结构体。"
+    state machine
+}
+
+DreamScrollBar:HandleSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:HandleSize
+    src   "How much of the track the handle covers, 0 to 1 -- the visible fraction of whatever is being\nscrolled. A bar attached to a scroll view has this rewritten from the view on every push; a\nquarter is what a bare bar shows so it reads as a bar and not as a filled rail."
+    text  "滑块覆盖轨道的比例，0 到 1——即所滚动内容的\n可见比例。附加到滚动视图的滚动条会在每次推送时由视图重写此值；\n独立滚动条会显示为四分之一，使其读起来像滚动条，而不是填满的导轨。"
+    state machine
+}
+
+DreamScrollBar:IsHorizontal {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:IsHorizontal
+    src   "True for LeftToRight and RightToLeft. Everything axis-dependent in here asks this."
+    text  "LeftToRight 和 RightToLeft 时为 true。此处所有与轴相关的逻辑都会查询该值。"
+    state machine
+}
+
+DreamScrollBar:MinHandleLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:MinHandleLength
+    src   "Floor on the handle's drawn length, in local units. Pushed into the behaviour, which applies it\nto the drawn length and to the drag scale together -- a handle drawn longer than the fraction\nit drags with would run at the wrong rate for the whole of a long list."
+    text  "滑块绘制长度的下限，使用局部单位。该值会推送到行为中，行为会同时将其\n应用于绘制长度和拖动比例——如果滑块绘制得比其拖动比例更长，则在长列表中\n整个拖动过程都会以错误速率运行。"
+    state machine
+}
+
+DreamScrollBar:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:NavigationChangeInterval
+    src   "How far one navigation press moves the value."
+    text  "一次导航按键移动数值的距离。"
+    state machine
+}
+
+DreamScrollBar:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:OnValueChanged
+    src   "Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it."
+    text  "从行为转发而来，因此使用方绑定的是控件本身，而不是它的某个部件。"
+    state machine
+}
+
+DreamScrollBar:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact name,\nso a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的名称合成其反向路由，\n因此值控件会将它和自身对外通告的事件一并提供。与之同时触发。"
+    state machine
+}
+
+DreamScrollBar:RefreshFromScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:RefreshFromScrollView
+    src   "Take position and visible fraction from the attached view. Called for you whenever it moves."
+    text  "从附加的视图获取位置和可见比例。每当视图移动时会为你调用。"
+    state machine
+}
+
+DreamScrollBar:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAcceptedMouseButtons
+    src   "Writes the bitmask and pushes it onto the bar's behaviours at once -- the next press consults it."
+    text  "写入位掩码并立即将其推送到滚动条的行为上——下一次按下时会查询它。"
+    state machine
+}
+
+DreamScrollBar:SetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetDirection
+    src   "Which way it runs decides the whole rect, so this is a style push and not a field write."
+    text  "运行方向决定整个矩形，因此这是一次样式推送，而不是字段写入。"
+    state machine
+}
+
+DreamScrollBar:SetScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetScrollView
+    src   "Drive a scroll view with this bar, both ways.\n\nUUIScrollViewWithScrollbar exists for exactly this and would have been the thing to compose,\nbut its Viewport and its two scrollbar fields are private with no setters, so a control that\nbuilds its own tree cannot hand it its parts. What it does internally is two subscriptions and\na visible-fraction ratio; that is what this is, and it works against a plain UUIScrollView."
+    text  "用此滚动条双向驱动滚动视图。\n\nUUIScrollViewWithScrollbar 正是为此而存在，本来也应该是用来组合的对象，\n但它的视口和两个滚动条字段是私有的且没有设置器，因此自行构建控件树的控件\n无法把各部分交给它。它在内部所做的是两个订阅和一个可见比例；这里做的正是这些，\n并且可用于普通的 UUIScrollView。"
+    state machine
+}
+
+DreamScrollBar:SetShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetShowArrows
+    src   "Wakes or sleeps the arrows AND re-insets the track, which is why it is a whole style push."
+    text  "唤醒或休眠箭头，并重新内缩轨道，因此这是一次完整的样式推送。"
+    state machine
+}
+
+DreamScrollBar:SetState {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetState
+    src   "Position and visible fraction in one call -- UMG's SetState, and the shape a scroll view\nactually pushes: the two numbers always move together, and writing them one at a time lays the\nhandle out twice for one change.\n\n@param bInCollapseIfNecessary Hide the bar when the fraction says everything fits, as\n                              bAlwaysShowScrollbar = false does for an attached view."
+    text  "一次调用设置位置和可见比例——即 UMG 的 SetState，也是滚动视图\n实际推送的形式：两个数值总是一起变化；若一次只写入一个，就会为一次变更而\n布局滑块两次。\n\n@param bInCollapseIfNecessary 当比例表明所有内容都放得下时隐藏滚动条，正如\n                              附加视图在 bAlwaysShowScrollbar = false 时所做的那样。"
+    state machine
+}
+
+DreamScrollBar:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetStyle
+    src   "Replace the whole look and re-push it -- thickness and margin are geometry, not paint."
+    text  "替换整体外观并重新推送——粗细和边距属于几何，而非绘制。"
+    state machine
+}
+
+DreamScrollBar:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValueWithoutNotify
+    src   "For a follower: moves the handle without telling anyone, so a two-way link cannot ring."
+    text  "对跟随对象进行操作时，移动滑块而不通知任何其他对象，因此无法建立双向链接。"
+    state machine
+}
+
+DreamScrollBar:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually\nexists; with no sheet in the project this IS the look in effect. A scroll box overwrites it\nwholesale with its own style's Bar, so one style edit dresses the box and its bar together."
+    text  "此实例自身的外观。当 StyleSource 指定时，只要项目中确实存在样式表，就以项目样式表为准；\n项目中无样式表时，此属性即为生效的外观。滚动框会用其自身样式的 Bar 整体覆盖它，\n因此一次样式编辑即可同时装扮滚动框及其滚动条。"
+    state machine
+}
+
+DreamScrollBar:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:Value
+    src   "Authored position in; mirror of the behaviour's out. A property so .dui and bindings can see it."
+    text  "由外部设置的位置，反映行为的输出。这是一个属性，用于供 .dui 文件和数据绑定使用。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Scroll Bar" {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAcceptedMouseButtons
+    src   "Scroll Bar"
+    // from the engine's zh-Hans
+    text  "滚动条"
+    state draft
+}

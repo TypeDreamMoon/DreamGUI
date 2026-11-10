@@ -1,0 +1,884 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMaskTransition {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition
+    src   "Mask Transition"
+    text  "遮罩过渡"
+    state machine
+}
+
+DreamMaskTransition:Angle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Angle
+    src   "Angle"
+    // from the engine's zh-Hans
+    text  "角度"
+    state draft
+}
+
+DreamMaskTransition:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamMaskTransition:bHitTestMask {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bHitTestMask
+    src   "Hit Test Mask"
+    text  "碰撞检测遮罩"
+    state machine
+}
+
+DreamMaskTransition:bInvert {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bInvert
+    src   "Invert"
+    // from the engine's zh-Hans
+    text  "反转"
+    state draft
+}
+
+DreamMaskTransition:bReverse {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bReverse
+    src   "Reverse"
+    // from the engine's zh-Hans
+    text  "倒回"
+    state draft
+}
+
+DreamMaskTransition:Centre {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Centre
+    src   "Centre"
+    text  "中心"
+    state machine
+}
+
+DreamMaskTransition:Channel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Channel
+    src   "Channel"
+    // from the engine's zh-Hans
+    text  "通道"
+    state draft
+}
+
+DreamMaskTransition:Count {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Count
+    src   "Count"
+    // from the engine's zh-Hans
+    text  "数量"
+    state draft
+}
+
+DreamMaskTransition:CrossFade:InDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamMaskTransition:CrossFade:InEase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InEase
+    src   "In Ease"
+    text  "淡入缓入"
+    state machine
+}
+
+DreamMaskTransition:CrossFade:InFrom {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InFrom
+    src   "In From"
+    text  "淡入起始"
+    state machine
+}
+
+DreamMaskTransition:CrossFade:InPreset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InPreset
+    src   "In Preset"
+    // from the engine's zh-Hans
+    text  "在预设中"
+    state draft
+}
+
+DreamMaskTransition:CrossFade:InTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InTo
+    src   "In To"
+    text  "淡入目标"
+    state machine
+}
+
+DreamMaskTransition:CrossFade:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:FindOrAdd:InWidget {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:FindOrAdd:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamMaskTransition:FindOrAdd:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:FindOrAdd:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetCentre:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetCentre:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetCount:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetGrain:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetGrain:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetInvert:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetInvert:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetPreset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetPreset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetProgress:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetReverse:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetReverse:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetSeed:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetSeed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:GetSoftness:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetSoftness:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:Grain {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Grain
+    src   "Grain"
+    // from the engine's zh-Hans
+    text  "颗粒"
+    state draft
+}
+
+DreamMaskTransition:IsEnabled:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:IsFullyHidden:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyHidden:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:IsFullyShown:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyShown:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:OrderTexture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:OrderTexture
+    src   "Order Texture"
+    text  "纹理排序"
+    state machine
+}
+
+DreamMaskTransition:PlayBackward:InDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayBackward:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamMaskTransition:PlayBackward:InEase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayBackward:InEase
+    src   "In Ease"
+    text  "淡入缓入"
+    state machine
+}
+
+DreamMaskTransition:PlayBackward:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayBackward:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:PlayForward:InDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamMaskTransition:PlayForward:InEase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward:InEase
+    src   "In Ease"
+    text  "淡入缓入"
+    state machine
+}
+
+DreamMaskTransition:PlayForward:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:PlayFromTo:InDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamMaskTransition:PlayFromTo:InEase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo:InEase
+    src   "In Ease"
+    text  "淡入缓入"
+    state machine
+}
+
+DreamMaskTransition:PlayFromTo:InFrom {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo:InFrom
+    src   "In From"
+    text  "淡入起始"
+    state machine
+}
+
+DreamMaskTransition:PlayFromTo:InTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo:InTo
+    src   "In To"
+    text  "淡入目标"
+    state machine
+}
+
+DreamMaskTransition:PlayFromTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:PlayScreenTransition:InColour {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InColour
+    src   "In Colour"
+    text  "起始颜色"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:InCoverSeconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InCoverSeconds
+    src   "In Cover Seconds"
+    text  "遮盖时长"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:InHoldSeconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InHoldSeconds
+    src   "In Hold Seconds"
+    text  "保持时长"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:InPreset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InPreset
+    src   "In Preset"
+    // from the engine's zh-Hans
+    text  "在预设中"
+    state draft
+}
+
+DreamMaskTransition:PlayScreenTransition:InSortOrder {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:InUncoverSeconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:InUncoverSeconds
+    src   "In Uncover Seconds"
+    text  "显示时长"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:OnCovered {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:OnCovered
+    src   "On Covered"
+    text  "遮盖事件"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition:OnFinished {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:OnFinished
+    src   "On Finished"
+    // from the engine's zh-Hans
+    text  "完成时"
+    state draft
+}
+
+DreamMaskTransition:PlayScreenTransition:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMaskTransition:PlayScreenTransition:WorldContextObject {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamMaskTransition:Preset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Preset
+    src   "Preset"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+DreamMaskTransition:Progress {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Progress
+    src   "Progress"
+    // from the engine's zh-Hans
+    text  "进度"
+    state draft
+}
+
+DreamMaskTransition:Seed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Seed
+    src   "Seed"
+    // from the engine's zh-Hans
+    text  "种子"
+    state draft
+}
+
+DreamMaskTransition:SetAngle:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetAngle:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetCentre:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCentre:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetCount:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCount:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetEnabled:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetGrain:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetGrain:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetInvert:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetInvert:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetPreset:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetPreset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetProgress:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetProgress:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetReverse:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetReverse:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetSeed:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSeed:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetSoftness:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSoftness:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetTexture:InChannel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetTexture:InChannel
+    src   "In Channel"
+    // from the engine's zh-Hans
+    text  "输入通道"
+    state draft
+}
+
+DreamMaskTransition:SetTexture:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetTexture:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMaskTransition:Softness {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Softness
+    src   "Softness"
+    // from the engine's zh-Hans
+    text  "柔软度"
+    state draft
+}
+
+DreamMaskTransition:Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+EDreamMaskTransitionPreset.Blinds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Blinds
+    src   "Blinds"
+    text  "百叶窗"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Checker {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Checker
+    src   "Checker"
+    text  "棋盘"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Clock {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Clock
+    src   "Clock"
+    // from the engine's zh-Hans
+    text  "时钟"
+    state draft
+}
+
+EDreamMaskTransitionPreset.Diamond {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Diamond
+    src   "Diamond"
+    text  "Diamond"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Dissolve {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Dissolve
+    src   "Dissolve"
+    text  "溶解"
+    state machine
+}
+
+EDreamMaskTransitionPreset.EDreamMaskTransitionPreset_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:EDreamMaskTransitionPreset_MAX
+    src   "EDream Mask Transition Preset MAX"
+    text  "EDream 遮罩过渡预设 MAX"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Ink {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Ink
+    src   "Ink"
+    text  "墨水"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Iris {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Iris
+    src   "Iris"
+    // from the engine's zh-Hans
+    text  "Iris"
+    state draft
+}
+
+EDreamMaskTransitionPreset.Shatter {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Shatter
+    src   "Shatter"
+    text  "碎片"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+EDreamMaskTransitionPreset.Wipe {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Wipe
+    src   "Wipe"
+    // from the engine's zh-Hans
+    text  "擦拭"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMaskTransition {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition
+    src   "Reveals or hides a widget and everything under it through a moving mask: a wipe, a clock, an iris, blinds, a checker\nboard, a dissolve, a blot of ink, shards, or a texture's order. Progress runs 0 (hidden) to 1 (shown) -- the other way\nwith Invert -- and can be driven by a tween (PlayForward, PlayBackward), a widget animation's property track, or\nBlueprint.\n\nIt drives the widget's clip mask (UDreamWidget::SetDrivenClipMask) without touching the Clip Mask the widget was\ngiven, so nothing of it is saved; while it drives one, a widget that did not clip to its bounds does. Fully shown, it\nlets go of the mask and costs nothing; fully hidden, nothing under it can be hit."
+    text  "通过移动的遮罩显示或隐藏控件及其下方的所有内容：擦除、时钟、光圈、百叶窗、棋盘、\n溶解、墨迹、碎片，或纹理的顺序。Progress 从 0（隐藏）变化到 1（显示）——使用 Invert 时\n方向相反——并可由补间（PlayForward、PlayBackward）、控件动画的属性轨道或\n蓝图驱动。\n\n它驱动控件的裁剪遮罩（UDreamWidget::SetDrivenClipMask），而不改动控件原本获得的\nClip Mask，因此其状态不会被保存；在它驱动期间，原本不裁剪到自身边界的控件也会裁剪。完全显示时，它\n放开遮罩且不产生开销；完全隐藏时，其下方的任何内容都无法被命中。"
+    state machine
+}
+
+DreamMaskTransition:Angle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Angle
+    src   "Degrees clockwise the Wipe, Clock and Blinds shapes are turned."
+    text  "擦除、时钟和百叶窗形状顺时针旋转的角度。"
+    state machine
+}
+
+DreamMaskTransition:bEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bEnabled
+    src   "Off, the widget is shown whole whatever the progress: to compare with and without the transition."
+    text  "关闭时，无论进度如何，控件都完整显示：用于对比有过渡和无过渡的效果。"
+    state machine
+}
+
+DreamMaskTransition:bHitTestMask {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bHitTestMask
+    src   "Clicks follow the mask while it moves, where the mask can be measured without a texture (Wipe, Clock, Iris, Diamond,\nBlinds, Dissolve); the others hit the whole rect until they are shown. Hidden, nothing is hit either way."
+    text  "遮罩移动时点击跟随遮罩，仅限无需纹理即可测量遮罩的形状（擦除、时钟、光圈、菱形、\n百叶窗、溶解）；其他形状在显示之前，整个矩形都会被命中。隐藏时，两种情况下都不会命中任何内容。"
+    state machine
+}
+
+DreamMaskTransition:bInvert {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bInvert
+    src   "Hides as Progress rises, by the same shape: what was shown first goes first."
+    text  "随 Progress 上升而以相同的形状隐藏：先显示的内容先消失。"
+    state machine
+}
+
+DreamMaskTransition:bReverse {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bReverse
+    src   "Runs the shape the other way: a wipe from the right, a clock anticlockwise, an iris closing in from the edge."
+    text  "以相反方向运行形状：擦除从右侧开始，时钟逆时针，光圈从边缘向内收拢。"
+    state machine
+}
+
+DreamMaskTransition:Centre {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Centre
+    src   "Where the Clock, Iris, Diamond, Ink and Shatter shapes start, in the widget's rect: 0,0 its top left, 1,1 its bottom right."
+    text  "时钟、光圈、菱形、墨水和碎片形状在控件矩形中的起点：0,0 为左上角，1,1 为右下角。"
+    state machine
+}
+
+DreamMaskTransition:Count {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Count
+    src   "Stripes for Blinds, squares across for Checker, shards for Shatter."
+    text  "百叶窗为条纹，棋盘为横贯的方格，碎片为碎块。"
+    state machine
+}
+
+DreamMaskTransition:CrossFade {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade
+    src   "InFrom gives way to InTo through one shape over InDuration seconds: InTo is revealed exactly where InFrom is hidden,\npixel for pixel. Each gets a transition of InPreset if it has none (its other settings kept, so that both match when\nset alike); InFrom ends fully hidden, InTo fully shown. Either may be null."
+    text  "InFrom 在 InDuration 秒内通过同一种形状过渡为 InTo：InTo 恰好在 InFrom 隐藏的位置，\n逐像素显现。若某一方没有过渡，则获得 InPreset 预设的过渡（保留其其他设置，以便在设置相同时\n二者一致）；InFrom 最终完全隐藏，InTo 完全显示。二者均可为 null。"
+    state machine
+}
+
+DreamMaskTransition:FindOrAdd {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:FindOrAdd
+    src   "The transition on InWidget, added when it has none."
+    text  "控件 InWidget 上的过渡，没有时添加。"
+    state machine
+}
+
+DreamMaskTransition:Grain {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Grain
+    src   "Pixels across a speck of Dissolve."
+    text  "Dissolve 中一个斑点的像素跨度。"
+    state machine
+}
+
+DreamMaskTransition:IsFullyShown {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyShown
+    src   "Shown: Progress at its showing end."
+    text  "是否已显示：Progress 位于其显示端。"
+    state machine
+}
+
+DreamMaskTransition:OrderTexture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:OrderTexture
+    src   "The order texture of Ink, Shatter or Checker, made here and held while it is drawn."
+    text  "Ink、Shatter 或 Checker 的顺序纹理，在此生成并在绘制期间保留。"
+    state machine
+}
+
+DreamMaskTransition:PlayBackward {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayBackward
+    src   "Progress from where it is back to 0 over InDuration seconds."
+    text  "Progress 在 InDuration 秒内从当前位置回到 0。"
+    state machine
+}
+
+DreamMaskTransition:PlayForward {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward
+    src   "Progress from where it is to its showing end over InDuration seconds. Returns the tween, to chain on."
+    text  "Progress 在 InDuration 秒内从当前位置到其显示端。返回补间对象，以便继续链式调用。"
+    state machine
+}
+
+DreamMaskTransition:PlayFromTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo
+    src   "Progress from InFrom to InTo over InDuration seconds; a tween this transition was playing stops."
+    text  "Progress 在 InDuration 秒内从 InFrom 到 InTo；此过渡正在播放的补间会停止。"
+    state machine
+}
+
+DreamMaskTransition:PlayScreenTransition {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition
+    src   "A transition of the whole screen: a cover of InColour put on the viewport above the pages, revealed by InPreset over\nInCoverSeconds; OnCovered then (load the next level, swap the screen), InHoldSeconds later the cover hides by the\nsame shape over InUncoverSeconds, and is taken off the screen; OnFinished then. Returns the cover's transition, whose\nsettings can still be changed while it covers. Null where there is no screen to cover."
+    text  "整个屏幕的过渡：将 InColour 的遮盖层放在视口上、页面之上，由 InPreset 预设于\nInCoverSeconds 内揭示；随后调用 OnCovered（加载下一关卡、切换屏幕），InHoldSeconds 后遮盖层以同一\n形状在 InUncoverSeconds 内隐藏，并从屏幕上移除；随后调用 OnFinished。返回遮盖层的过渡，其\n设置可在遮盖期间继续更改。没有可遮盖的屏幕时返回 null。"
+    state machine
+}
+
+DreamMaskTransition:Progress {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Progress
+    src   "0 hidden, 1 shown (with Invert: 0 shown, 1 hidden)."
+    text  "0 为隐藏，1 为显示（启用 Invert 时：0 为显示，1 为隐藏）。"
+    state machine
+}
+
+DreamMaskTransition:Refresh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Refresh
+    src   "Measures the mask on the widget again and hands it over: after any change."
+    text  "重新测量控件上的遮罩并提交：在发生任何更改后调用。"
+    state machine
+}
+
+DreamMaskTransition:Seed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Seed
+    src   "Which specks, which ink, which shards."
+    text  "选择哪些斑点、哪些墨迹、哪些碎片。"
+    state machine
+}
+
+DreamMaskTransition:Softness {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Softness
+    src   "How soft the moving edge is, as a share of the whole sweep: 0 is a hard edge."
+    text  "移动边缘的柔和程度，以整个扫描范围的比例表示：0 为硬边缘。"
+    state machine
+}
+
+DreamMaskTransition:Stop {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Stop
+    src   "Stops the tween this transition is playing, leaving Progress where it is."
+    text  "停止此过渡正在播放的补间动画，Progress 保持在当前值。"
+    state machine
+}
+
+DreamMaskTransition:Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Texture
+    src   "The order for the Texture preset: where its channel is dark shows first. Stretched over the widget's rect."
+    text  "纹理预设的顺序：通道中较暗处先显示。拉伸覆盖控件的矩形区域。"
+    state machine
+}
+
+EDreamMaskTransitionPreset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset
+    src   "The shape a mask transition reveals its widget in."
+    text  "蒙版过渡显示其控件时所用的形状。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Blinds {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Blinds
+    src   "Count stripes, each opening from its left (turned by Angle)."
+    text  "Count 条条纹，每条从其左侧展开（按 Angle 旋转）。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Checker {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Checker
+    src   "A board of squares Count across: one colour of squares wipes in, then the other."
+    text  "由 Count 个方格横向组成的棋盘：先以擦除方式显示一种颜色的方格，再显示另一种。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Clock {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Clock
+    src   "A hand sweeping clockwise about Centre from twelve o'clock (turned by Angle)."
+    text  "从十二点位置绕 Centre 顺时针扫过的指针（按 Angle 旋转）。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Diamond {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Diamond
+    src   "A diamond opening from Centre."
+    text  "从 Centre 展开的菱形。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Dissolve {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Dissolve
+    src   "Specks appearing all over, Grain pixels across."
+    text  "斑点四处出现，大小为 Grain 像素。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Ink {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Ink
+    src   "A blot of ink spreading from Centre, its edge ragged."
+    text  "从 Centre 扩散的墨迹，边缘参差不齐。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Iris {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Iris
+    src   "A circle opening from Centre."
+    text  "从 Centre 展开的圆形。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Shatter {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Shatter
+    src   "Count shards appearing one by one, the ones near Centre first."
+    text  "Count 个碎片逐个出现，靠近 Centre 的碎片先出现。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Texture
+    src   "The order a texture's channel gives: dark first, light last."
+    text  "纹理通道的顺序：从暗到亮。"
+    state machine
+}
+
+EDreamMaskTransitionPreset.Wipe {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#EDreamMaskTransitionPreset:Wipe
+    src   "A straight edge sweeping across, from the left (turned by Angle)."
+    text  "一条直线从左侧扫过（旋转角度为 Angle）。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Transition {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:bEnabled
+    src   "Transition"
+    // from the engine's zh-Hans
+    text  "过渡"
+    state draft
+}

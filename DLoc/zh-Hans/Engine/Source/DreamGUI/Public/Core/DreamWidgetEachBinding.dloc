@@ -1,0 +1,359 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetEachBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding
+    src   "Dream Widget Each Binding"
+    text  "Dream控件Each绑定"
+    state machine
+}
+
+DreamWidgetEachBinding:bInPanel {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:bInPanel
+    src   "In Panel"
+    text  "在面板内"
+    state machine
+}
+
+DreamWidgetEachBinding:bSourceIsFunction {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:bSourceIsFunction
+    src   "Source Is Function"
+    text  "源为函数"
+    state machine
+}
+
+DreamWidgetEachBinding:ContentWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:ContentWidgetName
+    src   "Content Widget Name"
+    text  "内容控件名称"
+    state machine
+}
+
+DreamWidgetEachBinding:EntryBindings {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:EntryBindings
+    src   "Entry Bindings"
+    text  "绑定项"
+    state machine
+}
+
+DreamWidgetEachBinding:EntryRoutes {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:EntryRoutes
+    src   "Entry Routes"
+    text  "绑定路径"
+    state machine
+}
+
+DreamWidgetEachBinding:HostWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:HostWidgetName
+    src   "Host Widget Name"
+    text  "宿主控件名称"
+    state machine
+}
+
+DreamWidgetEachBinding:LoopVariable {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:LoopVariable
+    src   "Loop Variable"
+    text  "循环变量"
+    state machine
+}
+
+DreamWidgetEachBinding:SourceColumn {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceColumn
+    src   "Source Column"
+    text  "源列"
+    state machine
+}
+
+DreamWidgetEachBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceLine
+    src   "Source Line"
+    // from the engine's zh-Hans
+    text  "源线"
+    state draft
+}
+
+DreamWidgetEachBinding:SourceName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceName
+    src   "Source Name"
+    // from the engine's zh-Hans
+    text  "源名称"
+    state draft
+}
+
+DreamWidgetEachBinding:SourcePath {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourcePath
+    src   "Source Path"
+    // from the engine's zh-Hans
+    text  "源码路径"
+    state draft
+}
+
+DreamWidgetEachBinding:TemplateWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:TemplateWidgetName
+    src   "Template Widget Name"
+    text  "模板控件名称"
+    state machine
+}
+
+DreamWidgetEntryBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding
+    src   "Dream Widget Entry Binding"
+    text  "Dream控件条目绑定"
+    state machine
+}
+
+DreamWidgetEntryBinding:BehaviourIndex {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:BehaviourIndex
+    src   "Behaviour Index"
+    text  "行为索引"
+    state machine
+}
+
+DreamWidgetEntryBinding:ItemMember {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:ItemMember
+    src   "Item Member"
+    text  "项成员"
+    state machine
+}
+
+DreamWidgetEntryBinding:PropertyName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:PropertyName
+    src   "Property Name"
+    // from the engine's zh-Hans
+    text  "属性名称"
+    state draft
+}
+
+DreamWidgetEntryBinding:SetterName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:SetterName
+    src   "Setter Name"
+    text  "设置器名称"
+    state machine
+}
+
+DreamWidgetEntryBinding:Target {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamWidgetEntryBinding:TargetWidgetDisplayName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:TargetWidgetDisplayName
+    src   "Target Widget Display Name"
+    text  "目标控件显示名称"
+    state machine
+}
+
+DreamWidgetEntryRoute {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute
+    src   "Dream Widget Entry Route"
+    text  "Dream控件条目路由"
+    state machine
+}
+
+DreamWidgetEntryRoute:bCallWithoutArguments {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:bCallWithoutArguments
+    src   "Call Without Arguments"
+    text  "无参数调用"
+    state machine
+}
+
+DreamWidgetEntryRoute:BehaviourIndex {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:BehaviourIndex
+    src   "Behaviour Index"
+    text  "行为索引"
+    state machine
+}
+
+DreamWidgetEntryRoute:EventName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:EventName
+    src   "Event Name"
+    // from the engine's zh-Hans
+    text  "事件名称"
+    state draft
+}
+
+DreamWidgetEntryRoute:ItemFunction {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:ItemFunction
+    src   "Item Function"
+    text  "项函数"
+    state machine
+}
+
+DreamWidgetEntryRoute:SourceColumn {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:SourceColumn
+    src   "Source Column"
+    text  "源列"
+    state machine
+}
+
+DreamWidgetEntryRoute:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:SourceLine
+    src   "Source Line"
+    // from the engine's zh-Hans
+    text  "源线"
+    state draft
+}
+
+DreamWidgetEntryRoute:Target {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamWidgetEntryRoute:TargetWidgetDisplayName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:TargetWidgetDisplayName
+    src   "Target Widget Display Name"
+    text  "目标控件显示名称"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetEachBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding
+    src   "One `each Item in Source { Template }` block, compiled: which widget hosts the list view, which\nwidget is the cell template, where the items come from, and what each cell writes from its item.\n\nThe runtime resolves it at Initialize the way property bindings are resolved: host and template\nthrough the class properties their ids became, the source through reflection -- a nullary\nUFUNCTION returning TArray<UObject*>, or a TArray<UObject*> variable, whose FieldNotify\nbroadcast (when it has one) is what refreshes the list without anyone calling refresh."
+}
+
+DreamWidgetEachBinding:bInPanel {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:bInPanel
+    src   "A `for` rather than an `each`: one copy of the template per item, made inside the host panel itself -- no list\nview, no virtualization, no synthesized content (ContentWidgetName stays None). The template stays in the tree\ncollapsed, and the copies take its place among the host's children, in item order. Run by the core\n(UDreamUIForAdapter); an `each` is run by the list views' module through IDreamUIEachBindingHandler."
+    text  "是 `for` 而不是 `each`：每个项一份模板副本，直接在宿主面板内部生成——没有列表\n视图，没有虚拟化，没有合成内容（ContentWidgetName 保持为 None）。模板在树中\n保持折叠，副本按项顺序在宿主的子级中占据它的位置。由核心\n（UDreamUIForAdapter）运行；`each` 则由列表视图控件的模块通过绑定处理器 IDreamUIEachBindingHandler 运行。"
+    state machine
+}
+
+DreamWidgetEachBinding:bSourceIsFunction {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:bSourceIsFunction
+    src   "Describes SourceName -- the last segment when there is a SourcePath."
+    text  "描述 SourceName——存在 SourcePath 时为最后一段。"
+    state machine
+}
+
+DreamWidgetEachBinding:ContentWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:ContentWidgetName
+    src   "The builder-synthesized content widget under the host, by variable name. Carried here because\nthe view's own Content pointer is authored against the ARCHETYPE tree: copied into an\ninstance it still aims at the archetype, and every cell the view cloned landed in the\ninvisible template tree. Resolve re-aims it per instance, exactly as it does the template."
+    text  "构建器在宿主下合成的内容控件，按变量名。之所以放在这里，是因为\n视图自身的 Content 指针是针对 ARCHETYPE 树创作的：复制到\n实例中后它仍指向原型，视图克隆的每个单元格都落在\n不可见的模板树里。Resolve 会像处理模板那样，按实例重新指向它。"
+    state machine
+}
+
+DreamWidgetEachBinding:EntryRoutes {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:EntryRoutes
+    src   "The body's `-> Item.Func` lines."
+    text  "主体中的`-> Item.Func`行。"
+    state machine
+}
+
+DreamWidgetEachBinding:HostWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:HostWidgetName
+    src   "The widget carrying the UUIRecyclableScrollView-family behaviour, by variable name."
+    text  "承载UUIRecyclableScrollView系列行为的控件，按变量名指定。"
+    state machine
+}
+
+DreamWidgetEachBinding:LoopVariable {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:LoopVariable
+    src   "The loop variable's spelling, kept for messages."
+    text  "循环变量的拼写，保留用于消息。"
+    state machine
+}
+
+DreamWidgetEachBinding:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceLine
+    src   "Where the `each` header was written, 1-based, 0 for a block that came from anywhere but a\n.dui -- the same pair FDreamWidgetPropertyBinding and FDreamWidgetEventBinding carry, spelled\nthe same on purpose so one AuthoredLocation helper reads all three.\n\nDUI6006 and DUI6007 are the readers. Both ask whether the SOURCE exists on the class being\ncompiled, which is a question that only has an answer after the class is built and therefore\nlong after the AST that knew this line is gone."
+    text  "`each` 头部的书写位置，从 1 开始计数，0 表示该块来自 .dui 以外的任何位置——\n与 FDreamWidgetPropertyBinding（控件属性绑定）和 FDreamWidgetEventBinding（控件事件绑定）携带的是同一对字段，故意\n拼写相同，以便一个 AuthoredLocation 辅助函数读取这三者。\n\nDUI6006 和 DUI6007 是读取方。二者都询问正在编译的类上是否存在 SOURCE，这个问题\n只有在类构建完成之后才有答案，因此\n远在知晓此行的 AST 已被丢弃之后。"
+    state machine
+}
+
+DreamWidgetEachBinding:SourceName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceName
+    src   "Function or variable on the user widget supplying TArray<UObject*>. With SourcePath, its LAST segment."
+}
+
+DreamWidgetEachBinding:SourcePath {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourcePath
+    src   "Set when the source is a member path (`in Inventory.Items`, `in Inventory.Filtered()`): every segment, the last\nequal to SourceName. Empty for the one-segment source every loop had before, which reads SourceName on the user\nwidget exactly as it always did. Items are read through DreamUIBindingPath (ResolveOwner, then ReadObjectArray), and\nthe owning widget refreshes the adapter when anything along the path changes (an FDreamUIBindingObserver client)."
+    text  "当源是成员路径（`in Inventory.Items`、`in Inventory.Filtered()`）时设置：包含每一个段，最后一段\n等于 SourceName。对于以前每个循环都有的单段源则为空，这种源会像以往一样在用户\n控件上读取 SourceName。项通过绑定路径 DreamUIBindingPath 读取（先 ResolveOwner，再 ReadObjectArray），并且\n当路径上任何内容变化时，所属控件会刷新适配器（一个 FDreamUIBindingObserver 客户端）。"
+    state machine
+}
+
+DreamWidgetEachBinding:TemplateWidgetName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:TemplateWidgetName
+    src   "The template root inside the host, by variable name."
+    text  "宿主内部的模板根，按变量名指定。"
+    state machine
+}
+
+DreamWidgetEntryBinding {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding
+    src   "One `Prop <- Item.Member` line inside an `each` body: what to write, on which widget of the CELL,\nfrom which member of the item. Resolved per cell at SetCell time -- the cell's widgets are clones\nof the template, addressed by the display names the clone carries across."
+    text  "`each`主体中的一行`Prop <- Item.Member`：要写入什么、写入CELL的哪个控件、\n来自项的哪个成员。在SetCell时按单元格解析——单元格的控件是模板的克隆，\n通过克隆保留的显示名称寻址。"
+    state machine
+}
+
+DreamWidgetEntryBinding:ItemMember {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:ItemMember
+    src   "The member read off the item object."
+    text  "从项对象上读取的成员。"
+    state machine
+}
+
+DreamWidgetEntryBinding:SetterName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:SetterName
+    src   "Resolved by the builder through the same setter rule every binding uses."
+    text  "由构建器按照每个绑定使用的同一setter规则解析。"
+    state machine
+}
+
+DreamWidgetEntryBinding:TargetWidgetDisplayName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryBinding:TargetWidgetDisplayName
+    src   "The template-subtree widget the value lands on, by display name -- clones keep it."
+    text  "值落到模板子树中的控件，按显示名称指定——克隆会保留它。"
+    state machine
+}
+
+DreamWidgetEntryRoute {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute
+    src   "One `Event -> Item.Func` line inside a loop body: the event, on which widget of the copy (or cell), routed to a\nfunction of THAT copy's item. Bound per copy by the adapter -- a `for` when it makes or re-aims a copy, an `each` at\nSetCell, unbinding the previous item first when a cell is recycled -- never on the class, which has no item.\n\nThe function takes nothing, or exactly what the event sends (bCallWithoutArguments says which the author wrote:\n`-> Item.Use()` or `-> Item.Use`). Checked by the compiler when the source's element class is known\n(LoopItemRouteMismatch); against an array of UObject only at run time, where a function that fits neither way is\nskipped."
+    text  "循环体中的一行`Event -> Item.Func`：事件，位于副本（或单元格）的哪个控件上，路由到\n该副本项的某个函数。由适配器按副本绑定——当它创建或重新对准副本时为`for`，在\nSetCell时为`each`，回收单元格时先解除与上一项的绑定——从不在类上绑定，因为类没有项。\n\n该函数不接收参数，或恰好接收事件发送的内容（bCallWithoutArguments表示作者写的是哪种：\n`-> Item.Use()`或`-> Item.Use`）。当源的元素类已知时由编译器检查\n（LoopItemRouteMismatch）；对于UObject数组仅在运行时检查，此时两种方式都不匹配的函数会被\n跳过。"
+    state machine
+}
+
+DreamWidgetEntryRoute:bCallWithoutArguments {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:bCallWithoutArguments
+    src   "`-> Item.Func()`: call with no arguments. Without the parentheses the event's own arguments are forwarded."
+    text  "`-> Item.Func()`：调用时不带参数。不加括号时，会转发事件自身的参数。"
+    state machine
+}
+
+DreamWidgetEntryRoute:EventName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:EventName
+    src   "A BlueprintAssignable multicast delegate, an FDreamUIEventDelegate property, or a single-cast delegate -- the three\nkinds a route names. A single-cast one is SET to the item's function (its one slot), the others are appended to."
+    text  "蓝图可赋值（BlueprintAssignable）多播委托、FDreamUIEventDelegate 属性，或单播委托——路由可指定的三\n种类型。单播委托会被 SET 为条目的函数（它唯一的槽位），其余类型则追加。"
+    state machine
+}
+
+DreamWidgetEntryRoute:ItemFunction {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:ItemFunction
+    src   "The function called on the item."
+    text  "在条目上调用的函数。"
+    state machine
+}
+
+DreamWidgetEntryRoute:SourceLine {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:SourceLine
+    src   "Where the route was written, for LoopItemRouteMismatch. See FDreamWidgetEachBinding::SourceLine."
+    text  "路由的书写位置，用于 LoopItemRouteMismatch。参见 FDreamWidgetEachBinding::SourceLine（控件 each 绑定）。"
+    state machine
+}
+
+DreamWidgetEntryRoute:TargetWidgetDisplayName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEntryRoute:TargetWidgetDisplayName
+    src   "The template-subtree widget whose event it is, by display name -- clones keep it."
+    text  "触发事件的模板子控件，以显示名称表示，克隆会保留此信息。"
+    state machine
+}

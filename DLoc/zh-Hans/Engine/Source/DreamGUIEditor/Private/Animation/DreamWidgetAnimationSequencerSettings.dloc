@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetAnimationSequencerSettings {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationSequencerSettings.h#DreamWidgetAnimationSequencerSettings
+    src   "Dream Widget Animation Sequencer Settings"
+    text  "Dream控件动画Sequencer设置"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetAnimationSequencerSettings {
+    at    Source/DreamGUIEditor/Private/Animation/DreamWidgetAnimationSequencerSettings.h#DreamWidgetAnimationSequencerSettings
+    src   "Just create this to set default values.\nThese default values are copy from \"Engine/Config/BaseEditorPerProjectUserSettings.ini\"-> EmbeddedActorSequenceEditor"
+    text  "仅创建此对象以设置默认值。\n这些默认值从 \"Engine/Config/BaseEditorPerProjectUserSettings.ini\"-> EmbeddedActorSequenceEditor 复制而来。"
+    state machine
+}

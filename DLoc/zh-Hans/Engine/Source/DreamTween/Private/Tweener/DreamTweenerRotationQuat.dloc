@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerRotationQuat {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerRotationQuat.h#DreamTweenerRotationQuat
+    src   "Dream Tweener Rotation Quat"
+    text  "DreamTweener 旋转四元数"
+    state machine
+}

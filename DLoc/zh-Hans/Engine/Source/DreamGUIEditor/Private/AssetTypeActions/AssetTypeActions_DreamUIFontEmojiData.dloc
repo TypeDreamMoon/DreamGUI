@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamUIFontEmojiData
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamUIFontEmojiData.cpp
+    src   "DreamUI Font Emoji Data"
+    text  "DreamUI 字体表情数据"
+    state machine
+}

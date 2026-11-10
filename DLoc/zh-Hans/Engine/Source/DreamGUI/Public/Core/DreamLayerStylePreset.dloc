@@ -1,0 +1,164 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayerStyleBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending
+    src   "Dream Layer Style Blending"
+    text  "Dream图层样式混合"
+    state machine
+}
+
+DreamLayerStyleBlending:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamLayerStyleBlending:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamLayerStylePreset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset
+    src   "Dream Layer Style Preset"
+    text  "Dream图层样式预设"
+    state machine
+}
+
+DreamLayerStylePreset:bIncludeBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:bIncludeBlending
+    src   "Include Layer Blending Options"
+    text  "包含图层混合选项"
+    state machine
+}
+
+DreamLayerStylePreset:Blending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:Blending
+    src   "Blending"
+    // from the engine's zh-Hans
+    text  "正在混合"
+    state draft
+}
+
+DreamLayerStylePreset:GetBlending:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:GetBlending:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStylePreset:GetStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStylePreset:IncludesBlending:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:IncludesBlending:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStylePreset:SetBlending:bInInclude {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetBlending:bInInclude
+    src   "In Include"
+    // from the engine's zh-Hans
+    text  "In Include"
+    state draft
+}
+
+DreamLayerStylePreset:SetBlending:InBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetBlending:InBlending
+    src   "In Blending"
+    text  "输入混合"
+    state machine
+}
+
+DreamLayerStylePreset:SetStyle:InStyle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamLayerStylePreset:Style {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLayerStyleBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending
+    src   "A layer's blend mode and opacity, as an image editor's style keeps them when it includes the layer's blending options."
+    text  "图层的混合模式和不透明度，与图像编辑器的样式在包含图层混合选项时所保留的一致。"
+    state machine
+}
+
+DreamLayerStyleBlending:BlendMode {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending:BlendMode
+    src   "The element's blend mode (its visual's BlendMode)."
+    text  "元素的混合模式（其视觉的BlendMode）。"
+    state machine
+}
+
+DreamLayerStyleBlending:Opacity {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending:Opacity
+    src   "The widget's opacity (RenderOpacity)."
+    text  "控件的不透明度（RenderOpacity）。"
+    state machine
+}
+
+DreamLayerStylePreset {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset
+    src   "A layer style kept as an asset: an image editor's styles panel, for a project's shared looks -- a button's bevel, a title's\nglow. A layer style that names it as its preset draws it, and follows every edit of it (OnStyleChanged).\n\nIt can keep the layer's blending too (bIncludeBlending): applying the preset to a widget -- from the designer's preset\nlibrary -- then also sets the widget's blend mode and opacity, once. A layer style following the preset only ever draws\nits effects."
+    text  "作为资产保存的图层样式：相当于图像编辑器的样式面板，用于项目的共享外观——按钮的斜面、标题的\n发光。以它为预设的图层样式会绘制它，并跟随对它的每一次编辑（OnStyleChanged）。\n\n它也可以保留图层的混合（bIncludeBlending）：从设计器的预设\n库将预设应用到控件时，还会一并设置该控件的混合模式和不透明度，仅此一次。跟随该预设的图层样式只绘制\n其效果。"
+    state machine
+}
+
+DreamLayerStylePreset:bIncludeBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:bIncludeBlending
+    src   "Whether applying the preset also sets the widget's blend mode and opacity (Blending)."
+    text  "应用预设时是否也设置控件的混合模式和不透明度（Blending）。"
+    state machine
+}
+
+DreamLayerStylePreset:SetBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetBlending
+    src   "Keep the layer's blending with the style, or stop keeping it."
+    text  "保留图层随样式保存的混合，或停止保留。"
+    state machine
+}
+
+DreamLayerStylePreset:SetStyle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetStyle
+    src   "Replace the style, and tell every layer style drawing it."
+    text  "替换样式，并通知每个绘制它的图层样式。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Blending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStyleBlending:BlendMode
+    src   "Blending"
+    // from the engine's zh-Hans
+    text  "正在混合"
+    state draft
+}

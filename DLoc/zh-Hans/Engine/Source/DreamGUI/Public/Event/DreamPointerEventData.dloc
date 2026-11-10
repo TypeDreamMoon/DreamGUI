@@ -1,0 +1,738 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerEventData {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData
+    src   "Dream Pointer Event Data"
+    text  "Dream Pointer Event Data"
+    state machine
+}
+
+DreamPointerEventData:bIsDragging {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:bIsDragging
+    src   "Is Dragging"
+    // from the engine's zh-Hans
+    text  "Is Dragging"
+    state draft
+}
+
+DreamPointerEventData:ClickCount {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ClickCount
+    src   "Click Count"
+    text  "点击次数"
+    state machine
+}
+
+DreamPointerEventData:ClickTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ClickTime
+    src   "Click Time"
+    text  "点击时间"
+    state machine
+}
+
+DreamPointerEventData:DragOperation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:DragOperation
+    src   "Drag Operation"
+    // from the engine's zh-Hans
+    text  "拖动操作"
+    state draft
+}
+
+DreamPointerEventData:DragWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:DragWidget
+    src   "Drag Widget"
+    text  "拖动控件"
+    state machine
+}
+
+DreamPointerEventData:EnterWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:EnterWidget
+    src   "Enter Widget"
+    text  "进入控件"
+    state machine
+}
+
+DreamPointerEventData:EnterWidgetStack {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:EnterWidgetStack
+    src   "Enter Widget Stack"
+    text  "进入控件堆栈"
+    state machine
+}
+
+DreamPointerEventData:FaceIndex {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:FaceIndex
+    src   "Face Index"
+    // from the engine's zh-Hans
+    text  "面索引"
+    state draft
+}
+
+DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetDragRayDirection:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetDragRayOrigin:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetWorldPointInPlane:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:GetWorldPointSpherical:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointSpherical:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:HitWidgetIgnoringEnabled {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:HitWidgetIgnoringEnabled
+    src   "Hit Widget Ignoring Enabled"
+    text  "忽略启用状态的命中控件"
+    state machine
+}
+
+DreamPointerEventData:HoverComponentArray {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:HoverComponentArray
+    src   "Hover Component Array"
+    text  "悬停组件数组"
+    state machine
+}
+
+DreamPointerEventData:InputType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:InputType
+    src   "Input Type"
+    // from the engine's zh-Hans
+    text  "输入类型"
+    state draft
+}
+
+DreamPointerEventData:IsPointerOverUI:ReturnValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:IsPointerOverUI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEventData:LastClickMouseButtonType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickMouseButtonType
+    src   "Last Click Mouse Button Type"
+    text  "上次点击鼠标按钮类型"
+    state machine
+}
+
+DreamPointerEventData:LastClickPressPointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickPressPointerPosition
+    src   "Last Click Press Pointer Position"
+    text  "上次点击按下指针位置"
+    state machine
+}
+
+DreamPointerEventData:LastClickPressWorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickPressWorldPoint
+    src   "Last Click Press World Point"
+    text  "上次点击按下世界坐标"
+    state machine
+}
+
+DreamPointerEventData:LastClickWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickWidget
+    src   "Last Click Widget"
+    text  "上次点击控件"
+    state machine
+}
+
+DreamPointerEventData:MouseButtonType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:MouseButtonType
+    src   "Mouse Button Type"
+    text  "鼠标按钮类型"
+    state machine
+}
+
+DreamPointerEventData:PointerID {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PointerID
+    src   "Pointer ID"
+    text  "指针 ID"
+    state machine
+}
+
+DreamPointerEventData:PointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PointerPosition
+    src   "Pointer Position"
+    text  "指针位置"
+    state machine
+}
+
+DreamPointerEventData:PressDistance {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressDistance
+    src   "Press Distance"
+    text  "按下距离"
+    state machine
+}
+
+DreamPointerEventData:PressPointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressPointerPosition
+    src   "Press Pointer Position"
+    text  "按下指针位置"
+    state machine
+}
+
+DreamPointerEventData:PressRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRaycaster
+    src   "Press Raycaster"
+    text  "按下射线投射器"
+    state machine
+}
+
+DreamPointerEventData:PressRayDirection {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRayDirection
+    src   "Press Ray Direction"
+    text  "按下射线方向"
+    state machine
+}
+
+DreamPointerEventData:PressRayOrigin {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRayOrigin
+    src   "Press Ray Origin"
+    text  "按下射线原点"
+    state machine
+}
+
+DreamPointerEventData:PressTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressTime
+    src   "Press Time"
+    text  "按下时间"
+    state machine
+}
+
+DreamPointerEventData:PressWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWidget
+    src   "Press Widget"
+    text  "按下控件"
+    state machine
+}
+
+DreamPointerEventData:PressWorldNormal {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldNormal
+    src   "Press World Normal"
+    text  "按下世界法线"
+    state machine
+}
+
+DreamPointerEventData:PressWorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldPoint
+    src   "Press World Point"
+    text  "按下世界坐标"
+    state machine
+}
+
+DreamPointerEventData:PressWorldToLocalTransform {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldToLocalTransform
+    src   "Press World to Local Transform"
+    text  "按下世界坐标到本地坐标变换"
+    state machine
+}
+
+DreamPointerEventData:Raycaster {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:Raycaster
+    src   "Raycaster"
+    text  "射线检测器"
+    state machine
+}
+
+DreamPointerEventData:ReleaseTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ReleaseTime
+    src   "Release Time"
+    // from the engine's zh-Hans
+    text  "释放时间"
+    state draft
+}
+
+DreamPointerEventData:ScrollAxisValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ScrollAxisValue
+    src   "Scroll Axis Value"
+    text  "滚动轴值"
+    state machine
+}
+
+DreamPointerEventData:SetHighlightedWidgetForNavigation:InWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:SetHighlightedWidgetForNavigation:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamPointerEventData:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamPointerEventData:WorldNormal {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:WorldNormal
+    src   "World Normal"
+    // from the engine's zh-Hans
+    text  "场景法线"
+    state draft
+}
+
+DreamPointerEventData:WorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:WorldPoint
+    src   "World Point"
+    // from the engine's zh-Hans
+    text  "World Point"
+    state draft
+}
+
+DreamUIHitResult {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult
+    src   "Dream UIHit Result"
+    text  "Dream UI命中结果"
+    state machine
+}
+
+DreamUIHitResult:Distance {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:Distance
+    src   "Distance"
+    // from the engine's zh-Hans
+    text  "距离"
+    state draft
+}
+
+DreamUIHitResult:FaceIndex {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:FaceIndex
+    src   "Face Index"
+    // from the engine's zh-Hans
+    text  "面索引"
+    state draft
+}
+
+DreamUIHitResult:ImpactPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:ImpactPoint
+    src   "Impact Point"
+    // from the engine's zh-Hans
+    text  "影响点"
+    state draft
+}
+
+DreamUIHitResult:Location {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:Location
+    src   "Location"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIHitResult:Normal {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:Normal
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+DreamUIHitResult:Time {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:Time
+    src   "Time"
+    // from the engine's zh-Hans
+    text  "时间"
+    state draft
+}
+
+DreamUIHitResult:TraceEnd {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:TraceEnd
+    src   "Trace End"
+    // from the engine's zh-Hans
+    text  "检测结束"
+    state draft
+}
+
+DreamUIHitResult:TraceStart {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamUIHitResult:TraceStart
+    src   "Trace Start"
+    // from the engine's zh-Hans
+    text  "检测开始"
+    state draft
+}
+
+EDreamUINavigationDirection.Down {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Down
+    src   "Down"
+    // from the engine's zh-Hans
+    text  "下移"
+    state draft
+}
+
+EDreamUINavigationDirection.EDreamUINavigationDirection_MAX {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:EDreamUINavigationDirection_MAX
+    src   "EDream UINavigation Direction MAX"
+    text  "EDream UI导航方向 MAX"
+    state machine
+}
+
+EDreamUINavigationDirection.Left {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamUINavigationDirection.Next {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Next
+    src   "Next"
+    // from the engine's zh-Hans
+    text  "Next"
+    state draft
+}
+
+EDreamUINavigationDirection.None {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUINavigationDirection.Prev {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Prev
+    src   "Prev"
+    // from the engine's zh-Hans
+    text  "上个"
+    state draft
+}
+
+EDreamUINavigationDirection.Right {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamUINavigationDirection.Up {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUINavigationDirection:Up
+    src   "Up"
+    // from the engine's zh-Hans
+    text  "上移"
+    state draft
+}
+
+EDreamUIPointerInputType.EDreamUIPointerInputType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUIPointerInputType:EDreamUIPointerInputType_MAX
+    src   "EDream UIPointer Input Type MAX"
+    text  "EDream UI指针输入类型 MAX"
+    state machine
+}
+
+EDreamUIPointerInputType.Navigation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUIPointerInputType:Navigation
+    src   "Navigation"
+    // from the engine's zh-Hans
+    text  "导航"
+    state draft
+}
+
+EDreamUIPointerInputType.Pointer {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#EDreamUIPointerInputType:Pointer
+    src   "Pointer"
+    text  "指针"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPointerEventData:bIsDragging {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:bIsDragging
+    src   "is dragging?"
+    text  "是否正在拖动？"
+    state machine
+}
+
+DreamPointerEventData:ClickCount {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ClickCount
+    src   "How many clicks this pointer has landed on the same widget in an unbroken run: 1 for a single\nclick, 2 for the second of a double, and so on. Reset to 1 by a press on a different widget from\nthe last click, with a different button, too late (see UDreamEventSystem::DoubleClickTime), or\nfarther from where the last click was pressed than the press raycaster's drag threshold.\n\nCounted at the PRESS, and the click that press ends in carries the same number, so a down, a\ndouble click and a click all read one answer. Every even press is dispatched as a double click\ninstead of a down, which is how a triple click reads as down, double, down and a quadruple as two\ndoubles -- the same shape as the desktop."
+    text  "此指针在同一控件上不中断地连续点击的次数：单击为1，\n双击的第二次为2，依此类推。以下情况会将其重置为1：按下的控件与上次点击不同、\n按键与上次点击不同、间隔太久（参见 UDreamEventSystem::DoubleClickTime），或\n按下位置与上次点击按下位置的距离超过按下射线检测器的拖动阈值。\n\n在按下时计数，该次按下最终形成的点击携带相同的数字，因此按下、\n双击和单击读到的都是同一个答案。每次偶数次按下都会作为双击派发，\n而不是按下，因此三击读作按下、双击、按下，四击读作两次双击\n——与桌面上的行为相同。"
+    state machine
+}
+
+DreamPointerEventData:ClickTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ClickTime
+    src   "When this pointer's last click landed -- the release that completed it -- in seconds on the\npointer clock (UDreamEventSystem::GetPointerClockSeconds: the world's real time, which a pause\ndoes not stop and time dilation does not stretch). The next press measures the double-click\nwindow from it."
+    text  "此指针上次点击落下的时刻（完成该次点击的释放）——以秒为单位，基于\n指针时钟（UDreamEventSystem::GetPointerClockSeconds：世界的真实时间，暂停\n不会使其停止，时间膨胀也不会将其拉伸）。下一次按下以此为起点衡量双击\n时间窗口。"
+    state machine
+}
+
+DreamPointerEventData:DragOperation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:DragOperation
+    src   "What this drag MEANS -- payload, tag, drag visual. Set by the drag's source when it begins\n(UDreamUIDragSource does), read by drop targets, cleared wherever DragWidget is: it lives\nexactly as long as the drag. Null for a drag nothing gave meaning to (a scroll, a slider)."
+    text  "此拖动意味着什么——载荷、标签、拖动视觉。由拖动源在拖动开始时设置\n（UDreamUIDragSource 会这样做），由放置目标读取，在清除 DragWidget 控件的地方一并清除：\n它的生命周期与拖动完全一致。未赋予任何含义的拖动（滚动、滑块）为 null。"
+    state machine
+}
+
+DreamPointerEventData:DragWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:DragWidget
+    src   "current dragging component"
+    text  "当前正在拖动的控件"
+    state machine
+}
+
+DreamPointerEventData:EnterWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:EnterWidget
+    src   "entered component"
+    text  "已进入的控件"
+    state machine
+}
+
+DreamPointerEventData:EnterWidgetStack {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:EnterWidgetStack
+    src   "a stack list for store entered component. the latest enter one stay at num-1, first stay at 0."
+    text  "用于存储已进入控件的栈列表。最新进入的位于 num-1，最早进入的位于 0。"
+    state machine
+}
+
+DreamPointerEventData:FaceIndex {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:FaceIndex
+    src   "current hit object's triangle face index.\nFor UI element, only valid when target's RaycastType is Geometry.\nFor world space static mesh, only valid when DreamWorldSpaceRaycaster->bRequireFaceIndex is true."
+    text  "当前命中对象的三角形面索引。\n对于 UI 元素，仅当目标的 RaycastType 为 Geometry 时有效。\n对于世界空间静态网格体，仅当 DreamWorldSpaceRaycaster->bRequireFaceIndex 为 true 时有效。"
+    state machine
+}
+
+DreamPointerEventData:GetLocalPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane
+    src   "Use a line-plane intersection to get world point, and convert to pressComponent's local space. The plane is pressComponent's x-axis plane."
+    text  "通过线面相交计算世界坐标点，并转换到 pressComponent 组件的局部空间。该平面为 pressComponent 组件的 x 轴平面。"
+    state machine
+}
+
+DreamPointerEventData:GetWorldPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane
+    src   "Use a line-plane intersection to get world point. The plane is pressComponent's x-axis plane."
+    text  "通过线面相交计算世界坐标点。该平面为 pressComponent 组件的 x 轴平面。"
+    state machine
+}
+
+DreamPointerEventData:GetWorldPointSpherical {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointSpherical
+    src   "Use (ray direction) * (press line distance) + (ray origin) to calculated world point, so the result is a sphere with (ray origin) as center point."
+    text  "使用 (射线方向) * (按压线距离) + (射线原点) 计算世界坐标点，因此结果是以 (射线原点) 为球心的球面。"
+    state machine
+}
+
+DreamPointerEventData:HitWidgetIgnoringEnabled {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:HitWidgetIgnoringEnabled
+    src   "The widget drawn on top under the pointer, enabled or not, as of the pointer's latest trace; null over nothing.\n\nIt is EnterWidget, or a widget inside EnterWidget when the pointer is over a disabled one: a disabled widget and\neverything in it are cut out of the path under the pointer, which then ends at the nearest widget above them\nthat takes input (FHittestGrid::GetBubblePath) -- EnterWidget, which is hovered, pressed and clicked. Slate still\nlooks for a tooltip under the cursor including disabled widgets (FSlateUser::UpdateTooltip), and so does\nUDreamUITooltipSubsystem, from here."
+    text  "指针下方最上层绘制的控件，无论是否启用，以指针最近一次追踪为准；指针下无内容时为 null。\n\n它是 EnterWidget，或当指针位于禁用控件上时，是 EnterWidget 内部的某个控件：禁用控件及其\n内部所有内容都会从指针下方的路径中剔除，路径随后终止于它们上方最近一个\n接收输入的控件（FHittestGrid::GetBubblePath）——即 EnterWidget，它被悬停、按下和点击。Slate 仍\n会在光标下查找工具提示，其中包含禁用控件（FSlateUser::UpdateTooltip），UDreamUITooltipSubsystem\n也是如此。"
+    state machine
+}
+
+DreamPointerEventData:HoverComponentArray {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:HoverComponentArray
+    src   "a collection that current pointer hovering objects. the top most one stay at index 0 in array."
+    text  "当前指针悬停对象的集合。最上层的对象位于数组索引 0 处。"
+    state machine
+}
+
+DreamPointerEventData:InputType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:InputType
+    src   "pointer or navigation input?\nnote some data is not valid when in navigation input."
+    text  "指针输入还是导航输入？\n注意，在导航输入下某些数据无效。"
+    state machine
+}
+
+DreamPointerEventData:LastClickMouseButtonType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickMouseButtonType
+    src   "Which button the previous click was made with. A run is one button's, as a desktop double click\nis: a left click and a quick right press are two single presses, not a double click -- which\nmatters now that the second press of a double click is delivered as the double click and not as\na down, since a right press read as a left double click would never reach anything as a press."
+    text  "上一次点击是用哪个按钮发出的。一次连续点击属于同一个按钮，正如桌面双击\n那样：一次左键点击加一次快速右键按下是两次单次按下，而不是双击——这一点\n现在很重要，因为双击的第二次按下会作为双击传递而不是作为一次按下，否则\n被读作左键双击的右键按下将永远无法作为按下事件到达任何对象。"
+    state machine
+}
+
+DreamPointerEventData:LastClickPressPointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickPressPointerPosition
+    src   "Where the previous click was PRESSED, in the pointer's screen position (its PressPointerPosition).\nA second press only continues the run if it lands within the press raycaster's drag threshold of\nthis -- see UDreamBaseRaycaster::IsWithinDoubleClickDistance."
+    text  "上一次点击按下的位置，以指针的屏幕位置表示（其 PressPointerPosition）。\n第二次按下只有落在此位置附近的按压射线检测器拖拽阈值之内，才会延续该次连续点击\n——参见 UDreamBaseRaycaster::IsWithinDoubleClickDistance。"
+    state machine
+}
+
+DreamPointerEventData:LastClickPressWorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickPressWorldPoint
+    src   "The same press in the world (its PressWorldPoint), for a pointer whose screen position never moves."
+    text  "同一次按下在世界空间中的位置（其 PressWorldPoint），适用于屏幕位置从不移动的指针。"
+    state machine
+}
+
+DreamPointerEventData:LastClickWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:LastClickWidget
+    src   "What the previous click landed on. A click elsewhere starts the count over rather than continuing it."
+    text  "上一次点击所落到的对象。点击其他位置会重新开始计数，而不是继续计数。"
+    state machine
+}
+
+DreamPointerEventData:MouseButtonType {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:MouseButtonType
+    src   "mouse input type"
+    text  "鼠标输入类型"
+    state machine
+}
+
+DreamPointerEventData:PointerID {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PointerID
+    src   "id of the pointer (touch id)"
+    text  "指针 ID (触摸 ID)。"
+    state machine
+}
+
+DreamPointerEventData:PointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PointerPosition
+    src   "current pointer position (mouse position or touchpoint position in screen space. X&Y for mouse position)"
+    text  "当前指针位置 (鼠标位置或触摸点位置，屏幕坐标 X&Y)。"
+    state machine
+}
+
+DreamPointerEventData:PressDistance {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressDistance
+    src   "ray distance when press and hit something"
+    text  "按下时与物体表面的距离。"
+    state machine
+}
+
+DreamPointerEventData:PressPointerPosition {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressPointerPosition
+    src   "pointer position when press (mouse position or touchpoint position in screen space. X&Y for mouse position)"
+    text  "按下时的指针位置 (鼠标位置或触摸点位置，屏幕坐标 X&Y)。"
+    state machine
+}
+
+DreamPointerEventData:PressRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRaycaster
+    src   "raycaster when press"
+    text  "按下时的射线投射器。"
+    state machine
+}
+
+DreamPointerEventData:PressRayDirection {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRayDirection
+    src   "ray direction when press and hit something"
+    text  "按下时的射线方向。"
+    state machine
+}
+
+DreamPointerEventData:PressRayOrigin {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressRayOrigin
+    src   "ray origin when press and hit something"
+    text  "按下时的射线起点。"
+    state machine
+}
+
+DreamPointerEventData:PressTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressTime
+    src   "When the trigger last went down, on the pointer clock (see ClickTime). Long press and hold-to-drag\nmeasure the hold as the pointer clock's current time minus this, so compare it against that clock\n-- never against the game clock (GetTimeSeconds), which a pause stops while the UI keeps running."
+    text  "上次触发器按下时的时间，基于指针时钟（参见 ClickTime）。长按和按住拖拽\n将按住时长计算为指针时钟的当前时间减去此值，因此请与指针时钟比较\n——切勿与游戏时钟（GetTimeSeconds）比较，暂停会使其停止，而 UI 仍在运行。"
+    state machine
+}
+
+DreamPointerEventData:PressWidget {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWidget
+    src   "hit component when press"
+    text  "按下时命中的组件。"
+    state machine
+}
+
+DreamPointerEventData:PressWorldNormal {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldNormal
+    src   "world space normal direction when press and hit something"
+    text  "世界空间法线方向，按下时。"
+    state machine
+}
+
+DreamPointerEventData:PressWorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldPoint
+    src   "world space hit point when press and hit something"
+    text  "世界空间命中点，按下时。"
+    state machine
+}
+
+DreamPointerEventData:PressWorldToLocalTransform {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:PressWorldToLocalTransform
+    src   "world to press component's local transform when trigger press, useful to calculate local space point/normal/delta"
+    text  "按下时，从世界空间到被触发组件的局部变换，用于计算局部空间点/法线/偏移量。"
+    state machine
+}
+
+DreamPointerEventData:Raycaster {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:Raycaster
+    src   "current raycaster"
+    text  "当前光线投射器"
+    state machine
+}
+
+DreamPointerEventData:ReleaseTime {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ReleaseTime
+    src   "When the trigger last came up, on the pointer clock (see ClickTime). ReleaseTime - PressTime is\nhow long the press was held, which is what a swipe's duration limit is measured on."
+    text  "上次触发器抬起时的时间，基于指针时钟（参见 ClickTime）。ReleaseTime - PressTime\n即按住的时长，滑动操作的时长限制正是以它来衡量。"
+    state machine
+}
+
+DreamPointerEventData:ScrollAxisValue {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ScrollAxisValue
+    src   "scroll event. X for horizontal, Y for vertical. if use mouse input, X equals Y"
+    text  "滚动事件。X 表示水平方向，Y 表示垂直方向。如果使用鼠标输入，则 X 等于 Y。"
+    state machine
+}
+
+DreamPointerEventData:WorldNormal {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:WorldNormal
+    src   "current world space hit normal"
+    text  "当前世界空间法线"
+    state machine
+}
+
+DreamPointerEventData:WorldPoint {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:WorldPoint
+    src   "current world space hit point"
+    text  "当前世界空间位置"
+    state machine
+}

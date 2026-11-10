@@ -1,0 +1,80 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+WidgetBlueprint {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp
+    src   "DreamGUI Widget"
+    text  "DreamGUI 控件蓝图"
+    state machine
+}
+
+WidgetBlueprintToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp
+    src   "A DreamGUI widget Blueprint: a screen or a reusable control, laid out in the designer, with a graph of its own."
+    text  "DreamGUI 控件蓝图：一个屏幕或可重用的控件，在设计器中布局，并具有自己的图表。"
+    state machine
+}
+
+namespace DreamWidgetBlueprintFactory
+
+PickParentClass {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp
+    src   "Pick Parent Class for New DreamUI Widget Blueprint"
+    text  "选择父类，用于创建新的 DreamGUI 控件蓝图。"
+    state machine
+}
+
+PickRootLayout {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp
+    src   "Pick Root Layout for New DreamUI Widget Blueprint"
+    text  "选择根布局，用于创建新的 DreamGUI 控件蓝图。"
+    state machine
+}
+
+CannotCreate {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp
+    src   "Cannot create a DreamUI Widget Blueprint based on the class '{0}'."
+    text  "无法基于类 '{0}' 创建 DreamGUI 控件蓝图。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamWidgetBlueprintFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp#DreamWidgetBlueprintFactory
+    src   "Dream Widget Blueprint Factory"
+    text  "DreamGUI 控件蓝图工厂"
+    state machine
+}
+
+DreamWidgetBlueprintFactory:ParentClass {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp#DreamWidgetBlueprintFactory:ParentClass
+    src   "Parent Class"
+    // from the engine's zh-Hans
+    text  "父类"
+    state draft
+}
+
+DreamWidgetBlueprintFactory:RootLayoutClass {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp#DreamWidgetBlueprintFactory:RootLayoutClass
+    src   "Root Layout Class"
+    text  "根布局类"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetBlueprintFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp#DreamWidgetBlueprintFactory
+    src   "Creates a UDreamWidgetBlueprint from the content browser.\n\nTwo pickers, matching UMG's: the parent class (any UDreamUserWidget, so a native or Blueprint base\ncarrying logic and bindings can be derived from) and the root layout container the fresh hierarchy\nstarts with. The root widget itself is always plain -- what varies is the panel on it."
+    text  "从内容浏览器创建 UDreamWidgetBlueprint。\n\n两个选择器与 UMG 的相同：父类（可以是任意 UDreamUserWidget，因此可从携带逻辑和绑定的原生或蓝图基类\n派生）以及新层级结构\n起始所用的根布局容器。根控件本身始终是普通控件——变化的是其上的面板。"
+    state machine
+}
+
+DreamWidgetBlueprintFactory:ParentClass {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamWidgetBlueprintFactory.cpp#DreamWidgetBlueprintFactory:ParentClass
+    src   "Parent class of the created Blueprint. Defaults to UDreamUserWidget when the picker is skipped."
+    text  "所创建的控件蓝图的父类。跳过选择器时默认为 UDreamUserWidget。"
+    state machine
+}

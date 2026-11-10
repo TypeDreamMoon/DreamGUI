@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPsdImportFactory {
+    at    Source/DreamGUIPsd/Private/Import/DreamPsdImportFactory.h#DreamPsdImportFactory
+    src   "Dream Psd Import Factory"
+    text  "Dream PSD 导入工厂"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPsdImportFactory {
+    at    Source/DreamGUIPsd/Private/Import/DreamPsdImportFactory.h#DreamPsdImportFactory
+    src   "The Content Browser's Import for .psd and .psb, as a DreamUI widget: only while UDreamPsdImportSettings says so\n(bHandleContentBrowserImport), so that importing a .psd as a texture keeps working as it always has. The folder\nmenu's import does not depend on it."
+    text  "内容浏览器用于 .psd 和 .psb 文件的导入功能，以 DreamUI 组件的形式实现：仅当 UDreamPsdImportSettings 中的 bHandleContentBrowserImport 设置为 true 时才生效，以确保将 .psd 文件导入为纹理时，其行为保持不变。文件夹菜单中的导入功能不受此影响。\n\n(bHandleContentBrowserImport) 选项决定是否以 DreamUI 组件的形式导入，以保持现有 .psd 纹理导入的兼容性。"
+    state machine
+}

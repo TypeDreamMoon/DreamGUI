@@ -1,0 +1,46 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerMaskHandles
+
+Name {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Mask"
+    // from the engine's zh-Hans
+    text  "遮罩"
+    state draft
+}
+
+MoveSide {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Move Clip Edge"
+    text  "移动边缘"
+    state machine
+}
+
+RoundCorners {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Round Clip Corners"
+    text  "圆角"
+    state machine
+}
+
+RoundPolygon {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Round Mask Polygon"
+    text  "圆形遮罩多边形"
+    state machine
+}
+
+InnerRatio {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Resize Mask Inner Size"
+    text  "调整遮罩内径大小"
+    state machine
+}
+
+Feather {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerMaskHandles.cpp
+    src   "Feather Mask"
+    text  "柔化遮罩"
+    state machine
+}
