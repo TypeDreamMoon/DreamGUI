@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "Controls/DreamListView.h"
 #include "Controls/DreamProgressBar.h"
 #include "Controls/DreamScrollBar.h"
@@ -17,6 +19,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIControlRegistry.h"
 #include "DreamUIEditorTools.h"
+#include "DreamWidgetBlueprint.h"
 #include "Designer/SDreamWidgetPalette.h"
 #include "Textures/SlateIcon.h"
 
@@ -103,6 +106,72 @@ bool FDreamPaletteControlsAreAllControlClassesTest::RunTest(const FString& Param
 		TestEqual(*FString::Printf(TEXT("%s is still the Blueprint road"), Name),
 			Descriptor->CreationKind, EDreamUIControlCreationKind::WidgetClass);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPaletteBlueprintPresetsValidateTest,
+	"DreamGUI.Palette.EveryBlueprintPresetValidates",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPaletteBlueprintPresetsValidateTest::RunTest(const FString& Parameters)
+{
+	// The shipped presets are DreamUI Widget Blueprints, so a row of them drawn disabled is the
+	// registry being wrong about them -- which it was on every launch, saying "not a DreamUI Widget
+	// Blueprint" about all twelve because it asked before the asset registry had gathered any.
+	int32 Checked = 0;
+	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+	{
+		if (Descriptor.CreationKind != EDreamUIControlCreationKind::WidgetClass)
+		{
+			continue;
+		}
+		++Checked;
+		FText ValidationError;
+		const bool bValid = FDreamUIControlRegistry::Get().Validate(Descriptor, ValidationError);
+		TestTrue(*FString::Printf(TEXT("%s validates: %s"), *Descriptor.Name.ToString(), *ValidationError.ToString()), bValid);
+	}
+	TestTrue(TEXT("the presets are registered"), Checked >= 12);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPaletteWrongPrefabTypeNeedsAGatheredPackageTest,
+	"DreamGUI.Palette.APrefabIsTheWrongTypeOnlyWhenTheRegistryHasGatheredItsPackage",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPaletteWrongPrefabTypeNeedsAGatheredPackageTest::RunTest(const FString& Parameters)
+{
+	const FAssetData WidgetBlueprint(TEXT("/Game/TestOnly/Prefab"), TEXT("/Game/TestOnly"), TEXT("Prefab"),
+		UDreamWidgetBlueprint::StaticClass()->GetClassPathName());
+	const FAssetData Material(TEXT("/Game/TestOnly/Prefab"), TEXT("/Game/TestOnly"), TEXT("Prefab"),
+		FTopLevelAssetPath(TEXT("/Script/Engine.Material")));
+
+	// Nothing gathered is the state every package is in when the defaults register.
+	TestFalse(TEXT("an ungathered package is not called the wrong type"),
+		FDreamUIControlRegistry::IsKnownNotToBeWidgetBlueprint({}));
+	TestFalse(TEXT("a widget blueprint is the right type"),
+		FDreamUIControlRegistry::IsKnownNotToBeWidgetBlueprint({ WidgetBlueprint }));
+	TestFalse(TEXT("a package that holds a widget blueprint among other assets is the right type"),
+		FDreamUIControlRegistry::IsKnownNotToBeWidgetBlueprint({ Material, WidgetBlueprint }));
+	TestTrue(TEXT("a gathered package with no widget blueprint is the wrong type"),
+		FDreamUIControlRegistry::IsKnownNotToBeWidgetBlueprint({ Material }));
+
+	// And through Validate, against a real package of the wrong kind -- once the registry has it.
+	const FString MaterialPackage = TEXT("/DreamGUI/Materials/DreamUI_RectBlock");
+	TArray<FAssetData> Gathered;
+	IAssetRegistry::GetChecked().GetAssetsByPackageName(FName(MaterialPackage), Gathered, true);
+	if (Gathered.IsEmpty())
+	{
+		AddInfo(FString::Printf(TEXT("%s is not gathered yet; skipped the Validate half."), *MaterialPackage));
+		return true;
+	}
+	FDreamUIControlDescriptor Descriptor;
+	Descriptor.Name = TEXT("TestOnly_WrongPrefabType");
+	Descriptor.CreationKind = EDreamUIControlCreationKind::WidgetClass;
+	Descriptor.WidgetClassPath = MaterialPackage;
+	FText Error;
+	TestFalse(TEXT("a material named as a prefab is refused"), FDreamUIControlRegistry::Get().Validate(Descriptor, Error));
 	return true;
 }
 

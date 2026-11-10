@@ -784,18 +784,14 @@ bool FDreamUIControlRegistry::Register(const FDreamUIControlDescriptor& Descript
 	}
 	// Validated here as well as in the Palette so a broken recipe is reported where the call stack
 	// still names whoever registered it. Not a rejection: an invalid entry appears disabled carrying
-	// this same reason, which beats vanishing. A prefab recipe is a question for the asset registry,
-	// and asking it mid-scan -- which is where the defaults register from the constructor -- answers
-	// "missing" about every one of them.
-	IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
-	if (Descriptor.CreationKind != EDreamUIControlCreationKind::WidgetClass || (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets()))
+	// this same reason, which beats vanishing. The defaults register from module startup, before the
+	// asset registry has gathered anything; Validate answers a prefab it cannot see yet on trust, and
+	// the Palette asks again once the scan is done.
+	FText ValidationError;
+	if (!Validate(Descriptor, ValidationError))
 	{
-		FText ValidationError;
-		if (!Validate(Descriptor, ValidationError))
-		{
-			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Control \"%s\" will appear disabled in the Palette: %s")
-				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Descriptor.Name.ToString(), *ValidationError.ToString());
-		}
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Control \"%s\" will appear disabled in the Palette: %s")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Descriptor.Name.ToString(), *ValidationError.ToString());
 	}
 	Descriptors.Add(Descriptor);
 	RegistryChanged.Broadcast();
@@ -871,6 +867,22 @@ TArray<const FDreamUIControlDescriptor*> FDreamUIControlRegistry::GetDescriptors
 	return Result;
 }
 
+bool FDreamUIControlRegistry::IsKnownNotToBeWidgetBlueprint(TConstArrayView<FAssetData> PackageAssets)
+{
+	// Asked of what the registry has gathered, not of whether it is still gathering: IsLoadingAssets()
+	// is false before the initial search starts as well as after it ends, and the defaults register in
+	// between the two -- which is how every preset logged "not a DreamUI Widget Blueprint" on every
+	// launch. A package the registry has not gathered lists nothing, and nothing rules nothing out.
+	if (PackageAssets.IsEmpty())
+	{
+		return false;
+	}
+	return !PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
+	{
+		return Asset.IsInstanceOf(UDreamWidgetBlueprint::StaticClass());
+	});
+}
+
 bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descriptor, FText& OutError) const
 {
 	if (Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass)
@@ -881,17 +893,11 @@ bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descript
 			return false;
 		}
 		TArray<FAssetData> PackageAssets;
-		IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
-		AssetRegistry.GetAssetsByPackageName(FName(Descriptor.WidgetClassPath), PackageAssets, true);
-		const bool bContainsWidgetBlueprint = PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
+		if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
 		{
-			return Asset.AssetClassPath == UDreamWidgetBlueprint::StaticClass()->GetClassPathName();
-		});
-		// A registry that has not finished scanning knows nothing about the package's contents, and
-		// answering "wrong type" to a question it cannot answer yet disabled every prefab-backed
-		// control for the rest of the session. The package exists on disk; that is all we can say
-		// until OnFilesLoaded, which the Palette re-validates on.
-		if (!bContainsWidgetBlueprint && !AssetRegistry.IsLoadingAssets())
+			AssetRegistry->GetAssetsByPackageName(FName(Descriptor.WidgetClassPath), PackageAssets, true);
+		}
+		if (IsKnownNotToBeWidgetBlueprint(PackageAssets))
 		{
 			OutError = FText::Format(LOCTEXT("WrongControlType", "Control resource is not a DreamUI Widget Blueprint: {0}"), FText::FromString(Descriptor.WidgetClassPath));
 			return false;

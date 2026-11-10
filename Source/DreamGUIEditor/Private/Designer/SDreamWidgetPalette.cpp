@@ -205,7 +205,8 @@ void SDreamWidgetPalette::HandleWidgetAssetRenamed(const FAssetData& InAssetData
 
 void SDreamWidgetPalette::HandleAssetRegistryFilesLoaded()
 {
-	// Every prefab-backed control fails validation against a registry that has not finished scanning.
+	// A prefab whose package the registry had not gathered yet was taken on trust; now that it has, the
+	// rebuild says whether each one really is a DreamUI Widget Blueprint.
 	RequestRebuild();
 }
 

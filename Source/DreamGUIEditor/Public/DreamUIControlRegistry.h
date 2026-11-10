@@ -6,6 +6,7 @@
 #include "Textures/SlateIcon.h"
 
 class UDreamWidget;
+struct FAssetData;
 DECLARE_MULTICAST_DELEGATE(FOnDreamUIControlRegistryChanged);
 
 enum class EDreamUIControlCreationKind : uint8
@@ -102,6 +103,12 @@ public:
 	/** InCategory's descriptors, by display name: what a category lists, wherever it is listed. */
 	TArray<const FDreamUIControlDescriptor*> GetDescriptorsInCategory(FName InCategory)const;
 	bool Validate(const FDreamUIControlDescriptor& Descriptor, FText& OutError)const;
+	/**
+	 * Whether what the asset registry has gathered of a prefab's package rules it out as a DreamUI
+	 * Widget Blueprint. An empty list rules nothing out: until the registry has scanned the package --
+	 * at editor startup, every package -- it means "not gathered yet", not "no".
+	 */
+	static bool IsKnownNotToBeWidgetBlueprint(TConstArrayView<FAssetData> PackageAssets);
 	void InitializeDynamicDiscovery();
 	void ShutdownDynamicDiscovery();
 	void RefreshDynamicClasses();
