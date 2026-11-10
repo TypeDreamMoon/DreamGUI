@@ -15,6 +15,7 @@ class UDreamWidget;
 class FDreamWidgetBlueprintEditor;
 class UDreamWidgetBlueprint;
 struct FDreamLayoutControlAnchorData;
+struct FDreamUIAnchorData;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */
 class DREAMGUIEDITOR_API FDreamWidgetDesignerViewportClient : public FEditorViewportClient
@@ -354,7 +355,17 @@ public:
 	UDreamWidget* GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock = true);
 	/** Where a drop at this pixel should be parented: nearest container under it, else the prefab root. */
 	UDreamWidget* GetDropContainerUnderCursor(int32 PixelX, int32 PixelY);
-	bool GetDropWorldPosition(int32 PixelX, int32 PixelY, UDreamWidget* ParentWidget, FVector& OutWorldPosition);
+	/**
+	 * The anchored position that stands a widget dropped at this pixel into InPreviewParent with its pivot under the
+	 * pointer, given its anchors and pivot (InAnchors): measured in the PREVIEW parent's rect, which is laid out, and
+	 * landed on the grid when snapping is on -- else spelled to half a pixel, the pointer's precision.
+	 *
+	 * The answer is written onto the new widget's TEMPLATE, which nothing lays out: its world transform is whatever it
+	 * was last told, so a world position set on it is read against a frame nobody can see. That is how a Text dropped
+	 * on a panel came out at its parent's centre-relative point, spelled (-100.99998474121094, -21.9999942779541).
+	 */
+	bool GetDropAnchoredPosition(int32 PixelX, int32 PixelY, const UDreamWidget* InPreviewParent, const FDreamUIAnchorData& InAnchors,
+		FVector2D& OutAnchoredPosition) const;
 	void SetPaletteDropPreview(UDreamWidget* Widget);
 	void ClearPaletteDropPreview();
 	/**

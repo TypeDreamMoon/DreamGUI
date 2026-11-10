@@ -7,6 +7,9 @@
 #include "SDreamWidgetDesignerViewportToolbar.h"
 #include "SDreamWidgetPalette.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIAnchorData.h"
+#include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamWidget.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Slate/SceneViewport.h"
 #include "DragAndDrop/AssetDragDropOp.h"
@@ -184,13 +187,28 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		if (!Parent)return FReply::Unhandled();
-		FVector DropWorldPosition = FVector::ZeroVector;
-		const bool bHasPosition = EditorViewportClient->GetDropWorldPosition(Pixel.X, Pixel.Y, Parent, DropWorldPosition);
-		// A viewport drop names a parent and a position, never a sibling order -- append.
+		// A viewport drop names a parent and a position, never a sibling order -- append. The position is the new
+		// widget's anchored position, worked out in the preview parent's rect against the anchors the widget was made
+		// with; the callback is handed the TEMPLATE, inside the creating transaction.
+		const TSharedPtr<FDreamWidgetDesignerViewportClient> DropClient = EditorViewportClient;
 		UDreamWidget* Created = PaletteOp->CreateUnder(Parent, TOptional<int32>(),
-			[bHasPosition, DropWorldPosition](UDreamWidget* Widget)
+			[DropClient, Pixel, Parent](UDreamWidget* Template)
 		{
-			if (Widget && bHasPosition)Widget->SetWorldLocation(DropWorldPosition);
+			if (!IsValid(Template) || !DropClient.IsValid())return;
+			FDreamUIAnchorData Anchors = Template->GetAnchorData();
+			FVector2D Position;
+			if (!DropClient->GetDropAnchoredPosition(Pixel.X, Pixel.Y, Parent, Anchors, Position))return;
+			// An axis the parent's panel places is the panel's: a number written there is not where the widget will
+			// stand, and the file would carry it as though somebody had typed it.
+			FDreamLayoutControlAnchorData Control;
+			const UDreamWidget* TemplateParent = Template->GetParent();
+			if (IsValid(TemplateParent) && TemplateParent->GetLayoutContainer() != nullptr)
+			{
+				Control = TemplateParent->GetLayoutContainer()->GetLayoutControlAnchor(Template);
+			}
+			if (!Control.bCanControlHorizontalPosition)Anchors.AnchoredPosition.X = Position.X;
+			if (!Control.bCanControlVerticalPosition)Anchors.AnchoredPosition.Y = Position.Y;
+			Template->SetAnchorData(Anchors);
 		});
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (Created)

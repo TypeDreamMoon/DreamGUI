@@ -4052,25 +4052,36 @@ UDreamWidget* FDreamWidgetDesignerViewportClient::GetDropContainerUnderCursor(in
 	return nullptr;
 }
 
-bool FDreamWidgetDesignerViewportClient::GetDropWorldPosition(int32 PixelX, int32 PixelY, UDreamWidget* ParentWidget, FVector& OutWorldPosition)
+bool FDreamWidgetDesignerViewportClient::GetDropAnchoredPosition(int32 PixelX, int32 PixelY, const UDreamWidget* InPreviewParent,
+	const FDreamUIAnchorData& InAnchors, FVector2D& OutAnchoredPosition) const
 {
-	if (!Viewport || !ParentWidget)return false;
-	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
-	FSceneView* View = CalcSceneView(&ViewFamily);
-	if (!View)return false;
-	FVector RayOrigin, RayDirection;
-	FSceneView::DeprojectScreenToWorld(FVector2D(PixelX, PixelY), View->UnscaledViewRect,
-		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
-	const FTransform& ParentTransform = ParentWidget->GetWorldTransform();
-	const FVector Intersection = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0f,
-		ParentTransform.GetLocation(), ParentTransform.GetUnitAxis(EAxis::X));
-	FVector LocalPosition = ParentTransform.InverseTransformPosition(Intersection);
-	if (DesignerPtr.IsValid())
+	if (!IsValid(InPreviewParent))return false;
+	const FVector2D Pixel(PixelX, PixelY);
+	const FTransform& ParentTransform = InPreviewParent->GetWorldTransform();
+	FVector Intersection;
+	if (!IntersectDesignerPlane(Pixel, ParentTransform, Intersection))return false;
+	const FVector Local = ParentTransform.InverseTransformPosition(Intersection);
+	// The point the anchors measure from in the parent's rect, as UDreamWidget::CalculateTransformFromAnchor reads it:
+	// the anchor box's own pivot point. The pivot stands the anchored position away from it.
+	const double Width = InPreviewParent->GetWidth();
+	const double Height = InPreviewParent->GetHeight();
+	const FVector2D Reference(
+		InPreviewParent->GetLocalSpaceLeft() + Width * (InAnchors.AnchorMin.X + (InAnchors.AnchorMax.X - InAnchors.AnchorMin.X) * InAnchors.Pivot.X),
+		InPreviewParent->GetLocalSpaceBottom() + Height * (InAnchors.AnchorMin.Y + (InAnchors.AnchorMax.Y - InAnchors.AnchorMin.Y) * InAnchors.Pivot.Y));
+	OutAnchoredPosition = FVector2D(Local.Y - Reference.X, Local.Z - Reference.Y);
+	// The number the file will hold lands on the grid, as a dragged widget's does; with no grid it is spelled to the pointer.
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin();
+	if (Designer.IsValid() && Designer->IsDesignerGridSnapEnabled() && Designer->GetDesignerGridSize() > 0.0f)
 	{
-		LocalPosition.Y = DesignerPtr.Pin()->SnapDesignerValue(LocalPosition.Y);
-		LocalPosition.Z = DesignerPtr.Pin()->SnapDesignerValue(LocalPosition.Z);
+		OutAnchoredPosition.X = FMath::GridSnap(OutAnchoredPosition.X, static_cast<double>(Designer->GetDesignerGridSize()));
+		OutAnchoredPosition.Y = FMath::GridSnap(OutAnchoredPosition.Y, static_cast<double>(Designer->GetDesignerGridSize()));
 	}
-	OutWorldPosition = ParentTransform.TransformPosition(LocalPosition);
+	else
+	{
+		const double HalfPixel = MeasureUnitsPerPixel(Pixel, ParentTransform) * 0.5;
+		DreamUIValueFormat::PrintWithin(OutAnchoredPosition.X, HalfPixel, 0, &OutAnchoredPosition.X);
+		DreamUIValueFormat::PrintWithin(OutAnchoredPosition.Y, HalfPixel, 0, &OutAnchoredPosition.Y);
+	}
 	return true;
 }
 
