@@ -9,13 +9,13 @@
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextWriteBack.h"
+#include "Text/DreamUITimelineSampling.h"
 #include "Text/DreamUIValueFormat.h"
 
 #include "Animation/DreamUIAnimEventTrack.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamTextUserWidget.h"
-#include "DreamTweener.h"
 
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
@@ -23,6 +23,7 @@
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 #include "MovieSceneTimeHelpers.h"
+#include "ScopedTransaction.h"
 #include "Sections/MovieSceneColorSection.h"
 #include "Sections/MovieSceneDoubleSection.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -37,16 +38,26 @@
 
 namespace DreamUITimelineWriteBackLocal
 {
-	/** The display rate the builder samples an ease at (DreamUITextBuilder, TimelineDisplayRate). */
-	constexpr double SampleRate = 60.0;
+	using DreamUITimelineSampling::FLineKey;
+	using DreamUITimelineSampling::FSample;
 
 	enum class EValueFormat : uint8 { Number, Tuple, Hex };
 
+	/** One key of a track as it is going to be written. */
 	struct FReadKey
 	{
+		/** Where the sequence holds it: its frame and, in seconds, its time. */
+		FFrameNumber Frame;
 		double Time = 0.0;
 		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+		/** The curve to the next key, as the line will say it. */
 		FString Ease;
+		/** The key of the line this one is -- moved, changed or as it was -- or INDEX_NONE for one the line did not have. */
+		int32 LineKey = INDEX_NONE;
+		/** Its index in the section's channels, which all key the same frames. */
+		int32 SequenceKey = INDEX_NONE;
+		/** The time the line says once written, which is where the next compile stands the key. */
+		double WrittenTime = 0.0;
 	};
 
 	struct FReadTrack
@@ -57,10 +68,17 @@ namespace DreamUITimelineWriteBackLocal
 		int32 ChannelCount = 1;
 		bool bSinglePrecision = false;
 		EValueFormat Format = EValueFormat::Number;
+		/** The author's keys, in time order; the samples of the line's eases are not among them. */
 		TArray<FReadKey> Keys;
 		TArray<TPair<double, FString>> Events;
 		/** The line of the block this track is, when it has one. */
 		const FDreamUITimelineTrack* Existing = nullptr;
+		/** Where the keys were read from, so the line's new samples can be put back there (Rebake). */
+		UMovieSceneSection* Section = nullptr;
+		TArray<FMovieSceneFloatChannel*> FloatChannels;
+		TArray<FMovieSceneDoubleChannel*> DoubleChannels;
+		/** The line was written differently from how the file had it. */
+		bool bRewritten = false;
 	};
 
 	// ---------------------------------------------------------------------------------------------
@@ -68,12 +86,12 @@ namespace DreamUITimelineWriteBackLocal
 	// ---------------------------------------------------------------------------------------------
 
 	/**
-	 * One channel's keys as seconds and values. A key with automatic tangents becomes linear -- the language has no word
+	 * One channel's keys as frames and values. A key with automatic tangents becomes linear -- the language has no word
 	 * for them, and the sequence is set to what the file will build. One with tangents of its own, or stepped, cannot be
 	 * said, unless it is the last (whose curve goes nowhere).
 	 */
 	template<typename ChannelType>
-	bool ReadChannel(ChannelType& InChannel, double InTickRate, UMovieSceneSection* InSection, TArray<double>& OutTimes,
+	bool ReadChannel(ChannelType& InChannel, UMovieSceneSection* InSection, TArray<FFrameNumber>& OutFrames,
 		TArray<double>& OutValues, FString& OutRefusal)
 	{
 		auto Data = InChannel.GetData();
@@ -95,92 +113,267 @@ namespace DreamUITimelineWriteBackLocal
 					: TEXT("a key with tangents of its own has no spelling in a timeline (keys are linear, or run along a named ease)");
 				return false;
 			}
-			OutTimes.Add(static_cast<double>(Times[Index].Value) / InTickRate);
+			OutFrames.Add(Times[Index]);
 			OutValues.Add(static_cast<double>(Value.Value));
 		}
 		return true;
 	}
 
-	/**
-	 * The author's keys back out of a run of sampled ones: from each anchor, the next anchor whose keys in between are
-	 * exactly the samples the builder makes of one ease -- the same count, frames and values -- or else the very next
-	 * key, linear.
-	 */
-	void RecoverKeys(const TArray<double>& InTimes, const TArray<TArray<double>>& InChannels, int32 InChannelCount, double InTickRate,
-		TArray<FReadKey>& OutKeys)
+	/** A key value the file spelled, as the channels the builder read from it -- false for a spelling this cannot read. */
+	bool ParseChannels(const FDreamUIValue& InValue, int32 InChannelCount, double OutChannels[4])
 	{
-		const UEnum* EaseEnum = StaticEnum<EDreamTweenEase>();
-		auto MakeKey = [&](int32 InIndex)
+		switch (InValue.Kind)
 		{
-			FReadKey Key;
-			Key.Time = InTimes[InIndex];
+		case EDreamUIValueKind::Number:
+			return LexTryParseString(OutChannels[0], *InValue.Raw);
+		case EDreamUIValueKind::HexColor:
+		{
+			FLinearColor Color;
+			if (!DreamUIValueFormat::ParseColorHex(InValue.Raw, Color))
+			{
+				return false;
+			}
+			OutChannels[0] = Color.R;
+			OutChannels[1] = Color.G;
+			OutChannels[2] = Color.B;
+			OutChannels[3] = Color.A;
+			return true;
+		}
+		case EDreamUIValueKind::Tuple:
+		{
+			FString Inner = InValue.Raw.TrimStartAndEnd();
+			Inner.RemoveFromStart(TEXT("("));
+			Inner.RemoveFromEnd(TEXT(")"));
+			TArray<FString> Parts;
+			Inner.ParseIntoArray(Parts, TEXT(","), /*InCullEmpty*/true);
+			if (Parts.Num() < InChannelCount)
+			{
+				return false;
+			}
 			for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
 			{
-				Key.Channels[Channel] = InChannels[Channel][InIndex];
+				if (!LexTryParseString(OutChannels[Channel], *Parts[Channel].TrimStartAndEnd()))
+				{
+					return false;
+				}
 			}
-			return Key;
-		};
-		auto ToFrame = [InTickRate](double InSeconds) { return FMath::RoundToInt64(InSeconds * InTickRate); };
-		auto Near = [](double A, double B) { return FMath::Abs(A - B) <= 1.0e-4 * FMath::Max(1.0, FMath::Abs(B)); };
-
-		const int32 Num = InTimes.Num();
-		if (Num == 0)
-		{
-			return;
+			return true;
 		}
-		int32 Anchor = 0;
-		OutKeys.Add(MakeKey(0));
-		while (Anchor < Num - 1)
+		default:
+			return false;
+		}
+	}
+
+	/** Whether two sets of channel values are the same value, to the grain of the track's spelling. */
+	bool NearValues(const FReadTrack& InTrack, const double InA[4], const double InB[4])
+	{
+		for (int32 Channel = 0; Channel < InTrack.ChannelCount; ++Channel)
 		{
-			int32 Next = INDEX_NONE;
-			FString NextEase;
-			for (int32 Candidate = Anchor + 2; Candidate < Num && Candidate <= Anchor + 602 && Next == INDEX_NONE; ++Candidate)
+			// A colour's channels went through an sRGB byte each way: a step of 1/255 is the spelling's own grain.
+			const double Tolerance = InTrack.Format == EValueFormat::Hex ? 0.5 / 255.0 + 1.0e-4 : 1.0e-4 * FMath::Max(1.0, FMath::Abs(InB[Channel]));
+			if (FMath::Abs(InA[Channel] - InB[Channel]) > Tolerance)
 			{
-				const double Span = InTimes[Candidate] - InTimes[Anchor];
-				const int32 SampleCount = FMath::Clamp(FMath::CeilToInt(Span * SampleRate) - 1, 0, 600);
-				if (SampleCount != Candidate - Anchor - 1)
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool SameValue(const FReadTrack& InTrack, const FReadKey& InKey, const FDreamUITimelineKey& InLine)
+	{
+		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+		return ParseChannels(InLine.Value, InTrack.ChannelCount, Channels) && NearValues(InTrack, InKey.Channels, Channels);
+	}
+
+	bool SameEase(const FString& InA, const FString& InB)
+	{
+		auto Normal = [](const FString& InEase) { return InEase.IsEmpty() || InEase.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ? FString() : InEase; };
+		return Normal(InA).Equals(Normal(InB), ESearchCase::IgnoreCase);
+	}
+
+	/** The line's keys as the builder read them, or false when one of its values is a spelling this cannot read. */
+	bool LineKeysOf(const FReadTrack& InTrack, TArray<FLineKey>& OutKeys)
+	{
+		if (InTrack.Existing == nullptr)
+		{
+			return false;
+		}
+		for (const FDreamUITimelineKey& Line : InTrack.Existing->Keys)
+		{
+			FLineKey& Key = OutKeys.AddDefaulted_GetRef();
+			Key.Time = Line.Time;
+			Key.EaseName = Line.EaseName;
+			if (!ParseChannels(Line.Value, InTrack.ChannelCount, Key.Channels))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * The author's keys out of what the sequence holds, read against the line the animation was built from.
+	 *
+	 * The line says exactly which frames and values its eases were sampled to (DreamUITimelineSampling), so the sequence
+	 * is read as an edit of that: a key standing where one of those samples stands, with its value, is the sample; every
+	 * other key is the author's. The samples of an ease stay put when the key at either end of it is dragged -- Sequencer
+	 * moves the key it was handed -- so the key a hand moved is the one that is no longer where the line put it, and the
+	 * ease between it and its neighbour is the line's still. A segment one of whose samples is missing or changed has had
+	 * its curve edited by hand: its keys are what is there now, each a linear key, and the ease into them goes.
+	 *
+	 * Which author's key is which of the line's: those still on their frame with their value are the keys they were; the
+	 * ones between two such that moved or changed are paired with the line's keys between the same two, in order. A key
+	 * keeps the ease the line gave it, unless the curve out of it was edited, or it was the last key of the line -- whose
+	 * ease went nowhere -- and now has a key after it, which Sequencer joined to it with a straight line. A key that is
+	 * last keeps whatever its text said.
+	 */
+	void ReadKeysAgainstLine(const TArray<FFrameNumber>& InFrames, const TArray<TArray<double>>& InChannels, double InTickRate,
+		FReadTrack& InOutTrack)
+	{
+		const int32 Num = InFrames.Num();
+		auto ValuesOf = [&InChannels](int32 InKey, double OutValues[4])
+		{
+			for (int32 Channel = 0; Channel < 4; ++Channel)
+			{
+				OutValues[Channel] = InChannels.IsValidIndex(Channel) ? InChannels[Channel][InKey] : 0.0;
+			}
+		};
+
+		TArray<FLineKey> LineKeys;
+		TArray<FSample> Expected;
+		FString BadEase;
+		const bool bAgainstLine = LineKeysOf(InOutTrack, LineKeys)
+			&& DreamUITimelineSampling::Sample(LineKeys, InOutTrack.ChannelCount, InTickRate, Expected, BadEase);
+		if (!bAgainstLine)
+		{
+			LineKeys.Reset();
+		}
+
+		TSet<int32> Samples;
+		TArray<bool> CurveKept;
+		CurveKept.Init(true, LineKeys.Num());
+		{
+			TMap<int32, int32> KeyAtFrame;
+			for (int32 Key = 0; Key < Num; ++Key)
+			{
+				KeyAtFrame.FindOrAdd(InFrames[Key].Value, Key);
+			}
+			TArray<TArray<int32>> SampleKeysOf;
+			SampleKeysOf.SetNum(LineKeys.Num());
+			for (const FSample& Sample : Expected)
+			{
+				if (Sample.bIsLineKey)
 				{
 					continue;
 				}
-				for (int32 EaseIndex = 0; EaseEnum != nullptr && EaseIndex < EaseEnum->NumEnums() - 1 && Next == INDEX_NONE; ++EaseIndex)
+				const int32* Found = KeyAtFrame.Find(Sample.Frame.Value);
+				double Values[4];
+				if (Found != nullptr)
 				{
-					const EDreamTweenEase Ease = static_cast<EDreamTweenEase>(EaseEnum->GetValueByIndex(EaseIndex));
-					if (Ease == EDreamTweenEase::Linear || Ease == EDreamTweenEase::CurveFloat)
-					{
-						continue;
-					}
-					const FDreamTweenFunction Curve = UDreamTweener::GetEaseFunction(Ease);
-					if (!Curve.IsBound())
-					{
-						continue;
-					}
-					bool bMatches = true;
-					for (int32 Sample = 1; Sample <= SampleCount && bMatches; ++Sample)
-					{
-						const double Alpha = static_cast<double>(Sample) / static_cast<double>(SampleCount + 1);
-						bMatches = ToFrame(InTimes[Anchor] + Span * Alpha) == ToFrame(InTimes[Anchor + Sample]);
-						const double Eased = static_cast<double>(Curve.Execute(1.0f, 0.0f, static_cast<float>(Alpha), 1.0f));
-						for (int32 Channel = 0; Channel < InChannelCount && bMatches; ++Channel)
-						{
-							const double From = InChannels[Channel][Anchor];
-							const double To = InChannels[Channel][Candidate];
-							bMatches = Near(InChannels[Channel][Anchor + Sample], From + (To - From) * Eased);
-						}
-					}
-					if (bMatches)
-					{
-						Next = Candidate;
-						NextEase = EaseEnum->GetNameStringByIndex(EaseIndex);
-					}
+					ValuesOf(*Found, Values);
+				}
+				if (Found == nullptr || !NearValues(InOutTrack, Values, Sample.Channels))
+				{
+					CurveKept[Sample.LineKey] = false;
+				}
+				else
+				{
+					SampleKeysOf[Sample.LineKey].Add(*Found);
 				}
 			}
-			if (Next == INDEX_NONE)
+			for (int32 Line = 0; Line < LineKeys.Num(); ++Line)
 			{
-				Next = Anchor + 1;
+				if (CurveKept[Line])
+				{
+					Samples.Append(SampleKeysOf[Line]);
+				}
 			}
-			OutKeys.Last().Ease = NextEase;
-			OutKeys.Add(MakeKey(Next));
-			Anchor = Next;
+		}
+		TArray<int32> Authored;
+		for (int32 Key = 0; Key < Num; ++Key)
+		{
+			if (!Samples.Contains(Key))
+			{
+				Authored.Add(Key);
+			}
+		}
+
+		// The longest run of keys still as the line has them, in order.
+		const int32 AuthoredNum = Authored.Num();
+		const int32 LineNum = LineKeys.Num();
+		auto StillAsWritten = [&](int32 InAuthored, int32 InLine)
+		{
+			double Values[4];
+			ValuesOf(Authored[InAuthored], Values);
+			return InFrames[Authored[InAuthored]] == DreamUITimelineSampling::TimeToFrame(LineKeys[InLine].Time, InTickRate)
+				&& NearValues(InOutTrack, Values, LineKeys[InLine].Channels);
+		};
+		TArray<int32> Run;
+		Run.SetNumZeroed((AuthoredNum + 1) * (LineNum + 1));
+		auto RunAt = [&Run, LineNum](int32 InAuthored, int32 InLine) -> int32& { return Run[InAuthored * (LineNum + 1) + InLine]; };
+		for (int32 A = AuthoredNum - 1; A >= 0; --A)
+		{
+			for (int32 L = LineNum - 1; L >= 0; --L)
+			{
+				RunAt(A, L) = StillAsWritten(A, L) ? RunAt(A + 1, L + 1) + 1 : FMath::Max(RunAt(A + 1, L), RunAt(A, L + 1));
+			}
+		}
+		TArray<TPair<int32, int32>> Kept;
+		for (int32 A = 0, L = 0; A < AuthoredNum && L < LineNum;)
+		{
+			if (StillAsWritten(A, L) && RunAt(A, L) == RunAt(A + 1, L + 1) + 1)
+			{
+				Kept.Add({ A, L });
+				++A;
+				++L;
+			}
+			else if (RunAt(A + 1, L) >= RunAt(A, L + 1))
+			{
+				++A;
+			}
+			else
+			{
+				++L;
+			}
+		}
+		Kept.Add({ AuthoredNum, LineNum });
+		TArray<int32> LineOf;
+		LineOf.Init(INDEX_NONE, AuthoredNum);
+		int32 PreviousA = -1;
+		int32 PreviousL = -1;
+		for (const TPair<int32, int32>& Pair : Kept)
+		{
+			for (int32 Step = 0; PreviousA + 1 + Step < Pair.Key && PreviousL + 1 + Step < Pair.Value; ++Step)
+			{
+				LineOf[PreviousA + 1 + Step] = PreviousL + 1 + Step;
+			}
+			if (Pair.Key < AuthoredNum)
+			{
+				LineOf[Pair.Key] = Pair.Value;
+			}
+			PreviousA = Pair.Key;
+			PreviousL = Pair.Value;
+		}
+
+		for (int32 A = 0; A < AuthoredNum; ++A)
+		{
+			FReadKey& Key = InOutTrack.Keys.AddDefaulted_GetRef();
+			Key.SequenceKey = Authored[A];
+			Key.Frame = InFrames[Authored[A]];
+			Key.Time = static_cast<double>(Key.Frame.Value) / InTickRate;
+			Key.WrittenTime = Key.Time;
+			ValuesOf(Authored[A], Key.Channels);
+			Key.LineKey = LineOf[A];
+			if (Key.LineKey == INDEX_NONE)
+			{
+				continue;
+			}
+			const bool bLast = A + 1 == AuthoredNum;
+			const bool bHadCurve = Key.LineKey + 1 < LineNum;
+			if (bLast || (bHadCurve && CurveKept[Key.LineKey]))
+			{
+				Key.Ease = LineKeys[Key.LineKey].EaseName;
+			}
 		}
 	}
 
@@ -253,7 +446,8 @@ namespace DreamUITimelineWriteBackLocal
 		OutDuration = Playback.HasUpperBound()
 			? static_cast<double>(UE::MovieScene::DiscreteExclusiveUpper(Playback).Value - 1) / TickRate : 0.0;
 
-		for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
+		const UMovieScene* ConstMovieScene = MovieScene;
+		for (const FMovieSceneBinding& Binding : ConstMovieScene->GetBindings())
 		{
 			const FMovieScenePossessable* Possessable = MovieScene->FindPossessable(Binding.GetObjectGuid());
 			if (Possessable == nullptr)
@@ -280,6 +474,7 @@ namespace DreamUITimelineWriteBackLocal
 				UMovieSceneSection* Section = Sections[0];
 
 				FReadTrack& Read = OutTracks.AddDefaulted_GetRef();
+				Read.Section = Section;
 				Read.PropertyName = PropertyTrack->GetPropertyPath().ToString();
 				const UClass* PossessedClass = Possessable->GetPossessedObjectClass();
 				Read.Existing = InExisting.Tracks.FindByPredicate([&](const FDreamUITimelineTrack& InLine)
@@ -299,33 +494,25 @@ namespace DreamUITimelineWriteBackLocal
 					return false;
 				}
 
-				TArray<double> Times;
+				TArray<FFrameNumber> Frames;
 				TArray<TArray<double>> Channels;
 				auto ReadOne = [&](auto& InChannel)
 				{
-					TArray<double> ChannelTimes;
+					TArray<FFrameNumber> ChannelFrames;
 					TArray<double>& Values = Channels.AddDefaulted_GetRef();
-					if (!ReadChannel(InChannel, TickRate, Section, ChannelTimes, Values, OutRefusal))
+					if (!ReadChannel(InChannel, Section, ChannelFrames, Values, OutRefusal))
 					{
 						return false;
 					}
 					if (Channels.Num() == 1)
 					{
-						Times = ChannelTimes;
+						Frames = ChannelFrames;
 						return true;
 					}
-					if (ChannelTimes.Num() != Times.Num())
+					if (ChannelFrames != Frames)
 					{
 						OutRefusal = FString::Printf(TEXT("the channels of '%s' are keyed apart, and a timeline key sets all of them at once"), *Read.PropertyName);
 						return false;
-					}
-					for (int32 Index = 0; Index < Times.Num(); ++Index)
-					{
-						if (FMath::RoundToInt64(ChannelTimes[Index] * TickRate) != FMath::RoundToInt64(Times[Index] * TickRate))
-						{
-							OutRefusal = FString::Printf(TEXT("the channels of '%s' are keyed apart, and a timeline key sets all of them at once"), *Read.PropertyName);
-							return false;
-						}
 					}
 					return true;
 				};
@@ -336,33 +523,56 @@ namespace DreamUITimelineWriteBackLocal
 					Read.ChannelCount = 4;
 					Read.bSinglePrecision = true;
 					Read.Format = EValueFormat::Hex;
-					bRead = ReadOne(Color->GetRedChannel()) && ReadOne(Color->GetGreenChannel()) && ReadOne(Color->GetBlueChannel()) && ReadOne(Color->GetAlphaChannel());
+					Read.FloatChannels = { &Color->GetRedChannel(), &Color->GetGreenChannel(), &Color->GetBlueChannel(), &Color->GetAlphaChannel() };
 				}
 				else if (UMovieSceneFloatSection* Float = Cast<UMovieSceneFloatSection>(Section))
 				{
 					Read.bSinglePrecision = true;
 					TArrayView<FMovieSceneFloatChannel*> FloatChannels = Float->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>();
-					bRead = FloatChannels.Num() > 0 && ReadOne(*FloatChannels[0]);
+					if (FloatChannels.Num() > 0)
+					{
+						Read.FloatChannels = { FloatChannels[0] };
+					}
 				}
 				else if (UMovieSceneDoubleSection* Double = Cast<UMovieSceneDoubleSection>(Section))
 				{
 					TArrayView<FMovieSceneDoubleChannel*> DoubleChannels = Double->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
-					bRead = DoubleChannels.Num() > 0 && ReadOne(*DoubleChannels[0]);
+					if (DoubleChannels.Num() > 0)
+					{
+						Read.DoubleChannels = { DoubleChannels[0] };
+					}
 				}
 				else if (UMovieSceneDoubleVectorSection* Vector = Cast<UMovieSceneDoubleVectorSection>(Section))
 				{
 					Read.ChannelCount = Vector->GetChannelsUsed();
 					Read.Format = EValueFormat::Tuple;
 					TArrayView<FMovieSceneDoubleChannel*> DoubleChannels = Vector->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
-					for (int32 Index = 0; Index < Read.ChannelCount && bRead; ++Index)
+					for (int32 Index = 0; Index < Read.ChannelCount; ++Index)
 					{
-						bRead = DoubleChannels.IsValidIndex(Index) && ReadOne(*DoubleChannels[Index]);
+						if (!DoubleChannels.IsValidIndex(Index))
+						{
+							bRead = false;
+							break;
+						}
+						Read.DoubleChannels.Add(DoubleChannels[Index]);
 					}
 				}
 				else
 				{
 					OutRefusal = FString::Printf(TEXT("'%s' is a kind of track a timeline line cannot spell"), *Read.PropertyName);
 					return false;
+				}
+				if (Read.FloatChannels.Num() + Read.DoubleChannels.Num() != Read.ChannelCount)
+				{
+					bRead = false;
+				}
+				for (FMovieSceneFloatChannel* Channel : Read.FloatChannels)
+				{
+					bRead = bRead && ReadOne(*Channel);
+				}
+				for (FMovieSceneDoubleChannel* Channel : Read.DoubleChannels)
+				{
+					bRead = bRead && ReadOne(*Channel);
 				}
 				if (!bRead)
 				{
@@ -383,7 +593,7 @@ namespace DreamUITimelineWriteBackLocal
 					default: break;
 					}
 				}
-				RecoverKeys(Times, Channels, Read.ChannelCount, TickRate, Read.Keys);
+				ReadKeysAgainstLine(Frames, Channels, TickRate, Read);
 			}
 		}
 
@@ -421,9 +631,26 @@ namespace DreamUITimelineWriteBackLocal
 	// Spelling it
 	// ---------------------------------------------------------------------------------------------
 
-	FString PrintTime(double InSeconds)
+	/** The decimals a number was written with: `0.30` has two, `1` and `1e-3` none. */
+	int32 DecimalsOf(const FString& InNumber)
 	{
-		return DreamUIValueFormat::PrintScalar(InSeconds, /*bSinglePrecision*/false);
+		int32 Dot = INDEX_NONE;
+		if (!InNumber.FindChar(TEXT('.'), Dot) || InNumber.Contains(TEXT("e")) || InNumber.Contains(TEXT("E")))
+		{
+			return 0;
+		}
+		return InNumber.Len() - Dot - 1;
+	}
+
+	/**
+	 * A time a hand set, spelled to within half a display frame -- the hand's precision, where Sequencer snapped it -- with
+	 * no fewer decimals than the token it replaces, so a row of keys written to two places keeps reading in its columns:
+	 * frame 28 of 60 is 0.47, and 0.58 dragged to 0.5 reads 0.50. OutWritten is what the spelling reads back as.
+	 */
+	FString SpellTime(double InSeconds, const FString& InReplacedToken, double InDisplayRate, double& OutWritten)
+	{
+		const double HalfFrame = InDisplayRate > 0.0 ? 0.5 / InDisplayRate : 0.0;
+		return DreamUIValueFormat::PrintWithin(InSeconds, HalfFrame, DecimalsOf(InReplacedToken), &OutWritten);
 	}
 
 	FString PrintValue(const FReadTrack& InTrack, const FReadKey& InKey)
@@ -447,77 +674,23 @@ namespace DreamUITimelineWriteBackLocal
 		}
 	}
 
-	/** A key value the file spelled, as the channels the builder read from it -- false for a spelling this cannot read. */
-	bool ParseChannels(const FDreamUIValue& InValue, int32 InChannelCount, double OutChannels[4])
+	/** A key's value as the file will say it: the spelling the line already had for this very value, or a new one. */
+	FString SpellValue(const FReadTrack& InTrack, const FReadKey& InKey)
 	{
-		switch (InValue.Kind)
+		if (InTrack.Existing != nullptr)
 		{
-		case EDreamUIValueKind::Number:
-			return LexTryParseString(OutChannels[0], *InValue.Raw);
-		case EDreamUIValueKind::HexColor:
-		{
-			FLinearColor Color;
-			if (!DreamUIValueFormat::ParseColorHex(InValue.Raw, Color))
+			for (const FDreamUITimelineKey& Line : InTrack.Existing->Keys)
 			{
-				return false;
-			}
-			OutChannels[0] = Color.R;
-			OutChannels[1] = Color.G;
-			OutChannels[2] = Color.B;
-			OutChannels[3] = Color.A;
-			return true;
-		}
-		case EDreamUIValueKind::Tuple:
-		{
-			FString Inner = InValue.Raw.TrimStartAndEnd();
-			Inner.RemoveFromStart(TEXT("("));
-			Inner.RemoveFromEnd(TEXT(")"));
-			TArray<FString> Parts;
-			Inner.ParseIntoArray(Parts, TEXT(","), /*InCullEmpty*/true);
-			if (Parts.Num() < InChannelCount)
-			{
-				return false;
-			}
-			for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
-			{
-				if (!LexTryParseString(OutChannels[Channel], *Parts[Channel].TrimStartAndEnd()))
+				if (SameValue(InTrack, InKey, Line))
 				{
-					return false;
+					return Line.Value.Kind == EDreamUIValueKind::HexColor ? TEXT("#") + Line.Value.Raw : Line.Value.Raw;
 				}
 			}
-			return true;
 		}
-		default:
-			return false;
-		}
+		return PrintValue(InTrack, InKey);
 	}
 
-	bool SameValue(const FReadTrack& InTrack, const FReadKey& InKey, const FDreamUITimelineKey& InLine)
-	{
-		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
-		if (!ParseChannels(InLine.Value, InTrack.ChannelCount, Channels))
-		{
-			return false;
-		}
-		for (int32 Channel = 0; Channel < InTrack.ChannelCount; ++Channel)
-		{
-			// A colour's channels went through an sRGB byte each way: a step of 1/255 is the spelling's own grain.
-			const double Tolerance = InTrack.Format == EValueFormat::Hex ? 0.5 / 255.0 + 1.0e-4 : 1.0e-4 * FMath::Max(1.0, FMath::Abs(Channels[Channel]));
-			if (FMath::Abs(InKey.Channels[Channel] - Channels[Channel]) > Tolerance)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool SameEase(const FString& InA, const FString& InB)
-	{
-		auto Normal = [](const FString& InEase) { return InEase.IsEmpty() || InEase.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ? FString() : InEase; };
-		return Normal(InA).Equals(Normal(InB), ESearchCase::IgnoreCase);
-	}
-
-	/** Whether a track says what its line says: the same keys, times, values and eases (the last key's ease goes nowhere). */
+	/** Whether a track says what its line says: the same keys, frames, values and eases (the last key's ease goes nowhere). */
 	bool Unchanged(const FReadTrack& InTrack, double InTickRate)
 	{
 		if (InTrack.Existing == nullptr || InTrack.Existing->Keys.Num() != InTrack.Keys.Num())
@@ -528,7 +701,7 @@ namespace DreamUITimelineWriteBackLocal
 		{
 			const FReadKey& Key = InTrack.Keys[Index];
 			const FDreamUITimelineKey& Line = InTrack.Existing->Keys[Index];
-			if (FMath::Abs(Key.Time - Line.Time) > 0.5 / InTickRate || !SameValue(InTrack, Key, Line)
+			if (Key.LineKey != Index || Key.Frame != DreamUITimelineSampling::TimeToFrame(Line.Time, InTickRate) || !SameValue(InTrack, Key, Line)
 				|| (Index + 1 < InTrack.Keys.Num() && !SameEase(Key.Ease, Line.EaseName)))
 			{
 				return false;
@@ -537,26 +710,14 @@ namespace DreamUITimelineWriteBackLocal
 		return true;
 	}
 
-	FString RenderTrack(const FReadTrack& InTrack)
+	/** A whole track line, spelled anew: for a track the block has no line for, or a line this cannot read token by token. */
+	FString RenderTrack(FReadTrack& InTrack, double InDisplayRate)
 	{
 		TArray<FString> Keys;
 		for (int32 Index = 0; Index < InTrack.Keys.Num(); ++Index)
 		{
-			const FReadKey& Key = InTrack.Keys[Index];
-			FString Value = PrintValue(InTrack, Key);
-			// The spelling the file already had for this very value, kept.
-			if (InTrack.Existing != nullptr)
-			{
-				for (const FDreamUITimelineKey& Line : InTrack.Existing->Keys)
-				{
-					if (SameValue(InTrack, Key, Line))
-					{
-						Value = Line.Value.Kind == EDreamUIValueKind::HexColor ? TEXT("#") + Line.Value.Raw : Line.Value.Raw;
-						break;
-					}
-				}
-			}
-			FString Spelled = FString::Printf(TEXT("%s = %s"), *PrintTime(Key.Time), *Value);
+			FReadKey& Key = InTrack.Keys[Index];
+			FString Spelled = FString::Printf(TEXT("%s = %s"), *SpellTime(Key.Time, FString(), InDisplayRate, Key.WrittenTime), *SpellValue(InTrack, Key));
 			if (Index + 1 < InTrack.Keys.Num() && !Key.Ease.IsEmpty())
 			{
 				Spelled += TEXT(" ease ") + Key.Ease;
@@ -565,6 +726,195 @@ namespace DreamUITimelineWriteBackLocal
 		}
 		const FString Path = InTrack.NodePath.IsEmpty() ? InTrack.PropertyName : InTrack.NodePath + TEXT(".") + InTrack.PropertyName;
 		return FString::Printf(TEXT("%s : %s"), *Path, *FString::Join(Keys, TEXT(", ")));
+	}
+
+	/** Where each key of a track line stands in its text, so an edit can replace the token it changed and nothing else. */
+	struct FKeySpan
+	{
+		/** The whole key: its time to the end of its value, or of its ease when it has one. */
+		int32 Start = 0;
+		int32 End = 0;
+		int32 TimeStart = 0;
+		int32 TimeEnd = 0;
+		int32 ValueStart = 0;
+		int32 ValueEnd = 0;
+		/** ` ease Name`, from the blank in front of the word; INDEX_NONE when the key has none. */
+		int32 EaseStart = INDEX_NONE;
+		int32 EaseEnd = INDEX_NONE;
+	};
+
+	/** The keys of a one-line track, `Path : 0.0 = (0, 0) ease OutCubic, 0.3 = (1, 1)`, as spans of InBody; false if it is not that. */
+	bool ScanKeys(const FString& InBody, TArray<FKeySpan>& OutSpans)
+	{
+		const int32 Len = InBody.Len();
+		int32 Colon = INDEX_NONE;
+		if (!InBody.FindChar(TEXT(':'), Colon))
+		{
+			return false;
+		}
+		auto IsBlank = [&InBody, Len](int32 InAt) { return InAt < Len && (InBody[InAt] == TEXT(' ') || InBody[InAt] == TEXT('\t')); };
+		int32 At = Colon + 1;
+		while (IsBlank(At))
+		{
+			++At;
+		}
+		for (;;)
+		{
+			FKeySpan& Span = OutSpans.AddDefaulted_GetRef();
+			Span.Start = Span.TimeStart = At;
+			while (At < Len && (FChar::IsDigit(InBody[At]) || InBody[At] == TEXT('.') || InBody[At] == TEXT('-') || InBody[At] == TEXT('+')
+				|| InBody[At] == TEXT('e') || InBody[At] == TEXT('E')))
+			{
+				++At;
+			}
+			Span.TimeEnd = At;
+			while (IsBlank(At))
+			{
+				++At;
+			}
+			if (Span.TimeEnd == Span.TimeStart || At >= Len || InBody[At] != TEXT('='))
+			{
+				return false;
+			}
+			++At;
+			while (IsBlank(At))
+			{
+				++At;
+			}
+			Span.ValueStart = At;
+			if (At < Len && InBody[At] == TEXT('('))
+			{
+				int32 Close = At;
+				while (Close < Len && InBody[Close] != TEXT(')'))
+				{
+					++Close;
+				}
+				if (Close >= Len)
+				{
+					return false;
+				}
+				At = Close + 1;
+			}
+			else
+			{
+				while (At < Len && !IsBlank(At) && InBody[At] != TEXT(','))
+				{
+					++At;
+				}
+			}
+			Span.ValueEnd = Span.End = At;
+			if (Span.ValueEnd == Span.ValueStart)
+			{
+				return false;
+			}
+			int32 Word = At;
+			while (IsBlank(Word))
+			{
+				++Word;
+			}
+			if (Word > At && InBody.Mid(Word, 4).Equals(TEXT("ease"), ESearchCase::CaseSensitive) && IsBlank(Word + 4))
+			{
+				int32 Name = Word + 4;
+				while (IsBlank(Name))
+				{
+					++Name;
+				}
+				int32 NameEnd = Name;
+				while (NameEnd < Len && (FChar::IsAlnum(InBody[NameEnd]) || InBody[NameEnd] == TEXT('_')))
+				{
+					++NameEnd;
+				}
+				if (NameEnd == Name)
+				{
+					return false;
+				}
+				Span.EaseStart = At;
+				Span.EaseEnd = Span.End = At = NameEnd;
+			}
+			int32 Next = At;
+			while (IsBlank(Next))
+			{
+				++Next;
+			}
+			if (Next < Len && InBody[Next] == TEXT(','))
+			{
+				At = Next + 1;
+				while (IsBlank(At))
+				{
+					++At;
+				}
+				continue;
+			}
+			return true;
+		}
+	}
+
+	/**
+	 * InBody, a track line, saying what InTrack holds now with the least of it changed: a key that moved has its time
+	 * replaced, one that changed its value its value, one whose ease went its ease -- and every other byte of the line
+	 * stays, the padding that lines its keys up with the next line's, `0.0` written as `0.0`, the comment after it. A key
+	 * added is spelled where it goes; a key taken out takes its text and the separator before it. False when the line is
+	 * not one this can read key by key, for the caller to spell it whole.
+	 */
+	bool PatchLine(const FString& InBody, FReadTrack& InTrack, double InTickRate, double InDisplayRate, FString& OutBody)
+	{
+		TArray<FKeySpan> Spans;
+		if (InTrack.Existing == nullptr || InTrack.Keys.IsEmpty() || !ScanKeys(InBody, Spans) || Spans.Num() != InTrack.Existing->Keys.Num())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < Spans.Num(); ++Index)
+		{
+			double Written = 0.0;
+			if (!LexTryParseString(Written, *InBody.Mid(Spans[Index].TimeStart, Spans[Index].TimeEnd - Spans[Index].TimeStart))
+				|| !FMath::IsNearlyEqual(Written, InTrack.Existing->Keys[Index].Time, 1.0e-9))
+			{
+				return false;
+			}
+		}
+		auto Slice = [&InBody](int32 InStart, int32 InEnd) { return InBody.Mid(InStart, InEnd - InStart); };
+		auto KeyText = [&](FReadKey& InKey, bool bInLast) -> FString
+		{
+			if (InKey.LineKey == INDEX_NONE)
+			{
+				FString Spelled = SpellTime(InKey.Time, FString(), InDisplayRate, InKey.WrittenTime) + TEXT(" = ") + SpellValue(InTrack, InKey);
+				if (!bInLast && !InKey.Ease.IsEmpty())
+				{
+					Spelled += TEXT(" ease ") + InKey.Ease;
+				}
+				return Spelled;
+			}
+			const FKeySpan& Span = Spans[InKey.LineKey];
+			const FDreamUITimelineKey& Line = InTrack.Existing->Keys[InKey.LineKey];
+			FString Time = Slice(Span.TimeStart, Span.TimeEnd);
+			InKey.WrittenTime = Line.Time;
+			if (InKey.Frame != DreamUITimelineSampling::TimeToFrame(Line.Time, InTickRate))
+			{
+				Time = SpellTime(InKey.Time, Time, InDisplayRate, InKey.WrittenTime);
+			}
+			const FString Value = SameValue(InTrack, InKey, Line) ? Slice(Span.ValueStart, Span.ValueEnd) : SpellValue(InTrack, InKey);
+			FString Ease = Span.EaseStart != INDEX_NONE ? Slice(Span.EaseStart, Span.EaseEnd) : FString();
+			if (!SameEase(InKey.Ease, Line.EaseName))
+			{
+				Ease = InKey.Ease.IsEmpty() ? FString() : TEXT(" ease ") + InKey.Ease;
+			}
+			return Time + Slice(Span.TimeEnd, Span.ValueStart) + Value + Ease;
+		};
+		const FString FirstSeparator = Spans.Num() > 1 ? Slice(Spans[0].End, Spans[1].Start) : FString(TEXT(", "));
+		FString Keys;
+		for (int32 Index = 0; Index < InTrack.Keys.Num(); ++Index)
+		{
+			if (Index > 0)
+			{
+				// The separator the line had between these two, when they stood side by side in it.
+				const int32 Before = InTrack.Keys[Index - 1].LineKey;
+				const int32 Here = InTrack.Keys[Index].LineKey;
+				Keys += Before != INDEX_NONE && Here == Before + 1 ? Slice(Spans[Before].End, Spans[Here].Start) : FirstSeparator;
+			}
+			Keys += KeyText(InTrack.Keys[Index], Index + 1 == InTrack.Keys.Num());
+		}
+		OutBody = InBody.Left(Spans[0].Start) + Keys + InBody.Mid(Spans.Last().End);
+		return true;
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -620,8 +970,8 @@ namespace DreamUITimelineWriteBackLocal
 		return FString();
 	}
 
-	bool Rewrite(const FString& InText, const FDreamUITimeline& InExisting, const TArray<FReadTrack>& InTracks, double InDuration,
-		double InTickRate, FString& OutText, FString& OutError)
+	bool Rewrite(const FString& InText, const FDreamUITimeline& InExisting, TArray<FReadTrack>& InTracks, double InDuration,
+		double InTickRate, double InDisplayRate, FString& OutText, FString& OutError)
 	{
 		TArray<FTextLine> Lines = SplitLines(InText);
 		const int32 Header = InExisting.Location.Line - 1;
@@ -691,6 +1041,7 @@ namespace DreamUITimelineWriteBackLocal
 		TSet<const FDreamUITimelineTrack*> Kept;
 		TSet<int32> KeptEvents;
 		bool bDurationLine = false;
+		double Unused = 0.0;
 		for (int32 Index = Header + 1; Index < Close; ++Index)
 		{
 			const FTextLine& Line = Lines[Index];
@@ -700,13 +1051,24 @@ namespace DreamUITimelineWriteBackLocal
 			}
 			if (const FDreamUITimelineTrack* const* Track = TrackLines.Find(Index))
 			{
-				const FReadTrack* Read = InTracks.FindByPredicate([Track](const FReadTrack& InRead) { return InRead.Existing == *Track && !InRead.bIsEvent; });
+				FReadTrack* Read = InTracks.FindByPredicate([Track](const FReadTrack& InRead) { return InRead.Existing == *Track && !InRead.bIsEvent; });
 				if (Read == nullptr)
 				{
 					continue;
 				}
 				Kept.Add(*Track);
-				Body.Add(Unchanged(*Read, InTickRate) ? Line.Body : LeadingWhitespace(Line.Body) + RenderTrack(*Read));
+				if (Unchanged(*Read, InTickRate))
+				{
+					Body.Add(Line.Body);
+					continue;
+				}
+				FString Patched;
+				if (!PatchLine(Line.Body, *Read, InTickRate, InDisplayRate, Patched))
+				{
+					Patched = LeadingWhitespace(Line.Body) + RenderTrack(*Read, InDisplayRate);
+				}
+				Read->bRewritten = true;
+				Body.Add(Patched);
 				continue;
 			}
 			if (const FDreamUITimelineKey* const* Event = EventLines.Find(Index))
@@ -732,7 +1094,9 @@ namespace DreamUITimelineWriteBackLocal
 				}
 				else if (bDurationNeeded || bDurationWritten)
 				{
-					Body.Add(LeadingWhitespace(Line.Body) + TEXT("duration = ") + PrintTime(InDuration));
+					FString Written;
+					Line.Body.Split(TEXT("="), nullptr, &Written);
+					Body.Add(LeadingWhitespace(Line.Body) + TEXT("duration = ") + SpellTime(InDuration, Written.TrimStartAndEnd(), InDisplayRate, Unused));
 				}
 				continue;
 			}
@@ -745,13 +1109,14 @@ namespace DreamUITimelineWriteBackLocal
 		}
 		if (!bDurationLine && bDurationChanged)
 		{
-			Body.Insert(Indent + TEXT("duration = ") + PrintTime(InDuration), 0);
+			Body.Insert(Indent + TEXT("duration = ") + SpellTime(InDuration, FString(), InDisplayRate, Unused), 0);
 		}
-		for (const FReadTrack& Track : InTracks)
+		for (FReadTrack& Track : InTracks)
 		{
 			if (!Track.bIsEvent && (Track.Existing == nullptr || !Kept.Contains(Track.Existing)))
 			{
-				Body.Add(Indent + RenderTrack(Track));
+				Track.bRewritten = true;
+				Body.Add(Indent + RenderTrack(Track, InDisplayRate));
 			}
 		}
 		if (EventTrack != nullptr)
@@ -760,7 +1125,8 @@ namespace DreamUITimelineWriteBackLocal
 			{
 				if (!KeptEvents.Contains(Index))
 				{
-					Body.Add(FString::Printf(TEXT("%s@%s -> %s"), *Indent, *PrintTime(EventTrack->Events[Index].Key), *EventTrack->Events[Index].Value));
+					Body.Add(FString::Printf(TEXT("%s@%s -> %s"), *Indent, *SpellTime(EventTrack->Events[Index].Key, FString(), InDisplayRate, Unused),
+						*EventTrack->Events[Index].Value));
 				}
 			}
 		}
@@ -782,44 +1148,137 @@ namespace DreamUITimelineWriteBackLocal
 		OutText = MoveTemp(Result);
 		return true;
 	}
+
+	/**
+	 * A rewritten track's keys put where its new line builds them: its keys at the times the line now says, the samples
+	 * of its eases taken out and made again between them. Without it the samples stayed where the old line had put them
+	 * -- around a key that was dragged off -- until the next compile, and the next edit, read against the new line,
+	 * found them in the wrong places and wrote the eased run out as a page of linear keys. The keys the author has hold
+	 * their handles, so what Sequencer has selected stays selected.
+	 */
+	void Rebake(const FReadTrack& InTrack, double InTickRate)
+	{
+		if (InTrack.Section == nullptr || InTrack.Keys.IsEmpty())
+		{
+			return;
+		}
+		TArray<FLineKey> LineKeys;
+		for (const FReadKey& Key : InTrack.Keys)
+		{
+			FLineKey& LineKey = LineKeys.AddDefaulted_GetRef();
+			LineKey.Time = Key.WrittenTime;
+			LineKey.EaseName = Key.Ease;
+			FMemory::Memcpy(LineKey.Channels, Key.Channels, sizeof(LineKey.Channels));
+		}
+		TArray<FSample> Samples;
+		FString BadEase;
+		if (!DreamUITimelineSampling::Sample(LineKeys, InTrack.ChannelCount, InTickRate, Samples, BadEase))
+		{
+			return;
+		}
+		InTrack.Section->Modify();
+		TSet<int32> Authored;
+		for (const FReadKey& Key : InTrack.Keys)
+		{
+			Authored.Add(Key.SequenceKey);
+		}
+		auto Settle = [&](auto& InChannel, int32 InChannelIndex)
+		{
+			auto Data = InChannel.GetData();
+			TArray<FKeyHandle> Keys;
+			for (const FReadKey& Key : InTrack.Keys)
+			{
+				Keys.Add(Data.GetHandle(Key.SequenceKey));
+			}
+			TArray<FKeyHandle> Doomed;
+			for (int32 Index = 0; Index < Data.GetTimes().Num(); ++Index)
+			{
+				if (!Authored.Contains(Index))
+				{
+					Doomed.Add(Data.GetHandle(Index));
+				}
+			}
+			for (const FKeyHandle& Handle : Doomed)
+			{
+				const int32 Index = Data.GetIndex(Handle);
+				if (Index != INDEX_NONE)
+				{
+					Data.RemoveKey(Index);
+				}
+			}
+			for (int32 Key = 0; Key < Keys.Num(); ++Key)
+			{
+				const int32 Index = Data.GetIndex(Keys[Key]);
+				const FFrameNumber Frame = DreamUITimelineSampling::TimeToFrame(InTrack.Keys[Key].WrittenTime, InTickRate);
+				if (Index != INDEX_NONE && Data.GetTimes()[Index] != Frame)
+				{
+					Data.MoveKey(Index, Frame);
+				}
+			}
+			for (const FSample& Sample : Samples)
+			{
+				if (!Sample.bIsLineKey)
+				{
+					InChannel.AddLinearKey(Sample.Frame, static_cast<decltype(Data.GetValues()[0].Value)>(Sample.Channels[InChannelIndex]));
+				}
+			}
+		};
+		int32 ChannelIndex = 0;
+		for (FMovieSceneFloatChannel* Channel : InTrack.FloatChannels)
+		{
+			Settle(*Channel, ChannelIndex++);
+		}
+		for (FMovieSceneDoubleChannel* Channel : InTrack.DoubleChannels)
+		{
+			Settle(*Channel, ChannelIndex++);
+		}
+	}
+
+	/** The block of InAnimation's timeline in InText, rewritten; OutTracks is what was read, for Rebake. */
+	bool Plan(const FString& InText, UDreamWidgetAnimation* InAnimation, const UDreamWidget* InHost, TArray<FReadTrack>& OutTracks,
+		FString& OutText, FString& OutError)
+	{
+		if (!IsValid(InAnimation) || InAnimation->GetMovieScene() == nullptr || !IsValid(InHost))
+		{
+			OutError = TEXT("there is no animation to write");
+			return false;
+		}
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		if (!FDreamUISourceFile::Parse(InText, FString(), Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			OutError = TEXT("the file does not parse, so the animation was not written into it");
+			return false;
+		}
+		const FString Name = InAnimation->GetDisplayNameString();
+		const FDreamUITimeline* Existing = Ast.Timelines.FindByPredicate([&Name](const FDreamUITimeline& InTimeline)
+		{
+			return !InTimeline.bExternal && InTimeline.Name.Equals(Name, ESearchCase::CaseSensitive) && InTimeline.SourceName.IsEmpty();
+		});
+		if (Existing == nullptr)
+		{
+			OutError = FString::Printf(TEXT("the file has no 'timeline %s { }' block of its own to write into"), *Name);
+			return false;
+		}
+		double Duration = 0.0;
+		FString Refusal;
+		if (!ReadTracks(InAnimation, InHost, *Existing, OutTracks, Duration, Refusal))
+		{
+			OutError = FString::Printf(TEXT("%s; edit the block in the .dui, or write 'timeline %s external' to hand the animation to Sequencer for good"),
+				*Refusal, *Name);
+			return false;
+		}
+		const UMovieScene* MovieScene = InAnimation->GetMovieScene();
+		return Rewrite(InText, *Existing, OutTracks, Duration, MovieScene->GetTickResolution().AsDecimal(),
+			MovieScene->GetDisplayRate().AsDecimal(), OutText, OutError);
+	}
 }
 
 bool FDreamUITimelineWriteBack::RewriteText(const FString& InText, UDreamWidgetAnimation* InAnimation, const UDreamWidget* InHost,
 	FString& OutText, FString& OutError)
 {
-	using namespace DreamUITimelineWriteBackLocal;
-	if (!IsValid(InAnimation) || InAnimation->GetMovieScene() == nullptr || !IsValid(InHost))
-	{
-		OutError = TEXT("there is no animation to write");
-		return false;
-	}
-	FDreamUIAst Ast;
-	FDreamUIDiagnosticBag Diagnostics;
-	if (!FDreamUISourceFile::Parse(InText, FString(), Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
-	{
-		OutError = TEXT("the file does not parse, so the animation was not written into it");
-		return false;
-	}
-	const FString Name = InAnimation->GetDisplayNameString();
-	const FDreamUITimeline* Existing = Ast.Timelines.FindByPredicate([&Name](const FDreamUITimeline& InTimeline)
-	{
-		return !InTimeline.bExternal && InTimeline.Name.Equals(Name, ESearchCase::CaseSensitive) && InTimeline.SourceName.IsEmpty();
-	});
-	if (Existing == nullptr)
-	{
-		OutError = FString::Printf(TEXT("the file has no 'timeline %s { }' block of its own to write into"), *Name);
-		return false;
-	}
-	TArray<FReadTrack> Tracks;
-	double Duration = 0.0;
-	FString Refusal;
-	if (!ReadTracks(InAnimation, InHost, *Existing, Tracks, Duration, Refusal))
-	{
-		OutError = FString::Printf(TEXT("%s; edit the block in the .dui, or write 'timeline %s external' to hand the animation to Sequencer for good"),
-			*Refusal, *Name);
-		return false;
-	}
-	return Rewrite(InText, *Existing, Tracks, Duration, InAnimation->GetMovieScene()->GetTickResolution().AsDecimal(), OutText, OutError);
+	TArray<DreamUITimelineWriteBackLocal::FReadTrack> Tracks;
+	return DreamUITimelineWriteBackLocal::Plan(InText, InAnimation, InHost, Tracks, OutText, OutError);
 }
 
 bool FDreamUITimelineWriteBack::CanWriteBack(const UDreamWidgetAnimation* InAnimation)
@@ -851,11 +1310,33 @@ bool FDreamUITimelineWriteBack::WriteAnimation(UDreamWidgetBlueprint* InBlueprin
 		OutReason = FText::FromString(Error);
 		return false;
 	}
+	const FString Current = WriteBack->GetDocumentText();
+	TArray<DreamUITimelineWriteBackLocal::FReadTrack> Tracks;
 	FString Updated;
-	if (!RewriteText(WriteBack->GetDocumentText(), InAnimation, Host, Updated, Error) || !WriteBack->ApplyTextChange(Updated, Error))
+	if (!DreamUITimelineWriteBackLocal::Plan(Current, InAnimation, Host, Tracks, Updated, Error))
 	{
 		OutReason = FText::FromString(Error);
 		return false;
+	}
+	if (Updated.Equals(Current, ESearchCase::CaseSensitive))
+	{
+		return true;
+	}
+	// The file and the keys it now puts elsewhere are one edit, and one undo step -- inside the gesture's own, when the
+	// animation editor writes as that closes (it folds into it by the transaction counter).
+	FScopedTransaction Transaction(LOCTEXT("WriteTimeline", "Edit Timeline"));
+	if (!WriteBack->ApplyTextChange(Updated, Error))
+	{
+		OutReason = FText::FromString(Error);
+		return false;
+	}
+	const double TickRate = InAnimation->GetMovieScene()->GetTickResolution().AsDecimal();
+	for (const DreamUITimelineWriteBackLocal::FReadTrack& Track : Tracks)
+	{
+		if (Track.bRewritten && !Track.bIsEvent)
+		{
+			DreamUITimelineWriteBackLocal::Rebake(Track, TickRate);
+		}
 	}
 	return true;
 }
