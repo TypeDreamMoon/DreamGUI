@@ -337,6 +337,13 @@ void UDreamCanvas::UpdateRootCanvas(const UWorld* InWorld)
 		}
 		
 		UpdateCanvasDrawCall();
+		/**
+		 * The clips the update made were given rows, and the vertices drawn this frame point at them already, but the
+		 * refresh that writes rows ran before the update. A row never written clips nothing, and one another clip let go of
+		 * still holds that clip's rect: left to the next frame's refresh, a widget that starts or stops clipping -- a mask
+		 * transition that starts or stops driving its clip -- would draw its whole subtree for a frame unclipped, or cut away.
+		 */
+		UploadNewClipData();
 	}
 }
 
@@ -870,6 +877,33 @@ void UDreamCanvas::RefreshAllClipData()
 	{
 		//removing a widget's clip leaves the slot behind until the list is compacted
 		if (!ClipData.IsValid())continue;
+		ClipData->UpdateData();
+	}
+	if (bBatch)
+	{
+		ClipDataAsTexture->Flush();
+	}
+}
+
+void UDreamCanvas::UploadNewClipData()
+{
+	if (!IsOwnRoot() || ClipDataList.Num() == 0)
+	{
+		return;
+	}
+	// Together, as RefreshAllClipData sends them: most frames make no clip, and nothing is sent.
+	bool bBatch = false;
+	for (const auto& ClipData : ClipDataList)
+	{
+		if (!ClipData.IsValid() || ClipData->HasUploaded())
+		{
+			continue;
+		}
+		if (!bBatch && IsValid(ClipDataAsTexture) && !ClipDataAsTexture->GetIsBatchUpdateMode())
+		{
+			ClipDataAsTexture->PrepareForBatchUpdate();
+			bBatch = true;
+		}
 		ClipData->UpdateData();
 	}
 	if (bBatch)
@@ -3197,7 +3231,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				WidgetsToPrepare.Reset();
 			}
 			WidgetsBeingUpdated.Reset();
-			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
+			// Clips created above are uploaded once the root's update is done (UploadNewClipData), and from then on by
+			// RefreshAllClipData, driven every tick from the UI manager.
 		}
 		{
 			DREAMUI_DETAIL_SCOPE(DreamUI_WidgetPropertyDataFlush);

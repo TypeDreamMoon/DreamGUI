@@ -60,6 +60,11 @@ public:
 	 * UnmaskedRowBytes).
 	 */
 	void UpdateData();
+	/**
+	 * Whether UpdateData has written this level's row yet. Until it has, the row holds what was there before: nothing, which
+	 * clips nothing, or the rect of the clip that last had the row.
+	 */
+	bool HasUploaded() const { return LastUploadedBlock.Num() > 0; }
 	bool IsPointVisible(const FVector& WorldPoint)const;
 	/**
 	 * The textures this chain's masks read, in their slots: the outermost texture mask's first. What a draw of anything

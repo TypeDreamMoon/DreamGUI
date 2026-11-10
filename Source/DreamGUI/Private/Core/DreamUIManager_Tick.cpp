@@ -308,7 +308,8 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
 	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
 	// build and a memcmp, with no GPU write.
-	// A root canvas's clips are refreshed where the root is updated, just before, in the pass over the root canvases below:
+	// A root canvas's clips are refreshed where the root is updated, just before, in the pass over the root canvases below
+	// (and the clips the update makes are uploaded by the update itself, UDreamCanvas::UploadNewClipData):
 	// only a root has clips to refresh (RefreshAllClipData), and a pass of their own over every canvas was two looks at each
 	// of a world of panels a frame for none.
 
