@@ -12,6 +12,7 @@
 #include "Animation/DreamUIAnimEventTrack.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/SDreamWidgetAnimationEditor.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "DreamUITextStructureTestFixtures.h"
@@ -19,8 +20,10 @@
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
+#include "ISequencer.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
+#include "ScopedTransaction.h"
 #include "Tracks/MovieScenePropertyTrack.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -463,6 +466,68 @@ bool FDreamUITimelineWrittenEditRekeysTest::RunTest(const FString&)
 	{
 		AddInfo(TEXT("written:\n") + File.Read());
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITimelineDragWrittenOnceTest,
+	"DreamGUI.Text.Timeline.ADragInTheAnimationEditorIsWrittenOnceWhenItEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A key dragged in the animation editor's Sequencer: one transaction from the press to the release, and a notification of
+ * the change on every mouse move. Nothing reaches the .dui while the key is held; when the transaction closes the drag is
+ * written once, into it, so one undo takes the key and the file back together.
+ */
+bool FDreamUITimelineDragWrittenOnceTest::RunTest(const FString&)
+{
+	using namespace DreamUITimelineWriteBackTestLocal;
+	using namespace DreamUITextStructureFixtures;
+
+	FScopedDuiFile File(TEXT("TimelineDragOnce.dui"));
+	if (!TestTrue(TEXT("the .dui is written"), File.Write(RevealLines())))
+	{
+		return false;
+	}
+	FScopedTextBlueprint Scoped(TEXT("TimelineDragOnce"), File.FilePath);
+	UDreamWidgetAnimation* Animation = AuthoredTimeline(Scoped, TEXT("Reveal"));
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer != nullptr ? Scoped.Designer->GetSequencerEditor() : nullptr;
+	const TSharedPtr<FDreamUITextWriteBack> WriteBack = Scoped.Designer != nullptr ? Scoped.Designer->GetTextWriteBack() : nullptr;
+	if (!TestNotNull(TEXT("the timeline is built"), Animation) || !TestTrue(TEXT("the designer has an Animations panel"), Panel.IsValid())
+		|| !TestTrue(TEXT("and writes into the file"), WriteBack.IsValid()))
+	{
+		return false;
+	}
+	Panel->AssignDreamWidgetAnimationComponent(Animation->GetTypedOuter<UDreamWidget>()->GetComponent<UDreamWidgetAnimationComponent>());
+	Panel->SelectAnimation(Animation);
+	const TSharedPtr<ISequencer> Sequencer = Panel->GetSequencer();
+	UMovieScenePropertyTrack* Footer = FindBoundTrack(Animation, TEXT("Footer"), TEXT("RenderTranslation"));
+	if (!TestTrue(TEXT("selecting it opened Sequencer on it"), Sequencer.IsValid()) || !TestNotNull(TEXT("with the row's track"), Footer))
+	{
+		return false;
+	}
+	const FString Before = File.Read();
+	const int32 WritesBefore = WriteBack->GetWriteCount();
+
+	{
+		FScopedTransaction Drag(FText::FromString(TEXT("Move Keys or Sections")));
+		for (const int32 Frame : { 13600, 12800, 12000 })
+		{
+			MoveLastKey(Footer, FFrameNumber(Frame));
+			Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::TrackValueChanged);
+			TestEqual(FString::Printf(TEXT("held at tick %d, the file is as it was"), Frame), File.Read(), Before);
+		}
+	}
+
+	TestEqual(TEXT("let go, the drag is one write"), WriteBack->GetWriteCount(), WritesBefore + 1);
+	TestEqual(TEXT("of where it was let go"), File.Read(),
+		Before.Replace(TEXT("0.30 = (-28, 0, 0), 0.58 = (0, 0, 0) ease OutCubic"), TEXT("0.30 = (-28, 0, 0), 0.50 = (0, 0, 0) ease OutCubic")));
+
+	TestTrue(TEXT("there is something to undo"), GEditor->UndoTransaction());
+	TestEqual(TEXT("one undo takes the file back"), File.Read(), Before);
+	const TArray<TPair<int32, double>> Keys = KeysOf(Footer, 0);
+	TestTrue(TEXT("and the key with it"), Keys.Num() == 3 && Keys.Last().Key == 13920);
+	Panel->ClearAnimationSelection();
 	return true;
 }
 

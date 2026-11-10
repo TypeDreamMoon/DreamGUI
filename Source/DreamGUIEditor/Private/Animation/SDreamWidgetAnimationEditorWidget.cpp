@@ -16,6 +16,8 @@
 #include "EditorUndoClient.h"
 #include "Editor.h"
 #include "ScopedTransaction.h"
+#include "Editor/TransBuffer.h"
+#include "Misc/ITransaction.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Utils/DreamUIUtils.h"
@@ -118,6 +120,10 @@ public:
 		{
 			GEditor->OnBlueprintPreCompile().Remove(BlueprintPreCompileHandle);
 			GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
+			if (UTransBuffer* TransBuffer = Cast<UTransBuffer>(GEditor->Trans))
+			{
+				TransBuffer->OnTransactionStateChanged().Remove(TransactionStateHandle);
+			}
 		}
 
 		Close();
@@ -148,6 +154,12 @@ public:
 				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintPreCompile);
 			BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddSP(
 				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintCompiled);
+			// See HandleMovieSceneDataChanged: an edit made inside a transaction is written when it closes.
+			if (UTransBuffer* TransBuffer = Cast<UTransBuffer>(GEditor->Trans))
+			{
+				TransactionStateHandle = TransBuffer->OnTransactionStateChanged().AddSP(
+					this, &SDreamWidgetAnimationEditorWidgetImpl::HandleTransactionStateChanged);
+			}
 		}
 
 		NoAnimationTextBlock =
@@ -968,6 +980,18 @@ public:
 			return;
 		}
 		UDreamWidgetAnimation* Sequence = WeakSequence.Get();
+		// A `timeline` block's animation: the edit is written into the block, or said to be one the file cannot hold --
+		// the next compile rebuilds the animation from the file either way. A drag of keys holds a transaction open from
+		// the press to the release and notifies on every mouse move, so inside one the write waits for it to close
+		// (HandleTransactionStateChanged) and happens once, inside it: one file write, and one undo step for the keys and
+		// the file. Asked before the signature, which Sequencer may hold back until that transaction closes; a write that
+		// finds nothing changed writes nothing.
+		const bool bTimeline = Sequence != nullptr && !bWritingTimeline && FDreamUITimelineWriteBack::CanWriteBack(Sequence);
+		const bool bInsideTransaction = GEditor != nullptr && GEditor->IsTransactionActive();
+		if (bTimeline && bInsideTransaction)
+		{
+			bTimelineWritePending = true;
+		}
 		// Only a change of what the animation holds: Sequencer re-reads its data after any undo that creates or destroys
 		// an object anywhere in the editor, and notifies that too -- which marked this Blueprint for a recompile when an
 		// actor was put back in the level.
@@ -979,22 +1003,10 @@ public:
 		}
 		MarkedSignature = Signature;
 		UDreamWidgetBlueprint* Blueprint = Sequence != nullptr ? Sequence->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
-		// A `timeline` block's animation: the edit is written into the block, or said to be one the file cannot hold --
-		// the next compile rebuilds the animation from the file either way.
-		if (Sequence != nullptr && !bWritingTimeline && FDreamUITimelineWriteBack::CanWriteBack(Sequence))
+		// A change made outside any transaction is written as it comes.
+		if (bTimeline && !bInsideTransaction)
 		{
-			TGuardValue<bool> Writing(bWritingTimeline, true);
-			FText Reason;
-			if (!FDreamUITimelineWriteBack::WriteAnimation(Blueprint, Sequence, Reason))
-			{
-				const FText Message = FText::Format(LOCTEXT("TimelineNotWritten",
-					"This edit of '{0}' could not be written into its timeline block, and the next compile will undo it: {1}"),
-					FText::FromString(Sequence->GetDisplayNameString()), Reason);
-				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message.ToString());
-				FNotificationInfo Info(Message);
-				Info.ExpireDuration = 6.0f;
-				FSlateNotificationManager::Get().AddNotification(Info);
-			}
+			WriteTimeline();
 		}
 		// A clean package as well: an edit made here has already dirtied it through Modify, and
 		// Sequencer also notifies when it merely re-reads its data -- it hears every undo that touches
@@ -1004,6 +1016,48 @@ public:
 			return;
 		}
 		FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+	}
+
+	/** The shown `timeline` animation written into its block, or a notice that it could not be. */
+	void WriteTimeline()
+	{
+		UDreamWidgetAnimation* Sequence = WeakSequence.Get();
+		UDreamWidgetBlueprint* Blueprint = Sequence != nullptr ? Sequence->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+		if (Sequence == nullptr || bWritingTimeline || !FDreamUITimelineWriteBack::CanWriteBack(Sequence))
+		{
+			return;
+		}
+		// Writing re-keys the sequence to what the file now builds (and can straighten a key), which is not another edit to write.
+		TGuardValue<bool> Writing(bWritingTimeline, true);
+		FText Reason;
+		if (!FDreamUITimelineWriteBack::WriteAnimation(Blueprint, Sequence, Reason))
+		{
+			const FText Message = FText::Format(LOCTEXT("TimelineNotWritten",
+				"This edit of '{0}' could not be written into its timeline block, and the next compile will undo it: {1}"),
+				FText::FromString(Sequence->GetDisplayNameString()), Reason);
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message.ToString());
+			FNotificationInfo Info(Message);
+			Info.ExpireDuration = 6.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+	}
+
+	/**
+	 * The end of the transaction an edit of a `timeline` animation was made in: its write, once. PreTransactionFinalized
+	 * is the last moment the transaction is still open (UTransBuffer::End), so the file joins the step that moved the
+	 * keys; a cancelled one has put the keys back, and there is nothing to write.
+	 */
+	void HandleTransactionStateChanged(const FTransactionContext&, ETransactionStateEventType InState)
+	{
+		if (InState == ETransactionStateEventType::TransactionCanceled)
+		{
+			bTimelineWritePending = false;
+		}
+		else if (InState == ETransactionStateEventType::PreTransactionFinalized && bTimelineWritePending)
+		{
+			bTimelineWritePending = false;
+			WriteTimeline();
+		}
 	}
 private:
 	TSharedRef<FExtender> GetAddTrackSequencerExtender(const TSharedRef<FUICommandList> CommandList, const TArray<UObject*> ContextSensitiveObjects)
@@ -1219,6 +1273,9 @@ private:
 	FGuid MarkedSignature;
 	/** A write-back in progress: reading the sequence can straighten a key, and that is not another edit to write. */
 	bool bWritingTimeline = false;
+	/** An edit of the shown timeline made inside a transaction that has not closed yet: written when it does. */
+	bool bTimelineWritePending = false;
+	FDelegateHandle TransactionStateHandle;
 
 	/**
 	 * Whether Sequencer may edit this animation: one the animation editor made, or a `timeline` block's whose .dui the
