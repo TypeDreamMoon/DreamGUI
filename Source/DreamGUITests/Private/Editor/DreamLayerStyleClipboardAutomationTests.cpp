@@ -142,11 +142,12 @@ namespace DreamLayerStyleClipboardTestLocal
 		return InLines.ContainsByPredicate([&InPrefix](const FString& InLine) { return InLine.StartsWith(InPrefix); });
 	}
 
+	/** Every text block's text as it was written -- the English a translated editor shows in its own language. */
 	void CollectTexts(TSharedRef<SWidget> InRoot, TArray<FString>& OutTexts)
 	{
 		if (InRoot->GetType() == TEXT("STextBlock"))
 		{
-			OutTexts.Add(StaticCastSharedRef<STextBlock>(InRoot)->GetText().ToString());
+			OutTexts.Add(StaticCastSharedRef<STextBlock>(InRoot)->GetText().BuildSourceString());
 		}
 		FChildren* Children = InRoot->GetChildren();
 		for (int32 Index = 0; Children != nullptr && Index < Children->Num(); ++Index)

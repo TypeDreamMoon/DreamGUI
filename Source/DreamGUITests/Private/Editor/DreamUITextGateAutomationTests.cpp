@@ -304,8 +304,9 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	TestNotNull(TEXT("the child is still there"), Scoped.FindTemplate(TEXT("Child")));
 
 	// The refusal sentence the remaining structural refusals are built with, once: this is where the claim "the
-	// message tells the author where to go" is actually checked rather than pattern-matched.
-	const FString Refusal = DreamUITextAuthoring::DescribeStructuralRefusal(Scoped.Blueprint, TEXT("delete 'Child'")).ToString();
+	// message tells the author where to go" is actually checked rather than pattern-matched. Read as written, since a
+	// translated editor says it in its own language.
+	const FString Refusal = DreamUITextAuthoring::DescribeStructuralRefusal(Scoped.Blueprint, TEXT("delete 'Child'")).BuildSourceString();
 	TestTrue(TEXT("the refusal names the file"), Refusal.Contains(Source.FileName));
 	TestTrue(TEXT("and says where the structure lives"), Refusal.Contains(TEXT("text")));
 

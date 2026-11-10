@@ -131,10 +131,11 @@ bool FDreamGUICompRefNodeUnresolvedOutputTest::RunTest(const FString& Parameters
 	TestEqual(TEXT("the output falls back to a plain ActorComponent"),
 		(const UObject*)Node->Pins[1]->PinType.PinSubCategoryObject.Get(),
 		(const UObject*)UActorComponent::StaticClass());
+	// The titles as written, which is what they read in an English editor and what a translated one is translated from.
 	TestEqual(TEXT("and the compact face says the cast is the caller's"),
-		Node->GetCompactNodeTitle().ToString(), FString(TEXT("!Get")));
+		Node->GetCompactNodeTitle().BuildSourceString(), FString(TEXT("!Get")));
 	TestTrue(TEXT("the full title says why, since the compact one has no room to"),
-		Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().Contains(TEXT("cast the result yourself")));
+		Node->GetNodeTitle(ENodeTitleType::FullTitle).BuildSourceString().Contains(TEXT("cast the result yourself")));
 
 	// The compile-time half, which was an empty body behind a @todo: a failed auto-cast said nothing
 	// at all, and the symptom is a cast that fails at run time with nothing in the compile log.
@@ -374,7 +375,7 @@ bool FDreamCreateDreamWidgetNodeTest::RunTest(const FString& Parameters)
 	Graph->AddNode(Node, /*bFromUI*/false, /*bSelectNewNode*/false);
 	Node->AllocateDefaultPins();
 	TestEqual(TEXT("in the menu it is Create Dream Widget"),
-		Node->GetNodeTitle(ENodeTitleType::MenuTitle).ToString(), FString(TEXT("Create Dream Widget")));
+		Node->GetNodeTitle(ENodeTitleType::MenuTitle).BuildSourceString(), FString(TEXT("Create Dream Widget")));
 
 	// What picking a class on the node does in the editor.
 	UEdGraphPin* ClassPin = Node->GetClassPin();
