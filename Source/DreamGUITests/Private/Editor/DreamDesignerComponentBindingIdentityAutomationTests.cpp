@@ -30,6 +30,7 @@
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Text/STextBlock.h"
 
 namespace DreamDesignerComponentBindingIdentityTestLocal
 {
@@ -80,13 +81,21 @@ namespace DreamDesignerComponentBindingIdentityTestLocal
 
 	// The property editor's real customization builds these rows; generating their widgets directly
 	// avoids depending on the Details tree's current expansion, scroll position or virtualized rows.
+	// A row is known by its label as written: the event row is a custom row with no property handle to match, and a
+	// translated label need not tell two events apart -- zh-Hans reads "OnPointerEnter" for both OnPointerEnter
+	// ("On Pointer Enter") and OnPointerEnterBP ("OnPointerEnter").
 	TSharedPtr<SWidget> FindEventButton(const TArray<TSharedRef<IDetailTreeNode>>& Nodes, const FString& EventLabel)
 	{
 		using namespace DreamTests::DreamSlatePanel;
+		const auto IsTheLabel = [&EventLabel](const TSharedRef<SWidget>& Candidate)
+		{
+			return Candidate->GetType() == FName(TEXT("STextBlock"))
+				&& StaticCastSharedRef<STextBlock>(Candidate)->GetText().BuildSourceString().Equals(EventLabel, ESearchCase::CaseSensitive);
+		};
 		for (const TSharedRef<IDetailTreeNode>& Node : Nodes)
 		{
 			const FNodeWidgets Widgets = Node->CreateNodeWidgets();
-			if (Widgets.WholeRowWidget.IsValid() && FindTextBlock(Widgets.WholeRowWidget.ToSharedRef(), EventLabel).IsValid())
+			if (Widgets.WholeRowWidget.IsValid() && FindDescendant(Widgets.WholeRowWidget.ToSharedRef(), IsTheLabel).IsValid())
 			{
 				TSharedPtr<SWidget> Button = FindDescendant(Widgets.WholeRowWidget.ToSharedRef(), [](const TSharedRef<SWidget>& Candidate)
 				{
@@ -174,7 +183,7 @@ bool FDreamDesignerReorderedComponentEventBindingTest::RunTest(const FString& Pa
 	TSharedRef<IPropertyRowGenerator> Rows = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"))
 		.CreatePropertyRowGenerator(FPropertyRowGeneratorArgs());
 	Rows->SetObjects(TArray<UObject*>{ Selected });
-	TSharedPtr<SWidget> Button = FindEventButton(Rows->GetRootTreeNodes(), Event->GetDisplayNameText().ToString());
+	TSharedPtr<SWidget> Button = FindEventButton(Rows->GetRootTreeNodes(), Event->GetDisplayNameText().BuildSourceString());
 	if (!TestTrue(TEXT("the real event customization creates an Add button"), Button.IsValid()))return false;
 	const FKeyEvent Accept(EKeys::SpaceBar, FModifierKeysState(), 0, false, 0, 0);
 	TestTrue(TEXT("the event Add button accepts the keyboard press"), Button->OnKeyDown(FGeometry(), Accept).IsEventHandled());
