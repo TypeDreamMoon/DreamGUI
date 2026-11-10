@@ -4,6 +4,7 @@
 
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIPaths.h"
+#include "Text/DreamUITimelineSampling.h"
 #include "Text/DreamUIValueFormat.h"
 
 #include "Core/DreamUIBehaviour.h"
@@ -3361,13 +3362,10 @@ namespace DreamUITextBuilderLocal
 	// one definition of what `ease OutBounce` means in this plugin.
 	// ---------------------------------------------------------------------------------------------
 
-	/** The tick resolution and display rate every language-owned timeline is built at. */
-	constexpr int32 TimelineTickResolution = 24000;
-	constexpr int32 TimelineDisplayRate = 60;
-
+	/** The tick resolution and display rate every language-owned timeline is built at (DreamUITimelineSampling). */
 	FFrameNumber TimelineTimeToFrame(double InSeconds)
 	{
-		return FFrameNumber(static_cast<int32>(FMath::RoundToDouble(InSeconds * static_cast<double>(TimelineTickResolution))));
+		return DreamUITimelineSampling::TimeToFrame(InSeconds, DreamUITimelineSampling::TickResolution);
 	}
 
 	/**
@@ -3658,108 +3656,43 @@ namespace DreamUITextBuilderLocal
 		return bParsed;
 	}
 
-	/** The ease of that name, or false. The word list is EDreamTweenEase's, read through reflection. */
-	bool FindEaseType(const FString& InName, EDreamTweenEase& OutEase)
-	{
-		const UEnum* EaseEnum = StaticEnum<EDreamTweenEase>();
-		const int64 Value = EaseEnum != nullptr ? EaseEnum->GetValueByNameString(InName) : INDEX_NONE;
-		if (Value == INDEX_NONE || static_cast<EDreamTweenEase>(Value) == EDreamTweenEase::CurveFloat)
-		{
-			// CurveFloat is excluded on purpose rather than missing: it names a curve ASSET, and a
-			// timeline key has nowhere to put one. An author who needs a hand-drawn curve marks the
-			// timeline `external` and draws it in Sequencer, which is the layer that exists for it.
-			return false;
-		}
-		OutEase = static_cast<EDreamTweenEase>(Value);
-		return true;
-	}
-
-	/** One channel's worth of keys, in frames, for one segment of one track. */
-	struct FTimelineSample
-	{
-		FFrameNumber Frame;
-		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
-	};
-
 	/**
-	 * Every key a track line produces, eases resolved into sampled points.
+	 * Every key a track line produces, eases resolved into sampled points (DreamUITimelineSampling, which the editor reads
+	 * an edit of the animation back with).
 	 *
 	 * Returns false only when an ease name is not one; a track with a single key is fine and produces
 	 * one constant key, which is how an author pins a value for the whole animation.
 	 */
 	bool SampleTimelineTrack(const FDreamUITimelineTrack& InTrack, const TArray<TArray<double>>& InKeyChannels,
-		int32 InChannelCount, TArray<FTimelineSample>& OutSamples, FString& OutBadEaseName)
+		int32 InChannelCount, TArray<DreamUITimelineSampling::FSample>& OutSamples, FString& OutBadEaseName)
 	{
-		const double SecondsPerSample = 1.0 / static_cast<double>(TimelineDisplayRate);
+		TArray<DreamUITimelineSampling::FLineKey> LineKeys;
+		LineKeys.Reserve(InTrack.Keys.Num());
 		for (int32 KeyIndex = 0; KeyIndex < InTrack.Keys.Num(); ++KeyIndex)
 		{
-			const FDreamUITimelineKey& Key = InTrack.Keys[KeyIndex];
-			FTimelineSample Start;
-			Start.Frame = TimelineTimeToFrame(Key.Time);
-			for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
+			DreamUITimelineSampling::FLineKey& Key = LineKeys.AddDefaulted_GetRef();
+			Key.Time = InTrack.Keys[KeyIndex].Time;
+			Key.EaseName = InTrack.Keys[KeyIndex].EaseName;
+			for (int32 Channel = 0; Channel < InChannelCount && Channel < 4; ++Channel)
 			{
-				Start.Channels[Channel] = InKeyChannels[KeyIndex][Channel];
-			}
-			OutSamples.Add(Start);
-
-			if (KeyIndex + 1 >= InTrack.Keys.Num())
-			{
-				break;
-			}
-			const FDreamUITimelineKey& NextKey = InTrack.Keys[KeyIndex + 1];
-			const double Span = NextKey.Time - Key.Time;
-			if (Span <= 0.0 || Key.EaseName.IsEmpty() || Key.EaseName.Equals(TEXT("Linear")))
-			{
-				// Linear needs no samples between: two keys and a straight line is exactly the curve.
-				continue;
-			}
-
-			EDreamTweenEase Ease = EDreamTweenEase::Linear;
-			if (!FindEaseType(Key.EaseName, Ease))
-			{
-				OutBadEaseName = Key.EaseName;
-				return false;
-			}
-			const FDreamTweenFunction Curve = UDreamTweener::GetEaseFunction(Ease);
-			if (!Curve.IsBound())
-			{
-				OutBadEaseName = Key.EaseName;
-				return false;
-			}
-
-			const int32 SampleCount = FMath::Clamp(FMath::CeilToInt(Span / SecondsPerSample) - 1, 0, 600);
-			for (int32 Sample = 1; Sample <= SampleCount; ++Sample)
-			{
-				const double Alpha = static_cast<double>(Sample) / static_cast<double>(SampleCount + 1);
-				// c = 1, b = 0, d = 1: the curve library's own normalised 0..1 shape, so `ease
-				// OutBounce` here and a DreamTween OutBounce are the same motion by construction.
-				const double Eased = static_cast<double>(Curve.Execute(1.0f, 0.0f, static_cast<float>(Alpha), 1.0f));
-				FTimelineSample Between;
-				Between.Frame = TimelineTimeToFrame(Key.Time + Span * Alpha);
-				for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
-				{
-					const double From = InKeyChannels[KeyIndex][Channel];
-					const double To = InKeyChannels[KeyIndex + 1][Channel];
-					Between.Channels[Channel] = From + (To - From) * Eased;
-				}
-				OutSamples.Add(Between);
+				Key.Channels[Channel] = InKeyChannels[KeyIndex][Channel];
 			}
 		}
-		return true;
+		return DreamUITimelineSampling::Sample(LineKeys, InChannelCount, DreamUITimelineSampling::TickResolution, OutSamples, OutBadEaseName);
 	}
 
 	/** Write one channel's samples into a float or double MovieScene channel. */
-	void FillTimelineFloatChannel(FMovieSceneFloatChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	void FillTimelineFloatChannel(FMovieSceneFloatChannel& OutChannel, const TArray<DreamUITimelineSampling::FSample>& InSamples, int32 InChannel)
 	{
-		for (const FTimelineSample& Sample : InSamples)
+		for (const DreamUITimelineSampling::FSample& Sample : InSamples)
 		{
 			OutChannel.AddLinearKey(Sample.Frame, static_cast<float>(Sample.Channels[InChannel]));
 		}
 	}
 
-	void FillTimelineDoubleChannel(FMovieSceneDoubleChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	void FillTimelineDoubleChannel(FMovieSceneDoubleChannel& OutChannel, const TArray<DreamUITimelineSampling::FSample>& InSamples, int32 InChannel)
 	{
-		for (const FTimelineSample& Sample : InSamples)
+		for (const DreamUITimelineSampling::FSample& Sample : InSamples)
 		{
 			OutChannel.AddLinearKey(Sample.Frame, Sample.Channels[InChannel]);
 		}
@@ -3823,7 +3756,7 @@ namespace DreamUITextBuilderLocal
 			KeyChannels.Add(TArray<double>({ Channels[0], Channels[1], Channels[2], Channels[3] }));
 		}
 
-		TArray<FTimelineSample> Samples;
+		TArray<DreamUITimelineSampling::FSample> Samples;
 		FString BadEase;
 		if (!SampleTimelineTrack(InTrack, KeyChannels, ChannelCount, Samples, BadEase))
 		{
@@ -4002,8 +3935,8 @@ namespace DreamUITextBuilderLocal
 			}
 
 			UMovieScene* MovieScene = Animation->GetMovieScene();
-			MovieScene->SetTickResolutionDirectly(FFrameRate(TimelineTickResolution, 1));
-			MovieScene->SetDisplayRate(FFrameRate(TimelineDisplayRate, 1));
+			MovieScene->SetTickResolutionDirectly(FFrameRate(DreamUITimelineSampling::TickResolution, 1));
+			MovieScene->SetDisplayRate(FFrameRate(DreamUITimelineSampling::DisplayRate, 1));
 			MovieScene->SetPlaybackRange(FFrameNumber(0), TimelineTimeToFrame(Duration).Value + 1);
 
 			FDreamUITimeline Resolved = Timeline;
