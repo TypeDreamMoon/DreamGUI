@@ -20,6 +20,7 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Engine/World.h"
+#include "Interfaces/IPluginManager.h"
 #include "Misc/Guid.h"
 #include "UObject/Package.h"
 
@@ -779,6 +780,42 @@ bool FDreamWidgetBlueprintFactoryOrphanClassTest::RunTest(const FString& Paramet
 	UObject* Created = Factory->FactoryCreateNew(
 		UDreamWidgetBlueprint::StaticClass(), Package, TEXT("Panel"), RF_Public | RF_Standalone, nullptr, GWarn);
 	TestNull(TEXT("the create is refused instead of compiled into the orphan"), Created);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamAssetClassModulesLoadBeforeGameModulesTest,
+	"DreamGUI.Blueprint.TheModulesDefiningSavedClassesLoadBeforeTheProjectsModules",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamAssetClassModulesLoadBeforeGameModulesTest::RunTest(const FString& Parameters)
+{
+	// A project's own modules load before any plugin's in the same phase. At Default, a game module
+	// whose constructor finds a widget Blueprint class -- ConstructorHelpers, as one does with a UMG
+	// widget -- loaded the package before UDreamWidgetBlueprint existed, so the Blueprint failed to
+	// load for the whole session ("its class (DreamWidgetBlueprint) does not exist") and only its
+	// class came back. PreDefault is ahead of every project Default module.
+	TestEqual(TEXT("the widget Blueprint class lives in DreamGUIEditor"),
+		UDreamWidgetBlueprint::StaticClass()->GetOutermost()->GetName(), FString(TEXT("/Script/DreamGUIEditor")));
+
+	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
+	if (!TestNotNull(TEXT("the plugin is found"), Plugin.Get()))
+	{
+		return false;
+	}
+	// DreamGUIEditor holds the asset class; DreamGUIK2Nodes the nodes any Blueprint graph can hold,
+	// which a too-early load drops from the graph -- and a resave then loses for good.
+	for (const TCHAR* ModuleName : { TEXT("DreamGUIEditor"), TEXT("DreamGUIK2Nodes") })
+	{
+		const FModuleDescriptor* Module = Plugin->GetDescriptor().Modules.FindByPredicate(
+			[ModuleName](const FModuleDescriptor& Item) { return Item.Name == FName(ModuleName); });
+		if (!TestNotNull(*FString::Printf(TEXT("%s is in the descriptor"), ModuleName), Module))
+		{
+			continue;
+		}
+		TestTrue(*FString::Printf(TEXT("%s loads at PreDefault or earlier"), ModuleName),
+			Module->LoadingPhase <= ELoadingPhase::PreDefault);
+	}
 	return true;
 }
 
