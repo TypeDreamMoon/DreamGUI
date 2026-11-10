@@ -1,0 +1,112 @@
+dloc 1
+culture zh-Hans
+namespace DreamUILayerStyleSession
+
+Blending {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Blending Options"
+    text  "混合模式"
+    state machine
+}
+
+BevelEmboss {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Bevel & Emboss"
+    text  "内角和阴影"
+    state machine
+}
+
+BevelContour {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Contour"
+    text  "轮廓"
+    state machine
+}
+
+BevelTexture {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+Stroke {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Stroke"
+    // from the engine's zh-Hans
+    text  "笔划"
+    state draft
+}
+
+InnerShadow {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Inner Shadow"
+    text  "内阴影"
+    state machine
+}
+
+InnerGlow {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Inner Glow"
+    text  "内发光"
+    state machine
+}
+
+Satin {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Satin"
+    text  "缎面"
+    state machine
+}
+
+ColorOverlay {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Color Overlay"
+    // from the engine's zh-Hans
+    text  "颜色覆层"
+    state draft
+}
+
+GradientOverlay {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Gradient Overlay"
+    text  "渐变叠加"
+    state machine
+}
+
+PatternOverlay {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Pattern Overlay"
+    text  "图案叠加"
+    state machine
+}
+
+OuterGlow {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Outer Glow"
+    text  "外发光"
+    state machine
+}
+
+DropShadow {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Drop Shadow"
+    text  "投影"
+    state machine
+}
+
+Numbered {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "{0} {1}"
+    // from the engine's zh-Hans
+    text  "{0} {1}"
+    state draft
+}
+
+LayerStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/DreamUILayerStyleSession.cpp
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}

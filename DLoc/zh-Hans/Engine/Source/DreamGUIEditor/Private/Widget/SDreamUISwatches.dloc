@@ -1,0 +1,66 @@
+dloc 1
+culture zh-Hans
+namespace SDreamUISwatches
+
+SwatchTooltip {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "{0}  {1}\nClick to use it; right-click to take it out of the project's palette."
+    text  "{0}  {1}\n点击使用；右键将其从项目的调色板中移除。"
+    state machine
+}
+
+RemoveSwatch {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "Remove from Project Palette"
+    text  "从项目调色板中移除"
+    state machine
+}
+
+AddSwatchTooltip {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "Add this colour to the project's palette."
+    text  "将此颜色添加到项目的调色板。"
+    state machine
+}
+
+NoSwatches {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "The project's palette is empty."
+    text  "项目调色板为空。"
+    state machine
+}
+
+PaletteTooltip {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "The project's palette: pick one of its colours, or add this one to it."
+    text  "项目调色板：选择其颜色之一，或将此颜色添加到其中。"
+    state machine
+}
+
+ProjectPalette {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "Project Palette"
+    text  "项目调色板"
+    state machine
+}
+
+AddToPalette {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "Add This Colour to the Palette"
+    text  "将此颜色添加到调色板"
+    state machine
+}
+
+EditPalette {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "Edit Project Palette..."
+    text  "编辑项目调色板..."
+    state machine
+}
+
+EditPaletteTooltip {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUISwatches.cpp
+    src   "The palette is a project setting: Project Settings > Plugins > Dream GUI > Editor."
+    text  "调色板是项目设置：项目设置 > 插件 > Dream GUI > 编辑器。"
+    state machine
+}

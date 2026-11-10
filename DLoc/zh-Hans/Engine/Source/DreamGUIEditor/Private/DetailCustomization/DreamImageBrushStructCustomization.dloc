@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace FSlateBrushStructCustomization
+
+IsEngineMaterialErrorText {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamImageBrushStructCustomization.cpp
+    src   "Assign a parent UI Material"
+    // from the engine's zh-Hans
+    text  "指定一个父UI材质"
+    state draft
+}

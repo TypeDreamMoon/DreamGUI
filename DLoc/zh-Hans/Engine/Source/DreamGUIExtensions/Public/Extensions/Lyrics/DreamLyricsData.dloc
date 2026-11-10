@@ -1,0 +1,240 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLyricLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine
+    src   "Dream Lyric Line"
+    text  "歌词行"
+    state machine
+}
+
+DreamLyricLine:bBackground {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:bBackground
+    src   "Background"
+    // from the engine's zh-Hans
+    text  "背景"
+    state draft
+}
+
+DreamLyricLine:bSecondary {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:bSecondary
+    src   "Secondary"
+    // from the engine's zh-Hans
+    text  "次要"
+    state draft
+}
+
+DreamLyricLine:EndTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:EndTime
+    src   "End Time"
+    // from the engine's zh-Hans
+    text  "结束时间"
+    state draft
+}
+
+DreamLyricLine:Roman {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:Roman
+    src   "Roman"
+    text  "罗马字"
+    state machine
+}
+
+DreamLyricLine:StartTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:StartTime
+    src   "Start Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamLyricLine:Translation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:Translation
+    src   "Translation"
+    // from the engine's zh-Hans
+    text  "平移"
+    state draft
+}
+
+DreamLyricLine:Words {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:Words
+    src   "Words"
+    text  "歌词"
+    state machine
+}
+
+DreamLyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyrics
+    src   "Dream Lyrics"
+    text  "歌词"
+    state machine
+}
+
+DreamLyrics:Lines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyrics:Lines
+    src   "Lines"
+    // from the engine's zh-Hans
+    text  "线条"
+    state draft
+}
+
+DreamLyricsLibrary {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary
+    src   "Dream Lyrics Library"
+    text  "歌词库"
+    state machine
+}
+
+DreamLyricsLibrary:ParseLRC:OutLyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC:OutLyrics
+    src   "Out Lyrics"
+    text  "输出歌词"
+    state machine
+}
+
+DreamLyricsLibrary:ParseLRC:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsLibrary:ParseLRC:Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamLyricsLibrary:ParseTTML:OutError {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML:OutError
+    src   "Out Error"
+    // from the engine's zh-Hans
+    text  "输出错误"
+    state draft
+}
+
+DreamLyricsLibrary:ParseTTML:OutLyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML:OutLyrics
+    src   "Out Lyrics"
+    text  "输出歌词"
+    state machine
+}
+
+DreamLyricsLibrary:ParseTTML:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsLibrary:ParseTTML:Xml {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML:Xml
+    src   "Xml"
+    text  "XML"
+    state machine
+}
+
+DreamLyricWord {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord
+    src   "Dream Lyric Word"
+    text  "歌词单词"
+    state machine
+}
+
+DreamLyricWord:EndTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord:EndTime
+    src   "End Time"
+    // from the engine's zh-Hans
+    text  "结束时间"
+    state draft
+}
+
+DreamLyricWord:StartTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord:StartTime
+    src   "Start Time"
+    // from the engine's zh-Hans
+    text  "开始时间"
+    state draft
+}
+
+DreamLyricWord:Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLyricLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine
+    src   "A line: its words in order, the line's own time span, and optional secondary texts."
+    text  "一行歌词：其单词的顺序、行本身的持续时间，以及可选的辅助文本。"
+    state machine
+}
+
+DreamLyricLine:bBackground {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:bBackground
+    src   "A backing vocal, shown smaller."
+    text  "伴唱，显示为较小的字体。"
+    state machine
+}
+
+DreamLyricLine:bSecondary {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:bSecondary
+    src   "Sung by the second voice (a duet); players usually right-align these."
+    text  "由第二声部演唱的歌曲（二重唱）；通常右对齐显示。"
+    state machine
+}
+
+DreamLyricLine:Roman {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:Roman
+    src   "A romanization / pronunciation guide, when the source carries one."
+    text  "音译/发音指南，如果原始文本包含。"
+    state machine
+}
+
+DreamLyricLine:Translation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricLine:Translation
+    src   "A translation shown under the line, when the source carries one."
+    text  "当原始文本包含翻译时，在行下方显示该翻译。"
+    state machine
+}
+
+DreamLyricsLibrary:ParseLRC {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC
+    src   "Parse LRC: \"[mm:ss.xx]text\" lines, with inline <mm:ss.xx> word times when present (enhanced LRC).\nLine ends are the next line's start."
+}
+
+DreamLyricsLibrary:ParseTTML {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML
+    src   "Parse TTML of the kind Apple Music and AMLL use: <p begin end> lines of <span begin end> words,\nwith ttm:agent for the second voice, ttm:role=\"x-bg\" spans for backing vocals and\nttm:role=\"x-translation\" / \"x-roman\" spans for the secondary texts. A <p> without word spans\nbecomes one word spanning the line."
+}
+
+DreamLyricWord {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord
+    src   "One timed word (or syllable) of a lyric line. Times are seconds from the start of the track."
+    text  "歌词行中的一个带有时间戳的单词（或音节）。时间戳表示从歌曲开始的秒数。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Lyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC
+    src   "DreamGUI|Lyrics"
+    text  "DreamGUI|歌词"
+    state machine
+}
+
+Lyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricWord:Text
+    src   "Lyrics"
+    text  "歌词"
+    state machine
+}

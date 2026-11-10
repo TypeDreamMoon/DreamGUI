@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIManager
+
+MultipleDreamUICanvasRenderScreenSpaceOverlay {
+    at    Source/DreamGUI/Private/Core/DreamUIManager_Tick.cpp
+    src   "[{0}].{1} Detect {2} DreamCanvas rendered with ScreenSpaceOverlay mode for the same UI layer. There may be at most one shared root and one root per local player; roots in the same layer compete for its projection\n\tWorld: {3}, type: {4}"
+    text  "[{0}].{1} 检测到 {2} 个 DreamCanvas 在同一 UI 层使用 ScreenSpaceOverlay 模式渲染。同一 UI 层最多只能有一个共享根和一个本地玩家根；同一层中的根会争用其投影\n\t世界：{3}，类型：{4}"
+    state machine
+}

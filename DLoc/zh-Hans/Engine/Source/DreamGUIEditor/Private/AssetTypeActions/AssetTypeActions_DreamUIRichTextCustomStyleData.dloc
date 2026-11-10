@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamUIRichTextCustomStyleData
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamUIRichTextCustomStyleData.cpp
+    src   "DreamUI RichText Custom Style Data"
+    text  "DreamUI 富文本自定义样式数据"
+    state machine
+}

@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerCallback {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerCallback.h#DreamTweenerCallback
+    src   "Dream Tweener Callback"
+    text  "DreamTweener 回调"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTweenerCallback {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerCallback.h#DreamTweenerCallback
+    src   "A tween with no value and no length: it exists to fire once, at the moment the clock reaches it.\n\nThis is what UDreamTweenerSequence::AppendCallback and InsertCallback put on the timeline, and it\nis a tween rather than a side list because everything a sequence already does to its children --\nposition it, flip it for a yoyo, rewind it for a restart, count it as finished -- is then the same\nfor a callback as for anything else. A zero duration means the first step past its delay lands on\n\"the cycle is over\", which runs the completion callbacks and retires it."
+    text  "一种没有值也没有长度的补间：它的存在只为在时钟到达它的那一刻触发一次。\n\n这就是 UDreamTweenerSequence::AppendCallback和InsertCallback 放到时间轴上的东西，而它\n是一个补间，而不是一份旁路列表，因为序列对子项所做的这一切——\n定位它、为 yoyo 翻转它、为重新开始回退它、把它计为已完成——对于回调来说，与对其他任何东西\n都完全相同。长度为 0 意味着越过其延迟后的第一步就会落到\n“周期结束”上，这会执行完成回调并将它退役。"
+    state machine
+}

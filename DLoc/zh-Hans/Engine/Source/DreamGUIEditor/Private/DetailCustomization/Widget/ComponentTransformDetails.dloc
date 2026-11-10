@@ -1,0 +1,154 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIComponentTransformDetails
+
+RotationLabel {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Rotation"
+    // from the engine's zh-Hans
+    text  "旋转"
+    state draft
+}
+
+ScaleLabel {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+LocationLabel {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Location"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+PreserveScaleToolTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "When locked, scales uniformly based on the current xyz scale values so the object maintains its shape in each direction when scaled"
+    text  "锁定后，缩放会根据当前的xyz缩放值进行均匀缩放，使对象在每个方向上保持其形状。"
+    state machine
+}
+
+PasteLocation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Paste Location"
+    // from the engine's zh-Hans
+    text  "粘帖位置"
+    state draft
+}
+
+PasteRotation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Paste Rotation"
+    // from the engine's zh-Hans
+    text  "粘贴旋转"
+    state draft
+}
+
+PasteScale {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Paste Scale"
+    // from the engine's zh-Hans
+    text  "粘贴缩放"
+    state draft
+}
+
+LocationFilter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Location"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+RotationFilter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Rotation"
+    // from the engine's zh-Hans
+    text  "旋转"
+    state draft
+}
+
+ScaleFilter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+ResetLocation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Reset Location"
+    // from the engine's zh-Hans
+    text  "重置位置"
+    state draft
+}
+
+ResetRotation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Reset Rotation"
+    // from the engine's zh-Hans
+    text  "重置旋转"
+    state draft
+}
+
+ResetScale {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Reset Scale"
+    // from the engine's zh-Hans
+    text  "重置缩放"
+    state draft
+}
+
+OnSetLocation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Set Location"
+    // from the engine's zh-Hans
+    text  "设置位置"
+    state draft
+}
+
+OnSetRotation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Set Rotation"
+    // from the engine's zh-Hans
+    text  "设置旋转"
+    state draft
+}
+
+OnSetScale {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Set Scale"
+    // from the engine's zh-Hans
+    text  "设置缩放"
+    state draft
+}
+
+OnSetRotation_ComponentDirect {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Modify Component(s)"
+    // from the engine's zh-Hans
+    text  "修改组件"
+    state draft
+}
+
+OnSetLocation_ComponentDirect {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Modify Component Location"
+    // from the engine's zh-Hans
+    text  "修改组件位置"
+    state draft
+}
+
+OnSetScale_ComponentDirect {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/Widget/ComponentTransformDetails.cpp
+    src   "Modify Component Scale"
+    // from the engine's zh-Hans
+    text  "修改组件缩放"
+    state draft
+}

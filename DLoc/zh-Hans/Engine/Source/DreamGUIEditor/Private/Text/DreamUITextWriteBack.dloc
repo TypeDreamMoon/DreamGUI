@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamUITextWriteBack
+
+DreamUIStatementTransaction {
+    at    Source/DreamGUIEditor/Private/Text/DreamUITextWriteBack.cpp
+    src   "Edit DreamUI Text"
+    text  "编辑 DreamUI 文本"
+    state machine
+}
+
+DreamUIWriteBackTransaction {
+    at    Source/DreamGUIEditor/Private/Text/DreamUITextWriteBack.cpp
+    src   "Edit DreamUI Text"
+    text  "编辑 DreamUI 文本"
+    state machine
+}

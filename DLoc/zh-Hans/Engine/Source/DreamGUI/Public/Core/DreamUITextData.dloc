@@ -1,0 +1,1224 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTextFillSegment {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment
+    src   "Dream Text Fill Segment"
+    text  "文本填充段"
+    state machine
+}
+
+DreamTextFillSegment:EndCharIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:EndCharIndex
+    src   "End Char Index"
+    text  "结束字符索引"
+    state machine
+}
+
+DreamTextFillSegment:GlowBoost {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:GlowBoost
+    src   "Glow Boost"
+    text  "发光增强"
+    state machine
+}
+
+DreamTextFillSegment:Progress {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:Progress
+    src   "Progress"
+    // from the engine's zh-Hans
+    text  "进度"
+    state draft
+}
+
+DreamTextFillSegment:StartCharIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:StartCharIndex
+    src   "Start Char Index"
+    text  "起始字符索引"
+    state machine
+}
+
+DreamTextStyle {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle
+    src   "Dream Text Style"
+    text  "文本样式"
+    state machine
+}
+
+DreamTextStyle:FaceDilate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FaceDilate
+    src   "Face Dilate"
+    text  "面部膨胀"
+    state machine
+}
+
+DreamTextStyle:FacePaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FacePaint
+    src   "Face Paint"
+    text  "面部描绘"
+    state machine
+}
+
+DreamTextStyle:FaceSoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FaceSoftness
+    src   "Face Softness"
+    text  "面部柔和度"
+    state machine
+}
+
+DreamTextStyle:FillDimAlpha {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FillDimAlpha
+    src   "Fill Dim Alpha"
+    text  "填充透明度"
+    state machine
+}
+
+DreamTextStyle:FillFadeWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FillFadeWidth
+    src   "Fill Fade Width"
+    text  "填充渐变宽度"
+    state machine
+}
+
+DreamTextStyle:GlowColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowColor
+    src   "Glow Color"
+    // from the engine's zh-Hans
+    text  "发光颜色"
+    state draft
+}
+
+DreamTextStyle:GlowPower {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowPower
+    src   "Glow Power"
+    text  "发光强度"
+    state machine
+}
+
+DreamTextStyle:GlowWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowWidth
+    src   "Glow Width"
+    text  "发光宽度"
+    state machine
+}
+
+DreamTextStyle:OutlineColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineColor
+    src   "Outline Color"
+    // from the engine's zh-Hans
+    text  "轮廓颜色"
+    state draft
+}
+
+DreamTextStyle:OutlinePaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlinePaint
+    src   "Outline Paint"
+    text  "轮廓描绘"
+    state machine
+}
+
+DreamTextStyle:OutlineSoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineSoftness
+    src   "Outline Softness"
+    text  "轮廓柔化"
+    state machine
+}
+
+DreamTextStyle:OutlineWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineWidth
+    src   "Outline Width"
+    text  "轮廓宽度"
+    state machine
+}
+
+DreamTextStyle:OverlayBlend {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OverlayBlend
+    src   "Overlay Blend"
+    text  "叠加混合"
+    state machine
+}
+
+DreamTextStyle:OverlayPaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OverlayPaint
+    src   "Overlay Paint"
+    text  "叠加填充"
+    state machine
+}
+
+DreamTextStyle:PaintBoxHorizontal {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:PaintBoxHorizontal
+    src   "Paint Box Horizontal"
+    text  "水平画笔盒"
+    state machine
+}
+
+DreamTextStyle:PaintBoxVertical {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:PaintBoxVertical
+    src   "Paint Box Vertical"
+    text  "垂直画笔盒"
+    state machine
+}
+
+DreamTextStyle:UnderlayColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayColor
+    src   "Underlay Color"
+    text  "底层颜色"
+    state machine
+}
+
+DreamTextStyle:UnderlayDilate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayDilate
+    src   "Underlay Dilate"
+    text  "底层膨胀"
+    state machine
+}
+
+DreamTextStyle:UnderlayOffset {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayOffset
+    src   "Underlay Offset"
+    text  "底层偏移"
+    state machine
+}
+
+DreamTextStyle:UnderlaySoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlaySoftness
+    src   "Underlay Softness"
+    text  "底层柔化"
+    state machine
+}
+
+DreamUIText_Emoji {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji
+    src   "Dream UIText Emoji"
+    text  "Dream UIText 表情符号"
+    state machine
+}
+
+DreamUIText_Emoji:EmojiCode {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:EmojiCode
+    src   "Emoji Code"
+    text  "表情代码"
+    state machine
+}
+
+DreamUIText_Emoji:Position {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIText_Emoji:Sequence {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:Sequence
+    src   "Sequence"
+    // from the engine's zh-Hans
+    text  "序列"
+    state draft
+}
+
+DreamUIText_Emoji:Size {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamUIText_RichTextCustomTag {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag
+    src   "Dream UIText Rich Text Custom Tag"
+    text  "Dream UIText 多格式文本自定义标签"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:bHyperlink {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:bHyperlink
+    src   "Hyperlink"
+    // from the engine's zh-Hans
+    text  "超链接"
+    state draft
+}
+
+DreamUIText_RichTextCustomTag:CharIndexEnd {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:CharIndexEnd
+    src   "Char Index End"
+    text  "字符索引结束"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:CharIndexStart {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:CharIndexStart
+    src   "Char Index Start"
+    text  "字符索引开始"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:TagName {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:TagName
+    src   "Tag Name"
+    // from the engine's zh-Hans
+    text  "Tag Name"
+    state draft
+}
+
+DreamUIText_RichTextImageTag {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag
+    src   "Dream UIText Rich Text Image Tag"
+    text  "Dream UIText多格式文本图像标签"
+    state machine
+}
+
+DreamUIText_RichTextImageTag:Position {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIText_RichTextImageTag:Size {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+DreamUIText_RichTextImageTag:TagName {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:TagName
+    src   "Tag Name"
+    // from the engine's zh-Hans
+    text  "Tag Name"
+    state draft
+}
+
+DreamUIText_RichTextImageTag:TintColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:TintColor
+    src   "Tint Color"
+    // from the engine's zh-Hans
+    text  "着色"
+    state draft
+}
+
+DreamUITextCharProperty {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty
+    src   "Dream UIText Char Property"
+    text  "Dream UIText 字符属性"
+    state machine
+}
+
+DreamUITextCharProperty:CharIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:CharIndex
+    src   "Char Index"
+    text  "字符索引"
+    state machine
+}
+
+DreamUITextCharProperty:IndicesCount {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:IndicesCount
+    src   "Indices Count"
+    text  "索引计数"
+    state machine
+}
+
+DreamUITextCharProperty:StartTriangleIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:StartTriangleIndex
+    src   "Start Triangle Index"
+    text  "起始三角形索引"
+    state machine
+}
+
+DreamUITextCharProperty:StartVertIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:StartVertIndex
+    src   "Start Vert Index"
+    text  "起始顶点索引"
+    state machine
+}
+
+DreamUITextCharProperty:VertCount {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:VertCount
+    src   "Vert Count"
+    // from the engine's zh-Hans
+    text  "顶点数量"
+    state draft
+}
+
+EDreamTextFlowDirection.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextFlowDirection:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamTextFlowDirection.EDreamTextFlowDirection_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextFlowDirection:EDreamTextFlowDirection_MAX
+    src   "EDream Text Flow Direction MAX"
+    text  "EDreamTextFlowDirection_MAX"
+    state machine
+}
+
+EDreamTextFlowDirection.LeftToRight {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextFlowDirection:LeftToRight
+    src   "Left to Right"
+    text  "从左到右"
+    state machine
+}
+
+EDreamTextFlowDirection.RightToLeft {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextFlowDirection:RightToLeft
+    src   "Right to Left"
+    text  "从右到左"
+    state machine
+}
+
+EDreamTextJustify.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamTextJustify.EDreamTextJustify_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:EDreamTextJustify_MAX
+    src   "EDream Text Justify MAX"
+    text  "EDreamTextJustify_MAX"
+    state machine
+}
+
+EDreamTextJustify.InterCharacter {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:InterCharacter
+    src   "Inter Character"
+    text  "字符间距"
+    state machine
+}
+
+EDreamTextJustify.InterWord {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:InterWord
+    src   "Inter Word"
+    text  "单词间距"
+    state machine
+}
+
+EDreamTextJustify.None {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamTextLastLineAlign.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamTextLastLineAlign.Center {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamTextLastLineAlign.EDreamTextLastLineAlign_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:EDreamTextLastLineAlign_MAX
+    src   "EDream Text Last Line Align MAX"
+    text  "EDreamText 对齐方式 (最大值)"
+    state machine
+}
+
+EDreamTextLastLineAlign.End {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+EDreamTextLastLineAlign.Justify {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Justify
+    src   "Justify"
+    // from the engine's zh-Hans
+    text  "文本对齐"
+    state draft
+}
+
+EDreamTextLastLineAlign.Start {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+EDreamTextPhraseWrap.CJKDictionary {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap:CJKDictionary
+    src   "CJKDictionary"
+    text  "CJK 字典"
+    state machine
+}
+
+EDreamTextPhraseWrap.EDreamTextPhraseWrap_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap:EDreamTextPhraseWrap_MAX
+    src   "EDream Text Phrase Wrap MAX"
+    text  "EDreamText 自动换行 (最大值)"
+    state machine
+}
+
+EDreamTextPhraseWrap.Off {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap:Off
+    src   "Off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Bold {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Bold
+    src   "Bold"
+    // from the engine's zh-Hans
+    text  "加粗"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Color {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.CustomTag {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:CustomTag
+    src   "Custom Tag"
+    // from the engine's zh-Hans
+    text  "自定义标签"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.EDreamUIText_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:EDreamUIText_MAX
+    src   "EDream UIText MAX"
+    text  "EDreamUIText 标签过滤 (最大值)"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Gradient {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Gradient
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "Gradient"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Hyperlink {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Hyperlink
+    src   "Hyperlink"
+    // from the engine's zh-Hans
+    text  "超链接"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Image {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Image
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Italic {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Italic
+    src   "Italic"
+    // from the engine's zh-Hans
+    text  "斜体"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Language {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Language
+    src   "Language"
+    // from the engine's zh-Hans
+    text  "语言"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Size {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+EDreamUIText_RichTextTagFilterFlags.Strikethrough {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Strikethrough
+    src   "Strikethrough"
+    text  "删除线"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Subscript {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Subscript
+    src   "Subscript"
+    text  "下标"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Superscript {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Superscript
+    src   "Superscript"
+    text  "上标"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Underline {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Underline
+    src   "Underline"
+    text  "下划线"
+    state machine
+}
+
+EDreamUITextFontStyle.Bold {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextFontStyle:Bold
+    src   "Bold"
+    // from the engine's zh-Hans
+    text  "加粗"
+    state draft
+}
+
+EDreamUITextFontStyle.BoldAndItalic {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextFontStyle:BoldAndItalic
+    src   "Bold and Italic"
+    text  "粗体和斜体"
+    state machine
+}
+
+EDreamUITextFontStyle.EDreamUITextFontStyle_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextFontStyle:EDreamUITextFontStyle_MAX
+    src   "EDream UIText Font Style MAX"
+    text  "EDreamUIText 字体样式 (最大值)"
+    state machine
+}
+
+EDreamUITextFontStyle.Italic {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextFontStyle:Italic
+    src   "Italic"
+    // from the engine's zh-Hans
+    text  "斜体"
+    state draft
+}
+
+EDreamUITextFontStyle.None {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextFontStyle:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUITextOverflowType.EDreamUITextOverflowType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:EDreamUITextOverflowType_MAX
+    src   "EDream UIText Overflow Type MAX"
+    text  "EDreamUIText 溢出类型 (最大值)"
+    state machine
+}
+
+EDreamUITextOverflowType.Ellipsis {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:Ellipsis
+    src   "Ellipsis"
+    text  "省略号"
+    state machine
+}
+
+EDreamUITextOverflowType.HorizontalOverflow {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:HorizontalOverflow
+    src   "Horizontal Overflow"
+    text  "水平溢出"
+    state machine
+}
+
+EDreamUITextOverflowType.MiddleEllipsis {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:MiddleEllipsis
+    src   "Middle Ellipsis"
+    text  "中间省略号"
+    state machine
+}
+
+EDreamUITextOverflowType.Truncate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:Truncate
+    src   "Truncate"
+    // from the engine's zh-Hans
+    text  "截断"
+    state draft
+}
+
+EDreamUITextOverflowType.VerticalOverflow {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:VerticalOverflow
+    src   "Vertical Overflow"
+    text  "垂直溢出"
+    state machine
+}
+
+EDreamUITextParagraphHorizontalAlign.Center {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamUITextParagraphHorizontalAlign.EDreamUITextParagraphHorizontalAlign_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:EDreamUITextParagraphHorizontalAlign_MAX
+    src   "EDream UIText Paragraph Horizontal Align MAX"
+    text  "EDreamUIText 段落水平对齐 (最大值)"
+    state machine
+}
+
+EDreamUITextParagraphHorizontalAlign.Justify {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:Justify
+    src   "Justify"
+    // from the engine's zh-Hans
+    text  "文本对齐"
+    state draft
+}
+
+EDreamUITextParagraphHorizontalAlign.Left {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamUITextParagraphHorizontalAlign.Right {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamUITextParagraphVerticalAlign.Bottom {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphVerticalAlign:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamUITextParagraphVerticalAlign.EDreamUITextParagraphVerticalAlign_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphVerticalAlign:EDreamUITextParagraphVerticalAlign_MAX
+    src   "EDream UIText Paragraph Vertical Align MAX"
+    text  "EDream UIText段落垂直对齐MAX"
+    state machine
+}
+
+EDreamUITextParagraphVerticalAlign.Middle {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphVerticalAlign:Middle
+    src   "Middle"
+    // from the engine's zh-Hans
+    text  "中"
+    state draft
+}
+
+EDreamUITextParagraphVerticalAlign.Top {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphVerticalAlign:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+EDreamUITextTransformPolicy.EDreamUITextTransformPolicy_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextTransformPolicy:EDreamUITextTransformPolicy_MAX
+    src   "EDream UIText Transform Policy MAX"
+    text  "EDream UIText变换策略MAX"
+    state machine
+}
+
+EDreamUITextTransformPolicy.None {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextTransformPolicy:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUITextTransformPolicy.ToLower {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextTransformPolicy:ToLower
+    src   "To Lower"
+    text  "转小写"
+    state machine
+}
+
+EDreamUITextTransformPolicy.ToUpper {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextTransformPolicy:ToUpper
+    src   "To Upper"
+    text  "转大写"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTextFillSegment {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment
+    src   "A run of characters that fills together, for lyric-style progress: the characters from\nStartCharIndex to EndCharIndex (inclusive, indices into the text) sweep from unlit to lit as\nProgress goes 0..1, left to right across the run's glyphs."
+    text  "一起填充的一段字符，用于歌词式进度：从\nStartCharIndex到EndCharIndex（含两端，为文本中的索引）的字符，随着\nProgress从0..1变化，按该段字形的从左到右顺序从未点亮渐变为点亮。"
+    state machine
+}
+
+DreamTextFillSegment:GlowBoost {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:GlowBoost
+    src   "Extra glow for this run, added to the style's GlowWidth as a fraction (1 = twice as wide)."
+    text  "此段额外的发光，以比例加到样式的GlowWidth上（1 = 宽度加倍）。"
+    state machine
+}
+
+DreamTextFillSegment:Progress {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextFillSegment:Progress
+    src   "0 = none of the run is lit, 1 = all of it."
+    text  "0 = 该段全部未点亮，1 = 全部点亮。"
+    state machine
+}
+
+DreamTextStyle {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle
+    src   "How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop\nshadow), glow, and how the unfilled part of a lyric line looks. Lengths are in em, so a style\nreads the same at every font size. Only distance-field fonts (MTSDF) render these; bitmap fonts\ndraw the face alone.\n\nThe style is stored per widget in the canvas's widget property texture, so texts with different\nstyles still batch into one draw."
+    text  "内置着色器如何绘制文本字形在本体之外的部分：描边、底层（投影）、发光，以及歌词行未填充部分的\n样式。长度以em为单位，因此同一样式\n在各字号下表现一致。只有距离场字体（MTSDF）会渲染这些效果；位图字体\n仅绘制本体。\n\n样式按控件存储在画布的控件属性纹理中，因此使用不同样式的文本\n仍可合批为一次绘制。"
+    state machine
+}
+
+DreamTextStyle:FaceDilate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FaceDilate
+    src   "Grow (positive) or shrink (negative) the face, in em."
+    text  "以em为单位放大（正值）或缩小（负值）本体。"
+    state machine
+}
+
+DreamTextStyle:FacePaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FacePaint
+    src   "Fill the face with a gradient instead of the text's colour, as CSS's `background-clip: text` with `color: transparent`\ndoes: the face is the gradient times the content tint, a custom style's Multiply and TextAnimation's colour, and the\ntext's own Color is not used for it. A <color> run inside stays solid, and so does a hovered link. Emoji keep their\ncolours. Works on every kind of glyph -- distance field, small-text coverage, bitmap -- and on underlines and\nstrikethroughs; drawn by the built-in shader and by materials built on MF_DreamUI_Shade, approximated in the vertex\ncolours for any other material."
+    text  "用渐变而非文本颜色填充字面，效果如同 CSS 的 `background-clip: text` 配合 `color: transparent`\n所做的那样：字面等于渐变乘以内容着色、自定义样式的 Multiply 与 TextAnimation 的颜色，文本自身的 Color\n不参与其中。内部的 <color>…</color> 区段保持纯色，悬停的链接也是如此。表情符号保留其\n颜色。适用于所有类型的字形——距离场、小字号覆盖、位图——以及下划线与\n删除线；由内置着色器以及基于 MF_DreamUI_Shade 的材质绘制，其他材质则在顶点\n颜色中近似。"
+    state machine
+}
+
+DreamTextStyle:FaceSoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FaceSoftness
+    src   "Extra edge softness (blur) in em. 0 draws a crisp edge. Each glyph softens on its own, so past\nabout 0.05 em the halos of neighbouring glyphs visibly merge; a real blur of a whole line is a\npost-process job, not a style."
+    text  "以em为单位的额外边缘柔化（模糊）。0表示绘制清晰的边缘。每个字形各自柔化，因此超过\n约0.05 em后，相邻字形的光晕会明显融合；整行的真正模糊属于\n后处理工作，而不是样式。"
+    state machine
+}
+
+DreamTextStyle:FillDimAlpha {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FillDimAlpha
+    src   "Alpha of the part of a glyph run that the fill progress has not reached yet (lyrics)."
+    text  "字形串中填充进度尚未覆盖部分的 Alpha（歌词）。"
+    state machine
+}
+
+DreamTextStyle:FillFadeWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FillFadeWidth
+    src   "Width of the lit/unlit transition as a fraction of the run, 0..1."
+    text  "点亮/未点亮过渡的宽度，以整个字形串的比例表示，0..1。"
+    state machine
+}
+
+DreamTextStyle:GlowColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowColor
+    src   "Glow colour; alpha scales the glow's strength, 0 means no glow."
+    text  "发光颜色；Alpha 缩放发光强度，0 表示无发光。"
+    state machine
+}
+
+DreamTextStyle:GlowPower {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowPower
+    src   "Glow falloff exponent; higher keeps the glow tight to the face."
+    text  "发光衰减指数；值越大，发光越贴近字形表面。"
+    state machine
+}
+
+DreamTextStyle:GlowWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowWidth
+    src   "How far the glow reaches outside the face, in em. Every reach is clamped to what the font's\nfield holds (SDFRadius / SampleFontSize em), so a wider glow needs a font with a wider spread."
+    text  "发光在字形表面之外延伸的距离，单位为 em。每个延伸距离都会被限制在字体的\n场范围内（SDFRadius / SampleFontSize em），因此更宽的发光需要扩散范围更宽的字体。"
+    state machine
+}
+
+DreamTextStyle:OutlineColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineColor
+    src   "Outline colour; alpha 0 means no outline."
+    text  "轮廓颜色；Alpha 为 0 表示无轮廓。"
+    state machine
+}
+
+DreamTextStyle:OutlinePaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlinePaint
+    src   "Fill the outline with a gradient, times OutlineColor (white shows the gradient as it is). Needs an outline: OutlineColor's alpha and OutlineWidth."
+    text  "用渐变填充轮廓，并与 OutlineColor 相乘（白色会原样显示渐变）。需要轮廓：OutlineColor 的 Alpha 和 OutlineWidth。"
+    state machine
+}
+
+DreamTextStyle:OutlineSoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineSoftness
+    src   "Outline edge softness, in em."
+    text  "轮廓边缘的柔和度，单位为 em。"
+    state machine
+}
+
+DreamTextStyle:OutlineWidth {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineWidth
+    src   "Outline width outside the face, in em."
+    text  "字形表面之外的轮廓宽度，单位为 em。"
+    state machine
+}
+
+DreamTextStyle:OverlayPaint {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OverlayPaint
+    src   "A gradient mixed onto the face, solid or painted, as OverlayBlend says: a highlight band, which UDreamText::SetOverlayPaintPhase moves across the text."
+    text  "混合到字形表面上的渐变，可为纯色或绘制，由 OverlayBlend 决定：一条高光带，UDreamText::SetOverlayPaintPhase 可让其扫过文本。"
+    state machine
+}
+
+DreamTextStyle:PaintBoxHorizontal {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:PaintBoxHorizontal
+    src   "What the text's paints are measured across, across and down; the text as a block on both, CSS's background box, by default."
+    text  "文本绘制内容的横向测量范围；默认两个方向都按整块文本（即 CSS 的 background box）计算。"
+    state machine
+}
+
+DreamTextStyle:UnderlayColor {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayColor
+    src   "Underlay (drop shadow) colour; alpha 0 means no underlay."
+    text  "底层（投影）颜色；Alpha 为 0 表示无底层。"
+    state machine
+}
+
+DreamTextStyle:UnderlayDilate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayDilate
+    src   "Grow the underlay beyond the face, in em."
+    text  "以 em 为单位，将底层扩展到字面之外。"
+    state machine
+}
+
+DreamTextStyle:UnderlayOffset {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayOffset
+    src   "Underlay offset in em; +Y is down."
+    text  "以 em 为单位的底层偏移；+Y 方向向下。"
+    state machine
+}
+
+DreamTextStyle:UnderlaySoftness {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlaySoftness
+    src   "Underlay edge softness, in em."
+    text  "底层边缘的柔化程度，以 em 为单位。"
+    state machine
+}
+
+DreamUIText_Emoji:EmojiCode {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:EmojiCode
+    src   "Emoji char: the cluster's base, its first code point."
+    text  "表情字符：该簇的基础字符，即其首个码点。"
+    state machine
+}
+
+DreamUIText_Emoji:Position {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:Position
+    src   "image object position"
+    text  "图像对象位置"
+    state machine
+}
+
+DreamUIText_Emoji:Sequence {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_Emoji:Sequence
+    src   "The whole emoji cluster as the text spells it -- an escaped element as the one character it stands for: what its\nemoji data entry is found by (UDreamUIFontEmojiData::FindBySequence, then FindByCodepoint on EmojiCode)."
+    text  "文本所书写的整个表情簇——转义元素表示为其所代表的单个字符：表情字体数据条目的查找依据\n（UDreamUIFontEmojiData::FindBySequence，再对 EmojiCode 调用 FindByCodepoint）。"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:bHyperlink {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:bHyperlink
+    src   "This range came from `<a=Id>` rather than `<Id>`: it is a hyperlink, and TagName is its id.\nUDreamText::FindHyperlinkByWorldPosition hit-tests these, and nothing else about them differs --\na link is still a named character range, so a custom style and TextAnimation reach it as usual."
+}
+
+DreamUIText_RichTextCustomTag:CharIndexEnd {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:CharIndexEnd
+    src   "end char index in cacheCharPropertyArray, inclusive; one below CharIndexStart when no visible character is inside the tag"
+    text  "cacheCharPropertyArray 中的结束字符索引（含）；当标签内没有可见字符时，比 CharIndexStart 小一"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:CharIndexStart {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:CharIndexStart
+    src   "start char index in cacheCharPropertyArray"
+    text  "cacheCharPropertyArray 中的起始字符索引"
+    state machine
+}
+
+DreamUIText_RichTextCustomTag:TagName {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:TagName
+    src   "Tag name"
+    // from the engine's zh-Hans
+    text  "Tag Name"
+    state draft
+}
+
+DreamUIText_RichTextImageTag:Position {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:Position
+    src   "image object position"
+    text  "图像对象位置"
+    state machine
+}
+
+DreamUIText_RichTextImageTag:TagName {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextImageTag:TagName
+    src   "Tag name"
+    // from the engine's zh-Hans
+    text  "Tag Name"
+    state draft
+}
+
+DreamUITextCharProperty {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty
+    src   "char property"
+    text  "字符属性"
+    state machine
+}
+
+DreamUITextCharProperty:CharIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:CharIndex
+    src   "char index in string"
+    text  "字符串中的字符索引"
+    state machine
+}
+
+DreamUITextCharProperty:IndicesCount {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:IndicesCount
+    src   "triangle indices count"
+    text  "三角形索引数"
+    state machine
+}
+
+DreamUITextCharProperty:StartTriangleIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:StartTriangleIndex
+    src   "triangle index in UIGeometry::triangles"
+    text  "UIGeometry::triangles 中的三角形索引"
+    state machine
+}
+
+DreamUITextCharProperty:StartVertIndex {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:StartVertIndex
+    src   "vertex index in UIGeometry::vertices"
+    text  "UIGeometry::vertices 中的顶点索引。"
+    state machine
+}
+
+DreamUITextCharProperty:VertCount {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUITextCharProperty:VertCount
+    src   "vertex count"
+    // from the engine's zh-Hans
+    text  "顶点数量"
+    state draft
+}
+
+EDreamTextFlowDirection {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextFlowDirection
+    src   "Which way the paragraph reads, UMG's ETextFlowDirection. Auto asks the bidi algorithm, which is what\nevery paragraph did before this existed; the other two override it, for a UI whose direction is the\ngame's setting rather than the string's content (an empty or all-neutral string has no direction of\nits own, and a mixed one takes the first strong character's)."
+    text  "段落的阅读方向，即 UMG 的 ETextFlowDirection。Auto 交由双向算法决定，在本选项出现之前，\n每个段落都是这样处理的；另外两项会覆盖它，用于 UI 的方向由游戏设置决定、\n而不是由字符串内容决定的场合（空字符串或全中性字符串自身没有方向，\n混合字符串则取第一个强方向字符的方向）。"
+    state machine
+}
+
+EDreamTextJustify {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify
+    src   "Where a justified line gets its extra room -- CSS text-justify. Read only with the Justify alignment."
+    text  "对齐的文本行在哪个位置添加额外的空间，对应 CSS 的 text-justify。仅在 Justify 对齐模式下生效。"
+    state machine
+}
+
+EDreamTextJustify.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:Auto
+    src   "After word separators, and at the boundaries next to a CJK ideograph, kana or fullwidth symbol (Blink's choice)."
+    text  "在单词分隔符之后，以及在与 CJK 字符、假名或全角符号相邻的位置（Blink 的选择）。"
+    state machine
+}
+
+EDreamTextJustify.InterCharacter {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:InterCharacter
+    src   "At every cluster boundary, except inside a cursive script and next to an inline object."
+    text  "在每个簇边界处，除非在连体笔迹内部或在内联对象旁边。"
+    state machine
+}
+
+EDreamTextJustify.InterWord {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:InterWord
+    src   "After word separators only: U+0020, U+00A0 and tab."
+    text  "仅在单词分隔符之后：U+0020、U+00A0 和制表符。"
+    state machine
+}
+
+EDreamTextJustify.None {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextJustify:None
+    src   "Nowhere: a justified line aligns to its start."
+    text  "在任何位置：对齐的文本行与起始边缘对齐。"
+    state machine
+}
+
+EDreamTextLastLineAlign {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign
+    src   "How a justified paragraph's last line, and a line ended by a newline, is aligned -- CSS text-align-last. Read only\nwith the Justify alignment; Start and End follow the paragraph's direction."
+    text  "两端对齐段落的最后一行，以及由换行符结束的行，其对齐方式 —— CSS text-align-last。仅在 Justify\n对齐方式下有效；Start 和 End 跟随段落的方向。"
+    state machine
+}
+
+EDreamTextLastLineAlign.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Auto
+    src   "The paragraph's start edge, as CSS's auto does under text-align: justify."
+    text  "与段落的起始边缘对齐，类似于 CSS 中 text-align: justify 的 auto 效果。"
+    state machine
+}
+
+EDreamTextLastLineAlign.Justify {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextLastLineAlign:Justify
+    src   "Justified like the lines before it."
+    text  "与前面行的对齐方式相同。"
+    state machine
+}
+
+EDreamTextPhraseWrap {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap
+    src   "Whether CJK text wraps between words rather than between any two characters.\n\nThe line-break rules (UAX #14) let a line end between any two ideographs, which is what every\nbrowser does by default. CSS Text 4 added `word-break: auto-phrase` to keep words together instead;\nthis is the same idea, using the dictionary ICU ships for Chinese and Japanese. A word that does not\nfit on a line still breaks inside under AllowPerCharacterWrapping, so it never makes text overflow."
+    text  "CJK 文本是否在词之间换行，而不是在任意两个字符之间换行。\n\n换行规则（UAX #14）允许在任意两个表意文字之间断行，这是每个\n浏览器的默认行为。CSS Text 4 增加了 `word-break: auto-phrase`，改为保持词完整；\n这里思路相同，使用的是 ICU 随附的中文和日文词典。放不下一行的词在\nAllowPerCharacterWrapping 下仍会在词内断开，因此文本永远不会溢出。"
+    state machine
+}
+
+EDreamTextPhraseWrap.CJKDictionary {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap:CJKDictionary
+    src   "Break only between dictionary words inside CJK runs."
+    text  "仅在词典单词之间换行。"
+    state machine
+}
+
+EDreamTextPhraseWrap.Off {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamTextPhraseWrap:Off
+    src   "Break between any two CJK characters, as the line-break rules allow."
+    text  "在任意两个 CJK 字符之间断行，如换行规则所允许的那样。"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Gradient {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Gradient
+    src   "`<gradient=Name>...</gradient>`: what is inside is painted with the gradient Name resolves to -- the custom style\nentry of that name, a project preset (UDreamGUISettings::GradientPresets), or Name read as CSS written without\nspaces -- measured across the run. Nested like <color>, and against it: the innermost of the two wins. Appended."
+    text  "`<gradient=Name>...</gradient>`：其中的内容用 Name 解析出的渐变绘制——即该名称的自定义样式\n条目、项目预设（UDreamGUISettings::GradientPresets），或将 Name 按去掉空格的 CSS 解读——\n沿整个区段度量。像 <color>…</color> 一样嵌套，且与之相对：两者中更内层的生效。追加。"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Hyperlink {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Hyperlink
+    src   "`<a=Id>...</a>`: a custom tag that can also be clicked. Appended, so saved flags keep their meaning."
+    text  "`<a=Id>...</a>`：一种还可以点击的自定义标签。追加，以便已保存的标志保持原有含义。"
+    state machine
+}
+
+EDreamUIText_RichTextTagFilterFlags.Language {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUIText_RichTextTagFilterFlags:Language
+    src   "`<lang=ja>...</lang>`: what is inside is in that language (its fallback faces and its shaping), nested like <size>. Appended."
+    text  "`<lang=ja>...</lang>`：其中的内容使用该语言（其回退字面与字形整形），嵌套方式与 <size>…</size> 相同。追加。"
+    state machine
+}
+
+EDreamUITextOverflowType.Ellipsis {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:Ellipsis
+    src   "replace chars with ... if out of range"
+    text  "超出范围时用 ... 替换字符"
+    state machine
+}
+
+EDreamUITextOverflowType.HorizontalOverflow {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:HorizontalOverflow
+    src   "chars will go out of rect range horizontally"
+    text  "字符将水平超出矩形范围"
+    state machine
+}
+
+EDreamUITextOverflowType.MiddleEllipsis {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:MiddleEllipsis
+    src   "Replace the middle of each line that does not fit with \"...\", keeping its start and its end -- Slate's\nETextOverflowPolicy::MiddleEllipsis. Each hard line on its own; with wrapping, an end ellipsis on the last visible\nline instead. Measured against the box, like Truncate and Ellipsis."
+    text  "如果超出范围，则用“...”替换每行的中间部分，同时保留其开头和结尾 -- Slate 的 ETextOverflowPolicy::MiddleEllipsis。每行独立处理；如果换行，则在最后一行的末尾显示省略号。相对于显示区域进行测量。\n\n当文本超出显示区域时，在垂直方向上使用省略号进行截断。"
+    state machine
+}
+
+EDreamUITextOverflowType.Truncate {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:Truncate
+    src   "remove chars on right if out of range"
+    text  "超出范围时移除右侧字符"
+    state machine
+}
+
+EDreamUITextOverflowType.VerticalOverflow {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextOverflowType:VerticalOverflow
+    src   "chars will go out of rect range vertically"
+    text  "字符将垂直超出矩形范围"
+    state machine
+}
+
+EDreamUITextParagraphHorizontalAlign.Justify {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextParagraphHorizontalAlign:Justify
+    src   "Both edges: a line that wrapped gets the room it lacks spread over its justification opportunities (TextJustify);\nthe paragraph's last line, and a line a newline ends, align as LastLineAlign says. Never shrinks, never stretches\nArabic (no kashida). Appended, so saved alignments keep their meaning."
+    text  "如果超出范围，则换行符后面的文本会被截断。\n\n对齐文本。"
+    state machine
+}
+
+EDreamUITextTransformPolicy {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#EDreamUITextTransformPolicy
+    src   "Case applied to the text on its way into the layout, UMG's ETextTransformPolicy. The Text property\nitself is untouched -- this is presentation, so a caret index and a copy still see what was authored."
+    text  "文本进入布局时所应用的大小写转换，即UMG的ETextTransformPolicy。Text属性\n本身不受影响——这只是呈现，因此插入符索引和复制操作看到的仍是创作时的内容。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Face {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FaceSoftness
+    src   "Face"
+    // from the engine's zh-Hans
+    text  "面"
+    state draft
+}
+
+Fill {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:FillDimAlpha
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+Glow {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:GlowColor
+    src   "Glow"
+    // from the engine's zh-Hans
+    text  "炫光"
+    state draft
+}
+
+Outline {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:OutlineColor
+    src   "Outline"
+    // from the engine's zh-Hans
+    text  "轮廓"
+    state draft
+}
+
+Underlay {
+    at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamTextStyle:UnderlayColor
+    src   "Underlay"
+    text  "底层"
+    state machine
+}

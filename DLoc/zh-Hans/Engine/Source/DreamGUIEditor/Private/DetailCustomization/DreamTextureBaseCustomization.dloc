@@ -1,0 +1,52 @@
+dloc 1
+culture zh-Hans
+namespace UITextureBaseCustomization
+
+FixTextureSettingForHitTest_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "FixTextureSettingForHitTest"
+    text  "修复纹理设置，用于碰撞检测"
+    state machine
+}
+
+FixTextureForHitTest_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "Fix texture for hit test"
+    text  "修复纹理，用于碰撞检测"
+    state machine
+}
+
+FixTextureSettingForHitTest_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "By default we can't access texture's pixel data, which is required for line traceClick this button to fix it by change texture settings"
+    text  "默认情况下，我们无法访问纹理的像素数据，这对于线追踪是必需的。点击此按钮以通过更改纹理设置来修复它。"
+    state machine
+}
+
+FixTextureForHitTest {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "Fix texture for hit test"
+    text  "修复纹理，用于碰撞检测"
+    state machine
+}
+
+AdditionalButton_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "AdditionalButton"
+    text  "附加按钮"
+    state machine
+}
+
+SnapSize_Button {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "Snap Size"
+    text  "缩放比例"
+    state machine
+}
+
+TextureSnapSize_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamTextureBaseCustomization.cpp
+    src   "UITexture snap size"
+    text  "纹理对齐尺寸"
+    state machine
+}

@@ -1,0 +1,221 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTextPaintLibrary {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary
+    src   "Dream Text Paint Library"
+    text  "Dream文本绘制库"
+    state machine
+}
+
+DreamTextPaintLibrary:PaintAngleTo:Delay {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:Delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintAngleTo:Duration {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintAngleTo:Ease {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:Ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintAngleTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintAngleTo:Text {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintAngleTo:To {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:Delay {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:Delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:Duration {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:Ease {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:Ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:Layer {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:Layer
+    src   "Layer"
+    // from the engine's zh-Hans
+    text  "图层"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:Text {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo:To {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamTextPaintLibrary:PlayShimmer:Delay {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer:Delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamTextPaintLibrary:PlayShimmer:Duration {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamTextPaintLibrary:PlayShimmer:Loops {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer:Loops
+    src   "Loops"
+    text  "循环次数"
+    state machine
+}
+
+DreamTextPaintLibrary:PlayShimmer:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTextPaintLibrary:PlayShimmer:Text {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+EDreamTextPaintLayer.EDreamTextPaintLayer_MAX {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#EDreamTextPaintLayer:EDreamTextPaintLayer_MAX
+    src   "EDream Text Paint Layer MAX"
+    text  "EDream Text Paint Layer MAX"
+    state machine
+}
+
+EDreamTextPaintLayer.Face {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#EDreamTextPaintLayer:Face
+    src   "Face"
+    // from the engine's zh-Hans
+    text  "Face"
+    state draft
+}
+
+EDreamTextPaintLayer.Outline {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#EDreamTextPaintLayer:Outline
+    src   "Outline"
+    // from the engine's zh-Hans
+    text  "轮廓"
+    state draft
+}
+
+EDreamTextPaintLayer.Overlay {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#EDreamTextPaintLayer:Overlay
+    src   "Overlay"
+    // from the engine's zh-Hans
+    text  "Overlay"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTextPaintLibrary {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary
+    src   "Tweens that move a text's paints (FDreamTextPaint) without repainting it: each drives one of UDreamText's paint\nanimation setters, which write one pixel of the text's paint table a step -- no repaint, no layout. They pause with\nthe game and follow its time dilation as the text's other tweens do (UDreamVisual::ColorTo), and end with the text."
+    text  "在不重绘文本的情况下移动其画笔（FDreamTextPaint）的补间：每个补间驱动UDreamText的一个画笔\n动画设置器，每步写入文本画笔表中的一个像素——不重绘，也不重新布局。它们随游戏暂停，并像文本的其他补间\n（UDreamVisual::ColorTo）一样跟随其时间膨胀，且在文本结束时结束。"
+    state machine
+}
+
+DreamTextPaintLibrary:PaintAngleTo {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo
+    src   "Turn every paint of the text (UDreamText::SetPaintAngleOffset) from its angle offset now to To, in degrees."
+    text  "将文本的每个画笔（UDreamText::SetPaintAngleOffset）的角度偏移从当前值渐变到To，单位为度。"
+    state machine
+}
+
+DreamTextPaintLibrary:PaintPhaseTo {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo
+    src   "Move one paint's phase (UDreamText::SetFacePaintPhase and its siblings) from where it is to To: its gradient slides\nalong its line, 1 being one whole gradient. Null when there is no text, or no tween manager to run it."
+    text  "将一个画笔的相位（UDreamText::SetFacePaintPhase及其同类函数）从当前位置移动到To：其渐变沿其线路滑动，\n1表示一整个渐变。没有文本，或没有可运行它的补间管理器时为null。"
+    state machine
+}
+
+DreamTextPaintLibrary:PlayShimmer {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer
+    src   "Sweep the overlay paint across the text: its phase from -1 to 1 at an even speed, Duration seconds a pass, starting\nagain at -1 after each, Loops passes (-1: until stopped, or until the text goes). The look is the overlay's: a band\nthat is transparent at both ends -- linear-gradient(90deg, transparent 40%, white 50%, transparent 60%) -- with\nOverlayBlend Add, is a shimmer. The phase stays at -1 during the delay, which keeps such a band off the text."
+    text  "以匀速让叠加画笔扫过文本：其相位从-1到1，Duration秒一遍，每遍后重新从-1开始，共Loops遍（-1：\n直到停止，或直到文本消失）。外观取决于叠加画笔：一条两端透明的色带\n——linear-gradient(90deg, transparent 40%, white 50%, transparent 60%)——配合\nOverlayBlend的Add，即为微光。延迟期间相位保持为-1，这使这样的色带不会落在文本上。"
+    state machine
+}
+
+EDreamTextPaintLayer {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#EDreamTextPaintLayer
+    src   "One of a text's three paints (FDreamTextStyle::FacePaint, OutlinePaint, OverlayPaint), as a tween names it."
+    text  "文本三个画笔之一（FDreamTextStyle::FacePaint、OutlinePaint、OverlayPaint），即补间所命名的那个画笔。"
+    state machine
+}

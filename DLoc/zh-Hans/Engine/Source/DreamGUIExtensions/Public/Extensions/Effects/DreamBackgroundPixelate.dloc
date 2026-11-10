@@ -1,0 +1,79 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBackgroundPixelate {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate
+    src   "Dream Background Pixelate"
+    text  "像素化背景"
+    state machine
+}
+
+DreamBackgroundPixelate:ApplyAlphaToStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:ApplyAlphaToStrength
+    src   "Apply Alpha to Strength"
+    text  "是否受 Alpha 影响"
+    state machine
+}
+
+DreamBackgroundPixelate:GetApplyAlphaToStrength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:GetApplyAlphaToStrength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundPixelate:GetPixelateStrength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:GetPixelateStrength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundPixelate:PixelateStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:PixelateStrength
+    src   "Pixelate Strength"
+    text  "像素化强度"
+    state machine
+}
+
+DreamBackgroundPixelate:SetApplyAlphaToStrength:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:SetApplyAlphaToStrength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBackgroundPixelate:SetPixelateStrength:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:SetPixelateStrength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamBackgroundPixelate {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate
+    src   "UI element that can make the background look pixelated\nUse it in ScreenSpace or WorldSpace-DreamUIRenderer.\nIf android OpenGL ES3.1, need to enable \"ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL\"."
+    text  "可使背景呈现像素化效果的 UI 元素。\n请在 ScreenSpace 或 WorldSpace-DreamUIRenderer 中使用。\n如果为 Android OpenGL ES3.1，则需要启用“ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL”。"
+    state machine
+}
+
+DreamBackgroundPixelate:ApplyAlphaToStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:ApplyAlphaToStrength
+    src   "Will alpha affect pixelate strength? If true, then 0 alpha means 0 pixelate strength, and 1 alpha means full pixelate strength."
+    text  "是否使 Alpha 值影响像素化强度？如果为真，则 0 Alpha 表示 0 像素化强度，1 Alpha 表示完全像素化。"
+    state machine
+}
+
+DreamBackgroundPixelate:PixelateStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:PixelateStrength
+    src   "Pixelate effect strength."
+    text  "像素化效果强度。"
+    state machine
+}

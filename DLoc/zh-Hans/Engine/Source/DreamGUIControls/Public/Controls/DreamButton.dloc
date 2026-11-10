@@ -1,0 +1,412 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton
+    src   "Dream Button"
+    text  "Dream按钮"
+    state machine
+}
+
+DreamButton:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:AcceptedMouseButtons
+    src   "Accepted Mouse Buttons"
+    text  "接受的鼠标按键"
+    state machine
+}
+
+DreamButton:BackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:BackgroundColor
+    src   "Background Color"
+    // from the engine's zh-Hans
+    text  "背景颜色"
+    state draft
+}
+
+DreamButton:bAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:bAllowDragDrop
+    src   "Allow Drag Drop"
+    // from the engine's zh-Hans
+    text  "Allow Drag Drop"
+    state draft
+}
+
+DreamButton:ButtonBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ButtonBehaviour
+    src   "Button Behaviour"
+    text  "按钮行为"
+    state machine
+}
+
+DreamButton:ClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ClickMethod
+    src   "Click Method"
+    // from the engine's zh-Hans
+    text  "点击方法"
+    state draft
+}
+
+DreamButton:ColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ColorAndOpacity
+    src   "Color and Opacity"
+    // from the engine's zh-Hans
+    text  "颜色和不透明度"
+    state draft
+}
+
+DreamButton:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ContentNode
+    src   "Content Node"
+    text  "内容节点"
+    state machine
+}
+
+DreamButton:DragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:DragSource
+    src   "Drag Source"
+    text  "拖拽源"
+    state machine
+}
+
+DreamButton:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamButton:GetAcceptedMouseButtons:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAcceptedMouseButtons:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetAllowDragDrop:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAllowDragDrop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetBackgroundColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetBackgroundColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetClickMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetClickMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetColorAndOpacity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetColorAndOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetDragSource:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetDragSource:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetPressMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetPressMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:GetTouchMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetTouchMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:IsPressed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:IsPressed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamButton:OnClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnClicked
+    src   "On Clicked"
+    // from the engine's zh-Hans
+    text  "点击时"
+    state draft
+}
+
+DreamButton:OnHovered {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnHovered
+    src   "On Hovered"
+    // from the engine's zh-Hans
+    text  "悬停时"
+    state draft
+}
+
+DreamButton:OnPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnPressed
+    src   "On Pressed"
+    // from the engine's zh-Hans
+    text  "按压时"
+    state draft
+}
+
+DreamButton:OnReleased {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnReleased
+    src   "On Released"
+    // from the engine's zh-Hans
+    text  "释放时"
+    state draft
+}
+
+DreamButton:OnUnhovered {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnUnhovered
+    src   "On Unhovered"
+    // from the engine's zh-Hans
+    text  "未悬停时"
+    state draft
+}
+
+DreamButton:PressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:PressMethod
+    src   "Press Method"
+    // from the engine's zh-Hans
+    text  "按压方法"
+    state draft
+}
+
+DreamButton:SetAcceptedMouseButtons:InAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAcceptedMouseButtons:InAcceptedMouseButtons
+    src   "In Accepted Mouse Buttons"
+    text  "传入的可接受鼠标按键"
+    state machine
+}
+
+DreamButton:SetAllowDragDrop:bInAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAllowDragDrop:bInAllowDragDrop
+    src   "In Allow Drag Drop"
+    // from the engine's zh-Hans
+    text  "In Allow Drag Drop"
+    state draft
+}
+
+DreamButton:SetBackgroundColor:InBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetBackgroundColor:InBackgroundColor
+    src   "In Background Color"
+    // from the engine's zh-Hans
+    text  "在背景颜色中"
+    state draft
+}
+
+DreamButton:SetClickMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetClickMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamButton:SetColorAndOpacity:InColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetColorAndOpacity:InColorAndOpacity
+    src   "In Color and Opacity"
+    // from the engine's zh-Hans
+    text  "在颜色和不透明度中"
+    state draft
+}
+
+DreamButton:SetPressMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetPressMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamButton:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamButton:SetTouchMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetTouchMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamButton:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamButton:TouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:TouchMethod
+    src   "Touch Method"
+    // from the engine's zh-Hans
+    text  "触控方法"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton
+    src   "A button whose hierarchy is code, not an asset.\n\nTwo nodes -- a face, and the hole on it -- and the behaviour BP_Button shipped without for months.\nThat omission is the whole argument for this class existing: a control that always adds its own\nUIButton has no state in which clicking it does nothing.\n\nThe face's brush stays white and the selectable writes the style's colours onto it as absolutes,\nrather than the gallery's habit of a coloured brush multiplied by near-white tints -- a product\nof two sources is a look no style sheet can name.\n\nIT DRAWS NO TEXT OF ITS OWN. What is on a button is whatever the host puts in the hole, which is\nthe default one, so nesting fills it:\n\n    Native.Button Confirm {\n        Text { Text = \"确定\" }\n        OnClicked -> HandleConfirm\n    }\n\nOne child, as every content slot takes one -- an icon BESIDE a label is a panel, and a panel is a\nthing the author puts in the hole rather than a thing the hole has to be. There used to be a\nstock `Label` property with a UDreamText node behind it, and the hole stood it down whenever it\nfilled: two answers to \"what is on this button\" alternating, with a swap rule to keep exactly one\nof them awake. One answer needs no rule. UDreamDialog, which was that property's only real\nconsumer, now puts a UDreamText of its own in the hole like any other host.\n\nITS SIZE IS ITS CONTENT'S. The face is a UMG Size Box: it keeps ContentPadding around whatever is\nin the hole, and measures to that plus the padding, with the style's Height as a FLOOR rather\nthan as the height. That is the difference between a button an Auto row can measure and the one\nthis was: a stock label with a text layout of its own decided the height, the authored number was\nwritten onto the widget where the next arrange overwrote it, and the hole -- a container-less\nnode -- never arranged what a host hung in it at all.\n\nHeight being a floor is what makes both readings work: an empty button is ContentPadding wide and\nHeight tall, a button with a line of text in it is that text plus the padding and still at least\nHeight tall, and a button with something big in it grows. Width has no floor -- an axis nobody\nstates is the consumer's, which is the family's rule everywhere else too."
+    text  "一个层级结构由代码而非资源定义的按钮。\n\n两个节点——一个面，以及它上面的洞——外加 BP_Button 缺失了数月之久的那套行为。\n正是这一缺失，构成了这个类存在的全部理由：一个总是自带 UIButton 的控件，\n不存在点击它却毫无反应的状态。\n\n面的画刷保持白色，可选组件把样式的颜色以绝对值写入其上，而不是画廊那种\n用带色画刷乘以近白色着色的习惯——两个来源相乘得到的观感，\n没有任何样式表能命名。\n\n它自身不绘制任何文本。按钮上显示的内容，是宿主放进洞里的东西，\n而洞是默认的那个，因此嵌套即可填充：\n\n    Native.Button Confirm {\n        Text { Text = \"确定\" }\n        OnClicked -> HandleConfirm\n    }\n\n只有一个子项，因为每个内容槽都只接受一个子项——与标签并排的图标是一个面板，\n而面板是作者放进洞里的东西，不是洞本身必须成为的东西。过去有一个内置的\n`Label` 属性，其背后是一个 UDreamText 节点，而洞一旦被填充就会让它退场：\n两个回答“这个按钮上是什么”的答案轮流出现，并靠一条交换规则保证只有一个\n处于唤醒状态。一个答案不需要规则。UDreamDialog 曾是那个属性唯一真正的\n使用者，如今它像任何其他宿主一样，把自己的 UDreamText 放进洞里。\n\n它的大小就是其内容的大小。面是一个 UMG 尺寸框：它在洞里任何东西的\n周围保留 ContentPadding，并以内容加填充来测量，同时把样式的 Height\n当作下限而非高度。这就是一个 Auto 行可以测量的按钮与此前那个按钮的区别：\n此前由一个自带文本布局的内置标签决定高度，作者填写的数字被写到控件上，\n而下一次排列又把它覆盖掉，而洞——一个没有容器的节点——从未对宿主\n挂在其中的任何东西进行排列。\n\n高度作为下限，使两种读法都成立：空按钮的宽度是 ContentPadding、高度是 Height；\n含一行文本的按钮是该文本加上填充，且高度仍至少为 Height；而含有大内容的按钮\n则会增长。宽度没有下限——没人声明的轴就归使用者所有，这也是该系列\n在其他所有地方一贯的规则。"
+    state machine
+}
+
+DreamButton:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:AcceptedMouseButtons
+    src   "WHICH mouse buttons press and click this button -- a bitmask over EDreamUIMouseButtonType, the\nleft button alone by default, which is UMG's rule: SButton answers the left button and nothing\nelse, so a right click on a button is not a use of it (no OnPressed, OnReleased or OnClicked)\nand goes on to whatever is behind it.\n\nUMG has no knob for this, so this is the one place that can say otherwise: widen it for a button\nthat should also answer the right or the middle button. A touch and a gamepad or keyboard press\nare not mouse buttons and always count. Pushed onto the behaviour with the three methods above --\nUUISelectable::AcceptedMouseButtons is what the clicks actually consult. In .dui it is a number,\none bit per EDreamUIMouseButtonType value: 1 is Left, 4 is Right, 5 is both."
+    text  "哪些鼠标按键可以按下并点击此按钮——一个基于 EDreamUIMouseButtonType 的位掩码，\n默认只有左键，这是 UMG 的规则：SButton 只响应左键，不响应其他按键，\n因此右键单击按钮不算使用它（不会触发 OnPressed、OnReleased 或 OnClicked），\n而是继续传递给其背后的对象。\n\nUMG 没有对应的开关，所以这里是唯一可以另行设定的地方：对于还应响应右键或中键的\n按钮，把它的范围放宽。触摸以及手柄或键盘按键不属于鼠标按键，始终计入。\n通过上面三个方法推送到行为上——真正被点击查询的是\nUUISelectable::AcceptedMouseButtons。在 .dui 中它是一个数字，\n每个 EDreamUIMouseButtonType 值占一位：1 是左键，4 是右键，5 是两者。"
+    state machine
+}
+
+DreamButton:BackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:BackgroundColor
+    src   "A tint multiplied over whatever the face is showing -- UMG's BackgroundColor, and the runtime\nhalf of the face brush's authored Tint.\n\nTwo channels rather than one because they answer different questions: the brush's Tint is part\nof the LOOK and comes from the style sheet, this one is a thing game code says about this one\nbutton (\"the confirm button goes red while the timer runs out\"). They multiply, and white --\nwhere this starts -- is no opinion, so every existing button is unchanged.\n\nDistinct again from the style's five state colours: those ride the visual's own colour through\nthe selectable's transition, and this rides the rect's body. All three multiply on screen."
+    text  "乘在面所显示内容之上的着色——UMG 的 BackgroundColor，也是面画刷\n作者指定 Tint 的运行时那一半。\n\n之所以有两个通道而不是一个，是因为它们回答不同的问题：画刷的 Tint 是观感的一部分，\n来自样式表；而这个是游戏代码对这一个按钮所做的声明（“计时快结束时确认按钮变红”）。\n二者相乘，而白色——也就是这里的起始值——表示不发表意见，\n因此所有现有按钮都不变。\n\n它又与样式的五个状态颜色不同：那些颜色通过可选组件的过渡作用于视觉自身的颜色，\n而这个作用于矩形的主体。三者在屏幕上相乘。"
+    state machine
+}
+
+DreamButton:bAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:bAllowDragDrop
+    src   "Whether a drag may START on this button -- UMG's bAllowDragDrop, and off as UMG has it.\n\nWhat it turns on is a UDreamUIDragSource on the face, because that is what makes a drag MEAN\nsomething in this framework: without one the pointer pipeline still reports the geometry and\nnothing carries a payload. Turning it back off destroys that component again, so a button\nthat never asked for one never grows one.\n\nThe payload is the drag source's own (Tag, Payload, DragVisualClass); reach it through\nGetDragSource. A button that needs a payload only runtime knows subclasses that component --\nwhich is the same road any other widget takes, and the reason this is a switch rather than a\nsecond set of drag properties here."
+    text  "拖拽是否可以从这个按钮开始——UMG 的 bAllowDragDrop，和 UMG 一样默认关闭。\n\n它开启的是面上的一个 UDreamUIDragSource，因为正是它让拖拽在这个框架中\n具有意义：没有它，指针管线仍然会报告几何信息，但没有任何东西携带载荷。\n再次关闭它会销毁该组件，因此从未要求过它的按钮\n也永远不会多出它。\n\n载荷归拖拽源自己所有（Tag、Payload、DragVisualClass）；可通过\nGetDragSource 获取。需要只有运行时才知道的载荷的按钮，会对该组件进行子类化——\n这与任何其他控件走的是同一条路，也是这里用一个开关而不是\n第二组拖拽属性的原因。"
+    state machine
+}
+
+DreamButton:ClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ClickMethod
+    src   "WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control.\n\nThe behaviour has carried them since they were added to UUISelectable; a control that did not\nstate them left every button in the project on the desktop's DownAndUp, which is right for a\ndesktop and wrong for a key on a virtual keyboard (which wants MouseDown) and for a button\ninside a scroll box (which wants PreciseClick, so a drag that was really a scroll cancels)."
+    text  "此按钮的点击在何时触发，按输入类型区分——UMG 的三个枚举，呈现在控件上。\n\n自它们被加入 UUISelectable 以来，行为就一直携带它们；一个不声明它们的控件，会把\n项目中的每个按钮都留在桌面的 DownAndUp 上，这对桌面是正确的，对虚拟键盘上的\n按键（它想要 MouseDown）以及滚动框内的按钮（它想要 PreciseClick，这样一次实为\n滚动的拖拽就会被取消）则是错误的。"
+    state machine
+}
+
+DreamButton:ColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ColorAndOpacity
+    src   "A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which this\nproperty honours the alpha.\n\nThe alpha is pushed to the control's own RenderOpacity, which cascades down everything under\nit: fading a button fades its face, its label and whatever else was put inside, whatever each\nof those is drawn with. That is the half nearly every caller wants -- a button fading in, or\ngreying while a cooldown runs.\n\nThe colour half is not applied by this property, so every existing button draws as it always\nhas. The tint that would carry it is UDreamWidget::SetContentTint, which multiplies every visual\nbelow a widget without writing to any of them (UDreamBorder::ContentColorAndOpacity is that\ntint): a caller who wants the whole button coloured sets it on the button itself. BackgroundColor\nabove tints the FACE alone, which is the part this control owns and the part a caller usually means."
+    text  "覆盖整个按钮（面和内容都一样）的着色——UMG 的 ColorAndOpacity（颜色与不透明度），\n此属性只采用其中的 alpha。\n\nalpha 会被推送到控件自身的 RenderOpacity，并向下级联到其下的所有内容：\n让一个按钮淡入淡出，就会淡入淡出它的面、它的标签以及放进其中的其他任何东西，\n无论它们各自用什么绘制。这正是几乎所有调用者都想要的那一半——\n按钮淡入，或在冷却期间变灰。\n\n颜色那一半不由本属性应用，因此所有现有按钮的绘制与以往完全一致。\n能够承载它的着色是 UDreamWidget::SetContentTint，它会在不写入任何视觉对象的情况下，\n对控件之下的每个视觉对象进行相乘（UDreamBorder::ContentColorAndOpacity 就是这种着色）：\n想让整个按钮着色的调用者，应在按钮自身上设置它。上面的 BackgroundColor 只给面着色，\n那是此控件自己拥有的部分，通常也是调用者的本意。"
+    state machine
+}
+
+DreamButton:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:ContentNode
+    src   "The hole. Empty is the normal state, and an empty one claims no size -- see RealizeBuiltIn."
+    text  "空位。为空是正常状态，空的空位不占任何尺寸——参见 RealizeBuiltIn。"
+    state machine
+}
+
+DreamButton:DragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:DragSource
+    src   "Only while bAllowDragDrop is on; see there for why it is added and destroyed rather than muted."
+    text  "仅在 bAllowDragDrop 开启时存在；关于为何是添加和销毁而不是静音，见该属性。"
+    state machine
+}
+
+DreamButton:GetDragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetDragSource
+    src   "The drag source this button's switch put on the face, or null while the switch is off.\n\nDefined in the .cpp rather than inline, because the class is only forward declared up here and\nunwrapping a TObjectPtr of an incomplete type is not something to leave to a cast's fallback."
+    text  "此按钮的开关放在面上的拖拽源；开关关闭时为 null。\n\n定义在 .cpp 中而非内联，因为此处该类只有前向声明，\n而对不完整类型的 TObjectPtr 解包不能交给类型转换的回退处理。"
+    state machine
+}
+
+DreamButton:IsPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:IsPressed
+    src   "Whether a pointer is holding this button down right now.\n\nAsked of the behaviour rather than remembered here: the selectable is what the pointer talks\nto, and a second copy of \"is it down\" on the control would be a flag that goes stale the first\ntime a press ends somewhere this control does not hear about."
+    text  "指针当前是否正按住此按钮。\n\n这是向行为询问的结果，而非在此处记录：与指针打交道的是可选中对象，\n若在控件上再存一份“是否按下”，一旦某次按压在\n本控件收不到通知的地方结束，这个标志就会过期。"
+    state machine
+}
+
+DreamButton:OnClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnClicked
+    src   "Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it."
+    text  "从行为转发而来，因此使用方绑定的是控件本身，而不是它的某个部件。"
+    state machine
+}
+
+DreamButton:OnPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:OnPressed
+    src   "The other four moments UMG's button speaks, re-broadcast from the same behaviour and for the\nsame reason OnClicked is: the signals existed on UUIButton the whole time and stopped at the\nface, so anything wanting them -- a sound on press, a tooltip on hover -- had to reach past the\ncontrol into a part the control owns.\n\nPress and release are the POINTER's, not the click's: a press that slides off the button\nreleases without clicking, which is exactly the distinction a hold-to-charge control needs.\nA disabled button broadcasts none of the press pair (the behaviour gates them)."
+    text  "UMG 按钮另外四个发出信号的时刻，同样从该行为转发，\n原因也与 OnClicked 相同：这些信号一直存在于 UUIButton 上，\n却止步于表面，因此任何需要它们的逻辑——按下时的音效、悬停时的提示——\n都得越过控件，深入到控件所拥有的部件里去接。\n\n按下与抬起属于指针，而不是点击：\n按下后滑出按钮会在不触发点击的情况下抬起，\n这正是按住蓄力控件所需的区分。禁用的按钮不会广播这一对按下信号中的任何一个（由行为拦截）。"
+    state machine
+}
+
+DreamButton:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAcceptedMouseButtons
+    src   "Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do."
+    text  "写入位掩码并立即将其推送到行为上，与那三个方法设置器相同。"
+    state machine
+}
+
+DreamButton:SetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetClickMethod
+    src   "Each of the four setters below writes the field and re-pushes it onto the behaviour."
+    text  "下面四个设置器各自写入字段，并重新推送到行为上。"
+    state machine
+}
+
+DreamButton:SetColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetColorAndOpacity
+    src   "See the property: the alpha cascades over the whole button, the colour has nowhere to go."
+    text  "参见该属性：alpha 会级联到整个按钮，颜色则无处可去。"
+    state machine
+}
+
+DreamButton:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetStyle
+    src   "This instance's whole look, replaced and pushed. Whether it is the look in EFFECT is still\nStyleSource's answer -- writing an inline style while the sheet is driving changes nothing you\ncan see, which is why the push runs either way rather than pretending otherwise."
+    text  "此实例的整套外观，被替换并推送。它是否实际生效仍取决于\nStyleSource——当样式表在驱动时写入内联样式，看不到任何\n变化，因此无论哪种情况都会推送，而不是假装无事发生。"
+    state machine
+}
+
+DreamButton:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Button {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAcceptedMouseButtons
+    src   "Button"
+    // from the engine's zh-Hans
+    text  "按钮"
+    state draft
+}

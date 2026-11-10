@@ -1,0 +1,162 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUICaptureLibrary {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary
+    src   "Dream UICapture Library"
+    text  "DreamUI捕获库"
+    state machine
+}
+
+DreamUICaptureLibrary:CaptureAll:InDirectory {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll:InDirectory
+    src   "In Directory"
+    text  "目录"
+    state machine
+}
+
+DreamUICaptureLibrary:CaptureAll:InWorldContextObject {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll:InWorldContextObject
+    src   "In World Context Object"
+    // from the engine's zh-Hans
+    text  "输入世界上下文Object"
+    state draft
+}
+
+DreamUICaptureLibrary:CaptureAll:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng:InCanvas {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng:InCanvas
+    src   "In Canvas"
+    // from the engine's zh-Hans
+    text  "In Canvas"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng:InFilePath {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng:InFilePath
+    src   "In File Path"
+    // from the engine's zh-Hans
+    text  "输入文件路径"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath
+    src   "In File Path"
+    // from the engine's zh-Hans
+    text  "输入文件路径"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveRenderTargetToPng:InTarget {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng:InTarget
+    src   "In Target"
+    // from the engine's zh-Hans
+    text  "In Target"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveRenderTargetToPng:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveViewportToPng:InFilePath {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng:InFilePath
+    src   "In File Path"
+    // from the engine's zh-Hans
+    text  "输入文件路径"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveViewportToPng:InWorldContextObject {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng:InWorldContextObject
+    src   "In World Context Object"
+    // from the engine's zh-Hans
+    text  "输入世界上下文Object"
+    state draft
+}
+
+DreamUICaptureLibrary:SaveViewportToPng:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUICaptureLibrary {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary
+    src   "Pictures of what DreamGUI draws, written out as PNG files -- a render target, a canvas that renders into one, or a\nviewport with the scene and every panel on it -- so that a UI can be looked at away from the machine that drew it:\nattached to a bug report, compared between two builds, kept by an automated run that wants to show what it saw.\n\nEvery call reads the picture back from the GPU, and so waits for the render thread to finish what it has been\ngiven: a tool for looking, not something to do every frame. Without a GPU (-nullrhi) there is nothing to read; the\ncall says so in the log and returns false.\n\nThe console command DreamUI.Capture [Directory] runs CaptureAll for the world it is typed in."
+    text  "把DreamGUI绘制的内容写成PNG文件——渲染目标、渲染到某个目标的画布，或带有场景及其上每个面板的\n视口——以便在绘制它的机器之外查看UI：附加到缺陷报告中、在两个构建之间比较、由想要展示所见内容的\n自动化运行保存。\n\n每次调用都会从GPU回读图片，因此会等待渲染线程完成已交给它的\n工作：这是用于查看的工具，而不是每帧都要做的事。没有GPU（-nullrhi）时没有可读取的内容；\n调用会在日志中说明这一点并返回false。\n\n控制台命令DreamUI.Capture [Directory]会为输入它的世界运行CaptureAll。"
+    state machine
+}
+
+DreamUICaptureLibrary:CaptureAll {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll
+    src   "Everything there is to look at in InWorldContextObject's world, into InDirectory -- a new time-stamped\ndirectory under the capture directory when it is empty: the viewport as Viewport.png, and each root canvas that\nrenders into a target as <its widget's name>.png. Returns the files written, in that order."
+}
+
+DreamUICaptureLibrary:GetCaptureDirectory {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory
+    src   "<Project>/Saved/DreamUI/Captures, the directory a relative path given to these functions is taken from."
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng
+    src   "What InCanvas draws, as a PNG at InFilePath: the target of a canvas that renders into one. A canvas drawn on\nscreen or in the world has no picture of its own -- it is part of the viewport's, which SaveViewportToPng writes."
+    text  "InCanvas 绘制的内容，以 PNG 保存到 InFilePath：即渲染到渲染目标的画布的渲染目标。\n在屏幕或世界中绘制的画布没有自己的图片——它是视口图片的一部分，由 SaveViewportToPng 写出。"
+    state machine
+}
+
+DreamUICaptureLibrary:SaveRenderTargetToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng
+    src   "InTarget's pixels, as a PNG at InFilePath (.png is added when the path has no extension). The target's alpha is\nkept, so what nothing was drawn over stays transparent in the file."
+    text  "InTarget 的像素，以 PNG 保存到 InFilePath（路径没有扩展名时会添加 .png）。\n目标的 alpha 会保留，因此未被绘制覆盖的区域在文件中保持透明。"
+    state machine
+}
+
+DreamUICaptureLibrary:SaveViewportToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng
+    src   "The viewport InWorldContextObject's world is shown in -- the game's, or in the editor a level viewport showing\nthat world -- as a PNG at InFilePath: the scene with every panel on it, as a player sees it. A game's viewport is\ndrawn straight into its window and can be read only while it draws a frame, so in a game this returns false; take\nthe picture with the engine's screenshot request there (HighResShot, FScreenshotRequest)."
+    text  "用于显示InWorldContextObject的世界的视口——游戏视口，或在编辑器中显示该世界的关卡视口——\n以PNG保存到InFilePath：包含场景及其上每个面板，如同玩家看到的那样。游戏视口直接绘制到其窗口中，\n只有在其绘制一帧时才能读取，因此在游戏中此函数返回false；请在那里使用引擎的截图请求\n（HighResShot、FScreenshotRequest）获取图片。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Capture {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll
+    src   "DreamGUI|Capture"
+    text  "DreamGUI|捕获"
+    state machine
+}

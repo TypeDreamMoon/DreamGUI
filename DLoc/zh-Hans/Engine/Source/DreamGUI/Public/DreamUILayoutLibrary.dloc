@@ -1,0 +1,321 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUILayoutLibrary {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary
+    src   "Dream UILayout Library"
+    text  "DreamUI布局库"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionOnPlatform:OutMousePosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform:OutMousePosition
+    src   "Out Mouse Position"
+    text  "输出鼠标位置"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionOnPlatform:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetMousePositionOnViewport:OutMousePosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnViewport:OutMousePosition
+    src   "Out Mouse Position"
+    text  "输出鼠标位置"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionOnViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetMousePositionOnViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:GetMousePositionScaledByDPI:InPlayer {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI:InPlayer
+    src   "In Player"
+    text  "输入玩家"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionScaledByDPI:OutMousePosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI:OutMousePosition
+    src   "Out Mouse Position"
+    text  "输出鼠标位置"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionScaledByDPI:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:InPlayer {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:InPlayer
+    src   "In Player"
+    text  "输入玩家"
+    state machine
+}
+
+DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:GetViewportScale:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetViewportScale:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportScale:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:GetViewportSize:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetViewportSize:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportSize:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:bPlayerViewportRelative {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:bPlayerViewportRelative
+    src   "Player Viewport Relative"
+    // from the engine's zh-Hans
+    text  "相对玩家视口"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:InPlayer {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:InPlayer
+    src   "In Player"
+    text  "输入玩家"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:InWorldLocation {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:InWorldLocation
+    src   "In World Location"
+    // from the engine's zh-Hans
+    text  "在世界位置中"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:OutScreenPosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:OutScreenPosition
+    src   "Out Screen Position"
+    text  "输出屏幕位置"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:bPlayerViewportRelative {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:bPlayerViewportRelative
+    src   "Player Viewport Relative"
+    // from the engine's zh-Hans
+    text  "相对玩家视口"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:InPlayer {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:InPlayer
+    src   "In Player"
+    text  "输入玩家"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:InWorldLocation {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:InWorldLocation
+    src   "In World Location"
+    // from the engine's zh-Hans
+    text  "在世界位置中"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:OutDistance {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:OutDistance
+    src   "Out Distance"
+    // from the engine's zh-Hans
+    text  "输出距离"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:OutScreenPosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:OutScreenPosition
+    src   "Out Screen Position"
+    text  "输出屏幕位置"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:RemoveAllWidgets:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:RemoveAllWidgets:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:SlotAsPanelSlot:InWidget {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:SlotAsPanelSlot:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUILayoutLibrary:SlotAsPanelSlot:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:SlotAsPanelSlot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUILayoutLibrary {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary
+    src   "The viewport, the mouse and the screen -- this framework's UWidgetLayoutLibrary.\n\nEverything here was reachable from C++ and from nowhere else: the viewport's size, its DPI scale,\nthe mouse position in the coordinates the UI actually uses, and where a world location lands on\nscreen. A Blueprint wanting to pin a marker to an enemy had to go through the UMG library, whose\nanswers are in Slate's spaces and not this framework's, and hope the two agreed."
+    text  "视口、鼠标和屏幕——本框架的 UWidgetLayoutLibrary（控件布局库）。\n\n这里的一切过去只能从 C++ 访问，别处都访问不到：视口的大小、它的 DPI 缩放，\nUI 实际使用的坐标中的鼠标位置，以及世界位置落在屏幕上的哪里。\n蓝图若想把标记钉在敌人身上，只能走 UMG 库，而 UMG 的答案在 Slate 的空间里，\n不在本框架的空间里，还得指望两者一致。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionOnPlatform {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform
+    src   "The mouse in the PLATFORM's coordinates -- desktop pixels, across every monitor.\n\nDifferent from GetMousePositionOnViewport by the window's own position, which is the whole\nreason UMG keeps both: a windowed game's viewport zero is not the desktop's zero."
+    text  "鼠标在平台的坐标中——桌面像素，跨所有显示器。\n\n与 GetMousePositionOnViewport 的区别在于窗口自身的位置，这正是\nUMG 同时保留两者的原因：窗口化游戏的视口零点不是桌面的零点。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionOnViewport {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnViewport
+    src   "The mouse in viewport pixels, top-left zero."
+    text  "以视口像素表示的鼠标位置，左上角为零点。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetMousePositionScaledByDPI {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI
+    src   "The mouse in DPI-scaled viewport coordinates -- the space the UI is laid out in."
+    text  "鼠标在 DPI 缩放后的视口坐标中——也就是 UI 布局所在的空间。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry
+    src   "The geometry of the whole screen for a player -- UMG's GetViewportWidgetGeometry and\nGetPlayerScreenWidgetGeometry, which are one function here because there is one screen root\nper local player and no shared layer behind them."
+    text  "某个玩家整个屏幕的几何——即 UMG 的 GetViewportWidgetGeometry（视口控件几何）和\nGetPlayerScreenWidgetGeometry，二者在这里是同一个函数，因为每个本地玩家只有一个屏幕根，\n其后也没有共享层。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetViewportScale {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportScale
+    src   "The project's DPI scale for the current viewport size -- the number the whole UI is scaled by\nbefore it is shown. The same curve UMG reads, so a project that tuned it once is obeyed here."
+    text  "项目针对当前视口大小的 DPI 缩放——整个 UI 在显示前按它缩放的那个数值。\n与 UMG 读取的是同一条曲线，因此项目调过一次，这里就会照办。"
+    state machine
+}
+
+DreamUILayoutLibrary:GetViewportSize {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportSize
+    src   "The game viewport's size in pixels. Zero when there is no viewport, e.g. on a dedicated server."
+    text  "游戏视口的像素大小。没有视口时为零，例如在专用服务器上。"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition
+    src   "Where a world location lands on screen, in viewport pixels -- what a health bar over an enemy\nneeds. False when the location is behind the camera or there is no viewport.\n\n@param bPlayerViewportRelative       Measure from this player's own viewport corner rather than the\n                                                                     whole window's. What split screen needs."
+    text  "世界位置落在屏幕上的位置，以视口像素表示——敌人头顶的血条需要的就是这个。\n该位置在相机后方或没有视口时返回 false。\n\n@param bPlayerViewportRelative       从该玩家自己的视口角开始测量，而不是\n整个窗口的角。分屏需要这样做。"
+    state machine
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance
+    src   "The same, and how far away it was. The distance is what a marker fades or sorts by."
+    text  "与前面相同，另外还给出距离。标记的淡出或排序依据的就是这个距离。"
+    state machine
+}
+
+DreamUILayoutLibrary:RemoveAllWidgets {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:RemoveAllWidgets
+    src   "Take every tracked page off the screen. UMG's RemoveAllWidgets."
+    text  "将所有已跟踪的页面从屏幕上移除，即 UMG 的 RemoveAllWidgets（移除所有控件）。"
+    state machine
+}
+
+DreamUILayoutLibrary:SlotAsPanelSlot {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:SlotAsPanelSlot
+    src   "A widget's panel slot -- UMG's whole SlotAs* family in one node.\n\nUMG needs a dozen of them because each panel has its own slot class and a graph has to cast to\nthe right one; here there is a single UDreamPanelSlot whatever the parent is, so there is\nnothing to choose between and nothing to get wrong. Null when the parent hands out no slots,\nwhich is a real and ordinary state -- see UDreamWidget::HasPanelSlots."
+    text  "控件的面板插槽——用一个节点囊括 UMG 的整个 SlotAs* 系列。\n\nUMG 需要十几个这样的函数，因为每种面板都有自己的插槽类，而图表必须转换到\n正确的那个；这里无论父级是什么都只有一个 UDreamPanelSlot，因此\n没有可选的余地，也不会出错。父级不提供插槽时返回 Null，\n这是一种真实且常见的状态——见 UDreamWidget::HasPanelSlots。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Viewport {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform
+    src   "DreamGUI|Viewport"
+    text  "DreamGUI|视口"
+    state machine
+}

@@ -1,0 +1,534 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGlass {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass
+    src   "Dream Glass"
+    text  "梦幻玻璃"
+    state machine
+}
+
+DreamGlass:Brightness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Brightness
+    src   "Brightness"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+DreamGlass:CornerRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:CornerRadius
+    src   "Corner Radius"
+    // from the engine's zh-Hans
+    text  "角半径"
+    state draft
+}
+
+DreamGlass:CornerRadiusUnitMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:CornerRadiusUnitMode
+    src   "Corner Radius Unit Mode"
+    text  "角半径单位"
+    state machine
+}
+
+DreamGlass:Dispersion {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Dispersion
+    src   "Dispersion"
+    text  "色散"
+    state machine
+}
+
+DreamGlass:EdgeWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:EdgeWidth
+    src   "Edge Width"
+    text  "边缘宽度"
+    state machine
+}
+
+DreamGlass:Frost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Frost
+    src   "Frost"
+    text  "冰霜"
+    state machine
+}
+
+DreamGlass:GetShape:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GetShape:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamGlass:GetShapeBlendGroup:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GetShapeBlendGroup:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamGlass:GlassTint {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GlassTint
+    src   "Glass Tint"
+    text  "玻璃着色"
+    state machine
+}
+
+DreamGlass:GlassTintStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GlassTintStrength
+    src   "Glass Tint Strength"
+    text  "玻璃着色强度"
+    state machine
+}
+
+DreamGlass:HighlightColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:HighlightColor
+    src   "Highlight Color"
+    // from the engine's zh-Hans
+    text  "高亮颜色"
+    state draft
+}
+
+DreamGlass:HighlightStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:HighlightStrength
+    src   "Highlight Strength"
+    text  "高光强度"
+    state machine
+}
+
+DreamGlass:HighlightWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:HighlightWidth
+    src   "Highlight Width"
+    text  "高光宽度"
+    state machine
+}
+
+DreamGlass:LightAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:LightAngle
+    src   "Light Angle"
+    text  "光线角度"
+    state machine
+}
+
+DreamGlass:Profile {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Profile
+    src   "Profile"
+    // from the engine's zh-Hans
+    text  "描述文件"
+    state draft
+}
+
+DreamGlass:Refraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Refraction
+    src   "Refraction"
+    // from the engine's zh-Hans
+    text  "折射"
+    state draft
+}
+
+DreamGlass:Saturation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Saturation
+    src   "Saturation"
+    // from the engine's zh-Hans
+    text  "饱和度"
+    state draft
+}
+
+DreamGlass:SetBrightness:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetBrightness:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetCornerRadius:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetCornerRadius:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetCornerRadiusUnitMode:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetCornerRadiusUnitMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetDispersion:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetDispersion:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetEdgeWidth:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetEdgeWidth:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetFrost:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetFrost:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetGlassTint:InColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetGlassTint:InColor
+    src   "In Color"
+    // from the engine's zh-Hans
+    text  "在颜色中"
+    state draft
+}
+
+DreamGlass:SetGlassTint:InStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetGlassTint:InStrength
+    src   "In Strength"
+    // from the engine's zh-Hans
+    text  "输入强度"
+    state draft
+}
+
+DreamGlass:SetHighlight:InColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetHighlight:InColor
+    src   "In Color"
+    // from the engine's zh-Hans
+    text  "在颜色中"
+    state draft
+}
+
+DreamGlass:SetHighlight:InLightAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetHighlight:InLightAngle
+    src   "In Light Angle"
+    text  "光线角度"
+    state machine
+}
+
+DreamGlass:SetHighlight:InStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetHighlight:InStrength
+    src   "In Strength"
+    // from the engine's zh-Hans
+    text  "输入强度"
+    state draft
+}
+
+DreamGlass:SetHighlight:InWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetHighlight:InWidth
+    src   "In Width"
+    // from the engine's zh-Hans
+    text  "In Width"
+    state draft
+}
+
+DreamGlass:SetInnerShadow:InStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetInnerShadow:InStrength
+    src   "In Strength"
+    // from the engine's zh-Hans
+    text  "输入强度"
+    state draft
+}
+
+DreamGlass:SetInnerShadow:InWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetInnerShadow:InWidth
+    src   "In Width"
+    // from the engine's zh-Hans
+    text  "In Width"
+    state draft
+}
+
+DreamGlass:SetProfile:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetProfile:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetRefraction:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetRefraction:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetSaturation:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetSaturation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetShape:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShape:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:SetShapeBlendGroup:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShapeBlendGroup:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamGlass:ShadowStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:ShadowStrength
+    src   "Shadow Strength"
+    // from the engine's zh-Hans
+    text  "Shadow Strength"
+    state draft
+}
+
+DreamGlass:ShadowWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:ShadowWidth
+    src   "Shadow Width"
+    text  "阴影宽度"
+    state machine
+}
+
+DreamGlass:Shape {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamGlass:ShapeBlendGroup {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:ShapeBlendGroup
+    src   "Shape Blend Group"
+    text  "形状混合组"
+    state machine
+}
+
+EDreamGlassProfile.Circle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Circle
+    src   "Circle"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamGlassProfile.EDreamGlassProfile_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:EDreamGlassProfile_MAX
+    src   "EDream Glass Profile MAX"
+    text  "EDream Glass Profile MAX"
+    state machine
+}
+
+EDreamGlassProfile.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamGlassProfile.Squircle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Squircle
+    src   "Squircle"
+    text  "方圆形"
+    state machine
+}
+
+EDreamGlassShape.EDreamGlassShape_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape:EDreamGlassShape_MAX
+    src   "EDream Glass Shape MAX"
+    text  "EDream Glass Shape MAX"
+    state machine
+}
+
+EDreamGlassShape.RoundedRect {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape:RoundedRect
+    src   "Rounded Rect"
+    text  "圆角矩形"
+    state machine
+}
+
+EDreamGlassShape.ShapeBlend {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape:ShapeBlend
+    src   "Shape Blend"
+    text  "形状混合"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGlass {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass
+    src   "Refractive glass: what is behind it seen through a slab whose edge bends the light in, the red and blue channels bending a\nlittle apart; optionally frosted, tinted, its saturation and brightness changed; an edge highlight from a light at an\nangle and an inner shadow. Its shape is a rounded rect of its widget's size, its corners as a rect block's, or the shape\na shape blend group melts its rect blocks into (EDreamGlassShape::ShapeBlend); a click outside the shape misses it.\n\nDrawn by DreamGUI's own renderer, as the other effects that read what is behind are. Its alpha (its colour's, its\nwidgets' opacity) fades it."
+    text  "折射玻璃：透过一块边缘将光线向内弯折的板面看到其背后的内容，红色和蓝色通道的弯折\n略有差异；可选磨砂、着色，改变其饱和度和亮度；来自某个角度的光的边缘高光\n以及内阴影。其形状为其控件大小的圆角矩形、与矩形块相同的圆角，或形状\n混合组将其矩形块融合成的形状（EDreamGlassShape::ShapeBlend）；在形状之外点击不会命中它。\n\n由 DreamGUI 自己的渲染器绘制，与其他读取背后内容的特效一样。其 alpha（其颜色的、其\n控件的透明度）使其淡出。"
+    state machine
+}
+
+DreamGlass:Brightness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Brightness
+    src   "Added to what is seen through."
+    text  "添加到所看到的内容上。"
+    state machine
+}
+
+DreamGlass:CornerRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:CornerRadius
+    src   "As a rect block's: in units, or as a fraction of half the smaller side."
+    text  "与矩形块相同：以单位计，或以较小边一半的比例计。"
+    state machine
+}
+
+DreamGlass:Dispersion {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Dispersion
+    src   "How much less red and more blue bend than green: 0 none."
+    text  "红色比绿色弯折得少、蓝色比绿色弯折得多的程度：0 表示无。"
+    state machine
+}
+
+DreamGlass:EdgeWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:EdgeWidth
+    src   "The band along the edge that bends the light, in units."
+    text  "沿边缘弯折光线的条带宽度，以单位计。"
+    state machine
+}
+
+DreamGlass:Frost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Frost
+    src   "0 clear, 1 as frosted as a progressive blur's strongest level."
+    text  "0 为清晰，1 为与渐进模糊最强级别相同的磨砂程度。"
+    state machine
+}
+
+DreamGlass:LightAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:LightAngle
+    src   "Where the light comes from: degrees, 0 from above, clockwise."
+    text  "光源的方向：以度为单位，0 为从上方，顺时针。"
+    state machine
+}
+
+DreamGlass:Refraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Refraction
+    src   "How far the edge bends the light, in units: what a pixel at the very edge shows is this far further in."
+    text  "边缘弯曲光线的距离（单位）：最边缘的像素会显示再向内这么远的内容。"
+    state machine
+}
+
+DreamGlass:Saturation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Saturation
+    src   "What is seen through is this many times as saturated."
+    text  "透过它看到的内容，饱和度为此值的倍数。"
+    state machine
+}
+
+DreamGlass:SetShapeBlendGroup {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShapeBlendGroup
+    src   "The widget whose shape blend group the glass takes its shape from (Shape ShapeBlend); none for this widget's own."
+    text  "玻璃从其形状混合组获取形状的控件（Shape ShapeBlend）；留空则使用此控件自身的。"
+    state machine
+}
+
+DreamGlass:ShapeBlendGroup {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:ShapeBlendGroup
+    src   "The widget whose shape blend group (UDreamShapeBlendGroup) the glass takes its shape from: none for this widget's own.\nIts rect blocks draw the melted shape too, in their colours; transparent ones leave only the glass."
+    text  "玻璃采用其形状混合组（UDreamShapeBlendGroup）来确定形状的控件：留空则使用此控件自身的形状混合组。\n它的矩形块也会用各自的颜色绘制融合后的形状；透明的矩形块则只留下玻璃。"
+    state machine
+}
+
+EDreamGlassProfile {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile
+    src   "How glass rises from its edge: the profile its refraction follows."
+    text  "玻璃从边缘升起的形态：其折射所遵循的轮廓。"
+    state machine
+}
+
+EDreamGlassProfile.Circle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Circle
+    src   "A quarter circle."
+    text  "四分之一圆。"
+    state machine
+}
+
+EDreamGlassProfile.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Linear
+    src   "A straight ramp."
+    text  "直线斜坡。"
+    state machine
+}
+
+EDreamGlassProfile.Squircle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassProfile:Squircle
+    src   "Steep at the edge and flat soon after: a squircle's quarter."
+    text  "边缘陡峭、随后很快平缓：方圆形的四分之一。"
+    state machine
+}
+
+EDreamGlassShape {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape
+    src   "Where glass's shape comes from."
+    text  "玻璃形状的来源。"
+    state machine
+}
+
+EDreamGlassShape.RoundedRect {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape:RoundedRect
+    src   "A rect of the widget's size, its corners rounded as a rect block's are."
+    text  "与控件尺寸相同的矩形，其圆角与矩形块的圆角一致。"
+    state machine
+}
+
+EDreamGlassShape.ShapeBlend {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#EDreamGlassShape:ShapeBlend
+    src   "The shape a shape blend group melts its rect blocks into (UDreamShapeBlendGroup): ShapeBlendGroup's, or this widget's\nown. The glass is drawn over the whole of it, wherever it reaches, its own rect only the frame it is measured in; while\nthe group is off or has no rect block, the glass is the rounded rect."
+    text  "形状混合组将其矩形块融合成的形状（UDreamShapeBlendGroup）：ShapeBlendGroup 的，或此控件自身的。\n玻璃绘制在整个形状之上，无论它延伸到哪里；它自己的矩形只是其测量所用的框架；当\n该组关闭或没有矩形块时，玻璃就是圆角矩形。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Glass|Refraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:EdgeWidth
+    src   "DreamGUI|Glass|Refraction"
+    text  "DreamGUI|玻璃|折射"
+    state machine
+}
+
+DreamGUI|Glass|Frost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Frost
+    src   "DreamGUI|Glass|Frost"
+    text  "DreamGUI | 玻璃 | 冰霜"
+    state machine
+}
+
+DreamGUI|Glass|Tone {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GlassTint
+    src   "DreamGUI|Glass|Tone"
+    text  "DreamGUI | 玻璃 | 色调"
+    state machine
+}
+
+DreamGUI|Glass|Highlight {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:HighlightColor
+    src   "DreamGUI|Glass|Highlight"
+    text  "DreamGUI | 玻璃 | 强调"
+    state machine
+}
+
+DreamGUI|Glass {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:Shape
+    src   "DreamGUI|Glass"
+    text  "DreamGUI | 玻璃"
+    state machine
+}

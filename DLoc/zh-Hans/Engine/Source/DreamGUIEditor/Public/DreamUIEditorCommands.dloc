@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace Contexts
+
+DreamGUIEditor {
+    at    Source/DreamGUIEditor/Public/DreamUIEditorCommands.cpp
+    src   "DreamGUIEditor Plugin"
+    text  "DreamGUI 编辑器插件"
+    state machine
+}

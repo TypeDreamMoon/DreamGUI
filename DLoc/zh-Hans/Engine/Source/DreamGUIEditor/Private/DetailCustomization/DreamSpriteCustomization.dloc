@@ -1,0 +1,24 @@
+dloc 1
+culture zh-Hans
+namespace UISpriteCustomization
+
+NoBorderWarning {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteCustomization.cpp
+    src   "NoBorderWarning"
+    text  "目标精灵没有边框信息！"
+    state machine
+}
+
+Warning {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteCustomization.cpp
+    src   "Target Sprite does not have any border information!"
+    text  "警告：目标精灵没有边框信息！"
+    state machine
+}
+
+FillOrigin {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteCustomization.cpp
+    src   "    Fill Origin"
+    text  "    填充原点"
+    state machine
+}

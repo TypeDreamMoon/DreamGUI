@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGradientThumbnailRenderer {
+    at    Source/DreamGUIEditor/Private/Thumbnail/DreamGradientThumbnailRenderer.h#DreamGradientThumbnailRenderer
+    src   "Dream Gradient Thumbnail Renderer"
+    text  "Dream 渐变缩略图渲染器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGradientThumbnailRenderer {
+    at    Source/DreamGUIEditor/Private/Thumbnail/DreamGradientThumbnailRenderer.h#DreamGradientThumbnailRenderer
+    src   "A Dream Gradient asset's thumbnail: the gradient painting the tile, as FDreamGradient::Evaluate paints a square box --\nits type, angle, shape and colour space included -- over a checkerboard where it is transparent."
+    text  "Dream 渐变资源的缩略图：渐变会绘制整个图块，方式与 FDreamGradient::Evaluate 绘制一个方形区域相同——\n包括其类型、角度、形状和颜色空间——并在透明处叠加棋盘格。"
+    state machine
+}

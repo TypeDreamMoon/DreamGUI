@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerSelectDeselectInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface
+    src   "Dream Pointer Select Deselect Interface"
+    text  "Dream 指针选择/取消选择 接口"
+    state machine
+}
+
+DreamPointerSelectDeselectInterface:OnPointerDeselect:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerDeselect:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerSelectDeselectInterface:OnPointerDeselect:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerDeselect:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerSelectDeselectInterface:OnPointerSelect:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerSelect:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerSelectDeselectInterface:OnPointerSelect:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerSelect:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerSelectDeselectInterface:OnPointerDeselect {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerDeselect
+    src   "Called when DreamUI EventSystem deselect this object.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当 DreamUI EventSystem 取消选择此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerSelectDeselectInterface:OnPointerSelect {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerSelect
+    src   "Called when DreamUI EventSystem select this object.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当 DreamUI EventSystem 选择此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}

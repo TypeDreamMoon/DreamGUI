@@ -1,0 +1,18 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUINiagaraEditor
+
+SystemEntry {
+    at    Source/DreamGUINiagaraEditor/Private/DreamGUINiagaraEditorModule.cpp
+    src   "Niagara System"
+    // from the engine's zh-Hans
+    text  "Niagara系统"
+    state draft
+}
+
+TriggerEntry {
+    at    Source/DreamGUINiagaraEditor/Private/DreamGUINiagaraEditorModule.cpp
+    src   "Niagara Trigger"
+    text  "Niagara触发器"
+    state machine
+}

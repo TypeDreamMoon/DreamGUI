@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerDownUpInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface
+    src   "Dream Pointer Down Up Interface"
+    text  "Dream 指针按下/抬起 接口"
+    state machine
+}
+
+DreamPointerDownUpInterface:OnPointerDown:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerDown:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDownUpInterface:OnPointerDown:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerDown:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerDownUpInterface:OnPointerUp:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerUp:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDownUpInterface:OnPointerUp:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerUp:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerDownUpInterface:OnPointerDown {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerDown
+    src   "Called when a pointer press event occurs.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当发生指针按下事件时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerDownUpInterface:OnPointerUp {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerUp
+    src   "Called when a pointer release event occurs.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当发生指针释放事件时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}

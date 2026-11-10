@@ -1,0 +1,36 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+Gradient {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamGradientAssetFactory.cpp
+    src   "Gradient"
+    // from the engine's zh-Hans
+    text  "梯度"
+    state draft
+}
+
+GradientToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamGradientAssetFactory.cpp
+    src   "A gradient kept as an asset and shared across the project: the texts and rich-text tags that name it paint with it."
+    text  "作为资源保存并在项目中共享的渐变：引用它的文本和富文本标签会用它进行绘制。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamGradientAssetFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamGradientAssetFactory.cpp#DreamGradientAssetFactory
+    src   "Dream Gradient Asset Factory"
+    text  "Dream 渐变 资产工厂"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGradientAssetFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamGradientAssetFactory.cpp#DreamGradientAssetFactory
+    src   "Makes Dream Gradient assets (UDreamGradientAsset): from the Add menu, and from a gradient row's \"Save as Gradient Asset\"."
+    text  "用于创建 Dream 渐变 资产 (UDreamGradientAsset)：从“添加”菜单和渐变行的“另存为渐变资产”选项创建。"
+    state machine
+}

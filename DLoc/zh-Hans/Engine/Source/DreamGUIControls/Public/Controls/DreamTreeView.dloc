@@ -1,0 +1,421 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTreeExpansionChangedEvent__DelegateSignature:bExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeExpansionChangedEvent__DelegateSignature:bExpanded
+    src   "Expanded"
+    // from the engine's zh-Hans
+    text  "已展开"
+    state draft
+}
+
+DreamTreeExpansionChangedEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeExpansionChangedEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamTreeGetItemChildren__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeGetItemChildren__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamTreeGetItemChildren__DelegateSignature:OutChildren {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeGetItemChildren__DelegateSignature:OutChildren
+    src   "Out Children"
+    text  "输出子项"
+    state machine
+}
+
+DreamTreeView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView
+    src   "Dream Tree View"
+    text  "Dream树视图"
+    state machine
+}
+
+DreamTreeView:CollapsedItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:CollapsedItemObjects
+    src   "Collapsed Item Objects"
+    text  "折叠项对象"
+    state machine
+}
+
+DreamTreeView:CollapsedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:CollapsedItems
+    src   "Collapsed Items"
+    text  "折叠项"
+    state machine
+}
+
+DreamTreeView:GetCollapsedItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetCollapsedItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:GetItemDepths:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetItemDepths:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:GetRowIndent:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetRowIndent:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:GetRowIndent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetRowIndent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:IsItemExpanded:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:IsItemExpanded:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:IsItemExpanded:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:IsItemExpanded:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:ItemDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ItemDepths
+    src   "Item Depths"
+    text  "项深度"
+    state machine
+}
+
+DreamTreeView:ItemHasChildren:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ItemHasChildren:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:ItemHasChildren:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ItemHasChildren:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTreeView:OnGetItemChildren {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:OnGetItemChildren
+    src   "On Get Item Children"
+    // from the engine's zh-Hans
+    text  "获取项目子项时"
+    state draft
+}
+
+DreamTreeView:OnItemExpansionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:OnItemExpansionChanged
+    src   "On Item Expansion Changed"
+    // from the engine's zh-Hans
+    text  "项目扩展变更时"
+    state draft
+}
+
+DreamTreeView:RootItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:RootItems
+    src   "Root Items"
+    text  "根项"
+    state machine
+}
+
+DreamTreeView:SetCollapsedItems:InCollapsed {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetCollapsedItems:InCollapsed
+    src   "In Collapsed"
+    text  "折叠"
+    state machine
+}
+
+DreamTreeView:SetItemDepths:InDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemDepths:InDepths
+    src   "In Depths"
+    text  "深度"
+    state machine
+}
+
+DreamTreeView:SetItemExpanded:bInExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpanded:bInExpanded
+    src   "In Expanded"
+    text  "展开"
+    state machine
+}
+
+DreamTreeView:SetItemExpanded:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpanded:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:SetItemExpansion:bInExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpansion:bInExpanded
+    src   "In Expanded"
+    text  "展开"
+    state machine
+}
+
+DreamTreeView:SetItemExpansion:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpansion:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:SetItemsWithDepths:InDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemsWithDepths:InDepths
+    src   "In Depths"
+    text  "深度"
+    state machine
+}
+
+DreamTreeView:SetItemsWithDepths:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemsWithDepths:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamTreeView:SetRootItems:InRootItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetRootItems:InRootItems
+    src   "In Root Items"
+    text  "根项"
+    state machine
+}
+
+DreamTreeView:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamTreeView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamTreeView:ToggleItemExpansion:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ToggleItemExpansion:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamTreeView:TwistyGlyphTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:TwistyGlyphTemplateNode
+    src   "Twisty Glyph Template Node"
+    text  "展开箭头字形模板节点"
+    state machine
+}
+
+DreamTreeView:TwistyTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:TwistyTemplateNode
+    src   "Twisty Template Node"
+    text  "展开箭头模板节点"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTreeGetItemChildren__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeGetItemChildren__DelegateSignature
+    src   "Who an item's children are. UMG's FOnGetItemChildrenDynamic, with its signature.\n\nSingle-cast, like UMG's and unlike every other delegate on this control: this one is a QUESTION,\nand two answers to a question is not more information, it is an ambiguity nothing can resolve."
+    text  "指定某一项的子项是谁。对应 UMG 的 FOnGetItemChildrenDynamic，签名相同。\n\n与 UMG 一样是单播的，这一点不同于该控件上的其他所有委托：这是一个问题，\n而对一个问题给出两个答案并不是更多信息，而是任何东西都无法消解的歧义。"
+    state machine
+}
+
+DreamTreeView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView
+    src   "A tree whose hierarchy is code, not an asset: a list whose rows carry an indent and a twisty.\n\nA tree IS a list that indents, and this class is written to be exactly that much more than\nUDreamListView -- both derive from UDreamListViewBase, which owns the viewport, the scrolled\ncolumn, the row template and the rows; this one adds a depth per item, a per-row indent, and a\ntwisty that expands and collapses. FDreamTreeViewStyle is built the same way round: it carries a\nwhole FDreamListStyle rather than restating its fields, so styling a project's lists styles its\ntrees' rows too.\n\nTHE SOURCE IS FLAT, AND ON PURPOSE\n----------------------------------\nItems (or ItemObjects) plus ItemDepths: the pre-order walk of the tree, with each item's depth\nbeside it. That is the shape UUITreeView flattens ITS source into before it can lay a row out\n(Items + ItemDepths, rebuilt whenever expansion moves), and it is the only shape a control can\ntake from a designer -- a nested source needs an interface on the item class, which is a contract\na .dui author cannot sign and a details panel cannot draw.\n\nWhat the flat form buys, beyond being authorable: the subtree of a row is exactly the run of rows\nthat follow it at a greater depth, so collapsing is a skip rather than a graph walk, and no item\never needs to be asked who its children are.\n\nEverything is expanded to begin with -- the authored list IS what you see -- and CollapsedItems\nis the set of exceptions. Selection stays an index into the SOURCE, so it survives a collapse.\n\nOnGetItemChildren BUILDS THE FLAT SOURCE; IT DOES NOT REPLACE IT\n----------------------------------------------------------------\nUMG's TreeView asks each item for its children and walks the answer, and so does this one --\nSetRootItems plus OnGetItemChildren (or IUITreeViewItem::GetTreeChildren, which this plugin's\nbehaviour-side tree already speaks) flattens the hierarchy in pre-order into exactly the Items +\nItemDepths pair above.\n\nFlattening rather than walking lazily is the whole design, and it is what keeps every index in\nthis control's API meaning something: SelectedIndex, ItemDepths, GetRowWidget, ScrollItemIntoView\nand CollapsedItems are all indices into the SOURCE, and a source that only materialises what is\ncurrently expanded would renumber itself every time a twisty moved. The walk therefore takes the\nWHOLE tree, including the children of collapsed nodes, and collapsing stays what it has always\nbeen here: a skip over a run of deeper rows at display time. A collapsed parent keeps its twisty\nbecause its children are still in the source to be counted.\n\nThe cost of that decision is stated rather than hidden: an unbounded or lazily-loaded hierarchy\ncannot be expressed this way, because the walk visits every node once. A tree that large wants the\nrecycling stack (UUITreeView) instead, which is why that class stays.\n\nCycles are survivable: an item already visited is not visited again, so a graph produces a tree\nrather than a hang.\n\nLEFT AND RIGHT ARE THE TREE'S\n-----------------------------\nUp and down step through the rows that show, as a list's do. Left and right open and close, as\nSTreeView::OnKeyDown has them: right on a folded parent unfolds it, right on an open one moves to its\nfirst child; left on an open parent folds it, left anywhere else moves to the parent. Where the key\nhas nothing to do -- right on a leaf, left on a root that is already folded -- it still belongs to\nthe tree and focus stays put, which is what STreeView does with the arrow keys. This library has one\nnavigation road for the keyboard and the gamepad, so a D-pad gets the same answer; in UMG a D-pad\ngoes round OnKeyDown and would leave the tree sideways instead. The twisty is not a navigation stop\n(UMG's expander arrow is not focusable either), so a press that follows a click on it starts from\nthe row.\n\nSee UDreamListViewBase for the shape of the tree it builds, why it hosts the plain scroll view\nrather than the recycling one, and how these controls sit beside the `each` language feature."
+    text  "一种树，其层级来自代码而非资产：一个列表，其行带有缩进和展开箭头。\n\n树就是带缩进的列表，本类被写成恰好比\nUDreamListView多出这一点——两者都派生自UDreamListViewBase，后者拥有视口、滚动\n列、行模板和行；本类为每个项增加深度、每行缩进，以及一个\n可展开和折叠的展开箭头。FDreamTreeViewStyle也按同样的方向构建：它包含一个\n完整的FDreamListStyle，而不是重新声明其字段，因此为项目中的列表设置样式时，也会为\n树的各行设置样式。\n\n源是扁平的，且是有意为之\n----------------------------------\nItems（或ItemObjects）加上ItemDepths：树的前序遍历，并在每个项旁边带上其深度。\n这也是UUITreeView在能够排布一行之前，将其自身的源展平成的形状\n（Items + ItemDepths，每当展开状态变化时重建）；而且这是控件唯一能\n从设计器接受的形状——嵌套的源需要在项类上提供接口，而这是一份\n.dui作者无法签署、细节面板也无法绘制的契约。\n\n扁平形式除了可编写之外还带来什么：一行的子树恰好就是紧随其后、深度更大的那一串行，\n因此折叠是一次跳过，而不是图遍历，也永远不需要询问某个项\n它的子项是谁。\n\n一开始所有内容都是展开的——所编写的列表就是你看到的内容——而CollapsedItems\n是例外集合。选择始终是指向源的索引，因此它能经受折叠。\n\nOnGetItemChildren构建扁平源；它不会替换它\n----------------------------------------------------------------\nUMG的TreeView会向每个项询问其子项并沿着答案遍历，本类也是如此——\nSetRootItems加上OnGetItemChildren（或IUITreeViewItem::GetTreeChildren，本插件的\n行为侧树已经支持它）会按前序将层级展平成上面的Items +\nItemDepths组合。\n\n扁平化而不是惰性遍历是整个设计的关键，也正是它让本控件API中的每个索引\n都有意义：SelectedIndex、ItemDepths、GetRowWidget、ScrollItemIntoView\n和CollapsedItems都是指向源的索引，而一个只物化当前已展开内容的源\n会在每次展开箭头移动时重新编号。因此遍历会取整棵树，\n包括已折叠节点的子项，而折叠在这里始终是它一直以来的样子：\n显示时跳过一串更深的行。已折叠的父项会保留其展开箭头，\n因为它的子项仍在源中可供计数。\n\n这一决定的代价是明说的，而不是隐藏的：无界或懒加载的层级\n无法用这种方式表达，因为遍历会访问每个节点一次。那么大的树更适合\n改用回收栈（UUITreeView），这也是该类保留下来的原因。\n\n循环是可承受的：已经访问过的项不会被再次访问，因此图会生成一棵树，\n而不是挂起。\n\n左和右属于树\n-----------------------------\n上键和下键会像列表那样，在显示出来的行之间逐行移动。左键和右键执行打开和关闭，与\nSTreeView::OnKeyDown中的行为一致：在已折叠的父项上按右键会展开它，在已展开的父项上按右键会移动到其\n第一个子项；在已展开的父项上按左键会折叠它，在其他任何位置按左键会移动到父项。当按键\n无事可做时——在叶子上按右键，在已经折叠的根上按左键——它仍然属于\n树，焦点保持不动，这正是STreeView对方向键的处理方式。本库为键盘和游戏手柄提供一条\n导航路径，因此十字键会得到相同结果；而在UMG中，十字键\n会绕过OnKeyDown，反而会让树无法按此方式导航。展开箭头不是导航停留点\n（UMG的展开箭头也不可获得焦点），因此在点击它之后按键，会从\n该行开始。\n\n有关它构建的树的形状、为什么它承载普通滚动视图，\n而不是回收滚动视图，以及这些控件如何与`each`语言特性并存，请参见UDreamListViewBase。"
+    state machine
+}
+
+DreamTreeView:CollapsedItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:CollapsedItemObjects
+    src   "The same exceptions, by IDENTITY, for a source that has ItemObjects.\n\nThe index set is what the row builder reads and what an author can write; this is what lets it\nmean the same thing after the source is replaced. Collapse \"Weapons\", hand the tree a re-sorted\nlist, and the fold follows the node rather than staying on whatever is now third.\n\nTransient: it is derived from the authored set the first time an object source is bound, and a\ntext-only tree never fills it -- there is nothing to be identical TO."
+    text  "同样的例外集合，但按“标识”而非索引，用于具有 ItemObjects 的源。\n\n索引集合是行构建器读取的东西，也是作者能写的东西；而这个集合让\n同一含义在源被替换之后依然成立。折叠“Weapons”，再交给树一个重新排序过的\n列表，折叠会跟着那个节点走，而不是停留在现在排在第三位的随便哪个东西上。\n\n瞬态：它在对象源第一次绑定时由编写好的集合派生而来，纯文本的树\n永远不会填充它——没有任何东西可以和它“相同”。"
+    state machine
+}
+
+DreamTreeView:CollapsedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:CollapsedItems
+    src   "The collapsed items, by source index. An exception set rather than an expanded set because a\ntree that opens showing nothing is a tree nobody can see they authored.\n\nAn index is only where an item HAPPENS to be, so this set cannot survive a new source on its\nown -- see CollapsedItemObjects for the half that can, and OnSourceChanged for what happens to\neach of them when the source moves."
+    text  "已折叠的项，按源索引。它是例外集合而不是展开集合，因为\n一棵打开时什么都不显示的树，是没人看得出自己编写过的那棵树。\n\n索引只是某一项“恰好”所在的位置，因此这个集合自身无法在更换新源后保留\n——能保留的那一半见 CollapsedItemObjects，源变动时它们各自会怎样\n见 OnSourceChanged。"
+    state machine
+}
+
+DreamTreeView:GetRowIndent {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetRowIndent
+    src   "How far in this item's row starts, in pixels: its depth times the style's IndentPerLevel."
+    text  "这一项的行起点缩进多少像素：它的深度乘以样式中的 IndentPerLevel。"
+    state machine
+}
+
+DreamTreeView:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:GetStyle
+    src   "By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct."
+    text  "按值而非按引用：UFUNCTION 返回值必须是值，而样式是一个小型结构体。"
+    state machine
+}
+
+DreamTreeView:ItemDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ItemDepths
+    src   "One depth per item, parallel to Items / ItemObjects: 0 is a root, 1 is a child of the nearest\npreceding 0, and so on. Missing entries read as 0, so a tree given no depths at all is simply\na flat list -- which is the right thing for it to be."
+    text  "每一项一个深度，与 Items / ItemObjects 平行：0 是根，1 是前面最近的那个 0\n的子项，依此类推。缺失的条目按 0 读取，因此完全没有给深度的树就是一个\n扁平的列表——而这正是它应有的样子。"
+    state machine
+}
+
+DreamTreeView:ItemHasChildren {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:ItemHasChildren
+    src   "True when the next item is deeper -- which, in a pre-order flat list, is what a parent is."
+    text  "当下一项更深时为 true——在一份前序扁平列表里，更深的就是父项。"
+    state machine
+}
+
+DreamTreeView:OnGetItemChildren {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:OnGetItemChildren
+    src   "Who an item's children are. UMG's OnGetItemChildren, with its signature and its job.\n\nUnbound, the walk falls back to IUITreeViewItem::GetTreeChildren -- the interface the\nbehaviour-side UUITreeView has always used -- so an item class that already implements it needs\nno delegate at all. With neither, every root is a leaf."
+    text  "指定某一项的子项是谁。对应 UMG 的 OnGetItemChildren，签名和职责都相同。\n\n未绑定时，遍历会回退到 IUITreeViewItem::GetTreeChildren——即\n行为侧的 UUITreeView 一直使用的接口——因此已经实现了它的项类根本不需要\n委托。两者都没有时，每个根都是叶子。"
+    state machine
+}
+
+DreamTreeView:OnItemExpansionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:OnItemExpansionChanged
+    src   "Per depth level, in whichever direction the twisty was clicked."
+    text  "按每个深度层级，沿点击展开箭头的方向。"
+    state machine
+}
+
+DreamTreeView:RefreshTree {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:RefreshTree
+    src   "Walk the roots again and rebuild the flat source from what the children provider says now.\n\nFor a hierarchy that changed underneath the control -- a node gained a child, a provider now\nanswers differently. Folds survive it: they are kept by item identity, so a node that is still\nin the tree is still folded wherever the walk puts it."
+    text  "重新遍历根项，并按照子项提供程序当前的回答重建平铺数据源。\n\n适用于控件底下的层级发生变化的情况——某个节点新增了子项，或某个提供程序\n现在给出了不同的回答。折叠状态会保留：折叠按项标识保存，因此仍在树中\n的节点无论遍历把它放到哪里，都仍保持折叠。"
+    state machine
+}
+
+DreamTreeView:RootItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:RootItems
+    src   "The top of the hierarchy, for a tree that is authored as a GRAPH rather than as a flat array.\n\nSet it (or call SetRootItems) and the control walks it with OnGetItemChildren, writing the flat\nItems + ItemDepths pair the rest of this class is written in. Empty is the flat road, where\nItemObjects / Items and ItemDepths are authored directly and nothing walks anything.\n\nNo BlueprintSetter, and the reason is the TYPE: a BlueprintSetter has to take the property's\nown type, and TArray<TObjectPtr<>> is not something a UFUNCTION parameter can be. SetRootItems\ntakes the raw pointers a caller actually has, and is the Blueprint road."
+    text  "层级结构的顶层，适用于以图而非平铺数组编写的树。\n\n设置它（或调用SetRootItems）后，控件会用OnGetItemChildren遍历它，写入本类\n其余部分所采用的平铺Items + ItemDepths对。为空时就是平铺路线，此时直接编写\nItemObjects / Items和ItemDepths，不做任何遍历。\n\n没有BlueprintSetter，原因在于类型：BlueprintSetter必须接受属性自身的\n类型，而TArray<TObjectPtr<>>不能作为UFUNCTION参数。SetRootItems\n接受调用方实际持有的原始指针，是蓝图路线。"
+    state machine
+}
+
+DreamTreeView:SetCollapsedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetCollapsedItems
+    src   "Replace the whole fold state at once and re-derive the visible rows.\n\nA raw write onto the set used to be picked up only on the next rebuild, which is the difference\nbetween a property and a setter -- and a tree whose folds moved without its rows moving is a\ntree that is lying about where its items are."
+    text  "一次性替换整个折叠状态，并重新推导可见行。\n\n过去，对集合的原始写入只会在下次重建时才被识别，这正是属性与设置器之间的\n区别——而折叠状态变了、可见行却没动的树，\n就是在谎报各项所在的位置。"
+    state machine
+}
+
+DreamTreeView:SetItemDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemDepths
+    src   "Replace the depths alone, for a source that did not move."
+    text  "仅替换深度，适用于数据源未移动的情况。"
+    state machine
+}
+
+DreamTreeView:SetItemExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpanded
+    src   "Moves the twisty, rebuilds the visible rows, then says so. A no-op if it was already there."
+    text  "移动展开箭头，重建可见行，随后发出通知。若原本已是该状态，则不做任何操作。"
+    state machine
+}
+
+DreamTreeView:SetItemExpansion {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemExpansion
+    src   "UMG's name for SetItemExpanded, which is the one this control was written with."
+    text  "UMG对SetItemExpanded的称呼，本控件编写时采用的就是这个名称。"
+    state machine
+}
+
+DreamTreeView:SetItemsWithDepths {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemsWithDepths
+    src   "Replace the source and its depths together, which is the only way they are ever coherent."
+    text  "同时替换数据源及其深度，这是二者始终保持一致的唯一方式。"
+    state machine
+}
+
+DreamTreeView:SetRootItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetRootItems
+    src   "Replace the roots and re-walk. The hierarchical counterpart of SetItemsWithDepths."
+    text  "替换根项并重新遍历。这是SetItemsWithDepths的层级对应版本。"
+    state machine
+}
+
+DreamTreeView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetStyle
+    src   "Replace the whole look and re-push it. The indent and the twisty are style, so rows rebuild."
+    text  "替换整个外观并重新推送。缩进和展开箭头属于样式，因此会重建行。"
+    state machine
+}
+
+DreamTreeView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why it\nstays editable instead of being gated on the enum."
+    text  "此实例自身的外观。当 StyleSource 如此指定且项目中确实存在样式表时，项目样式表\n优先；项目中不存在样式表时，此属性就是实际生效的外观——这也是它\n保持可编辑、而不是被枚举加以门控的原因。"
+    state machine
+}
+
+DreamTreeView:TwistyGlyphTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:TwistyGlyphTemplateNode
+    src   "The glyph inside it -- the stand-in for a state whose brush holds no image."
+    text  "其中的字形——用于替代画刷不含图像的状态。"
+    state machine
+}
+
+DreamTreeView:TwistyTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:TwistyTemplateNode
+    src   "The template's twisty. Every row has a copy of it, found by display name."
+    text  "模板的展开箭头。每一行都有一份它的副本，通过显示名称查找。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Tree View" {
+    at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:CollapseAll
+    src   "Tree View"
+    // from the engine's zh-Hans
+    text  "树状图"
+    state draft
+}

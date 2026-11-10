@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetTreeHost {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTreeHost.h#DreamWidgetTreeHost
+    src   "Dream Widget Tree Host"
+    text  "DreamGUI 控件树托管对象"
+    state machine
+}

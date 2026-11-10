@@ -1,0 +1,202 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamViewModelRegisteredEvent__DelegateSignature:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegisteredEvent__DelegateSignature:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamViewModelRegisteredEvent__DelegateSignature:ViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegisteredEvent__DelegateSignature:ViewModel
+    src   "View Model"
+    // from the engine's zh-Hans
+    text  "视图模型"
+    state draft
+}
+
+DreamViewModelRegistryEntry {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegistryEntry
+    src   "Dream View Model Registry Entry"
+    text  "Dream视图模型注册表项"
+    state machine
+}
+
+DreamViewModelRegistryEntry:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegistryEntry:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamViewModelRegistryEntry:ViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegistryEntry:ViewModel
+    src   "View Model"
+    // from the engine's zh-Hans
+    text  "视图模型"
+    state draft
+}
+
+DreamViewModelSubsystem {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem
+    src   "Dream View Model Subsystem"
+    text  "Dream视图模型子系统"
+    state machine
+}
+
+DreamViewModelSubsystem:Entries {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Entries
+    src   "Entries"
+    // from the engine's zh-Hans
+    text  "条目"
+    state draft
+}
+
+DreamViewModelSubsystem:Find:Class {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Find:Class
+    src   "Class"
+    // from the engine's zh-Hans
+    text  "类"
+    state draft
+}
+
+DreamViewModelSubsystem:Find:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Find:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamViewModelSubsystem:Find:ReturnValue {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Find:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamViewModelSubsystem:FindOrCreate:Class {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:FindOrCreate:Class
+    src   "Class"
+    // from the engine's zh-Hans
+    text  "类"
+    state draft
+}
+
+DreamViewModelSubsystem:FindOrCreate:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:FindOrCreate:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamViewModelSubsystem:FindOrCreate:ReturnValue {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:FindOrCreate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamViewModelSubsystem:OnRegistered {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:OnRegistered
+    src   "On Registered"
+    text  "注册时"
+    state machine
+}
+
+DreamViewModelSubsystem:Register:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Register:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamViewModelSubsystem:Register:ViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Register:ViewModel
+    src   "View Model"
+    // from the engine's zh-Hans
+    text  "视图模型"
+    state draft
+}
+
+DreamViewModelSubsystem:Unregister:ReturnValue {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Unregister:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamViewModelSubsystem:Unregister:ViewModel {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Unregister:ViewModel
+    src   "View Model"
+    // from the engine's zh-Hans
+    text  "视图模型"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamViewModelRegistryEntry {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegistryEntry
+    src   "One registered view model."
+    text  "一个已注册的视图模型。"
+    state machine
+}
+
+DreamViewModelRegistryEntry:Name {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelRegistryEntry:Name
+    src   "None for an entry registered by class alone."
+    text  "仅按类注册的条目为无。"
+    state machine
+}
+
+DreamViewModelSubsystem {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem
+    src   "The game's shared view models: what a `viewmodels` entry written `= global` or `= global \"Name\"` is filled from.\n\nPer game instance, so it outlives level loads and is not shared between PIE clients. The registry holds what it is\ngiven strongly until it is unregistered or the game instance shuts down.\n\nLookup (Find): with a Name, the entry of that name whose object is a Class; with None, the first entry registered\nwith no name whose object is a Class, else the first entry of any name whose object is a Class. Registering an object\na second time under the same name replaces nothing and is ignored; registering a second object under a name already\ntaken replaces the first (and broadcasts), which is how a game swaps a global view model wholesale. With no name, the\nentry is keyed by the object's exact class: objects of two classes sit side by side unnamed, and a second unnamed\nobject of the same class replaces the first.\n\nA widget whose global entry found nothing waits: OnRegisteredNative tells it when an object that fits arrives."
+    text  "游戏共享的视图模型：`viewmodels` 中写为 `= global` 或 `= global \"Name\"` 的条目由它填充。\n\n按游戏实例存在，因此比关卡加载存活更久，且不在PIE客户端之间共享。注册表会强引用交给它的对象，\n直到其被注销或游戏实例关闭。\n\n查找（Find）：给定Name时，返回该名称下对象为Class的条目；Name为None时，返回第一个未命名且对象为Class的已注册\n条目，否则返回任意名称下第一个对象为Class的条目。将同一个对象以同一名称再次注册不会替换任何内容，会被\n忽略；以已占用的名称注册第二个对象会替换第一个（并广播），\n游戏正是借此整体更换全局视图模型。不指定名称时，\n条目以对象的确切类为键：两个类的对象可以并列存在且均未命名，而同一个类的第二个未命名\n对象会替换第一个。\n\n全局条目未找到任何内容的控件会等待：OnRegisteredNative会在合适的对象到达时通知它。"
+    state machine
+}
+
+DreamViewModelSubsystem:Find {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Find
+    src   "See the class comment for the lookup rule. Null when nothing fits."
+    text  "查找规则见类注释。无匹配项时为null。"
+    state machine
+}
+
+DreamViewModelSubsystem:FindOrCreate {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:FindOrCreate
+    src   "Find, or make one of Class (outered to the game instance), register it under Name and return it. Null for an abstract class."
+    text  "查找一个Class的实例，或创建一个（其outer为游戏实例），以Name注册并返回它。抽象类返回null。"
+    state machine
+}
+
+DreamViewModelSubsystem:OnRegistered {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:OnRegistered
+    src   "After every Register that changed the registry."
+    text  "在每次改变了注册表的Register之后。"
+    state machine
+}
+
+DreamViewModelSubsystem:Register {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Register
+    src   "Share ViewModel under Name (None: by its class alone). Null is ignored."
+    text  "以Name共享ViewModel（为无时：仅按其类）。null会被忽略。"
+    state machine
+}
+
+DreamViewModelSubsystem:Unregister {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModelSubsystem.h#DreamViewModelSubsystem:Unregister
+    src   "Take ViewModel out, under whatever name it was registered. False when it was not registered."
+    text  "将ViewModel移出，使用其注册时的名称。未注册时返回false。"
+    state machine
+}

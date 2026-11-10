@@ -1,0 +1,438 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierBase {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase
+    src   "Dream Mesh Modifier Base"
+    text  "Dream Mesh Modifier 基础类"
+    state machine
+}
+
+DreamMeshModifierBase:bEnable {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:bEnable
+    src   "Enable"
+    // from the engine's zh-Hans
+    text  "启用"
+    state draft
+}
+
+DreamMeshModifierBase:GeometryModifierHelper {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:GeometryModifierHelper
+    src   "Geometry Modifier Helper"
+    text  "几何修改器辅助类"
+    state machine
+}
+
+DreamMeshModifierBase:GetEnable:ReturnValue {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:GetEnable:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierBase:GetVisualBatchMesh:ReturnValue {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:GetVisualBatchMesh:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierBase:ReceiveModifyUIGeometry:InGeometryModifierHelper {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:ReceiveModifyUIGeometry:InGeometryModifierHelper
+    src   "In Geometry Modifier Helper"
+    text  "输入几何修改器辅助类"
+    state machine
+}
+
+DreamMeshModifierBase:SetEnable:Value {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:SetEnable:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper
+    src   "Dream Visual Batch Mesh Modifier Helper"
+    text  "Dream Visual Batch Mesh Modifier 辅助类"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:OutPosition {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:OutPosition
+    src   "Out Position"
+    // from the engine's zh-Hans
+    text  "位置外部"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:ReturnValue {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InAlpha {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InAlpha
+    src   "In Alpha"
+    // from the engine's zh-Hans
+    text  "输入透明度"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InColor {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InColor
+    src   "In Color"
+    // from the engine's zh-Hans
+    text  "在颜色中"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InPosition {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InPositionType {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InPositionType
+    src   "In Position Type"
+    text  "输入位置类型"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InRotator {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InRotator
+    src   "In Rotator"
+    // from the engine's zh-Hans
+    text  "以旋转体"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InScale {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InScale
+    src   "In Scale"
+    // from the engine's zh-Hans
+    text  "输入缩放"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InCharIndex {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InCharIndex
+    src   "In Char Index"
+    text  "输入字符索引"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InPosition {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InPositionType {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InPositionType
+    src   "In Position Type"
+    text  "输入位置类型"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InRotator {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InRotator
+    src   "In Rotator"
+    // from the engine's zh-Hans
+    text  "以旋转体"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InScale {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InScale
+    src   "In Scale"
+    // from the engine's zh-Hans
+    text  "输入缩放"
+    state draft
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InUIText {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InUIText
+    src   "In UIText"
+    text  "输入文本"
+    state machine
+}
+
+EDreamMeshModifierStage.Characters {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Characters
+    src   "Characters"
+    // from the engine's zh-Hans
+    text  "角色"
+    state draft
+}
+
+EDreamMeshModifierStage.Copies {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Copies
+    src   "Copies"
+    // from the engine's zh-Hans
+    text  "副本"
+    state draft
+}
+
+EDreamMeshModifierStage.Deform {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Deform
+    src   "Deform"
+    // from the engine's zh-Hans
+    text  "变形"
+    state draft
+}
+
+EDreamMeshModifierStage.EDreamMeshModifierStage_MAX {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:EDreamMeshModifierStage_MAX
+    src   "EDream Mesh Modifier Stage MAX"
+    text  "EDream Mesh Modifier Stage 最大值"
+    state machine
+}
+
+EDreamMeshModifierStage.Layout {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Layout
+    src   "Layout"
+    // from the engine's zh-Hans
+    text  "布局"
+    state draft
+}
+
+EDreamUIMeshModifierHelper_TextPositionType.Absolute {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamUIMeshModifierHelper_TextPositionType:Absolute
+    src   "Absolute"
+    // from the engine's zh-Hans
+    text  "绝对"
+    state draft
+}
+
+EDreamUIMeshModifierHelper_TextPositionType.EDreamUIMeshModifierHelper_MAX {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamUIMeshModifierHelper_TextPositionType:EDreamUIMeshModifierHelper_MAX
+    src   "EDream UIMesh Modifier Helper MAX"
+    text  "EDream UIMesh Modifier Helper 最大值"
+    state machine
+}
+
+EDreamUIMeshModifierHelper_TextPositionType.Relative {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamUIMeshModifierHelper_TextPositionType:Relative
+    src   "Relative"
+    // from the engine's zh-Hans
+    text  "相对"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierBase {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase
+    src   "For modify ui mesh, like a filter."
+    text  "用于修改 UI 几何体，例如过滤器。"
+    state machine
+}
+
+DreamMeshModifierBase:bEnable {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:bEnable
+    src   "Enable this mesh modifier"
+    text  "启用此网格修改器。"
+    state machine
+}
+
+DreamMeshModifierBase:ReceiveModifyUIGeometry {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:ReceiveModifyUIGeometry
+    src   "Modify UI geometry's vertex and triangle."
+    text  "修改 UI 几何体的顶点和三角形。"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper
+    src   "a helper class for UIGeometryModifierBase to easily modify ui geometry\n\nThe UITextHelperFunction_* calls address a text's characters by index, one glyph each. A text joins letters into\nligatures (\"fi\") by default, which would draw two such characters as one glyph, so a modifier that moves, turns,\nscales or colours characters one by one calls UDreamText::RegisterPerCharacterAnimation(Self) when it starts and\nUnregisterPerCharacterAnimation when it stops (TextAnimation does this for itself)."
+    text  "一个辅助类，供UIGeometryModifierBase轻松修改UI几何体\n\nUITextHelperFunction_*系列调用按索引访问文本的字符，每个索引对应一个字形。文本默认会将字母合并为\n连字（“fi”），这样两个字符合并后只会绘制成一个字形，因此逐个移动、旋转、\n缩放或着色字符的修改器在启动时会调用UDreamText::RegisterPerCharacterAnimation(Self)，停止时调用\nUnregisterPerCharacterAnimation（TextAnimation会自行处理）。"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition
+    src   "Get character's pivot position relative to UIText's pivot position"
+    text  "获取字符轴心点相对于UIText轴心点的位置"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01 {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01
+    src   "Get character's center position in UIText's rect range, and convert to 0-1 range (left is 0 and right is 1)"
+    text  "获取字符中心点在UIText矩形范围内的位置，并转换为0-1范围（左侧为0，右侧为1）"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position
+    src   "Modify character's position\n@param       InPositionType          Set position type, relative to origin position or absolute position"
+    text  "修改字符的位置\n@param       InPositionType          设置位置类型，相对于原始位置或绝对位置"
+    state machine
+}
+
+DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform
+    src   "Modify character's position & rotation & scale\n@param       InPositionType          Set position type, relative to origin position or absolute position"
+    text  "修改字符的位置、旋转和缩放\n@param       InPositionType          设置位置类型，相对于原始位置或绝对位置"
+    state machine
+}
+
+EDreamMeshModifierStage {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage
+    src   "When a modifier runs among the others on the same visual. Modifiers run stage by stage, and within a stage in the order\ntheir components sit on the widget."
+    text  "修改器在同一可视对象上的其他修改器之间的运行时机。修改器按阶段运行，同一阶段内按\n组件在控件上的排列顺序运行。"
+    state machine
+}
+
+EDreamMeshModifierStage.Characters {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Characters
+    src   "Works on the vertices as the visual made them, a text's characters by their vertex ranges: animations, colours, UVs."
+    text  "基于可视对象生成的顶点进行处理，文本的字符则按其顶点范围处理：动画、颜色、UV。"
+    state machine
+}
+
+EDreamMeshModifierStage.Copies {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Copies
+    src   "Appends whole copies of the mesh as the stages before left it (shadow, outline, long shadow): see GetDuplicatesMesh."
+    text  "按前面阶段留下的网格追加完整副本（阴影、描边、长阴影）：参见GetDuplicatesMesh。"
+    state machine
+}
+
+EDreamMeshModifierStage.Deform {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Deform
+    src   "Reshapes the mesh by where each vertex is, cutting it finer first (warp, jelly). New vertices go after the old ones,\nwhich keep their indices, so a character's range still names its corners -- but no longer every vertex it draws."
+    text  "根据每个顶点的位置重塑网格，先对其进行更细的切分（扭曲、果冻）。新顶点排在旧顶点之后，\n旧顶点保留其索引，因此字符的范围仍指向其各个角点——但不再涵盖它绘制的所有顶点。"
+    state machine
+}
+
+EDreamMeshModifierStage.Layout {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamMeshModifierStage:Layout
+    src   "Places whole characters anew (text on a path). It still reads the characters' vertex ranges."
+    text  "重新摆放整个字符（路径文本）。它仍会读取字符的顶点范围。"
+    state machine
+}
+
+EDreamUIMeshModifierHelper_TextPositionType.Absolute {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamUIMeshModifierHelper_TextPositionType:Absolute
+    src   "Direct set character's position, relative to UIText's pivot position"
+    text  "直接设置字符的位置，相对于UIText的轴心点"
+    state machine
+}
+
+EDreamUIMeshModifierHelper_TextPositionType.Relative {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#EDreamUIMeshModifierHelper_TextPositionType:Relative
+    src   "Relative to character's origin position"
+    text  "相对于字符的原始位置"
+    state machine
+}

@@ -1,0 +1,322 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetBlueprint {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint
+    src   "DreamUI Widget Blueprint"
+    text  "DreamUI 控件蓝图"
+    state machine
+}
+
+DreamWidgetBlueprint:DesignerData {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:DesignerData
+    src   "Designer Data"
+    text  "设计器数据"
+    state machine
+}
+
+DreamWidgetBlueprint:EachBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:EachBindings
+    src   "Each Bindings"
+    text  "逐项绑定"
+    state machine
+}
+
+DreamWidgetBlueprint:EventBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:EventBindings
+    src   "Event Bindings"
+    text  "事件绑定"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodDispatchers {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodDispatchers
+    src   "Last Good Dispatchers"
+    text  "上次成功的分发器"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodHiddenWidgetNames {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodHiddenWidgetNames
+    src   "Last Good Hidden Widget Names"
+    text  "上次成功隐藏的控件名称"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodPropVariables {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodPropVariables
+    src   "Last Good Prop Variables"
+    text  "上次成功属性变量"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodResourceVariables {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodResourceVariables
+    src   "Last Good Resource Variables"
+    text  "上次成功资源变量"
+    state machine
+}
+
+DreamWidgetBlueprint:PropertyBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:PropertyBindings
+    src   "Property Bindings"
+    // from the engine's zh-Hans
+    text  "属性绑定"
+    state draft
+}
+
+DreamWidgetBlueprint:ViewModelSlots {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:ViewModelSlots
+    src   "View Model Slots"
+    text  "视图模型插槽"
+    state machine
+}
+
+DreamWidgetBlueprint:WidgetTree {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:WidgetTree
+    src   "Widget Tree"
+    // from the engine's zh-Hans
+    text  "控件树"
+    state draft
+}
+
+DreamWidgetDesignerData {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData
+    src   "Dream Widget Designer Data"
+    text  "DreamUI 控件设计器数据"
+    state machine
+}
+
+DreamWidgetDesignerData:CanvasRenderMode {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:CanvasRenderMode
+    src   "Canvas Render Mode"
+    text  "画布渲染模式"
+    state machine
+}
+
+DreamWidgetDesignerData:CanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:CanvasSize
+    src   "Canvas Size"
+    // from the engine's zh-Hans
+    text  "Canvas Size"
+    state draft
+}
+
+DreamWidgetDesignerData:DesignViewportSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:DesignViewportSize
+    src   "Design Viewport Size"
+    text  "设计视口大小"
+    state machine
+}
+
+DreamWidgetDesignerData:HiddenWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:HiddenWidgets
+    src   "Hidden Widgets"
+    text  "隐藏的控件"
+    state machine
+}
+
+DreamWidgetDesignerData:LockedWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:LockedWidgets
+    src   "Locked Widgets"
+    text  "锁定的控件"
+    state machine
+}
+
+DreamWidgetDesignerData:UnexpandedWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:UnexpandedWidgets
+    src   "Unexpanded Widgets"
+    text  "未展开的控件"
+    state machine
+}
+
+DreamWidgetDesignerData:ViewLocation {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewLocation
+    src   "View Location"
+    // from the engine's zh-Hans
+    text  "视图位置"
+    state draft
+}
+
+DreamWidgetDesignerData:ViewMode {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewMode
+    src   "View Mode"
+    // from the engine's zh-Hans
+    text  "视图模式"
+    state draft
+}
+
+DreamWidgetDesignerData:ViewOrbitLocation {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewOrbitLocation
+    src   "View Orbit Location"
+    text  "视图环绕位置"
+    state machine
+}
+
+DreamWidgetDesignerData:ViewportType {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewportType
+    src   "Viewport Type"
+    // from the engine's zh-Hans
+    text  "视口类型"
+    state draft
+}
+
+DreamWidgetDesignerData:ViewRotation {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewRotation
+    src   "View Rotation"
+    // from the engine's zh-Hans
+    text  "视图旋转"
+    state draft
+}
+
+DreamWidgetTextDispatcher {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetTextDispatcher
+    src   "Dream Widget Text Dispatcher"
+    text  "Dream控件文本调度器"
+    state machine
+}
+
+DreamWidgetTextDispatcher:Name {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetTextDispatcher:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamWidgetTextDispatcher:Parameters {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetTextDispatcher:Parameters
+    src   "Parameters"
+    // from the engine's zh-Hans
+    text  "参数"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetBlueprint {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint
+    src   "The authoring asset for a DreamUI hierarchy that is a class -- UMG's UWidgetBlueprint, for DreamUI.\n\nIt holds the hierarchy a designer edits; compiling duplicates that onto the generated class as the\narchetype instances are built from. The two copies are deliberate and match UMG: editing the\narchetype in place would mutate every live instance's template mid-session.\n\nNever cooked, like UWidgetBlueprint -- a cooked build has the generated class, bytecode included,\nand needs nothing else. Uncooked content is another matter: an editor build drops a Blueprint's\nsaved bytecode on load and rebuilds it from the Blueprint, so any process running uncooked content\n-- a game started with -game or as Standalone Game included -- needs this class and its compiler,\nwhich is why their module is UncookedOnly rather than Editor (FDreamGUIEditorModule::StartupModule).\nThe designer surface for it is out of scope here: a stock Blueprint editor opens this asset and\ncan already author graphs and variables against it."
+    text  "用于DreamUI层级的创作资产，该层级是一个类——即UMG的UWidgetBlueprint（控件蓝图）在DreamUI中的对应物。\n\n它保存设计器所编辑的层级；编译时会把它复制到生成的类上，作为构建\n实例时所用的原型。这两份副本是有意为之，与UMG一致：就地编辑\n原型会在会话中途改动每个活动实例的模板。\n\n与UWidgetBlueprint一样，它永远不会被Cook——Cooked构建中有生成的类（含字节码），\n不需要其他任何东西。未Cook的内容则是另一回事：编辑器构建在加载时会丢弃蓝图\n已保存的字节码，并从蓝图重新构建，因此任何运行未Cook内容的进程\n——包括以-game或Standalone Game方式启动的游戏——都需要这个类及其编译器，\n这也是它们的模块是UncookedOnly而非Editor的原因（FDreamGUIEditorModule::StartupModule）。\n它的设计器界面不在本文讨论范围内：标准蓝图编辑器可以打开此资产，\n并且已经能够基于它创作图表和变量。"
+    state machine
+}
+
+DreamWidgetBlueprint:DesignerData {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:DesignerData
+    src   "Designer session state for this asset. Not part of the hierarchy; see the struct."
+    text  "此资产的设计器会话状态。不属于层级的一部分；请参见该结构体。"
+    state machine
+}
+
+DreamWidgetBlueprint:EachBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:EachBindings
+    src   "`each` blocks, authored form; the compiler validates the source and hands them to the class."
+    text  "`each`块的创作形式；编译器会校验源并将其交给类。"
+    state machine
+}
+
+DreamWidgetBlueprint:EventBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:EventBindings
+    src   "`Event -> Handler` lines, authored form; CompileEventBindings resolves them onto the class."
+    text  "`Event -> Handler`行的创作形式；CompileEventBindings会把它们解析为类上的绑定。"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodPropVariables {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodPropVariables
+    src   "The `props` variables, `events` dispatchers and hidden anonymous-widget variable names of the last compile that\nread this asset's .dui into a hierarchy -- LastGoodResourceVariables' reason, for the class members the file\ndeclares beside its resources. A file that stops parsing keeps the previous hierarchy, and that hierarchy's\nbindings read these props, its emit handlers call these dispatchers and its unnamed widgets need their variables\nhidden; without them every one of those fails with an error pointing away from the one mistake in the file.\nEmpty for an asset that names no .dui."
+    text  "上一次编译中将此资源的.dui读取为层级结构的`props`变量、`events`调度器和隐藏的匿名控件变量名，\n这是LastGoodResourceVariables的用途，即文件在其资源旁声明的类成员。停止解析的文件会保留先前的层级结构，而该层级结构的\n绑定会读取这些props，其emit处理程序会调用这些调度器，其未命名控件需要隐藏各自的变量；\n如果没有它们，上述每一项都会失败，并报出一个指向别处的错误，\n而不是文件中的那个错误。\n未指定任何.dui的资源为空。"
+    state machine
+}
+
+DreamWidgetBlueprint:LastGoodResourceVariables {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodResourceVariables
+    src   "The `resources` class variables of the last compile that read this asset's .dui into a hierarchy.\n\nA compile whose file does not parse -- or cannot be read, or builds nothing -- keeps the previous\nhierarchy, and declares these again with it: the Blueprint compiler empties every generated variable\nbefore a compile declares its own, so the class would otherwise lose every resource, and every graph\nnode reading one would fail with an error pointing away from the one mistake in the file. Saved, so\na file that stopped parsing while the editor was closed still compiles with them. Empty for an asset\nthat names no .dui."
+    text  "上次编译时从该资产的.dui读取层级的`resources`类变量。\n\n若某次编译的文件无法解析——或无法读取，或未构建出任何内容——则会保留先前的\n层级，并随之再次声明这些变量：蓝图编译器会在编译声明自己的变量之前清空所有\n生成的变量，因此类否则会失去每一个资源，而每个读取其中之一的图表\n节点都会失败，并给出一个指向别处的错误，而真正的问题只是文件中的那一处错误。此项会被保存，因此\n即使文件在编辑器关闭期间停止解析，它仍能带着这些变量完成编译。对于不指定\n任何.dui的资产，此项为空。"
+    state machine
+}
+
+DreamWidgetBlueprint:PropertyBindings {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:PropertyBindings
+    src   "Property bindings as authored. The compiler resolves each into the class's copy, and reports\nthe ones it cannot -- so a binding that stops making sense (the widget renamed, the function\ndeleted, the setter's type changed) surfaces on the next compile rather than at runtime."
+    text  "按创作内容保存的属性绑定。编译器会将每个绑定解析到类的副本中，并报告\n无法解析的那些——因此，一个不再成立的绑定（控件被重命名、函数被\n删除、设置器的类型发生变化）会在下次编译时暴露出来，而不是在运行时。"
+    state machine
+}
+
+DreamWidgetBlueprint:ViewModelSlots {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:ViewModelSlots
+    src   "The `viewmodels` entries of this asset's .dui, as its last read declared them: variable, class and where the object\ncomes from. Rewritten by every compile that parses the file -- empty when it has no `viewmodels` block -- and left\nalone by one that does not (the variables of the last good read are declared again with the hierarchy it kept),\nand by an asset that names no .dui at all. The compiler hands it to the generated class\n(UDreamWidgetGeneratedClass::SetViewModelSlots), which the run time fills at Initialize."
+    text  "该资产.dui中的`viewmodels`条目，按其上次读取时的声明：变量、类以及对象的\n来源。每次解析该文件的编译都会重写它——若没有`viewmodels`块则为空——而无法解析的编译\n会保持原样（上次成功读取的变量会随其保留的层级一起再次声明），\n完全不指定.dui的资产也是如此。编译器会把它交给生成的控件类\n（UDreamWidgetGeneratedClass::SetViewModelSlots），由运行时在Initialize时填充这些插槽。"
+    state machine
+}
+
+DreamWidgetBlueprint:WidgetTree {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:WidgetTree
+    src   "The hierarchy being authored. Never handed to instances directly; the compiler duplicates it."
+    text  "正在创作的层级。不会直接交给实例；编译器会复制它。"
+    state machine
+}
+
+DreamWidgetDesignerData {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData
+    src   "What the designer remembers about one authored hierarchy, as opposed to what the hierarchy IS.\n\nThe prefab kept the same set in FDreamUIPrefabDataForPrefabEditor, keyed by the GUIDs its helper\nobject handed out. There are no GUIDs here: a widget is identified by its object FName, which is\nwhat the class archetype and every instance preserve, and which is therefore already the key the\ntemplate-to-preview correspondence runs on. Two keys for the same thing is how they drift.\n\nGrid snapping and the overlays are deliberately NOT here -- those are per-author preferences and\nlive in UDreamUIDesignerSettings (EditorPerProjectUserSettings). What stays on the asset is what\ndescribes the hierarchy itself: how big its canvas is, and which of its widgets are put away."
+    text  "设计器针对某个已创作层级所记住的内容，而非该层级本身。\n\n旧的prefab把同一组数据保存在FDreamUIPrefabDataForPrefabEditor中，以其辅助\n对象分配的GUID为键。这里没有GUID：控件由其对象FName标识，而这是\n类原型和每个实例都会保留的，因此它已经是模板到预览对应关系所使用的键。\n同一事物用两个键，正是它们发生偏差的原因。\n\n网格吸附和叠加层有意不放在这里——那些是每位作者的个人偏好，\n位于UDreamUIDesignerSettings（EditorPerProjectUserSettings）中。留在资产上的是\n描述层级本身的内容：其画布有多大，以及它的哪些控件被收起。"
+    state machine
+}
+
+DreamWidgetDesignerData:CanvasRenderMode {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:CanvasRenderMode
+    src   "Preview render mode (an EDreamRenderMode). ScreenSpaceOverlay by default, as in the designer."
+    text  "预览渲染模式（一个 EDreamRenderMode）。默认为 ScreenSpaceOverlay，与设计器中一致。"
+    state machine
+}
+
+DreamWidgetDesignerData:CanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:CanvasSize
+    src   "The design canvas the hierarchy is authored against."
+    text  "用于编辑层级的设计画布。"
+    state machine
+}
+
+DreamWidgetDesignerData:DesignViewportSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:DesignViewportSize
+    src   "Device resolution the designer picked. The hierarchy's own canvas-scaler rule turns it into\nCanvasSize, which is why the two differ for anything but ConstantPixelSize. Zero means nobody\nhas picked one, in which case CanvasSize is the resolution."
+    text  "设计器选择的设备分辨率。层级自身的画布缩放器规则会将其转换为\nCanvasSize，因此除 ConstantPixelSize 之外两者都会不同。为零表示尚未\n选择，此时 CanvasSize 即为分辨率。"
+    state machine
+}
+
+DreamWidgetDesignerData:HiddenWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:HiddenWidgets
+    src   "Widgets hidden in the designer only; runtime WidgetActive is untouched."
+    text  "仅在设计器中隐藏的控件；运行时的 WidgetActive 不受影响。"
+    state machine
+}
+
+DreamWidgetDesignerData:LockedWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:LockedWidgets
+    src   "Widgets protected from selection and manipulation in the designer."
+    text  "在设计器中受保护、不可选中和操作的控件。"
+    state machine
+}
+
+DreamWidgetDesignerData:UnexpandedWidgets {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:UnexpandedWidgets
+    src   "Hierarchy rows the author has collapsed. Keyed by template widget object FName."
+    text  "作者已折叠的层级行。以模板控件对象的 FName 为键。"
+    state machine
+}
+
+DreamWidgetDesignerData:ViewportType {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:ViewportType
+    src   "ELevelViewportType; 2 is LVT_OrthoYZ, the plane DreamUI lays out in."
+    text  "ELevelViewportType（视口类型）；2为LVT_OrthoYZ，即DreamUI进行布局的平面。"
+    state machine
+}
+
+DreamWidgetTextDispatcher {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetTextDispatcher
+    src   "One `events` entry as a compile declared it: the dispatcher's name and its parameters, as the variable descriptions\n(name and pin type) its signature graph is made from. Kept so a compile whose .dui does not build can declare the\ndispatcher again -- see UDreamWidgetBlueprint::LastGoodDispatchers."
+    text  "编译声明的一个`events`条目：调度器的名称及其参数，即其签名图所依据的变量描述\n（名称与引脚类型）。保留它是为了让.dui无法构建的编译能够重新声明该\n调度器——参见控件蓝图UDreamWidgetBlueprint::LastGoodDispatchers。"
+    state machine
+}

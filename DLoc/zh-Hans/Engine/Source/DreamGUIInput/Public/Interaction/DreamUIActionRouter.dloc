@@ -1,0 +1,344 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIActionBinding {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding
+    src   "Dream UIAction Binding"
+    text  "DreamUIAction绑定"
+    state machine
+}
+
+DreamUIActionBinding:DisplayName {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:DisplayName
+    src   "Display Name"
+    // from the engine's zh-Hans
+    text  "显示名称"
+    state draft
+}
+
+DreamUIActionBinding:Handle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamUIActionBinding:HoldProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:HoldProgress
+    src   "Hold Progress"
+    text  "按住进度"
+    state machine
+}
+
+DreamUIActionBinding:HoldTime {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:HoldTime
+    src   "Hold Time"
+    // from the engine's zh-Hans
+    text  "保留时间"
+    state draft
+}
+
+DreamUIActionBinding:Icon {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:Icon
+    src   "Icon"
+    // from the engine's zh-Hans
+    text  "图标"
+    state draft
+}
+
+DreamUIActionBinding:Key {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUIActionRouter {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter
+    src   "Dream UIAction Router"
+    text  "DreamUIAction路由"
+    state machine
+}
+
+DreamUIActionRouter:ExecuteAction:InHandle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:ExecuteAction:InHandle
+    src   "In Handle"
+    // from the engine's zh-Hans
+    text  "在柄中"
+    state draft
+}
+
+DreamUIActionRouter:ExecuteAction:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:ExecuteAction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionRouter:GetDisplayBindings:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetDisplayBindings:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIActionRouter:GetDisplayBindings:OutBindings {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetDisplayBindings:OutBindings
+    src   "Out Bindings"
+    // from the engine's zh-Hans
+    text  "输出绑定"
+    state draft
+}
+
+DreamUIActionRouter:GetHoldProgress:InHandle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetHoldProgress:InHandle
+    src   "In Handle"
+    // from the engine's zh-Hans
+    text  "在柄中"
+    state draft
+}
+
+DreamUIActionRouter:GetHoldProgress:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetHoldProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionRouter:HandleKey:bPressed {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey:bPressed
+    src   "Pressed"
+    // from the engine's zh-Hans
+    text  "已按下"
+    state draft
+}
+
+DreamUIActionRouter:HandleKey:InKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey:InKey
+    src   "In Key"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamUIActionRouter:HandleKey:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIActionRouter:HandleKey:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:bAltDown {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:bAltDown
+    src   "Alt Down"
+    // from the engine's zh-Hans
+    text  "Alt按下"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:bCmdDown {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:bCmdDown
+    src   "Cmd Down"
+    text  "Cmd 键按下"
+    state machine
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:bCtrlDown {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:bCtrlDown
+    src   "Ctrl Down"
+    // from the engine's zh-Hans
+    text  "Ctrl按下"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:bPressed {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:bPressed
+    src   "Pressed"
+    // from the engine's zh-Hans
+    text  "已按下"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:bShiftDown {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:bShiftDown
+    src   "Shift Down"
+    // from the engine's zh-Hans
+    text  "Shift按下"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:InKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:InKey
+    src   "In Key"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionRouter:RegisterAction:bDisplayInActionBar {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:bDisplayInActionBar
+    src   "Display in Action Bar"
+    // from the engine's zh-Hans
+    text  "在操作栏中显示"
+    state draft
+}
+
+DreamUIActionRouter:RegisterAction:InAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:InAction
+    src   "In Action"
+    // from the engine's zh-Hans
+    text  "输入操作"
+    state draft
+}
+
+DreamUIActionRouter:RegisterAction:InCallback {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:InCallback
+    src   "In Callback"
+    // from the engine's zh-Hans
+    text  "In Callback"
+    state draft
+}
+
+DreamUIActionRouter:RegisterAction:InScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:InScope
+    src   "In Scope"
+    text  "作用域"
+    state machine
+}
+
+DreamUIActionRouter:RegisterAction:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIActionRouter:RegisterAction:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIActionRouter:UnregisterAction:InHandle {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterAction:InHandle
+    src   "In Handle"
+    // from the engine's zh-Hans
+    text  "在柄中"
+    state draft
+}
+
+DreamUIActionRouter:UnregisterScope:InScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterScope:InScope
+    src   "In Scope"
+    text  "作用域"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIActionBinding {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding
+    src   "One live binding as a prompt bar needs to see it: already resolved for the device in use."
+    text  "供提示栏使用的一个实时绑定：已针对当前使用的设备解析完成。"
+    state machine
+}
+
+DreamUIActionBinding:HoldProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionBinding:HoldProgress
+    src   "0..1 through the hold; always 0 for an action that fires on press."
+    text  "按住过程中的0..1进度；对于按下即触发的操作，始终为0。"
+    state machine
+}
+
+DreamUIActionRouter {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter
+    src   "Which screen gets told about which key.\n\nBefore this, the answer was a static array of FKeys in the input actor's cpp: a project could not\nadd an action, rebind one, or draw a prompt for one without editing the plugin, and there was no\nnotion of a key belonging to the screen currently in front. Bindings here live and die with the\nscreen that registered them, and only the screen on top is offered the key -- which is what makes\n\"Delete\" mean the dialog's delete and not the list's while that dialog is open.\n\nTicks, because a hold has to fire when the time is up rather than when the player lets go."
+    text  "哪个屏幕会收到哪个按键的通知。\n\n在此之前，答案只是输入 Actor 的 cpp 中的一个静态 FKey 数组：项目若不修改插件，就无法\n添加操作、重新绑定或为其绘制提示，而且也没有\n“按键属于当前前置屏幕”这一概念。这里的绑定随注册它们的屏幕一同存在与销毁，只有最顶层的屏幕才会\n获得该按键——正因如此，当对话框打开时，\n“Delete”才表示对话框的删除，而不是列表的删除。\n\n使用Tick，因为按住必须在时间到时触发，而不是在玩家松开时触发。"
+    state machine
+}
+
+DreamUIActionRouter:ExecuteAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:ExecuteAction
+    src   "Run the action InHandle names, as its key would, without a key: what a prompt the player clicks, taps or confirms\non the prompt bar does (UDreamUIActionBar), as UCommonBoundActionButton::NativeOnClicked runs its binding's\nOnExecuteAction (CommonUI/Private/Input/CommonBoundActionButton.cpp:37-45). Only while its key would run it -- its\nscreen in front, or global -- and at once, whatever its HoldTime: the hold is the key's, as CommonUI's bound\nbutton needs no hold unless told to (bLinkRequiresHoldToBindingHold, off by default).\n@return true when the action ran."
+    text  "运行 InHandle 指定的操作，就像其按键所做的那样，但无需按键：即玩家在提示栏上点击、轻触或确认\n的提示所做的事（UDreamUIActionBar），如同 UCommonBoundActionButton::NativeOnClicked 运行其绑定的\nOnExecuteAction（CommonUI/Private/Input/CommonBoundActionButton.cpp:37-45）。仅在其按键会运行它时——其\n屏幕位于最前，或为全局——并且立即执行，无论其 HoldTime 为何：按住是按键的事，因为 CommonUI 的绑定\n按钮除非另行指定，否则不需要按住（bLinkRequiresHoldToBindingHold，默认关闭）。\n@return 动作运行时为 true。"
+    state machine
+}
+
+DreamUIActionRouter:GetDisplayBindings {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetDisplayBindings
+    src   "Live bindings for a prompt bar, most recently registered first, resolved for the device in use."
+    text  "供提示栏使用的实时绑定，最近注册的排在前面，已针对当前使用的设备解析。"
+    state machine
+}
+
+DreamUIActionRouter:GetHoldProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetHoldProgress
+    src   "0..1 through the hold on one binding. Zero when it is not being held or fires on press."
+    text  "单个绑定按住过程中的0..1。未处于按住状态或按下即触发时为零。"
+    state machine
+}
+
+DreamUIActionRouter:HandleKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey
+    src   "Offer a key to the bindings for InUserIndex.\n\nA release is answered by what took its press -- the focused widget's handlers or the binding that took it -- and\nby nothing else: a binding registered while the key was held never saw the press, and does not take its release.\nThe focused widget hears every release all the same, as UMG's OnKeyUp does.\n@return true when a binding took it, which the caller must read as \"do not also treat this as\n        navigation\" -- otherwise a Confirm bound to Enter would both fire and press whatever\n        navigation happens to be sitting on."
+    text  "向 InUserIndex 的绑定提供按键。\n\n松开由接管其按下的对象来应答——焦点控件的处理程序或接管它的绑定——并且\n除此之外不作应答：在按键被按住期间注册的绑定从未见到该按下，也不会接管其松开。\n焦点控件仍然会收到每一次松开，如同 UMG 的 OnKeyUp 那样。\n@return 当某个绑定接管了它时为 true，调用方必须将其理解为“不要同时把它当作\n        导航”——否则绑定到 Enter 的 Confirm 会既触发又按下当前所处的任何\n        导航。"
+    state machine
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers
+    src   "The same, with the modifier keys stated rather than read from the player.\n\nHandleKey asks the player controller what is held, which is right for a key arriving from real\ninput and useless without one -- a test, a replay, or a virtual keyboard knows its own chord and\nhas no controller to ask."
+    text  "同上，但修饰键由外部指定，而不是从玩家处读取。\n\nHandleKey 会询问玩家控制器当前按住了什么，这对于来自真实\n输入的按键是正确的，但在没有控制器时毫无用处——测试、回放或虚拟键盘知道自己的组合键，\n却没有控制器可询问。"
+    state machine
+}
+
+DreamUIActionRouter:RefreshInputActionKeys {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RefreshInputActionKeys
+    src   "Re-read the keys behind every binding's Enhanced Input action.\n\nThey are resolved once, when a binding first has to answer for a key, because a mapping context\nis normally pushed before any screen opens and never touched again. A project that swaps contexts\nwhile screens are open -- a remapping menu, a vehicle mode with its own bindings -- calls this\nafterwards, and the prompt bars rebuild with the new keys."
+    text  "重新读取每个绑定的增强输入操作背后的按键。\n\n这些按键只在绑定首次需要应答某个按键时解析一次，因为映射上下文\n通常在任何界面打开之前就已推送，之后不再改动。如果项目在界面打开期间切换上下文\n——例如改键菜单，或带有一套自身绑定的载具模式——就在之后调用本函数，\n提示栏便会用新的按键重新构建。"
+    state machine
+}
+
+DreamUIActionRouter:RegisterAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction
+    src   "Bind InAction for as long as InScope is the screen on top. A null scope binds globally, which is\nfor something that must work whatever is open and is deliberately the lower priority of the two.\n@param bDisplayInActionBar   And-ed with the action's own flag; a caller can hide but not reveal."
+    text  "只要 InScope 是顶层界面，就绑定 InAction。作用域为空时绑定到全局，用于\n必须在任何界面打开时都能工作的内容，且有意设为两者中较低的优先级。\n@param bDisplayInActionBar   与该操作自身的标志进行与运算；调用方可以隐藏，但无法显示。"
+    state machine
+}
+
+DreamUIActionRouter:UnregisterScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterScope
+    src   "Drop every binding InScope registered. Called when a screen goes away."
+    text  "释放 InScope 注册的所有绑定。当屏幕关闭时调用。"
+    state machine
+}

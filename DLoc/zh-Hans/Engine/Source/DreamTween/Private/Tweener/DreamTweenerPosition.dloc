@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerPosition {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerPosition.h#DreamTweenerPosition
+    src   "Dream Tweener Position"
+    text  "DreamTweener 位置"
+    state machine
+}

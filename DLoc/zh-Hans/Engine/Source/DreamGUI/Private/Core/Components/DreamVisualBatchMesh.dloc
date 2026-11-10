@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamVisualBatchMesh
+
+TooManyTrianglesInSingleUIElement {
+    at    Source/DreamGUI/Private/Core/Components/DreamVisualBatchMesh.cpp
+    src   "{0} Too many vertex ({1}) in single UI element: {2}"
+    text  "顶点数量过多 ({1})，单个 UI 元素：{2}。{0}"
+    state machine
+}

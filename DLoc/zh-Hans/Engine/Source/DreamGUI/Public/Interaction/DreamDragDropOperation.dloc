@@ -1,0 +1,149 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamDragDropOperation {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation
+    src   "Dream Drag Drop Operation"
+    text  "Dream拖放操作"
+    state machine
+}
+
+DreamDragDropOperation:bDropWasHandled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:bDropWasHandled
+    src   "Drop Was Handled"
+    text  "放置已处理"
+    state machine
+}
+
+DreamDragDropOperation:DragVisualClass {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:DragVisualClass
+    src   "Drag Visual Class"
+    text  "拖动视觉类"
+    state machine
+}
+
+DreamDragDropOperation:DragVisualOffset {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:DragVisualOffset
+    src   "Drag Visual Offset"
+    text  "拖动视觉偏移"
+    state machine
+}
+
+DreamDragDropOperation:OnDragCancelled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:OnDragCancelled
+    src   "On Drag Cancelled"
+    // from the engine's zh-Hans
+    text  "拖动取消时"
+    state draft
+}
+
+DreamDragDropOperation:OnDropHandled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:OnDropHandled
+    src   "On Drop Handled"
+    text  "放置已处理时"
+    state machine
+}
+
+DreamDragDropOperation:Payload {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:Payload
+    src   "Payload"
+    // from the engine's zh-Hans
+    text  "负载"
+    state draft
+}
+
+DreamDragDropOperation:SourceWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:SourceWidget
+    src   "Source Widget"
+    text  "源控件"
+    state machine
+}
+
+DreamDragDropOperation:Tag {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:Tag
+    src   "Tag"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamUIDragDropOperationEvent__DelegateSignature:Operation {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamUIDragDropOperationEvent__DelegateSignature:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamDragDropOperation {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation
+    src   "What a drag MEANS, riding along with it. The pointer pipeline itself only knows geometry -- which\nwidget is dragging and where the pointer is -- and every consumer used to reconstruct meaning\nfrom that alone. This object carries the meaning: the payload being moved, a tag for cheap\nfiltering, and the drag visual to show under the cursor.\n\nCreated by the source when its drag begins (UDreamUIDragSource, or any code that writes it onto\nthe pointer's event data), read by targets on drop, and alive exactly as long as the drag: the\ninput module clears it wherever it clears DragWidget."
+    text  "拖拽的真正含义随它一同传递。指针管线本身只知道几何信息——哪个\n控件正在拖拽、指针位于何处——而过去每个使用方都只能据此重建含义。\n此对象承载这些含义：正在移动的负载、用于低成本筛选的标签，以及\n要在光标下显示的拖动视觉。\n\n由源在其拖拽开始时创建（UDreamUIDragSource，或任何将其写入\n指针事件数据的代码），由目标在放置时读取，并且其生命周期与拖拽完全一致：\n输入模块在清除DragWidget的地方也会清除它。"
+    state machine
+}
+
+DreamDragDropOperation:bDropWasHandled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:bDropWasHandled
+    src   "Set by the target that accepted the drop. What the source's end-of-drag reads to decide\nbetween \"it landed\" and \"it was cancelled\" -- writable so a Blueprint implementing the drop\ninterface directly can accept too."
+    text  "由接受放置的目标设置。源的拖拽结束逻辑会读取它，以在\n“已落地”和“已取消”之间作出判断——它可写，因此直接实现放置\n接口的蓝图也能接受放置。"
+    state machine
+}
+
+DreamDragDropOperation:DragVisualClass {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:DragVisualClass
+    src   "Widget class shown under the cursor for the duration of the drag. Null shows nothing."
+    text  "拖拽期间在光标下显示的控件类。为空时不显示任何内容。"
+    state machine
+}
+
+DreamDragDropOperation:DragVisualOffset {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:DragVisualOffset
+    src   "Drag visual offset from the pointer, canvas units, X right Y up."
+    text  "拖动视觉相对指针的偏移，画布单位，X向右，Y向上。"
+    state machine
+}
+
+DreamDragDropOperation:NotifyDragCancelled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:NotifyDragCancelled
+    src   "Tell this operation its drag ended with nothing accepting it. Fires OnDragCancelled at most\nonce, whoever notices the end first.\n\nTwo things can notice, and only one of them used to: the source's own OnPointerEndDrag, and\nthe pointer pipeline clearing a drag directly. The pipeline's path only ran the source's, and\nonly when the source widget was still alive -- so a drag whose source was destroyed mid-flight\n(a recycled list row, a screen closed under the pointer) ended with no cancel at all and every\nOnDragCancelled handler waiting for a call that could no longer come. The cancel belongs to\nthe OPERATION, which outlives the widget that made it."
+    text  "告知此操作：其拖拽已结束，且没有任何对象接受它。无论谁先察觉到结束，OnDragCancelled 最多\n触发一次。\n\n有两处可能察觉到，而过去只有其中一处：源自身的 OnPointerEndDrag，以及\n指针管线直接清除拖拽。管线的路径只运行源的那一套，而且\n仅在源控件仍然存活时运行——因此，如果拖拽的源在中途被销毁\n（被回收的列表行、在指针下方关闭的屏幕），拖拽就会完全得不到取消，所有\n等待一个再也无法到来的调用的 OnDragCancelled 处理程序也会落空。取消属于\n该操作，而该操作比创建它的控件存活得更久。"
+    state machine
+}
+
+DreamDragDropOperation:OnDragCancelled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:OnDragCancelled
+    src   "Fired by the source when the drag ended with no target accepting."
+    text  "当拖拽结束且没有目标接受时，由源触发。"
+    state machine
+}
+
+DreamDragDropOperation:OnDropHandled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:OnDropHandled
+    src   "Fired by the accepting target, after its own handling."
+    text  "由接受目标触发，在目标自身处理完成后。"
+    state machine
+}
+
+DreamDragDropOperation:Payload {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:Payload
+    src   "The thing being dragged -- an item, an entry's data object, anything. May be null for tag-only drags."
+    text  "被拖动的对象，可以是项目、条目的数据对象或其他内容。对于仅标记的拖动操作，可能为空。"
+    state machine
+}
+
+DreamDragDropOperation:SourceWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:SourceWidget
+    src   "The widget the drag started on."
+    text  "拖动操作开始的控件。"
+    state machine
+}
+
+DreamDragDropOperation:Tag {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:Tag
+    src   "Cheap filter for targets: an inventory slot accepts \"Item\", a hotbar accepts \"Item\" and \"Skill\"."
+    text  "用于筛选目标的标签：例如，物品栏槽接受“Item”，快捷栏接受“Item”和“Skill”。"
+    state machine
+}

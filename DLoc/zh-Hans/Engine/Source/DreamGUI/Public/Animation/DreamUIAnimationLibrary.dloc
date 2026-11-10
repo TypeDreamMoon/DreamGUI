@@ -1,0 +1,89 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAnimationLibrary {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary
+    src   "Dream UIAnimation Library"
+    text  "Dream UI 动画库"
+    state machine
+}
+
+DreamUIAnimationLibrary:EqualAnimationHandles:A {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:EqualAnimationHandles:A
+    src   "A"
+    // from the engine's zh-Hans
+    text  "A"
+    state draft
+}
+
+DreamUIAnimationLibrary:EqualAnimationHandles:B {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:EqualAnimationHandles:B
+    src   "B"
+    // from the engine's zh-Hans
+    text  "B"
+    state draft
+}
+
+DreamUIAnimationLibrary:EqualAnimationHandles:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:EqualAnimationHandles:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIAnimationLibrary:GetAnimationFromHandle:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamUIAnimationLibrary:GetAnimationFromHandle:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIAnimationLibrary:IsAnimationHandleValid:Handle {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:IsAnimationHandleValid:Handle
+    src   "Handle"
+    // from the engine's zh-Hans
+    text  "柄"
+    state draft
+}
+
+DreamUIAnimationLibrary:IsAnimationHandleValid:ReturnValue {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:IsAnimationHandleValid:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIAnimationLibrary {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary
+    src   "The Blueprint-side helpers for FDreamUIAnimationHandle, which a struct cannot carry itself."
+    text  "用于 FDreamUIAnimationHandle 的蓝图辅助函数，结构体本身无法承载这些信息。"
+    state machine
+}
+
+DreamUIAnimationLibrary:GetAnimationFromHandle {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle
+    src   "The animation the handle's instance plays, or null once the instance is gone."
+    text  "动画句柄实例正在播放的动画，或当实例不再存在时为 null。"
+    state machine
+}
+
+DreamUIAnimationLibrary:IsAnimationHandleValid {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:IsAnimationHandleValid
+    src   "True while the instance the handle names is still live (playing or paused)."
+    text  "当动画句柄命名的实例仍然存在（正在播放或暂停）时，返回 true。"
+    state machine
+}

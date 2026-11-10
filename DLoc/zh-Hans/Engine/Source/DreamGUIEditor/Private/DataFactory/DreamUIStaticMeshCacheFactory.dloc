@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+StaticMeshCache {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticMeshCacheFactory.cpp
+    src   "Static Mesh Cache"
+    text  "静态网格缓存"
+    state machine
+}
+
+StaticMeshCacheToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticMeshCacheFactory.cpp
+    src   "A static mesh's geometry kept for a Dream Static Mesh widget, which cannot read the mesh at runtime."
+    text  "静态网格缓存：用于 Dream 静态网格部件的几何体数据，运行时无法读取网格。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIStaticMeshCacheFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticMeshCacheFactory.cpp#DreamUIStaticMeshCacheFactory
+    src   "Dream UIStatic Mesh Cache Factory"
+    text  "Dream UI 静态网格缓存工厂"
+    state machine
+}

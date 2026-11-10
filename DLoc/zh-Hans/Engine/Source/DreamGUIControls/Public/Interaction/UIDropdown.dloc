@@ -1,0 +1,725 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EUIDropdownHorizontalPosition.Automatic {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:Automatic
+    src   "Automatic"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EUIDropdownHorizontalPosition.Center {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EUIDropdownHorizontalPosition.EUIDropdownHorizontalPosition_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:EUIDropdownHorizontalPosition_MAX
+    src   "EUIDropdown Horizontal Position MAX"
+    text  "水平位置（最大）"
+    state machine
+}
+
+EUIDropdownHorizontalPosition.Left {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EUIDropdownHorizontalPosition.Right {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EUIDropdownVerticalPosition.Automatic {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:Automatic
+    src   "Automatic"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EUIDropdownVerticalPosition.Bottom {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EUIDropdownVerticalPosition.EUIDropdownVerticalPosition_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:EUIDropdownVerticalPosition_MAX
+    src   "EUIDropdown Vertical Position MAX"
+    text  "垂直位置（最大）"
+    state machine
+}
+
+EUIDropdownVerticalPosition.Middle {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:Middle
+    src   "Middle"
+    // from the engine's zh-Hans
+    text  "中"
+    state draft
+}
+
+EUIDropdownVerticalPosition.Top {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+UIDropdown {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown
+    src   "UIDropdown"
+    text  "UIDropdown"
+    state machine
+}
+
+UIDropdown:AddOptions:InOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:AddOptions:InOptions
+    src   "In Options"
+    // from the engine's zh-Hans
+    text  "In Options"
+    state draft
+}
+
+UIDropdown:bTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:bTabCommitsHighlightedRow
+    src   "Tab Commits Highlighted Row"
+    text  "选项卡选中项高亮"
+    state machine
+}
+
+UIDropdown:bUseInteractionBlock {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:bUseInteractionBlock
+    src   "Use Interaction Block"
+    text  "使用交互遮挡"
+    state machine
+}
+
+UIDropdown:CaptionImage {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:CaptionImage
+    src   "Caption Image"
+    text  "标题图片"
+    state machine
+}
+
+UIDropdown:CaptionText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:CaptionText
+    src   "Caption Text"
+    text  "标题文本"
+    state machine
+}
+
+UIDropdown:CreatedItemArray {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:CreatedItemArray
+    src   "Created Item Array"
+    text  "已创建项数组"
+    state machine
+}
+
+UIDropdown:GetCurrentOption:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetCurrentOption:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetHorizontalPosition:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetHorizontalPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetListRoot:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetListRoot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetMaxHeight:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetMaxHeight:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetOption:index {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOption:index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+UIDropdown:GetOption:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOption:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetOptions:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOptions:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetTabCommitsHighlightedRow:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetTabCommitsHighlightedRow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetUseInteractionBlock:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetUseInteractionBlock:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetVerticalOverlap:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalOverlap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:GetVerticalPosition:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdown:HorizontalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:HorizontalPosition
+    src   "Horizontal Position"
+    text  "水平位置"
+    state machine
+}
+
+UIDropdown:ItemTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ItemTemplate
+    src   "Item Template"
+    text  "项模板"
+    state machine
+}
+
+UIDropdown:ListRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ListRoot
+    src   "List Root"
+    text  "列表根"
+    state machine
+}
+
+UIDropdown:MaxHeight {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:MaxHeight
+    src   "Max Height"
+    // from the engine's zh-Hans
+    text  "最大高度"
+    state draft
+}
+
+UIDropdown:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+UIDropdown:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:OnValueChangedBP
+    src   "OnValueChanged"
+    text  "值已更改"
+    state machine
+}
+
+UIDropdown:Options {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:Options
+    src   "Options"
+    // from the engine's zh-Hans
+    text  "选项"
+    state draft
+}
+
+UIDropdown:SetCaptionText:InCaptionText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetCaptionText:InCaptionText
+    src   "In Caption Text"
+    text  "标题文本"
+    state machine
+}
+
+UIDropdown:SetHorizontalPosition:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetHorizontalPosition:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetItemCustomDataFunction:InFunction {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemCustomDataFunction:InFunction
+    src   "In Function"
+    // from the engine's zh-Hans
+    text  "输入函数"
+    state draft
+}
+
+UIDropdown:SetItemTemplate:InItemTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemTemplate:InItemTemplate
+    src   "In Item Template"
+    text  "项目模板"
+    state machine
+}
+
+UIDropdown:SetListRoot:InListRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetListRoot:InListRoot
+    src   "In List Root"
+    text  "列表根节点"
+    state machine
+}
+
+UIDropdown:SetMaxHeight:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetMaxHeight:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetOptions:InOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetOptions:InOptions
+    src   "In Options"
+    // from the engine's zh-Hans
+    text  "In Options"
+    state draft
+}
+
+UIDropdown:SetTabCommitsHighlightedRow:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetTabCommitsHighlightedRow:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetUseInteractionBlock:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetUseInteractionBlock:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetValue:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValue:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetValueWithoutNotify:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValueWithoutNotify:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetVerticalOverlap:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetVerticalOverlap:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:SetVerticalPosition:InValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetVerticalPosition:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+UIDropdown:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIDropdown:VerticalOverlap {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:VerticalOverlap
+    src   "Vertical Overlap"
+    text  "垂直重叠"
+    state machine
+}
+
+UIDropdown:VerticalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:VerticalPosition
+    src   "Vertical Position"
+    text  "垂直位置"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate__DelegateSignature:InSelectIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate__DelegateSignature:InSelectIndex
+    src   "In Select Index"
+    text  "选择索引"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemScript {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemScript
+    src   "In Item Script"
+    text  "项目脚本"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature:InItemWidget
+    src   "In Item Widget"
+    text  "项目控件"
+    state machine
+}
+
+UIDropdownItemComponent {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent
+    src   "UIDropdown Item Component"
+    text  "下拉列表项目组件"
+    state machine
+}
+
+UIDropdownItemComponent:GetImage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetImage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdownItemComponent:GetText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdownItemComponent:GetToggle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetToggle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIDropdownItemComponent:Image {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:Image
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}
+
+UIDropdownItemComponent:OnSelectDynamic {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:OnSelectDynamic
+    src   "On Select Dynamic"
+    text  "动态选择事件"
+    state machine
+}
+
+UIDropdownItemComponent:ReceiveInit:Data {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit:Data
+    src   "Data"
+    // from the engine's zh-Hans
+    text  "数据"
+    state draft
+}
+
+UIDropdownItemComponent:ReceiveInit:Index {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+UIDropdownItemComponent:ReceiveInit:OnSelectCallback {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit:OnSelectCallback
+    src   "On Select Callback"
+    text  "选择回调"
+    state machine
+}
+
+UIDropdownItemComponent:ReceiveSetSelectionState:InSelect {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveSetSelectionState:InSelect
+    src   "In Select"
+    text  "是否通过导航选中"
+    state machine
+}
+
+UIDropdownItemComponent:SetImage:InImage {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetImage:InImage
+    src   "In Image"
+    text  "图像"
+    state machine
+}
+
+UIDropdownItemComponent:SetText:InText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetText:InText
+    src   "In Text"
+    // from the engine's zh-Hans
+    text  "在文本中"
+    state draft
+}
+
+UIDropdownItemComponent:SetToggle:InToggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetToggle:InToggle
+    src   "In Toggle"
+    text  "切换按钮"
+    state machine
+}
+
+UIDropdownItemComponent:Text {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+UIDropdownItemComponent:Toggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:Toggle
+    src   "Toggle"
+    // from the engine's zh-Hans
+    text  "Toggle"
+    state draft
+}
+
+UIDropdownOptionData {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownOptionData
+    src   "UIDropdown Option Data"
+    text  "UIDropdown选项数据"
+    state machine
+}
+
+UIDropdownOptionData:ImageBrush {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownOptionData:ImageBrush
+    src   "Image Brush"
+    text  "图像笔刷"
+    state machine
+}
+
+UIDropdownOptionData:Text {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownOptionData:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+UIDropdownValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+EUIDropdownHorizontalPosition.Automatic {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownHorizontalPosition:Automatic
+    src   "automatically choose left or right"
+    text  "自动选择左侧或右侧"
+    state machine
+}
+
+EUIDropdownVerticalPosition.Automatic {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#EUIDropdownVerticalPosition:Automatic
+    src   "automatically choose bottom or top"
+    text  "自动选择底部或顶部"
+    state machine
+}
+
+UIDropdown:AddOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:AddOptions
+    src   "Append options, rebuilding an open list at once as SetOptions does."
+    text  "追加选项，并像SetOptions那样立即重建已打开的列表。"
+    state machine
+}
+
+UIDropdown:bTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:bTabCommitsHighlightedRow
+    src   "What Tab and Shift+Tab do in the open list besides closing it: on, the row the player is on is chosen first, as an\nHTML select does, and the Tab then moves on past the dropdown; off, the list only closes. Tab never stays in an open\nlist (it is pushed with EDreamPopupTabBehavior::CloseAndContinue)."
+    text  "在打开的列表中，Tab和Shift+Tab除了关闭列表之外还做什么：开启时，先选中玩家当前所在的行，与\nHTML select一样，随后Tab继续移过下拉框；关闭时，列表仅关闭。Tab从不停留在打开的\n列表中（它是以EDreamPopupTabBehavior::CloseAndContinue方式压入的）。"
+    state machine
+}
+
+UIDropdown:bUseInteractionBlock {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:bUseInteractionBlock
+    src   "Keep the press outside the open list from what is under it, for this dropdown whatever the project says.\n\nA press outside the open list closes it. Off, the default, what it does next is the project's choice for all its\nmenus (UDreamGUISettings::bMenusConsumeOutsideClick): by default it then reaches whatever is under the pointer, as\nSComboBox's list -- a menu on the Slate menu stack -- lets it. On, it goes no further for this dropdown, as a click\non the full-screen blocker this used to build went nowhere else (EDreamPopupOutsideClick Consume / PassThrough). A\npress on the dropdown's own face closes the list either way and never opens it again."
+    text  "使打开的列表之外的按压不会到达其下方的内容，对此下拉框而言，无论项目如何设置。\n\n在打开的列表之外按压会关闭它。关闭时（默认），接下来做什么由项目为其所有\n菜单统一决定（UDreamGUISettings::bMenusConsumeOutsideClick）：默认情况下按压会到达指针下方的内容，正如\nSComboBox的列表——Slate菜单栈上的菜单——所允许的那样。开启时，对此下拉框而言按压不再继续传递，就像点击\n过去构建的全屏阻挡器不会去到别处一样（EDreamPopupOutsideClick Consume / PassThrough）。无论哪种情况，\n在下拉框自身表面上的按压都会关闭列表，并且不会再打开它。"
+    state machine
+}
+
+UIDropdown:ClearItemCustomDataFunction {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ClearItemCustomDataFunction
+    src   "Clear the function set by \"SetItemCustomDataFunction\"."
+    text  "清除由“SetItemCustomDataFunction”设置的函数。"
+    state machine
+}
+
+UIDropdown:MarkRecreateList {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:MarkRecreateList
+    src   "list items will be created at next time when show the list"
+    text  "列表项将在下次显示列表时创建"
+    state machine
+}
+
+UIDropdown:MaxHeight {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:MaxHeight
+    src   "ListRoot's max height"
+    text  "ListRoot的最大高度"
+    state machine
+}
+
+UIDropdown:SetItemCustomDataFunction {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemCustomDataFunction
+    src   "Set custom function to customize option-list item, called when set data for every dropdown-option-list item."
+    text  "设置用于自定义选项列表项的自定义函数，在为每个下拉选项列表项设置数据时调用。"
+    state machine
+}
+
+UIDropdown:SetListRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetListRoot
+    src   "The parts, settable from code. All four are EditAnywhere weak references the designer and .dui\nalways reached by reflection while no caller could -- the UUIToggle transition-target hole.\nA part swap invalidates the built list; the caption re-applies at once."
+    text  "各部件，可从代码设置。四个都是EditAnywhere弱引用，设计器和.dui\n一直通过反射访问它们，而没有任何调用方能够做到——即UUIToggle过渡目标的漏洞。\n替换部件会使已构建的列表失效；标题会立即重新应用。"
+    state machine
+}
+
+UIDropdown:SetOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetOptions
+    src   "Replace the options. An open list is rebuilt at once, so none of its rows stands for an option\nthat is gone; a closed one builds its rows the next time it opens."
+    text  "替换选项。已打开的列表会立即重建，因此不会再有行对应已移除的选项；\n已关闭的列表会在下次打开时构建其行。"
+    state machine
+}
+
+UIDropdown:SetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetTabCommitsHighlightedRow
+    src   "See bTabCommitsHighlightedRow. An open list answers the next Tab by the new setting."
+    text  "参见 bTabCommitsHighlightedRow。已打开的列表在下次按 Tab 时按新设置响应。"
+    state machine
+}
+
+UIDropdown:SetUseInteractionBlock {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetUseInteractionBlock
+    src   "See bUseInteractionBlock. An open list answers the next press by the new setting."
+    text  "参见 bUseInteractionBlock。已打开的列表在下次按下时按新设置响应。"
+    state machine
+}
+
+UIDropdown:Value {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:Value
+    src   "Current selected option index. -1 means none selected"
+    text  "当前选中的选项索引。-1 表示未选择。"
+    state machine
+}
+
+UIDropdown:VerticalOverlap {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:VerticalOverlap
+    src   "If list will overlap this button? Only valid if VerticalPosition NOT equal Middle, because Middle mode always overlay."
+    text  "列表是否与此按钮重叠？仅在 VerticalPosition 不等于 Middle 时有效，因为 Middle 模式始终为覆盖显示。"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate__DelegateSignature
+    src   "Dropdown option selection change.\n@param InSelectIndex Selected item index\n@param InSelectItem Selected item string"
+    text  "下拉选项选择发生变化。\n@param InSelectIndex 选中的项索引\n@param InSelectItem 选中的项字符串"
+    state machine
+}
+
+UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownComponentDynamicDelegate_SetItemCustomData__DelegateSignature
+    src   "Called when set data for every dropdown-option-list item.\n@param InItemIndex Dropdown-option-list item index.\n@param InItemScript The UIDropdownItemComponent script attached on dropdown-option-list item.\n@param InItemWidget The dropdown-option-list item actor."
+    text  "为每个下拉选项列表项设置数据时调用。\n@param InItemIndex 下拉选项列表项索引。\n@param InItemScript 附加在下拉选项列表项上的UIDropdownItemComponent组件脚本。\n@param InItemWidget 下拉选项列表项控件Actor。"
+    state machine
+}
+
+UIDropdownItemComponent:ReceiveInit {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit
+    src   "Called by UIDropdownComponent when create a item. Use this to initialize.\n@param Index Item's index.\n@param Data Item's data.\n@param OnSelectCallback Callback function that need to be executed by user, when select this item."
+    text  "创建项时由UIDropdownComponent组件调用。可用于初始化。\n@param Index 项的索引。\n@param Data 项的数据。\n@param OnSelectCallback 用户选择该项时需要执行的回调函数。"
+    state machine
+}
+
+UIDropdownItemComponent:ReceiveSetSelectionState {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveSetSelectionState
+    src   "Set this item's selection state.\nWhen select other item, then need to de-select this one."
+    text  "设置该项的选择状态。\n选择其他项时，需要取消选择此项。"
+    state machine
+}
+
+UIDropdownItemComponent:SetText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetText
+    src   "The parts, settable from code -- the same reflection-only hole the dropdown itself had."
+    text  "这些部件可从代码设置——存在与下拉框自身相同的只能通过反射访问的问题。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Dropdown {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:AddOptions
+    src   "DreamGUI-Dropdown"
+    text  "DreamGUI-下拉框"
+    state machine
+}

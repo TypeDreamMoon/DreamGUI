@@ -1,0 +1,91 @@
+dloc 1
+culture zh-Hans
+namespace DreamCanvasCustomization
+
+MultipleScreenSpaceDreamCanvasError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "[{0}].{1} Detect multiple DreamCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!"
+    text  "[{0}].{1} 检测到多个以 ScreenSpaceOverlay 模式渲染的 DreamCanvas，这是不允许的！一个世界中只应有一个 ScreenSpace UI！"
+    state machine
+}
+
+DrawCallInfo {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "DrawCallInfo"
+    text  "DrawCallInfo"
+    state machine
+}
+
+DrawCallCountLabel {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "DrawCallCount"
+    text  "DrawCallCount"
+    state machine
+}
+
+RenderTarget {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "RenderTarget"
+    // from the engine's zh-Hans
+    text  "渲染目标"
+    state draft
+}
+
+Match {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "Match"
+    // from the engine's zh-Hans
+    text  "匹配"
+    state draft
+}
+
+Width {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "Width"
+    // from the engine's zh-Hans
+    text  "宽度"
+    state draft
+}
+
+Height {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "Height"
+    // from the engine's zh-Hans
+    text  "高度"
+    state draft
+}
+
+WorldSpaceUIInfo {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "WorldSpaceUIInfo"
+    text  "WorldSpaceUIInfo"
+    state machine
+}
+
+NothingHereForWorldSpaceUI {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "Nothing here for WorldSpaceUI"
+    text  "此处没有 WorldSpaceUI 相关信息"
+    state machine
+}
+
+MatchSlider {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "MatchSlider"
+    text  "MatchSlider"
+    state machine
+}
+
+FixClipTexture_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "Fix Clip Texture Settings"
+    text  "调整裁剪纹理设置"
+    state machine
+}
+
+DrawcallInfoTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamCanvasCustomization.cpp
+    src   "This canvas's drawcall count:{0}, all canvas of {1} drawcall count:{2}"
+    text  "此 Canvas 的渲染调用次数：{0}，所有 Canvas 的渲染调用次数：{2}，{1} 的渲染调用次数：{1}。"
+    state machine
+}

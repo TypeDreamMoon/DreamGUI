@@ -1,0 +1,111 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree
+    src   "DreamUI Widget Tree"
+    text  "DreamUI控件树"
+    state machine
+}
+
+DreamWidgetTree:CountWidgets:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:CountWidgets:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetTree:FindWidgetByVariableName:InVariableName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:FindWidgetByVariableName:InVariableName
+    src   "In Variable Name"
+    // from the engine's zh-Hans
+    text  "输入变量名称"
+    state draft
+}
+
+DreamWidgetTree:FindWidgetByVariableName:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:FindWidgetByVariableName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetTree:GetAllWidgets:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetAllWidgets:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetTree:GetRootWidget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetRootWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetTree:RootWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:RootWidget
+    src   "Root Widget"
+    // from the engine's zh-Hans
+    text  "根控件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree
+    src   "Owns one widget hierarchy: the object every widget in that hierarchy is outered to.\n\nDreamUI used to outer widgets flat to the UWorld and keep the hierarchy only inside the prefab\nblob (FDreamUIPrefabSaveData::MapWidgetToParent), rebuilding it at load. That left no object\ngraph for the engine to serialize, duplicate or instance -- which is why a widget tree could not\nlive on a class template. The tree is that anchor.\n\nWidgets stay outered FLAT to the tree rather than nested under their parents, matching UMG, whose\nUWidgetTree::ConstructWidget outers every widget to the tree and expresses the hierarchy purely\nthrough Instanced properties. FObjectInstancingGraph follows those properties, not the outer\nchain, so a flat outer costs nothing -- and it means reparenting never has to move an outer,\nwhich keeps UObject::Rename (unsafe once an object has begun destruction) out of the attach path.\n\nUDreamWidget::GetWorld is the world of the level its outers reach -- that level's OwningWorld -- or\nelse the UWorld they reach, so an instance tree must be outered somewhere that reaches a level or a\nworld. A tree held as a class template deliberately is not: it returns no world,\nnever registers (registration is an explicit OnRegister call, never PostInitProperties) and is\nnever ticked."
+    text  "拥有一个控件层级：该层级中每个控件的outer都指向此对象。\n\nDreamUI过去把控件的outer扁平地设为UWorld，层级只保留在预制体\nblob（FDreamUIPrefabSaveData::MapWidgetToParent）中，并在加载时重建。这样就没有可供\n引擎序列化、复制或实例化的对象图——这正是控件树无法\n存在于类模板上的原因。控件树就是这个锚点。\n\n控件仍扁平地以控件树为outer，而不嵌套在父控件之下，这与UMG一致，其\nUWidgetTree::ConstructWidget把每个控件的outer设为控件树，并仅\n通过Instanced属性表达层级。FObjectInstancingGraph跟随的是这些属性，而不是outer\n链，因此扁平的outer没有额外开销——而且这意味着更改父级从不需要移动outer，\n从而让UObject::Rename（对象开始销毁后即不安全）不出现在附加路径中。\n\nUDreamWidget::GetWorld返回其outer所到达的关卡的世界——即该关卡的OwningWorld——\n否则返回它们所到达的UWorld，因此实例树必须以能到达关卡或\n世界的对象为outer。而作为类模板持有的树则刻意不是：它不返回世界，\n从不注册（注册是显式的OnRegister调用，从不是PostInitProperties），也\n从不tick。"
+    state machine
+}
+
+DreamWidgetTree:CountWidgets {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:CountWidgets
+    src   "Total widget count, root included. Walks the tree; not cached."
+    text  "控件总数，包含根控件。遍历树；不缓存。"
+    state machine
+}
+
+DreamWidgetTree:FindWidgetByVariableName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:FindWidgetByVariableName
+    src   "The first widget whose variable name matches, or null. Used to resolve a binding by name --\nUMG's UWidgetTree::GetWidgetFromName, and the same name the compiler declares variables from."
+    text  "第一个变量名匹配的控件，没有则为null。用于按名称解析绑定——\n即UMG的UWidgetTree::GetWidgetFromName，也是编译器声明变量时所用的同一个名称。"
+    state machine
+}
+
+DreamWidgetTree:GetAllWidgets {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetAllWidgets
+    src   "Every widget in the tree, root first, parents before children -- UMG's\nUWidgetTree::GetAllWidgets, and the Blueprint face of ForEachWidget, which takes a C++\npredicate no graph can supply."
+    text  "树中的每个控件，根控件在前，父控件先于子控件——即UMG的\nUWidgetTree::GetAllWidgets，以及ForEachWidget的蓝图接口，它接受C++\n谓词，而蓝图无法提供。"
+    state machine
+}
+
+DreamWidgetTree:GetRootWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetRootWidget
+    src   "The tree's root widget, or null for a tree nothing has been authored into."
+    text  "树的根控件；若树中尚未创建任何内容，则为null。"
+    state machine
+}
+
+DreamWidgetTree:RootWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:RootWidget
+    src   "Root of the hierarchy. Instanced: this is where FObjectInstancingGraph enters the tree, and\nfrom here UDreamWidget::Children (also Instanced) carries it the rest of the way down."
+    text  "层级的根控件。Instanced：FObjectInstancingGraph由此进入树，\n并从UDreamWidget::Children（同样为Instanced）出发一路向下传递。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|WidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:CountWidgets
+    src   "DreamGUI|WidgetTree"
+    text  "DreamGUI|控件树"
+    state machine
+}

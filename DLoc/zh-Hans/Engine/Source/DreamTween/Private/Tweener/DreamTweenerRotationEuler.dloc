@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerRotationEuler {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerRotationEuler.h#DreamTweenerRotationEuler
+    src   "Dream Tweener Rotation Euler"
+    text  "DreamTweener 旋转欧拉角"
+    state machine
+}

@@ -1,0 +1,159 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIFontEmojiData {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData
+    src   "Dream UIFont Emoji Data"
+    text  "DreamGUI 字体表情数据"
+    state machine
+}
+
+DreamUIFontEmojiData:AnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:AnimationFps
+    src   "Animation Fps"
+    text  "动画帧率"
+    state machine
+}
+
+DreamUIFontEmojiData:DataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:DataMap
+    src   "Data Map"
+    text  "数据映射"
+    state machine
+}
+
+DreamUIFontEmojiData:GetAnimationFps:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetAnimationFps:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIFontEmojiData:GetDataMap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetDataMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIFontEmojiData:GetMutableDataMap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetMutableDataMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIFontEmojiData:SetAnimationFps:Value {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:SetAnimationFps:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIFontEmojiData:SetDataMap:Value {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:SetDataMap:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIFontEmojiDataItem {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiDataItem
+    src   "Dream UIFont Emoji Data Item"
+    text  "DreamGUI 字体表情数据项"
+    state machine
+}
+
+DreamUIFontEmojiDataItem:Frames {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiDataItem:Frames
+    src   "Frames"
+    // from the engine's zh-Hans
+    text  "Frames"
+    state draft
+}
+
+DreamUIFontEmojiDataItem:OverrideAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiDataItem:OverrideAnimationFps
+    src   "Override Animation Fps"
+    text  "重载动画帧率"
+    state machine
+}
+
+DreamUIFontEmojiKey {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey
+    src   "Dream UIFont Emoji Key"
+    text  "DreamGUI 字体表情键"
+    state machine
+}
+
+DreamUIFontEmojiKey:EmojiChar {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:EmojiChar
+    src   "Emoji Char"
+    text  "表情字符"
+    state machine
+}
+
+DreamUIFontEmojiKey:EmojiCode {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:EmojiCode
+    src   "Emoji Code"
+    text  "表情代码"
+    state machine
+}
+
+DreamUIFontEmojiKey:Sequence {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:Sequence
+    src   "Sequence"
+    // from the engine's zh-Hans
+    text  "序列"
+    state draft
+}
+
+DreamUIFontEmojiKey:VariantSelector {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:VariantSelector
+    src   "Variant Selector"
+    text  "变体选择器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIFontEmojiData:GetMutableDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetMutableDataMap
+    src   "Get this to directly modify the data. After modify is done, call BroadcastOnDataChange function to notify."
+    text  "用于直接修改数据。修改完成后，调用 BroadcastOnDataChange 函数进行通知。"
+    state machine
+}
+
+DreamUIFontEmojiDataItem:OverrideAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiDataItem:OverrideAnimationFps
+    src   "use this value as animation-fps, -1 means not override"
+    text  "使用此值作为动画帧率，-1 表示不覆盖。"
+    state machine
+}
+
+DreamUIFontEmojiKey {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey
+    src   "What an emoji data entry is found by: the whole emoji cluster, its code points with U+FE0E and U+FE0F left out (they\npick a presentation, not a picture). A key loaded from before sequences has an empty Sequence and stands for the\none-code-point sequence {EmojiCode}, so old and new keys hash and compare alike and nothing has to be rehashed when\nthe load fills Sequence in (FDreamGUIObjectVersion::EmojiKeyBySequence)."
+    text  "表情符号数据条目的查找依据：整个表情符号簇，即去掉 U+FE0E 和 U+FE0F 后的码点（它们\n决定的是呈现形式，而不是图形）。在序列出现之前加载的键其 Sequence 为空，代表\n单码点序列 {EmojiCode}，因此新旧键的哈希与比较结果一致，\n加载时填入 Sequence 无需重新计算哈希（FDreamGUIObjectVersion::EmojiKeyBySequence）。"
+    state machine
+}
+
+DreamUIFontEmojiKey:EmojiCode {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:EmojiCode
+    src   "The cluster's base, its first code point: what a key was before sequences, and what FindByCodepoint matches."
+    text  "簇的基础，即第一个代码点：这是键在序列之前的状态，也是 FindByCodepoint 匹配的对象。"
+    state machine
+}
+
+DreamUIFontEmojiKey:Sequence {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiKey:Sequence
+    src   "Every code point of the cluster in order, variation selectors U+FE0E/U+FE0F left out. Empty: {EmojiCode}."
+    text  "按顺序列出该簇的每个码点，不含变体选择符 U+FE0E/U+FE0F。为空时：{EmojiCode}。"
+    state machine
+}

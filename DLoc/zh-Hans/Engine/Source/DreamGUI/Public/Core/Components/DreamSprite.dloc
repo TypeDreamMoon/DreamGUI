@@ -1,0 +1,391 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamSprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite
+    src   "Dream Sprite"
+    text  "梦幻精灵"
+    state machine
+}
+
+DreamSprite:DrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:DrawType
+    src   "Draw Type"
+    text  "绘制类型"
+    state machine
+}
+
+DreamSprite:FillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillAmount
+    src   "Fill Amount"
+    text  "填充量"
+    state machine
+}
+
+DreamSprite:FillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillDirectionFlip
+    src   "Fill Direction Flip"
+    text  "填充方向翻转"
+    state machine
+}
+
+DreamSprite:FillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillMethod
+    src   "Fill Method"
+    // from the engine's zh-Hans
+    text  "填充方法"
+    state draft
+}
+
+DreamSprite:FillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillOrigin
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamSprite:FillOriginType_Radial180 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillOriginType_Radial180
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamSprite:FillOriginType_Radial360 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillOriginType_Radial360
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamSprite:FillOriginType_Radial90 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillOriginType_Radial90
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamSprite:GetFillAmount:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillAmount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:GetFillDirectionFlip:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillDirectionFlip:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:GetFillMethod:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:GetFillOrigin:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillOrigin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:GetPixelsPerUnitMultiplier:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetPixelsPerUnitMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:GetSpriteDrawType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetSpriteDrawType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSprite:PixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:PixelsPerUnitMultiplier
+    src   "Pixels Per Unit Multiplier"
+    text  "像素/单位倍数"
+    state machine
+}
+
+DreamSprite:SetDrawType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetDrawType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSprite:SetFillAmount:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillAmount:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSprite:SetFillDirectionFlip:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillDirectionFlip:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSprite:SetFillMethod:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillMethod:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSprite:SetFillOrigin:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillOrigin:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSprite:SetPixelsPerUnitMultiplier:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetPixelsPerUnitMultiplier:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamUISpriteDrawType.EDreamUISpriteDrawType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:EDreamUISpriteDrawType_MAX
+    src   "EDream UISprite Draw Type MAX"
+    text  "EDreamUISpriteDrawType_MAX"
+    state machine
+}
+
+EDreamUISpriteDrawType.Filled {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:Filled
+    src   "Filled"
+    text  "填充"
+    state machine
+}
+
+EDreamUISpriteDrawType.Normal {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:Normal
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+EDreamUISpriteDrawType.Sliced {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:Sliced
+    src   "Sliced"
+    // from the engine's zh-Hans
+    text  "切片"
+    state draft
+}
+
+EDreamUISpriteDrawType.SlicedFrame {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:SlicedFrame
+    src   "Sliced Frame"
+    text  "分片"
+    state machine
+}
+
+EDreamUISpriteDrawType.Tiled {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteDrawType:Tiled
+    src   "Tiled"
+    text  "平铺"
+    state machine
+}
+
+EDreamUISpriteFillMethod.EDreamUISpriteFillMethod_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:EDreamUISpriteFillMethod_MAX
+    src   "EDream UISprite Fill Method MAX"
+    text  "EDreamUISpriteFillMethod_MAX"
+    state machine
+}
+
+EDreamUISpriteFillMethod.Horizontal {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:Horizontal
+    src   "Horizontal"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+EDreamUISpriteFillMethod.Radial180 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:Radial180
+    src   "Radial 180"
+    text  "径向180度"
+    state machine
+}
+
+EDreamUISpriteFillMethod.Radial360 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:Radial360
+    src   "Radial 360"
+    text  "径向 360 度"
+    state machine
+}
+
+EDreamUISpriteFillMethod.Radial90 {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:Radial90
+    src   "Radial 90"
+    text  "径向 90 度"
+    state machine
+}
+
+EDreamUISpriteFillMethod.Vertical {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillMethod:Vertical
+    src   "Vertical"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial180.Bottom {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial180:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial180.EDreamUISpriteFillOriginType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial180:EDreamUISpriteFillOriginType_MAX
+    src   "EDream UISprite Fill Origin Type MAX"
+    text  "Dream GUI 填充原点类型 最大值"
+    state machine
+}
+
+EDreamUISpriteFillOriginType_Radial180.Left {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial180:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial180.Right {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial180:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial180.Top {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial180:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial360.Bottom {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial360:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial360.EDreamUISpriteFillOriginType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial360:EDreamUISpriteFillOriginType_MAX
+    src   "EDream UISprite Fill Origin Type MAX"
+    text  "Dream GUI 填充原点类型 最大值"
+    state machine
+}
+
+EDreamUISpriteFillOriginType_Radial360.Left {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial360:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial360.Right {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial360:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial360.Top {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial360:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial90.BottomLeft {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial90:BottomLeft
+    src   "Bottom Left"
+    // from the engine's zh-Hans
+    text  "左下"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial90.BottomRight {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial90:BottomRight
+    src   "Bottom Right"
+    // from the engine's zh-Hans
+    text  "右下"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial90.EDreamUISpriteFillOriginType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial90:EDreamUISpriteFillOriginType_MAX
+    src   "EDream UISprite Fill Origin Type MAX"
+    text  "Dream GUI 填充原点类型 最大值"
+    state machine
+}
+
+EDreamUISpriteFillOriginType_Radial90.TopLeft {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial90:TopLeft
+    src   "Top Left"
+    // from the engine's zh-Hans
+    text  "左上"
+    state draft
+}
+
+EDreamUISpriteFillOriginType_Radial90.TopRight {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#EDreamUISpriteFillOriginType_Radial90:TopRight
+    src   "Top Right"
+    // from the engine's zh-Hans
+    text  "右上"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamSprite:FillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:FillOrigin
+    src   "DreamGUI_Hidden: edited through the Fill Origin row of the fill method, one of the three below."
+    text  "通过“填充原点”行编辑 DreamGUI_Hidden，这是三种填充方式之一。"
+    state machine
+}
+
+DreamSprite:PixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:PixelsPerUnitMultiplier
+    src   "Beside the draw type it applies to, rather than in a category of its own that is empty for the other draw types."
+    text  "在填充方法行的“像素/单位倍数”中编辑，以下三个选项之一。"
+    state machine
+}

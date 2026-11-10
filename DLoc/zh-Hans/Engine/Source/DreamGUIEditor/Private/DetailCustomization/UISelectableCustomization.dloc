@@ -1,0 +1,39 @@
+dloc 1
+culture zh-Hans
+namespace UISelectableCustomization
+
+MultipleUISelectableComponentError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UISelectableCustomization.cpp
+    src   "Multiple UISelectable component in one actor is not allowed!"
+    text  "一个Actor中不允许存在多个UISelectable组件！"
+    state machine
+}
+
+TransitionTarget_ImageBrush_Tip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UISelectableCustomization.cpp
+    src   "If use ImageBrush, Target must be a DreamImage"
+    text  "如果使用ImageBrush（图像笔刷），Target必须是DreamImage"
+    state machine
+}
+
+VisualizeNavigation {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UISelectableCustomization.cpp
+    src   "VisualizeNavigation"
+    text  "可视化导航"
+    state machine
+}
+
+Visualize {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UISelectableCustomization.cpp
+    src   "Visualize"
+    // from the engine's zh-Hans
+    text  "可视化"
+    state draft
+}
+
+ToggleNavigationVisualizer_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UISelectableCustomization.cpp
+    src   "Toggle Navigation Visualizer"
+    text  "切换导航可视化器"
+    state machine
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamUIRichTextImageData
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamUIRichTextImageData.cpp
+    src   "DreamUI RichText Image Data"
+    text  "DreamUI 富文本图像数据"
+    state machine
+}

@@ -1,0 +1,232 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetBlueprintCompiler
+
+InheritedPropDefaultNotApplied {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The .dui's default for \"{0}\" could not be written onto {1}'s property of that name."
+    text  "无法将 .dui 为“{0}”指定的默认值写入{1}的同名属性。"
+    state machine
+}
+
+AuthoredVariableKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "a variable"
+    text  "变量"
+    state machine
+}
+
+AuthoredFunctionKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "a function"
+    text  "函数"
+    state machine
+}
+
+AuthoredTimelineKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "a timeline"
+    text  "时间轴"
+    state machine
+}
+
+GeneratedNameTaken {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is the name of {1} this Blueprint declares, so the {2} of that name gets no variable: two members of one name leave every graph node reading whichever one the class finds first. Rename one of them."
+    text  "“{0}”是此蓝图声明的{1}的名称，因此同名的{2}无法获得变量：同名的两个成员会让每个图表节点读取类最先找到的那一个。请重命名其中一个。"
+    state machine
+}
+
+GeneratedPropKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "prop"
+    // from the engine's zh-Hans
+    text  "属性"
+    state draft
+}
+
+GeneratedEventKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "event dispatcher"
+    // from the engine's zh-Hans
+    text  "事件分发器"
+    state draft
+}
+
+KeptTextMembers {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The .dui did not parse, so this class keeps the props and events its last good read declared ({0}), with the defaults they had then. They follow the file again once the errors above are fixed."
+    text  ".dui 未能解析，因此此类保留上次成功读取时声明的属性和事件（{0}），并沿用它们当时的默认值。修复上述错误后，它们会重新跟随文件。"
+    state machine
+}
+
+DuplicateWidgetVariableName {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "More than one widget is named \"{0}\"; only the first is exposed as a variable, and an animation bound to that name under the same parent would drive the first one too. Rename one of them."
+    text  "有多个控件名为“{0}”；只有第一个会作为变量公开，同一父级下绑定到该名称的动画也会驱动第一个控件。请重命名其中一个。"
+    state machine
+}
+
+GeneratedWidgetKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DuplicateAnimationVariableName {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" already names a widget or another animation; only the first is exposed as a variable. Rename one of them."
+    text  "“{0}”已经是某个控件或另一个动画的名称；只有第一个会作为变量公开。请重命名其中一个。"
+    state machine
+}
+
+AnimationNameIsATextMember {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is a prop or an event the .dui declares, so the animation of that name gets no variable. Rename one of them."
+    text  "“{0}”是 .dui 声明的属性或事件，因此同名的动画无法获得变量。请重命名其中一个。"
+    state machine
+}
+
+GeneratedAnimationKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "animation"
+    // from the engine's zh-Hans
+    text  "动画"
+    state draft
+}
+
+BindWidgetAnimWrongType {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is declared meta=(BindDreamWidgetAnim) but cannot hold an animation; only an animation-typed property can be bound to one."
+    text  "“{0}”声明了 meta=(BindDreamWidgetAnim)，但无法容纳控件动画；只有动画类型的属性才能绑定到动画。"
+    state machine
+}
+
+BindWidgetAnimMissing {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is declared meta=(BindDreamWidgetAnim), so this hierarchy must contain an animation named \"{0}\", and it has none. Rename an animation to match, drop the specifier, or mark it BindDreamWidgetAnimOptional."
+    text  "“{0}”声明了 meta=(BindDreamWidgetAnim)，因此此控件层级中必须包含名为“{0}”的动画，但当前没有。请重命名一个动画以匹配，删除该说明符，或将其标记为 BindDreamWidgetAnimOptional。"
+    state machine
+}
+
+GeneratedResourceKind {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "resource"
+    // from the engine's zh-Hans
+    text  "资源"
+    state draft
+}
+
+KeptResourceVariables {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The .dui did not build, so this class keeps the resource variables its last good read declared ({0}), with the values they had then. They follow the file again once the errors above are fixed."
+    text  ".dui 未能构建，因此此类保留上次成功读取时声明的资源变量（{0}），并沿用它们当时的值。修复上述错误后，它们会重新跟随文件。"
+    state machine
+}
+
+BindingWidgetNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The binding on \"{0}\" expects a widget named \"{1}\", and this hierarchy has none."
+    text  "绑定 \"{0}\" 时，期望找到名为 \"{1}\" 的控件，但当前层级结构中没有找到。"
+    state machine
+}
+
+BindingTargetNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The binding on \"{0}.{1}\" points at something \"{0}\" does not have."
+    text  "绑定 \"{0}.{1}\" 时，目标对象 \"{0}\" 不存在。"
+    state machine
+}
+
+BindingPropertyNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" has no property named \"{1}\" to bind."
+    text  "\"{0}\" 没有名为 \"{1}\" 的属性，无法进行绑定。"
+    state machine
+}
+
+BindingNoSetter {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" cannot be bound: {1} exposes no setter for it, so a bound value would be written but never take effect."
+    text  "无法绑定 \"{0}\"：{1} 没有提供设置器，因此绑定的值会被写入，但不会生效。"
+    state machine
+}
+
+BindingFunctionNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The binding on \"{0}.{1}\" calls \"{2}\", and this Blueprint has no such function."
+    text  "绑定 \"{0}.{1}\" 时，调用了 \"{2}\"，但此蓝图没有该函数。"
+    state machine
+}
+
+BindingFunctionWrongShape {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" has to take no arguments and return the type of \"{1}.{2}\" to bind to it."
+    text  "要绑定到 \"{0}\"，它必须不带参数，并返回与 \"{1}.{2}\" 相同的类型。"
+    state machine
+}
+
+EventWidgetNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "The event route on \"{0}\" expects a widget named \"{1}\", and this hierarchy has none."
+    text  "事件路由 \"{0}\" 期望找到名为 \"{1}\" 的控件，但当前层级结构中没有找到。"
+    state machine
+}
+
+EventNotOnTarget {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" has no event named \"{1}\" to route."
+    text  "\"{0}\" 没有名为 \"{1}\" 的事件可供路由。"
+    state machine
+}
+
+EventHandlerNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}.{1}\" routes to \"{2}\", and this Blueprint has no such function."
+    text  "\"{0}.{1}\" 路由到 \"{2}\"，但此蓝图没有该函数。"
+    state machine
+}
+
+EventHandlerWrongShape {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."
+    text  "\"{0}\" 无法处理 \"{1}.{2}\"：其参数与事件不匹配。"
+    state machine
+}
+
+WidgetBindingNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is declared meta=(BindDreamWidget), so this hierarchy must contain a widget of that name, and it has none. Rename a widget to match, or drop the specifier."
+    text  "\"{0}\" 声明了 meta=(BindDreamWidget)，因此当前层级结构必须包含一个名为 \"{0}\" 的控件，但没有找到。请重命名控件以匹配，或移除该声明。"
+    state machine
+}
+
+WidgetBindingWrongType {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" is declared meta=(BindDreamWidget) as {1}, but the widget of that name is {2}."
+    text  "\"{0}\" 声明了 meta=(BindDreamWidget) 为 {1}，但名为 {2} 的控件类型不匹配。"
+    state machine
+}
+
+NamedSlotNotDeclared {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "\"{0}\" has content bound to a slot named \"{1}\", and {2} declares no such slot."
+    text  "\"{0}\" 绑定到名为 \"{1}\" 的槽，而 {2} 中没有声明该槽。"
+    state machine
+}
+
+AnimationBindingHasNoPath {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "Animation \"{0}\" binds \"{1}\" without recording a widget path, so nothing but the authoring hierarchy will ever resolve it. Rebind that track against \"{2}\"."
+    text  "动画 \"{0}\" 绑定 \"{1}\"，但未记录任何组件路径，因此只有在编辑时才能解析。请重新绑定该轨道到 \"{2}\"。"
+    state machine
+}
+
+AnimationBindingPathNotFound {
+    at    Source/DreamGUIEditor/Private/DreamWidgetBlueprintCompiler.cpp
+    src   "Animation \"{0}\" drives \"{1}\" through the path \"{2}\", and \"{3}\" has nothing there. A widget's display name is also its animation path, so renaming one leaves every track bound to it naming a widget that no longer exists. Rename the widget back, or rebind the track."
+    text  "动画 \"{0}\" 通过路径 \"{2}\" 驱动 \"{1}\"，但 \"{3}\" 中没有该路径。组件的显示名称也是其动画路径，因此重命名一个组件会导致所有绑定的轨道都指向一个不存在的组件。请将组件重命名回原来的名称，或重新绑定该轨道。"
+    state machine
+}

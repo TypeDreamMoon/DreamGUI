@@ -1,0 +1,612 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRichTextBlock {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock
+    src   "Dream Rich Text Block"
+    text  "Dream多格式文本块"
+    state machine
+}
+
+DreamRichTextBlock:bAutoWrapText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:bAutoWrapText
+    src   "Auto Wrap Text"
+    // from the engine's zh-Hans
+    text  "自动包裹文本"
+    state draft
+}
+
+DreamRichTextBlock:CustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:CustomStyleData
+    src   "Custom Style Data"
+    text  "自定义样式数据"
+    state machine
+}
+
+DreamRichTextBlock:GetAutoWrapText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetAutoWrapText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetCustomStyleData:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetCustomStyleData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetDefaultDynamicMaterial:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultDynamicMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetDefaultFont:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultFont:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetHorizontalAlignment:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetHorizontalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetImageData:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetImageData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetLanguage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetLanguage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetLastLineAlign:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetLastLineAlign:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetMinDesiredWidth:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetMinDesiredWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetOverflowType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetOverflowType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetSmallTextRaster:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetSmallTextRaster:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetTabSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTabSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetTagFilterFlags:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTagFilterFlags:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetTextJustify:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextJustify:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetTextTransformPolicy:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextTransformPolicy:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetVerticalAlignment:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetVerticalAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:HorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:HorizontalAlignment
+    src   "Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "水平对齐"
+    state draft
+}
+
+DreamRichTextBlock:ImageData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:ImageData
+    src   "Image Data"
+    // from the engine's zh-Hans
+    text  "图像数据"
+    state draft
+}
+
+DreamRichTextBlock:Language {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Language
+    src   "Language"
+    // from the engine's zh-Hans
+    text  "语言"
+    state draft
+}
+
+DreamRichTextBlock:LastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:LastLineAlign
+    src   "Last Line Align"
+    text  "最后一行对齐方式"
+    state machine
+}
+
+DreamRichTextBlock:MinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:MinDesiredWidth
+    src   "Min Desired Width"
+    // from the engine's zh-Hans
+    text  "所需最小宽度"
+    state draft
+}
+
+DreamRichTextBlock:OverflowType {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:OverflowType
+    src   "Overflow Type"
+    text  "溢出类型"
+    state machine
+}
+
+DreamRichTextBlock:SetAutoWrapText:bInAutoWrapText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetAutoWrapText:bInAutoWrapText
+    src   "In Auto Wrap Text"
+    text  "输入自动换行文本"
+    state machine
+}
+
+DreamRichTextBlock:SetCustomStyleData:InCustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetCustomStyleData:InCustomStyleData
+    src   "In Custom Style Data"
+    text  "输入自定义样式数据"
+    state machine
+}
+
+DreamRichTextBlock:SetDefaultFont:InFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetDefaultFont:InFont
+    src   "In Font"
+    // from the engine's zh-Hans
+    text  "在字体中"
+    state draft
+}
+
+DreamRichTextBlock:SetHorizontalAlignment:InHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetHorizontalAlignment:InHorizontalAlignment
+    src   "In Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "在水平对齐中"
+    state draft
+}
+
+DreamRichTextBlock:SetImageData:InImageData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetImageData:InImageData
+    src   "In Image Data"
+    // from the engine's zh-Hans
+    text  "In Image Data"
+    state draft
+}
+
+DreamRichTextBlock:SetJustification:InJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetJustification:InJustification
+    src   "In Justification"
+    // from the engine's zh-Hans
+    text  "在对齐中"
+    state draft
+}
+
+DreamRichTextBlock:SetLanguage:InLanguage {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetLanguage:InLanguage
+    src   "In Language"
+    text  "输入语言"
+    state machine
+}
+
+DreamRichTextBlock:SetLastLineAlign:InLastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetLastLineAlign:InLastLineAlign
+    src   "In Last Line Align"
+    text  "输入末行对齐"
+    state machine
+}
+
+DreamRichTextBlock:SetMinDesiredWidth:InMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetMinDesiredWidth:InMinDesiredWidth
+    src   "In Min Desired Width"
+    // from the engine's zh-Hans
+    text  "在所需最小宽度中"
+    state draft
+}
+
+DreamRichTextBlock:SetOverflowType:InOverflowType {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetOverflowType:InOverflowType
+    src   "In Overflow Type"
+    text  "输入溢出类型"
+    state machine
+}
+
+DreamRichTextBlock:SetSmallTextRaster:InSmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetSmallTextRaster:InSmallTextRaster
+    src   "In Small Text Raster"
+    text  "输入小文本光栅"
+    state machine
+}
+
+DreamRichTextBlock:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamRichTextBlock:SetTabSize:InTabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTabSize:InTabSize
+    src   "In Tab Size"
+    text  "输入制表符大小"
+    state machine
+}
+
+DreamRichTextBlock:SetTagFilterFlags:InTagFilterFlags {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTagFilterFlags:InTagFilterFlags
+    src   "In Tag Filter Flags"
+    text  "输入标签筛选标志"
+    state machine
+}
+
+DreamRichTextBlock:SetText:InText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetText:InText
+    src   "In Text"
+    // from the engine's zh-Hans
+    text  "在文本中"
+    state draft
+}
+
+DreamRichTextBlock:SetTextJustify:InTextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextJustify:InTextJustify
+    src   "In Text Justify"
+    text  "输入文本对齐"
+    state machine
+}
+
+DreamRichTextBlock:SetTextOverflowPolicy:InOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextOverflowPolicy:InOverflowPolicy
+    src   "In Overflow Policy"
+    // from the engine's zh-Hans
+    text  "输入溢出策略"
+    state draft
+}
+
+DreamRichTextBlock:SetTextTransformPolicy:InTransformPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextTransformPolicy:InTransformPolicy
+    src   "In Transform Policy"
+    // from the engine's zh-Hans
+    text  "在变换规则中"
+    state draft
+}
+
+DreamRichTextBlock:SetVerticalAlignment:InVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetVerticalAlignment:InVerticalAlignment
+    src   "In Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "在垂直对齐中"
+    state draft
+}
+
+DreamRichTextBlock:SmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SmallTextRaster
+    src   "Small Text Raster"
+    text  "小字栅格"
+    state machine
+}
+
+DreamRichTextBlock:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamRichTextBlock:TabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TabSize
+    src   "Tab Size"
+    text  "制表符大小"
+    state machine
+}
+
+DreamRichTextBlock:TagFilterFlags {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TagFilterFlags
+    src   "Tag Filter Flags"
+    text  "标签筛选标志"
+    state machine
+}
+
+DreamRichTextBlock:Text {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamRichTextBlock:TextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextJustify
+    src   "Text Justify"
+    // from the engine's zh-Hans
+    text  "文本对齐"
+    state draft
+}
+
+DreamRichTextBlock:TextNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextNode
+    src   "Text Node"
+    text  "文本节点"
+    state machine
+}
+
+DreamRichTextBlock:TextTransformPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextTransformPolicy
+    src   "Text Transform Policy"
+    text  "文本变换策略"
+    state machine
+}
+
+DreamRichTextBlock:VerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:VerticalAlignment
+    src   "Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "垂直对齐"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamRichTextBlock {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock
+    src   "A rich text block whose hierarchy is code, not an asset: one paragraph that reads markup.\n\nUMG's RichTextBlock resolves `<Tag>text</Tag>` against a decorator set; this library's text stack\nhas had the same idea since it was written -- UDreamText::bRichText plus two data assets, one\nmapping tags to styles and one mapping tags to images -- and what was missing was a CONTROL that\nturns it on. That is all this class is: a text node with the flag set, the two assets exposed, and\nthe colour and size coming from the project sheet like every other control's.\n\nWHY IT IS A CONTROL AND NOT A FLAG ON A TEXT NODE\n-------------------------------------------------\nThe flag already exists on the node, and an author who wants it there can still set it. What a\ncontrol adds is the thing a flag cannot: a `Native.RichText` tag that reads the project's text\ncolour and size, so a project restyles its prose in one place, and a place for the two data assets\nto be authored per instance without anyone reaching into a visual.\n\nWHAT THE MARKUP MEANS is not this control's business and is not restated here -- the tag\nvocabulary, the filter flags and the two asset formats belong to UDreamText and its parser, and a\nsecond description of them in a control header is a second thing to keep true."
+    text  "一种富文本块，其层级是代码而非资产：只需一个段落即可读取标记。\n\nUMG 的 RichTextBlock 依据装饰器集合解析 `<Tag>text</Tag>`；本库的文本栈\n自编写之初就有同样的思路——UDreamText::bRichText 外加两个数据资产，一个\n把标签映射到样式，一个把标签映射到图像——所缺的只是一个能将其开启的控件。\n这个类不过如此：一个设置了该标志的文本节点，两个资产对外暴露，\n颜色和大小与其他控件一样取自项目表。\n\n为什么它是控件，而不是文本节点上的一个标志\n-------------------------------------------------\n该标志在节点上本就存在，想要如此的使用者仍然可以设置它。控件所增加的，\n是标志做不到的事：一个读取项目文本颜色和大小的 `Native.RichText` 标签，\n使项目能在一处重新设定其正文的样式；以及一个位置，让两个数据资产\n可以按实例分别编辑，而无需任何人深入某个可视对象。\n\n标记的含义不归本控件管，此处也不重述——标签词汇、\n过滤标志和两种资产格式属于 UDreamText 及其解析器，\n而在控件头文件中再写一遍它们的说明，就是多出一件需要保持一致的事。"
+    state machine
+}
+
+DreamRichTextBlock:bAutoWrapText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:bAutoWrapText
+    src   "Break a line that does not fit rather than letting it run on -- UMG's AutoWrapText.\n\nOff by default, which is the paragraph's own default and therefore what every existing block\ndoes. It only bites under the overflow types that do NOT already wrap: VerticalOverflow always\nwraps, so a block left on the shipped overflow will not notice this either way."
+    text  "放不下的行就换行，而不是让它继续延伸——即 UMG 的 AutoWrapText。\n\n默认关闭，这也是段落自身的默认值，因此现有的每个块都是如此。它只在那些本身不换行的溢出类型下才起作用：\nVerticalOverflow 总会换行，所以沿用默认溢出的块\n无论如何都不会察觉它的存在。"
+    state machine
+}
+
+DreamRichTextBlock:CustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:CustomStyleData
+    src   "What `<MyTag>` means, as a style. Null leaves custom tags to the char-selection consumers."
+    text  "`<MyTag>text</MyTag>` 作为样式所表示的含义。为空时，自定义标签交由字符选择的使用方处理。"
+    state machine
+}
+
+DreamRichTextBlock:GetDefaultDynamicMaterial {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultDynamicMaterial
+    src   "A material instance of this block's own, created over the style's material the first time it\nis asked for -- UMG's GetDefaultDynamicMaterial.\n\nReturns null when the style names no material: there is nothing to instance, and handing back\nan instance of the library's built-in text material would let a caller edit every other\nparagraph in the project through it."
+    text  "此块自有的材质实例，在首次请求时基于样式的材质创建——\n即 UMG 的 GetDefaultDynamicMaterial。\n\n当样式未指定材质时返回空值：没有任何东西可供实例化，而返回\n库内置文本材质的实例，会让调用方通过它改动项目中的其他所有\n段落。"
+    state machine
+}
+
+DreamRichTextBlock:GetDefaultFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultFont
+    src   "The DEFAULT typeface for undecorated prose -- UMG's SetDefaultFont, minus what FSlateFontInfo\npacks in beside it: the size is Style.FontSize and the outline is Style.TextStyle. Markup may\nstill switch the face per run; this is what a run that says nothing gets.\n\nReads and writes Style.Font, so it obeys StyleSource like the rest of the look. Null means\n\"leave the paragraph on the font it has\", which is every block that exists today."
+    text  "未加装饰的正文所用的默认字体——即 UMG 的 SetDefaultFont，但不含 FSlateFontInfo 额外打包的内容：\n大小取自 Style.FontSize，描边取自 Style.TextStyle。标记仍可按文本段切换字体；\n此处是未作任何声明的文本段所得到的字体。\n\n读写 Style.Font，因此与外观的其他部分一样遵循 StyleSource。为空表示“让段落保持它当前的字体”，\n现有每个块都是如此。"
+    state machine
+}
+
+DreamRichTextBlock:HorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:HorizontalAlignment
+    src   "How the paragraph sits in the control's rect."
+    text  "段落在控件矩形中的水平位置。"
+    state machine
+}
+
+DreamRichTextBlock:ImageData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:ImageData
+    src   "What `<img=key/>` means. Null draws nothing for an image tag. The tag may also give a size and where the image sits\non its line: `<img=key,24/>`, `<img=key,24,32/>`, `<img=key,24,baseline/>` -- middle (the default, centred), baseline,\ntop or bottom. An image taller than its line makes the line taller."
+    text  "`<img=key/>` 的含义。为空时，图像标签不绘制任何内容。该标签还可以给出尺寸以及图像在其行上的位置：\n`<img=key,24/>`、`<img=key,24,32/>`、`<img=key,24,baseline/>`——middle（默认，居中）、baseline、\ntop 或 bottom。图像高于其所在行时，该行会被撑高。"
+    state machine
+}
+
+DreamRichTextBlock:Language {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Language
+    src   "The language the prose is written in, as a culture name (\"ja\", \"zh-Hans\"); empty is the game's. Picks the font's\nfallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. `<lang=xx>` still\noverrides it for what the tag encloses."
+    text  "正文所使用的语言，以文化名表示（\"ja\"、\"zh-Hans\"）；为空则使用游戏的。用于挑选为该语言准备的字体\n回退，以及文字系统按语言绘制的字形——参见 UDreamText::Language。`<lang=xx>文本</lang>` 仍\n会对其所包围的内容覆盖此设置。"
+    state machine
+}
+
+DreamRichTextBlock:LastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:LastLineAlign
+    src   "How a justified paragraph's last line, and a line a newline ends, align. Read only with HorizontalAlignment Justify."
+    text  "两端对齐段落的最后一行，以及由换行符结束的行，如何对齐。仅在 HorizontalAlignment 为 Justify 时读取。"
+    state machine
+}
+
+DreamRichTextBlock:MinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:MinDesiredWidth
+    src   "A floor under the width the paragraph asks a content-sized parent for -- UMG's MinDesiredWidth.\nZero means no opinion, which is every block that exists today."
+    text  "段落向按内容调整大小的父级所请求宽度的下限——即 UMG 的 MinDesiredWidth。\n零表示不发表意见，现有每个块都是如此。"
+    state machine
+}
+
+DreamRichTextBlock:OverflowType {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:OverflowType
+    src   "What a line too long for the control does. VerticalOverflow is the one that WRAPS, which is\nwhat prose usually wants and what a rich text block almost always is."
+    text  "行超出控件长度时如何处理。VerticalOverflow 是会换行的那一种，这也是普通文本通常需要的，\n富文本块几乎总是如此。"
+    state machine
+}
+
+DreamRichTextBlock:RefreshTextLayout {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:RefreshTextLayout
+    src   "Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout.\n\nThe prose has not changed, so this is not SetText: what may have changed is what the markup\nRESOLVES against (a style asset edited in place, an image data asset reloaded), and the parser\nonly reads those while it is parsing."
+    text  "重新解析标记并重新排布段落——即 UMG 的 RefreshTextLayout。\n\n正文没有改变，所以这不是 SetText：可能改变的是标记所解析\n依据的对象（就地编辑的样式资产、重新加载的图像数据资产），而解析器\n只在解析时读取它们。"
+    state machine
+}
+
+DreamRichTextBlock:SetCustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetCustomStyleData
+    src   "What the custom tags mean. UMG's TextStyleSet under the name this library gives it: a data\nasset mapping tag to style, which is the same job its RichTextStyleRow table does."
+    text  "自定义标签的含义。即本库命名下的 UMG TextStyleSet：一个把标签映射到样式的数据\n资产，与它的 RichTextStyleRow 表所做的事相同。"
+    state machine
+}
+
+DreamRichTextBlock:SetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetJustification
+    src   "UMG's Justification, which on a paragraph is the horizontal alignment. One implementation."
+    text  "UMG 的 Justification，用在段落上就是水平对齐。只有一种实现。"
+    state machine
+}
+
+DreamRichTextBlock:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetStyle
+    src   "The whole look at once, re-pushed."
+    text  "一次性重新推送整套外观。"
+    state machine
+}
+
+DreamRichTextBlock:SetText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetText
+    src   "Replace the prose. Re-parsed on the way in, which is what the markup costs."
+    text  "替换正文。传入时会重新解析，这就是标记的开销。"
+    state machine
+}
+
+DreamRichTextBlock:SetTextOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextOverflowPolicy
+    src   "UMG's name for the same decision. Forwards, so there is one writer and one truth."
+    text  "UMG 对同一决定的叫法。直接转发，因此只有一个写入者和一份真相。"
+    state machine
+}
+
+DreamRichTextBlock:SmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SmallTextRaster
+    src   "Off keeps the prose on its font's distance field at every size; see UDreamText::SmallTextRaster."
+    text  "关闭时，正文在任何字号下都保持在其字体的距离场上；参见 UDreamText::SmallTextRaster。"
+    state machine
+}
+
+DreamRichTextBlock:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect."
+    text  "本实例自身的外观。只要StyleSource如此指定且样式表\n确实存在，项目样式表就优先；项目中没有任何样式表时，这里就是实际生效的外观。"
+    state machine
+}
+
+DreamRichTextBlock:TabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TabSize
+    src   "Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it."
+    text  "制表位以空格计，从行的起始边缘算起——即 CSS 的 tab-size，与浏览器一样为 8。"
+    state machine
+}
+
+DreamRichTextBlock:TagFilterFlags {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TagFilterFlags
+    src   "Which tags the parser is allowed to act on. The default is all of them."
+    text  "解析器允许处理的标签。默认为全部。"
+    state machine
+}
+
+DreamRichTextBlock:Text {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:Text
+    src   "The prose, markup and all."
+    text  "正文，连同标记一起。"
+    state machine
+}
+
+DreamRichTextBlock:TextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextJustify
+    src   "Where a justified line gets its extra room. Read only with HorizontalAlignment Justify."
+    text  "两端对齐的行从哪里获得额外空间。仅在 HorizontalAlignment 为 Justify 时可读。"
+    state machine
+}
+
+DreamRichTextBlock:TextNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextNode
+    src   "The paragraph itself. Public because everything under a control is reachable by name."
+    text  "段落本身。设为公开是因为控件下的所有内容都可以通过名称访问。"
+    state machine
+}
+
+DreamRichTextBlock:TextTransformPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:TextTransformPolicy
+    src   "Case the prose is DRAWN in -- UMG's TextTransformPolicy. The authored string is untouched."
+    text  "用于绘制文本的策略，来自 UMG。作者输入的字符串不会被修改。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Rich Text" {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetAutoWrapText
+    src   "Rich Text"
+    // from the engine's zh-Hans
+    text  "多格式文本"
+    state draft
+}

@@ -1,0 +1,80 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIForAdapter {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter
+    src   "Dream UIFor Adapter"
+    text  "Dream UIFor适配器"
+    state machine
+}
+
+DreamUIForAdapter:Copies {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Copies
+    src   "Copies"
+    // from the engine's zh-Hans
+    text  "副本"
+    state draft
+}
+
+DreamUIForAdapter:Host {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Host
+    src   "Host"
+    // from the engine's zh-Hans
+    text  "主机"
+    state draft
+}
+
+DreamUIForAdapter:Items {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Items
+    src   "Items"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamUIForAdapter:Owner {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Owner
+    src   "Owner"
+    // from the engine's zh-Hans
+    text  "拥有者"
+    state draft
+}
+
+DreamUIForAdapter:Template {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Template
+    src   "Template"
+    // from the engine's zh-Hans
+    text  "模板"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIForAdapter {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter
+    src   "What a `for` block becomes at run time: one copy of the template widget per item of the source, made inside the\npanel the template sits in, in item order, where the template sits among that panel's children.\n\n    VerticalBox Options {\n        Text Header { }\n        for Option in GetOptions() {\n            Row { Label <- Option.Label }\n        }\n        Text Footer { }\n    }\n\ngives Header, the template (collapsed), one Row per option, Footer. The template stays in the tree because it is\nthe class's authored copy -- every instance of the class has one, the class variable points at it, and it is what\nevery copy is cloned from -- but Collapsed: no layout space, no drawing, no hit testing, and no navigation (both\nthe selectable search and UDreamWidgetNavigation ask GetRenderVisibleInHierarchy). The copies are ordinary widgets\nthat join the tree through DuplicateWidget, so they are registered as they arrive and their selectables register\nwith them, exactly as an authored widget's do.\n\nWhere an `each` is the list views' (virtualized, run through IDreamUIEachBindingHandler by the controls module),\na `for` is the core's: no list view, no recycling, a copy per item for as long as the item is in the source. That\nis the right shape for the short lists screens are made of -- a settings page's options, a tab bar, a legend --\nand the wrong one for ten thousand rows, which is what `each` is for.\n\nThe source may be a member path (`for Item in Player.Items`), read on whatever the path's leading members hold at\neach refresh; the owner refreshes the adapter when anything along it changes. Between refreshes each copy follows\nits own item (FDreamUIEntryRows): a member the item announces is written onto that copy alone, and the body's\n`-> Item.Func` lines call that copy's item.\n\nOwned by the user widget that resolved the binding (UDreamUserWidget::ResolveEachBindings keeps it in\nEachAdapters beside the `each` adapters), outered to it, one per `for`. The copies live in that widget's tree\nlike any other widget, so destroying the widget takes them down with it."
+    text  "`for`块在运行时变成什么：源中每个项对应一个模板控件的副本，生成于模板所在的\n面板内，按项顺序排列，位置就是模板在该面板子级中的位置。\n\n    VerticalBox Options {\n        Text Header { }\n        for Option in GetOptions() {\n            Row { Label <- Option.Label }\n        }\n        Text Footer { }\n    }\n\n会得到Header、模板（已折叠）、每个选项一个Row、Footer。模板仍留在树中，因为它是\n该类在编辑时创建的副本——类的每个实例都有一个，类变量指向它，而且它是\n每个副本克隆的来源——但它处于Collapsed：没有布局空间、不绘制、不参与命中测试，也不参与导航（\n可选控件的搜索和UDreamWidgetNavigation都会调用GetRenderVisibleInHierarchy，询问它在层级中是否可见）。这些副本是普通控件，\n它们通过DuplicateWidget加入树，因此到达时即被注册，其可选控件也随之注册，\n与编辑时创建的控件完全一样。\n\n`each`属于列表视图的（虚拟化，由控件模块通过IDreamUIEachBindingHandler运行），\n而`for`属于核心的：没有列表视图，没有回收复用，只要项还在源中，就为每个项保留一个副本。这\n适合屏幕所使用的短列表——设置页面的选项、标签栏、图例——\n但不适合一万行，那正是`each`的用途。\n\n源可以是成员路径（`for Item in Player.Items`），读取该路径前导成员在\n每次刷新时持有的内容；路径上任何内容变化时，所有者都会刷新适配器。两次刷新之间，每个副本跟随\n自己的项（FDreamUIEntryRows）：项所通告的成员只会写入该副本，而正文中的\n`-> Item.Func`行会调用该副本的项。\n\n由解析该绑定的用户控件持有（UDreamUserWidget::ResolveEachBindings将其保存在\nEachAdapters中，与`each`适配器并列），其Outer为该控件，每个`for`一个。这些副本存在于该控件的树中，\n如同任何其他控件，因此销毁该控件时它们也会随之销毁。"
+    state machine
+}
+
+DreamUIForAdapter:Copies {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Copies
+    src   "Parallel to Items. An entry is null only when the panel refused that copy."
+    text  "与Items平行。仅当面板拒绝了该副本时，条目才为null。"
+    state machine
+}
+
+DreamUIForAdapter:Items {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Items
+    src   "Held, as the `each` adapter holds its items: the key a copy is kept by is the object's identity, and an\nobject let go while its copy still shows it could be replaced by a new one at the same address."
+    text  "持有方式与`each`适配器持有其项相同：副本所依据的键是对象的标识，而一个\n对象在其副本仍显示它时被释放，就可能被同一地址上的新对象替换。"
+    state machine
+}
+
+DreamUIForAdapter:Owner {
+    at    Source/DreamGUI/Public/Core/DreamUIForAdapter.h#DreamUIForAdapter:Owner
+    src   "Weak: the owner holds this adapter, not the other way round, and a copy of the owner must never be able to\nreach back through a stale pointer into the source. DuplicateTransient on every reference for that second\nreason -- an adapter copied along with anything is inert rather than in charge of somebody else's copies."
+    text  "弱引用：所有者持有此适配器，而不是反过来；所有者的副本绝不能\n通过过期指针反向访问源。基于第二个\n原因，每个引用都标记为DuplicateTransient——随任何内容一起复制的适配器是惰性的，而不是负责管理他人的副本。"
+    state machine
+}

@@ -1,0 +1,228 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIStaticSpriteAtlasData {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData
+    src   "Dream UIStatic Sprite Atlas Data"
+    text  "Dream UI 静态精灵图集数据"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:AtlasTextureArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureArray
+    src   "Atlas Texture Array"
+    text  "图集纹理数组"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:AtlasTextureFilter {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureFilter
+    src   "Atlas Texture Filter"
+    text  "图集纹理过滤"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:AtlasTextureUseSRGB {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureUseSRGB
+    src   "Atlas Texture Use SRGB"
+    text  "图集纹理是否使用 SRGB"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:bIsAtlasPackDirty {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:bIsAtlasPackDirty
+    src   "Is Atlas Pack Dirty"
+    text  "是否为图集包脏数据"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:EdgePixelPadding {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:EdgePixelPadding
+    src   "Edge Pixel Padding"
+    text  "边沿像素填充"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:GetAtlasTexture:Index {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:GetAtlasTexture:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+DreamUIStaticSpriteAtlasData:GetAtlasTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:GetAtlasTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIStaticSpriteAtlasData:MaxTextureSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:MaxTextureSize
+    src   "Max Texture Size"
+    // from the engine's zh-Hans
+    text  "最大纹理尺寸"
+    state draft
+}
+
+DreamUIStaticSpriteAtlasData:PrevSpriteDataArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:PrevSpriteDataArray
+    src   "Prev Sprite Data Array"
+    text  "前一个精灵数据数组"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:ReadPixel:InTextureIndex {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:ReadPixel:InTextureIndex
+    src   "In Texture Index"
+    text  "纹理索引"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:ReadPixel:InUV {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:ReadPixel:InUV
+    src   "In UV"
+    text  "In UV"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:ReadPixel:OutPixel {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:ReadPixel:OutPixel
+    src   "Out Pixel"
+    text  "输出像素"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:ReadPixel:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:ReadPixel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIStaticSpriteAtlasData:RenderSpriteArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:RenderSpriteArray
+    src   "Render Sprite Array"
+    text  "渲染Sprite数组"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:SpaceBetweenSprites {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:SpaceBetweenSprites
+    src   "Space Between Sprites"
+    text  "精灵间距"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:SpriteDataArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:SpriteDataArray
+    src   "Sprite Data Array"
+    text  "Sprite数据数组"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:TexturePixelData {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:TexturePixelData
+    src   "Texture Pixel Data"
+    text  "纹理像素数据"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:TexturePixelDataForBuild {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:TexturePixelDataForBuild
+    src   "Texture Pixel Data for Build"
+    text  "用于构建的纹理像素数据"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:TexturePixelDataMD5 {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:TexturePixelDataMD5
+    src   "Texture Pixel Data MD5"
+    text  "纹理像素数据 MD5"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:TextureSizeArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:TextureSizeArray
+    src   "Texture Size Array"
+    text  "纹理尺寸数组"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIStaticSpriteAtlasData {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData
+    src   "Static packing Sprite into atlas"
+    text  "将精灵静态打包到图集中。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:AtlasTextureArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureArray
+    src   "Generated atlas texture."
+    text  "生成的图集纹理。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:AtlasTextureUseSRGB {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureUseSRGB
+    src   "weather or not use srgb for generated atlas texture"
+    text  "如果图集纹理的大小大于此值，则打包操作将中止。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:EdgePixelPadding {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:EdgePixelPadding
+    src   "Repeat edge pixel fill spaced between other sprites in atlas texture"
+    text  "在图集纹理中，用重复的边缘像素填充其他精灵之间的间隔"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:MaxTextureSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:MaxTextureSize
+    src   "If packing atlas texture's size is larger than this, then packing operation will abort."
+    text  "如果打包的图集纹理尺寸大于此值，则打包操作将中止。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:RenderSpriteArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:RenderSpriteArray
+    src   "collection of all objects that use this atlas to render. Object must implement IUISpriteRenderableInterface."
+    text  "使用此图集进行渲染的所有对象的集合。对象必须实现IUISpriteRenderableInterface。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:SpaceBetweenSprites {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:SpaceBetweenSprites
+    src   "space between two sprites when package into atlas"
+    text  "打包到纹理集中时，精灵之间的间距。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:SpriteDataArray {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:SpriteDataArray
+    src   "Collected Sprite array to pack."
+    text  "用于打包的精灵数组。"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:TexturePixelData {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:TexturePixelData
+    src   "Store texture mip data, so we can recreate atlas texture with this data."
+    text  "存储纹理金字塔数据，以便我们可以使用这些数据重新创建图集纹理。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Atlas-Setting {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:AtlasTextureUseSRGB
+    src   "Atlas-Setting"
+    text  "图集设置"
+    state machine
+}

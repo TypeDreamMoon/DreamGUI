@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIRenderTargetGeometrySource
+
+StaticMeshComponentNotValid {
+    at    Source/DreamGUIExtensions/Private/Extensions/DreamUIRenderTargetGeometrySource.cpp
+    src   "StaticMesh component not valid!"
+    text  "静态网格组件无效！"
+    state machine
+}

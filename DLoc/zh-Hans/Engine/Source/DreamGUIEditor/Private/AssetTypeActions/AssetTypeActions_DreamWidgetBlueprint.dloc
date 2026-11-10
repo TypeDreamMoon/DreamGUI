@@ -1,0 +1,64 @@
+dloc 1
+culture zh-Hans
+namespace AssetTypeActions_DreamWidgetBlueprint
+
+Name {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "DreamUI Widget Blueprint"
+    text  "DreamUI控件蓝图"
+    state machine
+}
+
+MissingParentClass {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "'{0}' has no parent class and cannot be designed until that is repaired."
+    text  "“{0}”没有父类，修复之前无法设计。"
+    state machine
+}
+
+NewFromTemplate {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "New Widget Blueprint From This"
+    text  "基于此新建控件蓝图"
+    state machine
+}
+
+NewFromTemplateTooltip {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Create a new DreamUI Widget Blueprint beside this one, with the same parent class and a copy of its hierarchy. The copy is independent from then on; to keep following this asset, derive from it instead."
+    text  "在此资产旁新建一个DreamUI控件蓝图，使用相同的父类并复制其层级。此后该副本彼此独立；若要继续跟随此资产，请改为从它派生。"
+    state machine
+}
+
+ConvertToText {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Convert to Text (.dui)"
+    text  "转换为文本（.dui）"
+    state machine
+}
+
+ConvertToTextTooltip {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Write each selected Blueprint's hierarchy, bindings and routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first; a backup of the asset (<Name>_PreDui) is made before anything changes."
+}
+
+NewChildBlueprint {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Create Child Widget Blueprint"
+    text  "创建子控件蓝图"
+    state machine
+}
+
+NewChildBlueprintTooltip {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Create a DreamUI Widget Blueprint whose parent class is this one. It inherits this hierarchy and keeps following it -- changes made here reach every child."
+    text  "创建一个父类为此资产的DreamUI控件蓝图。它继承此层级并持续跟随——在此处所做的更改会传递给每个子项。"
+    state machine
+}
+
+CreateChildTitle {
+    at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
+    src   "Create Child DreamUI Widget Blueprint"
+    text  "创建子DreamUI控件蓝图"
+    state machine
+}

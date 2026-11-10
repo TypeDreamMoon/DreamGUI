@@ -1,0 +1,294 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPolygon {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon
+    src   "Dream Polygon"
+    text  "多边形"
+    state machine
+}
+
+DreamPolygon:EndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngle
+    src   "End Angle"
+    // from the engine's zh-Hans
+    text  "结束角"
+    state draft
+}
+
+DreamPolygon:EndAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamPolygon:EndAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamPolygon:EndAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamPolygon:EndAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamPolygon:EndAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:FullCycle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:FullCycle
+    src   "Full Cycle"
+    text  "完整循环"
+    state machine
+}
+
+DreamPolygon:GetEndAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetEndAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:GetFullCycle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetFullCycle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:GetSides:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetSides:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:GetStartAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetStartAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:GetUVType:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetUVType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:GetVertexOffsetArray:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetVertexOffsetArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:SetEndAngle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetEndAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:SetFullCycle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetFullCycle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:SetSides:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetSides:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:SetStartAngle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetStartAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:SetUVType:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetUVType:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:SetVertexOffsetArray:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetVertexOffsetArray:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygon:Sides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:Sides
+    src   "Sides"
+    // from the engine's zh-Hans
+    text  "侧边"
+    state draft
+}
+
+DreamPolygon:StartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngle
+    src   "Start Angle"
+    // from the engine's zh-Hans
+    text  "开始角"
+    state draft
+}
+
+DreamPolygon:StartAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamPolygon:StartAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamPolygon:StartAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamPolygon:StartAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamPolygon:StartAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygon:UVType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:UVType
+    src   "UVType"
+    text  "UV 类型"
+    state machine
+}
+
+DreamPolygon:VertexOffsetArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:VertexOffsetArray
+    src   "Vertex Offset Array"
+    text  "顶点偏移数组"
+    state machine
+}
+
+EDreamPolygonUVType.EDreamPolygonUVType_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:EDreamPolygonUVType_MAX
+    src   "EDream Polygon UVType MAX"
+    text  "EDream Polygon UVType 最大值"
+    state machine
+}
+
+EDreamPolygonUVType.HeightCenter {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:HeightCenter
+    src   "Height Center"
+    text  "高度中心"
+    state machine
+}
+
+EDreamPolygonUVType.SpriteRect {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:SpriteRect
+    src   "Sprite Rect"
+    text  "精灵矩形"
+    state machine
+}
+
+EDreamPolygonUVType.StretchSpriteHeight {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:StretchSpriteHeight
+    src   "Stretch Sprite Height"
+    text  "拉伸精灵高度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPolygon {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon
+    src   "render a solid polygon shape"
+    text  "渲染一个实心多边形。"
+    state machine
+}
+
+DreamPolygon:Sides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:Sides
+    src   "Sides of polygon"
+    text  "多边形边数。"
+    state machine
+}
+
+EDreamPolygonUVType.HeightCenter {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:HeightCenter
+    src   "Use left center as polygon's center, and right center as polygon's ring uv"
+    text  "将左侧中心点用作多边形的中心，将右侧中心点用作多边形环的 UV。"
+    state machine
+}
+
+EDreamPolygonUVType.SpriteRect {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:SpriteRect
+    src   "Use full rect uv"
+    text  "使用完整的 UV 矩形。"
+    state machine
+}
+
+EDreamPolygonUVType.StretchSpriteHeight {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#EDreamPolygonUVType:StretchSpriteHeight
+    src   "Use left center as polygon's center, right bottom as polygon ring's start, and right top as polygon ring's end"
+    text  "将左侧中心点用作多边形的中心，将右下角用作多边形环的起点，将右上角用作多边形环的终点。"
+    state machine
+}

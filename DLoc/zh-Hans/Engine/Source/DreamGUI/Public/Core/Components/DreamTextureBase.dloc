@@ -1,0 +1,74 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTextureBase {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase
+    src   "Dream Texture Base"
+    text  "Dream 纹理基础"
+    state machine
+}
+
+DreamTextureBase:GetOverrideMaterial:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:GetOverrideMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTextureBase:GetTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:GetTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTextureBase:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:OverrideMaterial
+    src   "Override Material"
+    // from the engine's zh-Hans
+    text  "重载材质"
+    state draft
+}
+
+DreamTextureBase:SetOverrideMaterial:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetOverrideMaterial:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTextureBase:SetTexture:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetTexture:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTextureBase:Texture {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTextureBase {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase
+    src   "This is base class for create custom mesh based on UITexture. Just override OnCreateGeometry() and OnUpdateGeometry(...) to create or update your own geometry"
+    text  "这是基于UITexture创建自定义纹理网格的基类。只需重写OnCreateGeometry()和OnUpdateGeometry(...)，即可创建或更新你自己的几何体。"
+    state machine
+}
+
+DreamTextureBase:OverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:OverrideMaterial
+    src   "Use a custom material to render this texture"
+    text  "使用自定义材质来渲染此纹理。"
+    state machine
+}

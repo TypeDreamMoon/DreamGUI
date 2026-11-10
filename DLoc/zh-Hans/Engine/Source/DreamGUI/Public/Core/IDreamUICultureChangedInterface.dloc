@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUICultureChangedInterface {
+    at    Source/DreamGUI/Public/Core/IDreamUICultureChangedInterface.h#DreamUICultureChangedInterface
+    src   "Dream UICulture Changed Interface"
+    text  "Dream UI 文化设置已更改"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUICultureChangedInterface:OnCultureChanged {
+    at    Source/DreamGUI/Public/Core/IDreamUICultureChangedInterface.h#DreamUICultureChangedInterface:OnCultureChanged
+    src   "Called when current culture changed and DreamGUI need to update culture."
+    text  "当当前文化设置发生更改，且 DreamGUI 需要更新文化设置时，会触发此事件。"
+    state machine
+}

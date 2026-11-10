@@ -1,0 +1,109 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRichTextImageData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData
+    src   "Dream UIRich Text Image Data"
+    text  "Dream UI 多格式文本图像数据"
+    state machine
+}
+
+DreamUIRichTextImageData:AnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:AnimationFps
+    src   "Animation Fps"
+    text  "动画帧率"
+    state machine
+}
+
+DreamUIRichTextImageData:GetAnimationFps:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetAnimationFps:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRichTextImageData:GetImageMap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetImageMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRichTextImageData:GetMutableImageMap:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetMutableImageMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRichTextImageData:ImageMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:ImageMap
+    src   "Image Map"
+    text  "图像映射"
+    state machine
+}
+
+DreamUIRichTextImageData:SetAnimationFps:value {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:SetAnimationFps:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRichTextImageData:SetImageMap:value {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:SetImageMap:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRichTextImageItemData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageItemData
+    src   "Dream UIRich Text Image Item Data"
+    text  "Dream UI 多格式文本图像项数据"
+    state machine
+}
+
+DreamUIRichTextImageItemData:Frames {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageItemData:Frames
+    src   "Frames"
+    // from the engine's zh-Hans
+    text  "Frames"
+    state draft
+}
+
+DreamUIRichTextImageItemData:OverrideAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageItemData:OverrideAnimationFps
+    src   "Override Animation Fps"
+    text  "重载动画帧率"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIRichTextImageData {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData
+    src   "use Sprite to render image for UIText"
+    text  "使用 Sprite 渲染图像以显示在 UIText 中。 获取此对象以直接修改数据。 修改完成后，调用 BroadcastOnDataChange 函数以通知。 使用此值作为动画帧率，-1 表示不覆盖。"
+    state machine
+}
+
+DreamUIRichTextImageData:GetMutableImageMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetMutableImageMap
+    src   "Get this to directly modify the data. After modify is done, call BroadcastOnDataChange function to notify."
+    text  "用于直接修改数据。修改完成后，调用 BroadcastOnDataChange 函数进行通知。"
+    state machine
+}
+
+DreamUIRichTextImageItemData:OverrideAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageItemData:OverrideAnimationFps
+    src   "use this value as animation-fps, -1 means not override"
+    text  "使用此值作为动画帧率，-1 表示不覆盖。"
+    state machine
+}

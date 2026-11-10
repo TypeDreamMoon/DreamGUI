@@ -1,0 +1,240 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIBehaviour {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour
+    src   "DreamUI Behaviour"
+    text  "DreamUI行为"
+    state machine
+}
+
+DreamUIBehaviour:AnimationPlayer {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:AnimationPlayer
+    src   "Animation Player"
+    text  "动画播放器"
+    state machine
+}
+
+DreamUIBehaviour:bStartWithTickEnabled {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:bStartWithTickEnabled
+    src   "Start with Tick Enabled"
+    // from the engine's zh-Hans
+    text  "启用Tick并开始"
+    state draft
+}
+
+DreamUIBehaviour:bTickEvenWhenPaused {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:bTickEvenWhenPaused
+    src   "Tick Even when Paused"
+    // from the engine's zh-Hans
+    text  "暂停时继续tick"
+    state draft
+}
+
+DreamUIBehaviour:CacheWidget {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:CacheWidget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUIBehaviour:GetAnimationPlayer:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetAnimationPlayer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBehaviour:GetPathDisplayName:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetPathDisplayName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBehaviour:GetWidget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBehaviour:ReceiveOnChildDimensionsChanged:Child {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnChildDimensionsChanged:Child
+    src   "Child"
+    // from the engine's zh-Hans
+    text  "子项"
+    state draft
+}
+
+DreamUIBehaviour:ReceiveOnChildDimensionsChanged:HeightChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnChildDimensionsChanged:HeightChanged
+    src   "Height Changed"
+    text  "高度已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnChildDimensionsChanged:PivotChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnChildDimensionsChanged:PivotChanged
+    src   "Pivot Changed"
+    text  "枢轴点已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnChildDimensionsChanged:WidthChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnChildDimensionsChanged:WidthChanged
+    src   "Width Changed"
+    text  "宽度已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDimensionsChanged:HeightChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged:HeightChanged
+    src   "Height Changed"
+    text  "高度已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDimensionsChanged:PivotChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged:PivotChanged
+    src   "Pivot Changed"
+    text  "枢轴点已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDimensionsChanged:WidthChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged:WidthChanged
+    src   "Width Changed"
+    text  "宽度已更改"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnInteractableChanged:Interactable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnInteractableChanged:Interactable
+    src   "Interactable"
+    text  "可交互"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnRaycastableChanged:Raycastable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnRaycastableChanged:Raycastable
+    src   "Raycastable"
+    text  "可射线投射"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveTick:DeltaTime {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveTick:DeltaTime
+    src   "Delta Time"
+    // from the engine's zh-Hans
+    text  "差量时间"
+    state draft
+}
+
+DreamUIBehaviour:SetCanExecuteTick:Value {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:SetCanExecuteTick:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIBehaviour {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour
+    src   "Base class for DreamUI's life cycle behaviour related component.\nAwake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root widget will execute the first."
+    text  "DreamUI生命周期行为相关组件的基类。\n预制体中Awake的执行顺序：层级越高越先执行，因此根控件上的脚本将最先执行。"
+    state machine
+}
+
+DreamUIBehaviour:GetAnimationPlayer {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetAnimationPlayer
+    src   "Finds the prefab animation host on this widget or the nearest parent widget."
+    text  "在此控件或最近的父控件上查找预制体动画宿主。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveAwake {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveAwake
+    src   "This function is always called before any Start functions and also after a prefab is loaded.\nAwake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root widget will execute the first."
+    text  "此函数始终在任何Start函数之前调用，且在预制体加载之后调用。\n预制体中Awake的执行顺序：层级越高越先执行，因此根控件上的脚本将最先执行。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnAttachmentChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnAttachmentChanged
+    src   "Called when Widget attach to a new parent"
+    text  "控件附加到新父级时调用。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDestroy {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDestroy
+    src   "OnDestroy is called when Widget destroy"
+    text  "控件销毁时调用OnDestroy。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDimensionsChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged
+    src   "Called when Widget->AnchorData is changed."
+    text  "当控件的锚点数据（AnchorData）更改时调用。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDisable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDisable
+    src   "OnDisable is called when WidgetActiveInHierarchy become false, or before OnDestroy."
+    text  "当控件的层级激活状态（WidgetActiveInHierarchy）变为false时，或在OnDestroy之前调用OnDisable。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnEnable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnEnable
+    src   "Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true."
+    text  "当控件的层级激活状态（WidgetActiveInHierarchy）为true时，在Awake之后执行，或在其变为true时执行。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnInteractableChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnInteractableChanged
+    src   "Called when Widget IsActiveInHierarchy state is changed"
+    text  "当控件的层级激活状态（IsActiveInHierarchy）发生变化时调用。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveStart {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveStart
+    src   "Start is called before the first Tick."
+    text  "Start 在第一次 Tick 之前调用。"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveTick {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveTick
+    src   "Tick is called once per frame."
+    text  "Tick 每帧调用一次。"
+    state machine
+}
+
+DreamUIBehaviour:SetCanExecuteTick {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:SetCanExecuteTick
+    src   "Set if this component can execute \"Update\" event or not. \"CanExecuteUpdate\" is true by default."
+    text  "设置此组件能否执行“Update”事件。“CanExecuteUpdate”默认为 true。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamUIBehaviour {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:DestroyComponent
+    src   "DreamUIBehaviour"
+    text  "DreamUIBehaviour"
+    state machine
+}

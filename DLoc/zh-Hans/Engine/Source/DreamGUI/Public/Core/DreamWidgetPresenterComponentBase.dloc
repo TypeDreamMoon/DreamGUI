@@ -1,0 +1,136 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetPresenterComponentBase {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase
+    src   "Dream Widget Presenter Component Base"
+    text  "Dream控件呈现器组件基类"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:bWidgetVisible {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:bWidgetVisible
+    src   "Widget Visible"
+    text  "控件可见"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:GetLoadedCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetPresenterComponentBase:GetLoadedWidget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetPresenterComponentBase:GetNavigationSelection:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetNavigationSelection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetPresenterComponentBase:LoadedWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:LoadedWidget
+    src   "Loaded Widget"
+    text  "已加载控件"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:NavigationSelection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:NavigationSelection
+    src   "Navigation Selection"
+    text  "导航选择"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:NavigationSelectionClass {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:NavigationSelectionClass
+    src   "Navigation Selection Class"
+    text  "导航选择类"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:OwnedTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:OwnedTree
+    src   "Owned Tree"
+    text  "拥有的树"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:RootCanvas {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:RootCanvas
+    src   "Root Canvas"
+    text  "根画布"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:WidgetOffset {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:WidgetOffset
+    src   "Widget Offset"
+    text  "控件偏移"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:WidgetOpacity {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:WidgetOpacity
+    src   "Widget Opacity"
+    text  "控件不透明度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetPresenterComponentBase {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase
+    src   "Abstract: LoadWidget is PURE_VIRTUAL, so an instance of this class asserts the moment it\nregisters. Without this the Add Component list offers it, and picking it there is a crash\nrather than an error. Add DreamWorldWidgetComponent."
+    text  "抽象：LoadWidget 是 PURE_VIRTUAL，因此该控件组件类的实例在\n注册的那一刻就会断言。若没有此项，添加组件列表就会列出它，在那里选中它是崩溃\n而不是报错。请改用 DreamWorldWidgetComponent。"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:GetNavigationSelection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetNavigationSelection
+    src   "The focus ring of the tree this component hosts, made from NavigationSelectionClass (else the project's) the first\ntime it is asked for. Shown and hidden by the selectables it marks, while their player's focus is to be drawn."
+    text  "此组件所承载的树的焦点环，在首次\n被请求时用 NavigationSelectionClass（若未设置则用项目中的）创建。它由所标记的可选中项显示和隐藏，此时需要绘制其玩家的焦点。"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:NavigationSelectionClass {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:NavigationSelectionClass
+    src   "For navigation input, show a selection widget"
+    text  "用于导航输入，显示选择控件"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:OwnedTree {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:OwnedTree
+    src   "The tree this component hosts: outered to it, held here and nowhere else, and let go by\nDestroyLoadedWidget. Never saved, never duplicated into a play session, never exported by Copy --\nthe class it is built from is what the level keeps.\n\nNonTransactional, with the rest of what the component knows of its tree. A transaction records\ntransient properties too, and an undo or redo that brought this component back, or took it away,\nwrote back the tree it held when the edit was recorded: one already destroyed, or none while a live\none stood -- which the component then never let go. Which tree it holds is the component's own\nbusiness, never undo's."
+    text  "此组件承载的控件树：以该组件为外部对象，仅在此处持有，别无他处，并由\nDestroyLoadedWidget 释放。从不保存，从不复制进游戏会话，也从不经 Copy 导出——\n构建它所用的类才是关卡所保留的内容。\n\n与组件所知的关于其树的其他信息一样，为 NonTransactional。事务同样会记录\n瞬态属性，而让此组件恢复、或被移除的撤销与重做，\n会写回记录该次编辑时它所持有的树：一棵已被销毁的树，或在有活动树\n存在时写回空——而这棵活动树此后便再也不会被释放。它持有哪棵树是组件自己的\n事，与撤销无关。"
+    state machine
+}
+
+DreamWidgetPresenterComponentBase:WidgetOpacity {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:WidgetOpacity
+    src   "Presenter-level animation forwards. These exist so a Level Sequence possessing this component\ncan fade, slide, and show/hide the whole widget tree without binding any widget: each setter\nwrites through to the root widget, and a fresh load replays the stored values. Opacity rides\nRenderOpacity (children inherit it multiplicatively) and the offset rides the render-only\ntranslation, so neither touches layout."
+    text  "呈现器级动画转发。它们的存在是为了让拥有此组件的关卡序列\n可以淡入淡出、滑动以及显示/隐藏整个控件树，而无需绑定任何控件：每个设置器\n直接写入根控件，重新加载时会重放所存储的值。不透明度作用于\nRenderOpacity（子项以乘法方式继承），偏移作用于仅用于渲染的\n平移，因此两者都不影响布局。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamWidgetPresenter {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:NavigationSelectionClass
+    src   "DreamWidgetPresenter"
+    text  "DreamWidgetPresenter（控件呈现器）"
+    state machine
+}

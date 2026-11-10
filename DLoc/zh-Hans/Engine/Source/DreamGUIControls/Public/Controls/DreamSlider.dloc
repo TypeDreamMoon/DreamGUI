@@ -1,0 +1,614 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamSlider {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider
+    src   "Dream Slider"
+    text  "滑动条"
+    state machine
+}
+
+DreamSlider:bIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bIndentHandle
+    src   "Indent Handle"
+    // from the engine's zh-Hans
+    text  "缩进柄"
+    state draft
+}
+
+DreamSlider:bLocked {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bLocked
+    src   "Locked"
+    // from the engine's zh-Hans
+    text  "已锁定"
+    state draft
+}
+
+DreamSlider:bMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bMouseUsesStep
+    src   "Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "鼠标使用步"
+    state draft
+}
+
+DreamSlider:bRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bRequiresControllerLock
+    src   "Requires Controller Lock"
+    // from the engine's zh-Hans
+    text  "需要控制器锁定"
+    state draft
+}
+
+DreamSlider:bWholeNumbers {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bWholeNumbers
+    src   "Whole Numbers"
+    text  "整数"
+    state machine
+}
+
+DreamSlider:Direction {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Direction
+    src   "Direction"
+    // from the engine's zh-Hans
+    text  "方向"
+    state draft
+}
+
+DreamSlider:FillAreaNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:FillAreaNode
+    src   "Fill Area Node"
+    text  "填充区域节点"
+    state machine
+}
+
+DreamSlider:FillNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:FillNode
+    src   "Fill Node"
+    text  "填充节点"
+    state machine
+}
+
+DreamSlider:GetDirection:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetIndentHandle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetIndentHandle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetMaxValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMaxValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetMinValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMinValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetMouseUsesStep:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMouseUsesStep:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetNavigationChangeInterval:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNavigationChangeInterval:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetNormalizedValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNormalizedValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetRequiresControllerLock:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetRequiresControllerLock:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetSliderBarColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetSliderBarColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetSliderHandleColor:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetSliderHandleColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetStepSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetStepSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetValue:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetValue:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:GetWholeNumbers:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetWholeNumbers:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:HandleAreaNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:HandleAreaNode
+    src   "Handle Area Node"
+    text  "手柄区域节点"
+    state machine
+}
+
+DreamSlider:HandleNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:HandleNode
+    src   "Handle Node"
+    text  "手柄节点"
+    state machine
+}
+
+DreamSlider:IsControllerCaptured:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsControllerCaptured:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:IsLocked:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsLocked:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamSlider:MaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:MaxValue
+    src   "Max Value"
+    // from the engine's zh-Hans
+    text  "最大值"
+    state draft
+}
+
+DreamSlider:MinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:MinValue
+    src   "Min Value"
+    // from the engine's zh-Hans
+    text  "最小值"
+    state draft
+}
+
+DreamSlider:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:NavigationChangeInterval
+    src   "Navigation Change Interval"
+    text  "导航变化间隔"
+    state machine
+}
+
+DreamSlider:OnControllerCaptureBegin {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnControllerCaptureBegin
+    src   "On Controller Capture Begin"
+    // from the engine's zh-Hans
+    text  "控制器捕获开始时"
+    state draft
+}
+
+DreamSlider:OnControllerCaptureEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnControllerCaptureEnd
+    src   "On Controller Capture End"
+    // from the engine's zh-Hans
+    text  "控制器捕获结束时"
+    state draft
+}
+
+DreamSlider:OnMouseCaptureBegin {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnMouseCaptureBegin
+    src   "On Mouse Capture Begin"
+    // from the engine's zh-Hans
+    text  "On Mouse Capture Begin"
+    state draft
+}
+
+DreamSlider:OnMouseCaptureEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnMouseCaptureEnd
+    src   "On Mouse Capture End"
+    // from the engine's zh-Hans
+    text  "On Mouse Capture End"
+    state draft
+}
+
+DreamSlider:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnValueChanged
+    src   "On Value Changed"
+    // from the engine's zh-Hans
+    text  "值变更时"
+    state draft
+}
+
+DreamSlider:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamSlider:SetDirection:InDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetDirection:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamSlider:SetIndentHandle:bInIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetIndentHandle:bInIndentHandle
+    src   "In Indent Handle"
+    text  "缩进手柄"
+    state machine
+}
+
+DreamSlider:SetLocked:bInLocked {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetLocked:bInLocked
+    src   "In Locked"
+    // from the engine's zh-Hans
+    text  "输入已锁定"
+    state draft
+}
+
+DreamSlider:SetMaxValue:InMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMaxValue:InMaxValue
+    src   "In Max Value"
+    text  "最大值"
+    state machine
+}
+
+DreamSlider:SetMinValue:InMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMinValue:InMinValue
+    src   "In Min Value"
+    text  "最小值"
+    state machine
+}
+
+DreamSlider:SetMouseUsesStep:bInMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMouseUsesStep:bInMouseUsesStep
+    src   "In Mouse Uses Step"
+    text  "鼠标使用步进"
+    state machine
+}
+
+DreamSlider:SetNavigationChangeInterval:InInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetNavigationChangeInterval:InInterval
+    src   "In Interval"
+    // from the engine's zh-Hans
+    text  "输入间隔"
+    state draft
+}
+
+DreamSlider:SetRequiresControllerLock:bInRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetRequiresControllerLock:bInRequiresControllerLock
+    src   "In Requires Controller Lock"
+    text  "需要控制器锁定"
+    state machine
+}
+
+DreamSlider:SetSliderBarColor:InSliderBarColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetSliderBarColor:InSliderBarColor
+    src   "In Slider Bar Color"
+    text  "滑块颜色"
+    state machine
+}
+
+DreamSlider:SetSliderHandleColor:InSliderHandleColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetSliderHandleColor:InSliderHandleColor
+    src   "In Slider Handle Color"
+    text  "手柄颜色"
+    state machine
+}
+
+DreamSlider:SetStepSize:InStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStepSize:InStepSize
+    src   "In Step Size"
+    text  "步进大小"
+    state machine
+}
+
+DreamSlider:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamSlider:SetValue:InValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetValue:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamSlider:SetWholeNumbers:bInWholeNumbers {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetWholeNumbers:bInWholeNumbers
+    src   "In Whole Numbers"
+    text  "使用整数"
+    state machine
+}
+
+DreamSlider:SliderBarColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SliderBarColor
+    src   "Slider Bar Color"
+    // from the engine's zh-Hans
+    text  "滑条颜色"
+    state draft
+}
+
+DreamSlider:SliderBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SliderBehaviour
+    src   "Slider Behaviour"
+    text  "滑块行为"
+    state machine
+}
+
+DreamSlider:SliderHandleColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SliderHandleColor
+    src   "Slider Handle Color"
+    // from the engine's zh-Hans
+    text  "滑柄颜色"
+    state draft
+}
+
+DreamSlider:StepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:StepSize
+    src   "Step Size"
+    // from the engine's zh-Hans
+    text  "步长"
+    state draft
+}
+
+DreamSlider:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamSlider:TrackNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:TrackNode
+    src   "Track Node"
+    text  "跟踪节点"
+    state machine
+}
+
+DreamSlider:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamSliderValueChangedEvent__DelegateSignature:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSliderValueChangedEvent__DelegateSignature:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamSlider {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider
+    src   "A slider whose hierarchy is code, not an asset.\n\nThe same five nodes both preset Blueprints carry -- a track, a fill area holding the fill, a\nhandle area holding the handle -- with one difference that is the point: BP_HorizontalSlider and\nBP_VerticalSlider are two assets because an asset cannot branch on a property, and this class is\none control because code can. Direction re-anchors the parts; there is nothing else the two\npresets disagreed about.\n\nThe areas exist because UUISlider positions the fill and the handle INSIDE whatever their\nparents are -- FillArea and HandleArea are how the track tells it where \"0\" and \"1\" live. The\nhandle area is inset by the handle's own size so the handle rides within the track's ends\ninstead of overhanging them."
+    text  "层级由代码而非资源构建的滑块。\n\n两个预设蓝图都带有同样的五个节点——一条轨道、一个容纳填充的填充区域、一个\n容纳手柄的手柄区域——只有一处区别，而这一点正是关键：BP_HorizontalSlider 和\nBP_VerticalSlider 是两个资源，因为资源无法根据属性分支；而这个类是一\n个控件，因为代码可以。Direction 会重新锚定各个部件；除此之外，两个预设\n再无分歧。\n\n这些区域之所以存在，是因为 UUISlider 会把填充和手柄放在其父项内部——\nFillArea 和 HandleArea 就是轨道告知它“0”和“1”所在位置的方式。\n手柄区域按手柄自身的尺寸内缩，因此手柄在轨道两端之内移动，\n而不会悬出两端。"
+    state machine
+}
+
+DreamSlider:bIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bIndentHandle
+    src   "Whether the handle stays inside the track's ends -- UMG's IndentHandle.\n\nOn (the default, and what this slider has always drawn) the handle's travel is the track minus\nthe handle's own width, so at 0 and at 1 the handle sits fully on the track. Off gives it the\ntrack's whole length, so its centre reaches the very ends and half of it hangs off each --\nwhich is what a handle drawn as a thin notch wants, and what UMG ships.\n\nIt is the HANDLE AREA's inset either way, so the value the slider reports is unaffected: the\nsame drag still spans the same numbers."
+    text  "手柄是否保持在轨道两端之内——即 UMG 的 IndentHandle。\n\n开启时（默认值，也是此滑块一贯的绘制方式），手柄的行程是轨道减去\n手柄自身的宽度，因此在 0 和 1 处手柄完全位于轨道上。关闭时手柄获得\n轨道全长，其中心可以到达两端极点，于是一半会悬在两端之外——\n这正是以细槽形式绘制的手柄所需要的，也是 UMG 的默认做法。\n\n无论哪种情况，内缩的都是手柄区域，因此滑块上报的值不受影响：\n同样的拖动仍然覆盖同样的数值范围。"
+    state machine
+}
+
+DreamSlider:bLocked {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bLocked
+    src   "Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour. A press on a\nlocked slider begins no mouse capture, so OnMouseCaptureBegin and OnMouseCaptureEnd stay silent,\nas SSlider's do.\n\nNot the same as switching the control off: a disabled slider wears its Disabled colours and\nsays \"not now\", a locked one looks completely ordinary and says \"this is what it is\". A volume\nbar during a cutscene is the second. SetValue keeps working either way."
+    text  "显示其值，但拒绝被移动——即 UMG 的 Locked，被推送到了行为上。按下已\n锁定的滑块不会开始鼠标捕获，因此 OnMouseCaptureBegin 和 OnMouseCaptureEnd 保持静默，\n与 SSlider 的行为一致。\n\n这与关闭控件并不相同：禁用的滑块会披上 Disabled 颜色，\n说“现在不行”；锁定的滑块看起来完全普通，只是说“它就是这样”。过场动画中的音量\n条属于后者。无论哪种情况，SetValue 都照常工作。"
+    state machine
+}
+
+DreamSlider:bMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bMouseUsesStep
+    src   "Quantise a mouse drag to StepSize. Off, a drag is continuous."
+    text  "将鼠标拖动量化到 StepSize。关闭时，拖动是连续的。"
+    state machine
+}
+
+DreamSlider:bRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bRequiresControllerLock
+    src   "A gamepad must capture this slider before its directions move the value -- UMG's\nRequiresControllerLock, on by default for the reason it is on there: a row of sliders a stick\ntravels THROUGH is unusable if the first one swallows every left and right."
+    text  "游戏手柄必须先捕获此滑块，其方向键才会改变值——即 UMG 的\nRequiresControllerLock，默认开启，原因与 UMG 中相同：一列滑块若被摇杆\n依次穿过，而第一个滑块吞掉了所有左右输入，那这一列就没法用了。"
+    state machine
+}
+
+DreamSlider:bWholeNumbers {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:bWholeNumbers
+    src   "Whole numbers only -- the behaviour has always had this and the control never pushed it, so a\nslider authored as an integer picker answered 3.7215. Every value the slider takes is rounded to\nthe nearest whole number -- a drag, a gamepad step, SetValue -- so an authored fractional Value is\nrounded at the next push rather than refused."
+    text  "仅使用整数——行为一直有此属性，而控件从未将它推送出去，因此一个作为整数\n选择器编写的滑块会返回 3.7215。滑块接受的每个值都会舍入到\n最接近的整数——拖动、手柄步进、SetValue——因此编写时指定的小数值\n会在下一次推送时被舍入，而不是被拒绝。"
+    state machine
+}
+
+DreamSlider:Direction {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Direction
+    src   "Which way it runs. One property instead of two Blueprint assets.\n\nBlueprintSetter, like every knob below it: nothing in this family re-derives a control from a\nproperty that changed -- that is the SynchronizeProperties tax UDreamUIControl documents -- so\na runtime write straight onto the variable moved the number and left the parts where they\nwere. Through the setter the re-push is not something a caller has to remember."
+    text  "它的运行方向。用一个属性取代两个蓝图资源。\n\n与其下每个开关一样，这是一个 BlueprintSetter：此系列中没有任何东西会根据\n已更改的属性重新推导控件——这就是 UDreamUIControl 所记录的 SynchronizeProperties 代价——因此\n直接对变量进行运行时写入只会移动数值，而让各部件留在原处。\n通过 setter，重新推送就不再是调用方必须记住的事情。"
+    state machine
+}
+
+DreamSlider:GetNormalizedValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNormalizedValue
+    src   "Where the value sits between the two ends, 0 to 1 -- UMG's GetNormalizedValue.\n\nThe number every consumer of a slider actually wants (a bar's width, a volume multiplier),\nand the one everybody was computing by hand out of three getters. A range of zero answers\nzero rather than dividing by it."
+    text  "值在两个端点之间的位置，0 到 1——即 UMG 的 GetNormalizedValue。\n\n这是每个滑块使用者真正想要的数值（进度条的宽度、音量乘数），\n也是大家此前要用三个 getter 手工计算的那一个。范围为 0 时返回\n0，而不是除以它。"
+    state machine
+}
+
+DreamSlider:IsControllerCaptured {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsControllerCaptured
+    src   "Whether a gamepad currently holds this slider -- read straight off the behaviour."
+    text  "游戏手柄当前是否持有此滑块——直接从行为读取。"
+    state machine
+}
+
+DreamSlider:NavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:NavigationChangeInterval
+    src   "How far one gamepad or keyboard press moves the value, as a FRACTION of the range: a press is\nworth (MaxValue - MinValue) * this. Also the behaviour's, also never pushed before -- so every\nslider in the project stepped by the library's 0.1 whatever its .dui said."
+    text  "一次手柄或键盘按键使值移动多远，以范围的比例表示：一次按键相当于\n(MaxValue - MinValue) * 此值。它同样属于行为，同样从未被推送过——因此项目中每个\n滑块都以库的 0.1 步进，不管它的 .dui 是怎么写的。"
+    state machine
+}
+
+DreamSlider:OnMouseCaptureBegin {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnMouseCaptureBegin
+    src   "The four capture moments UMG's slider speaks, re-broadcast from the behaviour exactly as the\nvalue change is. Mouse begin/end are the press and release; controller begin/end are the lock\nbeing taken and given back. What they are FOR is the reason UMG has them: a consumer that\nwrites the value into a setting, plays a sound or asks the server can hold off while the\nplayer is still dragging, and act once on the moment they let go."
+    text  "UMG 滑块会发出的四个捕获时刻，与值变更一样，\n从行为原样转发。鼠标开始/结束即按下与松开；控制器开始/结束即锁定\n被取得与归还。它们的用途正是 UMG 提供它们的原因：使用方\n把值写入设置、播放声音或请求服务器时，可以在玩家\n仍在拖动时暂缓，并在松手的那一刻只执行一次。"
+    state machine
+}
+
+DreamSlider:OnValueChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnValueChanged
+    src   "Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it."
+    text  "从行为转发而来，因此使用方绑定的是控件本身，而不是它的某个部件。"
+    state machine
+}
+
+DreamSlider:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamSlider:SetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetDirection
+    src   "Re-anchors the parts: the direction decides which axis the track, fill and handle run along."
+    text  "重新对齐各个部分：方向决定轨道、填充和手柄沿哪个轴运行。"
+    state machine
+}
+
+DreamSlider:SetIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetIndentHandle
+    src   "Re-places the handle area, which is the one thing this decides."
+    text  "重新对齐手柄区域，这是它所决定的唯一部分。"
+    state machine
+}
+
+DreamSlider:SetMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMinValue
+    src   "Range before value, always: the value is clamped against the range, never the other way."
+    text  "范围始终在值之前：值会被限制在范围内，而不是反过来。"
+    state machine
+}
+
+DreamSlider:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamSlider:SliderBarColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SliderBarColor
+    src   "A tint over the bar the handle travels along -- UMG's SliderBarColor, which is a tint over\nSSlider's bar image for exactly the same reason this is one: the STYLE says what the slider\nlooks like, and this says what is happening to it right now. White is no opinion."
+    text  "覆盖在手柄所沿轨道条上的着色——即 UMG 的 SliderBarColor，它对\nSSlider 的条状图像着色，原因与本项完全相同：STYLE 决定滑块\n外观，而本项决定它此刻正发生什么。白色即不作任何表态。"
+    state machine
+}
+
+DreamSlider:SliderHandleColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SliderHandleColor
+    src   "The same, over the handle's five state colours -- UMG's SliderHandleColor."
+    text  "与手柄的五个状态颜色相同，类似于 UMG 的 SliderHandleColor。"
+    state machine
+}
+
+DreamSlider:StepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:StepSize
+    src   "The quantum a MOUSE drag moves the value in, while bMouseUsesStep is on -- UMG's StepSize.\n\nAbsolute, where NavigationChangeInterval above is a fraction, and each says which input it\ngoverns: re-pointing navigation at this number would silently re-scale every slider already\nauthored against this plugin. See UUISlider::StepSize for the full argument."
+    text  "bMouseUsesStep 开启时，MOUSE 拖动改变值的步长——即 UMG 的 StepSize。\n\n此处为绝对值，而上面的 NavigationChangeInterval 是比例；两者各自说明\n自己管辖哪种输入：把导航改为引用此数值，会静默地重新缩放所有已按本插件\n制作的滑块。完整论述见 UUISlider::StepSize。"
+    state machine
+}
+
+DreamSlider:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+DreamSlider:Value {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:Value
+    src   "Authored value in; mirror of the behaviour's out. A property so .dui and bindings can see it."
+    text  "编辑时写入的值；行为输出的镜像。设为属性，以便 .dui 和绑定能够读取。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Slider {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetDirection
+    src   "Slider"
+    // from the engine's zh-Hans
+    text  "滑动条"
+    state draft
+}

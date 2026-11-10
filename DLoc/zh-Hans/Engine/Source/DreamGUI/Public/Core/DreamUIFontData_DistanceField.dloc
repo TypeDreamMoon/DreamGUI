@@ -1,0 +1,327 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIFontData_DistanceField {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField
+    src   "Dream UIFont Data Distance Field"
+    text  "Dream UI 字体数据 距离场"
+    state machine
+}
+
+DreamUIFontData_DistanceField:AdditionalVerticalOffset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:AdditionalVerticalOffset
+    src   "Additional Vertical Offset"
+    text  "附加垂直偏移量"
+    state machine
+}
+
+DreamUIFontData_DistanceField:BoldRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:BoldRatio
+    src   "Bold Ratio"
+    text  "粗体比例"
+    state machine
+}
+
+DreamUIFontData_DistanceField:CoverageHinting {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:CoverageHinting
+    src   "Coverage Hinting"
+    text  "字形轮廓提示"
+    state machine
+}
+
+DreamUIFontData_DistanceField:ItalicAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:ItalicAngle
+    src   "Italic Angle"
+    text  "斜体角度"
+    state machine
+}
+
+DreamUIFontData_DistanceField:LineHeight {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:LineHeight
+    src   "Line Height"
+    // from the engine's zh-Hans
+    text  "行高"
+    state draft
+}
+
+DreamUIFontData_DistanceField:SampleFontSize {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SampleFontSize
+    src   "Sample Font Size"
+    text  "样本字体大小"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SDFRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SDFRadius
+    src   "SDFRadius"
+    text  "SDF 半径"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SdfSource {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SdfSource
+    src   "Sdf Source"
+    text  "SDF 来源"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SmallTextCoverage {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SmallTextCoverage
+    src   "Small Text Coverage"
+    text  "小文本覆盖"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SmallTextMaxPixelSize {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SmallTextMaxPixelSize
+    src   "Small Text Max Pixel Size"
+    text  "小文本最大像素尺寸"
+    state machine
+}
+
+DreamUIFontData_DistanceField:VerticalOffset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:VerticalOffset
+    src   "Vertical Offset"
+    // from the engine's zh-Hans
+    text  "Vertical Offset"
+    state draft
+}
+
+EDreamUICoverageHinting.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:Auto
+    src   "Auto"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamUICoverageHinting.Autohint {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:Autohint
+    src   "Autohint"
+    text  "自动提示"
+    state machine
+}
+
+EDreamUICoverageHinting.EDreamUICoverageHinting_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:EDreamUICoverageHinting_MAX
+    src   "EDream UICoverage Hinting MAX"
+    text  "EDream UI 轮廓提示 最大值"
+    state machine
+}
+
+EDreamUICoverageHinting.None {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUISdfSource.BitmapSingleChannel {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource:BitmapSingleChannel
+    src   "Bitmap Single Channel"
+    text  "位图单通道"
+    state machine
+}
+
+EDreamUISdfSource.EDreamUISdfSource_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource:EDreamUISdfSource_MAX
+    src   "EDream UISdf Source MAX"
+    text  "EDream UI SDF 来源 最大值"
+    state machine
+}
+
+EDreamUISdfSource.OutlineMultiChannel {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource:OutlineMultiChannel
+    src   "Outline Multi Channel"
+    text  "轮廓多通道"
+    state machine
+}
+
+EDreamUISmallTextCoverage.EDreamUISmallTextCoverage_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:EDreamUISmallTextCoverage_MAX
+    src   "EDream UISmall Text Coverage MAX"
+    text  "EDream UI 细字覆盖 最大值"
+    state machine
+}
+
+EDreamUISmallTextCoverage.Inherit {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:Inherit
+    src   "Inherit"
+    // from the engine's zh-Hans
+    text  "继承"
+    state draft
+}
+
+EDreamUISmallTextCoverage.Off {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:Off
+    src   "Off"
+    // from the engine's zh-Hans
+    text  "关闭"
+    state draft
+}
+
+EDreamUISmallTextCoverage.On {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:On
+    src   "On"
+    // from the engine's zh-Hans
+    text  "开启"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIFontData_DistanceField {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField
+    src   "SDF(Signed Distance Field) Font asset for render smooth scaled sdf text."
+    text  "用于渲染平滑缩放 SDF 文本的 SDF (Signed Distance Field) 字体资源。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:AdditionalVerticalOffset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:AdditionalVerticalOffset
+    src   "Ascent and descent at SampleFontSize; negative means not cached yet."
+    text  "在SampleFontSize处的字体上伸与下伸；负值表示尚未缓存。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:BoldRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:BoldRatio
+    src   "How much bolder a bold glyph is, in em of total stroke growth (half on each side). Applied as a\ndilation of the distance field, so it is continuous and costs no atlas space; the advance grows\nby the same amount. 0.04 is FreeType's own synthetic bold (1/24 em); the old 0.08 closed the\ncounters of CJK glyphs. A text can shift its weight on top of this with FDreamTextStyle::FaceDilate."
+    text  "粗体字形比常规字形粗多少，以em为单位给出笔画总增量（每侧一半）。以距离场的\n膨胀实现，因此连续且不占用图集空间；步进量也按相同数值增大。0.04 是 FreeType\n自带的合成粗体（1/24 em）；旧的 0.08 会糊住 CJK 字形的字怀。文本还可以在此基础上\n用 FDreamTextStyle::FaceDilate 再调整字重。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:CoverageHinting {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:CoverageHinting
+    src   "Which hinter shapes the coverage glyphs."
+    text  "哪个 hinter 塑造覆盖字形。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:ItalicAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:ItalicAngle
+    src   "Angle of italic style in degree"
+    text  "斜体样式的角度（单位：度）。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:LineHeight {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:LineHeight
+    src   "-1 means not set yet. Transient, so widening it costs no serialized data."
+    text  "-1 表示未设置。临时值，因此增大它不会占用序列化数据。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SampleFontSize {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SampleFontSize
+    src   "Font size when render glyph."
+    text  "渲染字形时的字体大小。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SDFRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SDFRadius
+    src   "The radius of the distance field in pixels at SampleFontSize. Normally 1/4 to 1/3 of SampleFontSize.\nIt is also as far as any text effect can reach: outline, glow and underlay are clamped to\nSDFRadius / SampleFontSize em outside the glyph, and the atlas cells grow with it."
+    text  "在SampleFontSize处的字体距离场半径，以像素为单位。通常为SampleFontSize的1/4到1/3。\n它也是任何文字效果能达到的最远距离：描边、发光和底衬都被限制在字形外\nSDFRadius / SampleFontSize em以内，图集单元也随之增大。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SdfSource {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SdfSource
+    src   "Outline multi-channel is the default, for assets saved before this property existed too."
+    text  "默认情况下使用多通道轮廓，适用于在创建此属性之前保存的资源。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SmallTextCoverage {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SmallTextCoverage
+    src   "Draw text this small on screen from hinted coverage glyphs -- crisp stems and four subpixel positions, as Chrome and\nSlate draw it -- rather than from the field, which reads soft below about 20 px. Needs the outline field (BGRA atlas).\nDecided per glyph item at paint time; a text can still opt out (UDreamText::SmallTextRaster)."
+    text  "屏幕上的文字小到此值时，用经过微调的覆盖率字形绘制——笔画清晰，有四个亚像素位置，如同 Chrome 和\nSlate 的绘制方式——而不是用距离场，距离场在低于约 20 px 时显得发虚。需要轮廓场（BGRA 图集）。\n在绘制时按字形项逐项决定；文本仍可自行关闭（UDreamText::SmallTextRaster）。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:SmallTextMaxPixelSize {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:SmallTextMaxPixelSize
+    src   "Device pixels per em up to which coverage glyphs are used; 0 or less takes the project's UDreamGUISettings::SmallTextMaxPixelSize."
+    text  "在覆盖字形使用的像素数/em 为止的设备像素数；如果为 0 或更小，则使用项目的 UDreamGUISettings::SmallTextMaxPixelSize。"
+    state machine
+}
+
+DreamUIFontData_DistanceField:VerticalOffset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#DreamUIFontData_DistanceField:VerticalOffset
+    src   "-1 means not set yet. Transient, so widening it costs no serialized data."
+    text  "-1 表示未设置。临时值，因此增大它不会占用序列化数据。"
+    state machine
+}
+
+EDreamUICoverageHinting {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting
+    src   "Which hinter shapes a font's coverage glyphs. Value for value the rasterizer's EDreamGlyphHinting."
+    text  "哪个 hinter 塑造字形的覆盖字形。其值与 rasterizer 的 EDreamGlyphHinting 值相同。"
+    state machine
+}
+
+EDreamUICoverageHinting.Auto {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:Auto
+    src   "FreeType's light target: the face's own hints (vertical only) when it has them, the autohinter when it has none; the\nautohinter too at a fractional size on a face that would round its ppem, so the glyph keeps its size."
+    text  "FreeType 的 light 目标：字体自带 hint 时用其自带的 hint（仅纵向），没有则用自动微调器；\n对于会把 ppem 取整的字体，在非整数大小时也用自动微调器，使字形保持其大小。"
+    state machine
+}
+
+EDreamUICoverageHinting.Autohint {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:Autohint
+    src   "The autohinter (light target) for every face."
+    text  "每个字体的自动提示（轻量级目标）。"
+    state machine
+}
+
+EDreamUICoverageHinting.None {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUICoverageHinting:None
+    src   "No hinting: the outline at its exact size, in four subpixel phases."
+    text  "无提示：轮廓以其精确的大小显示，包含四个子像素阶段。"
+    state machine
+}
+
+EDreamUISdfSource {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource
+    src   "How the distance field is produced."
+    text  "距离场生成方式。"
+    state machine
+}
+
+EDreamUISdfSource.BitmapSingleChannel {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource:BitmapSingleChannel
+    src   "Single-channel field derived from a rasterized bitmap (the original method). Corners round off."
+    text  "从栅格化位图派生的单通道字段（原始方法）。角会变得圆钝。"
+    state machine
+}
+
+EDreamUISdfSource.OutlineMultiChannel {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISdfSource:OutlineMultiChannel
+    src   "Multi-channel field from the glyph outline (msdfgen): sharp corners from the median of three\nchannels, and a true distance in alpha that effects -- blur, glow, shadows, outlines -- widen into."
+    text  "由字形轮廓（msdfgen）生成的多通道场：尖角取自三个通道的中值，alpha 通道中则是真实距离，\n模糊、发光、阴影、描边等效果可向外扩展。"
+    state machine
+}
+
+EDreamUISmallTextCoverage {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage
+    src   "Whether a distance-field font draws small sizes from hinted coverage glyphs instead of its field."
+    text  "是否使用提示覆盖字形来绘制小尺寸的距离场字体。"
+    state machine
+}
+
+EDreamUISmallTextCoverage.Inherit {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:Inherit
+    src   "As the project says: UDreamGUISettings::bSmallTextCoverage, unless the console variable DreamGUI.Text.SmallTextCoverage is 0 or 1."
+    text  "如项目所述：UDreamGUISettings::bSmallTextCoverage，除非控制台变量 DreamGUI.Text.SmallTextCoverage 为 0 或 1。"
+    state machine
+}
+
+EDreamUISmallTextCoverage.On {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h#EDreamUISmallTextCoverage:On
+    src   "On, unless the console variable DreamGUI.Text.SmallTextCoverage is 0."
+    text  "启用，除非控制台变量 DreamGUI.Text.SmallTextCoverage 为 0。"
+    state machine
+}

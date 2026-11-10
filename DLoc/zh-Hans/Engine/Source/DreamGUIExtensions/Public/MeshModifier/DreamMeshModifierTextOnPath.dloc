@@ -1,0 +1,557 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierTextOnPath {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath
+    src   "Text On Path"
+    text  "文本路径"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:Align {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:Align
+    src   "Align"
+    // from the engine's zh-Hans
+    text  "对齐"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:Anchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:Anchor
+    src   "Anchor"
+    // from the engine's zh-Hans
+    text  "锚点"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:BaselineOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:BaselineOffset
+    src   "Baseline Offset"
+    text  "基线偏移"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bBendGlyphs {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bBendGlyphs
+    src   "Bend Glyphs"
+    text  "弯曲字形"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bClockwise {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bClockwise
+    src   "Clockwise"
+    text  "顺时针"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bFlip {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bFlip
+    src   "Flip"
+    // from the engine's zh-Hans
+    text  "翻转"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:bHideOutside {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bHideOutside
+    src   "Hide Outside"
+    text  "隐藏外部"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:CellLength {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:CellLength
+    src   "Cell Length"
+    text  "单元格长度"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:CircleCentre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:CircleCentre
+    src   "Circle Centre"
+    text  "圆形中心"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:GetBaselineOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:GetBaselineOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:GetLetterSpacing:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:GetLetterSpacing:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:GetPathWidget:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:GetPathWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:GetStartOffset:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:GetStartOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:LetterSpacing {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:LetterSpacing
+    src   "Letter Spacing"
+    // from the engine's zh-Hans
+    text  "Letter Spacing"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:OffsetSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:OffsetSpeed
+    src   "Offset Speed"
+    text  "偏移速度"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:PathWidget {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:PathWidget
+    src   "Path Widget"
+    text  "路径控件"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:Radius {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:Radius
+    src   "Radius"
+    // from the engine's zh-Hans
+    text  "半径"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetAlign:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetAlign:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetAnchor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetAnchor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetBaselineOffset:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetBaselineOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetBendGlyphs:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetBendGlyphs:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetCircle:bInClockwise {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetCircle:bInClockwise
+    src   "In Clockwise"
+    text  "顺时针方向"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:SetCircle:InCentre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetCircle:InCentre
+    src   "In Centre"
+    text  "中心位置"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:SetCircle:InRadius {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetCircle:InRadius
+    src   "In Radius"
+    // from the engine's zh-Hans
+    text  "输入半径"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetCircle:InStartAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetCircle:InStartAngle
+    src   "In Start Angle"
+    // from the engine's zh-Hans
+    text  "输入起始角度"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetCircle:InSweepAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetCircle:InSweepAngle
+    src   "In Sweep Angle"
+    text  "扫描角度"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:SetFlip:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetFlip:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetHideOutside:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetHideOutside:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetLetterSpacing:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetLetterSpacing:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetOffsetSpeed:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetOffsetSpeed:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetPathWidget:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetPathWidget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetSource:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetSource:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SetStartOffset:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SetStartOffset:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:Source {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:Source
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:StartAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:StartAngle
+    src   "Start Angle"
+    // from the engine's zh-Hans
+    text  "开始角"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:StartOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:StartOffset
+    src   "Start Offset"
+    // from the engine's zh-Hans
+    text  "初始偏移"
+    state draft
+}
+
+DreamMeshModifierTextOnPath:SweepAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SweepAngle
+    src   "Sweep Angle"
+    text  "扫描角度"
+    state machine
+}
+
+EDreamTextPathAlign.Centre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:Centre
+    src   "Centre"
+    text  "中心"
+    state machine
+}
+
+EDreamTextPathAlign.EDreamTextPathAlign_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:EDreamTextPathAlign_MAX
+    src   "EDream Text Path Align MAX"
+    text  "EDream 文本路径对齐 最大值"
+    state machine
+}
+
+EDreamTextPathAlign.End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+EDreamTextPathAlign.Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+EDreamTextPathAnchor.Bottom {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamTextPathAnchor.EDreamTextPathAnchor_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:EDreamTextPathAnchor_MAX
+    src   "EDream Text Path Anchor MAX"
+    text  "EDream 文本路径锚点 最大值"
+    state machine
+}
+
+EDreamTextPathAnchor.Middle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Middle
+    src   "Middle"
+    // from the engine's zh-Hans
+    text  "中"
+    state draft
+}
+
+EDreamTextPathAnchor.Top {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+EDreamTextPathSource.Circle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource:Circle
+    src   "Circle"
+    // from the engine's zh-Hans
+    text  "环形"
+    state draft
+}
+
+EDreamTextPathSource.EDreamTextPathSource_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource:EDreamTextPathSource_MAX
+    src   "EDream Text Path Source MAX"
+    text  "EDream Text Path Source MAX"
+    state machine
+}
+
+EDreamTextPathSource.Path {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource:Path
+    src   "Path"
+    // from the engine's zh-Hans
+    text  "路径"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierTextOnPath {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath
+    src   "Lays a text's glyphs along a path: a circle, an arc, or another widget's Path. Each glyph goes to the point as far\nalong the path as it was along the line, turned to follow the path (or, with Bend Glyphs, bent along it), lifted off\nthe path by Baseline Offset; Align, Start Offset and Letter Spacing place the run, Flip puts it on the path's other\nside, and Offset Speed scrolls it along -- a marquee.\n\nIt runs after the modifiers that work on characters, so a text animation's moves are kept: a character it lifts is\nlifted off the path, one it turns is turned from the path's direction. On anything but a text, the whole mesh is bent\nalong the path."
+    text  "将文本的字形沿路径排列：圆形、圆弧或其他控件的路径。每个字形会移动到路径上的对应点，该点在路径上的距离与其在线性文本中的位置相同，\n并朝向路径方向（启用弯曲字形时则沿路径弯曲），再按基线偏移抬离\n路径；对齐、起始偏移和字距决定这段文本的位置，翻转会将其放到路径的另一\n侧，偏移速度则让它沿路径滚动——形成跑马灯。\n\n它在作用于字符的修改器之后运行，因此文本动画的运动会被保留：被抬起的字符会\n从路径上抬离，被旋转的字符会转向路径方向。对于文本以外的对象，整个网格会沿\n路径弯曲。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:BaselineOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:BaselineOffset
+    src   "How far off the path the anchor line sits, in local units, outward from the path's left side."
+    text  "锚线距路径的距离，单位为局部单位，从路径左侧向外计算。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bBendGlyphs {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bBendGlyphs
+    src   "Bends each glyph along the path, rather than turning it whole to the path's direction at its middle."
+    text  "沿路径弯曲每个字形，而不是在字形中点处将其整体转向路径方向。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bFlip {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bFlip
+    src   "Runs the text the other way along the path, on its other side."
+    text  "让文本沿路径反向排列，并位于路径的另一侧。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:bHideOutside {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:bHideOutside
+    src   "On an open path, hides the glyphs whose middle is past either end, instead of carrying them on straight."
+    text  "在开放路径上，隐藏中点越过任一端的字形，而不是让它们继续沿直线排列。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:CellLength {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:CellLength
+    src   "The widest a bent glyph's columns may be, in local units."
+    text  "弯曲字形的列宽上限，单位为局部单位。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:CircleCentre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:CircleCentre
+    src   "The circle's centre, from the widget's centre, in local units (y up)."
+    text  "圆心相对控件中心的偏移，单位为局部单位（y 轴向上）。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:LetterSpacing {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:LetterSpacing
+    src   "Space added between one glyph and the next, in local units."
+    text  "字形之间添加的间距，单位为局部单位。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:OffsetSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:OffsetSpeed
+    src   "Local units a second Start Offset moves by while the game runs; on a closed path the text goes round and round."
+    text  "游戏运行时起始偏移每秒移动的局部单位数；在闭合路径上，文本会不断环绕。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:PathWidget {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:PathWidget
+    src   "The widget whose visual is the Path to follow."
+    text  "以自身视觉作为要跟随路径的控件。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:StartAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:StartAngle
+    src   "Degrees clockwise from twelve o'clock the arc starts at."
+    text  "圆弧起始位置相对十二点方向的顺时针角度。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:StartOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:StartOffset
+    src   "Moves the run along the path, in local units. Animate it, or let Offset Speed move it."
+    text  "在本地单位上移动文本，使其沿路径移动。可以动画化它，或者让“偏移速度”来移动它。"
+    state machine
+}
+
+DreamMeshModifierTextOnPath:SweepAngle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:SweepAngle
+    src   "Degrees the arc runs; 360 is the whole circle, which the text then wraps around."
+    text  "弧的运行角度；360 度是一个完整的圆，文本会围绕它环绕。"
+    state machine
+}
+
+EDreamTextPathAlign {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign
+    src   "Where along the path the text sits."
+    text  "文本在路径上的位置。"
+    state machine
+}
+
+EDreamTextPathAlign.Centre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:Centre
+    src   "Its middle at the path's middle."
+    text  "文本的中间位于路径的中间。"
+    state machine
+}
+
+EDreamTextPathAlign.End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:End
+    src   "Its end at the path's end."
+    text  "文本的末端位于路径的末端。"
+    state machine
+}
+
+EDreamTextPathAlign.Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAlign:Start
+    src   "Its start at the path's start (plus Start Offset)."
+    text  "文本的起始位置位于路径的起始位置（加上起始偏移量）。"
+    state machine
+}
+
+EDreamTextPathAnchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor
+    src   "Which line of the text the path runs through."
+    text  "文本的哪一行沿着路径运行。"
+    state machine
+}
+
+EDreamTextPathAnchor.Bottom {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Bottom
+    src   "The bottom of the glyphs: the letters stand on the path."
+    text  "字形的底部：字母位于路径上。"
+    state machine
+}
+
+EDreamTextPathAnchor.Middle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Middle
+    src   "The middle of the glyphs, top to bottom."
+    text  "字形的中间，从上到下。"
+    state machine
+}
+
+EDreamTextPathAnchor.Top {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathAnchor:Top
+    src   "The top of the glyphs: the letters hang from it."
+    text  "字形的顶部：字母悬挂在其下方。"
+    state machine
+}
+
+EDreamTextPathSource {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource
+    src   "What the text runs along."
+    text  "文本沿着什么运行。"
+    state machine
+}
+
+EDreamTextPathSource.Circle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource:Circle
+    src   "A circle or an arc of one, about a point of this widget."
+    text  "一个圆或圆弧，围绕此小部件的点。"
+    state machine
+}
+
+EDreamTextPathSource.Path {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#EDreamTextPathSource:Path
+    src   "The path drawn by another widget's Path visual (UDreamPath)."
+    text  "由其他组件的路径视觉效果 (UDreamPath) 绘制的路径。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Text On Path" {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextOnPath.h#DreamMeshModifierTextOnPath:Source
+    src   "Text On Path"
+    text  "文本在路径上"
+    state machine
+}

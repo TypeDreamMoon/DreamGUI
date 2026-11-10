@@ -1,0 +1,25 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerDetails
+
+WidgetNameHint {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDetailsHeader.h
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+EmptyWidgetName {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDetailsHeader.h
+    src   "Widget name cannot be empty."
+    text  "控件名称不能为空。"
+    state machine
+}
+
+ChangeWidgetName_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetDetailsHeader.h
+    src   "Change Name"
+    text  "更改名称"
+    state machine
+}

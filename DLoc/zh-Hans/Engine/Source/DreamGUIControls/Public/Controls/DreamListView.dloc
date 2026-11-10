@@ -1,0 +1,3126 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+DreamListDraggingStateEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListDraggingStateEvent__DelegateSignature
+    src   "Whether this list is dragging one of its own rows."
+    text  "此列表是否正在拖动它自己的一行。"
+    state machine
+}
+
+DreamListEntriesGeneratedEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListEntriesGeneratedEvent__DelegateSignature
+    src   "A batch of rows was just rebuilt: how many the control now has realized."
+    text  "刚刚重建了一批行：控件当前已实例化了多少行。"
+    state machine
+}
+
+DreamListItemDragEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDragEvent__DelegateSignature
+    src   "A drag that started on a row: which item, and the operation carrying it."
+    text  "从某一行开始的拖动：哪个项，以及承载它的操作。"
+    state machine
+}
+
+DreamListItemDropEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDropEvent__DelegateSignature
+    src   "A drop that landed on a row, with the zone it landed in."
+    text  "落在某一行上的放置，以及它落入的区域。"
+    state machine
+}
+
+DreamListItemEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemEvent__DelegateSignature
+    src   "An item something happened TO, with its object when the source has one."
+    text  "发生了某事的项；当来源带对象时一并给出该对象。"
+    state machine
+}
+
+DreamListItemHoverEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemHoverEvent__DelegateSignature
+    src   "An item the pointer entered or left."
+    text  "指针进入或离开的项。"
+    state machine
+}
+
+DreamListItemSelectableQuery__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemSelectableQuery__DelegateSignature
+    src   "Whether one item may be chosen or navigated to at all.\n\nSingle-cast, like the tree's children provider and for the same reason: this is a QUESTION, and\ntwo answers to a question is an ambiguity nothing can resolve. Unbound means yes."
+    text  "某一项是否可被选中或导航到。\n\n单播，与树的子项提供器一样，原因也相同：这是一个问题，而对一个问题\n给出两个答案是无法化解的歧义。未绑定时表示是。"
+    state machine
+}
+
+DreamListRowButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowButton
+    src   "The button a list puts on its rows: an ordinary UUIButton that lets its list answer a navigation\npress first.\n\nSListView answers a direction by ITEM, not by geometry: the selector steps one line (a tile view one\ntile along a line), NavigationSelect selects what it lands on, the list scrolls it into view, and\nonly a press that would take the selector off the list is handed to the widgets around it. A row is\nwhat navigation is resting on, so the row's selectable is where that question has to be put -- and\nOnNavigate is the one call the pointer module makes on it when a press is actually taken. The\nnavigation visualizer and every other query go through FindNavigableOn, which never reaches here,\nso whatever the list does in answer (selecting, scrolling, a tree opening a node) happens for real\npresses only. UUISlider spends its left and right the same way.\n\nStepping by item rather than letting the scan pick a widget is also what keeps a recycling list\nhonest: the list scrolls the item into view first and only then names the row that now shows it,\nso a window that re-binds on the way can never leave focus on a row showing the wrong item.\n\nThe stock row template carries this. A row drawn by an authored template keeps whatever selectable\nits author gave it, and with it the plain geometric navigation every other widget gets."
+    text  "列表放在其行上的按钮：一个普通的UUIButton，让它先由自己的列表来回答导航\n按下。\n\nSListView按项而非按几何来回答方向：选择器步进一行（平铺视图沿一行\n步进一格），NavigationSelect选中它落到的东西，列表将其滚动到可见处，\n只有会带走选择器离开列表的按下才交给周围的控件。行是导航所停驻之处，\n因此行上的可选对象正是必须提出这个问题的地方——而OnNavigate是指针模块\n在实际接受按下时对它做的唯一调用。导航可视化器和所有其他查询都走\nFindNavigableOn，它永远不会到达这里，因此列表在回答中所做的任何事\n（选中、滚动、树展开节点）都只发生在真实按下时。UUISlider也以同样的\n方式处理它的左右方向。\n\n按项步进、而不是让扫描去挑控件，也是让回收列表保持诚实的原因：列表先把项\n滚动到可见处，然后才指出现今显示它的行，所以途中重新绑定的窗口绝不会把焦点\n留在显示错误项的行上。\n\n标准行模板自带这一点。由自定义模板绘制的行会保留其作者赋予它的任何可选\n对象，也随之保留其他每个控件都有的普通几何导航。"
+    state machine
+}
+
+DreamListRowButton:PoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowButton:PoolIndex
+    src   "The POOL slot, not the item: which item the row stands for is asked when the press arrives."
+    text  "池槽位，而非项：行代表哪个项要等按下到达时才询问。"
+    state machine
+}
+
+DreamListRowDragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDragSource
+    src   "The drag source a list puts on its rows.\n\nA subclass of the library's own UDreamUIDragSource rather than a second detection path: the base\nalready owns the press-and-move test, the operation hand-off and the end-of-drag notification,\nand a list that re-implemented those would be a second set of rules for the same gesture. All\nthis adds is WHOSE row it is -- the back-pointer and the pool slot -- so the payload can be the\nitem rather than the widget."
+    text  "列表放在其行上的拖动源。\n\n它是库自带UDreamUIDragSource的子类，而不是第二条检测路径：\n基类已经拥有按下并移动的测试、操作交接和拖动结束通知，若列表重新\n实现这些，就会为同一手势再添一套规则。这里新增的只是这是谁的行\n——回指针和池槽位——以便载荷可以是\n项而不是控件。"
+    state machine
+}
+
+DreamListRowDragSource:PoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDragSource:PoolIndex
+    src   "The POOL slot, not the item: a recycled row stands for a different item every few scrolls."
+    text  "池槽位，而非项：回收的行每隔几次滚动就代表另一个项。"
+    state machine
+}
+
+DreamListRowDropTarget {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget
+    src   "The drop target a list puts on its rows.\n\nSame relationship as the source above. What it adds is the ZONE: the base answers \"may this drop\nland here\", and a list also has to say WHERE on the row it landed, which is a question about the\nrow's rect and the pointer -- neither of which the base has any reason to look at."
+    text  "列表放在其行上的放置目标。\n\n与上面的源关系相同。它新增的是区域：基类回答“此放置是否可以落在这里”，\n而列表还必须说明它落在行上的哪里，这涉及行的矩形和指针——基类没有任何理由\n去看这两者。"
+    state machine
+}
+
+DreamListRowDropTarget:HandleDragEnter {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragEnter
+    src   "Bound to this target's OWN enter and leave, so the row never has to be searched for.\n\nThe base's delegates carry only the operation, and the operation cannot say which row fired.\nA search would also have had to guess on leave, where the hovered flag is already down by the\ntime anyone is told -- whereas the target has known its own pool slot since it was made."
+    text  "绑定到此目标自身的 enter 和 leave，因此无需再查找该行。\n\n基类的委托只携带操作，而操作无法说明是哪一行触发的。\n查找在 leave 时也只能靠猜，因为等到有人收到通知时，悬停标志已经\n置下——而目标从创建时就已知自己的池槽位。"
+    state machine
+}
+
+DreamListRowDropTarget:HandleDragOver {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragOver
+    src   "Every frame a drag hovers this row -- the subsystem's Over, forwarded for the same reason the\ntwo edges are. It is what edge scrolling rides: the drag-drop subsystem already ticks the hover\nonce a frame, so the list steps its scroll there instead of keeping a clock of its own."
+    text  "拖拽悬停于此行的每一帧——子系统的 Over 被转发，原因与\n两个边缘相同。边缘滚动正是靠它驱动：拖放子系统已经每帧 tick 一次悬停，\n因此列表在那里步进滚动，而不是自己维护一个时钟。"
+    state machine
+}
+
+DreamListScrolledEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListScrolledEvent__DelegateSignature
+    src   "The list moved: where to, and how much of it is on screen.\n\nBoth numbers, because a consumer drawing its own position indicator needs both and can work out\nneither -- the row pitch and the realized window are the control's business, not theirs."
+    text  "列表移动了：移到何处，以及有多少内容在屏幕上。\n\n两个数字都要，因为自行绘制位置指示器的使用方两者都需要，却一个也\n算不出来——行间距和已实现窗口是控件的分内事，不是它们的。"
+    state machine
+}
+
+DreamListView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView
+    src   "A list whose hierarchy is code, not an asset: rows built from a source, in a scrolling viewport.\n\nUMG's ListView in the DreamGUI idiom -- and deliberately smaller than it. There is no entry-widget\nprotocol to implement and no data source to write: the two properties a designer actually reaches\nfor (a set of items, and which one is selected) are UPROPERTYs, so .dui, the designer, Blueprint\nand a `<->` binding can all drive them without anyone writing a line of glue.\n\nSee UDreamListViewBase for the shape of the tree, why the rows are placed rather than arranged,\nwhen it starts recycling them, and how a Native.List sits beside the `each` language feature."
+    text  "层级由代码而非资产定义的列表：行由数据源构建，位于滚动视口中。\n\nDreamGUI 风格下的 UMG ListView——并且刻意比它更小。没有需要实现的条目控件\n协议，也没有需要编写的数据源：设计师真正会用的两个属性（一组项，以及选中哪一项）\n都是 UPROPERTY，因此 .dui、设计师、蓝图和 `<->` 绑定都能驱动它们，\n而无需任何人写一行胶水代码。\n\n参见 UDreamListViewBase，了解树的形态、为何行是放置而非排列、\n何时开始回收它们，以及 Native.List 如何与 `each` 语言特性并列。"
+    state machine
+}
+
+DreamListView:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:GetStyle
+    src   "By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct."
+    text  "按值而非按引用：UFUNCTION 返回值必须是值，而样式是一个小型结构体。"
+    state machine
+}
+
+DreamListView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:SetStyle
+    src   "Replace the whole look and re-push it. Row geometry is style, so this rebuilds the rows."
+    text  "替换整个外观并重新推送。行几何属于样式，因此这会重建这些行。"
+    state machine
+}
+
+DreamListView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why it\nstays editable instead of being gated on the enum."
+    text  "此实例自身的外观。当 StyleSource 如此指定且项目中确实存在样式表时，项目样式表\n优先；项目中不存在样式表时，此属性就是实际生效的外观——这也是它\n保持可编辑、而不是被枚举加以门控的原因。"
+    state machine
+}
+
+DreamListViewBase {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase
+    src   "Everything a list and a tree have in common, which is nearly all of it.\n\nA tree IS a list that indents, and this class is written to be exactly that: the viewport, the\nbar, the scrolled column, the row template, the row POOL, the row colours and the one selected\nindex live here, and each concrete control adds only what makes it itself -- its typed style,\nand (for the tree) a depth per item, a per-row indent and a twisty. FDreamTreeViewStyle is built\nthe same way round, carrying a whole FDreamListStyle rather than restating its fields.\n\nThis class is abstract and holds NO style property. That is deliberate, and it is the reason\nthere is a base class at all rather than UDreamTreeView deriving from UDreamListView: the\nfamily's contract is that a control's look is ONE decision (see UDreamUIControl), and a tree\ninheriting a spare FDreamListStyle it never resolves would be a second source of truth wearing\nthe same name as the real one. Each subclass declares `Style`, typed, and answers\nResolveListStyle() with the list half of it.\n\nTHE SHAPE\n---------\nA face carrying the look, a viewport clipped inside it holding the scroll behaviour, the column\nthat slides within the viewport, and a bar along the viewport's edge -- UDreamScrollBox's\narrangement, and for its reasons. Two of them are worth restating because they are not obvious:\nthe behaviour sits on the VIEWPORT and the bar is the viewport's SIBLING, because a scroll view\naccepts drags from anywhere inside its own widget, so a bar hung underneath it would scroll the\ncontent every time the handle was grabbed; and the column's height is the control's statement of\nhow far there is to scroll, never layout output.\n\nROWS ARE PLACED, NOT ARRANGED\n-----------------------------\nThe column holds NO layout container and every row states its own rect: top-anchored, stretched\nacross, and offset by its index times the row pitch. Three things follow, and all three matter:\n\n - a row's height is the style's RowHeight, full stop. The previous shape put the rows in a\n   vertical box on equal-weight Fill slots and then authored the COLUMN's height to exactly\n   rows*RowHeight + gaps so the box would divide it back out -- an equation solved in two places\n   that had to agree, and which stopped agreeing the moment anything measured a row's content;\n - placing row N costs nothing and depends on no sibling, which is what makes recycling possible\n   at all: a box arranges every child it has, so a box can never show a window onto a million;\n - and the answer is available with no layout pass at all, which is what a headless test and the\n   designer's first frame actually see.\n\nVIRTUALIZATION IS A THRESHOLD, NOT A MODE\n-----------------------------------------\nUnder VirtualizationThreshold items there is one row widget per item and GetRowWidget answers for\nevery index -- the contract this control has always had, and the one that makes it correct in a\nheadless test where no viewport has been arranged. At or above it, the pool is sized to the\nwindow plus an overscan and rows are re-bound as the view moves, which is what UMG's ListView\ndoes and the only way a hundred thousand rows is anything but a hang. GetRowWidget then answers\nfor realized rows and null for the rest, which is UMG's contract too.\n\nNAVIGATION STEPS BY ITEM, AS SListView's DOES\n--------------------------------------------\nA navigation press on a row is answered by the list (see UDreamListRowButton): along the scroll axis\nthe next or previous item -- ResolveNavigationTarget, which a tile view answers per line and per\ncolumn -- is scrolled into view and, while bSelectItemOnNavigation is on, selected, the way\nSListView::OnNavigation and NavigationSelect do it. A press with nowhere to go inside the list (past\neither end, or across a one-column list) is left to the ordinary geometric scan, which takes focus\nto whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from\noutside is that same scan, which lands on the nearest row and does not select it.\n\nMULTI SELECTION IS SListView's\n------------------------------\nIn Multi mode a click chooses the way STableRow::OnMouseButtonDown and OnMouseButtonUp do: a plain\nclick selects the row it lands on and nothing else; Ctrl adds the row or takes it away; Shift adds\nevery row from the range anchor to this one to what is already chosen, and Ctrl with Shift does the\nsame. The anchor is the row the last plain click, Ctrl click, finger tap or plain navigation step landed\non -- SListView's RangeSelectionStart -- and a Shift range leaves it where it was. A finger has no\nmodifier keys, and STableRow::OnTouchEnded gives a tap in Multi mode the one meaning it can have: it\nadds the row it lifts on and never takes one away. The keys are SListView::NavigationSelect's and\nOnKeyDown's: an arrow with Shift selects from the anchor to the row it moves to and nothing else, with\nCtrl and Shift adds that range, with Ctrl alone adds the row it moves to, and Ctrl+A selects every row.\nThe modifiers a click is read with are the clicking player's, held under their hands as the player\ncontroller has them; the Ctrl spot is shared with Cmd. Every selection is still asked of the veto\n(OnIsItemSelectableOrNavigable), and a click still selects on the release that completes it.\n\nTAB SEES ONE STOP\n-----------------\nA list is one Tab stop, as a browser's list box is: TabNavigation is Once, Tab enters at\nResolveTabEntry's row -- the selected item's, else the first item's, the last's for Shift+Tab, found\nby index, scrolled into view and built, because the rows exist only for what shows -- and the next\nTab leaves the list. The arrows move inside it. Next and Prev are never the rows' to step through\n(HandleRowNavigation leaves them to the Tab walk), and the bar is no stop at all.\n\nWHY THE PLAIN SCROLL VIEW, NOT UUIListView\n------------------------------------------\nThe recycling stack (UUIRecyclableScrollView, and UUIListView on top of it) is the right answer\nfor a data source and the wrong one for a control, for reasons that are all in those files:\n\n - its unit is a UObject* item, because IUIRecyclableScrollViewDataSource is a UObject protocol.\n   A Native.List's natural item is a line of text -- the same call FDreamDropdownStyle's options\n   make -- and feeding the recycler would mean minting a UObject per label;\n - a cell only exists after Start(), which needs a live world, a registered tree AND an arranged\n   viewport: InitializeOnDataSource sizes the cell pool from the content parent's local-space\n   extents. A control has to be correct the instant its properties are set;\n - and UUIListView::Awake hands its data-source seat to whoever claimed it first, which is how an\n   `each` block's adapter gets in. A control hosting one would be a third party to that seat.\n\nSo the rows are built here, from a template, into a column inside a plain UUIScrollView -- which\nis what UDreamDropdown's option list does, because it is the same problem.\n\nHOW THIS RELATES TO `each`\n--------------------------\nThey are the two halves of the same need and they do not compete:\n\n  `each Track in Tracks { ... }` is the LANGUAGE route. It compiles a repeated subtree into the\n  generated class, feeds a host recyclable view through UDreamUIEachAdapter, and binds each row's\n  fields to the item's members (`Text <- Track.Title`). You get arbitrary row shape and per-field\n  bindings, and you pay for it with a .dui class to live in and a row you have to draw yourself.\n\n  `Native.List` is the CONTROL route. One tag, two properties, and you have a list that looks\n  like every other list in the project because its rows come from the style sheet.\n\nReach for `each` when the ROW is the interesting part. Reach for Native.List when the LIST is."
+    text  "列表和树共有的全部内容，而这几乎是它们的全部。\n\n树就是一种会缩进的列表，而这个类正是照此编写的：视口、\n滚动条、滚动列、行模板、行池、行颜色和唯一选中\n索引都在这里，每个具体控件只添加使其成为自身的东西——它的类型化样式，\n以及（对于树）每项的深度、每行缩进和一个展开箭头。FDreamTreeViewStyle 也按\n同样的方式构建，携带整个 FDreamListStyle，而不是重新声明其字段。\n\n此类是抽象类，且不包含任何样式属性。这是有意为之，也正是\n之所以存在基类、而不是让 UDreamTreeView 派生自 UDreamListView 的原因：该\n家族的约定是，控件的外观是唯一一项决策（参见 UDreamUIControl），而一棵树\n若继承一个它从不解析的闲置 FDreamListStyle，就会成为第二个事实来源，\n却与真正的那个同名。每个子类都声明类型化的 `Style`，并\n用其中的列表部分来回答 ResolveListStyle()。\n\n结构\n---------\n一个承载外观的表面，一个裁剪在其内部并承载滚动行为的视口，一个\n在视口内滑动的列，以及一条沿视口边缘的滚动条——UDreamScrollBox 的\n布局，原因也相同。其中两点值得重申，因为它们并不显而易见：\n滚动行为位于视口上，而滚动条是视口的同级，因为滚动视图\n会接受其自身控件内任意位置的拖动，所以挂在它下面的滚动条会在每次抓住滑块时滚动\n内容；列的高度是控件对可滚动距离的声明，\n绝不是布局输出。\n\n行是放置的，不是排列的\n-----------------------------\n列不包含任何布局容器，每一行都声明自己的矩形：顶部锚定、横向\n拉伸，并按索引乘以行距进行偏移。由此得出三点，且三点都很重要：\n\n - 一行的高度就是样式的 RowHeight，没有别的。之前的结构把行放进一个\n   垂直盒中、使用等权重的 Fill 槽位，然后把列的高度精确设定为\n   rows*RowHeight + gaps，以便盒再把它分配回去——这是一个在两个地方求解\n   且必须一致的方程，而一旦有任何东西测量了行的内容，它就不再一致；\n - 放置第 N 行的成本为零，且不依赖任何同级项，这正是回收之所以可能\n   的原因：盒会排列它拥有的每个子项，因此盒永远无法显示百万行中的窗口；\n - 并且答案无需任何布局过程即可获得，这正是无头测试和\n   设计师的第一帧实际看到的东西。\n\n虚拟化是阈值，不是模式\n-----------------------------------------\n当项数低于 VirtualizationThreshold 时，每个项对应一个行控件，且 GetRowWidget 会对\n每个索引作出回答——这是此控件一直以来的约定，也是让它在\n未安排任何视口的无头测试中保持正确的约定。达到或超过该阈值时，池的大小设为\n窗口加上一个 overscan，并且行会随着视图移动而重新绑定，这正是 UMG 的 ListView\n所做的，也是让十万行不至于卡死的唯一方式。此时 GetRowWidget 对\n已实现的行作出回答，对其余行返回 null，这也是 UMG 的约定。\n\n导航按项步进，与 SListView 的做法相同\n--------------------------------------------\n在行上按下导航键时，由列表来回答（参见 UDreamListRowButton）：沿滚动轴，\n下一个或上一个项——ResolveNavigationTarget，平铺视图会按行和按\n列回答——会被滚动到视野中，并且在 bSelectItemOnNavigation 开启时被选中，方式与\nSListView::OnNavigation 和 NavigationSelect 相同。若在列表内部无处可去（越过\n任一端，或横穿单列列表），则交给普通的几何扫描，它会把焦点\n移到列表旁边的任意对象——这是 STableViewBase::OnNavigation 的回答。从外部\n到达列表也是同一次扫描，它会落在最近的行上，但不选中它。\n\n多选遵循 SListView\n------------------------------\n在 Multi 模式下，单击的选择方式与 STableRow::OnMouseButtonDown 和 OnMouseButtonUp 相同：普通\n单击会选中它落到的行，除此之外不选别的；Ctrl 会添加该行或将其移除；Shift 会把\n从范围锚点到当前行的所有行添加到已选内容中，Ctrl+Shift 也是如此。\n锚点是上一次普通单击、Ctrl 单击、手指点按或普通导航步进落到的行\n——即 SListView 的 RangeSelectionStart——而 Shift 范围会把它留在原处。手指没有\n修饰键，STableRow::OnTouchEnded 让 Multi 模式下的点按具有它唯一能有的含义：它\n添加它抬起时所在的行，且绝不移除任何行。按键行为来自 SListView::NavigationSelect 和\nOnKeyDown：带 Shift 的方向键会选中从锚点到其移动到的行，除此之外不选别的；带\nCtrl 和 Shift 会添加该范围；仅带 Ctrl 会添加其移动到的行；Ctrl+A 会选中所有行。\n读取单击所用的修饰键来自执行单击的玩家，即其玩家\n控制器所保持的按键状态；Ctrl 的位置与 Cmd 共享。每次选择仍会经过否决\n（OnIsItemSelectableOrNavigable），而单击仍在完成它的释放时进行选择。\n\nTab 只看到一个停靠点\n-----------------\n列表是一个 Tab 停靠点，就像浏览器的列表框一样：TabNavigation 为 Once，Tab 从\nResolveTabEntry 的行进入——选中项的行，否则是第一项的行，Shift+Tab 则是最后一项的行，按\n索引找到、滚动到视野中并构建，因为行只为显示出来的内容而存在——而下一次\nTab 会离开列表。方向键在其内部移动。Next 和 Prev 从来不由行来步进\n（HandleRowNavigation 将它们留给 Tab 遍历），而滚动条根本不是停靠点。\n\n为什么使用普通滚动视图，而不是 UUIListView\n------------------------------------------\n回收栈（UUIRecyclableScrollView，以及其上的 UUIListView）对于数据源是正确答案，\n对于控件则是错误答案，原因都在那些文件中：\n\n - 它的单位是 UObject* 项，因为 IUIRecyclableScrollViewDataSource 是一个 UObject 协议。\n   Native.List 的自然项是一行文本——FDreamDropdownStyle 的选项也做同样的\n   选择——而喂给回收器意味着为每个标签创建一个 UObject；\n - 单元格只有在 Start() 之后才存在，而 Start() 需要运行中的世界、已注册的树以及已排布的\n   视口：InitializeOnDataSource 根据内容父项的局部空间\n   范围确定单元格池的大小。控件必须在设置其属性的那一刻就是正确的；\n - 并且 UUIListView::Awake 会将其数据源席位交给最先认领它的人，`each`\n   块的适配器就是这样进入的。承载这种视图的控件会成为该席位的第三方。\n\n因此这里的行是从模板构建到普通 UUIScrollView 内的列中的——这\n正是 UDreamDropdown 的选项列表所做的，因为这是同一个问题。\n\n这与 `each` 的关系\n--------------------------\n它们是同一需求的两半，并不相互竞争：\n\n  `each Track in Tracks { ... }` 是语言路线。它把重复的子树编译进\n  生成的类，通过 UDreamUIEachAdapter 向宿主可回收视图提供数据，并将每一行的\n  字段绑定到项的成员（`Text <- Track.Title`）。你可以获得任意的行形状和逐字段\n  绑定，代价是需要一个 .dui 类来安身，并且行必须自己绘制。\n\n  `Native.List` 是控件路线。一个标签、两个属性，你就得到一个看起来\n  像项目中其他所有列表一样的列表，因为它的行来自样式表。\n\n当行本身是有趣的部分时，选择 `each`。当列表本身是有趣的部分时，选择 Native.List。"
+    state machine
+}
+
+DreamListViewBase:ActiveDragOperation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ActiveDragOperation
+    src   "The operation this list's own drag is riding, so an ending drag can be told apart from anyone's."
+    text  "此列表自身拖动所依附的操作，用于将结束的拖动与其他来源的拖动区分开。"
+    state machine
+}
+
+DreamListViewBase:AddItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItem
+    src   "Append one object to the source and rebuild -- UMG's AddItem."
+    text  "向源追加一个对象并重建——即 UMG 的 AddItem。"
+    state machine
+}
+
+DreamListViewBase:AddItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemAt
+    src   "Insert one object at a source index and rebuild -- UMG's AddItemAt.\n\nThe parallel text goes in at the SAME place, because the two arrays describe the same rows:\ninserting into one alone re-labels every row after the seam."
+    text  "在源的指定索引处插入一个对象并重建——即 UMG 的 AddItemAt。\n\n并行文本会插入到同一位置，因为这两个数组描述的是同一批行：\n只向其中一个插入会重新标记接缝之后的所有行。"
+    state machine
+}
+
+DreamListViewBase:AddItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItems
+    src   "Append several objects and rebuild ONCE -- UMG's AddItems."
+    text  "追加多个对象并只重建一次——即 UMG 的 AddItems。"
+    state machine
+}
+
+DreamListViewBase:AddItemsAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemsAt
+    src   "Insert several objects at a source index and rebuild once -- UMG's AddItemsAt."
+    text  "在源的指定索引处插入多个对象并只重建一次——即 UMG 的 AddItemsAt。"
+    state machine
+}
+
+DreamListViewBase:AddTextItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddTextItem
+    src   "Append one line of text to the source and rebuild. The text source's half of AddItem."
+    text  "向源追加一行文本并重建。这是文本源对应的 AddItem。"
+    state machine
+}
+
+DreamListViewBase:bAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowDragDrop
+    src   "Whether a row can be dropped ON -- UMG's bAllowDragDrop.\n\nSeparate from bAllowDragging on purpose, and both directions are useful: a palette a player\ndrags OUT of but never into wants dragging alone, and an equipment list that accepts items\nfrom elsewhere wants dropping alone."
+    text  "是否可以将内容放置到行上——即 UMG 的 bAllowDragDrop。\n\n有意与 bAllowDragging 分开，两个方向都有用：一个玩家只从中拖出、从不拖入的\n调色板只需要拖动，而一个接受来自其他位置物品的\n装备列表只需要放置。"
+    state machine
+}
+
+DreamListViewBase:bAllowDragging {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowDragging
+    src   "Whether a row can be picked UP -- UMG's bAllowDragging.\n\nOff, and off is literal: with this false no row carries a drag behaviour at all, so an existing\nlist gains nothing to subscribe to, nothing to tick and nothing that could change what a press\non a row means. Turning it on adds the behaviour to every pool row, including ones already\nmade."
+    text  "行是否可以被拾起——即 UMG 的 bAllowDragging。\n\n默认关闭，而且关闭是字面意义上的：为 false 时，任何行都不会带有拖动行为，因此现有\n列表既没有可订阅的内容，也没有需要 Tick 的内容，更没有任何会改变按下\n某一行含义的内容。开启后会将此行为添加到每个行池中的行，包括已经\n创建的行。"
+    state machine
+}
+
+DreamListViewBase:bAllowKeepPreselectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowKeepPreselectedItems
+    src   "Whether a selection made before its item arrived is REMEMBERED -- UMG's\nbAllowKeepPreselectedItems.\n\nReconcileSelection drops indices the source no longer answers to, which is right for a source\nthat shrank and wrong for one that has not been filled yet: a screen that restores \"row 7 was\nselected\" before its data loads would otherwise silently lose it. With this on, a dropped index\nis parked and re-applied the moment the source is long enough to hold it.\n\nOff, one case is still kept: an index asked for while the source is EMPTY waits for the items\n(see SetSelectedIndex), because an empty source is not one that shrank -- it has not arrived."
+    text  "是否记住在其项到达之前做出的选择——UMG 的\nbAllowKeepPreselectedItems。\n\nReconcileSelection 会丢弃源不再响应的索引，对于缩小的源这是正确的，\n但对于尚未填充的源则是错误的：某个界面在数据加载前恢复“第 7 行\n已选中”，否则会悄无声息地丢失它。开启后，被丢弃的索引\n会被暂存，并在源足够长、能容纳它时立即重新应用。\n\n关闭时，仍会保留一种情况：在源为空时请求的索引会等待项\n（参见 SetSelectedIndex），因为空源并不是缩小的源——它只是尚未到达。"
+    state machine
+}
+
+DreamListViewBase:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowOverscroll
+    src   "Let the rows be pulled past an end and spring back -- UMG's AllowOverscroll."
+    text  "允许将行拉过端点并回弹——即 UMG 的 AllowOverscroll。"
+    state machine
+}
+
+DreamListViewBase:bAlternatingRowColors {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAlternatingRowColors
+    src   "Every other row wears FDreamListStyle::RowAlternate. Off is the dense list UMG draws.\n\nBlueprintSetter, like every writable knob on this control: nothing in this family re-derives a\ncontrol from a property that moved -- the SynchronizeProperties tax UDreamUIControl documents --\nso a runtime write straight onto the variable used to change the number and leave the list\nexactly as it was, with nothing anywhere saying why."
+    text  "每隔一行使用FDreamListStyle::RowAlternate。关闭时就是UMG绘制的紧凑列表。\n\n蓝图设置器（BlueprintSetter），和此控件上的每个可写开关一样：此系列中没有任何\n东西会因属性变动而重新派生控件——UDreamUIControl记载的SynchronizeProperties\n开销正是如此——因此直接对该变量进行运行时写入，过去只会改变数字，却让列表\n保持原样，且没有任何地方说明原因。"
+    state machine
+}
+
+DreamListViewBase:bClearScrollVelocityOnSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bClearScrollVelocityOnSelection
+    src   "Whether choosing a row also stops a fling -- UMG's bClearScrollVelocityOnSelection.\n\nOff, which is what this control has always done. On, a click or a navigation press kills the\nmomentum, so the row the player picked does not slide out from under the cursor."
+    text  "选择行是否也会停止惯性滑动——即 UMG 的 bClearScrollVelocityOnSelection。\n\n关闭，这是此控件一直以来的行为。开启后，单击或导航按键会消除\n动量，因此玩家选中的行不会从光标下方滑走。"
+    state machine
+}
+
+DreamListViewBase:bEnableDragEdgeScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableDragEdgeScrolling
+    src   "Whether a drag held near the viewport's edge scrolls the list towards that edge -- which UMG's\nlist does not do, and which is what makes a drop onto a row that is off screen possible at all.\n\nWhile a drag this list would accept (bAllowDragDrop, and whatever CanAcceptDrop says) hovers a\nrow within DragEdgeScrollBandSize of the viewport's near or far edge, the list scrolls that way\nat DragEdgeScrollSpeed. It stops the moment the pointer leaves the band, leaves the list, or lets\ngo. The step is taken where the drag-drop subsystem already ticks the hover -- once a frame --\nso nothing extra polls, and a list with no drag over it does no work at all. While it moves the\nlist counts as scrolling, so OnListViewFinishedScrolling is said once, when it stops.\n\nOff by default, because it changes what an existing drop target does: with it on, holding a drag\nover the first or last row that shows moves the rows under the pointer instead of waiting for the\ndrop."
+    text  "在视口边缘附近按住拖拽时，列表是否朝该边缘滚动——UMG的\n列表不会这样做，而正是有了这一点，才能把内容拖放到屏幕外的行上。\n\n当这个列表会接受的拖拽（bAllowDragDrop，以及CanAcceptDrop的判断）悬停在\n距视口近端或远端边缘DragEdgeScrollBandSize范围内的一行上时，列表就以\nDragEdgeScrollSpeed朝该方向滚动。指针一离开该区域、离开列表或松开，\n滚动立刻停止。步进发生在拖放子系统本就每帧更新悬停的地方——\n因此没有额外的轮询，而没有拖拽悬停的列表完全不做事。滚动期间\n列表算作正在滚动，所以停止时会触发一次OnListViewFinishedScrolling。\n\n默认关闭，因为它会改变现有放置目标的行为：开启后，把拖拽按在\n当前可见的第一行或最后一行上，会移动指针下方的行，而不是等待\n放置。"
+    state machine
+}
+
+DreamListViewBase:bEnableFixedLineOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableFixedLineOffset
+    src   "Pin a revealed row at a fixed share of the window instead of merely bringing it inside --\nUMG's bEnableFixedLineOffset.\n\nWhat a cursor-driven menu wants: the highlighted row stays put and the list moves underneath\nit, rather than the row sliding to whichever edge it came in from. Off by default, which is\nthe reveal every existing list does."
+    text  "把显示出来的行固定在窗口的某个固定比例位置，而不只是把它带入视野内——\n对应UMG的bEnableFixedLineOffset。\n\n这正是光标驱动菜单想要的：高亮的行留在原地，列表在它下面移动，\n而不是让行滑到它进来的那个边缘。默认关闭，这也是现有每个列表\n都在用的显示方式。"
+    state machine
+}
+
+DreamListViewBase:bEnableRightClickScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableRightClickScrolling
+    src   "Whether a drag with the RIGHT button scrolls the rows -- UMG's bEnableRightClickScrolling."
+    text  "用右键拖拽是否滚动各行——对应UMG的bEnableRightClickScrolling。"
+    state machine
+}
+
+DreamListViewBase:bEnableScrollAnimation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableScrollAnimation
+    src   "Whether the reveal and the wheel GLIDE rather than jump -- UMG's bEnableScrollAnimation.\n\nThe reveal is ScrollIndexIntoView, NavigateToIndex and ScrollItemIntoView asked to animate; a\nnavigation press between rows still jumps, because the row it lands on has to exist at once.\n\nOff by default: every existing list's reveal lands in one frame, and a project that has tuned\nits own timing around that should keep it."
+    text  "显示与滚轮是平滑滑动还是直接跳转——对应UMG的bEnableScrollAnimation。\n\n这里的显示指的是要求带动画的ScrollIndexIntoView、NavigateToIndex和ScrollItemIntoView；\n行与行之间的导航按键仍然直接跳转，因为它落到的那一行必须立刻存在。\n\n默认关闭：现有每个列表的显示都在一帧内到位，已经围绕这一点调整过\n自己时序的项目应当保持关闭。"
+    state machine
+}
+
+DreamListViewBase:bEnableShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableShadowBrush
+    src   "Draw a fade at each end of the window while there is more list out there -- UMG's\nbEnableShadowBrush.\n\nTwo overlays inside the viewport, each awake only while the list is scrolled away from that\nend, so the fade says \"there is more this way\" rather than being permanent decoration. Off by\ndefault; nothing existing gains an overlay it did not have."
+    text  "当列表在该端之外还有内容时，在窗口两端绘制渐隐——对应UMG的\nbEnableShadowBrush，即阴影笔刷。\n\n视口内有两个叠加层，各自只在列表滚离该端时才生效，因此渐隐表达的是\n“这边还有更多”，而不是常驻的装饰。默认关闭；现有内容不会多出\n它原本没有的叠加层。"
+    state machine
+}
+
+DreamListViewBase:bEnableTouchAnimatedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableTouchAnimatedScrolling
+    src   "Whether a TOUCH drag glides too -- UMG's bInEnableTouchAnimatedScrolling."
+    text  "触摸拖拽是否也平滑滑动——对应UMG的bInEnableTouchAnimatedScrolling。"
+    state machine
+}
+
+DreamListViewBase:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableTouchScrolling
+    src   "Whether a TOUCH drag scrolls the rows -- UMG's bEnableTouchScrolling. A mouse drag is unaffected."
+    text  "触摸拖拽是否滚动各行——对应UMG的bEnableTouchScrolling。鼠标拖拽不受影响。"
+    state machine
+}
+
+DreamListViewBase:bIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bIsGamepadScrollingEnabled
+    src   "Whether the analog stick can scroll it -- UMG's bIsGamepadScrollingEnabled."
+    text  "能否用摇杆滚动它——对应UMG的bIsGamepadScrollingEnabled。"
+    state machine
+}
+
+DreamListViewBase:bIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bIsPointerScrollingEnabled
+    src   "Whether a POINTER can scroll this list at all -- UMG's bIsPointerScrollingEnabled.\n\nThe wheel and the mouse drag together, because they are one gesture set: a list that answers\nthe wheel but not the drag is a list whose scroll bar is the only way down."
+    text  "指针到底能否滚动这个列表——对应UMG的bIsPointerScrollingEnabled。\n\n滚轮和鼠标拖拽是一体的，因为它们属于同一套手势：只响应滚轮而不响应拖拽的列表，\n就是只能靠滚动条往下走的列表。"
+    state machine
+}
+
+DreamListViewBase:bReturnFocusToSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bReturnFocusToSelection
+    src   "Whether focus arriving at the LIST is handed on to the selected row -- UMG's\nbReturnFocusToSelection.\n\nWhat a player coming back from a submenu expects: focus lands where they left it rather than\nat the top. Off by default, because a list whose focus jumped somewhere else on arrival would\nchange where an existing screen's next directional press goes."
+    text  "焦点到达列表时是否转交给选中的行——对应UMG的\nbReturnFocusToSelection。\n\n这正是玩家从子菜单返回时所期望的：焦点落在他们离开的地方，而不是\n回到顶部。默认关闭，因为若焦点到达时跳到别处，就会改变现有界面\n下一次方向按键的去向。"
+    state machine
+}
+
+DreamListViewBase:bSelectItemOnNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bSelectItemOnNavigation
+    src   "Whether landing on a row by navigation also SELECTS it -- UMG's bSelectItemOnNavigation.\n\nTrue by default, on both roads: a navigation press that steps to another row selects it, as\nSListView's NavigationSelect does, and NavigateToIndex selects the index it reveals. Off, both\nonly move focus and reveal, and the selection stays wherever the player last put it -- a\nshopping list you scroll through without losing the line you were on. SelectionMode None never\nselects either way, and a press in Multi mode replaces the selection with the row it lands on,\nwhich is what SListView does for a press without modifier keys; with Shift or Ctrl held it extends\nthe selection instead (see MULTI SELECTION above)."
+    text  "通过导航落到某一行时是否也选中它——对应UMG的bSelectItemOnNavigation。\n\n两条路径默认都为真：步进到另一行的导航按键会选中该行，如同\nSListView的NavigationSelect；NavigateToIndex也会选中它显示出来的索引。关闭后，\n两者都只移动焦点并显示，选中项仍停留在玩家最后一次放置的位置——\n就像浏览购物清单时不会丢掉你正看的那一行。SelectionMode为None时两种情况下\n都不会选中，而在Multi模式下按键会用落到的那一行替换选中项，\n这正是SListView在没有修饰键时按键的行为；按住Shift或Ctrl则会改为扩展\n选中范围（见上文的MULTI SELECTION）。"
+    state machine
+}
+
+DreamListViewBase:bShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bShowScrollBar
+    src   "Off means no bar at all, and the viewport keeps the gutter it would have cost."
+    text  "关闭表示完全不显示滚动条，视口则保留原本要留给它的那条空边。"
+    state machine
+}
+
+DreamListViewBase:bVirtualizing {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bVirtualizing
+    src   "Set while the pool is a window onto the source rather than a widget per item."
+    text  "当池是源数据的窗口、而不是为每个项创建一个控件时设置。"
+    state machine
+}
+
+DreamListViewBase:CancelListViewDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:CancelListViewDragDrop
+    src   "End a drag from this list with no drop -- UMG's CancelListViewDragDrop.\n\nGoes through the drag-drop subsystem rather than just clearing the flags: the operation, the\nvisual and the pointer's state are the subsystem's, and a list that only forgot its own half\nwould leave a visual on screen with nothing to end it."
+    text  "结束此列表的拖拽而不放置——UMG的CancelListViewDragDrop。\n\n经由拖放子系统处理，而不只是清除标志：操作、可视对象和指针的状态\n都归子系统所有，若列表只清掉自己那一半，屏幕上就会留下一个\n无法结束的可视对象。"
+    state machine
+}
+
+DreamListViewBase:ClearListItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ClearListItems
+    src   "Empty both sources, clear the selection and rebuild -- UMG's ClearListItems."
+    text  "清空两个源、清除选择并重建——UMG的ClearListItems。"
+    state machine
+}
+
+DreamListViewBase:ClearSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ClearSelection
+    src   "Nothing selected. Announced, unless there was nothing selected to begin with."
+    text  "未选中任何项。会进行播报，除非一开始就没有选中项。"
+    state machine
+}
+
+DreamListViewBase:ColumnNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ColumnNode
+    src   "The scrolled content: as tall as ALL rows while the viewport shows only what fits."
+    text  "滚动的内容：与所有行等高，而视口只显示能放下的部分。"
+    state machine
+}
+
+DreamListViewBase:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ConsumeMouseWheel
+    src   "Whether the wheel is swallowed here or handed to an outer scrolling ancestor at a limit -- the\nsame three answers, and the same enum, a scroll box gives."
+    text  "滚轮是在此处被吞掉，还是在到达边界时交给外层滚动祖先——同样的三种答案，\n与滚动框相同的枚举。"
+    state machine
+}
+
+DreamListViewBase:DragDropOperationClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropOperationClass
+    src   "The operation class a row's drag builds -- UMG's DragDropOperationClass.\n\nUDreamDragDropOperation by default, which already carries a payload, a tag and a visual class.\nA project with its own subclass names it here and gets it on every row."
+    text  "行的拖拽所构建的操作类——UMG的DragDropOperationClass。\n\n默认为UDreamDragDropOperation，它已带有载荷、标签和可视类。\n若项目有自己的子类，可在此指定，每一行都会用它。"
+    state machine
+}
+
+DreamListViewBase:DragDropVisualEntryClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualEntryClass
+    src   "What to show under the cursor while dragging -- UMG's DragDropVisualEntryClass.\n\nNull falls back to RowTemplateClass, which is the answer that needs no authoring: the thing\nunder the cursor should look like the row it came from, and the list already knows how to make\none of those."
+    text  "拖拽时在光标下显示的内容——UMG的DragDropVisualEntryClass。\n\n为空时回退到RowTemplateClass，这是无需额外制作的答案：光标下的东西\n应当看起来像它来自的那一行，\n而列表已经知道如何创建一个。"
+    state machine
+}
+
+DreamListViewBase:DragDropVisualOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualOffset
+    src   "A further nudge in local units, after the pivot -- UMG's DragDropVisualOffset."
+    text  "在枢轴点之后以本地单位做的进一步微调——UMG的DragDropVisualOffset。"
+    state machine
+}
+
+DreamListViewBase:DragDropVisualPivot {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualPivot
+    src   "Where the drag visual sits relative to the pointer, as a fraction of its own size -- UMG's\nDragDropVisualPivot. (0,0) hangs it below-right of the cursor, (0.5,0.5) centres it on it."
+    text  "拖拽可视对象相对于指针的位置，以自身大小的比例表示——UMG的\nDragDropVisualPivot（枢轴点）。(0,0)使其挂在光标右下方，(0.5,0.5)使其以光标为中心。"
+    state machine
+}
+
+DreamListViewBase:DragEdgeScrollBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragEdgeScrollBandSize
+    src   "How deep the band along each end of the viewport is, in local units along the scroll axis.\nThe whole band scrolls at the same speed; zero turns the band, and with it edge scrolling, off."
+    text  "视口两端边缘带的深度，以沿滚动轴的本地单位表示。\n整条带以相同速度滚动；为零则关闭该带，边缘滚动也随之关闭。"
+    state machine
+}
+
+DreamListViewBase:DragEdgeScrollSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragEdgeScrollSpeed
+    src   "How fast a drag in the band scrolls the list, in local units per second."
+    text  "在边缘带内拖拽时列表滚动的速度，以本地单位/秒表示。"
+    state machine
+}
+
+DreamListViewBase:DragOperationTag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragOperationTag
+    src   "The tag copied onto every operation this list creates, for drop targets to filter on."
+    text  "复制到此列表创建的每个操作上的标签，供放置目标筛选。"
+    state machine
+}
+
+DreamListViewBase:EndInertialScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:EndInertialScrolling
+    src   "Drop the fling, keeping the position -- UMG's EndInertialScrolling."
+    text  "停止惯性滑动并保持当前位置——即 UMG 的 EndInertialScrolling。"
+    state machine
+}
+
+DreamListViewBase:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FaceNode
+    src   "The face: the list's own look, and what cuts everything off at its rounded edge."
+    text  "外观：列表自身的视觉样式，以及在圆角边缘裁切所有内容的部分。"
+    state machine
+}
+
+DreamListViewBase:FingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FingerDrag
+    src   "What a finger dragged along rows that can be picked up does: scroll the list (the default, UMG's) or pick the row up.\n\nUMG has no switch for it: STableRow hands a touch drag to its list (STableRow::OnDragDetected captures the touch\nfor the table and returns before the row's own drag is asked), so on a touch screen a list of draggable rows still\nscrolls, and the mouse picks the rows up. PickUpRow is for a touch-first screen whose rows are dragged by finger --\nan inventory, a reorderable deck -- and whose list does not need scrolling by that drag. The mouse is the same\neither way."
+    text  "手指沿可拾取的行拖动时的行为：滚动列表（默认，UMG的做法）还是拾取该行。\n\nUMG没有对应的开关：STableRow会把触摸拖动交给它所属的列表（STableRow::OnDragDetected\n为表格捕获该触摸并直接返回，不会再去询问行自身的拖动），因此在触摸屏上，可拖动行的列表\n仍然会滚动，而由鼠标来拾取行。PickUpRow适用于以触摸为主的界面——其行由手指拖动\n（如背包、可重排的牌组），且列表不需要通过该拖动来滚动。鼠标在两种情况下\n表现相同。"
+    state machine
+}
+
+DreamListViewBase:FixedLineScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FixedLineScrollOffset
+    src   "Where in the window that row is pinned, 0 = the near edge, 1 = the far one. Half is the middle."
+    text  "该行固定在窗口中的位置，0 = 近端边缘，1 = 远端边缘。一半即正中。"
+    state machine
+}
+
+DreamListViewBase:FocusSelectedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FocusSelectedRow
+    src   "Put keyboard focus on the selected row's widget, if it has one on screen.\n\nFalse when there is no selection or its row is not realized -- which is not a failure, only\nthe honest answer: a recycled list genuinely has no widget standing for an off-screen item."
+    text  "将键盘焦点放到选中行的控件上（如果它已在屏幕上）。\n\n当没有选中项或选中行尚未实例化时返回false——这并非失败，而只是\n如实的回答：回收复用的列表确实没有代表屏幕外项的控件。"
+    state machine
+}
+
+DreamListViewBase:GetDraggedItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDraggedItemIndex
+    src   "The source index of the item the drag in flight carries -- where it is now, when an object source\nmoved under the drag -- or -1 when nothing is being dragged."
+    text  "当前拖动所携带项在数据源中的索引——当对象数据源在拖动过程中\n移动时，这里就是它当前的位置——未拖动任何内容时为 -1。"
+    state machine
+}
+
+DreamListViewBase:GetIndexForItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIndexForItem
+    src   "Where an object sits in the source, or -1 when it is not in it -- UMG's GetIndexForItem."
+    text  "对象在数据源中的位置，不在其中时为 -1——即 UMG 的 GetIndexForItem。"
+    state machine
+}
+
+DreamListViewBase:GetIsDraggingListItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsDraggingListItem
+    src   "True while a row of THIS list is being dragged -- UMG's bIsDragging / GetIsDraggingListItem."
+    text  "当此列表的某一行正在被拖动时为 true——即 UMG 的 bIsDragging / GetIsDraggingListItem。"
+    state machine
+}
+
+DreamListViewBase:GetItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemAt
+    src   "The object at a source index, or null for a text-only source or an index out of range."
+    text  "数据源索引处的对象；纯文本数据源或索引超出范围时为 null。"
+    state machine
+}
+
+DreamListViewBase:GetItemCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemCount
+    src   "How many items the source holds -- objects if it has any, texts otherwise."
+    text  "数据源中包含的项数——有对象时为对象数，否则为文本数。"
+    state machine
+}
+
+DreamListViewBase:GetListItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetListItems
+    src   "The object source, as raw pointers -- UMG's GetListItems.\n\nA copy rather than a reference, because a UFUNCTION return is a value and because handing out\nthe live array would let a caller resize the thing the rows are indexed into."
+    text  "对象数据源，以裸指针形式返回——即 UMG 的 GetListItems。\n\n返回副本而非引用，因为 UFUNCTION 的返回值是一个值，而且若直接交出\n活动数组，调用方就能调整这个被行索引的数组的大小。"
+    state machine
+}
+
+DreamListViewBase:GetNumItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItems
+    src   "How many items the source holds -- UMG's name for GetItemCount."
+    text  "数据源包含多少个项——即UMG中GetItemCount的名称。"
+    state machine
+}
+
+DreamListViewBase:GetNumItemsSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItemsSelected
+    src   "How many rows are selected -- UMG's GetNumItemsSelected."
+    text  "已选中多少行——UMG的GetNumItemsSelected。"
+    state machine
+}
+
+DreamListViewBase:GetOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOverscroll
+    src   "Signed distance past an end, in local units -- UMG's GetOverscroll."
+    text  "超出某一端的带符号距离，以本地单位计——UMG的GetOverscroll。"
+    state machine
+}
+
+DreamListViewBase:GetRealizedRowCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRealizedRowCount
+    src   "How many row widgets exist. Equal to GetRowCount until the list starts recycling."
+    text  "存在多少个行控件。在列表开始回收之前，等于GetRowCount。"
+    state machine
+}
+
+DreamListViewBase:GetRowCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowCount
+    src   "How many rows the list is SHOWING -- for a tree the visible count, which is the point of a\ntree. Not the number of widgets: see GetRealizedRowCount for that."
+    text  "列表当前正在显示多少行——对于树来说就是可见数量，而这正是树的意义所在。\n不是控件数量：控件数量请参见GetRealizedRowCount。"
+    state machine
+}
+
+DreamListViewBase:GetRowItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowItemIndex
+    src   "Which source item a POOL row is currently showing, or -1 while it is parked."
+    text  "池中的行当前正在显示数据源中的哪个项，停放时返回-1。"
+    state machine
+}
+
+DreamListViewBase:GetRowWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowWidget
+    src   "The row standing for a source item, or null when that item has no row right now -- collapsed\nunder a tree node, gone from the source, or (while recycling) scrolled out of the window."
+    text  "代表数据源中某个项的行；当该项当前没有行时返回null——可能折叠在树节点下、\n已从数据源中移除，或在回收期间滚动出了窗口。"
+    state machine
+}
+
+DreamListViewBase:GetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollOffset
+    src   "How far down the column the viewport currently sits, in local units."
+    text  "视口当前在列中向下滚动到的位置，以本地单位计。"
+    state machine
+}
+
+DreamListViewBase:GetSelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndices
+    src   "Every selected row, as source indices, in the order they were chosen."
+    text  "每个选中的行，以数据源索引表示，按选择顺序排列。"
+    state machine
+}
+
+DreamListViewBase:GetSelectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedItems
+    src   "The selected rows as their item OBJECTS, for a source that has them -- UMG's GetSelectedItems.\nA text-only source has no objects to answer with, so this comes back empty there and\nGetSelectedIndices is the question to ask instead."
+    text  "选中的行以其项对象表示，适用于具有项对象的数据源——UMG的GetSelectedItems。\n仅文本数据源没有可用于返回的对象，因此这里返回空，而应改为查询\nGetSelectedIndices。"
+    state machine
+}
+
+DreamListViewBase:GetViewFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetViewFraction
+    src   "Fraction of the rows currently on screen, 0..1. One when they all fit."
+    text  "当前屏幕上行的比例，0..1。全部可见时为1。"
+    state machine
+}
+
+DreamListViewBase:IsItemSelectableOrNavigable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelectableOrNavigable
+    src   "Whether the veto lets this item be chosen or navigated to. True when nothing is bound."
+    text  "否决是否允许选择或导航到该项。未绑定任何内容时为true。"
+    state machine
+}
+
+DreamListViewBase:IsItemVisible {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemVisible
+    src   "True when an item currently has a row widget standing for it -- UMG's IsItemVisible."
+    text  "当某个项当前有代表它的行控件时为 true，即 UMG 的 IsItemVisible。"
+    state machine
+}
+
+DreamListViewBase:IsVirtualizing {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsVirtualizing
+    src   "True while the list is showing a window of widgets rather than one per item."
+    text  "当列表显示的是控件窗口而非每个项一个控件时为 true。"
+    state machine
+}
+
+DreamListViewBase:ItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ItemObjects
+    src   "The rows, as objects. Non-empty, this decides the row count and each row's item; the label\nthen comes from the matching entry of Items, or from the object's name when there is none.\nThis is the seat UUIListView's own Items array occupies, kept so a consumer that already\nmodels its rows as UObjects does not have to unpack them into text first."
+    text  "行数据，以对象形式表示。非空时，它决定行数以及每一行的项；标签\n则来自 Items 中匹配的条目，没有匹配条目时使用对象的名称。\n这个位置由 UUIListView 自身的 Items 数组占据，保留它是为了让已经把\n行建模为 UObject 的使用方不必先把它们解包成文本。"
+    state machine
+}
+
+DreamListViewBase:Items {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:Items
+    src   "The rows, as text. The common case, and the control's job is to be the common case -- the same\ncall UDreamDropdown's Options make. Parallel to ItemObjects when both are given: the object\ncarries the data, this carries what the built-in row says."
+    text  "行数据，以文本形式表示。这是最常见的情形，而该控件的职责就是服务最常见的情形——与\nUDreamDropdown 的 Options 采用相同的调用。两者都给定时与 ItemObjects 平行：对象\n承载数据，此项承载内置行所显示的内容。"
+    state machine
+}
+
+DreamListViewBase:NavigateToIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:NavigateToIndex
+    src   "Select an item's row AND bring it into view -- UMG's NavigateToIndex.\n\nThe two halves in one call because doing them separately is always wrong in the same way: a\nselection that is off screen is a selection nobody can see they made. With\nbSelectItemOnNavigation off, or SelectionMode None, it only reveals. A navigation press moving\nbetween rows makes the same two moves (see UDreamListRowButton), through SetItemSelection."
+    text  "选中某个项的行并将其滚动到可见区域——即 UMG 的 NavigateToIndex。\n\n把这两半放在一次调用中，是因为分开做总会以同样的方式出错：一个\n在屏幕外的选中，就是没人看得见自己做出的选中。关闭\nbSelectItemOnNavigation，或 SelectionMode 为 None 时，它只负责滚动到可见。在行之间移动的导航按键\n通过 SetItemSelection 执行同样的两步（参见 UDreamListRowButton）。"
+    state machine
+}
+
+DreamListViewBase:OnDraggingStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnDraggingStateChanged
+    src   "This list started or stopped dragging one of its rows -- UMG's BP_OnListViewDraggingStateChanged."
+    text  "此列表开始或停止拖动其中一行——即 UMG 的 BP_OnListViewDraggingStateChanged。"
+    state machine
+}
+
+DreamListViewBase:OnIsItemSelectableOrNavigable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnIsItemSelectableOrNavigable
+    src   "Whether one item may be chosen or navigated to -- UMG's BP_OnIsItemSelectableOrNavigable.\n\nAsked on BOTH roads, which is the point: a row that cannot be clicked but can be navigated to\nis a dead end the player can reach. Deselecting is never vetoed, or a row that became\nunselectable while chosen could never stop being chosen."
+    text  "某一项是否可被选中或导航到——即 UMG 的 BP_OnIsItemSelectableOrNavigable。\n\n两条路径上都会询问，这正是关键所在：一行不能被点击却能被导航到，\n就是玩家可以走到的死胡同。取消选中永远不会被否决，否则某个被选中期间变为\n不可选的行就永远无法取消选中。"
+    state machine
+}
+
+DreamListViewBase:OnItemAcceptDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemAcceptDrop
+    src   "A drop landed on a row -- UMG's BP_OnItemAcceptDrop, with the zone it landed in.\n\nFired only while bAllowDragDrop is on. The list does NOT re-order itself: what a drop means is\nthe consumer's to decide, and a list that moved its own source would be guessing at an edit\nonly the data's owner can make."
+    text  "一次拖放落在某一行上——即 UMG 的 BP_OnItemAcceptDrop，并带有它落入的区域。\n\n仅在 bAllowDragDrop 开启时触发。列表不会自行重新排序：拖放意味着什么\n由使用方决定，而一个自行移动其数据源的列表只是在猜测一项\n只有数据所有者才能做出的编辑。"
+    state machine
+}
+
+DreamListViewBase:OnItemClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemClicked
+    src   "A row was clicked -- every click, whatever the selection mode did with it. Separate from\nOnSelectionChanged because a click on the already-selected row is still a click, and because a\nlist whose SelectionMode is None still wants to know.\n\nFires AFTER the selection has moved, so a handler asking GetSelectedIndex sees the answer the\nuser just gave."
+    text  "某一行被点击——每一次点击，无论选择模式对它做了什么。与\nOnSelectionChanged 分开，是因为点击已选中的行仍然是一次点击，而且\nSelectionMode 为 None 的列表也仍然想知道。\n\n在选择已经移动之后触发，因此询问 GetSelectedIndex 的处理程序看到的正是\n用户刚给出的答案。"
+    state machine
+}
+
+DreamListViewBase:OnItemDoubleClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDoubleClicked
+    src   "Two clicks on the same row inside the event system's DoubleClickTime.\n\nThat clock and no other: the pointer input module already decides what a double click is (it is\nwhat UUITextInput's select-the-word gesture uses), and a list measuring its own would disagree\nwith the field beside it -- and would be counting click EVENTS rather than pointer presses.\nThe single click still fires first, so a row that opens on a double click also selects on the\nway there."
+    text  "在事件系统的 DoubleClickTime 内对同一行的两次点击。\n\n以这个时钟为准，不采用其他：指针输入模块已经决定了什么是双击（\nUUITextInput 的选择单词手势用的就是它），而列表若自行计时就会与\n旁边的字段不一致——而且统计的会是点击事件而不是指针按下。\n单击仍会先触发，因此双击即打开的行在打开途中也会\n被选中。"
+    state machine
+}
+
+DreamListViewBase:OnItemDragCancelled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragCancelled
+    src   "A drag from this list ended with nobody accepting -- UMG's BP_OnItemDragCancelled."
+    text  "从此列表开始的拖动以无人接受而结束——即 UMG 的 BP_OnItemDragCancelled。"
+    state machine
+}
+
+DreamListViewBase:OnItemDragDetected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragDetected
+    src   "A row was picked up -- UMG's BP_OnItemDragDetected. The operation is still editable here."
+    text  "某一行被拾起——即 UMG 的 BP_OnItemDragDetected。此时该操作仍可编辑。"
+    state machine
+}
+
+DreamListViewBase:OnItemDragEnter {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragEnter
+    src   "A drag entered a row -- UMG's BP_OnItemDragEnter. Any drag, not only this list's own."
+    text  "一行上有拖拽进入——UMG 的 BP_OnItemDragEnter。任何拖拽都算，不限于此列表自身的拖拽。"
+    state machine
+}
+
+DreamListViewBase:OnItemIsHoveredChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemIsHoveredChanged
+    src   "The pointer entered or left a row -- UMG's OnItemIsHoveredChanged.\n\nThe item index and its object, with the hovered flag; a row that is re-bound while the pointer\nsits over it announces the new item, because what is hovered is the ITEM and not the widget."
+    text  "指针进入或离开某一行——UMG 的 OnItemIsHoveredChanged。\n\n条目索引及其对象，附带悬停标志；指针停留在某行上时该行被重新绑定，\n会通告新的条目，因为悬停的是条目本身，而不是控件。"
+    state machine
+}
+
+DreamListViewBase:OnItemScrolledIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemScrolledIntoView
+    src   "An item came into the realized window -- UMG's BP_OnItemScrolledIntoView.\n\nThe EDGE, not the state: only items that were not realized a moment ago are announced, so a\nconsumer loading a thumbnail per row is called once per arrival rather than once per scroll."
+    text  "有条目进入已实现窗口——UMG 的 BP_OnItemScrolledIntoView。\n\n是边沿，而不是状态：只通告片刻之前尚未实现的条目，因此按行加载缩略图的使用者\n每次到达只被调用一次，而不是每次滚动调用一次。"
+    state machine
+}
+
+DreamListViewBase:OnListViewFinishedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewFinishedScrolling
+    src   "The list stopped moving -- UMG's OnListViewFinishedScrolling.\n\nFired the first time a move lands with no momentum left, so a consumer loading thumbnails for\nwhat is now on screen gets one call per gesture rather than one per frame of a flick."
+    text  "列表停止移动——UMG 的 OnListViewFinishedScrolling。\n\n在一次移动已无剩余动量而落定时首次触发，因此为当前屏幕上内容加载缩略图的使用者\n每次手势只收到一次调用，而不是轻扫的每一帧一次。"
+    state machine
+}
+
+DreamListViewBase:OnListViewScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewScrolled
+    src   "The list moved -- UMG's OnListViewScrolled. Carries the offset and the visible fraction, which\nis what a consumer drawing its own position indicator needs and cannot work out alone."
+    text  "列表发生了移动——UMG 的 OnListViewScrolled。携带偏移量和可见比例，\n这正是自行绘制位置指示器的使用者所需要、且无法独自算出的数据。"
+    state machine
+}
+
+DreamListViewBase:OnListViewTouchStart {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewTouchStart
+    src   "A touch drag began on the rows -- UMG's BP_OnListViewTouchStart. Offset and visible fraction."
+    text  "行上开始了触摸拖拽——UMG 的 BP_OnListViewTouchStart。偏移量和可见比例。"
+    state machine
+}
+
+DreamListViewBase:OnRowGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowGenerated
+    src   "One per row, every time it is BOUND to an item -- which, while recycling, is every time that\nrow comes back round to a new item rather than once in its life, and on every row the list\nre-pushes (a rebuild, a style push, a resize), because that re-writes the row's look. A scroll\nthat leaves a row on its item binds nothing. Always after an OnRowReleased for whatever the row\nstood for before, so the two pair up. The hook for a consumer whose rows are richer than a label\nbut who would rather not author a whole class: everything under the row is reachable from here\nby display name."
+    text  "每行一次，每次该行被绑定到某个条目时都会触发——在回收复用时，就是该行\n轮到新条目的每一次，而不是它一生只有一次；列表重新推送的每一行\n（重建、样式推送、调整大小）也会触发，因为那会重写该行的外观。滚动\n后若某行仍停留在其条目上，则不绑定任何东西。总是在针对该行先前所代表对象的\nOnRowReleased 之后触发，两者因此成对。对于行内容比一个标签更丰富、\n但又不愿编写整个类的使用者来说，这就是合适的钩子：行下方的所有内容都可以从这里\n按显示名称访问。"
+    state machine
+}
+
+DreamListViewBase:OnRowInitialized {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowInitialized
+    src   "A row widget was just created -- UMG's OnEntryInitialized, and ONCE in that widget's life.\n\nDistinct from OnRowGenerated, which fires on every bind: this is where something permanent\nbelongs, and subscribing to it from the generated hook instead is how a recycled row ends up\ncarrying one subscription per item it has ever shown."
+    text  "行控件刚刚创建——UMG 的 OnEntryInitialized，且在该控件的一生中只触发一次。\n\n与每次绑定都会触发的 OnRowGenerated 不同：永久性的东西应当放在这里，\n若改为在生成钩子中订阅，被回收的行就会为它曾显示过的每个条目各带\n一个订阅。"
+    state machine
+}
+
+DreamListViewBase:OnRowReleased {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowReleased
+    src   "The counterpart of OnRowGenerated: a pool row is about to stop standing for this item, because\nit is re-bound -- to another item, or to this one again by a re-push -- parked, or destroyed.\nCarries the item the row was bound to, object included, even when the source has moved since.\nUMG's OnEntryReleased, and the hook for undoing whatever OnRowGenerated did to that row."
+    text  "OnRowGenerated 的对应项：池中的行即将不再代表此条目，因为它被重新绑定——\n绑定到另一个条目，或因重新推送而再次绑定到这一个——被停放，或被销毁。\n携带该行原先绑定到的条目（含其对象），即使此后源已发生变化。\n即 UMG 的 OnEntryReleased，也是撤销 OnRowGenerated 对该行所做一切的钩子。"
+    state machine
+}
+
+DreamListViewBase:OnRowsGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowsGenerated
+    src   "A whole rebuild finished -- UMG's BP_OnEntriesGenerated.\n\nBroadcast before RebuildRows returns, which IS the batch boundary here: this control rebuilds\nsynchronously, so there is no pending request for a later frame to complete."
+    text  "整个重建已完成——UMG 的 BP_OnEntriesGenerated。\n\n在 RebuildRows 返回之前广播，而这里正是批次边界：此控件同步重建，\n因此不存在留给后续帧完成的待处理请求。"
+    state machine
+}
+
+DreamListViewBase:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnSelectionChanged
+    src   "Re-broadcast from the rows, so a consumer binds to the control, not to a part of it.\n\nAlso said when an edit to the SOURCE takes selected items away -- a RemoveItem, a replaced\nsource, ClearListItems -- once per edit (a batch is one edit), with whatever is left selected,\nthe way SListView::UpdateSelectionSet signals ESelectInfo::Direct. A selection that merely moved\nto a new index along with its item has not changed, and is not announced."
+    text  "由各行重新广播，因此使用者绑定的是控件，而不是它的某个部分。\n\n当对源的编辑带走所选项时也会发出——RemoveItem、替换\n源、ClearListItems——每次编辑一次（一个批次算一次编辑），并带上仍然选中的内容，\n方式与 SListView::UpdateSelectionSet 发出 ESelectInfo::Direct 时相同。仅仅是随其条目一起移到\n新索引的选择并未改变，不会通告。"
+    state machine
+}
+
+DreamListViewBase:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact name,\nso a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的名称合成其反向路由，\n因此值控件会将它和自身对外通告的事件一并提供。与之同时触发。"
+    state machine
+}
+
+DreamListViewBase:Orientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:Orientation
+    src   "Which way the rows run -- UMG's Orientation, and the axis this whole control is written in.\n\nVertical is a column of rows that scrolls up and down; Horizontal is a band of rows that\nscrolls left and right. Every other measurement follows it: RowHeight becomes the row's extent\nALONG the scroll axis, RowSpacing the gap between two of them, and the row stretches across the\nother axis instead of down it. The scroll bar moves to the bottom edge, and the wheel, the\nreveal and the first/last calls all change axis with it.\n\nVertical is the default, which is what every existing list already is."
+    text  "行的排列方向——即 UMG 的 Orientation，也是整个控件所依据的轴向。\n\nVertical 是上下滚动的行组成的列；Horizontal 是左右滚动的行\n组成的带。其他所有度量都随之变化：RowHeight 变成行沿滚动轴的尺寸，\nRowSpacing 是两行之间的间距，行则横跨另一条轴而不是沿其延伸。\n滚动条移到下边缘，滚轮、滚动显现以及 first/last 调用也都随之\n切换轴向。\n\n默认是 Vertical，现有的每个列表本来就是这个方向。"
+    state machine
+}
+
+DreamListViewBase:PoolRowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:PoolRowTemplateClass
+    src   "The authored row class the pool was built with. A rebind can carry a new style into an existing\nrow but not a new CLASS -- the instance lives inside the row and is made once per pool row --\nso this is one of the two things that still forces a teardown. See RebuildRows for why a\nteardown is worth avoiding at all."
+    text  "池构建时所使用的、编辑中指定的行类。重新绑定可以把新样式带入已有的\n行，但无法带入新的 CLASS——实例位于行内部，每个池行只创建一次——\n所以这是仍然会强制拆除的两件事之一。关于为什么应尽量避免拆除，请参阅\nRebuildRows。"
+    state machine
+}
+
+DreamListViewBase:RebuildRows {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RebuildRows
+    src   "Throw the rows away and build them again from the source. Called for you by ApplyStyle -- row\ngeometry and row colour are both style, so there is no such thing as re-styling without it --\nand by every setter that moves the source."
+    text  "丢弃这些行，并依据源重新构建。ApplyStyle 会自动调用——行\n几何和行颜色都属于样式，因此不存在不重建的重新设置样式——\n此外每个改动源的 setter 也会调用。"
+    state machine
+}
+
+DreamListViewBase:RemoveItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItem
+    src   "Drop one object from the source and rebuild -- UMG's RemoveItem.\n\nThe matching text, if there is one, goes with it: the two arrays are parallel, and a removal\nthat shortened only one of them would re-label every row after it. Removing a selected item\ndeselects it and says so once on OnSelectionChanged, as UMG's next refresh does."
+    text  "从源中移除一个对象并重建——即 UMG 的 RemoveItem。\n\n如果有对应的文本，它会一并移除：两个数组是平行的，只缩短其中一个的移除\n会让其后的每一行错位重标。移除选中项会取消其选中状态，\n并在 OnSelectionChanged 上通知一次，与 UMG 的下一次刷新一致。"
+    state machine
+}
+
+DreamListViewBase:RemoveItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItemAt
+    src   "Drop the item at a source index and rebuild. Out of range does nothing."
+    text  "移除源中指定索引处的项并重建。索引超出范围时不做任何事。"
+    state machine
+}
+
+DreamListViewBase:RemoveItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItems
+    src   "Drop several objects and rebuild once -- UMG's RemoveItems."
+    text  "移除多个对象并只重建一次——即 UMG 的 RemoveItems。"
+    state machine
+}
+
+DreamListViewBase:ResolveDropZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ResolveDropZone
+    src   "Which zone a point falls in, as a fraction ALONG the row's main axis.\n\nStatic and pure, because it is the one piece of this that is worth pinning exactly: the first\nand last EdgeFraction of the row are the seams and everything between is the row itself. A\nquarter each end by default, which leaves the middle half -- wide enough to hit on a phone,\nnarrow enough that a re-order does not need precision."
+    text  "某个点落在哪个区域，以沿行主轴的比例表示。\n\n是静态且纯的函数，因为这是其中最值得精确固定的部分：行的第一个\n和最后一个 EdgeFraction 是接缝，两者之间全部是行本身。默认\n两端各占四分之一，留下中间的一半——宽到在手机上也能点中，\n窄到重新排序时无需精确操作。"
+    state machine
+}
+
+DreamListViewBase:RowLabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowLabelNode
+    src   "The template's label. Every row has a copy of it, found by display name."
+    text  "模板的标签。每一行都有一份副本，按显示名称查找。"
+    state machine
+}
+
+DreamListViewBase:RowNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowNodes
+    src   "The row widgets that exist, in pool order -- which is visual order only while the list is not\nrecycling. RowSourceIndices says what each one is currently showing."
+    text  "现有的行控件，按池顺序排列——只有在列表未进行\n回收时，这个顺序才是视觉顺序。RowSourceIndices 说明每个行当前显示的内容。"
+    state machine
+}
+
+DreamListViewBase:RowSourceIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowSourceIndices
+    src   "Parallel to RowNodes: which source item each pool row stands for, or -1 while it is parked."
+    text  "与 RowNodes 平行：每个池行代表哪个源项，处于停用状态时为 -1。"
+    state machine
+}
+
+DreamListViewBase:RowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowTemplateClass
+    src   "A row's CONTENT, authored elsewhere: one instance of this class is created inside every row\nwidget, filling it, and the built-in label steps aside. The row's face, height, hover and\nselection stay the control's, so a template only has to draw an item.\n\nCreated once per POOL row rather than per item, which is what makes it survive recycling:\nOnRowGenerated fires on every bind, and that is where a consumer updates it.\n\nNull (the default) is the built-in label row. Instancing a user widget needs a world, so with\nnone this quietly stays the built-in row rather than producing half a list."
+    text  "行的 CONTENT，在别处编写：每个行控件内部都会创建该类的一个实例来填充它，\n内置标签则让位。行的外观、高度、悬停和\n选中仍归控件所有，因此模板只需绘制一个项。\n\n按池行而不是按项创建，这正是它能经受回收的原因：\nOnRowGenerated 在每次绑定时触发，使用者在那里更新它。\n\nNull（默认值）表示内置的标签行。实例化用户控件需要 world，没有 world 时\n会静默保留内置行，而不会生成一个不完整的列表。"
+    state machine
+}
+
+DreamListViewBase:RowTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowTemplateNode
+    src   "The thing rows are copied from -- authored once, inactive, never drawn itself. Public because\nit is half of the \"hand it a template\" story: anything added under this node before the first\nrebuild rides into every row."
+    text  "行的复制来源——只编写一次，处于非活动状态，自身从不绘制。公开是因为\n它是“交给它一个模板”这套做法的一半：在首次重建之前添加到该节点下的任何内容\n都会随之进入每一行。"
+    state machine
+}
+
+DreamListViewBase:ScrollBarNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollBarNode
+    src   "A real Native.ScrollBar, so the handle geometry the anchor rule dictates exists once."
+    text  "一个真正的 Native.ScrollBar，因此锚点规则所规定的滑块几何只存在一份。"
+    state machine
+}
+
+DreamListViewBase:ScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollBarVisibility
+    src   "Whether the bar stays put or disappears while every row already fits. Hidden never draws it, though the\nlist still scrolls, and keeps its gutter while the rows overflow, as a Hidden Slate bar keeps its slot."
+    text  "在所有行都已容纳得下时，滚动条是保持原位还是消失。Hidden 从不绘制它，但\n列表仍可滚动，并在行溢出时保留其边距，就像 Hidden 的 Slate 滚动条保留自己的位置一样。"
+    state machine
+}
+
+DreamListViewBase:ScrollIndexIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIndexIntoView
+    src   "Bring an item's row into view without touching the selection -- UMG's ScrollIndexIntoView."
+    text  "将某项的行带入视野，但不改变选择——即 UMG 的 ScrollIndexIntoView。"
+    state machine
+}
+
+DreamListViewBase:ScrollingAnimationInterpolationSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollingAnimationInterpolationSpeed
+    src   "How fast that glide closes the distance -- UMG's ScrollingAnimationInterpolationSpeed, and its\nparameterisation: a SPEED, where the scroll behaviour's own tween takes a duration.\n\nTurned into a duration at the push, because the two describe the same ease and the behaviour\nonly knows one of them: a higher speed is a shorter glide."
+    text  "该滑行收敛距离的快慢——即 UMG 的 ScrollingAnimationInterpolationSpeed，以及它的\n参数化方式：它表示的是速度，而滚动行为自身的补间接受的是时长。\n\n在推入时转换为时长，因为两者描述的是同一种缓动，而该行为\n只认识其中一种：速度越高，滑行越短。"
+    state machine
+}
+
+DreamListViewBase:ScrollIntoViewDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIntoViewDestination
+    src   "Where a row revealed by ScrollIndexIntoView or by navigation ends up -- UMG calls this\nScrollIntoViewAlignment and spells it as a float; this is the four-answer enum the scroll box\nand the scroll behaviour already share, because they are the same question."
+    text  "由 ScrollIndexIntoView 或导航揭示出来的行最终停在何处——UMG 将此称为\nScrollIntoViewAlignment（对齐），并以浮点数表示；这里是滚动框\n和滚动行为已经共用的四选一枚举，因为它们问的是同一个问题。"
+    state machine
+}
+
+DreamListViewBase:ScrollItemIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView
+    src   "Scroll the least distance that brings an item's row fully into the viewport.\n\nComputed from the row pitch rather than from a widget, so it answers for an item whose row is\nnot realized -- which is the only version of this that means anything while recycling.\n\nGlides there, with the wheel's ease and duration, when bInAnimate AND bEnableScrollAnimation are\nboth on; jumps otherwise. A navigation press always jumps: the row it lands on has to exist the\nmoment the press names it."
+    text  "以最小距离滚动，使某项的行完整进入视口。\n\n按行间距而非按控件计算，因此对行尚未实化的项也能\n给出结果——在回收复用时，也只有这种版本才有意义。\n\n当 bInAnimate 与 bEnableScrollAnimation 同时开启时，以滚轮的缓动和\n时长滑行到该处；否则直接跳转。导航按键始终直接跳转：按键指定某行的那一刻，\n该行就必须存在。"
+    state machine
+}
+
+DreamListViewBase:ScrollToBottom {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollToBottom
+    src   "Jump to the last row -- UMG's ScrollToBottom."
+    text  "跳转到最后一行——即 UMG 的 ScrollToBottom。"
+    state machine
+}
+
+DreamListViewBase:ScrollToTop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollToTop
+    src   "Jump to the first row -- UMG's ScrollToTop."
+    text  "跳转到第一行——即 UMG 的 ScrollToTop。"
+    state machine
+}
+
+DreamListViewBase:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectedIndex
+    src   "The selected row, as an index into the SOURCE -- not into the rows on screen. For a list the\ntwo are the same; for a tree they are not, and an index that survives a collapse is the one\nworth handing to a binding. -1 is none.\n\nWith SelectionMode at Multi this is the ANCHOR -- the row the last selection landed on -- and\nSelectedIndices is the whole answer. (A Shift range is measured from a range anchor of its own,\nSListView's, which a range leaves where it was: see MULTI SELECTION above.) The two are kept in\nstep: writing this one (a .dui line, a details-panel edit, a `<->` binding) is read as \"that row\nis selected\", and a set that empties puts this back to -1."
+    text  "选中的行，以 SOURCE 中的索引表示——而不是屏幕上的行索引。对于列表，两者相同；\n对于树则不同，而一个能在折叠后仍然存续的索引，才值得交给绑定。\n-1 表示无。\n\n当 SelectionMode 为 Multi 时，这是 ANCHOR——最后一次选择落到的行——\n而 SelectedIndices 才是完整答案。（Shift 范围由它自己的范围锚点度量，\n即 SListView 的锚点，范围操作后该锚点会留在原处：见上文的 MULTI SELECTION。）\n两者保持同步：写入此项（.dui 中的一行、详情面板中的编辑、`<->` 绑定）会被读作\n“该行已被选中”，而清空集合会把它恢复为 -1。"
+    state machine
+}
+
+DreamListViewBase:SelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectedIndices
+    src   "Every selected row, as source indices, in the order they were chosen. Authorable, but the\nordinary road is SetItemSelection / SetSelectedIndex -- those keep SelectedIndex in step and\nrepaint.\n\nBlueprintReadWrite through a setter rather than read-only: a raw write used to be picked up\nonly on the next rebuild, which left the anchor pointing at a row that was no longer selected\nand the rows painted for a selection that had moved. SetSelectedIndices settles both."
+    text  "所有选中的行，以源索引表示，按选择顺序排列。可直接编写，但通常的途径是\nSetItemSelection / SetSelectedIndex——它们会让 SelectedIndex 保持同步并\n重绘。\n\n通过 setter 实现的蓝图读写（BlueprintReadWrite），而不是只读：原始写入\n过去只在下一次重建时才被读取，这会让锚点仍指向一个已不再选中的行，而行仍按已经移动的选择来绘制。\nSetSelectedIndices 会同时处理这两者。"
+    state machine
+}
+
+DreamListViewBase:SelectionMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectionMode
+    src   "How many rows can be selected at once, in UUIListView's four modes -- the same enum, because\nthey are the same four answers and a second one spelling them again is a second thing to keep\ntrue. None ignores clicks; Single always leaves exactly one chosen; SingleToggle lets a second\nclick on the chosen row clear it; Multi chooses as SListView does -- a plain click one row, Ctrl\na row more or less, Shift a range, a finger tap a row more (see MULTI SELECTION above)."
+    text  "一次能选中多少行，取决于 UUIListView 的四种模式——用的是同一个枚举，因为\n它们就是同样的四个答案，再写一个枚举来重复表述，就等于多了一件必须保持一致的事。\nNone 忽略点击；Single 始终只留下恰好一个选中项；SingleToggle 允许再次点击已选中的行将其清除；\nMulti 的选择方式与 SListView 相同——普通点击选中一行，Ctrl 点击增加或减少一行，\nShift 点击选择一段范围，手指轻点增加一行（见上文的 MULTI SELECTION）。"
+    state machine
+}
+
+DreamListViewBase:SetAlternatingRowColors {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAlternatingRowColors
+    src   "The five knobs below are read only by the style push or the row build, so each setter writes\nthe field and then makes that push itself -- which is the whole of what a BlueprintSetter buys\nhere. Restyling never creates or destroys a row (see the list's restyle-identity test), so the\nfirst three are cheap; the two virtualization knobs change how many rows there ARE, and go\nthrough RebuildRows for that reason."
+    text  "下面五个开关只由样式推入或行构建读取，因此每个 setter 都会写入字段，\n然后自己执行那次推入——这就是蓝图 setter（BlueprintSetter）在这里的全部意义。\n重新设置样式从不会创建或销毁行（见列表的 restyle-identity 测试），所以\n前三个开销很小；两个虚拟化开关会改变实际存在的行数，因此\n要经由 RebuildRows 处理。"
+    state machine
+}
+
+DreamListViewBase:SetDragDropVisualPivot {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualPivot
+    src   "The five below are read when a drag STARTS, so setting one is all a setter has to do; a drag\nalready in flight keeps the visual and the operation it began with."
+    text  "下面五项在拖拽开始时读取，因此设置器只需写入该项即可；\n已经在进行的拖拽会保留其开始时的视觉效果和操作。"
+    state machine
+}
+
+DreamListViewBase:SetDragEdgeScrollBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollBandSize
+    src   "Clamped at zero. Read on every step, so a change reaches a drag already in flight."
+    text  "限制为零。每一步都会读取，因此更改会作用于已经在进行的拖拽。"
+    state machine
+}
+
+DreamListViewBase:SetDragEdgeScrollSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollSpeed
+    src   "Clamped at zero. Read on every step, like the band."
+    text  "限制为零。与边缘滚动带一样，每一步都会读取。"
+    state machine
+}
+
+DreamListViewBase:SetEnableDragEdgeScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableDragEdgeScrolling
+    src   "Turning it off mid-drag stops a scroll already under way, and says it finished."
+    text  "在拖拽过程中关闭它会停止已经开始的滚动，并报告滚动已完成。"
+    state machine
+}
+
+DreamListViewBase:SetFingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFingerDrag
+    src   "Read when a finger's drag starts: a drag already under way goes on as it began."
+    text  "在手指拖拽开始时读取：已经开始的拖拽会按开始时的状态继续。"
+    state machine
+}
+
+DreamListViewBase:SetItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemObjects
+    src   "Replace the object source and rebuild.\n\nThe selection follows its OBJECTS to wherever they landed, silently -- nothing about what is\nchosen has changed. Objects that left the source leave the selection too, and that IS a change:\nit is announced once on OnSelectionChanged."
+    text  "替换对象源并重建。\n\n选择会静默地跟随其对象到它们最终所在的位置——所选内容本身没有任何变化。\n离开源的对象也会离开选择，而这确实是一次变化：\n它会在 OnSelectionChanged 上通知一次。"
+    state machine
+}
+
+DreamListViewBase:SetItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItems
+    src   "Replace the text source and rebuild.\n\nA text-only source has no identity to carry a selection across, so a selection it held is\ndropped -- and, like any source edit that takes selected items away, announced once on\nOnSelectionChanged."
+    text  "替换文本源并重建。\n\n纯文本源没有可用于携带选择跨越源的身份标识，因此它原先持有的选择会被丢弃——\n并且，与任何会移除已选项目的源编辑一样，\n会在 OnSelectionChanged 上通知一次。"
+    state machine
+}
+
+DreamListViewBase:SetItemSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemSelection
+    src   "Add or remove ONE row from the selection, which is the only call that can express a multi\nselection. bInClearOthers is implied by every mode except Multi.\n\nFires both selection events whenever the selection actually moved -- including the case where\nTHIS row's state did not change but others were cleared, which is where the behaviour-side\nversion left rows painted as selected after they had been dropped."
+    text  "向选择中添加或移除一行，这是唯一能表达多选的调用。\n除 Multi 外，所有模式都会隐含 bInClearOthers。\n\n每当选择实际发生变化时，都会触发两个选择事件——包括这一行的状态未变但其他行被清除的情况；\n在行为侧版本中，正是这种情况导致行在被取消选择后\n仍被绘制为选中状态。"
+    state machine
+}
+
+DreamListViewBase:SetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetOrientation
+    src   "Turn the whole control through ninety degrees.\n\nVirtual so a subclass can refuse: a tree is a column by definition, and a horizontal one is not\na thing UMG has either."
+    text  "将整个控件旋转九十度。\n\n虚函数，因此子类可以拒绝：树按定义就是列，而水平树也不是\nUMG 所具备的东西。"
+    state machine
+}
+
+DreamListViewBase:SetRowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetRowTemplateClass
+    src   "Replace the class every row's content is made from.\n\nA teardown, not a restyle: the instance lives INSIDE each pool row and is made once per row, so\na rebind can carry a new style into an existing row but never a new class."
+    text  "替换用于生成每一行内容的类。\n\n这是一次拆除重建，而不是重新设置样式：实例位于每个池行内部，并且每行只创建一次，\n因此重新绑定可以将新样式带入现有行，但绝不能带入新类。"
+    state machine
+}
+
+DreamListViewBase:SetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollOffset
+    src   "Put the viewport at an offset down the column, in local units. Clamped by the scroll range."
+    text  "将视口沿列向下放到指定的偏移处，单位为本地单位。受滚动范围限制。"
+    state machine
+}
+
+DreamListViewBase:SetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndex
+    src   "Moves the highlight and fires both selection events. Out of range selects nothing.\n\nSelects exactly ONE row whatever the mode but None, which selects nothing at all -- this is the\nsingle-selection road, and the name says so. SetItemSelection is the one that can add to a\nMulti selection.\n\nAn index asked for while the source is still EMPTY (or, with bAllowKeepPreselectedItems on, not\nyet long enough) is kept rather than dropped: GetSelectedIndex reads -1 until the items arrive,\nand then the row is selected and both events fire once. Any other selection made meanwhile --\na click, ClearSelection, another index -- replaces the kept one."
+    text  "移动高亮并触发两个选择事件。超出范围时不会选择任何内容。\n\n除 None 外，无论何种模式都只选择一行，而 None 完全不选择——这是单选路径，\n名称也说明了这一点。\nSetItemSelection 才是那个可以向多选添加项目的调用。\n\n在源仍为空（或启用 bAllowKeepPreselectedItems 时，源尚未足够长）的情况下请求的索引会被保留而不是丢弃：\n在项目到达之前，GetSelectedIndex 会读取为 -1，随后该行被选中，并且两个事件各触发一次。\n在此期间进行的任何其他选择——一次点击、ClearSelection、另一个索引——\n都会替换被保留的索引。"
+    state machine
+}
+
+DreamListViewBase:SetSelectedIndexWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndexWithoutNotify
+    src   "The same move, silently: for pushing an authored value in, which is not the user choosing."
+    text  "同样的操作，但静默执行：用于推入外部指定的值，而不是用户在选择。"
+    state machine
+}
+
+DreamListViewBase:SetSelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndices
+    src   "Replace the whole selection at once. Keeps the anchor and the rows' paint in step with it."
+    text  "一次性替换整个选择。保持锚点和各行的绘制与之同步。"
+    state machine
+}
+
+DreamListViewBase:SetSelectionMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectionMode
+    src   "Which mode decides how many rows can be chosen. Re-narrows the selection when it has to, and says\nso once when that changed it -- None drops the whole selection, Multi to a single mode keeps the\nanchor -- so a two-way binding is not left holding a row nothing selects any more."
+    text  "由哪种模式决定可以选择多少行。必要时会收窄选择，\n并在因此发生变化时通知一次——None 丢弃整个选择，Multi 收窄为单选模式时保留\n锚点——以免双向绑定仍持有一个已无任何选中项的行。"
+    state machine
+}
+
+DreamListViewBase:SetShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrush
+    src   "The image drawn over the viewport's edges while there is more to scroll to. Pushed at once."
+    text  "当仍有内容可滚动时，绘制在视口边缘上的图像。会立即推送。"
+    state machine
+}
+
+DreamListViewBase:SetVirtualizationThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationThreshold
+    src   "Crossing the threshold changes whether the list pools, so this rebuilds rather than restyles."
+    text  "越过阈值会改变列表是否使用池化，因此这会重建，而不是仅重新设置样式。"
+    state machine
+}
+
+DreamListViewBase:ShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowBrush
+    src   "What that fade is drawn with -- UMG's ShadowBrushStyle.\n\nOn the CONTROL rather than in FDreamListStyle: the style struct is the list's shared look and\nis resolved against the project sheet, where a fade is a per-screen decision about one list's\nedges. Keeping it here also means a project sheet cannot switch the overlay on for every list\nat once, which is not an edit anyone would make on purpose."
+    text  "该渐隐所用的绘制资源——UMG的ShadowBrushStyle（阴影笔刷样式）。\n\n放在控件上而非FDreamListStyle中：样式结构体是列表的共享外观，并\n针对项目样式表解析，而渐隐是关于单个列表边缘的逐屏幕决策。\n放在这里也意味着项目样式表无法一次性为所有列表\n开启该叠加层，而这并不是任何人会刻意做出的修改。"
+    state machine
+}
+
+DreamListViewBase:ShadowBrushThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowBrushThickness
+    src   "How deep the fade reaches into the window, in local units."
+    text  "渐隐向窗口内延伸的深度，以本地单位计。"
+    state machine
+}
+
+DreamListViewBase:ViewportNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ViewportNode
+    src   "The window the rows slide behind, and where the scroll behaviour lives."
+    text  "各行在其后方滑动的窗口，也是滚动行为的所在之处。"
+    state machine
+}
+
+DreamListViewBase:VirtualizationOverscan {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VirtualizationOverscan
+    src   "Extra rows kept realized past each edge of the window, so a fast scroll never shows a gap."
+    text  "在窗口各边缘之外额外保持实例化的行，使快速滚动时不会出现空隙。"
+    state machine
+}
+
+DreamListViewBase:VirtualizationThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VirtualizationThreshold
+    src   "Above this many rows the list recycles a window of widgets instead of building one per item.\n\nA threshold rather than a switch because the two behaviours are each right somewhere: below\nit every index has a widget, which is what a headless test, a designer preview and a consumer\nasking \"give me the widget for item 7\" all want; above it a list of a hundred thousand is a\npool of thirty. Zero recycles always; a very large number never does."
+    text  "超过此行数时，列表会回收一个控件窗口，而不是为每个项各建一个控件。\n\n这里用阈值而非开关，是因为两种行为各有其适用之处：低于阈值时\n每个索引都有对应的控件，这正是无头测试、设计器预览以及询问“给我第7项的控件”的使用方\n所需要的；高于阈值时，十万行的列表也只是一个\n三十个控件的池。零表示始终回收；一个非常大的数字表示从不回收。"
+    state machine
+}
+
+DreamListViewBase:VisibleItemIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VisibleItemIndices
+    src   "The display positions of the items the source is showing, in order."
+    text  "数据源当前显示的项对应的显示位置，按顺序排列。"
+    state machine
+}
+
+DreamListViewBase:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:WheelScrollMultiplier
+    src   "How many ROWS a wheel notch travels. One is the only sensitivity a list can state without\nguessing -- it is the unit the content is made of -- and this is the multiplier on it, for a\nlong list where a row at a time is too slow. Zero stops the wheel."
+    text  "滚轮每格滚动多少行。一是在无需猜测的情况下列表唯一能给出的灵敏度——它是内容构成的基本单位——\n而这是它的倍数，用于一次一行太慢的长列表。\n为零时滚轮停止滚动。"
+    state machine
+}
+
+DreamListViewBase:WindowStart {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:WindowStart
+    src   "The display index the realized window starts at. Zero while not recycling."
+    text  "已实现窗口起始处的显示索引。未回收时为零。"
+    state machine
+}
+
+EDreamItemDropZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone
+    src   "Where a drop landed relative to the row under the pointer -- UMG's EItemDropZone.\n\nThree answers, not two, because \"between these rows\" and \"onto this row\" are different edits: a\nre-order wants the seam, an assignment wants the row. The names are UMG's and are written for a\nvertical list; a horizontal one reads AboveItem as \"before it\" and BelowItem as \"after it\",\nbecause the question was always about SOURCE ORDER rather than about up and down."
+    text  "拖放落点相对于指针下那一行的位置——即UMG的EItemDropZone。\n\n有三种答案而非两种，因为“这些行之间”和“落到这一行上”是不同的编辑：重新\n排序要的是接缝，赋值要的是行本身。名称取自UMG，且是按\n垂直列表书写的；水平列表会把AboveItem读作“在它之前”，把BelowItem读作“在它之后”，\n因为这个问题始终关乎源顺序（SOURCE ORDER），而非上下方向。"
+    state machine
+}
+
+EDreamItemDropZone.AboveItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:AboveItem
+    src   "The seam before the row: a re-order that puts the dragged item ahead of it."
+    text  "行之前的接缝：重新排序会把拖动的项放在它前面。"
+    state machine
+}
+
+EDreamItemDropZone.BelowItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:BelowItem
+    src   "The seam after the row."
+    text  "行之后的接缝。"
+    state machine
+}
+
+EDreamItemDropZone.OntoItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:OntoItem
+    src   "The row itself: an assignment onto whatever that row stands for."
+    text  "行本身：赋值到该行所代表的任何对象上。"
+    state machine
+}
+
+EDreamListFingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag
+    src   "What a finger dragged along a list whose rows can be picked up (bAllowDragging) does."
+    text  "手指在行可被拾取的列表（bAllowDragging）上拖动时的行为。"
+    state machine
+}
+
+EDreamListFingerDrag.PickUpRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag:PickUpRow
+    src   "The row under the finger is picked up, as the mouse picks it up; the list does not scroll under that finger."
+    text  "手指下的行会被拾取，与鼠标拾取时一样；该手指下列表不会滚动。"
+    state machine
+}
+
+EDreamListFingerDrag.ScrollList {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag:ScrollList
+    src   "The list scrolls under the finger and no row is picked up, as in UMG: a touch drag on a row of an SListView is the\nlist's (STableRow hands it to its table before the row's own drag is asked). The mouse still picks rows up."
+    text  "列表在手指下滚动，不拾取任何行，与UMG中一样：在SListView的行上进行触摸拖动属于\n列表的拖动（在询问行自身的拖动之前，STableRow会先把它交给其表格）。鼠标仍会拾取行。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamListDraggingStateEvent__DelegateSignature:bIsDragging {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListDraggingStateEvent__DelegateSignature:bIsDragging
+    src   "Is Dragging"
+    // from the engine's zh-Hans
+    text  "Is Dragging"
+    state draft
+}
+
+DreamListEntriesGeneratedEvent__DelegateSignature:RealizedRowCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListEntriesGeneratedEvent__DelegateSignature:RealizedRowCount
+    src   "Realized Row Count"
+    text  "已实现行数"
+    state machine
+}
+
+DreamListItemDragEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDragEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListItemDragEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDragEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListItemDragEvent__DelegateSignature:Operation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDragEvent__DelegateSignature:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
+DreamListItemDropEvent__DelegateSignature:DropZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDropEvent__DelegateSignature:DropZone
+    src   "Drop Zone"
+    // from the engine's zh-Hans
+    text  "Drop Zone"
+    state draft
+}
+
+DreamListItemDropEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDropEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListItemDropEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDropEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListItemDropEvent__DelegateSignature:Operation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemDropEvent__DelegateSignature:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
+DreamListItemEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListItemEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListItemHoverEvent__DelegateSignature:bIsHovered {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemHoverEvent__DelegateSignature:bIsHovered
+    src   "Is Hovered"
+    // from the engine's zh-Hans
+    text  "Is Hovered"
+    state draft
+}
+
+DreamListItemHoverEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemHoverEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListItemHoverEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemHoverEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListItemSelectableQuery__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemSelectableQuery__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListItemSelectableQuery__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemSelectableQuery__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListItemSelectableQuery__DelegateSignature:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListItemSelectableQuery__DelegateSignature:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListRowButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowButton
+    src   "Dream List Row Button"
+    text  "Dream列表行按钮"
+    state machine
+}
+
+DreamListRowButton:OwningList {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowButton:OwningList
+    src   "Owning List"
+    text  "所属列表"
+    state machine
+}
+
+DreamListRowButton:PoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowButton:PoolIndex
+    src   "Pool Index"
+    text  "池索引"
+    state machine
+}
+
+DreamListRowDragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDragSource
+    src   "Dream List Row Drag Source"
+    text  "列表行拖动源"
+    state machine
+}
+
+DreamListRowDragSource:OwningList {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDragSource:OwningList
+    src   "Owning List"
+    text  "所属列表"
+    state machine
+}
+
+DreamListRowDragSource:PoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDragSource:PoolIndex
+    src   "Pool Index"
+    text  "池索引"
+    state machine
+}
+
+DreamListRowDropTarget {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget
+    src   "Dream List Row Drop Target"
+    text  "列表行放置目标"
+    state machine
+}
+
+DreamListRowDropTarget:HandleDragEnter:InOperation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragEnter:InOperation
+    src   "In Operation"
+    // from the engine's zh-Hans
+    text  "输入运算"
+    state draft
+}
+
+DreamListRowDropTarget:HandleDragLeave:InOperation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragLeave:InOperation
+    src   "In Operation"
+    // from the engine's zh-Hans
+    text  "输入运算"
+    state draft
+}
+
+DreamListRowDropTarget:HandleDragOver:InOperation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragOver:InOperation
+    src   "In Operation"
+    // from the engine's zh-Hans
+    text  "输入运算"
+    state draft
+}
+
+DreamListRowDropTarget:OwningList {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:OwningList
+    src   "Owning List"
+    text  "所属列表"
+    state machine
+}
+
+DreamListRowDropTarget:PoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:PoolIndex
+    src   "Pool Index"
+    text  "池索引"
+    state machine
+}
+
+DreamListRowEvent__DelegateSignature:Item {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowEvent__DelegateSignature:Item
+    src   "Item"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListRowEvent__DelegateSignature:ItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowEvent__DelegateSignature:ItemIndex
+    src   "Item Index"
+    // from the engine's zh-Hans
+    text  "项目索引"
+    state draft
+}
+
+DreamListRowEvent__DelegateSignature:Row {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowEvent__DelegateSignature:Row
+    src   "Row"
+    // from the engine's zh-Hans
+    text  "行"
+    state draft
+}
+
+DreamListScrolledEvent__DelegateSignature:CurrentOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListScrolledEvent__DelegateSignature:CurrentOffset
+    src   "Current Offset"
+    // from the engine's zh-Hans
+    text  "当前偏移"
+    state draft
+}
+
+DreamListScrolledEvent__DelegateSignature:ViewFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListScrolledEvent__DelegateSignature:ViewFraction
+    src   "View Fraction"
+    text  "视图比例"
+    state machine
+}
+
+DreamListSelectionChangedEvent__DelegateSignature:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListSelectionChangedEvent__DelegateSignature:SelectedIndex
+    src   "Selected Index"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamListView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView
+    src   "Dream List View"
+    text  "列表视图"
+    state machine
+}
+
+DreamListView:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListView:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamListView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamListViewBase {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase
+    src   "Dream List View Base"
+    text  "列表视图基类"
+    state machine
+}
+
+DreamListViewBase:ActiveDragOperation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ActiveDragOperation
+    src   "Active Drag Operation"
+    text  "活动拖动操作"
+    state machine
+}
+
+DreamListViewBase:AddItem:InItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItem:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:AddItemAt:InItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemAt:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:AddItemAt:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemAt:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:AddItems:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItems:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamListViewBase:AddItemsAt:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemsAt:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:AddItemsAt:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemsAt:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamListViewBase:AddTextItem:InItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddTextItem:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:bAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowDragDrop
+    src   "Allow Drag Drop"
+    // from the engine's zh-Hans
+    text  "Allow Drag Drop"
+    state draft
+}
+
+DreamListViewBase:bAllowDragging {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowDragging
+    src   "Allow Dragging"
+    // from the engine's zh-Hans
+    text  "允许拖动"
+    state draft
+}
+
+DreamListViewBase:bAllowKeepPreselectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowKeepPreselectedItems
+    src   "Allow Keep Preselected Items"
+    // from the engine's zh-Hans
+    text  "Allow Keep Preselected Items"
+    state draft
+}
+
+DreamListViewBase:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAllowOverscroll
+    src   "Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "允许过度滚动"
+    state draft
+}
+
+DreamListViewBase:bAlternatingRowColors {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bAlternatingRowColors
+    src   "Alternating Row Colors"
+    text  "交替行颜色"
+    state machine
+}
+
+DreamListViewBase:bClearScrollVelocityOnSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bClearScrollVelocityOnSelection
+    src   "Clear Scroll Velocity on Selection"
+    // from the engine's zh-Hans
+    text  "清除选择时的滚动速度"
+    state draft
+}
+
+DreamListViewBase:bEnableDragEdgeScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableDragEdgeScrolling
+    src   "Enable Drag Edge Scrolling"
+    text  "启用边缘滚动"
+    state machine
+}
+
+DreamListViewBase:bEnableFixedLineOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableFixedLineOffset
+    src   "Enable Fixed Line Offset"
+    // from the engine's zh-Hans
+    text  "启用固定行偏移"
+    state draft
+}
+
+DreamListViewBase:bEnableRightClickScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableRightClickScrolling
+    src   "Enable Right Click Scrolling"
+    // from the engine's zh-Hans
+    text  "启用右键点击滚动"
+    state draft
+}
+
+DreamListViewBase:bEnableScrollAnimation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableScrollAnimation
+    src   "Enable Scroll Animation"
+    // from the engine's zh-Hans
+    text  "启用滚动动画"
+    state draft
+}
+
+DreamListViewBase:bEnableShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableShadowBrush
+    src   "Enable Shadow Brush"
+    text  "启用阴影笔刷"
+    state machine
+}
+
+DreamListViewBase:bEnableTouchAnimatedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableTouchAnimatedScrolling
+    src   "Enable Touch Animated Scrolling"
+    // from the engine's zh-Hans
+    text  "启用触摸带动画的滚动"
+    state draft
+}
+
+DreamListViewBase:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bEnableTouchScrolling
+    src   "Enable Touch Scrolling"
+    // from the engine's zh-Hans
+    text  "启用触摸滚动"
+    state draft
+}
+
+DreamListViewBase:bIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bIsGamepadScrollingEnabled
+    src   "Is Gamepad Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "是否游戏手柄滚动已启用"
+    state draft
+}
+
+DreamListViewBase:bIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bIsPointerScrollingEnabled
+    src   "Is Pointer Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "是否启用指针滚动"
+    state draft
+}
+
+DreamListViewBase:bReturnFocusToSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bReturnFocusToSelection
+    src   "Return Focus to Selection"
+    // from the engine's zh-Hans
+    text  "将聚焦返回选项"
+    state draft
+}
+
+DreamListViewBase:bSelectItemOnNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bSelectItemOnNavigation
+    src   "Select Item on Navigation"
+    // from the engine's zh-Hans
+    text  "导航时选择项"
+    state draft
+}
+
+DreamListViewBase:bShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bShowScrollBar
+    src   "Show Scroll Bar"
+    // from the engine's zh-Hans
+    text  "显示滚动条"
+    state draft
+}
+
+DreamListViewBase:bVirtualizing {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:bVirtualizing
+    src   "Virtualizing"
+    text  "虚拟化"
+    state machine
+}
+
+DreamListViewBase:CancelListViewDragDrop:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:CancelListViewDragDrop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:ColumnNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ColumnNode
+    src   "Column Node"
+    text  "列节点"
+    state machine
+}
+
+DreamListViewBase:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ConsumeMouseWheel
+    src   "Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "消耗鼠标滚轮"
+    state draft
+}
+
+DreamListViewBase:DragDropOperationClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropOperationClass
+    src   "Drag Drop Operation Class"
+    // from the engine's zh-Hans
+    text  "Drag Drop Operation Class"
+    state draft
+}
+
+DreamListViewBase:DragDropVisualEntryClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualEntryClass
+    src   "Drag Drop Visual Entry Class"
+    // from the engine's zh-Hans
+    text  "Drag Drop Visual Entry Class"
+    state draft
+}
+
+DreamListViewBase:DragDropVisualOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualOffset
+    src   "Drag Drop Visual Offset"
+    // from the engine's zh-Hans
+    text  "Drag Drop Visual Offset"
+    state draft
+}
+
+DreamListViewBase:DragDropVisualPivot {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragDropVisualPivot
+    src   "Drag Drop Visual Pivot"
+    // from the engine's zh-Hans
+    text  "Drag Drop Visual Pivot"
+    state draft
+}
+
+DreamListViewBase:DragEdgeScrollBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragEdgeScrollBandSize
+    src   "Drag Edge Scroll Band Size"
+    text  "拖动边缘滚动条大小"
+    state machine
+}
+
+DreamListViewBase:DragEdgeScrollSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragEdgeScrollSpeed
+    src   "Drag Edge Scroll Speed"
+    text  "拖动边缘滚动速度"
+    state machine
+}
+
+DreamListViewBase:DragOperationTag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:DragOperationTag
+    src   "Drag Operation Tag"
+    text  "拖动操作标签"
+    state machine
+}
+
+DreamListViewBase:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamListViewBase:FingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FingerDrag
+    src   "Finger Drag"
+    text  "手指拖动"
+    state machine
+}
+
+DreamListViewBase:FixedLineScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FixedLineScrollOffset
+    src   "Fixed Line Scroll Offset"
+    // from the engine's zh-Hans
+    text  "固定行滚动偏移"
+    state draft
+}
+
+DreamListViewBase:FocusSelectedRow:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FocusSelectedRow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetAllowDragDrop:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragDrop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetAllowDragging:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragging:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetAllowKeepPreselectedItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowKeepPreselectedItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetAllowOverscroll:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowOverscroll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetAlternatingRowColors:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAlternatingRowColors:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetClearScrollVelocityOnSelection:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetClearScrollVelocityOnSelection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetConsumeMouseWheel:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetConsumeMouseWheel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetDragEdgeScrollBandSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDragEdgeScrollBandSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetDragEdgeScrollSpeed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDragEdgeScrollSpeed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetDraggedItemIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDraggedItemIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableDragEdgeScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableDragEdgeScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableFixedLineOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableFixedLineOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableRightClickScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableRightClickScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableScrollAnimation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableScrollAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableShadowBrush:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableShadowBrush:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableTouchAnimatedScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableTouchAnimatedScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetEnableTouchScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableTouchScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetFingerDrag:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFingerDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetFixedLineScrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFixedLineScrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetIndexForItem:InItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIndexForItem:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:GetIndexForItem:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIndexForItem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetIsDraggingListItem:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsDraggingListItem:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetIsGamepadScrollingEnabled:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsGamepadScrollingEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetIsPointerScrollingEnabled:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsPointerScrollingEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetItemAt:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemAt:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:GetItemAt:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemAt:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetItemCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetListItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetListItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetNumItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetNumItemsSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItemsSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetOrientation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOrientation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetOverscroll:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOverscroll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetRealizedRowCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRealizedRowCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetReturnFocusToSelection:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetReturnFocusToSelection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetRowCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetRowItemIndex:InPoolIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowItemIndex:InPoolIndex
+    src   "In Pool Index"
+    text  "池索引"
+    state machine
+}
+
+DreamListViewBase:GetRowItemIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowItemIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetRowTemplateClass:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowTemplateClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetRowWidget:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowWidget:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:GetRowWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetScrollBarVisibility:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollBarVisibility:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetScrollingAnimationInterpolationSpeed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollingAnimationInterpolationSpeed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetScrollIntoViewDestination:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollIntoViewDestination:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetScrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetSelectedIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetSelectedIndices:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndices:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetSelectedItems:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedItems:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetSelectionMode:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectionMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetSelectItemOnNavigation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectItemOnNavigation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetShadowBrushThickness:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetShadowBrushThickness:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetShowScrollBar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetShowScrollBar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetViewFraction:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetViewFraction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetVirtualizationOverscan:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetVirtualizationOverscan:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetVirtualizationThreshold:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetVirtualizationThreshold:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetWheelScrollMultiplier:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetWheelScrollMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:IsItemSelectableOrNavigable:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelectableOrNavigable:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:IsItemSelectableOrNavigable:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelectableOrNavigable:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:IsItemSelected:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelected:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:IsItemSelected:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelected:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:IsItemVisible:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemVisible:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:IsItemVisible:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemVisible:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:IsVirtualizing:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsVirtualizing:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:ItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ItemObjects
+    src   "Item Objects"
+    text  "项目对象"
+    state machine
+}
+
+DreamListViewBase:Items {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:Items
+    src   "Items"
+    // from the engine's zh-Hans
+    text  "项目"
+    state draft
+}
+
+DreamListViewBase:NavigateToIndex:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:NavigateToIndex:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:OnDraggingStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnDraggingStateChanged
+    src   "On Dragging State Changed"
+    text  "拖动状态改变事件"
+    state machine
+}
+
+DreamListViewBase:OnIsItemSelectableOrNavigable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnIsItemSelectableOrNavigable
+    src   "On Is Item Selectable or Navigable"
+    // from the engine's zh-Hans
+    text  "开启项是否可选或可导航"
+    state draft
+}
+
+DreamListViewBase:OnItemAcceptDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemAcceptDrop
+    src   "On Item Accept Drop"
+    // from the engine's zh-Hans
+    text  "On Item Accept Drop"
+    state draft
+}
+
+DreamListViewBase:OnItemClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemClicked
+    src   "On Item Clicked"
+    // from the engine's zh-Hans
+    text  "点击项目时"
+    state draft
+}
+
+DreamListViewBase:OnItemDoubleClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDoubleClicked
+    src   "On Item Double Clicked"
+    // from the engine's zh-Hans
+    text  "双击项目时"
+    state draft
+}
+
+DreamListViewBase:OnItemDragCancelled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragCancelled
+    src   "On Item Drag Cancelled"
+    // from the engine's zh-Hans
+    text  "On Item Drag Cancelled"
+    state draft
+}
+
+DreamListViewBase:OnItemDragDetected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragDetected
+    src   "On Item Drag Detected"
+    // from the engine's zh-Hans
+    text  "On Item Drag Detected"
+    state draft
+}
+
+DreamListViewBase:OnItemDragEnter {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragEnter
+    src   "On Item Drag Enter"
+    // from the engine's zh-Hans
+    text  "On Item Drag Enter"
+    state draft
+}
+
+DreamListViewBase:OnItemDragLeave {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemDragLeave
+    src   "On Item Drag Leave"
+    // from the engine's zh-Hans
+    text  "On Item Drag Leave"
+    state draft
+}
+
+DreamListViewBase:OnItemIsHoveredChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemIsHoveredChanged
+    src   "On Item Is Hovered Changed"
+    // from the engine's zh-Hans
+    text  "悬停项目变更时"
+    state draft
+}
+
+DreamListViewBase:OnItemScrolledIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnItemScrolledIntoView
+    src   "On Item Scrolled Into View"
+    // from the engine's zh-Hans
+    text  "项目滚动到视图时"
+    state draft
+}
+
+DreamListViewBase:OnListViewFinishedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewFinishedScrolling
+    src   "On List View Finished Scrolling"
+    // from the engine's zh-Hans
+    text  "在列表视图中完成滚动"
+    state draft
+}
+
+DreamListViewBase:OnListViewScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewScrolled
+    src   "On List View Scrolled"
+    // from the engine's zh-Hans
+    text  "列表视图滚动时"
+    state draft
+}
+
+DreamListViewBase:OnListViewTouchEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewTouchEnd
+    src   "On List View Touch End"
+    // from the engine's zh-Hans
+    text  "On List View Touch End"
+    state draft
+}
+
+DreamListViewBase:OnListViewTouchMove {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewTouchMove
+    src   "On List View Touch Move"
+    // from the engine's zh-Hans
+    text  "On List View Touch Move"
+    state draft
+}
+
+DreamListViewBase:OnListViewTouchStart {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnListViewTouchStart
+    src   "On List View Touch Start"
+    // from the engine's zh-Hans
+    text  "On List View Touch Start"
+    state draft
+}
+
+DreamListViewBase:OnRowGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowGenerated
+    src   "On Row Generated"
+    text  "行生成事件"
+    state machine
+}
+
+DreamListViewBase:OnRowInitialized {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowInitialized
+    src   "On Row Initialized"
+    text  "行初始化事件"
+    state machine
+}
+
+DreamListViewBase:OnRowReleased {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowReleased
+    src   "On Row Released"
+    text  "行释放事件"
+    state machine
+}
+
+DreamListViewBase:OnRowsGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnRowsGenerated
+    src   "On Rows Generated"
+    text  "多行生成事件"
+    state machine
+}
+
+DreamListViewBase:OnSelectionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnSelectionChanged
+    src   "On Selection Changed"
+    // from the engine's zh-Hans
+    text  "选择已变化时"
+    state draft
+}
+
+DreamListViewBase:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamListViewBase:Orientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:Orientation
+    src   "Orientation"
+    // from the engine's zh-Hans
+    text  "朝向"
+    state draft
+}
+
+DreamListViewBase:PoolRowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:PoolRowTemplateClass
+    src   "Pool Row Template Class"
+    text  "行模板类池"
+    state machine
+}
+
+DreamListViewBase:RemoveItem:InItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItem:InItem
+    src   "In Item"
+    // from the engine's zh-Hans
+    text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:RemoveItemAt:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItemAt:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:RemoveItems:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItems:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamListViewBase:ResolveDropZone:InEdgeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ResolveDropZone:InEdgeFraction
+    src   "In Edge Fraction"
+    text  "边缘比例"
+    state machine
+}
+
+DreamListViewBase:ResolveDropZone:InFractionAlongRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ResolveDropZone:InFractionAlongRow
+    src   "In Fraction Along Row"
+    text  "行内比例"
+    state machine
+}
+
+DreamListViewBase:ResolveDropZone:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ResolveDropZone:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:RowLabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowLabelNode
+    src   "Row Label Node"
+    text  "行标签节点"
+    state machine
+}
+
+DreamListViewBase:RowNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowNodes
+    src   "Row Nodes"
+    text  "行节点"
+    state machine
+}
+
+DreamListViewBase:RowSourceIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowSourceIndices
+    src   "Row Source Indices"
+    text  "行源索引"
+    state machine
+}
+
+DreamListViewBase:RowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowTemplateClass
+    src   "Row Template Class"
+    text  "行模板类"
+    state machine
+}
+
+DreamListViewBase:RowTemplateNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RowTemplateNode
+    src   "Row Template Node"
+    text  "行模板节点"
+    state machine
+}
+
+DreamListViewBase:ScrollBarNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollBarNode
+    src   "Scroll Bar Node"
+    text  "滚动条节点"
+    state machine
+}
+
+DreamListViewBase:ScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollBarVisibility
+    src   "Scroll Bar Visibility"
+    // from the engine's zh-Hans
+    text  "滚动条可视性"
+    state draft
+}
+
+DreamListViewBase:ScrollBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollBehaviour
+    src   "Scroll Behaviour"
+    text  "滚动行为"
+    state machine
+}
+
+DreamListViewBase:ScrollIndexIntoView:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIndexIntoView:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:ScrollingAnimationInterpolationSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollingAnimationInterpolationSpeed
+    src   "Scrolling Animation Interpolation Speed"
+    // from the engine's zh-Hans
+    text  "滚动动画插值速度"
+    state draft
+}
+
+DreamListViewBase:ScrollIntoViewDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIntoViewDestination
+    src   "Scroll Into View Destination"
+    text  "滚动目标位置"
+    state machine
+}
+
+DreamListViewBase:ScrollItemIntoView:bInAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView:bInAnimate
+    src   "In Animate"
+    text  "是否动画"
+    state machine
+}
+
+DreamListViewBase:ScrollItemIntoView:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:ScrollItemIntoView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamListViewBase:SelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectedIndex
+    src   "Selected Index"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamListViewBase:SelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectedIndices
+    src   "Selected Indices"
+    // from the engine's zh-Hans
+    text  "选定索引"
+    state draft
+}
+
+DreamListViewBase:SelectionMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SelectionMode
+    src   "Selection Mode"
+    // from the engine's zh-Hans
+    text  "选择模式"
+    state draft
+}
+
+DreamListViewBase:SetAllowDragDrop:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowDragDrop:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamListViewBase:SetAllowDragging:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowDragging:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamListViewBase:SetAllowKeepPreselectedItems:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowKeepPreselectedItems:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamListViewBase:SetAllowOverscroll:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowOverscroll:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamListViewBase:SetAlternatingRowColors:bInAlternating {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAlternatingRowColors:bInAlternating
+    src   "In Alternating"
+    text  "是否交替颜色"
+    state machine
+}
+
+DreamListViewBase:SetClearScrollVelocityOnSelection:bInClear {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetClearScrollVelocityOnSelection:bInClear
+    src   "In Clear"
+    text  "是否清除滚动速度"
+    state machine
+}
+
+DreamListViewBase:SetConsumeMouseWheel:InConsume {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetConsumeMouseWheel:InConsume
+    src   "In Consume"
+    text  "是否消费鼠标滚轮"
+    state machine
+}
+
+DreamListViewBase:SetDragDropOperationClass:InOperationClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropOperationClass:InOperationClass
+    src   "In Operation Class"
+    text  "操作类"
+    state machine
+}
+
+DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass
+    src   "In Entry Class"
+    text  "拖拽时使用的条目类"
+    state machine
+}
+
+DreamListViewBase:SetDragDropVisualOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+DreamListViewBase:SetDragDropVisualPivot:InPivot {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualPivot:InPivot
+    src   "In Pivot"
+    // from the engine's zh-Hans
+    text  "输入枢轴"
+    state draft
+}
+
+DreamListViewBase:SetDragEdgeScrollBandSize:InBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollBandSize:InBandSize
+    src   "In Band Size"
+    text  "边缘滚动条带大小"
+    state machine
+}
+
+DreamListViewBase:SetDragEdgeScrollSpeed:InSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollSpeed:InSpeed
+    src   "In Speed"
+    text  "边缘滚动速度"
+    state machine
+}
+
+DreamListViewBase:SetDragOperationTag:InTag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragOperationTag:InTag
+    src   "In Tag"
+    // from the engine's zh-Hans
+    text  "在标签中"
+    state draft
+}
+
+DreamListViewBase:SetEnableDragEdgeScrolling:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableDragEdgeScrolling:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableFixedLineOffset:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableFixedLineOffset:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableRightClickScrolling:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableRightClickScrolling:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableScrollAnimation:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableScrollAnimation:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableShadowBrush:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableShadowBrush:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableTouchAnimatedScrolling:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableTouchAnimatedScrolling:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetEnableTouchScrolling:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableTouchScrolling:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetFingerDrag:InFingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFingerDrag:InFingerDrag
+    src   "In Finger Drag"
+    text  "是否支持手指拖动"
+    state machine
+}
+
+DreamListViewBase:SetFixedLineScrollOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFixedLineScrollOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+DreamListViewBase:SetIsGamepadScrollingEnabled:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetIsGamepadScrollingEnabled:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetIsPointerScrollingEnabled:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetIsPointerScrollingEnabled:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetItemObjects:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemObjects:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamListViewBase:SetItems:InItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItems:InItems
+    src   "In Items"
+    // from the engine's zh-Hans
+    text  "输入项"
+    state draft
+}
+
+DreamListViewBase:SetItemSelection:bInClearOthers {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemSelection:bInClearOthers
+    src   "In Clear Others"
+    text  "是否清除其他选中项"
+    state machine
+}
+
+DreamListViewBase:SetItemSelection:bInSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemSelection:bInSelected
+    src   "In Selected"
+    // from the engine's zh-Hans
+    text  "输入已选项"
+    state draft
+}
+
+DreamListViewBase:SetItemSelection:InItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemSelection:InItemIndex
+    src   "In Item Index"
+    text  "项目索引"
+    state machine
+}
+
+DreamListViewBase:SetOrientation:InOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetOrientation:InOrientation
+    src   "In Orientation"
+    // from the engine's zh-Hans
+    text  "输入朝向"
+    state draft
+}
+
+DreamListViewBase:SetReturnFocusToSelection:bInReturn {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetReturnFocusToSelection:bInReturn
+    src   "In Return"
+    text  "是否返回到选中项"
+    state machine
+}
+
+DreamListViewBase:SetRowTemplateClass:InClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetRowTemplateClass:InClass
+    src   "In Class"
+    // from the engine's zh-Hans
+    text  "在类中"
+    state draft
+}
+
+DreamListViewBase:SetScrollBarVisibility:InVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollBarVisibility:InVisibility
+    src   "In Visibility"
+    // from the engine's zh-Hans
+    text  "在可视性中"
+    state draft
+}
+
+DreamListViewBase:SetScrollingAnimationInterpolationSpeed:InSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollingAnimationInterpolationSpeed:InSpeed
+    src   "In Speed"
+    text  "边缘滚动速度"
+    state machine
+}
+
+DreamListViewBase:SetScrollIntoViewDestination:InDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollIntoViewDestination:InDestination
+    src   "In Destination"
+    // from the engine's zh-Hans
+    text  "输入目的地"
+    state draft
+}
+
+DreamListViewBase:SetScrollOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+DreamListViewBase:SetSelectedIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamListViewBase:SetSelectedIndices:InIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndices:InIndices
+    src   "In Indices"
+    text  "索引 (输入)"
+    state machine
+}
+
+DreamListViewBase:SetSelectionMode:InMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectionMode:InMode
+    src   "In Mode"
+    // from the engine's zh-Hans
+    text  "输入模式"
+    state draft
+}
+
+DreamListViewBase:SetSelectItemOnNavigation:bInSelect {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectItemOnNavigation:bInSelect
+    src   "In Select"
+    text  "是否通过导航选中"
+    state machine
+}
+
+DreamListViewBase:SetShadowBrush:InShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrush:InShadowBrush
+    src   "In Shadow Brush"
+    text  "阴影笔刷"
+    state machine
+}
+
+DreamListViewBase:SetShadowBrushThickness:InThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrushThickness:InThickness
+    src   "In Thickness"
+    // from the engine's zh-Hans
+    text  "输入厚度"
+    state draft
+}
+
+DreamListViewBase:SetShowScrollBar:bInShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShowScrollBar:bInShowScrollBar
+    src   "In Show Scroll Bar"
+    text  "是否显示滚动条"
+    state machine
+}
+
+DreamListViewBase:SetVirtualizationOverscan:InOverscan {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationOverscan:InOverscan
+    src   "In Overscan"
+    // from the engine's zh-Hans
+    text  "输入过扫描"
+    state draft
+}
+
+DreamListViewBase:SetVirtualizationThreshold:InThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationThreshold:InThreshold
+    src   "In Threshold"
+    // from the engine's zh-Hans
+    text  "输入阈值"
+    state draft
+}
+
+DreamListViewBase:SetWheelScrollMultiplier:InMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetWheelScrollMultiplier:InMultiplier
+    src   "In Multiplier"
+    text  "滚轮倍率"
+    state machine
+}
+
+DreamListViewBase:ShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowBrush
+    src   "Shadow Brush"
+    text  "阴影笔刷"
+    state machine
+}
+
+DreamListViewBase:ShadowBrushThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowBrushThickness
+    src   "Shadow Brush Thickness"
+    text  "阴影笔刷粗细"
+    state machine
+}
+
+DreamListViewBase:ShadowEndNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowEndNode
+    src   "Shadow End Node"
+    text  "阴影结束节点"
+    state machine
+}
+
+DreamListViewBase:ShadowStartNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ShadowStartNode
+    src   "Shadow Start Node"
+    text  "阴影开始节点"
+    state machine
+}
+
+DreamListViewBase:ViewportNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ViewportNode
+    src   "Viewport Node"
+    text  "视口节点"
+    state machine
+}
+
+DreamListViewBase:VirtualizationOverscan {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VirtualizationOverscan
+    src   "Virtualization Overscan"
+    text  "虚拟化溢出范围"
+    state machine
+}
+
+DreamListViewBase:VirtualizationThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VirtualizationThreshold
+    src   "Virtualization Threshold"
+    text  "虚拟化阈值"
+    state machine
+}
+
+DreamListViewBase:VisibleItemIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:VisibleItemIndices
+    src   "Visible Item Indices"
+    text  "可见项索引"
+    state machine
+}
+
+DreamListViewBase:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:WheelScrollMultiplier
+    src   "Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "滚轮滚动乘数"
+    state draft
+}
+
+DreamListViewBase:WindowStart {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:WindowStart
+    src   "Window Start"
+    text  "窗口起始位置"
+    state machine
+}
+
+EDreamItemDropZone.AboveItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:AboveItem
+    src   "Above Item"
+    text  "上方项目"
+    state machine
+}
+
+EDreamItemDropZone.BelowItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:BelowItem
+    src   "Below Item"
+    text  "下方项目"
+    state machine
+}
+
+EDreamItemDropZone.EDreamItemDropZone_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:EDreamItemDropZone_MAX
+    src   "EDream Item Drop Zone MAX"
+    text  "EDream Item Drop Zone 最大值"
+    state machine
+}
+
+EDreamItemDropZone.OntoItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamItemDropZone:OntoItem
+    src   "Onto Item"
+    text  "放置到项目"
+    state machine
+}
+
+EDreamListFingerDrag.EDreamListFingerDrag_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag:EDreamListFingerDrag_MAX
+    src   "EDream List Finger Drag MAX"
+    text  "列表拖拽最大值"
+    state machine
+}
+
+EDreamListFingerDrag.PickUpRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag:PickUpRow
+    src   "Pick Up Row"
+    text  "拾取行"
+    state machine
+}
+
+EDreamListFingerDrag.ScrollList {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#EDreamListFingerDrag:ScrollList
+    src   "Scroll List"
+    text  "滚动列表"
+    state machine
+}
+
+namespace UObjectCategory
+
+List {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItem
+    src   "List"
+    // from the engine's zh-Hans
+    text  "列表"
+    state draft
+}
+
+List|Drag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:CancelListViewDragDrop
+    src   "List|Drag"
+    text  "列表|拖拽"
+    state machine
+}

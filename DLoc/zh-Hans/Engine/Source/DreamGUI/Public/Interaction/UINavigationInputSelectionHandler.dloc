@@ -1,0 +1,54 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UINavigationInputSelectionHandler {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler
+    src   "UINavigation Input Selection Handler"
+    text  "导航输入选择处理程序"
+    state machine
+}
+
+UINavigationInputSelectionHandler:AnimDuration {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:AnimDuration
+    src   "Anim Duration"
+    text  "动画持续时间"
+    state machine
+}
+
+UINavigationInputSelectionHandler:CurrentSelected {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:CurrentSelected
+    src   "Current Selected"
+    text  "当前选中"
+    state machine
+}
+
+UINavigationInputSelectionHandler:ReceiveSelectWidget:InSelected {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectWidget:InSelected
+    src   "In Selected"
+    // from the engine's zh-Hans
+    text  "输入已选项"
+    state draft
+}
+
+UINavigationInputSelectionHandler:SelectWidget:InSelected {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:SelectWidget:InSelected
+    src   "In Selected"
+    // from the engine's zh-Hans
+    text  "输入已选项"
+    state draft
+}
+
+UINavigationInputSelectionHandler:ThisCanvas {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ThisCanvas
+    src   "This Canvas"
+    text  "此画布"
+    state machine
+}
+
+UINavigationInputSelectionHandler:TweenerCollection {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:TweenerCollection
+    src   "Tweener Collection"
+    text  "缓动器集合"
+    state machine
+}

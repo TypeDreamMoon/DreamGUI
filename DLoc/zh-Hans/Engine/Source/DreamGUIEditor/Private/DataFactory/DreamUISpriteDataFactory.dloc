@@ -1,0 +1,43 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+Sprite {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISpriteDataFactory.cpp
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "Sprite"
+    state draft
+}
+
+SpriteToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISpriteDataFactory.cpp
+    src   "A texture a widget draws, packed into an atlas -- in the editor or at runtime -- so the widgets sharing it batch."
+    text  "控件绘制的纹理，会打包到图集中（在编辑器中或运行时），以便共享它的控件可以合批。"
+    state machine
+}
+
+namespace DreamUISpriteDataFactory
+
+TextureSizeError {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISpriteDataFactory.cpp
+    src   "Target texture width or height is too large! Consider use UITexture to render this texture."
+    text  "目标纹理宽度或高度过大！请考虑使用 UITexture 渲染该纹理。"
+    state machine
+}
+
+ApplySpriteTextureSettings {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISpriteDataFactory.cpp
+    src   "Apply Sprite Texture Settings"
+    text  "应用精灵纹理设置"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUISpriteDataFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUISpriteDataFactory.cpp#DreamUISpriteDataFactory
+    src   "Dream UISprite Data Factory"
+    text  "DreamUI 纹理数据工厂"
+    state machine
+}

@@ -1,0 +1,81 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerDragInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface
+    src   "Dream Pointer Drag Interface"
+    text  "拖拽接口"
+    state machine
+}
+
+DreamPointerDragInterface:OnPointerBeginDrag:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDragInterface:OnPointerBeginDrag:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerDragInterface:OnPointerDrag:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerDrag:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDragInterface:OnPointerDrag:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerDragInterface:OnPointerEndDrag:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerEndDrag:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerDragInterface:OnPointerEndDrag:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerEndDrag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerDragInterface:OnPointerBeginDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag
+    src   "Called when drag this object begin.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当开始拖动此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerDragInterface:OnPointerDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerDrag
+    src   "Called when dragging this object.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当拖动此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerDragInterface:OnPointerEndDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerEndDrag
+    src   "Called when drag this object end.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当停止拖动此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}

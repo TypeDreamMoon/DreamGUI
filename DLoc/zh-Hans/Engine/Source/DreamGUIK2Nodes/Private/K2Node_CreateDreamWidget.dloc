@@ -1,0 +1,61 @@
+dloc 1
+culture zh-Hans
+namespace K2Node_CreateDreamWidget
+
+NodeTooltip {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "Creates a DreamUI widget, off screen until it is added somewhere (Add to Viewport, Add Child).\nThe class's Expose on Spawn properties -- every prop of a .dui file -- are set before the widget initializes, so Pre Construct, On Initialized and its bindings already see them."
+    text  "创建一个 DreamUI 控件，在添加到某处（添加到视口、添加子项）之前一直处于屏幕外。\n该类的 Expose on Spawn 属性（.dui 文件的每个 prop）在控件初始化之前就已设置好，因此 Pre Construct、On Initialized 及其绑定都已经能读到它们。"
+    state machine
+}
+
+OwningPlayerPinDescription {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "The local player the widget belongs to: whose screen it goes on, whose focus and input it takes. Empty means the first local player."
+    text  "该控件所属的本地玩家：决定它显示在谁的屏幕上，以及使用谁的焦点和输入。留空表示第一个本地玩家。"
+    state machine
+}
+
+BaseTitle {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "Create Dream Widget"
+    text  "创建 Dream 控件"
+    state machine
+}
+
+TitleFormat {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "Create {ClassName} Widget\nDreamGUI"
+    text  "创建 {ClassName} 控件\nDreamGUI"
+    state machine
+}
+
+MenuCategory {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "DreamGUI|Create"
+    text  "DreamGUI|创建"
+    state machine
+}
+
+Keywords {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "Create New Widget DreamUI DreamGUI"
+    text  "创建 新建 控件 DreamUI DreamGUI"
+    state machine
+}
+
+MissingClass_Error {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp
+    src   "@@ must have a class specified."
+    text  "@@ 必须指定一个类。"
+    state machine
+}
+
+namespace UObjectToolTips
+
+K2Node_CreateDreamWidget {
+    at    Source/DreamGUIK2Nodes/Private/K2Node_CreateDreamWidget.cpp#K2Node_CreateDreamWidget
+    src   "\"Create Dream Widget\": UMG's Create Widget node for a DreamUI widget class.\n\nA node rather than a function for the reason UMG's is one: the class picked on it decides its pins.\nUK2Node_ConstructObjectFromClass grows an input for every Expose on Spawn property of that class --\nevery `props` entry of a .dui file is one -- types the result as that class, and rebuilds both when\nthe class changes. What is left here is what makes it a DreamGUI widget: the class pin's base, the\nOwning Player pin, and the expansion.\n\nThe expansion is UDreamUIBPLibrary::BeginDeferredCreateDreamWidget, the assignments, then\nFinishDeferredCreateDreamWidget -- Spawn Actor's shape rather than Create Widget's, whose assignments\nfollow a finished Create. A DreamUI widget first reads its own data inside Initialize (PreConstruct,\nOn Initialized, the first evaluation of its bindings), so the values have to be in place before it."
+    text  "“创建 Dream 控件”：UMG 的 Create Widget 节点，用于 DreamUI 控件类。\n\n之所以做成节点而不是函数，原因与 UMG 的相同：在节点上选定的类决定它的引脚。\nUK2Node_ConstructObjectFromClass 会为该类的每个 Expose on Spawn 属性增加一个输入——\n.dui 文件的每个 `props` 条目就是一个——把结果类型定为该类，并在类改变时\n重建这两者。此处剩下的部分才让它成为 DreamGUI 控件：类引脚的基类、\nOwning Player 引脚以及展开逻辑。\n\n展开逻辑是 UDreamUIBPLibrary::BeginDeferredCreateDreamWidget、各项赋值，然后\nFinishDeferredCreateDreamWidget——是 Spawn Actor 的形态，而不是 Create Widget 的形态，后者的赋值\n在 Create 完成之后才进行。DreamUI 控件会在 Initialize 内部（PreConstruct、\nOn Initialized、绑定第一次求值）首次读取自身的数据，所以这些值必须提前就位。"
+    state machine
+}

@@ -1,0 +1,74 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetEventCustomization
+
+Disabled_NoBlueprintPin {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "This event carries a value a Blueprint graph has no pin for (a narrow or unsigned integer, or a struct chosen per binding). Handle it from C++."
+    text  "此事件携带一个值，但蓝图图中没有对应的引脚（可以是窄整数、无符号整数或根据绑定选择的结构体）。请在 C++ 中处理。"
+    state machine
+}
+
+Disabled_NoTemplate {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Only widgets that are part of this Blueprint's own hierarchy can have events routed."
+    text  "只有属于此蓝图自身层级的组件才能路由事件。"
+    state machine
+}
+
+Disabled_NameShadowed {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Another widget is also named \"{0}\", so this one has no variable of its own. Rename it first."
+    text  "另一个组件也命名为“{0}”，因此此组件没有自己的变量。请先重命名。"
+    state machine
+}
+
+Disabled_BehaviourMismatch {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "This behaviour has no counterpart on the widget's template, so a route cannot reach it."
+    text  "此行为在组件的模板中没有对应项，因此路由无法到达它。"
+    state machine
+}
+
+EventsCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Events"
+    // from the engine's zh-Hans
+    text  "事件"
+    state draft
+}
+
+AddOrViewTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Add or view the handler for this event in the event graph"
+    text  "在事件图中添加或查看此事件的处理程序。"
+    state machine
+}
+
+RemoveRouteTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Remove this event route. The handler stays in the event graph; delete it there if it is no longer wanted."
+    text  "删除此事件路由。处理程序保留在事件图中；如果不再需要，请在此处删除它。"
+    state machine
+}
+
+RecreateEventHandler {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Recreate Event Handler"
+    text  "重新创建事件处理程序。"
+    state machine
+}
+
+AddEventRoute {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Add Event Handler"
+    text  "添加事件处理程序。"
+    state machine
+}
+
+RemoveEventRoute {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamWidgetEventCustomization.cpp
+    src   "Remove Event Route"
+    text  "删除事件路由。"
+    state machine
+}

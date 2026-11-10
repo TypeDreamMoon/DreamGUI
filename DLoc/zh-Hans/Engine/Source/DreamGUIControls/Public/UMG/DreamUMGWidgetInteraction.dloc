@@ -1,0 +1,395 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUMGWidgetInteraction {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction
+    src   "Dream UMGWidget Interaction"
+    text  "Dream UMG控件交互"
+    state machine
+}
+
+DreamUMGWidgetInteraction:bAllowEventBubbleUp {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bAllowEventBubbleUp
+    src   "Allow Event Bubble Up"
+    text  "允许事件冒泡"
+    state machine
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetFocusable
+    src   "Is Hovered Widget Focusable"
+    // from the engine's zh-Hans
+    text  "为可聚焦悬停控件"
+    state draft
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetHitTestVisible {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetHitTestVisible
+    src   "Is Hovered Widget Hit Test Visible"
+    // from the engine's zh-Hans
+    text  "为可视悬停控件命中测试"
+    state draft
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetInteractable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetInteractable
+    src   "Is Hovered Widget Interactable"
+    // from the engine's zh-Hans
+    text  "为可交互悬停控件"
+    state draft
+}
+
+DreamUMGWidgetInteraction:Get2DHitLocation:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:Get2DHitLocation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverFocusableWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverFocusableWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverInteractableWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverInteractableWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:LastLocalHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:LastLocalHitLocation
+    src   "Last Local Hit Location"
+    // from the engine's zh-Hans
+    text  "最后本地命中位置"
+    state draft
+}
+
+DreamUMGWidgetInteraction:LocalHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:LocalHitLocation
+    src   "Local Hit Location"
+    // from the engine's zh-Hans
+    text  "本地命中位置"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressAndReleaseKey:Key {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressAndReleaseKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressAndReleaseKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressAndReleaseKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressKey:bRepeat {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressKey:bRepeat
+    src   "Repeat"
+    // from the engine's zh-Hans
+    text  "重复"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressKey:Key {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressPointerKey:Key {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressPointerKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ReleaseKey:Key {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleaseKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ReleaseKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleaseKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ReleasePointerKey:Key {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleasePointerKey:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ScrollWheel:ScrollDelta {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ScrollWheel:ScrollDelta
+    src   "Scroll Delta"
+    // from the engine's zh-Hans
+    text  "滚动差量"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SendKeyChar:bRepeat {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SendKeyChar:bRepeat
+    src   "Repeat"
+    // from the engine's zh-Hans
+    text  "重复"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SendKeyChar:Characters {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SendKeyChar:Characters
+    src   "Characters"
+    // from the engine's zh-Hans
+    text  "角色"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SendKeyChar:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SendKeyChar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SetFocus:FocusWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SetFocus:FocusWidget
+    src   "Focus Widget"
+    // from the engine's zh-Hans
+    text  "聚焦控件"
+    state draft
+}
+
+DreamUMGWidgetInteraction:VirtualUserIndex {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:VirtualUserIndex
+    src   "Virtual User Index"
+    // from the engine's zh-Hans
+    text  "虚拟用户索引"
+    state draft
+}
+
+DreamUMGWidgetInteraction:WidgetComponent {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:WidgetComponent
+    src   "Widget Component"
+    // from the engine's zh-Hans
+    text  "控件组件"
+    state draft
+}
+
+DreamUMGWidgetInteractionManager {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteractionManager
+    src   "Dream UMGWidget Interaction Manager"
+    text  "Dream UMG控件交互管理器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUMGWidgetInteraction {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction
+    src   "Perform a raycaster and interaction for DreamUMGWidget, which shows UMG widget.\nThis component should be placed on a actor which have a DreamUMGWidget component.\n\nEvery DreamGUI pointer over the surface is forwarded as a pointer of its own: the mouse as Slate's cursor\n(ETouchIndex::CursorPointerIndex), and each finger as a TOUCH, with its own finger index -- a press that\nreaches OnTouchStarted, moves while it is down with the first one flagged as\nSlate's first move, and a release with no force -- which is what Slate's own touch input sends, and what a\nUMG ScrollBox pans on. A second finger's release lets go of the second finger only."
+    text  "为 DreamUMGWidget 执行射线检测与交互，它用于显示 UMG 控件。\n此组件应放置在拥有 DreamUMGWidget 组件的 Actor 上。\n\n表面上的每个 DreamGUI 指针都会作为独立的指针转发：鼠标作为 Slate 的光标\n（ETouchIndex::CursorPointerIndex），每根手指作为一次 TOUCH，并带有各自的手指索引——按下时\n会触发 OnTouchStarted，按住期间会移动，其中第一个被标记为\nSlate 的首次移动，释放时不带力度——这正是 Slate 自身的触摸输入所发送的内容，也是\nUMG ScrollBox 平移所依据的内容。第二根手指的释放只会松开第二根手指。"
+    state machine
+}
+
+DreamUMGWidgetInteraction:bAllowEventBubbleUp {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bAllowEventBubbleUp
+    src   "inherited events of this component can bubble up?"
+    text  "此组件继承的事件是否可向上冒泡？"
+    state machine
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetFocusable
+    src   "Are we hovering over any focusable widget?"
+    // from the engine's zh-Hans
+    text  "是否正悬停在可聚焦的控件上？"
+    state draft
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetHitTestVisible {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetHitTestVisible
+    src   "Are we hovered over a widget that is hit test visible?"
+    // from the engine's zh-Hans
+    text  "是否悬停在命中测试可见的控件上？"
+    state draft
+}
+
+DreamUMGWidgetInteraction:bIsHoveredWidgetInteractable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:bIsHoveredWidgetInteractable
+    src   "Are we hovering over any interactive widgets."
+    // from the engine's zh-Hans
+    text  "是否正悬停在可交互的控件上？"
+    state draft
+}
+
+DreamUMGWidgetInteraction:Get2DHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:Get2DHitLocation
+    src   "Gets the last hit location on the widget in 2D, local pixel units of the render target."
+    // from the engine's zh-Hans
+    text  "获取控件上的上个命中位置，按渲染目标的2D本地像素单位计。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverFocusableWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverFocusableWidget
+    src   "Returns true if a widget under the hit result is focusable.  e.g. Slate widgets that\nreturn true for SupportsKeyboardFocus()."
+    // from the engine's zh-Hans
+    text  "如命中结果之下的一个控件可聚焦，则返回true。例如为SupportsKeyboardFocus()\n返回true的Slate控件。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget
+    src   "Returns true if a widget under the hit result is has a visibility that makes it hit test\nvisible.  e.g. Slate widgets that return true for GetVisibility().IsHitTestVisible()."
+    // from the engine's zh-Hans
+    text  "如命中结果之下的空间拥有可视性，命中测试对其可见，则返回\ntrue。例如为GetVisibility().IsHitTestVisible()返回true的Slate控件。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverInteractableWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverInteractableWidget
+    src   "Returns true if a widget under the hit result is interactive.  e.g. Slate widgets\nthat return true for IsInteractable()."
+    // from the engine's zh-Hans
+    text  "如命中结果之下的一个控件可交互，则返回true。例如为IsInteractable()\n返回true的Slate控件。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:LastLocalHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:LastLocalHitLocation
+    src   "That pointer's location the time before."
+    text  "该指针上一次的位置。"
+    state machine
+}
+
+DreamUMGWidgetInteraction:LocalHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:LocalHitLocation
+    src   "The 2D location on the widget component that was hit, by the pointer traced last."
+    text  "最后一次追踪的指针在控件组件上命中的 2D 位置。"
+    state machine
+}
+
+DreamUMGWidgetInteraction:PressAndReleaseKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressAndReleaseKey
+    src   "Does both the press and release of a simulated keyboard key."
+    // from the engine's zh-Hans
+    text  "执行模拟键盘键的按下和松开。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressKey
+    src   "Press a key as if it had come from the keyboard.  Avoid using this for 'a-z|A-Z', things like\nthe Editable Textbox in Slate expect OnKeyChar to be called to signal a specific character being\nsend to the widget.  So for those cases you should use SendKeyChar."
+    // from the engine's zh-Hans
+    text  "按下一个键，假定其来自键盘。不要将“a-z|A-Z”用于此键。Slate中可编辑文本框之类的内容预计将调用OnKeyChar，发出将特定角色发送至控件的通知。因此在这些情况下应使用SendKeyChar。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressPointerKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressPointerKey
+    src   "Presses a key as if the mouse/pointer were the source of it.  Normally you would just use\nLeft/Right mouse button for the Key.  However - advanced uses could also be imagined where you\nsend other keys to signal widgets to take special actions if they're under the cursor.\n\nFor the first pointer still over the surface (CurrentPointerEventData); with none, nothing is\npressed. A touch key presses as that pointer's touch."
+    text  "按下某个键，就像该键来自鼠标/指针一样。通常只需将\n左/右鼠标键用作 Key。不过，也可以设想一些高级用法：\n发送其他按键，以通知光标下的控件执行特殊操作。\n\n作用于仍位于表面上的第一个指针（CurrentPointerEventData）；若没有这样的指针，则不会\n按下任何内容。触摸键会以该指针的触摸方式按下。"
+    state machine
+}
+
+DreamUMGWidgetInteraction:ReleaseKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleaseKey
+    src   "Releases a key as if it had been released by the keyboard."
+    // from the engine's zh-Hans
+    text  "松开一个键，类似于在键盘上松开一个键。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ReleasePointerKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleasePointerKey
+    src   "Releases a key as if the mouse/pointer were the source of it.  Normally you would just use\nLeft/Right mouse button for the Key.  However - advanced uses could also be imagined where you\nsend other keys to signal widgets to take special actions if they're under the cursor.\n\nFor the pointer PressPointerKey acts for."
+    text  "释放某个键，就像该键由鼠标/指针释放一样。通常只需将\n左/右鼠标键用作 Key。不过，也可以设想一些高级用法：\n发送其他按键，以通知光标下的控件执行特殊操作。\n\n作用于 PressPointerKey 所作用的指针。"
+    state machine
+}
+
+DreamUMGWidgetInteraction:ScrollWheel {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ScrollWheel
+    src   "Sends a scroll wheel event to the widget under the last hit result."
+    // from the engine's zh-Hans
+    text  "将一个滚轮事件发送到上个命中结果下的控件。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SendKeyChar {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SendKeyChar
+    src   "Transmits a list of characters to a widget by simulating a OnKeyChar event for each key listed in\nthe string."
+    // from the engine's zh-Hans
+    text  "模拟字符串中列出的每个键的OnKeyChar事件，将一个字符列表传输到一个\n控件。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SetFocus {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SetFocus
+    src   "Set the focus target of the virtual user managed by this component"
+    // from the engine's zh-Hans
+    text  "设置此组件管理的虚拟用户聚焦目标"
+    state draft
+}
+
+DreamUMGWidgetInteraction:VirtualUserIndex {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:VirtualUserIndex
+    src   "Represents the Virtual User Index.  Each virtual user should be represented by a different\nindex number, this will maintain separate capture and focus states for them.  Each\ncontroller or finger-tip should get a unique PointerIndex."
+    // from the engine's zh-Hans
+    text  "代表虚拟用户索引。每个虚拟用户均应由一个不同的索引数\n所代表，这将为其维持单独的捕获和聚焦状态。每个\n控制器或指尖都应获得一个独有的PointerIndex。"
+    state draft
+}
+
+DreamUMGWidgetInteraction:WidgetComponent {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:WidgetComponent
+    src   "The widget component we're currently hovering over."
+    // from the engine's zh-Hans
+    text  "当前悬停的控件组件。"
+    state draft
+}
+
+DreamUMGWidgetInteractionManager {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteractionManager
+    src   "The one place that answers \"which of the components sharing a virtual Slate user is driving it\", per world.\n\nA virtual user is a Slate-wide resource keyed by index, and nothing stops several DreamUMGWidgetInteraction\ncomponents from being authored with the same VirtualUserIndex -- several UMG panels in a level sharing one\nsimulated cursor is the intended use. Only one of them may hold that cursor at a time, so the hover that arrives\nfirst claims CurrentInteraction and the rest stand down until it is given back.\n\nA world subsystem, holding its components weakly. It used to be a rooted object in a static, shared by every\nworld and made and unmade by hand as components enrolled and left: two worlds' components contended for one\ncontainer, and the first un-enrolled component to go could destroy it out from under the rest."
+    text  "按世界统一回答“共享同一个虚拟 Slate 用户的各组件中，究竟是哪一个在驱动它”的唯一位置。\n\n虚拟用户是按索引键控的 Slate 全局资源，没有任何机制阻止多个 DreamUMGWidgetInteraction控件\n被设为相同的 VirtualUserIndex——让关卡中的多个 UMG 面板共享同一个\n模拟光标正是它的预期用法。同一时刻只能有一个组件持有该光标，因此最先到达的悬停\n会占用 CurrentInteraction，其余组件则在它被归还之前保持退让。\n\n一个世界子系统，以弱引用持有其组件。它过去是静态变量中的一个根对象，由每个\n世界共享，并随着组件的加入与退出手工创建和销毁：两个世界的组件会争抢同一个\n容器，而最先退出注册的组件可能在其余组件脚下把它销毁。"
+    state machine
+}

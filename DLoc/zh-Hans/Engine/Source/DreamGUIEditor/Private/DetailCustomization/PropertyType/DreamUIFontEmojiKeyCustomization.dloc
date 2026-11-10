@@ -1,0 +1,59 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIFontEmojiKeyCustomization
+
+CharactersHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "Emoji"
+    text  "表情符号"
+    state machine
+}
+
+Characters_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "The emoji this entry draws: one emoji, a flag, a keycap, a ZWJ sequence or an emoji with a skin tone."
+    text  "此条目绘制的表情符号：单个表情符号、旗帜、键盘符号、ZWJ 序列或带有肤色的表情符号。"
+    state machine
+}
+
+SequenceHint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "U+1F44D U+1F3FD"
+    text  "U+1F44D U+1F3FD"
+    state machine
+}
+
+Sequence_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "The code points this entry is found by, in hex. U+FE0E and U+FE0F are left out: they choose between a character's text and emoji forms, not a picture."
+    text  "代码点以十六进制表示，U+FE0E 和 U+FE0F 除外：它们用于选择字符的文本形式和表情符号形式，而不是图像。"
+    state machine
+}
+
+NotASequence {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "\"{0}\" is not a list of code points: type them in hex, as U+1F44D U+1F3FD or 1F44D 1F3FD."
+    text  "“{0}” 不是代码点列表：请使用十六进制输入，例如 U+1F44D U+1F3FD 或 1F44D 1F3FD。"
+    state machine
+}
+
+NotAnEmoji {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "\"{0}\" is not an emoji. An entry is one emoji: a pictograph, a flag, a keycap, a ZWJ sequence or an emoji with a skin tone."
+    text  "“{0}” 不是表情符号。一个条目代表一个表情符号：一个图象、一个旗帜、一个键盘符号、一个 ZWJ 序列或一个带有肤色的表情符号。"
+    state machine
+}
+
+DuplicateEmptyEmoji {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "This emoji data already has an entry with no emoji."
+    text  "此表情符号数据已经有一个不包含表情符号的条目。"
+    state machine
+}
+
+DuplicateEmoji {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIFontEmojiKeyCustomization.h
+    src   "This emoji data already has an entry for {0}."
+    text  "此表情符号数据已经有一个 {0} 的条目。"
+    state machine
+}

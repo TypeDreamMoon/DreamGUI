@@ -1,0 +1,558 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+EUIRecyclableScrollViewCellTemplateType.Actor {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#EUIRecyclableScrollViewCellTemplateType:Actor
+    src   "Actor"
+    // from the engine's zh-Hans
+    text  "Actor"
+    state draft
+}
+
+EUIRecyclableScrollViewCellTemplateType.EUIRecyclableScrollViewCellTemplateType_MAX {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#EUIRecyclableScrollViewCellTemplateType:EUIRecyclableScrollViewCellTemplateType_MAX
+    src   "EUIRecyclable Scroll View Cell Template Type MAX"
+    text  "EUIRecyclable Scroll View Cell 模板类型 (最大值)"
+    state machine
+}
+
+EUIRecyclableScrollViewCellTemplateType.Prefab {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#EUIRecyclableScrollViewCellTemplateType:Prefab
+    src   "Prefab"
+    text  "预制件"
+    state machine
+}
+
+UIRecyclableScrollView {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView
+    src   "UIRecyclable Scroll View"
+    text  "可回收滚动视图"
+    state machine
+}
+
+UIRecyclableScrollView:bInfiniteLoop {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:bInfiniteLoop
+    src   "Infinite Loop"
+    // from the engine's zh-Hans
+    text  "无限循环"
+    state draft
+}
+
+UIRecyclableScrollView:CacheCellList {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CacheCellList
+    src   "Cache Cell List"
+    text  "缓存单元列表"
+    state machine
+}
+
+UIRecyclableScrollView:CellTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CellTemplate
+    src   "Cell Template"
+    text  "单元模板"
+    state machine
+}
+
+UIRecyclableScrollView:CellTemplateClass {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CellTemplateClass
+    src   "Cell Template Class"
+    text  "单元模板类"
+    state machine
+}
+
+UIRecyclableScrollView:CellTemplateType {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CellTemplateType
+    src   "Cell Template Type"
+    text  "单元模板类型"
+    state machine
+}
+
+UIRecyclableScrollView:Columns {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Columns
+    src   "Columns"
+    // from the engine's zh-Hans
+    text  "列"
+    state draft
+}
+
+UIRecyclableScrollView:DataSource {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:DataSource
+    src   "Data Source"
+    // from the engine's zh-Hans
+    text  "数据源"
+    state draft
+}
+
+UIRecyclableScrollView:GetCacheCellList:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCacheCellList:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellItemByDataIndex:Index {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellItemByDataIndex:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellItemByDataIndex:OutResult {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellItemByDataIndex:OutResult
+    src   "Out Result"
+    // from the engine's zh-Hans
+    text  "结果外"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellItemByDataIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellItemByDataIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellTemplate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellTemplate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellTemplateClass:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellTemplateClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetCellTemplateType:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellTemplateType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetColumns:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetColumns:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetDataSource:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetDataSource:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetInfiniteLoop:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetInfiniteLoop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetPadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetPadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetRows:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetRows:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetSpace:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetSpace:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollView:GetUserFriendlyCacheCellList:OutResult {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetUserFriendlyCacheCellList:OutResult
+    src   "Out Result"
+    // from the engine's zh-Hans
+    text  "结果外"
+    state draft
+}
+
+UIRecyclableScrollView:Padding {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Padding
+    src   "Padding"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+UIRecyclableScrollView:Rows {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Rows
+    src   "Rows"
+    // from the engine's zh-Hans
+    text  "行数"
+    state draft
+}
+
+UIRecyclableScrollView:ScrollToByDataIndex:InAnimationDuration {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ScrollToByDataIndex:InAnimationDuration
+    src   "In Animation Duration"
+    text  "动画持续时间"
+    state machine
+}
+
+UIRecyclableScrollView:ScrollToByDataIndex:InDataIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ScrollToByDataIndex:InDataIndex
+    src   "In Data Index"
+    text  "数据索引"
+    state machine
+}
+
+UIRecyclableScrollView:ScrollToByDataIndex:InEaseAnimation {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ScrollToByDataIndex:InEaseAnimation
+    src   "In Ease Animation"
+    text  "缓动动画"
+    state machine
+}
+
+UIRecyclableScrollView:SetCellTemplate:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetCellTemplate:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetCellTemplateClass:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetCellTemplateClass:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetColumns:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetColumns:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetDataSource:InDataSource {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetDataSource:InDataSource
+    src   "In Data Source"
+    text  "数据源"
+    state machine
+}
+
+UIRecyclableScrollView:SetInfiniteLoop:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetInfiniteLoop:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetPadding:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetPadding:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetRows:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetRows:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:SetSpace:value {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetSpace:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+UIRecyclableScrollView:Space {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Space
+    src   "Space"
+    // from the engine's zh-Hans
+    text  "空间"
+    state draft
+}
+
+UIRecyclableScrollViewCell {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewCell
+    src   "UIRecyclable Scroll View Cell"
+    text  "可回收滚动视图单元"
+    state machine
+}
+
+UIRecyclableScrollViewCellContainer {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewCellContainer
+    src   "UIRecyclable Scroll View Cell Container"
+    text  "UIRecyclable滚动视图单元格容器"
+    state machine
+}
+
+UIRecyclableScrollViewCellContainer:CellComponent {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewCellContainer:CellComponent
+    src   "Cell Component"
+    text  "单元格组件"
+    state machine
+}
+
+UIRecyclableScrollViewCellContainer:Widget {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewCellContainer:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+UIRecyclableScrollViewDataSource {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource
+    src   "UIRecyclable Scroll View Data Source"
+    text  "UIRecyclable滚动视图数据源"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:GetItemCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:GetItemCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+UIRecyclableScrollViewDataSource:InitOnCreate:Component {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:InitOnCreate:Component
+    src   "Component"
+    // from the engine's zh-Hans
+    text  "组件"
+    state draft
+}
+
+UIRecyclableScrollViewDataSource:SetCell:Component {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:SetCell:Component
+    src   "Component"
+    // from the engine's zh-Hans
+    text  "组件"
+    state draft
+}
+
+UIRecyclableScrollViewDataSource:SetCell:Index {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:SetCell:Index
+    src   "Index"
+    // from the engine's zh-Hans
+    text  "索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+UIRecyclableScrollView {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView
+    src   "RecyclableScrollView can reuse cell's ui element.\nAssign your own DataSource object (IUIRecyclableScrollViewDataSource) and create recyclable scroll view on that data."
+    text  "RecyclableScrollView可以复用单元格的UI元素。\n指定你自己的DataSource对象（IUIRecyclableScrollViewDataSource），并基于该数据创建可复用的滚动视图。"
+    state machine
+}
+
+UIRecyclableScrollView:bInfiniteLoop {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:bInfiniteLoop
+    src   "Make the scrollview loop infinite.\nOnly valid if Rows and Columns equals 1."
+    text  "使滚动视图无限循环。\n仅在Rows和Columns均等于1时有效。"
+    state machine
+}
+
+UIRecyclableScrollView:CellTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CellTemplate
+    src   "CellTemplate must have a ActorComponent which implement UIRecyclableScrollViewCell interface.\nOnly valid if CellTemplateType is Actor."
+    text  "CellTemplate必须有一个实现了UIRecyclableScrollViewCell接口的Actor组件。\n仅在CellTemplateType为Actor时有效。"
+    state machine
+}
+
+UIRecyclableScrollView:CellTemplateClass {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:CellTemplateClass
+    src   "CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.\nOnly valid if CellTemplateType is Prefab."
+    text  "CellTemplatePrefab的根Actor必须有一个实现了UIRecyclableScrollViewCell接口的Actor组件。\n仅在CellTemplateType为Prefab时有效。"
+    state machine
+}
+
+UIRecyclableScrollView:ClearAllCells {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ClearAllCells
+    src   "Delete all created cell objects.\nCall \"UpdateWithDataSource\" to recreate cells."
+    text  "删除所有已创建的单元格对象。\n调用“UpdateWithDataSource”可重新创建单元格。"
+    state machine
+}
+
+UIRecyclableScrollView:Columns {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Columns
+    src   "When use vertical scroll, this can set the column count in every cell."
+    text  "使用垂直滚动时，可设置每行的列数。"
+    state machine
+}
+
+UIRecyclableScrollView:DataSource {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:DataSource
+    src   "Use a Actor which implement UIRecyclableScrollViewDataSource interface."
+    text  "使用一个实现了UIRecyclableScrollViewDataSource接口的Actor。"
+    state machine
+}
+
+UIRecyclableScrollView:GetCacheCellList {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCacheCellList
+    src   "Get all created cell object array. Note this just directly return cell list, which is not in user-friendly order (first one may not at the left-top position).\nUse \"GetUserFriendlyCacheCellList\" can get the cell list in good order."
+    text  "获取所有已创建的单元格对象数组。注意，此处直接返回单元格列表，其顺序并不友好（第一个可能不在左上角位置）。\n使用“GetUserFriendlyCacheCellList”可获取顺序友好的单元格列表。"
+    state machine
+}
+
+UIRecyclableScrollView:GetCellItemByDataIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellItemByDataIndex
+    src   "RecyclableScrollView will create a cache list to store cell object, use data-index to get the cell that represent the data.\n@param Index         data index\n@param OutResult                     The cell object which represent the data. could be null if there is no cell represent the data (not in render range)\n@return true if have valid result, false otherwise"
+    text  "RecyclableScrollView会创建一个缓存列表来存储单元格对象，通过data-index获取表示该数据的单元格。\n@param Index         数据索引\n@param OutResult                     表示该数据的单元格对象。如果没有单元格表示该数据（不在渲染范围内），则可能为null\n@return 如果有有效结果则返回true，否则返回false"
+    state machine
+}
+
+UIRecyclableScrollView:GetUserFriendlyCacheCellList {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetUserFriendlyCacheCellList
+    src   "Get all created cell object array, with user-friendly order (left-top is the first one, and right-bottom is last)."
+    text  "获取所有已创建的单元格对象数组，按便于使用的顺序排列（左上为第一个，右下为最后一个）。"
+    state machine
+}
+
+UIRecyclableScrollView:RecreateList {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:RecreateList
+    src   "Recreate cell list."
+    text  "重新创建单元格列表。"
+    state machine
+}
+
+UIRecyclableScrollView:Rows {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Rows
+    src   "When use horizontal scroll, this can set the row count in every cell."
+    text  "使用水平滚动时，可设置每个单元格中的行数。"
+    state machine
+}
+
+UIRecyclableScrollView:ScrollToByDataIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ScrollToByDataIndex
+    src   "Try to scroll the scrollview so the cell item with InDataIndex can sit at center. Will clamp it in valid range.\n@param InDataIndex Cell data index.\n@param InEaseAnimation true-use tween animation to make smooth scroll, false-immediate set.\n@param InAnimationDuration Animation duration if InEaseAnimation = true."
+    text  "尝试滚动滚动视图，使数据索引为InDataIndex的单元格项居中显示。会将其限制在有效范围内。\n@param InDataIndex 单元格数据索引。\n@param InEaseAnimation true-使用补间动画实现平滑滚动，false-立即设置。\n@param InAnimationDuration 当InEaseAnimation为true时的动画时长。"
+    state machine
+}
+
+UIRecyclableScrollView:SetCellTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetCellTemplate
+    src   "CellTemplate must have a ActorComponent which implement UIRecyclableScrollViewCell interface.\nThis function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource."
+    text  "CellTemplate必须具有一个实现了UIRecyclableScrollViewCell接口的Actor组件。\n此函数仅设置参数。如需刷新显示的UI列表，只需调用UpdateWithDataSource。"
+    state machine
+}
+
+UIRecyclableScrollView:SetCellTemplateClass {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetCellTemplateClass
+    src   "CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.\nThis function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource."
+    text  "CellTemplatePrefab的根Actor必须具有一个实现了UIRecyclableScrollViewCell接口的Actor组件。\n此函数仅设置参数。如需刷新显示的UI列表，只需调用UpdateWithDataSource。"
+    state machine
+}
+
+UIRecyclableScrollView:SetColumns {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetColumns
+    src   "Set vertical column count, will automatically recreate cells if current is vertical scroll."
+    text  "设置垂直列数；如果当前为垂直滚动，将自动重新创建单元格。"
+    state machine
+}
+
+UIRecyclableScrollView:SetDataSource {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetDataSource
+    src   "Set DataSource object, will automatically recreate cells."
+    text  "设置DataSource对象，将自动重新创建单元格。"
+    state machine
+}
+
+UIRecyclableScrollView:SetRows {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:SetRows
+    src   "Set horizontal row count, will automatically recreate cells if current is horizontal scroll."
+    text  "设置水平行数；如果当前为水平滚动，将自动重新创建单元格。"
+    state machine
+}
+
+UIRecyclableScrollView:Space {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:Space
+    src   "Space between cells"
+    text  "单元格之间的间距"
+    state machine
+}
+
+UIRecyclableScrollView:UpdateCellData {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:UpdateCellData
+    src   "Update list cell's data, this will not change current layout, only set data."
+    text  "更新列表单元格的数据，不会改变当前布局，仅设置数据。"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:AfterSetCell {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:AfterSetCell
+    src   "Called after calling \"SetCell\" function for all children"
+    text  "在调用所有子项的“SetCell”函数之后调用"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:BeforeSetCell {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:BeforeSetCell
+    src   "Called before calling any \"SetCell\" function for all children"
+    text  "在调用所有子项的任何“SetCell”函数之前调用"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:GetItemCount {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:GetItemCount
+    src   "@return data item count"
+    text  "@return 数据项数量"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:InitOnCreate {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:InitOnCreate
+    src   "Init cell when it is created. Only called one time when the cell is created.\n@param       Component               ActorComponent which implement UIRecyclableScrollViewCell interface. Cast this component to your own type and do the init process."
+    text  "在单元格创建时初始化单元格。仅在单元格创建时调用一次。\n@param       Component               实现 UIRecyclableScrollViewCell 接口的 ActorComponent。将此组件转换为自己的类型并执行初始化流程。"
+    state machine
+}
+
+UIRecyclableScrollViewDataSource:SetCell {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:SetCell
+    src   "@param       Component               ActorComponent which implement UIRecyclableScrollViewCell interface. Cast this component to your own type and set cell UI's data.\n@param       Index                   Cell's data index."
+    text  "@param       Component               实现 UIRecyclableScrollViewCell 接口的 ActorComponent。将此组件转换为自己的类型并设置单元格 UI 的数据。\n@param       Index                   单元格的数据索引。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-RecyclableScrollView {
+    at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollViewDataSource:AfterSetCell
+    src   "DreamGUI-RecyclableScrollView"
+    text  "DreamGUI-RecyclableScrollView"
+    state machine
+}

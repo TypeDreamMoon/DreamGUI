@@ -1,0 +1,20 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+MovieSceneDreamUIMaterialSystem {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialSystem.h#MovieSceneDreamUIMaterialSystem
+    src   "Movie Scene Dream UIMaterial System"
+    text  "电影序列 Dream UI 材质系统"
+    state machine
+}
+
+namespace UObjectToolTips
+
+MovieSceneDreamUIMaterialSystem {
+    at    Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialSystem.h#MovieSceneDreamUIMaterialSystem
+    src   "namespace UE::MovieScene"
+    // from the engine's zh-Hans
+    text  "命名空间UE::MovieScene"
+    state draft
+}

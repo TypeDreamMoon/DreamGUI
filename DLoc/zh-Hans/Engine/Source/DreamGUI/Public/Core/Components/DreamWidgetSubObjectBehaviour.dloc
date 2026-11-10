@@ -1,0 +1,41 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetSubObjectBehaviour {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour
+    src   "Dream Widget Sub Object Behaviour"
+    text  "Dream 控件子对象行为"
+    state machine
+}
+
+DreamWidgetSubObjectBehaviour:GetPathDisplayName:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetPathDisplayName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetSubObjectBehaviour:GetPathDisplayName:StopOuter {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetPathDisplayName:StopOuter
+    src   "Stop Outer"
+    text  "停止外部"
+    state machine
+}
+
+DreamWidgetSubObjectBehaviour:GetWidget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWidgetSubObjectBehaviour:OwnerWidget {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:OwnerWidget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}

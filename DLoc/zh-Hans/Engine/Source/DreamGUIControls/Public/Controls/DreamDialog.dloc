@@ -1,0 +1,585 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamDialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog
+    src   "Dream Dialog"
+    text  "对话框"
+    state machine
+}
+
+DreamDialog:BackScope {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:BackScope
+    src   "Back Scope"
+    text  "返回范围"
+    state machine
+}
+
+DreamDialog:bCloseOnBack {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bCloseOnBack
+    src   "Close on Back"
+    text  "点击返回按钮关闭"
+    state machine
+}
+
+DreamDialog:bCloseOnDimmerClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bCloseOnDimmerClick
+    src   "Close on Dimmer Click"
+    text  "点击遮罩层关闭"
+    state machine
+}
+
+DreamDialog:bFocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bFocusDefaultButton
+    src   "Focus Default Button"
+    text  "聚焦默认按钮"
+    state machine
+}
+
+DreamDialog:BodyNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:BodyNode
+    src   "Body Node"
+    text  "内容区域"
+    state machine
+}
+
+DreamDialog:bShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bShowDimmer
+    src   "Show Dimmer"
+    text  "显示遮罩层"
+    state machine
+}
+
+DreamDialog:ButtonRowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ButtonRowNode
+    src   "Button Row Node"
+    text  "按钮行"
+    state machine
+}
+
+DreamDialog:Buttons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Buttons
+    src   "Buttons"
+    // from the engine's zh-Hans
+    text  "按钮"
+    state draft
+}
+
+DreamDialog:ButtonWidgets {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ButtonWidgets
+    src   "Button Widgets"
+    text  "按钮控件"
+    state machine
+}
+
+DreamDialog:CancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:CancelResult
+    src   "Cancel Result"
+    text  "取消结果"
+    state machine
+}
+
+DreamDialog:Close:InResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Close:InResult
+    src   "In Result"
+    text  "结果"
+    state machine
+}
+
+DreamDialog:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ContentNode
+    src   "Content Node"
+    text  "内容节点"
+    state machine
+}
+
+DreamDialog:DimmerNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:DimmerNode
+    src   "Dimmer Node"
+    text  "遮罩层"
+    state machine
+}
+
+DreamDialog:GetButtons:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetButtons:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:GetDefaultButton:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetDefaultButton:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:GetMessage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetMessage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:GetShowDimmer:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetShowDimmer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:GetTitle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetTitle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:Message {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Message
+    src   "Message"
+    // from the engine's zh-Hans
+    text  "消息"
+    state draft
+}
+
+DreamDialog:MessageNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:MessageNode
+    src   "Message Node"
+    text  "消息节点"
+    state machine
+}
+
+DreamDialog:OnButtonClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:OnButtonClicked
+    src   "On Button Clicked"
+    text  "按钮点击事件"
+    state machine
+}
+
+DreamDialog:OnDialogClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:OnDialogClosed
+    src   "On Dialog Closed"
+    text  "对话框关闭事件"
+    state machine
+}
+
+DreamDialog:PanelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:PanelNode
+    src   "Panel Node"
+    text  "面板节点"
+    state machine
+}
+
+DreamDialog:ResolveCancelResult:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ResolveCancelResult:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDialog:SetButtons:InButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetButtons:InButtons
+    src   "In Buttons"
+    text  "按钮"
+    state machine
+}
+
+DreamDialog:SetCancelResult:InCancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCancelResult:InCancelResult
+    src   "In Cancel Result"
+    text  "取消结果"
+    state machine
+}
+
+DreamDialog:SetCloseOnBack:bInCloseOnBack {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnBack:bInCloseOnBack
+    src   "In Close on Back"
+    text  "点击返回关闭"
+    state machine
+}
+
+DreamDialog:SetCloseOnDimmerClick:bInCloseOnDimmerClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnDimmerClick:bInCloseOnDimmerClick
+    src   "In Close on Dimmer Click"
+    text  "点击遮罩层关闭"
+    state machine
+}
+
+DreamDialog:SetFocusDefaultButton:bInFocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetFocusDefaultButton:bInFocusDefaultButton
+    src   "In Focus Default Button"
+    text  "默认按钮获得焦点"
+    state machine
+}
+
+DreamDialog:SetMessage:InMessage {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetMessage:InMessage
+    src   "In Message"
+    // from the engine's zh-Hans
+    text  "输入消息"
+    state draft
+}
+
+DreamDialog:SetShowDimmer:bInShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetShowDimmer:bInShowDimmer
+    src   "In Show Dimmer"
+    text  "显示遮罩层"
+    state machine
+}
+
+DreamDialog:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamDialog:SetTitle:InTitle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetTitle:InTitle
+    src   "In Title"
+    // from the engine's zh-Hans
+    text  "在标题中"
+    state draft
+}
+
+DreamDialog:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamDialog:Title {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Title
+    src   "Title"
+    // from the engine's zh-Hans
+    text  "标题"
+    state draft
+}
+
+DreamDialog:TitleNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:TitleNode
+    src   "Title Node"
+    text  "标题节点"
+    state machine
+}
+
+DreamDialogButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton
+    src   "Dream Dialog Button"
+    text  "对话框按钮"
+    state machine
+}
+
+DreamDialogButton:bIsPrimary {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:bIsPrimary
+    src   "Is Primary"
+    // from the engine's zh-Hans
+    text  "Is Primary"
+    state draft
+}
+
+DreamDialogButton:Label {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:Label
+    src   "Label"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamDialogButton:Result {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamDialogResultEvent__DelegateSignature:Result {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogResultEvent__DelegateSignature:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamDialogScope {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogScope
+    src   "Dream Dialog Scope"
+    text  "Dream 对话框作用域"
+    state machine
+}
+
+DreamDialogScope:OwnerDialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogScope:OwnerDialog
+    src   "Owner Dialog"
+    text  "所属对话框"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamDialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog
+    src   "A dialog whose hierarchy is code, not an asset: a dimmer, a centred panel, a title, a content\narea with a message in it, and a row of buttons.\n\nWHAT IT DOES NOT DO, because UDreamUIModalSubsystem already does it. Opened through ShowModal the\ndialog is parented to that subsystem's modal LAYER, which is itself the scrim (a full-rect tinted\nrect block), carries the UUIEventBlocker that eats every pointer event aimed at the world beneath,\nsorts above the page band, and pushes a UDreamUIModalScope that confines gamepad focus and gives\nBack the meaning \"close with the Back result\". None of that is re-implemented here. The division\nis: the SUBSYSTEM owns the screen (dimming, input blocking, focus, one-at-a-time queueing and\ncarrying the result back to the caller); the DIALOG owns the panel (what it says, which buttons it\noffers, which result each of them means) and ends the modal by calling CloseTopModal.\n\nThe dimmer part therefore exists for the OTHER supported arrangement -- standalone. Dropped into a\n.dui as an ordinary widget (asleep, woken when something needs to ask a question) there is no\nsubsystem layer above it, so the dialog's own dimmer is the only thing darkening the screen and\nits UUIEventBlocker the only thing stopping clicks reaching what is behind. When a host IS already\nscrimming -- detected as a blocker anywhere up the parent chain, which is exactly what the modal\nlayer carries -- the dialog puts its own dimmer away rather than darkening the screen twice.\nBoth arrangements are supported; nothing about the tree changes between them.\n\nButtons are real Native.Button instances rather than hand-built faces, so a project styles its\nbuttons once and dialog buttons follow. FDreamDialogStyle carries Button and PrimaryButton for\nexactly this, and the created buttons are switched to Inline style source: the dialog style has\nALREADY resolved (sheet or instance) and the look it names must win, or every dialog button would\nquietly re-resolve to the sheet's plain button and those two style fields would do nothing.\n\nOn the button LIST and .dui: the language has no array literal yet, exactly as Native.Dropdown's\nOptions honestly says. Buttons is still fillable from C++, from Blueprint and from the details\npanel -- and the constructor seeds Cancel + OK (OK primary), so the common dialog needs no array\nat all:\n\n    /Script/DreamGUIControls.DreamDialog Confirm {\n        Title   = \"删除存档\"\n        Message = \"这个操作不能撤销。\"\n        OnDialogClosed -> HandleAnswer\n    }\n\nA fixed OK/Cancel pair with an enum would have spelled that same case no better and had nothing to\nsay about the three-button one, which is why the array won."
+    text  "对话框的层级由代码而非资产构建：一层遮罩、一个居中面板、一个标题、一个带消息的内容区域，\n以及一行按钮。\n\n它不做的事，因为 UDreamUIModalSubsystem 已经做了。通过 ShowModal 打开时，\n对话框会挂到该子系统的模态 LAYER 下，这一层本身就是遮罩（一个铺满矩形的着色块），\n携带 UUIEventBlocker，吃掉所有指向下方世界的指针事件，\n排序在页面带之上，并推入一个 UDreamUIModalScope，限制手柄焦点，\n并赋予 Back“以 Back 结果关闭”的含义。这些在这里都没有重新实现。分工是：\nSUBSYSTEM 掌管屏幕（变暗、输入拦截、焦点、逐个排队以及把结果带回给调用方）；\nDIALOG 掌管面板（它说什么、提供哪些按钮、每个按钮代表哪个结果），\n并通过调用 CloseTopModal 结束模态。\n\n因此遮罩部分是为另一种受支持的布置而存在的——独立使用。\n作为普通控件放进 .dui 时（休眠，在有东西需要提问时唤醒），上方没有子系统层，\n所以对话框自身的遮罩是唯一让屏幕变暗的东西，\n它的 UUIEventBlocker 也是唯一阻止点击到达背后的东西。\n当宿主已经在做遮罩时——通过在父级链上任意位置检测到 blocker 来判断，\n而这正是模态层所携带的——对话框会收起自己的遮罩，而不是把屏幕变暗两次。\n两种布置都受支持；它们之间树的结构没有任何变化。\n\n按钮是真正的 Native.Button 实例，而不是手工拼出来的外观，\n因此项目只需给按钮设一次样式，对话框按钮就会跟随。\nFDreamDialogStyle 正是为此携带 Button 和 PrimaryButton，\n而创建出的按钮会切换到 Inline 样式源：对话框样式已经解析完毕（来自样式表或实例），\n它指定的外观必须胜出，否则每个对话框按钮都会悄悄重新解析为样式表里的普通按钮，那两个样式字段就形同虚设。\n\n关于按钮 LIST 与 .dui：这门语言还没有数组字面量，\n正如 Native.Dropdown 的 Options 所坦率说明的那样。Buttons 仍然可以从 C++、蓝图和细节面板填充——\n而且构造函数会预置 Cancel + OK（OK 为主按钮），\n所以常见的对话框完全不需要数组：\n\n    /Script/DreamGUIControls.DreamDialog Confirm {\n        Title   = \"删除存档\"\n        Message = \"这个操作不能撤销。\"\n        OnDialogClosed -> HandleAnswer\n    }\n\n用枚举写死的 OK/Cancel 组合既不会把那同一种情况表达得更好，\n对三按钮的情况也无可奉告，这就是数组胜出的原因。"
+    state machine
+}
+
+DreamDialog:BackScope {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:BackScope
+    src   "The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when\nthe dialog closes, answers Back while bCloseOnBack asks, and keeps the pad and Tab inside the dialog while it is\ndimmed, whatever bCloseOnBack says. It belongs to the dialog's owning player. See UDreamDialogScope."
+    text  "导航作用域，仅在独立使用时添加：对话框出现时它获取焦点，对话框关闭时归还焦点，\n在 bCloseOnBack 要求时响应 Back，并在对话框变暗期间把手柄和 Tab 保持在对话框内，\n无论 bCloseOnBack 怎么说。它属于对话框的所属玩家。参见 UDreamDialogScope。"
+    state machine
+}
+
+DreamDialog:bCloseOnBack {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bCloseOnBack
+    src   "Back (Escape, or the pad's B) closes this dialog with its cancel result.\n\nOnly while STANDALONE. Hosted by UDreamUIModalSubsystem the modal layer's own scope already\nanswers Back -- with the \"Back\" result its header promises whoever called ShowModal -- and a\nsecond scope on top of it would quietly change that answer. So this fills the hole the\nsubsystem does not cover rather than overruling the half it does."
+    text  "Back（Escape 或手柄的 B）会以取消结果关闭此对话框。\n\n仅在独立使用时。由 UDreamUIModalSubsystem 承载时，模态层自己的作用域已经\n响应 Back——使用其头文件向调用 ShowModal 的一方承诺的“Back”结果——\n在其之上再加第二个作用域会悄悄改变那个答案。因此这里填补的是\n子系统未覆盖的空缺，而不是推翻它已覆盖的那一半。"
+    state machine
+}
+
+DreamDialog:bCloseOnDimmerClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bCloseOnDimmerClick
+    src   "Clicking the dimmer closes the dialog with its cancel result -- the \"click outside to dismiss\"\nevery desktop dialog has.\n\nOff by default, and deliberately: a dialog asking a question that MATTERS (\"delete this save?\")\nmust not be dismissable by a stray click, which is why UMG's own dialogs make this opt-in too.\nOnly ever reachable while the dialog's own dimmer is up -- under the modal subsystem the layer\nis what eats clicks, and it is not this control's to put a button on."
+    text  "点击遮罩会以取消结果关闭对话框——即每个桌面对话框都有的\n“点击外部关闭”。\n\n默认关闭，且是有意为之：提出重要问题（“删除这个存档？”）的对话框\n绝不能因为一次误点就被关闭，这也是 UMG 自己的对话框同样把它设为可选的原因。\n只有在对话框自身的遮罩存在时才可能触发——在模态子系统下，吃掉点击的是那一层，\n而那一层并不归此控件所有，无法为它添加按钮。"
+    state machine
+}
+
+DreamDialog:bFocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bFocusDefaultButton
+    src   "Put focus on the default button when the dialog appears.\n\nThe default button is the PRIMARY one (the confirming one, by convention), or the last in the\nrow when none is marked. Without this a dialog opened with a gamepad came up with focus\nwherever the previous screen left it, so the first press went to a control behind the scrim."
+    text  "对话框出现时将焦点放在默认按钮上。\n\n默认按钮是 PRIMARY 按钮（按惯例即确认按钮），若没有任何按钮被标记，\n则是行中的最后一个。没有这一项时，用手柄打开的对话框会把焦点留在上一个界面\n留下的位置，于是第一次按键会落到遮罩后面的控件上。"
+    state machine
+}
+
+DreamDialog:BodyNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:BodyNode
+    src   "The hole in the middle band. Empty is the normal state; what a host puts here replaces the\nbuilt-in message, which is its overlay sibling rather than its child for exactly that reason."
+    text  "中间带上的空缺。空是正常状态；宿主放在这里的内容会替换内置消息，\n正因如此内置消息是它的覆盖同级而不是它的子级。"
+    state machine
+}
+
+DreamDialog:bShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:bShowDimmer
+    src   "Whether this dialog darkens the screen itself.\n\nTrue means \"dim unless somebody above me already is\" -- a host that scrims (the modal\nsubsystem's layer) is honoured automatically at construct time, so leaving this on costs a\nmodal dialog nothing. False is the opt-out for a dialog deliberately shown over a live screen."
+    text  "此对话框是否自行让屏幕变暗。\n\nTrue 表示“除非上方已经有人变暗，否则变暗”——会做遮罩的宿主（模态\n子系统的层）在构造时会被自动尊重，所以保持开启对模态对话框没有任何代价。\nFalse 则是为故意显示在活动屏幕之上的对话框准备的退出选项。"
+    state machine
+}
+
+DreamDialog:Buttons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Buttons
+    src   "One Native.Button per entry, left to right. Seeded with Cancel + OK; see the class comment.\n\nBlueprintReadOnly rather than a BlueprintSetter pair, which is the other half of the same\nrule: the specs are what the button WIDGETS are made from, so a Blueprint writing this array\nin place used to change the data and leave the row built from the old copy -- a dialog showing\nbuttons it no longer has. SetButtons is the way in, and it reconciles the widgets. The designer\nand .dui still author it directly (EditAnywhere), where PostEditChangeProperty does the same."
+    text  "每个条目对应一个 Native.Button，从左到右。预置为 Cancel + OK；参见类注释。\n\n用 BlueprintReadOnly 而不是 BlueprintSetter 对，这是同一条规则的另一半：\n这些规格是构建按钮 WIDGET 的依据，所以蓝图就地写入此数组时，\n过去只改变数据，却让按钮行仍由旧副本构建——对话框显示着它已不再拥有的按钮。\nSetButtons 才是正确的入口，它会协调这些控件。设计器和 .dui 仍可直接编辑它\n（EditAnywhere），在那里 PostEditChangeProperty 也起同样的作用。"
+    state machine
+}
+
+DreamDialog:ButtonWidgets {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ButtonWidgets
+    src   "One per entry in Buttons, in order. Rebuilt whenever the specs change."
+    text  "按顺序，Buttons 中的每个条目对应一个。规格变化时重建。"
+    state machine
+}
+
+DreamDialog:CancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:CancelResult
+    src   "What Close is called with when the dialog is cancelled rather than answered -- RequestCancel,\nand whatever a project routes Escape or Back to.\n\nNone (the default) resolves it from the button row instead of guessing: the first NON-primary\nbutton's result, because that is what \"Cancel\" is in every row this control builds, falling\nback to the last button's and finally to \"Cancel\". Naming it explicitly wins over all of that."
+    text  "对话框被取消而非回答时，调用 Close 所使用的参数——RequestCancel，\n以及项目把 Escape 或 Back 路由到的任何地方。\n\nNone（默认值）会从按钮行推导而不是猜测：第一个非主按钮的结果，\n因为在这个控件构建的每一行里那就是“Cancel”，若没有则回退到最后一个按钮的结果，\n最后再回退到“Cancel”。显式指定会胜过这一切。"
+    state machine
+}
+
+DreamDialog:Close {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Close
+    src   "End the dialog with InResult.\n\nHosted by the modal subsystem this is CloseTopModal -- the subsystem pops the focus scope,\ndelivers the result to whoever called ShowModal, destroys the layer and shows the next queued\ndialog. Standalone it simply puts the dialog to sleep, which is the state a .dui-placed dialog\nwas in before it was shown. Either way OnDialogClosed has already fired."
+    text  "用InResult结束对话框。\n\n由模态子系统承载时，它就是CloseTopModal——子系统弹出焦点作用域，\n把结果交给调用ShowModal的一方，销毁该层并显示下一个排队的\n对话框。独立运行时，它只是让对话框休眠，这正是.dui中放置的对话框\n在显示之前所处的状态。无论哪种方式，OnDialogClosed都已触发。"
+    state machine
+}
+
+DreamDialog:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ContentNode
+    src   "The middle band. Holds MessageNode, and is where a consumer's own content goes."
+    text  "中间区域。包含 MessageNode，以及消费者的自定义内容。"
+    state machine
+}
+
+DreamDialog:DimmerNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:DimmerNode
+    src   "The whole-screen scrim. Asleep whenever a host is already scrimming; see the class comment."
+    text  "整个屏幕的遮罩层。当宿主已经显示遮罩层时，它处于睡眠状态；请参阅类注释。"
+    state machine
+}
+
+DreamDialog:FocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:FocusDefaultButton
+    src   "Put focus on the default button now. Called for you whenever the dialog appears while\nbFocusDefaultButton is on; public because a dialog whose buttons were replaced after it appeared\nhas a new default."
+    text  "立即将焦点放到默认按钮上。当bFocusDefaultButton开启时，对话框每次出现\n都会为你调用此函数；之所以公开，是因为对话框出现后其按钮被替换时，\n默认按钮也会随之改变。"
+    state machine
+}
+
+DreamDialog:GetDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetDefaultButton
+    src   "The primary button, or the last one when none is marked, or null for an empty row."
+    text  "默认按钮，如果没有标记，则为最后一个按钮，如果为空，则为 null。"
+    state machine
+}
+
+DreamDialog:Message {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Message
+    src   "The built-in occupant of the content area. Empty puts it away; the area stays for other content."
+    text  "内容区域的内置组件。如果为空，则将其移除；区域将保留以供其他内容使用。"
+    state machine
+}
+
+DreamDialog:OnButtonClicked {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:OnButtonClicked
+    src   "What the buttons speak, re-broadcast at the control: a consumer binds here, not to a button."
+    text  "按钮的文本，在控件中广播：消费者在此处绑定，而不是绑定到按钮。"
+    state machine
+}
+
+DreamDialog:OnDialogClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:OnDialogClosed
+    src   "The dialog closed, however it closed. Fires exactly once, BEFORE the modal host tears it down."
+    text  "对话已关闭，无论如何关闭。在模态宿主销毁对话之前，此事件将触发一次。"
+    state machine
+}
+
+DreamDialog:RequestCancel {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:RequestCancel
+    src   "Close with that result. What a project's Escape or Back handler calls, and what a scrim click\nwould call -- this control does not route either itself (see the class comment)."
+    text  "用该结果关闭。项目的Escape或Back处理器调用的就是它，点击遮罩\n也会调用它——此控件自身不路由这两者（见类注释）。"
+    state machine
+}
+
+DreamDialog:ResolveCancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ResolveCancelResult
+    src   "The result this dialog answers with when it is cancelled rather than answered: CancelResult\nwhen it names one, and otherwise the button row's own cancel (see CancelResult)."
+    text  "对话框被取消而非被应答时所给出的结果：CancelResult指定了值就用它，\n否则使用按钮行自身的取消结果（见CancelResult）。"
+    state machine
+}
+
+DreamDialog:SetButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetButtons
+    src   "Replace the button row wholesale; the widgets are rebuilt from the new specs at once."
+    text  "替换整个按钮行；根据新的规范，将重新构建小部件。"
+    state machine
+}
+
+DreamDialog:SetCancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCancelResult
+    src   "What Back and a click on the dimmer answer with. Read at the moment of the dismissal."
+    text  "Back 键和遮罩层单击事件返回的结果。在对话关闭时读取。"
+    state machine
+}
+
+DreamDialog:SetCloseOnBack {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnBack
+    src   "Whether Back closes the dialog. The Back scope is added or released to match, which is why this is a setter."
+    text  "Back是否关闭对话框。会相应地添加或释放Back作用域，这也是它做成设置器的原因。"
+    state machine
+}
+
+DreamDialog:SetCloseOnDimmerClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnDimmerClick
+    src   "Whether a click outside closes the dialog. The scrim's button is added or unbound to match."
+    text  "点击外部是否关闭对话框。会相应地添加或解绑遮罩的按钮。"
+    state machine
+}
+
+DreamDialog:SetShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetShowDimmer
+    src   "Whether this dialog darkens the screen itself, re-decided at once.\n\nA setter because the knob used to be read in exactly one place -- the construct-time host\narrangement -- so turning it off in the designer or at runtime changed nothing anyone could\nsee until the next time the dialog was built."
+    text  "此对话框是否自行使屏幕变暗，会立即重新判定。\n\n做成设置器是因为这个开关过去只在一处被读取——构造时的宿主\n安排——因此在设计器或运行时关掉它，直到下次构建对话框之前\n都不会有任何可见的变化。"
+    state machine
+}
+
+DreamDialog:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetStyle
+    src   "Replace the look and push it. A write straight onto the variable changes a struct nothing reads again."
+    text  "替换外观并推送。直接写入变量只会改动一个再也不会被读取的结构体。"
+    state machine
+}
+
+DreamDialog:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum."
+    text  "此实例自身的外观。当StyleSource如此指示且项目中确实存在样式表时，项目样式表\n优先；项目中没有任何样式表时，它本身就是生效的外观——因此\n它保持可编辑，而不受枚举限制。"
+    state machine
+}
+
+DreamDialog:SubmitDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SubmitDefaultButton
+    src   "Answer as the default button would -- UMG's \"Enter presses the default\".\n\nEnter already reaches a FOCUSED button as a click (it is one of the standalone input actor's\nnavigation trigger keys), and bFocusDefaultButton puts focus there when the dialog opens, so\nthe ordinary case needs nothing. This is the same answer for the case where focus has since\nmoved somewhere that is not a button at all -- a body slot's text field, say -- and for code\nthat wants to confirm without a pointer. A default button that is disabled answers nothing,\nexactly as it would to a click."
+    text  "以默认按钮的方式应答——即UMG的“Enter按下默认按钮”。\n\nEnter本就以点击的形式送达获得焦点的按钮（它是独立输入Actor的\n导航触发键之一），而bFocusDefaultButton会在对话框打开时将焦点放到那里，\n所以常规情况无需额外处理。当焦点之后移到根本不是按钮的地方时\n——比如正文章节的文本字段——此处给出同样的应答；对于想在没有指针的情况下\n确认的代码也是如此。被禁用的默认按钮不应答，\n与点击它的效果完全相同。"
+    state machine
+}
+
+DreamDialog:Title {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Title
+    src   "Empty puts the title away entirely rather than reserving a blank line for it.\n\nBlueprintSetter, like every writable knob on this control: nothing re-derives a control from a\nproperty that changed (the SynchronizeProperties tax UDreamUIControl documents), so a runtime\nwrite straight onto the variable moved the text and left the panel saying the old thing."
+    text  "Empty 会完全移除标题，而不是为它保留空行。\n\nBlueprintSetter 这个蓝图设置器，和此控件上的每个可写旋钮一样：不会根据已更改的属性重新派生控件\n（UDreamUIControl 文档中所述的 SynchronizeProperties 开销），所以直接对变量进行运行时\n写入，文本变了，面板却仍显示旧内容。"
+    state machine
+}
+
+DreamDialogButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton
+    src   "One button in a dialog's row: what it says, what it answers, and whether it is the loud one.\n\nA struct rather than a pair of fixed OK/Cancel knobs because a dialog's button row is genuinely\nvariable -- \"Save / Don't Save / Cancel\" is as ordinary as \"OK / Cancel\" -- and because the RESULT\nis the dialog's whole output. Naming it per button is what lets a caller distinguish the three\nwithout counting indices."
+    text  "对话框按钮行中的一个按钮：显示什么文字、应答什么结果，以及它是否是那个显眼的按钮。\n\n采用结构体而非固定的确定/取消两个开关，是因为对话框的按钮行确实\n多变——“保存/不保存/取消”与“确定/取消”一样常见——而且结果（RESULT）\n就是对话框的全部输出。为每个按钮命名，调用方才能区分这三个按钮\n而无需数索引。"
+    state machine
+}
+
+DreamDialogButton:bIsPrimary {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:bIsPrimary
+    src   "Wears FDreamDialogStyle::PrimaryButton instead of ::Button. The confirming one, usually."
+    text  "使用FDreamDialogStyle::PrimaryButton而非::Button。通常即确认的那一个。"
+    state machine
+}
+
+DreamDialogButton:Result {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:Result
+    src   "What this button answers with -- the name that reaches CloseTopModal, OnDialogClosed and the\nShowModal callback. \"Confirm\", \"Cancel\", \"Discard\": a word the caller can switch on, never an\nindex, because inserting a button in the middle must not re-map anyone's handler."
+    text  "此按钮所回应的结果——即传到CloseTopModal、OnDialogClosed和\nShowModal回调的名称。“Confirm”、“Cancel”、“Discard”：调用方可以据此分支的单词，绝非\n索引，因为在中间插入按钮绝不能重映射任何人的处理程序。"
+    state machine
+}
+
+DreamDialogScope {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogScope
+    src   "The navigation scope a STANDALONE dialog wears: pushed as the dialog appears, it puts focus in the\ndialog and gives back, when the dialog closes, what had focus before (UDreamUINavigationStack); and\nwhile bCloseOnBack asks, it is what Back closes the dialog through.\n\nOnly ever added when no host is already scrimming -- see UDreamDialog::RefreshDimmer. Under\nUDreamUIModalSubsystem the LAYER carries UDreamUIModalScope and that scope's contract (\"Back means\nclose with the Back result\") is the one in force; putting a second scope on top of it would\nsilently change which result a hosted dialog answers Back with, which is a promise the subsystem\nmakes to whoever called ShowModal and not this control's to break."
+    text  "独立对话框所用的导航作用域：对话框出现时压入，将焦点放入\n对话框，并在对话框关闭时归还此前持有焦点的对象（UDreamUINavigationStack）；而在\nbCloseOnBack要求时，它正是Back关闭对话框所经由的通道。\n\n仅当尚无宿主在做遮罩时才会添加——参见UDreamDialog::RefreshDimmer。在\nUDreamUIModalSubsystem下，该层携带UDreamUIModalScope，生效的是该作用域的约定（“Back意味着\n以Back结果关闭”）；在其之上再叠加一个作用域，会\n悄然改变被托管的对话框回应Back时给出的结果，而这是子系统\n对调用ShowModal者所做的承诺，不是此控件该打破的。"
+    state machine
+}
+
+DreamDialogScope:OwnerDialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogScope:OwnerDialog
+    src   "The dialog this scope belongs to. Set by it, right after the scope is added."
+    text  "此作用域所属的对话框。在作用域添加后由该对话框立即设置。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Dialog {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Close
+    src   "Dialog"
+    // from the engine's zh-Hans
+    text  "对话框"
+    state draft
+}
+
+"Dialog Button" {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialogButton:Label
+    src   "Dialog Button"
+    text  "对话按钮"
+    state machine
+}

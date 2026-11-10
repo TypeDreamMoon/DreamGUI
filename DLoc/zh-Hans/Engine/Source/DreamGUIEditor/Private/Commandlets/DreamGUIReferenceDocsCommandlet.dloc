@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGUIReferenceDocsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamGUIReferenceDocsCommandlet.h#DreamGUIReferenceDocsCommandlet
+    src   "Dream GUIReference Docs Commandlet"
+    text  "DreamGUI参考文档Commandlet"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGUIReferenceDocsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamGUIReferenceDocsCommandlet.h#DreamGUIReferenceDocsCommandlet
+    src   "Writes the control library's reference pages from reflection.\n\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs [-Out=<directory>]\n\nA hand-written property reference is wrong the day after it is written: the header gains a knob,\nthe page does not, and nothing fails. These pages are printed from the same reflection data the\ndetails panel and the Blueprint menus read, so what they say a control offers is what it offers.\nThe comment above a property is its description here, which is one more reason to write it for the\nperson using the control rather than the person maintaining it.\n\nEach page ends with the class's UMG comparison, read from Resources/UMGParity: the same tables the\nautomation suite holds against UMG's own reflection, so \"how does this differ from UScrollBox\" has\none answer and it is a tested one.\n\nOutput is deterministic -- members in declaration order, everything else sorted -- so that the diff\nof a regenerated page is the diff of the API."
+}

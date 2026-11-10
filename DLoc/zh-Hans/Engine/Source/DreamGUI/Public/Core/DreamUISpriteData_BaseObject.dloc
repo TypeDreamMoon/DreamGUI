@@ -1,0 +1,79 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISpriteData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject
+    src   "Dream UISprite Data Base Object"
+    text  "Dream UI 贴图数据 基础对象"
+    state machine
+}
+
+DreamUISpriteData_BaseObject:GetAtlasTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:GetAtlasTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData_BaseObject:GetSpriteInfo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:GetSpriteInfo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData_BaseObject:IsIndividual:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:IsIndividual:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData_BaseObject:ReadPixel:InUV {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:ReadPixel:InUV
+    src   "In UV"
+    text  "In UV"
+    state machine
+}
+
+DreamUISpriteData_BaseObject:ReadPixel:OutPixel {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:ReadPixel:OutPixel
+    src   "Out Pixel"
+    text  "输出像素"
+    state machine
+}
+
+DreamUISpriteData_BaseObject:ReadPixel:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:ReadPixel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUISpriteData_BaseObject {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject
+    src   "Base class for Sprite data.\nA Sprite is a small area rendered in a big atlas texture."
+    text  "贴图数据的基类。\n贴图是一个在大型纹理图集中渲染的小区域。"
+    state machine
+}
+
+DreamUISpriteData_BaseObject:IsIndividual {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:IsIndividual
+    src   "This Sprite-data is a individual one? Means it will not pack into any atlas texture."
+    text  "此贴图数据是否为独立数据？ 意味着它不会被打包到任何纹理图集中。"
+    state machine
+}
+
+DreamUISpriteData_BaseObject:ReadPixel {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:ReadPixel
+    src   "Read pixel value from packed atlas texture.\n@param InUV uv coordinate in atlas texture.\n@param OutPixel result pixel value.\n@return true- successfully read pixel, false- not support read pixel."
+    text  "从打包的纹理图集中读取像素值。\n@param InUV 纹理图集中的 UV 坐标。\n@param OutPixel 结果像素值。\n@return true- 成功读取像素，false- 不支持读取像素。"
+    state machine
+}

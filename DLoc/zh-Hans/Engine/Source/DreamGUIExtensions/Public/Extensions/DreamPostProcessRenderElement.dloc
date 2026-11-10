@@ -1,0 +1,43 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPostProcessRenderElement {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h#DreamPostProcessRenderElement
+    src   "Dream Post Process Render Element"
+    text  "Dream 后处理渲染元素"
+    state machine
+}
+
+DreamPostProcessRenderElement:Material {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h#DreamPostProcessRenderElement:Material
+    src   "Material"
+    // from the engine's zh-Hans
+    text  "材质"
+    state draft
+}
+
+DreamPostProcessRenderElement:MaterialInstanceDynamic {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h#DreamPostProcessRenderElement:MaterialInstanceDynamic
+    src   "Material Instance Dynamic"
+    // from the engine's zh-Hans
+    text  "材质动态实例"
+    state draft
+}
+
+DreamPostProcessRenderElement:PostProcess {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h#DreamPostProcessRenderElement:PostProcess
+    src   "Post Process"
+    // from the engine's zh-Hans
+    text  "后期处理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPostProcessRenderElement {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h#DreamPostProcessRenderElement
+    src   "This component will grab post-process result image and display here.\nNOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and bUseFullSize is set to false.\nUV channel:\n            UV0: Rect UV from (0,0) to (1,1)\n            UV1: Check DreamCanvas"
+    text  "此组件将获取后处理结果图像并在此处显示。\n注意！！！ 仅当目标后处理渲染类型设置为 RenderTarget 且 bUseFullSize 设置为 false 时有效。\nUV通道：\n            UV0：从 (0,0) 到 (1,1) 的矩形 UV\n            UV1：检查 DreamCanvas"
+    state machine
+}

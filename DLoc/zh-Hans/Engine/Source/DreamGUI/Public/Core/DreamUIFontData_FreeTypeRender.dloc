@@ -1,0 +1,642 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIFontData_FreeTypeRender {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender
+    src   "Dream UIFont Data Free Type Render"
+    text  "DreamUI 字体数据，FreeType 渲染"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bCultureFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bCultureFont
+    src   "Culture Font"
+    text  "文化 字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bHasKerning {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bHasKerning
+    src   "Has Kerning"
+    text  "是否启用字间距"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:BoldFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:BoldFont
+    src   "Bold Font"
+    text  "粗体 字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:BoldItalicFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:BoldItalicFont
+    src   "Bold Italic Font"
+    text  "粗斜体 字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bPreferColorEmoji {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bPreferColorEmoji
+    src   "Prefer Color Emoji"
+    text  "优先使用彩色表情符号"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bUseExternalFileOrEmbedInToUAsset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bUseExternalFileOrEmbedInToUAsset
+    src   "Use External File or Embed in to UAsset"
+    text  "使用外部文件或嵌入到UAsset资产中"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bUseRelativeFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bUseRelativeFilePath
+    src   "Use Relative File Path"
+    text  "使用相对文件路径"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:CultureFontMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:CultureFontMap
+    src   "Culture Font Map"
+    text  "文化 字体映射"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:EngineFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:EngineFont
+    src   "Engine Font"
+    text  "引擎 字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FallbackFontArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FallbackFontArray
+    src   "Fallback Font Array"
+    text  "备用字体 数组"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:Fallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:Fallbacks
+    src   "Fallbacks"
+    text  "备用字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontBinaryArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontBinaryArray
+    src   "Font Binary Array"
+    text  "字体二进制数组"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontFace {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontFace
+    src   "Font Face"
+    // from the engine's zh-Hans
+    text  "字体样式"
+    state draft
+}
+
+DreamUIFontData_FreeTypeRender:FontFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontFilePath
+    src   "Font File Path"
+    text  "字体文件路径"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontType
+    src   "Font Type"
+    text  "字体类型"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIFontData_FreeTypeRender:ItalicFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:ItalicFont
+    src   "Italic Font"
+    text  "斜体字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:LineHeightType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:LineHeightType
+    src   "Line Height Type"
+    text  "行高类型"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:RectPackCellSizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:RectPackCellSizeType
+    src   "Rect Pack Cell Size Type"
+    text  "矩形填充单元格大小类型"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:RenderTextArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:RenderTextArray
+    src   "Render Text Array"
+    text  "渲染文本数组"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks
+    src   "In Fallbacks"
+    text  "备用字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks
+    src   "In Fallbacks"
+    text  "备用字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFontFilePath:bInRelativeToProjectDir {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFontFilePath:bInRelativeToProjectDir
+    src   "In Relative to Project Dir"
+    text  "相对于项目目录"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFontFilePath:InPath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFontFilePath:InPath
+    src   "In Path"
+    // from the engine's zh-Hans
+    text  "在路径中"
+    state draft
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts:InBold {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts:InBold
+    src   "In Bold"
+    text  "加粗"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts:InBoldItalic {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts:InBoldItalic
+    src   "In Bold Italic"
+    text  "粗斜体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic
+    src   "In Italic"
+    text  "斜体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetVerticalMetrics:InVerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetVerticalMetrics:InVerticalMetrics
+    src   "In Vertical Metrics"
+    text  "垂直指标"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SubFaces {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SubFaces
+    src   "Sub Faces"
+    // from the engine's zh-Hans
+    text  "子样式"
+    state draft
+}
+
+DreamUIFontData_FreeTypeRender:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+DreamUIFontData_FreeTypeRender:TextureSizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:TextureSizeType
+    src   "Texture Size Type"
+    text  "纹理大小类型"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:VerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:VerticalMetrics
+    src   "Vertical Metrics"
+    text  "垂直指标"
+    state machine
+}
+
+DreamUIFontFallback {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback
+    src   "Dream UIFont Fallback"
+    text  "DreamUI 字体回退"
+    state machine
+}
+
+DreamUIFontFallback:bPreferOverPrimary {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:bPreferOverPrimary
+    src   "Prefer Over Primary"
+    text  "优先使用"
+    state machine
+}
+
+DreamUIFontFallback:Cultures {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Cultures
+    src   "Cultures"
+    // from the engine's zh-Hans
+    text  "语系"
+    state draft
+}
+
+DreamUIFontFallback:Font {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Font
+    src   "Font"
+    // from the engine's zh-Hans
+    text  "字体"
+    state draft
+}
+
+DreamUIFontFallback:Ranges {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Ranges
+    src   "Ranges"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+DreamUIFontFallback:Scale {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+EDreamUIDynamicFontDataType.CustomFontFile {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontDataType:CustomFontFile
+    src   "Custom Font File"
+    text  "自定义字体文件"
+    state machine
+}
+
+EDreamUIDynamicFontDataType.EDreamUIDynamicFontDataType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontDataType:EDreamUIDynamicFontDataType_MAX
+    src   "EDream UIDynamic Font Data Type MAX"
+    text  "DreamUI 动态字体数据类型 最大值"
+    state machine
+}
+
+EDreamUIDynamicFontDataType.EngineFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontDataType:EngineFont
+    src   "Engine Font"
+    text  "引擎 字体"
+    state machine
+}
+
+EDreamUIDynamicFontLineHeightType.EDreamUIDynamicFontLineHeightType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontLineHeightType:EDreamUIDynamicFontLineHeightType_MAX
+    src   "EDream UIDynamic Font Line Height Type MAX"
+    text  "DreamUI 动态字体行高类型 最大值"
+    state machine
+}
+
+EDreamUIDynamicFontLineHeightType.FontSizeAsLineHeight {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontLineHeightType:FontSizeAsLineHeight
+    src   "Font Size as Line Height"
+    text  "字体大小作为行高"
+    state machine
+}
+
+EDreamUIDynamicFontLineHeightType.FromFontFace {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontLineHeightType:FromFontFace
+    src   "From Font Face"
+    text  "从字体面"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.EDreamUIFontVerticalMetrics_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:EDreamUIFontVerticalMetrics_MAX
+    src   "EDream UIFont Vertical Metrics MAX"
+    text  "DreamUI 字体垂直指标 最大值"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.FreeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:FreeType
+    src   "FreeType (hhea, grid-fitted)"
+    text  "FreeType (hhea, grid-fitted)"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Hhea {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Hhea
+    src   "hhea"
+    text  "hhea"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Platform {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Platform
+    src   "Platform (DirectWrite)"
+    text  "Platform (DirectWrite)"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Typo {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Typo
+    src   "OS/2 Typo"
+    text  "OS/2 Typo"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Win {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Win
+    src   "OS/2 Win"
+    text  "OS/2 Win"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIFontData_FreeTypeRender {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender
+    src   "Font asset for UIText to render"
+    text  "用于 UIText 渲染的字体资源。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bHasKerning {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bHasKerning
+    src   "Current using font face has kerning?"
+    text  "当前使用的字体是否支持字间距？"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:BoldFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:BoldFont
+    src   "The real bold face of this font. A bold run is drawn from it -- its own outlines and advances -- instead of from this\nfont's face made bolder. Its primary face is rendered into this font's atlas, the way a fallback's is."
+    text  "此字体真正的粗体字型。粗体文本段由它绘制——使用其自身的轮廓和步进——而不是由此\n字体字型加粗而成。它的主字型会像回退字型那样渲染到此字体的图集中。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:BoldItalicFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:BoldItalicFont
+    src   "The real bold-italic face of this font. Without it a bold-italic run takes BoldFont and is slanted, or ItalicFont and is emboldened."
+    text  "此字体的真实粗斜体字面。如果没有它，粗斜体文本将使用 BoldFont 并倾斜，或使用 ItalicFont 并加粗。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bPreferColorEmoji {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bPreferColorEmoji
+    src   "Clusters asking for emoji presentation (a pictograph that defaults to it, U+FE0F, a flag, a keycap, a skin tone, a\nZWJ sequence) try the colour faces among this font's faces first, as browsers do; off, every cluster takes the faces\nin order. A cluster in text presentation always tries the monochrome faces first."
+    text  "请求以表情符号形式呈现的字符簇（默认如此呈现的图形符号、U+FE0F、旗帜、键帽、肤色、\nZWJ序列）会像浏览器那样优先尝试此字体各字型中的彩色字型；关闭后，每个字符簇按顺序取用各字型。\n以文本形式呈现的字符簇始终优先尝试单色字型。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bUseExternalFileOrEmbedInToUAsset {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bUseExternalFileOrEmbedInToUAsset
+    src   "When in build, use external file or embed into uasset. But in editor, will always load from fontFilePath."
+    text  "构建时，是否使用外部文件或嵌入到 uasset 中。但在编辑器中，始终从 fontFilePath 加载。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:bUseRelativeFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:bUseRelativeFilePath
+    src   "Font file use relative path(relative to ProjectDir) or absolute path. After build your game, remember to copy your font file to target path, unless \"useExternalFileOrEmbedInToUAsset\" is false"
+    text  "字体文件使用相对路径（相对于ProjectDir）或绝对路径。构建游戏后，请记得将字体文件复制到目标路径，除非“useExternalFileOrEmbedInToUAsset”（将字体嵌入资产）为false"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FallbackFontArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FallbackFontArray
+    src   "The fallbacks of an asset saved before they had settings (FDreamGUIObjectVersion::FontFallbackEntries): moved into\nFallbacks, with default settings and in the same order, when the asset loads, and empty from then on. Not edited."
+    text  "字体在回退项还没有设置时保存的资产的回退项（FDreamGUIObjectVersion::FontFallbackEntries）：资产加载时会以默认设置、按相同顺序移动到\nFallbacks中，此后一直为空。不可编辑。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:Fallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:Fallbacks
+    src   "The faces tried for what this font's own face lacks. Entry i is face index i + 1. Which one draws a character is\ndecided by FDreamFontFaceResolver from each entry's ranges, cultures and preference, and the text's language."
+    text  "当此字体自身的字型缺少所需字符时尝试的字型。第i项即字型索引i + 1。哪个字型绘制某个字符由\nFDreamFontFaceResolver根据每一项的范围、文化区域和优先级，以及文本的语言决定。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontBinaryArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontBinaryArray
+    src   "save data when useExternalFileOrEmbedInToUAsset=false"
+    text  "当useExternalFileOrEmbedInToUAsset（嵌入到资产）为false时保存的数据"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontFace {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontFace
+    src   "Which face of a font collection (.ttc) to open. Kept across reloads; a file with fewer faces opens its last one. // DreamGUI_Hidden: the face picker beside the font file edits it."
+    text  "要打开字体集合（.ttc）中的哪个字型。重新加载后保持不变；字型数量更少的文件会打开其最后一个字型。// DreamGUI_Hidden：字体文件旁的字型选择器会编辑它。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:FontFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:FontFilePath
+    src   "Font file path, absolute path or relative to ProjectDir // DreamGUI_Hidden on this and the next: the font file row (a file picker with the relative-path switch) edits them."
+    text  "字体文件路径，绝对路径或相对于ProjectDir // 此项及下一项的DreamGUI_Hidden：字体文件行（带相对路径开关的文件选择器）会编辑它们。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:ItalicFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:ItalicFont
+    src   "The real italic face of this font, used for italic runs instead of slanting this font's face."
+    text  "此字体真正的斜体字型，用于斜体文本段，而不是将此字体的字型倾斜。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:RectPackCellSizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:RectPackCellSizeType
+    src   "rect pack use small cells to pack glyphs, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area."
+    text  "矩形打包使用小单元格打包字形，当前单元格已满时移动到下一个单元格。值越小性能越好，但会留下更多碎片区域。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:RenderTextArray {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:RenderTextArray
+    src   "Collection of UIText which use this font to render. Out of undo, as the atlas is: an undo of a font edit unregisters no text."
+    text  "使用此字体进行渲染的UIText集合。与图集一样不受撤销管理：撤销字体编辑不会取消注册任何文本。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFallbackFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts
+    src   "Replace the fallback list with these fonts, each an entry with default settings (every code point, any language, scale 1)."
+    text  "使用这些字体替换备用列表，每个条目都具有默认设置（每个代码点、任何语言、比例因子 1）。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks
+    src   "Replace the fallback list. Entries with no font, or with this font, are dropped. Resets what the faces behind the\nindices fed (the worker, face metrics, glyph cache, face table), moves the layout epoch on, and lays out every text\nusing the font again."
+    text  "替换回退列表。没有字体的条目以及使用此字体的条目都会被丢弃。重置这些索引背后的面所提供的内容（工作线程、面度量、字形缓存、面表），\n推进布局纪元，并重新排版\n所有使用该字体的文本。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFontFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFontFilePath
+    src   "Point the font at a file -- absolute, or relative to the project directory -- and reload it on next use."
+    text  "指定字体文件（绝对路径或相对于项目目录的路径），并在下次使用时重新加载。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts
+    src   "Replace the real bold, italic and bold-italic faces; null for a style the font should synthesize."
+    text  "替换用于粗体、斜体和粗斜体的面；如果为 null，则表示字体应合成该样式。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetVerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetVerticalMetrics
+    src   "Choose which of each face's own metrics the line box is built from; texts using the font lay out again."
+    text  "选择每个面的指标，用于构建行框；使用该字体的文本将重新布局。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:Texture
+    src   "Texture of this font. Kept out of undo: it is the atlas the font made, not something edited, and an undo that put an\nolder pointer back left the live atlas rooted with nothing pointing at it."
+    text  "此字体的纹理。不纳入撤销：它是字体生成的图集，而不是被编辑的内容；撤销把旧指针放回后，活动图集仍被根持有，\n却没有对象指向它。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:TextureSizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:TextureSizeType
+    src   "when packing char pixel into one single atlas texture, DreamUI will use this size to create a blank Texture2DArray, then insert char pixel."
+    text  "当将字符像素打包到单个纹理图时，DreamUI 将使用此大小创建空白的 Texture2DArray，然后插入字符像素。"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:VerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:VerticalMetrics
+    src   "Which of each face's own metrics the line box is built from, for this font's own face, its fallbacks and its style faces alike. LineHeightType then applies on top."
+    text  "选择每个面的指标，用于构建行框，适用于此字体的面、其备用字体和其样式字体。然后，LineHeightType 会在此基础上进行应用。"
+    state machine
+}
+
+DreamUIFontFallback {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback
+    src   "One face a font falls back to for what its own face lacks: which font, for which characters and which languages, at\nwhat scale. Entry i of a font's Fallbacks is its face index i + 1, as it always was; the resolver\n(FDreamFontFaceResolver) decides the order they are tried in from these settings."
+    text  "字体自身面缺失时回退使用的一个面：使用哪个字体、用于哪些字符和哪些语言、以什么\n缩放。字体Fallbacks的第i个条目始终是它的面索引i + 1；由解析器\n（FDreamFontFaceResolver）根据这些设置决定尝试顺序。"
+    state machine
+}
+
+DreamUIFontFallback:bPreferOverPrimary {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:bPreferOverPrimary
+    src   "Win over the font's own face for the code points in Ranges when the text's language matches Cultures (Slate's sub-fonts)."
+    text  "当文本的语言与文化相匹配时，覆盖主字体的代码点范围（Slate 的子字体）。"
+    state machine
+}
+
+DreamUIFontFallback:Cultures {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Cultures
+    src   "Cultures this face is meant for, semicolon-separated as Slate writes them (\"ja\", \"zh-Hans;zh-Hant\"); empty means any\nlanguage. Matched against the text's language (UDreamText::Language, a rich-text <lang=xx>) and the names it falls\nback to, so \"zh\" matches a Chinese text of any script."
+}
+
+DreamUIFontFallback:Font {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Font
+    src   "The fallback font. Its own face is used -- never its fallbacks or style faces in turn."
+    text  "备用字体。使用其自身的面，而不是其自身的备用字体或样式字体。"
+    state machine
+}
+
+DreamUIFontFallback:Ranges {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Ranges
+    src   "Code point ranges, inclusive, this face may be used for, matched against a cluster's base; empty means every code point."
+    text  "代码点范围，包含此字体的可用范围，与集群的基准进行匹配；为空表示所有代码点。"
+    state machine
+}
+
+DreamUIFontFallback:Scale {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Scale
+    src   "CSS size-adjust: glyphs from this face are shaped and rasterized at the text's size times this, and the line box is\nmeasured at that size, so a face scaled up grows its lines (as in Chrome; Slate's ScalingFactor does not)."
+    text  "CSS size-adjust：此面的字形按文本字号乘以该值进行整形和栅格化，行框也按该字号\n测量，因此放大后的面会使行高增大（与 Chrome 相同；Slate 的 ScalingFactor 则不会）。"
+    state machine
+}
+
+EDreamUIDynamicFontDataType.CustomFontFile {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontDataType:CustomFontFile
+    src   "Use custom external font file"
+    text  "使用自定义的外部字体文件。"
+    state machine
+}
+
+EDreamUIDynamicFontDataType.EngineFont {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontDataType:EngineFont
+    src   "Use existing UnrealEngine's font.\nNote: if UnrealEngine's font use 'Lazy Load' loading policy, then DreamUI will load target font file by itself."
+    text  "使用 Unreal Engine 现有的字体。\n注意：如果 Unreal Engine 的字体使用“延迟加载”加载策略，则 DreamUI 将自行加载目标字体文件。"
+    state machine
+}
+
+EDreamUIDynamicFontLineHeightType.FontSizeAsLineHeight {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontLineHeightType:FontSizeAsLineHeight
+    src   "Use font size as line height"
+    text  "使用字体大小作为行高。"
+    state machine
+}
+
+EDreamUIDynamicFontLineHeightType.FromFontFace {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIDynamicFontLineHeightType:FromFontFace
+    src   "Get line height from font face data"
+    text  "从字体数据获取行高。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics
+    src   "Which of a face's own vertical metrics its ascent, descent and line spacing are read from."
+    text  "获取字体自身的垂直指标，例如上标、下标和行间距。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.FreeType {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:FreeType
+    src   "FreeType's size metrics: the hhea ascender, descender and line gap, grid-fitted (ascender rounded up, descender down, line spacing to the nearest pixel). What DreamGUI has always used."
+    text  "FreeType 的尺寸指标：hhea 的上标、下标和行间距，经过网格拟合（上标向上取整，下标向下取整，行间距四舍五入）。DreamGUI 始终使用的指标。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Hhea {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Hhea
+    src   "The hhea ascender, descender and line gap, scaled without rounding. What CoreText on macOS lays text out with."
+    text  "hhea 的上标、下标和行间距，未经缩放。macOS 上的 CoreText 使用的指标。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Platform {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Platform
+    src   "What DirectWrite reports on Windows, and so what Chrome on Windows lays text out with: the typo metrics when the face sets\nOS/2 fsSelection bit 7 (USE_TYPO_METRICS), otherwise usWinAscent and usWinDescent with GDI's external leading as the line\ngap, max(0, hhea lineGap - ((usWinAscent + usWinDescent) - (hhea ascender - hhea descender))). The same rule on every\nplatform DreamGUI runs on. Falls back to hhea when the face has no OS/2 table."
+    text  "DirectWrite 在 Windows 上报告的值，也是 Windows 上的 Chrome 排版文本所用的值：当面设置了\nOS/2 fsSelection 第 7 位（USE_TYPO_METRICS）时使用 typo 度量，否则使用 usWinAscent 和 usWinDescent，并以 GDI 的外部间距作为行\n间距，即 max(0, hhea lineGap - ((usWinAscent + usWinDescent) - (hhea ascender - hhea descender)))。DreamGUI 运行的每个\n平台都使用同一规则。当面没有 OS/2 表时回退到 hhea。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Typo {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Typo
+    src   "OS/2 sTypoAscender, sTypoDescender and sTypoLineGap, scaled without rounding: the metrics the OpenType spec recommends for line layout. Falls back to hhea when the face has no OS/2 table."
+    text  "OS/2 的 sTypoAscender、sTypoDescender 和 sTypoLineGap，未经缩放：OpenType 规范推荐的用于行布局的指标。如果字体没有 OS/2 表，则回退到 hhea。"
+    state machine
+}
+
+EDreamUIFontVerticalMetrics.Win {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#EDreamUIFontVerticalMetrics:Win
+    src   "OS/2 usWinAscent and usWinDescent with no line gap: GDI's line box, tall enough that no glyph is clipped. Falls back to hhea when the face has no OS/2 table."
+    text  "OS/2 的 usWinAscent 和 usWinDescent，不带行间距：GDI 的行盒，高度足以避免任何字形被裁剪。如果字体没有 OS/2 表，则回退到 hhea。"
+    state machine
+}

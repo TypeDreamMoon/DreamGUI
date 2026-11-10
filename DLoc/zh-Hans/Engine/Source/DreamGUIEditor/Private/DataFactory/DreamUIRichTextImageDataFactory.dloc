@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+RichTextImages {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextImageDataFactory.cpp
+    src   "Rich Text Images"
+    text  "多格式文本图像"
+    state machine
+}
+
+RichTextImagesToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextImageDataFactory.cpp
+    src   "Images for rich text: each name places a sprite, or an animated run of sprites, inline in a text."
+    text  "用于多格式文本的图像：每个名称都会在文本中放置一个精灵或一系列动画精灵。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIRichTextImageDataFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIRichTextImageDataFactory.cpp#DreamUIRichTextImageDataFactory
+    src   "Dream UIRich Text Image Data Factory"
+    text  "DreamUI多格式文本图像数据工厂"
+    state machine
+}

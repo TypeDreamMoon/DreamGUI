@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerLinearColor {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerLinearColor.h#DreamTweenerLinearColor
+    src   "Dream Tweener Linear Color"
+    text  "DreamTweener 线性颜色"
+    state machine
+}

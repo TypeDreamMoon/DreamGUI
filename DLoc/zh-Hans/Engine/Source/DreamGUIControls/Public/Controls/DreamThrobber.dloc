@@ -1,0 +1,358 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamThrobber {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber
+    src   "Dream Throbber"
+    text  "Dream活动指示器"
+    state machine
+}
+
+DreamThrobber:bAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:bAnimate
+    src   "Animate"
+    text  "动画"
+    state machine
+}
+
+DreamThrobber:bAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:bAnimateHorizontally
+    src   "Animate Horizontally"
+    // from the engine's zh-Hans
+    text  "水平设置动画"
+    state draft
+}
+
+DreamThrobber:bAnimateVertically {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:bAnimateVertically
+    src   "Animate Vertically"
+    // from the engine's zh-Hans
+    text  "垂直设置动画"
+    state draft
+}
+
+DreamThrobber:ElapsedInCycle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:ElapsedInCycle
+    src   "Elapsed in Cycle"
+    text  "周期内已过时间"
+    state machine
+}
+
+DreamThrobber:GetAnimate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetAnimateHorizontally:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateHorizontally:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetAnimateOpacity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetAnimateVertically:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateVertically:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetNumberOfPieces:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetNumberOfPieces:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetPeriod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPeriod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetPhase:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPhase:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetRadius:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetRadius:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetShape:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetShape:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamThrobber:PieceNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:PieceNodes
+    src   "Piece Nodes"
+    text  "片段节点"
+    state machine
+}
+
+DreamThrobber:PieceRootNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:PieceRootNode
+    src   "Piece Root Node"
+    text  "片段根节点"
+    state machine
+}
+
+DreamThrobber:SetAnimate:bInAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimate:bInAnimate
+    src   "In Animate"
+    text  "是否动画"
+    state machine
+}
+
+DreamThrobber:SetAnimateHorizontally:bInAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateHorizontally:bInAnimateHorizontally
+    src   "In Animate Horizontally"
+    // from the engine's zh-Hans
+    text  "在水平设置动画中"
+    state draft
+}
+
+DreamThrobber:SetAnimateOpacity:bInAnimateOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateOpacity:bInAnimateOpacity
+    src   "In Animate Opacity"
+    // from the engine's zh-Hans
+    text  "在动画不透明度中"
+    state draft
+}
+
+DreamThrobber:SetAnimateVertically:bInAnimateVertically {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateVertically:bInAnimateVertically
+    src   "In Animate Vertically"
+    // from the engine's zh-Hans
+    text  "在垂直设置动画中"
+    state draft
+}
+
+DreamThrobber:SetNumberOfPieces:InNumberOfPieces {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetNumberOfPieces:InNumberOfPieces
+    src   "In Number Of Pieces"
+    // from the engine's zh-Hans
+    text  "在图像块数量中"
+    state draft
+}
+
+DreamThrobber:SetPeriod:InPeriod {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetPeriod:InPeriod
+    src   "In Period"
+    // from the engine's zh-Hans
+    text  "在周期中"
+    state draft
+}
+
+DreamThrobber:SetRadius:InRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetRadius:InRadius
+    src   "In Radius"
+    // from the engine's zh-Hans
+    text  "输入半径"
+    state draft
+}
+
+DreamThrobber:SetShape:InShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetShape:InShape
+    src   "In Shape"
+    text  "形状"
+    state machine
+}
+
+DreamThrobber:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamThrobber:Shape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:Shape
+    src   "Shape"
+    // from the engine's zh-Hans
+    text  "形状"
+    state draft
+}
+
+DreamThrobber:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamThrobber {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber
+    src   "A throbber whose hierarchy is code, not an asset: N pieces that pulse, saying only \"something is\nhappening\".\n\nONE CONTROL FOR UMG'S TWO, which is the call this library has already made three times: the\nprogress bar has Bar and Radial rather than two classes, the slider has a Direction rather than\ntwo Blueprint presets, the scroll box has an Orientation. The pieces, the period, the colours and\nthe fade are identical between a Throbber and a CircularThrobber; the only thing that differs is\nwhere the pieces are put, so that is one enum and not one class. The palette still offers both\nrows -- they differ by a single property write, exactly like the two sliders.\n\nWHY IT TICKS, WHEN NOTHING ELSE IN THE LIBRARY DOES\n---------------------------------------------------\nEvery other animated thing here is a TWEEN: it has a start, an end and a duration, and the tween\nmanager owns the clock. A throbber has none of those -- it runs until somebody takes it off screen\n-- so a tween would have to be re-started forever, and a looping tween per piece would be N\nobjects the manager walks every frame to do arithmetic this control can do in one pass. So it opts\ninto NativeOnTick (off by default for every widget, see UDreamUserWidget::SetWantsTick) and writes\nthe opacities itself.\n\nThat also makes it correct where the tween manager does not exist: the manager is a world\nsubsystem and hands back null in a headless test and in the designer's preview, where a tween-based\nthrobber would simply stand still. This one animates wherever something calls its tick, and holds\nits first frame where nothing does -- which is a throbber that LOOKS like a throbber in the\ndesigner rather than an empty box.\n\nNO PLAY / STOP, for UMG's reason: a throbber is not a timeline. Take it off screen to stop it."
+    text  "层级是代码而非资源的活动指示器：N 个脉动的片段，只表示“有事情\n正在发生”。\n\n一个控件顶 UMG 的两个，这是本库已经做过三次的取舍：\n进度条用 Bar 和 Radial 而不是两个类，滑块用 Direction 而不是\n两个蓝图预设，滚动框用 Orientation。活动指示器与 CircularThrobber 的片段、周期、颜色和\n淡出完全相同；唯一不同的是\n片段的摆放位置，所以那是一个枚举而不是一个类。调色板仍然提供\n两行——它们只差一次属性写入，和两个滑块完全一样。\n\n为什么库中其他东西都不 Tick 时它要 Tick\n---------------------------------------------------\n这里的其他所有动画对象都是补间（TWEEN）：有起点、终点和时长，补间\n管理器掌管时钟。活动指示器这三样都没有——它会一直运行到有人把它移出屏幕\n——所以补间就得永远不停地重启，而每个片段一个循环补间，就是 N\n个对象，管理器每帧都要遍历它们，去做这个控件一趟就能算完的算术。于是它选择\n启用 NativeOnTick（所有控件默认关闭，参见 UDreamUserWidget::SetWantsTick），并写\n入不透明度。\n\n这也让它在补间管理器不存在的地方依然正确：管理器是一个世界\n子系统，在无头测试和设计师预览中会返回空，那里基于补间的\n活动指示器只会静止不动。这个控件在任何调用其 tick 的地方动起来，并在没有调用的地方\n保持第一帧——这样的活动指示器在设计师里看起来才像活动指示器，\n而不是一个空盒子。\n\n没有播放 / 停止，理由和 UMG 一样：活动指示器不是时间轴。要停止就把它移出屏幕。"
+    state machine
+}
+
+DreamThrobber:bAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:bAnimate
+    src   "Off holds the pieces at the phase they were on. The widget stops ticking with it."
+    text  "关闭时片段停在当前所处的相位上，控件也随之停止 Tick。"
+    state machine
+}
+
+DreamThrobber:bAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:bAnimateHorizontally
+    src   "Whether a piece also PULSES on that axis -- UMG's bAnimateHorizontally / bAnimateVertically,\nand Slate's rule for them: the piece is scaled on the ticked axis by the same wave that drives\nits opacity, so it swells as it brightens and shrinks as it fades.\n\nBoth off, which is what this throbber has always drawn (opacity only). Both on is UMG's own\ndefault look; one on is the squash a loading strip wants.\n\nOn the CONTROL rather than in the style because it decides what the animation DOES, the way\nbAnimate and Shape beside it do, rather than what a piece looks like."
+    text  "片段是否还在该轴上脉动——即 UMG 的 bAnimateHorizontally / bAnimateVertically，\n以及 Slate 为它们定的规则：片段在勾选的轴上按驱动其\n不透明度的同一条波形缩放，于是变亮时胀大，变暗时缩小。\n\n两者都关闭，正是这个活动指示器一直绘制的方式（只有不透明度）。两者都开启是 UMG 自己的\n默认外观；只开一个是加载条想要的压扁效果。\n\n放在控件上而不是样式里，因为它决定动画做什么，\n就像旁边的 bAnimate 和 Shape 一样，而不是片段长什么样。"
+    state machine
+}
+
+DreamThrobber:ElapsedInCycle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:ElapsedInCycle
+    src   "Seconds into the current cycle. Wrapped rather than accumulated, so it cannot lose precision."
+    text  "当前周期内已过去的秒数。采用回绕而非累加，因此不会损失精度。"
+    state machine
+}
+
+DreamThrobber:GetAnimateOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateOpacity
+    src   "Whether the pieces fade at all -- UMG's bAnimateOpacity, read off how faint they are allowed\nto get: a floor of 1 keeps every piece solid, which is the flag being off."
+    text  "片段是否淡出——即 UMG 的 bAnimateOpacity（不透明度动画），从允许它们\n淡到多淡读出：下限为 1 时每个片段都保持实心，也就是该标志关闭。"
+    state machine
+}
+
+DreamThrobber:GetNumberOfPieces {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetNumberOfPieces
+    src   "The four numbers UMG's two throbbers offer one at a time.\n\nEach getter answers the style in EFFECT, and each setter edits THIS INSTANCE'S style and\nre-pushes -- so they show up when this instance's style is what is in effect, and under a\nproject sheet they are writes to a value the sheet is overruling. Same bargain, and same\nwording, as UDreamBorder::SetPadding."
+    text  "UMG 的两个活动指示器一次只提供一个的四个数值。\n\n每个 getter 返回的是当前生效的样式，每个 setter 编辑的是本实例的样式并\n重新推送——所以只有当本实例的样式生效时它们才显现，而在\n项目样式表下，它们写入的是被样式表覆盖的值。同样的取舍，\n同样的措辞，与 UDreamBorder::SetPadding 的填充约定相同。"
+    state machine
+}
+
+DreamThrobber:GetPhase {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPhase
+    src   "How far through one cycle the animation is, 0 to 1. Authored in; readable out."
+    text  "动画走完一个周期的程度，0 到 1。可写入，也可读出。"
+    state machine
+}
+
+DreamThrobber:PieceNodes {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:PieceNodes
+    src   "The pieces, in order. Public because a decorator may want to skin one."
+    text  "这些片段，按顺序排列。设为公开是因为装饰器可能想为其中某个换肤。"
+    state machine
+}
+
+DreamThrobber:PieceRootNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:PieceRootNode
+    src   "What the pieces hang under, and the control's one built-in node.\n\nA root rather than hanging the pieces off the control directly, for two reasons that are both\nabout the rest of the library rather than about throbbers: a control with no built-in tree never\ngets a UDreamWidgetTree at all (DreamUI::Realize's owner overload is what makes one), so there\nwould be nothing for the pieces to be built INTO; and a named root is what gives the template\nroad something to supply, the way every other control's Face does."
+    text  "片段所挂载的父节点，也是该控件唯一的内置节点。\n\n用根节点而不是把片段直接挂在控件下面，有两个原因，都与\n库的其余部分有关，而与活动指示器无关：没有内置树的控件从不会\n获得 UDreamWidgetTree（DreamUI::Realize 的 owner 重载才会创建它），因此\n片段就没有可以构建进去的对象；而具名根节点则让模板\n这条路径有东西可供，正如其他每个控件的 Face 那样。"
+    state machine
+}
+
+DreamThrobber:SetAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateHorizontally
+    src   "Turning it OFF re-places every piece at once, because a piece frozen mid-pulse would otherwise\nkeep the width the last tick gave it -- a switch that leaves the thing it switched off in a\nrandom state is a switch that looks broken."
+    text  "关闭它会立即重新放置所有片段，否则在脉冲中途被冻结的片段会\n一直保留上一次 Tick 赋予的宽度——一个让被关闭的对象处于\n随机状态的开关，看起来就是坏的。"
+    state machine
+}
+
+DreamThrobber:SetAnimateOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateOpacity
+    src   "Off pins the floor at 1. On restores the style's shipped floor, but only when the floor is\ncurrently 1 -- so switching off and on again is not a way to lose a hand-tuned value, and a\nthrobber already fading keeps fading exactly as far as it did."
+    text  "关闭时把下限固定为 1。开启时恢复样式自带的下限，但仅当当前下限\n为 1 时才这样做——因此关掉再打开并不会丢失手工调整过的值，而\n已经处于淡出状态的活动指示器会继续按原来的程度淡出。"
+    state machine
+}
+
+DreamThrobber:SetNumberOfPieces {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetNumberOfPieces
+    src   "Rebuilds the piece pool, which is what a count IS here."
+    text  "重建片段池，这里的数量指的就是它。"
+    state machine
+}
+
+DreamThrobber:SetPeriod {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetPeriod
+    src   "Seconds for one full cycle. Drives the linear shape too, where UMG offers it only on the ring."
+    text  "一个完整周期的秒数。也驱动线性形态，而在 UMG 中该值只对环形形态提供。"
+    state machine
+}
+
+DreamThrobber:SetRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetRadius
+    src   "How far out the pieces ride. Circular only, as in UMG; the linear shape ignores it."
+    text  "片段向外偏移的距离。仅适用于环形形态，与 UMG 相同；线性形态会忽略它。"
+    state machine
+}
+
+DreamThrobber:SetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetShape
+    src   "Re-places every piece: the two shapes put them in different places, nothing else differs."
+    text  "重新放置所有片段：两种形态只是放置位置不同，其他没有区别。"
+    state machine
+}
+
+DreamThrobber:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetStyle
+    src   "This instance's whole look, replaced and pushed -- which for a throbber means the piece POOL is\nrebuilt if the count changed. See UDreamButton::SetStyle for the caveat about the sheet."
+    text  "此实例的整套外观，被替换并推送——对活动指示器而言，如果数量发生变化，就意味着片段池\n会被重建。关于项目样式表的注意事项见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamThrobber:Shape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:Shape
+    src   "A row of pieces, or pieces around a circle. UMG's Throbber and CircularThrobber."
+    text  "一排片段，或围绕圆周排列的片段。对应 UMG 的 Throbber 和 CircularThrobber。"
+    state machine
+}
+
+DreamThrobber:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect."
+    text  "本实例自身的外观。只要StyleSource如此指定且样式表\n确实存在，项目样式表就优先；项目中没有任何样式表时，这里就是实际生效的外观。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Throbber {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimate
+    src   "Throbber"
+    // from the engine's zh-Hans
+    text  "动态浏览图示"
+    state draft
+}

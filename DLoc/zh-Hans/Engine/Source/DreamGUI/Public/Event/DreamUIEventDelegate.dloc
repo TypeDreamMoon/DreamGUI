@@ -1,0 +1,674 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIEventDelegate {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate
+    src   "Dream UIEvent Delegate"
+    text  "Dream UI 事件委托"
+    state machine
+}
+
+DreamUIEventDelegate:EventList {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate:EventList
+    src   "Event List"
+    text  "事件列表"
+    state machine
+}
+
+DreamUIEventDelegate:SupportParameterType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate:SupportParameterType
+    src   "NativeParameterType"
+    text  "原生参数类型"
+    state machine
+}
+
+DreamUIEventDelegateData {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData
+    src   "Dream UIEvent Delegate Data"
+    text  "Dream UI 事件委托数据"
+    state machine
+}
+
+DreamUIEventDelegateData:BoolValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:BoolValue
+    src   "Bool Value"
+    // from the engine's zh-Hans
+    text  "布尔值"
+    state draft
+}
+
+DreamUIEventDelegateData:bUseNativeParameter {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:bUseNativeParameter
+    src   "Use Native Parameter"
+    text  "使用原生参数"
+    state machine
+}
+
+DreamUIEventDelegateData:CacheFunction {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:CacheFunction
+    src   "Cache Function"
+    text  "缓存函数"
+    state machine
+}
+
+DreamUIEventDelegateData:ColorValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ColorValue
+    src   "Color Value"
+    // from the engine's zh-Hans
+    text  "颜色值"
+    state draft
+}
+
+DreamUIEventDelegateData:DoubleValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:DoubleValue
+    src   "Double Value"
+    // from the engine's zh-Hans
+    text  "Double值"
+    state draft
+}
+
+DreamUIEventDelegateData:FloatValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:FloatValue
+    src   "Float Value"
+    // from the engine's zh-Hans
+    text  "浮点值"
+    state draft
+}
+
+DreamUIEventDelegateData:FunctionName {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:FunctionName
+    src   "Function Name"
+    // from the engine's zh-Hans
+    text  "函数名称"
+    state draft
+}
+
+DreamUIEventDelegateData:HelperClass {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperClass
+    src   "Helper Class"
+    text  "辅助 类"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperComponentIndex {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperComponentIndex
+    src   "Helper Component Index"
+    text  "辅助组件索引"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperComponentName {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperComponentName
+    src   "Helper Component Name"
+    text  "辅助 组件名称"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperWidget {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperWidget
+    src   "Helper Widget"
+    text  "辅助控件"
+    state machine
+}
+
+DreamUIEventDelegateData:Int16Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Int16Value
+    src   "Int 16Value"
+    // from the engine's zh-Hans
+    text  "Int 16值"
+    state draft
+}
+
+DreamUIEventDelegateData:Int32Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Int32Value
+    src   "Int 32Value"
+    // from the engine's zh-Hans
+    text  "Int 32值"
+    state draft
+}
+
+DreamUIEventDelegateData:Int64Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Int64Value
+    src   "Int 64Value"
+    // from the engine's zh-Hans
+    text  "Int 64值"
+    state draft
+}
+
+DreamUIEventDelegateData:Int8Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Int8Value
+    src   "Int 8Value"
+    // from the engine's zh-Hans
+    text  "Int 8值"
+    state draft
+}
+
+DreamUIEventDelegateData:LinearColorValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:LinearColorValue
+    src   "Linear Color Value"
+    // from the engine's zh-Hans
+    text  "线性颜色值"
+    state draft
+}
+
+DreamUIEventDelegateData:NameValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:NameValue
+    src   "Name Value"
+    // from the engine's zh-Hans
+    text  "Name Value"
+    state draft
+}
+
+DreamUIEventDelegateData:ParamBuffer {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ParamBuffer
+    src   "Param Buffer"
+    text  "参数缓冲区"
+    state machine
+}
+
+DreamUIEventDelegateData:ParamType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ParamType
+    src   "Param Type"
+    // from the engine's zh-Hans
+    text  "参数类型"
+    state draft
+}
+
+DreamUIEventDelegateData:QuatValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:QuatValue
+    src   "Quat Value"
+    // from the engine's zh-Hans
+    text  "四元数值"
+    state draft
+}
+
+DreamUIEventDelegateData:ReferenceObject {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ReferenceObject
+    src   "Reference Object"
+    // from the engine's zh-Hans
+    text  "引用Object"
+    state draft
+}
+
+DreamUIEventDelegateData:RotatorValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:RotatorValue
+    src   "Rotator Value"
+    // from the engine's zh-Hans
+    text  "旋转体值"
+    state draft
+}
+
+DreamUIEventDelegateData:StringValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:StringValue
+    src   "String Value"
+    // from the engine's zh-Hans
+    text  "字符串值"
+    state draft
+}
+
+DreamUIEventDelegateData:StructValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:StructValue
+    src   "Struct Value"
+    // from the engine's zh-Hans
+    text  "结构体值"
+    state draft
+}
+
+DreamUIEventDelegateData:StructValueType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:StructValueType
+    src   "Struct Value Type"
+    text  "结构体值类型"
+    state machine
+}
+
+DreamUIEventDelegateData:TargetObject {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:TargetObject
+    src   "Target Object"
+    // from the engine's zh-Hans
+    text  "目标Object"
+    state draft
+}
+
+DreamUIEventDelegateData:TextValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:TextValue
+    src   "Text Value"
+    // from the engine's zh-Hans
+    text  "文本值"
+    state draft
+}
+
+DreamUIEventDelegateData:UInt16Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:UInt16Value
+    src   "UInt 16Value"
+    text  "UInt16 值"
+    state machine
+}
+
+DreamUIEventDelegateData:UInt32Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:UInt32Value
+    src   "UInt 32Value"
+    text  "UInt32 值"
+    state machine
+}
+
+DreamUIEventDelegateData:UInt64Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:UInt64Value
+    src   "UInt 64Value"
+    text  "UInt64 值"
+    state machine
+}
+
+DreamUIEventDelegateData:UInt8Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:UInt8Value
+    src   "UInt 8Value"
+    text  "UInt8 值"
+    state machine
+}
+
+DreamUIEventDelegateData:Vector2Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Vector2Value
+    src   "Vector 2Value"
+    // from the engine's zh-Hans
+    text  "Vector 2值"
+    state draft
+}
+
+DreamUIEventDelegateData:Vector3Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Vector3Value
+    src   "Vector 3Value"
+    text  "Vector3 值"
+    state machine
+}
+
+DreamUIEventDelegateData:Vector4Value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:Vector4Value
+    src   "Vector 4Value"
+    // from the engine's zh-Hans
+    text  "Vector 4值"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Asset {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Asset
+    src   "Asset"
+    // from the engine's zh-Hans
+    text  "资产"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Bool {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Bool
+    src   "Boolean"
+    // from the engine's zh-Hans
+    text  "布尔"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Class {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Class
+    src   "Class"
+    // from the engine's zh-Hans
+    text  "类"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Color {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Double {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Double
+    src   "Double"
+    // from the engine's zh-Hans
+    text  "Double"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.DreamWidget {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:DreamWidget
+    src   "Dream Widget"
+    text  "Dream 控件"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.EDreamUIEventDelegateParameterType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:EDreamUIEventDelegateParameterType_MAX
+    src   "EDream UIEvent Delegate Parameter Type MAX"
+    text  "EDreamUIEventDelegateParameterType_MAX"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Empty {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Empty
+    src   "Empty"
+    // from the engine's zh-Hans
+    text  "空"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Float {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Float
+    src   "Float"
+    // from the engine's zh-Hans
+    text  "浮点"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Int16 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Int16
+    src   "Int 16"
+    // from the engine's zh-Hans
+    text  "整数16"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Int32 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Int32
+    src   "Integer"
+    // from the engine's zh-Hans
+    text  "整数"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Int64 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Int64
+    src   "Int 64"
+    // from the engine's zh-Hans
+    text  "Int 64"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Int8 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Int8
+    src   "Int 8"
+    // from the engine's zh-Hans
+    text  "整数8"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.LinearColor {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:LinearColor
+    src   "Linear Color"
+    // from the engine's zh-Hans
+    text  "线性颜色"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Name {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.None {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.PointerEvent {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:PointerEvent
+    src   "DreamPointerEventData"
+    text  "DreamPointerEventData"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Quaternion {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Quaternion
+    src   "Quaternion"
+    // from the engine's zh-Hans
+    text  "四元数"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Rotator {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Rotator
+    src   "Rotator"
+    // from the engine's zh-Hans
+    text  "旋转"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.String {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:String
+    src   "String"
+    // from the engine's zh-Hans
+    text  "字符串"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Struct {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Struct
+    src   "Struct"
+    // from the engine's zh-Hans
+    text  "结构体"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Text {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.UInt16 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:UInt16
+    src   "UInt 16"
+    // from the engine's zh-Hans
+    text  "UInt 16"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.UInt32 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:UInt32
+    src   "UInt 32"
+    // from the engine's zh-Hans
+    text  "U整数32"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.UInt64 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:UInt64
+    src   "UInt 64"
+    // from the engine's zh-Hans
+    text  "U整数64"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.UInt8 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:UInt8
+    src   "UInt8EnumByte"
+    text  "UInt8枚举值"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Vector2 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Vector2
+    src   "Vector2"
+    // from the engine's zh-Hans
+    text  "Vector2"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Vector3 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Vector3
+    src   "Vector3"
+    // from the engine's zh-Hans
+    text  "Vector3"
+    state draft
+}
+
+EDreamUIEventDelegateParameterType.Vector4 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Vector4
+    src   "Vector4"
+    // from the engine's zh-Hans
+    text  "Vector4"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIEventDelegate {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate
+    src   "event or callback that can edit inside editor"
+    text  "可以在编辑器中编辑的事件或回调"
+    state machine
+}
+
+DreamUIEventDelegate:EventList {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate:EventList
+    src   "event list"
+    text  "事件列表"
+    state machine
+}
+
+DreamUIEventDelegate:SupportParameterType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegate:SupportParameterType
+    src   "supported parameter type of this event"
+    text  "支持的事件参数类型"
+    state machine
+}
+
+DreamUIEventDelegateData {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData
+    src   "Editable event type in editor"
+    text  "在编辑器中可编辑的事件类型"
+    state machine
+}
+
+DreamUIEventDelegateData:bUseNativeParameter {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:bUseNativeParameter
+    src   "use the function's native parameter?"
+    text  "使用函数的原生参数？"
+    state machine
+}
+
+DreamUIEventDelegateData:FunctionName {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:FunctionName
+    src   "target function name"
+    text  "目标函数名"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperClass {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperClass
+    src   "target object class. If class is DreamWidget then TargetObject is HelperWidget, if class is DreamUIBehaviour then TargetObject is the component."
+    text  "目标对象类。如果类是 DreamWidget（控件），则 TargetObject 是 HelperWidget；如果类是 DreamUIBehaviour，则 TargetObject 是组件。"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperComponentIndex {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperComponentIndex
+    src   "Which behaviour, when HelperClass is a UDreamUIBehaviour: its position in the widget's component\narray. The same key FDreamWidgetPropertyBinding::BehaviourIndex uses, and for the same reason --\nan instanced sub-object and its authored copy share no name, and UE re-numbers the instance's\nFName on every preview rebuild. INDEX_NONE means \"not recorded\"; see HelperComponentName."
+    text  "当 HelperClass 是 UDreamUIBehaviour 时，指定哪个行为：它在控件的组件\n数组中的位置。与属性绑定 FDreamWidgetPropertyBinding::BehaviourIndex 使用相同的键，原因也相同——\n实例化子对象与其源副本不共享名称，且 UE 会在每次预览重建时重新编号实例的\nFName。INDEX_NONE 表示“未记录”；参见 HelperComponentName。"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperComponentName {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperComponentName
+    src   "LEGACY key, kept so assets saved before HelperComponentIndex existed still resolve. Consulted\nonly when the index is INDEX_NONE, and the index is written back the first time it resolves."
+    text  "旧版键，保留它是为了让在 HelperComponentIndex（组件索引）出现之前保存的资产仍能解析。仅当索引为\nINDEX_NONE 时才会查询它，并在首次解析成功时回写索引。"
+    state machine
+}
+
+DreamUIEventDelegateData:HelperWidget {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:HelperWidget
+    src   "target widget"
+    text  "目标控件"
+    state machine
+}
+
+DreamUIEventDelegateData:ParamBuffer {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ParamBuffer
+    src   "data buffer stores function's parameter"
+    text  "数据缓冲区存储函数的参数"
+    state machine
+}
+
+DreamUIEventDelegateData:ParamType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ParamType
+    src   "target function supported parameter type"
+    text  "目标函数支持的参数类型"
+    state machine
+}
+
+DreamUIEventDelegateData:ReferenceObject {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:ReferenceObject
+    src   "Object reference, can reference widget/class/asset"
+    text  "对象引用，可引用控件/类/资产"
+    state machine
+}
+
+DreamUIEventDelegateData:StructValue {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:StructValue
+    src   "A `Struct` parameter's value, as exported text. Not in ParamBuffer: see the enum's Struct entry.\nEmpty means \"the struct's own defaults\", which is what a freshly picked function should send."
+    text  "`Struct` 参数的值，以导出文本表示。不在 ParamBuffer 中：参见枚举的 Struct 项。\n为空表示“使用结构体自身的默认值”，这也是刚选取的函数应当发送的值。"
+    state machine
+}
+
+DreamUIEventDelegateData:StructValueType {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#DreamUIEventDelegateData:StructValueType
+    src   "Which struct StructValue was written for. The type actually sent is always the one the target\nfunction declares TODAY; this is here so a mismatch is an error rather than a partial parse --\ntwo unrelated structs can both accept a text literal that names a member they happen to share,\nand quietly sending half a value is worse than sending the defaults and saying so."
+    text  "StructValue 是为哪个结构体写入的。实际发送的类型始终是目标\n函数当前声明的类型；保留此项是为了让不匹配成为错误，而不是部分解析——\n两个不相关的结构体都可能接受一个文本字面量，只要其中命名了它们碰巧共有的成员，\n而悄悄发送一半的值，比发送默认值并说明情况更糟。"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Asset {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Asset
+    src   "for asset reference"
+    text  "用于资产引用"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Class {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Class
+    src   "Class for UClass reference"
+    text  "用于 UClass 引用的类"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.DreamWidget {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:DreamWidget
+    src   "for DreamWidget reference"
+    text  "用于 DreamWidget 控件引用"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Int8 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Int8
+    src   "The narrow and unsigned integers are offered like any other type: every one of them has a\nbuffer size (GetParameterBufferSize), a typed field on FDreamUIEventDelegateData, an editor row\nand a change handler, so the only thing Hidden bought was an author who could not declare a\nnative event carrying the argument their own C++ delegate already passes. None stays hidden --\nit is the enum's \"not initialized\", not a type anyone can mean."
+    text  "窄整型和无符号整型与其他任何类型一样提供：它们每一个都有\n缓冲区大小（GetParameterBufferSize）、FDreamUIEventDelegateData 上的类型化字段、一个编辑器行\n和一个变更处理程序，因此 Hidden 换来的唯一东西，就是作者无法声明一个\n原生事件来携带其自己的 C++ 委托已经传递的参数。None 不会保持隐藏——\n它是枚举的“未初始化”，不是任何人会表示的类型。"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.None {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:None
+    src   "not initialized"
+    text  "未初始化。"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.PointerEvent {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:PointerEvent
+    src   "for DreamPointerEventData"
+    text  "用于 DreamPointerEventData。"
+    state machine
+}
+
+EDreamUIEventDelegateParameterType.Struct {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate.h#EDreamUIEventDelegateParameterType:Struct
+    src   "Any other USTRUCT. Appended rather than slotted in beside the named struct types above because\nthese values are serialized as their NUMBER: inserting anywhere else would silently re-read every\nsaved binding as a different type.\n\nThe value is stored as exported text (FDreamUIEventDelegateData::StructValue), not as raw bytes\nin ParamBuffer. A struct is free to own heap memory -- an FString member, a TArray -- and a byte\ncopy of one is a copy of the pointers, which ProcessEvent would then read as another object's\nmemory and the callee's destructor would free twice. Text is what every other part of the engine\nthat has to persist an arbitrary struct literal uses, for the same reason."
+    text  "任何其他 USTRUCT。追加在末尾，而不是插到上面那些具名结构体类型旁边，因为\n这些值按其 NUMBER 序列化：插入到其他任何位置都会悄悄地把每个\n已保存的绑定重新读取为不同的类型。\n\n该值以导出文本（FDreamUIEventDelegateData::StructValue）的形式存储，而不是作为\nParamBuffer 中的原始字节。结构体可以拥有堆内存——一个 FString 成员、一个 TArray——而它的字节\n副本复制的是指针，ProcessEvent 随后会把这些指针当作另一个对象的内存来读取，\n被调用方的析构函数则会重复释放。出于同样的原因，引擎中其他所有必须\n持久化任意结构体字面量的部分，使用的也是文本。"
+    state machine
+}

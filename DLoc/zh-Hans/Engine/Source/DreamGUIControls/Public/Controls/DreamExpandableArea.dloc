@@ -1,0 +1,424 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamExpandableArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea
+    src   "Dream Expandable Area"
+    text  "可展开区域"
+    state machine
+}
+
+DreamExpandableArea:ArrowMarkNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ArrowMarkNode
+    src   "Arrow Mark Node"
+    text  "箭头标记节点"
+    state machine
+}
+
+DreamExpandableArea:ArrowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ArrowNode
+    src   "Arrow Node"
+    text  "箭头节点"
+    state machine
+}
+
+DreamExpandableArea:bExpansionAnimating {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:bExpansionAnimating
+    src   "Expansion Animating"
+    text  "是否正在展开动画"
+    state machine
+}
+
+DreamExpandableArea:bIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:bIsExpanded
+    src   "Is Expanded"
+    // from the engine's zh-Hans
+    text  "已扩展"
+    state draft
+}
+
+DreamExpandableArea:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ContentNode
+    src   "Content Node"
+    text  "内容节点"
+    state machine
+}
+
+DreamExpandableArea:ExpansionAlpha {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ExpansionAlpha
+    src   "Expansion Alpha"
+    text  "展开透明度"
+    state machine
+}
+
+DreamExpandableArea:ExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ExpansionDuration
+    src   "Expansion Duration"
+    text  "展开持续时间"
+    state machine
+}
+
+DreamExpandableArea:GetContent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetExpansionDuration:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetExpansionDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetIsExpanded:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetIsExpanded:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetLabel:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetLabel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetMaxHeight:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetMaxHeight:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:HeaderBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderBehaviour
+    src   "Header Behaviour"
+    text  "标题行为"
+    state machine
+}
+
+DreamExpandableArea:HeaderNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderNode
+    src   "Header Node"
+    text  "标题节点"
+    state machine
+}
+
+DreamExpandableArea:HeaderRowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderRowNode
+    src   "Header Row Node"
+    text  "标题行节点"
+    state machine
+}
+
+DreamExpandableArea:HeaderSlotNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderSlotNode
+    src   "Header Slot Node"
+    text  "标题插槽节点"
+    state machine
+}
+
+DreamExpandableArea:Label {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:Label
+    src   "Label"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamExpandableArea:LabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:LabelNode
+    src   "Label Node"
+    text  "标签节点"
+    state machine
+}
+
+DreamExpandableArea:MaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:MaxHeight
+    src   "Max Height"
+    // from the engine's zh-Hans
+    text  "最大高度"
+    state draft
+}
+
+DreamExpandableArea:OnExpansionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:OnExpansionChanged
+    src   "On Expansion Changed"
+    // from the engine's zh-Hans
+    text  "扩展变更时"
+    state draft
+}
+
+DreamExpandableArea:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamExpandableArea:RootNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:RootNode
+    src   "Root Node"
+    // from the engine's zh-Hans
+    text  "根节点"
+    state draft
+}
+
+DreamExpandableArea:SetContent:InContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetContent:InContent
+    src   "In Content"
+    // from the engine's zh-Hans
+    text  "输入内容"
+    state draft
+}
+
+DreamExpandableArea:SetExpansionDuration:InExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetExpansionDuration:InExpansionDuration
+    src   "In Expansion Duration"
+    text  "展开持续时间（输入）"
+    state machine
+}
+
+DreamExpandableArea:SetIsExpanded:bInIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetIsExpanded:bInIsExpanded
+    src   "In Is Expanded"
+    text  "是否展开（输入）"
+    state machine
+}
+
+DreamExpandableArea:SetLabel:InLabel {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetLabel:InLabel
+    src   "In Label"
+    // from the engine's zh-Hans
+    text  "In Label"
+    state draft
+}
+
+DreamExpandableArea:SetMaxHeight:InMaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetMaxHeight:InMaxHeight
+    src   "In Max Height"
+    // from the engine's zh-Hans
+    text  "输入最大高度"
+    state draft
+}
+
+DreamExpandableArea:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamExpandableArea:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamExpandableAreaExpansionChangedEvent__DelegateSignature:bIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableAreaExpansionChangedEvent__DelegateSignature:bIsExpanded
+    src   "Is Expanded"
+    // from the engine's zh-Hans
+    text  "已扩展"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamExpandableArea {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea
+    src   "A header that toggles, and the content it hides.\n\nThree nodes and one behaviour: a column, a clickable header face with an indicator and a label on\nit, and a content column below. The header is a UUIButton on its own face, exactly as DreamButton\nbuilds one -- an expander IS a button whose click means \"show the rest\" -- so hover, press and\nnavigation come from the library's one selectable rather than from a second interaction story.\n\nHOW A CONSUMER PUTS CONTENT IN IT, and which idiom that is, because there are two in this codebase\nand only one is reachable from here:\n\n    Native.ExpandableArea Details {\n        Label = \"Advanced\"\n        Text Body { Text = \"...\" }\n    }\n\nNesting, plainly. The text builder attaches a node's children to the widget it just built\n(BuildNode's TrySetParent), so those widgets arrive as children of THIS control, sitting beside\nthe tree the control realized for itself -- and the content column is this control's DEFAULT\nNAMED SLOT, so they are moved into it for free.\n\nThat used to be a hand-written adoption pass here, with a comment explaining that UDreamNamedSlot\ncould not be used: a host's NamedSlotContent was hung by InitializeWidgetStatic, which returns\nimmediately for a class with no widget-tree archetype, and a native control never has one -- so a\nslot declared here would have been a hole nothing could fill. That gate is gone (slots are now\nfilled from UDreamUserWidget::Initialize, after NativeOnInitialized, which is the first moment\nBOTH kinds of contents exist), and with it the reason to hand-roll this. Code that assembles a\nhierarchy by hand can still call SetContent; the designer's drag into this control lands as a\nchild, which is the same road as the .dui above.\n\nTHE PART NAMES, which a Template's author has to spell exactly, because parts are bound by\nDISPLAY NAME and nothing checks the spelling but the missing-part log line:\n\n    ExpandableArea   the outer column\n    HeaderFace       the clickable header face; the node whose height IS HeaderHeight\n    HeaderRow        the indicator-and-label row inside the face\n    Arrow            the glyph indicator          (optional)\n    ArrowMark        the image indicator          (optional)\n    Label            the stock header text\n    Header           the header HOLE -- a UDreamNamedSlot  (optional)\n    Content          the body, and this control's default UDreamNamedSlot\n\nThe face is \"HeaderFace\" and NOT \"Header\" on purpose. A named slot's name is its host node's\ndisplay name (UDreamNamedSlot::GetSlotName), so the hole must be called Header -- that string is\nHeaderSlotName, a public binding key, and one of the two names GetNativeSlotNames promises. A\npart walk meets ancestors before descendants, so a face also called Header answers for BOTH, and\nthe swap that puts the stock label away when the hole is filled then reads an empty hole and\nsleeps the entire header. A template that names its own header face Header re-creates exactly\nthat: the header disappears, and the only trace is one missing-part line for HeaderFace.\n\nUMG parity is UExpandableArea's core: bIsExpanded, SetIsExpanded, OnExpansionChanged -- plus the\nlibrary's OnValueChangedBP, because the expanded flag is a value and `<->` binds against it.\n\nCollapsed, the control measures as the HEADER and nothing more: an Auto slot asks the control for\nits size, and an expander that kept its expanded height would leave a hole in every list it is in."
+    text  "可切换的标题，以及它所隐藏的内容。\n\n三个节点，一种行为：一个列、一个可点击的标题面（上面带有一个指示器和一个标签），\n以及下方的一个内容列。标题本身就是一个位于自身表面上的 UUIButton，与DreamButton\n构建的完全一致——展开器就是一个按钮，点击它意味着“显示其余部分”——因此悬停、按下和\n导航都来自库中那唯一的可选中控件，而不是另一套交互逻辑。\n\n使用方如何向其中放入内容，以及这属于哪种惯用法（细节见下），因为本代码库中有两种，\n而从这里只有一种可达：\n\n    Native.ExpandableArea Details {\n        Label = \"Advanced\"\n        Text Body { Text = \"...\" }\n    }\n\n就是嵌套。文本构建器会把节点的子级挂到它刚构建的控件上\n（BuildNode的TrySetParent），因此这些控件会作为此控件的子级到达，与控制自身实现的树并排——\n而内容列就是此控件的默认\n命名插槽，所以它们会被自动移入其中。\n\n这里过去是一段手写的收编流程，并附有注释说明为何不能使用UDreamNamedSlot：\n宿主的NamedSlotContent由InitializeWidgetStatic挂载，而该函数对于没有控件树原型的类会立即返回，\n原生控件从来就没有原型——因此\n在这里声明的插槽会是一个无人能填的洞。那道门槛已经不存在了（插槽现在\n由UDreamUserWidget::Initialize填充，在NativeOnInitialized之后，那是\n两种内容同时存在的第一刻），随之而去的是手写这一流程的理由。手工组装层级的代码\n仍然可以调用SetContent；设计器拖入此控件的内容会作为\n子级落地，与上面.dui的路径相同。\n\n部件名称，模板作者必须精确拼写，因为部件是按\n显示名称绑定的，除了缺少部件的日志行之外，没有任何东西检查拼写：\n\n    ExpandableArea   外层列\n    HeaderFace       可点击的标题面；高度即HeaderHeight的节点\n    HeaderRow        面内部的指示器加标签行\n    Arrow            字形指示器          （可选）\n    ArrowMark        图像指示器          （可选）\n    Label            内置的标题文本\n    Header           标题的洞——一个UDreamNamedSlot （可选）\n    Content          主体，也是此控件的默认UDreamNamedSlot\n\n面叫 “HeaderFace” 而非 “Header” 是有意为之。命名插槽的名字就是其宿主节点的\n显示名称（UDreamNamedSlot::GetSlotName），所以那个洞必须叫Header——该字符串是\nHeaderSlotName，一个公开的绑定键，也是GetNativeSlotNames承诺的两个名字之一。\n部件遍历会先遇到祖先再遇到后代，因此一个也叫Header的面会同时应答两者，\n随后那个在洞被填上时收起内置标签的交换逻辑就会读到一个空洞，\n并让整个标题休眠。一个把自己的标题面命名为Header的模板会精确重现\n这一点：标题消失，唯一的痕迹就是一行关于HeaderFace的缺少部件日志。\n\nUMG对等性是UExpandableArea的核心：bIsExpanded、SetIsExpanded、OnExpansionChanged——外加\n库的OnValueChangedBP，因为展开标志是一个值，`<->`会对它进行绑定。\n\n折叠时，该控件只按标题测量，仅此而已：Auto插槽会向控件询问\n其尺寸，而一个保留展开高度的展开器会在它所在的每个列表中留下一个洞。"
+    state machine
+}
+
+DreamExpandableArea:ArrowMarkNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ArrowMarkNode
+    src   "The image indicator, the glyph's stand-in. Exactly one of the two is awake."
+    text  "图像指示器，字形指示器的替身。两者之中恰好只有一个处于激活状态。"
+    state machine
+}
+
+DreamExpandableArea:ArrowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ArrowNode
+    src   "The built-in glyph indicator. Asleep whenever the state's brush carries an image instead."
+    text  "内置的字形指示器。当状态的画刷改为携带图像时休眠。"
+    state machine
+}
+
+DreamExpandableArea:bExpansionAnimating {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:bExpansionAnimating
+    src   "True while an open or close is still travelling. Transient: an animation is a live gesture."
+    text  "展开或折叠仍在进行中时为 true。瞬态：动画是一次实时手势。"
+    state machine
+}
+
+DreamExpandableArea:bIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:bIsExpanded
+    src   "Whether the content shows. A property so .dui, the designer and bindings can see it and so an\nauthor can ship a section already open; every road that CHANGES it goes through SetIsExpanded,\nwhich is the only thing that broadcasts."
+    text  "内容是否显示。作为属性，.dui、设计器和绑定都能看到它，作者也可以直接发布一个已展开的\n区段；每一条改变它的路径都会经过SetIsExpanded，\n后者是唯一会广播的地方。"
+    state machine
+}
+
+DreamExpandableArea:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ContentNode
+    src   "Where a consumer's content lives, and the node that is switched off when collapsed."
+    text  "使用方内容所在之处，也是折叠时被关闭的节点。"
+    state machine
+}
+
+DreamExpandableArea:ExpansionAlpha {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ExpansionAlpha
+    src   "Where a running open or close currently stands, 0 collapsed to 1 expanded. Kept at the flag's end\nwhile nothing travels, so an open starts from where the section actually is."
+    text  "正在进行的展开或折叠当前所处的位置，0为折叠，1为展开。没有动画进行时保持在标志的一端，\n因此展开会从区段实际所在的位置开始。"
+    state machine
+}
+
+DreamExpandableArea:ExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ExpansionDuration
+    src   "How long the open and close take, in seconds. Zero (the default) is instant.\n\nInstant by DEFAULT and not by preference: every expander already authored against this plugin\nopens instantly, the suite asserts the control's height in the same breath as the flag, and a\nsilently animated open would make both of those wrong. Opting in is one number.\n\nA click while a travel is under way turns it round from where it has got: the section goes back\nthe way it came, from the height it shows, and takes as long as it has travelled. This departs\nfrom UMG on purpose. SExpandableArea::SetExpanded_Animated starts a new curve from one of its\nends -- an open from collapsed, a close from fully open -- so a section caught halfway jumps to\nthat end before it moves; turning round from the height it shows never jumps."
+    text  "展开和折叠所需的时间，单位为秒。零（默认值）表示瞬时。\n\n默认即时而非出于偏好：所有已经针对此插件编写的展开器都是即时展开的，\n测试套件会在断言标志的同时断言控件的高度，而\n一个悄悄带动画的展开会让这两者都出错。启用它只需一个数字。\n\n动画进行中点击会从当前位置折返：区段会沿着来时的方向回去，\n从它显示的高度出发，所用的时间与它已经走过的时间一样长。这是有意\n与UMG不同的。SExpandableArea::SetExpanded_Animated会从它的某一端开始一条新曲线\n——展开从折叠开始，折叠从完全展开开始——因此一个处在半途的区段会在移动之前跳到\n那一端；而从它显示的高度折返则永远不会跳变。"
+    state machine
+}
+
+DreamExpandableArea:GetContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetContent
+    src   "The first widget in the content column, or null while it is empty."
+    text  "内容列中的第一个控件，为空时为 null。"
+    state machine
+}
+
+DreamExpandableArea:HeaderNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderNode
+    src   "The clickable face, and the node whose height IS the style's HeaderHeight. Bound from the\npart named \"HeaderFace\" -- the FIELD keeps its name, the part does not; see the class comment\nfor why the two differ."
+    text  "可点击的面，也是高度即样式的HeaderHeight的节点。它从名为 “HeaderFace” 的部件绑定——\n字段保留自己的名称，部件则不保留；\n两者为何不同见类注释。"
+    state machine
+}
+
+DreamExpandableArea:HeaderRowNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderRowNode
+    src   "The indicator-and-label row inside the header. See the tree comment for why it is its own node."
+    text  "标题内部的指示器加标签行。它为何自成一个节点见树结构注释。"
+    state machine
+}
+
+DreamExpandableArea:HeaderSlotNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:HeaderSlotNode
+    src   "The header's hole, in the stock label's place. Empty is the normal state."
+    text  "标题的洞，位于内置标签的位置。空是正常状态。"
+    state machine
+}
+
+DreamExpandableArea:Label {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:Label
+    src   "The words on the header."
+    text  "标题栏上的文字。"
+    state machine
+}
+
+DreamExpandableArea:MaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:MaxHeight
+    src   "A ceiling on the CONTENT's share of the control's height, in local units -- UMG's MaxHeight.\n\nZero (the default) is no ceiling, which is what this control has always done: expanded, it is\nas tall as its header plus whatever is inside it. A non-zero value caps that and clips the\ncolumn to it, which is the only honest way to put a section of unknown length inside a page\nthat has a length."
+    text  "内容在控件高度中所占份额的上限，以本地单位计——即UMG的MaxHeight。\n\n零（默认值）表示不设上限，这也是该控件一直以来的行为：展开时，其高度\n等于标题加上其中的内容。非零值会限制该高度并将列裁剪到该值，\n这是在具有长度的页面中放置长度未知的区块时\n唯一诚实可行的做法。"
+    state machine
+}
+
+DreamExpandableArea:OnExpansionChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:OnExpansionChanged
+    src   "Fired whenever the expanded flag moves, from a click or from code."
+    text  "每当展开标志发生变化时触发，例如通过点击或代码操作。"
+    state machine
+}
+
+DreamExpandableArea:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamExpandableArea:SetContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetContent
+    src   "Put InContent in the content column, taking it from wherever it currently hangs.\n\nThe code-facing half of the nesting idiom in the class comment: a hierarchy built by hand has\nno .dui author to nest anything, so it says where the content goes. Null empties the column."
+    text  "将InContent放入内容列，并从它当前挂载的位置移走。\n\n这是类注释中嵌套惯例面向代码的那一半：手工构建的层级没有.dui作者来嵌套任何内容，\n因此由它指明内容的去向。为Null时清空该列。"
+    state machine
+}
+
+DreamExpandableArea:SetExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetExpansionDuration
+    src   "How long the NEXT open or close takes. Nothing is re-run: a duration describes a move that has\nnot happened yet, and replaying the current one to honour a new speed would animate a section\nthe player already finished opening."
+    text  "下一次打开或关闭所花费的时间。不会重新执行任何内容：时长描述的是尚未发生的动作，\n为了遵从新的速度而重放当前动作，会让玩家已经完成展开的区块\n再次播放动画。"
+    state machine
+}
+
+DreamExpandableArea:SetIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetIsExpanded
+    src   "Silent when the flag does not move; otherwise pushes the visuals and broadcasts both events.\n\nCollapsing first moves every player's focus that is inside the content onto the header (through\nFDreamFocusReturn::MoveFocusOutOf), so the next stick press starts from the section that closed\nrather than from nowhere."
+    text  "标志未变化时保持静默；否则推送视觉效果并广播这两个事件。\n\n折叠时会先把内容内所有玩家的焦点移到标题上（通过\nFDreamFocusReturn::MoveFocusOutOf），使下一次摇杆操作从刚刚关闭的区块开始，\n而不是从空处开始。"
+    state machine
+}
+
+DreamExpandableArea:SetLabel {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetLabel
+    src   "The words on the header, written through to the label the control owns.\n\nA setter rather than a bare property because the header's text is pushed by the style pass: a\nwrite without one left the control showing the previous words until something else pushed."
+    text  "标题上的文字，会直接写入该控件所拥有的标签。\n\n这里用Setter而不是裸属性，是因为标题的文本由样式流程推送：只写入而不触发推送，会让控件\n一直显示之前的文字，直到有其他东西推送为止。"
+    state machine
+}
+
+DreamExpandableArea:SetMaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetMaxHeight
+    src   "Re-measures at once: the ceiling is part of the height this control claims."
+    text  "会立即重新测量：该上限是控件声明的高度的一部分。"
+    state machine
+}
+
+DreamExpandableArea:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamExpandableArea:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+DreamExpandableArea:ToggleExpansion {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ToggleExpansion
+    src   "What the header click does, callable without a pointer."
+    text  "标题栏的点击操作，可以直接调用，无需指针。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Expandable Area" {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetContent
+    src   "Expandable Area"
+    // from the engine's zh-Hans
+    text  "可扩展区域"
+    state draft
+}

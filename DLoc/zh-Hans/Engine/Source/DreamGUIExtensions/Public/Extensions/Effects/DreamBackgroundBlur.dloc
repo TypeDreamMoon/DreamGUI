@@ -1,0 +1,383 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamBackgroundBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur
+    src   "Dream Background Blur"
+    text  "Dream背景模糊"
+    state machine
+}
+
+DreamBackgroundBlur:ApplyAlphaToBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:ApplyAlphaToBlur
+    src   "Apply Alpha to Blur"
+    // from the engine's zh-Hans
+    text  "为模糊应用透明度"
+    state draft
+}
+
+DreamBackgroundBlur:BlurStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:BlurStrength
+    src   "Blur Strength"
+    // from the engine's zh-Hans
+    text  "模糊强度"
+    state draft
+}
+
+DreamBackgroundBlur:GetApplyAlphaToBlur:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetApplyAlphaToBlur:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundBlur:GetBlurStrength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetBlurStrength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundBlur:GetMaxDownSampleLevel:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetMaxDownSampleLevel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundBlur:GetStrengthMap:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetStrengthMap:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamBackgroundBlur:MaxDownSampleLevel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:MaxDownSampleLevel
+    src   "Max Down Sample Level"
+    text  "最大降采样级别"
+    state machine
+}
+
+DreamBackgroundBlur:SetApplyAlphaToBlur:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetApplyAlphaToBlur:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBackgroundBlur:SetBlurStrength:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetBlurStrength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBackgroundBlur:SetMaxDownSampleLevel:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetMaxDownSampleLevel:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBackgroundBlur:SetStrengthMap:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetStrengthMap:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamBackgroundBlur:StrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:StrengthMap
+    src   "Strength Map"
+    text  "强度图"
+    state machine
+}
+
+DreamBlurStrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap
+    src   "Dream Blur Strength Map"
+    text  "Dream模糊强度图"
+    state machine
+}
+
+DreamBlurStrengthMap:Channel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Channel
+    src   "Channel"
+    // from the engine's zh-Hans
+    text  "通道"
+    state draft
+}
+
+DreamBlurStrengthMap:End {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+DreamBlurStrengthMap:EndStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:EndStrength
+    src   "End Strength"
+    text  "结束强度"
+    state machine
+}
+
+DreamBlurStrengthMap:Frequency {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Frequency
+    src   "Frequency"
+    // from the engine's zh-Hans
+    text  "频率"
+    state draft
+}
+
+DreamBlurStrengthMap:InnerRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:InnerRadius
+    src   "Inner Radius"
+    // from the engine's zh-Hans
+    text  "内部半径"
+    state draft
+}
+
+DreamBlurStrengthMap:Kind {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Kind
+    src   "Kind"
+    // from the engine's zh-Hans
+    text  "种类"
+    state draft
+}
+
+DreamBlurStrengthMap:MaxLevel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:MaxLevel
+    src   "Max Level"
+    // from the engine's zh-Hans
+    text  "最高等级"
+    state draft
+}
+
+DreamBlurStrengthMap:OuterRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:OuterRadius
+    src   "Outer Radius"
+    // from the engine's zh-Hans
+    text  "外部半径"
+    state draft
+}
+
+DreamBlurStrengthMap:Pattern {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Pattern
+    src   "Pattern"
+    // from the engine's zh-Hans
+    text  "模式"
+    state draft
+}
+
+DreamBlurStrengthMap:Seed {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Seed
+    src   "Seed"
+    // from the engine's zh-Hans
+    text  "种子"
+    state draft
+}
+
+DreamBlurStrengthMap:Start {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+DreamBlurStrengthMap:StartStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:StartStrength
+    src   "Start Strength"
+    text  "起始强度"
+    state machine
+}
+
+DreamBlurStrengthMap:Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+EDreamBlurStrengthMapKind.EDreamBlurStrengthMapKind_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:EDreamBlurStrengthMapKind_MAX
+    src   "EDream Blur Strength Map Kind MAX"
+    text  "EDream模糊强度图种类MAX"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Linear
+    src   "Linear"
+    // from the engine's zh-Hans
+    text  "Linear"
+    state draft
+}
+
+EDreamBlurStrengthMapKind.None {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamBlurStrengthMapKind.Procedural {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Procedural
+    src   "Procedural"
+    // from the engine's zh-Hans
+    text  "程序性"
+    state draft
+}
+
+EDreamBlurStrengthMapKind.Radial {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamBlurStrengthMapKind.Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamBackgroundBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur
+    src   "UI element that can add blur effect on background image, just like UMG's BackgroundBlur.\nUse it in ScreenSpace or WorldSpace-DreamUIRenderer.\nIf android OpenGL ES3.1, need to enable \"ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL\"."
+    text  "可在背景图像上添加模糊效果的UI元素，与UMG的BackgroundBlur一样。\n在ScreenSpace或WorldSpace-DreamUIRenderer中使用。\n如果是Android OpenGL ES3.1，需要启用“ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL”。"
+    state machine
+}
+
+DreamBackgroundBlur:ApplyAlphaToBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:ApplyAlphaToBlur
+    src   "Will alpha affect blur strength? If true, then 0 alpha means 0 blur strength, and 1 alpha means full blur strength."
+    text  "Alpha是否影响模糊强度？如果为true，则alpha为0表示模糊强度为0，alpha为1表示完整的模糊强度。"
+    state machine
+}
+
+DreamBackgroundBlur:BlurStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:BlurStrength
+    src   "Blur effect strength.\n\nThe three below name their setters, so a write from Blueprint or from a .dui binding lands on\nthe function rather than on the field: each of them has to mark the render proxy dirty, and a\nbare property write is a change the renderer never hears about."
+    text  "模糊效果强度。\n\n下面三项都以各自的setter命名，因此从蓝图或.dui绑定写入时会落在\n函数上而不是字段上：每一项都必须把渲染代理标记为脏，而\n单纯的属性写入是渲染器永远接收不到的更改。"
+    state machine
+}
+
+DreamBackgroundBlur:StrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:StrengthMap
+    src   "How the strength varies across the rect: a progressive blur. None is the uniform blur it always was. A map other than\nNone is drawn from a blur pyramid over what is behind, each pixel at its own level, and is not drawn full size or into\nan output render target."
+    text  "强度在矩形范围内如何变化：渐进模糊。None就是它一贯的均匀模糊。除None以外的\n图从后方内容的模糊金字塔中绘制，每个像素取各自的层级，既不按完整尺寸绘制，也不绘制到\n输出渲染目标中。"
+    state machine
+}
+
+DreamBlurStrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap
+    src   "How strong a background blur is across its rect, from 0 (none) to 1 (its Blur Strength), for a progressive blur: frosted at\nthe top and clear at the bottom, clear in the middle and frosted round it. Points are fractions of the rect from its top\nleft; a radius is a fraction of its height."
+    text  "背景模糊在矩形范围内的强度，从0（无）到1（其模糊强度），用于渐进模糊：顶部磨砂而\n底部清晰，中间清晰而四周磨砂。点的坐标是相对矩形左上角的比例；半径是矩形高度的\n比例。"
+    state machine
+}
+
+DreamBlurStrengthMap:End {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:End
+    src   "Linear: where the end strength is."
+    text  "线性：指定强度结束的位置。"
+    state machine
+}
+
+DreamBlurStrengthMap:InnerRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:InnerRadius
+    src   "Radial: the radius the start strength holds out to, and the one the end strength is reached at."
+    text  "径向：指定起始强度延伸的半径，以及达到结束强度的半径。"
+    state machine
+}
+
+DreamBlurStrengthMap:MaxLevel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:MaxLevel
+    src   "How many levels of the blur pyramid the strongest blur reaches: each one twice as wide as the one before."
+    text  "模糊金字塔的最大层数：每个层级宽度是前一个层级的两倍。"
+    state machine
+}
+
+DreamBlurStrengthMap:Start {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Start
+    src   "Linear: where the start strength is; Radial: the centre."
+    text  "线性：指定起始强度位置；径向：中心。"
+    state machine
+}
+
+DreamBlurStrengthMap:StartStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:StartStrength
+    src   "The strengths at the start (inner radius, a pattern's 0) and at the end (outer radius, a pattern's 1)."
+    text  "起始强度（内半径，图案的 0）和结束强度（外半径，图案的 1）。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind
+    src   "What a background blur's strength varies by across its rect."
+    text  "背景模糊的强度变化方式。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.Linear {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Linear
+    src   "From one point to another."
+    text  "从一个点到另一个点。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.None {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:None
+    src   "The same strength everywhere: the blur as it always was."
+    text  "在整个区域内强度相同：这是原始的模糊效果。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.Procedural {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Procedural
+    src   "One of a clip mask's patterns (EDreamClipMaskPattern)."
+    text  "剪裁遮罩的模式之一（EDreamClipMaskPattern）。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.Radial {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Radial
+    src   "Out from a centre, between two radii."
+    text  "从中心向外，在两个半径之间。"
+    state machine
+}
+
+EDreamBlurStrengthMapKind.Texture {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#EDreamBlurStrengthMapKind:Texture
+    src   "A texture's channel, stretched over the rect."
+    text  "纹理通道，在矩形区域内拉伸。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Strength Map" {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBlurStrengthMap:Kind
+    src   "Strength Map"
+    text  "强度图"
+    state machine
+}

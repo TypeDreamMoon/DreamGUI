@@ -1,0 +1,191 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamImageSequencePlayer {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer
+    src   "Dream Image Sequence Player"
+    text  "Dream 图像序列播放器"
+    state machine
+}
+
+DreamImageSequencePlayer:bAffectByGamePause {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bAffectByGamePause
+    src   "Affect by Game Pause"
+    text  "受游戏暂停影响"
+    state machine
+}
+
+DreamImageSequencePlayer:bAffectByTimeDilation {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bAffectByTimeDilation
+    src   "Affect by Time Dilation"
+    text  "受时间缩放影响"
+    state machine
+}
+
+DreamImageSequencePlayer:bLoop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bLoop
+    src   "Loop"
+    // from the engine's zh-Hans
+    text  "循环"
+    state draft
+}
+
+DreamImageSequencePlayer:bPlayOnStart {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bPlayOnStart
+    src   "Play on Start"
+    text  "开始播放"
+    state machine
+}
+
+DreamImageSequencePlayer:bPreviewInEditor {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bPreviewInEditor
+    src   "Preview in Editor"
+    // from the engine's zh-Hans
+    text  "在编辑器中预览"
+    state draft
+}
+
+DreamImageSequencePlayer:Fps {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Fps
+    src   "Fps"
+    // from the engine's zh-Hans
+    text  "FPS"
+    state draft
+}
+
+DreamImageSequencePlayer:GetDuration:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamImageSequencePlayer:GetFps:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetFps:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamImageSequencePlayer:GetIsPlaying:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetIsPlaying:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamImageSequencePlayer:GetLoop:ReturnValue {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetLoop:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamImageSequencePlayer:SeekFrame:frameNumber {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekFrame:frameNumber
+    src   "Frame Number"
+    // from the engine's zh-Hans
+    text  "帧数"
+    state draft
+}
+
+DreamImageSequencePlayer:SeekTime:time {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekTime:time
+    src   "Time"
+    // from the engine's zh-Hans
+    text  "时间"
+    state draft
+}
+
+DreamImageSequencePlayer:SetFps:value {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetFps:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamImageSequencePlayer:SetLoop:value {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetLoop:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamImageSequencePlayer:bPlayOnStart {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:bPlayOnStart
+    src   "Autoplay when BeginPlay."
+    text  "开始时自动播放。"
+    state machine
+}
+
+DreamImageSequencePlayer:Fps {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Fps
+    src   "fps: Frame per second. Must stay above zero -- see EnforceFrameRate for what a zero costs."
+    text  "帧率：每秒帧数。必须大于零，否则请参阅 EnforceFrameRate 以了解零值的影响。"
+    state machine
+}
+
+DreamImageSequencePlayer:GetDuration {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetDuration
+    src   "Get the animation time length"
+    text  "获取动画时长。"
+    state machine
+}
+
+DreamImageSequencePlayer:GetIsPlaying {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetIsPlaying
+    src   "Is the animation playing?"
+    text  "动画是否正在播放？"
+    state machine
+}
+
+DreamImageSequencePlayer:Pause {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Pause
+    src   "Pause the animation, call Play to resume."
+    text  "暂停动画，调用 Play 恢复播放。"
+    state machine
+}
+
+DreamImageSequencePlayer:Play {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Play
+    src   "Play the animation sequence. If is paused then resume play"
+    text  "播放动画序列。如果已暂停，则恢复播放。"
+    state machine
+}
+
+DreamImageSequencePlayer:SeekFrame {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekFrame
+    src   "Seek to desired frame and play."
+    text  "跳转到指定帧并播放。"
+    state machine
+}
+
+DreamImageSequencePlayer:SeekTime {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekTime
+    src   "Seek to desired time and play."
+    text  "跳转到指定时间并播放。"
+    state machine
+}
+
+DreamImageSequencePlayer:SetLoop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetLoop
+    src   "Will take effect on nexe cycle."
+    text  "将在下一帧循环生效。"
+    state machine
+}
+
+DreamImageSequencePlayer:Stop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Stop
+    src   "Stop the animation."
+    text  "停止动画。"
+    state machine
+}

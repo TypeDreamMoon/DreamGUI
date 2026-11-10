@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace ""
+
+2D6DD58341400AA21CF2B983F0096369 {
+    at    Content/EnhancedInput/IA_MouseWheel.uasset#IA_MouseWheel.ActionDescription
+    src   "Middle mouse button trigger"
+    text  "中键触发"
+    state machine
+}

@@ -1,0 +1,72 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamKeyInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface
+    src   "Dream Key Interface"
+    text  "Dream 键接口"
+    state machine
+}
+
+DreamKeyInterface:OnAnalogValueChanged:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnAnalogValueChanged:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamKeyInterface:OnKeyChar:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyChar:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamKeyInterface:OnKeyDown:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyDown:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamKeyInterface:OnKeyUp:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyUp:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamKeyInterface:OnAnalogValueChanged {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnAnalogValueChanged
+    src   "An analog axis moved: a stick, a trigger."
+    text  "模拟轴移动：摇杆或触发器。"
+    state machine
+}
+
+DreamKeyInterface:OnKeyChar {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyChar
+    src   "A character was produced -- what a text box wants, and what a key code cannot give it."
+    text  "生成了一个字符，文本框需要的是字符，而按键代码无法提供。"
+    state machine
+}
+
+DreamKeyInterface:OnKeyDown {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyDown
+    src   "A key went down on this player. Set EventData->bHandled to keep it."
+    text  "一个按键被按下。设置 EventData->bHandled 以阻止其进一步处理。"
+    state machine
+}
+
+DreamKeyInterface:OnKeyUp {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyUp
+    src   "A key came up on this player."
+    text  "一个按键被释放。"
+    state machine
+}

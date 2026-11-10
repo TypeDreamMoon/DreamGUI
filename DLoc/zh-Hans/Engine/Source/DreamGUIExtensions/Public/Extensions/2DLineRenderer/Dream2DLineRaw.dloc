@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+Dream2DLineRaw {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h#Dream2DLineRaw
+    src   "Dream 2DLine Raw"
+    text  "Dream 2D 线段 (原始数据)"
+    state machine
+}
+
+Dream2DLineRaw:PointArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h#Dream2DLineRaw:PointArray
+    src   "Point Array"
+    // from the engine's zh-Hans
+    text  "点数组"
+    state draft
+}
+
+Dream2DLineRaw:SetPoints:InPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h#Dream2DLineRaw:SetPoints:InPoints
+    src   "In Points"
+    // from the engine's zh-Hans
+    text  "在点中"
+    state draft
+}

@@ -1,0 +1,172 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIFreeTypeRenderFontDataCustomization
+
+ReloadFont {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "ReloadFont"
+    text  "重新加载字体"
+    state machine
+}
+
+FontSourceFileCategory {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "FontSourceFile"
+    text  "字体源文件"
+    state machine
+}
+
+FontSourceFile {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Font Source File"
+    text  "字体源文件"
+    state machine
+}
+
+UseRelativePath {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Relative To \"ProjectDir\""
+    text  "相对于“ProjectDir”"
+    state machine
+}
+
+Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Font file use relative path(relative to ProjectDir) or absolute path. After build your game, remember to copy your font file to target path, unless \"UseExternalFileOrEmbedInToUAsset\" is false"
+    text  "字体文件可使用相对路径（相对于ProjectDir）或绝对路径。构建游戏后，请记得将字体文件复制到目标路径，除非“UseExternalFileOrEmbedInToUAsset”（将字体嵌入UAsset资产）为false。"
+    state machine
+}
+
+ErrorTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "ErrorTip"
+    text  "错误提示"
+    state machine
+}
+
+InitializeFontFail {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Initialize font fail, check outputlog for detail"
+    text  "初始化字体失败，请查看输出日志了解详情"
+    state machine
+}
+
+FontFace {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "FontFace"
+    // from the engine's zh-Hans
+    text  "字体面"
+    state draft
+}
+
+NoFontFace {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "(No Valid Face)"
+    text  "（无有效字体面）"
+    state machine
+}
+
+ResolveSampleGameLanguage {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Game language"
+    text  "游戏语言"
+    state machine
+}
+
+ResolveSampleRow {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Resolve Sample"
+    text  "解析示例"
+    state machine
+}
+
+ResolveSample {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Resolve Sample"
+    text  "解析示例"
+    state machine
+}
+
+ResolveSample_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Type some text to see which of this font's faces draws each of its characters, in the language picked beside it. It is the choice a text makes: from the fallbacks' ranges, cultures and preference, and whether a character asks for its emoji form."
+    text  "输入一些文本，即可查看此字体的哪个字体面绘制其中的每个字符，语言为旁边所选的语言。这就是文本所做的选择：由回退字体的范围、文化和偏好决定，以及字符是否要求使用其表情符号形式。"
+    state machine
+}
+
+ResolveSample_Hint {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Sample text"
+    text  "示例文本"
+    state machine
+}
+
+ResolveSampleCulture_Tooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "The sample's language, as a text's Language: the fallbacks meant for it are tried first."
+    text  "示例的语言，即文本的Language：会优先尝试为该语言准备的回退字体。"
+    state machine
+}
+
+ResolveSampleNoFace {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "no face has it: face 0's missing-glyph box"
+    text  "没有找到字体：字体 0 缺少字形。"
+    state machine
+}
+
+ResolveSampleNoFont {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "(no font)"
+    text  "(无字体)"
+    state machine
+}
+
+ResolveSampleColour {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "colour"
+    text  "彩色"
+    state machine
+}
+
+ResolveSampleMonochrome {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "monochrome"
+    text  "单色"
+    state machine
+}
+
+ResolveSampleFace {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "face {0} · {1} · {2}"
+    text  "字体 {0} · {1} · {2}"
+    state machine
+}
+
+ResolveSampleFaceBaseOnly {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "face {0} · {1} · {2} · its first character only"
+    text  "字体 {0} · {1} · {2} · 仅显示第一个字符"
+    state machine
+}
+
+ResolveSampleEmojiForm {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Asks for its emoji form: the colour faces are tried first while the font prefers colour emoji."
+    text  "请求表情符号形式：首先尝试彩色字体，然后使用字体。"
+    state machine
+}
+
+ResolveSampleTextForm {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "Asks for its text form: the monochrome faces are tried first."
+    text  "请求文本形式：首先尝试单色字体。"
+    state machine
+}
+
+ResolveSampleMore {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.cpp
+    src   "...and {0} more"
+    text  "...和 {0} 个更多"
+    state machine
+}

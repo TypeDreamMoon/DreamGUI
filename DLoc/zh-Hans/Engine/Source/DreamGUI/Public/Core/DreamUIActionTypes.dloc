@@ -1,0 +1,36 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIActionHandle {
+    at    Source/DreamGUI/Public/Core/DreamUIActionTypes.h#DreamUIActionHandle
+    src   "Dream UIAction Handle"
+    text  "Dream UI 操作句柄"
+    state machine
+}
+
+DreamUIActionHandle:Id {
+    at    Source/DreamGUI/Public/Core/DreamUIActionTypes.h#DreamUIActionHandle:Id
+    src   "Id"
+    // from the engine's zh-Hans
+    text  "ID"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIActionHandle {
+    at    Source/DreamGUI/Public/Core/DreamUIActionTypes.h#DreamUIActionHandle
+    src   "Identifies one live binding. Handed back by RegisterAction and used to take it away again."
+    text  "标识一个有效的绑定。由 RegisterAction 返回，并用于取消注册。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Navigation {
+    at    Source/DreamGUI/Public/Core/DreamUIActionTypes.h#DreamUIActionHandle:Id
+    src   "DreamGUI-Navigation"
+    text  "DreamGUI-导航"
+    state machine
+}

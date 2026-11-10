@@ -1,0 +1,33 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamEditableText {
+    at    Source/DreamGUIControls/Public/Controls/DreamEditableText.h#DreamEditableText
+    src   "Dream Editable Text"
+    text  "可编辑文本"
+    state machine
+}
+
+DreamMultiLineEditableText {
+    at    Source/DreamGUIControls/Public/Controls/DreamEditableText.h#DreamMultiLineEditableText
+    src   "Dream Multi Line Editable Text"
+    text  "多行可编辑文本"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamEditableText {
+    at    Source/DreamGUIControls/Public/Controls/DreamEditableText.h#DreamEditableText
+    src   "A text field with no box: UMG's EditableText, where Native.TextInput is its EditableTextBox.\n\nUMG ships four classes for one field -- EditableText, EditableTextBox, MultiLineEditableText,\nMultiLineEditableTextBox -- and the two axes it splits them on are \"does it draw a box\" and \"does\nit take more than one line\". This library already had the second axis as a property\n(UDreamTextInput::bMultiLine), so the only thing genuinely missing was the FIRST: a field that\ndraws nothing behind the text.\n\nSo this is a UDreamTextInput whose face is not drawn, and nothing else. Every property, event,\nvalidator and key rule stays where it was, which is the point: Native.TextInput does not change\nmeaning, and an author who wants the boxed one keeps writing exactly what they wrote before.\n\nWHAT \"NO BOX\" MEANS, precisely, because half-answers here are how a control ends up with an\ninvisible box that still tints on hover: the face's brush is cleared, and ALL FIVE of the\nbehaviour's state colours are pushed transparent -- so there is no resting fill, no hover tint and\nno focus tint. The caret and the selection highlight are what show the field is live, which is\nwhat UMG's EditableText does too. The style's padding, font, text colour and caret colour all\nstill apply: a borderless field is still a styled one."
+    text  "不带框的文本字段：UMG的EditableText，其中Native.TextInput就是它的EditableTextBox。\n\nUMG为一个字段提供了四个类——EditableText、EditableTextBox、MultiLineEditableText、\nMultiLineEditableTextBox——而它区分它们所用的两个维度是“是否绘制框”和“是否\n接受多行”。这个库已经把第二个维度作为属性\n(UDreamTextInput::bMultiLine)，所以真正缺少的只有第一个维度：一个\n在文本后方不绘制任何内容的字段。\n\n所以这是一个不绘制表面的UDreamTextInput，除此之外别无不同。每个属性、事件、\n验证器和按键规则都保持原样，这正是关键所在：Native.TextInput的含义不变，\n而想要带框版本的作者仍然可以完全按以前的方式编写。\n\n“无框”的确切含义是什么，因为这里若给出不完整的答案，控件最终就会带有一个\n在悬停时仍会着色的不可见框：表面的画刷被清除，行为的全部五种\n状态颜色都被设为透明——因此没有常态填充、没有悬停着色，也\n没有聚焦着色。插入符和选区高亮才表明该字段处于活动状态，这也正是\nUMG的EditableText所做的。样式的内边距、字体、文本颜色和插入符颜色都\n仍然生效：无边框字段仍然是一个有样式的字段。"
+    state machine
+}
+
+DreamMultiLineEditableText {
+    at    Source/DreamGUIControls/Public/Controls/DreamEditableText.h#DreamMultiLineEditableText
+    src   "The same field over several lines: UMG's MultiLineEditableText.\n\nA subclass rather than a palette entry that ticks bMultiLine, unlike the boxed pair -- and the\ndifference is worth stating. `Native.TextInput` plus `bMultiLine = true` IS the multi-line boxed\nfield, and the palette offers it as a second row of the same class (see the registry). A CLASS\nexists here instead because UMG has one, because `.dui` gains a tag that reads the way the UMG\ndocumentation reads, and because a Blueprint that wants to subclass \"the multi-line borderless\nfield\" has something to derive from. It sets exactly one property."
+    text  "同一个字段跨多行显示：UMG的MultiLineEditableText。\n\n与带框的那一对不同，这里是一个子类，而不是一个勾选bMultiLine的调色板条目——而这个\n区别值得说明。`Native.TextInput`加上`bMultiLine = true`就是多行带框\n字段，调色板将其作为同一个类的第二行提供（见注册表）。这里之所以改为提供一个类，\n是因为UMG有一个这样的类，因为`.dui`会获得一个读起来与UMG\n文档一致的标签，也因为想要子类化“多行无边框\n字段”的蓝图有东西可以派生。它只设置一个属性。"
+    state machine
+}

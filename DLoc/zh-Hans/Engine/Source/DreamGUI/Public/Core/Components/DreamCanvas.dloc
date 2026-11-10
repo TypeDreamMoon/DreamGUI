@@ -1,0 +1,2031 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas
+    src   "Dream Canvas"
+    text  "Dream Canvas"
+    state machine
+}
+
+DreamCanvas:AttachedRootSceneComponent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:AttachedRootSceneComponent
+    src   "Attached Root Scene Component"
+    text  "附加的根场景组件"
+    state machine
+}
+
+DreamCanvas:AutoRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:AutoRenderTarget
+    src   "Auto Render Target"
+    text  "自动渲染目标"
+    state machine
+}
+
+DreamCanvas:bAllowDropFrame {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bAllowDropFrame
+    src   "Allow Drop Frame"
+    text  "允许丢帧"
+    state machine
+}
+
+DreamCanvas:bCullElementsOutsideCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bCullElementsOutsideCanvas
+    src   "Cull Elements Outside Canvas"
+    text  "裁剪画布外部元素"
+    state machine
+}
+
+DreamCanvas:bEnableDepthTest {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bEnableDepthTest
+    src   "Enable Depth Test"
+    text  "启用深度测试"
+    state machine
+}
+
+DreamCanvas:bFixedSizeInEditMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bFixedSizeInEditMode
+    src   "Fixed Size in Edit Mode"
+    text  "编辑模式下固定大小"
+    state machine
+}
+
+DreamCanvas:bForceRenderToTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bForceRenderToTarget
+    src   "Force Render to Target"
+    text  "强制渲染到目标"
+    state machine
+}
+
+DreamCanvas:BlendDepth {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BlendDepth
+    src   "Blend Depth"
+    // from the engine's zh-Hans
+    text  "混合深度"
+    state draft
+}
+
+DreamCanvas:bOverrideSorting {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bOverrideSorting
+    src   "Override Sorting"
+    text  "重载排序"
+    state machine
+}
+
+DreamCanvas:bRequireNormalAndTangent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bRequireNormalAndTangent
+    src   "Require Normal and Tangent"
+    text  "需要法线和切线"
+    state machine
+}
+
+DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:OutViewProjectionMatrix {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:OutViewProjectionMatrix
+    src   "Out View Projection Matrix"
+    text  "视口投影矩阵"
+    state machine
+}
+
+DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:Player {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:Player
+    src   "Player"
+    // from the engine's zh-Hans
+    text  "播放器"
+    state draft
+}
+
+DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:PlayerCamera {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:PlayerCamera
+    src   "Player Camera"
+    text  "玩家相机"
+    state machine
+}
+
+DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BuildViewProjectionMatrixForPlayerCamera:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:ChildrenCanvasArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ChildrenCanvasArray
+    src   "Children Canvas Array"
+    text  "子画布数组"
+    state machine
+}
+
+DreamCanvas:ClipDataAsTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ClipDataAsTexture
+    src   "Clip Data as Texture"
+    text  "裁剪数据纹理"
+    state machine
+}
+
+DreamCanvas:ConvertPositionFromCanvasToViewport:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromCanvasToViewport:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvas:ConvertPositionFromCanvasToViewport:Result {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromCanvasToViewport:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamCanvas:ConvertPositionFromCanvasToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromCanvasToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:ConvertPositionFromViewportToCanvas:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromViewportToCanvas:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvas:ConvertPositionFromViewportToCanvas:Result {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromViewportToCanvas:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamCanvas:ConvertPositionFromViewportToCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromViewportToCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:CustomScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:CustomScale
+    src   "Custom Scale"
+    text  "自定义缩放"
+    state machine
+}
+
+DreamCanvas:DefaultMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DefaultMaterial
+    src   "Default Material"
+    // from the engine's zh-Hans
+    text  "默认材质"
+    state draft
+}
+
+DreamCanvas:DefaultMeshType {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DefaultMeshType
+    src   "Default Mesh Type"
+    text  "默认网格类型"
+    state machine
+}
+
+DreamCanvas:DepthFade {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DepthFade
+    src   "Depth Fade"
+    text  "深度淡化"
+    state machine
+}
+
+DreamCanvas:FarClipPlane {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:FarClipPlane
+    src   "Far Clip Plane"
+    text  "远裁剪平面"
+    state machine
+}
+
+DreamCanvas:FieldOfView {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:FieldOfView
+    src   "Field Of View"
+    // from the engine's zh-Hans
+    text  "视野"
+    state draft
+}
+
+DreamCanvas:GetActualBlendDepth:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualBlendDepth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetActualDepthFade:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualDepthFade:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetActualRenderMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualRenderMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetActualRenderTarget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualRenderTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetActualRequireNormalAndTangent:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualRequireNormalAndTangent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetActualSortOrder:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualSortOrder:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetAttachedRootSceneComponent:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetAttachedRootSceneComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetBlendDepth:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetBlendDepth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetCullElementsOutsideCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetCullElementsOutsideCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetCustomScale:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetCustomScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetDefaultMaterial:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDefaultMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetDefaultMeshType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDefaultMeshType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetDepthFade:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDepthFade:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetDrawCallCount:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDrawCallCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetDrawCallRebuildSuspended:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDrawCallRebuildSuspended:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetEnableDepthTest:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetEnableDepthTest:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetFarClipPlane:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetFarClipPlane:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetFieldOfView:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetFieldOfView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetForceRenderToTarget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetForceRenderToTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetMatchFromWidthToHeight:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetMatchFromWidthToHeight:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetNearClipPlane:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetNearClipPlane:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetOverrideSorting:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetOverrideSorting:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetProjectionType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetProjectionType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetReferenceResolution:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetReferenceResolution:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderTarget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderTargetClearColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTargetClearColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderTargetResolutionScale:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTargetResolutionScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderTargetSizeMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTargetSizeMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRenderTargetUpdateMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTargetUpdateMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRequireNormalAndTangent:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRequireNormalAndTangent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetRootCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRootCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetScaleMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetScaleMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetScreenMatchMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetScreenMatchMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetScreenSpaceRenderScale:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetScreenSpaceRenderScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetSortOrder:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetSortOrder:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetTraceChannel:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetTraceChannel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:GetViewportPlayerIndex:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetViewportPlayerIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:IsRootCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:IsRootCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:MatchFromWidthToHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:MatchFromWidthToHeight
+    src   "Match"
+    // from the engine's zh-Hans
+    text  "匹配"
+    state draft
+}
+
+DreamCanvas:MaterialProxyReferences {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:MaterialProxyReferences
+    src   "Material Proxy References"
+    text  "材质代理引用"
+    state machine
+}
+
+DreamCanvas:NearClipPlane {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:NearClipPlane
+    src   "Near Clip Plane"
+    // from the engine's zh-Hans
+    text  "近剪切平面"
+    state draft
+}
+
+DreamCanvas:OverrideParameters {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:OverrideParameters
+    src   "Override Parameters"
+    // from the engine's zh-Hans
+    text  "重载参数"
+    state draft
+}
+
+DreamCanvas:ParentCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ParentCanvas
+    src   "Parent Canvas"
+    text  "父画布"
+    state machine
+}
+
+DreamCanvas:Project3DToScreen:OutPosition2D {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:Project3DToScreen:OutPosition2D
+    src   "Out Position 2D"
+    text  "输出 2D 位置"
+    state machine
+}
+
+DreamCanvas:Project3DToScreen:Position3D {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:Project3DToScreen:Position3D
+    src   "Position 3D"
+    text  "3D 位置"
+    state machine
+}
+
+DreamCanvas:Project3DToScreen:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:Project3DToScreen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:ProjectionType {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectionType
+    src   "Projection Type"
+    // from the engine's zh-Hans
+    text  "投影类型"
+    state draft
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera:OutPosition2D {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera:OutPosition2D
+    src   "Out Position 2D"
+    text  "输出 2D 位置"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera:Player {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera:Player
+    src   "Player"
+    // from the engine's zh-Hans
+    text  "播放器"
+    state draft
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera:PlayerCamera {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera:PlayerCamera
+    src   "Player Camera"
+    text  "玩家相机"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InViewportSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InViewportSize
+    src   "In Viewport Size"
+    text  "视口尺寸"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InViewProjectionMatrix {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:InViewProjectionMatrix
+    src   "In View Projection Matrix"
+    text  "视口投影矩阵"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:OutPosition2D {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:OutPosition2D
+    src   "Out Position 2D"
+    text  "输出 2D 位置"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithViewProjectionMatrix:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvas:ReferenceResolution {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ReferenceResolution
+    src   "Reference Resolution"
+    text  "引用分辨率"
+    state machine
+}
+
+DreamCanvas:RenderMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderMode
+    src   "Render Mode"
+    // from the engine's zh-Hans
+    text  "渲染模式"
+    state draft
+}
+
+DreamCanvas:RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTarget
+    src   "Render Target"
+    // from the engine's zh-Hans
+    text  "渲染目标"
+    state draft
+}
+
+DreamCanvas:RenderTargetClearColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetClearColor
+    src   "Render Target Clear Color"
+    text  "渲染目标清除颜色"
+    state machine
+}
+
+DreamCanvas:RenderTargetResolutionScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetResolutionScale
+    src   "Render Target Resolution Scale"
+    text  "渲染目标分辨率缩放"
+    state machine
+}
+
+DreamCanvas:RenderTargetSizeMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetSizeMode
+    src   "Render Target Size Mode"
+    text  "渲染目标大小模式"
+    state machine
+}
+
+DreamCanvas:RenderTargetUpdateMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetUpdateMode
+    src   "Render Target Update Mode"
+    text  "渲染目标更新模式"
+    state machine
+}
+
+DreamCanvas:RootCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RootCanvas
+    src   "Root Canvas"
+    text  "根画布"
+    state machine
+}
+
+DreamCanvas:ScaleMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ScaleMode
+    src   "Scale Mode"
+    // from the engine's zh-Hans
+    text  "缩放模式"
+    state draft
+}
+
+DreamCanvas:ScreenMatchMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ScreenMatchMode
+    src   "Screen Match Mode"
+    text  "屏幕匹配模式"
+    state machine
+}
+
+DreamCanvas:ScreenSpaceRenderScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ScreenSpaceRenderScale
+    src   "Screen Space Render Scale"
+    text  "屏幕空间渲染缩放"
+    state machine
+}
+
+DreamCanvas:SetBlendDepth:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetBlendDepth:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetCullElementsOutsideCanvas:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetCullElementsOutsideCanvas:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetCustomScale:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetCustomScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetDefaultMaterial:InMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetDefaultMaterial:InMaterial
+    src   "In Material"
+    // from the engine's zh-Hans
+    text  "输入材质"
+    state draft
+}
+
+DreamCanvas:SetDefaultMeshType:InValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetDefaultMeshType:InValue
+    src   "In Value"
+    // from the engine's zh-Hans
+    text  "输入值"
+    state draft
+}
+
+DreamCanvas:SetDepthFade:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetDepthFade:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetDrawCallRebuildSuspended:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetDrawCallRebuildSuspended:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetEnableDepthTest:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetEnableDepthTest:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetFarClipPlane:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetFarClipPlane:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetFieldOfView:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetFieldOfView:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetForceRenderToTarget:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetForceRenderToTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetMatchFromWidthToHeight:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetMatchFromWidthToHeight:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetNearClipPlane:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetNearClipPlane:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetOverrideFovAngle:Override {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideFovAngle:Override
+    src   "Override"
+    // from the engine's zh-Hans
+    text  "重载"
+    state draft
+}
+
+DreamCanvas:SetOverrideFovAngle:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideFovAngle:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetOverrideProjectionMatrix:Override {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideProjectionMatrix:Override
+    src   "Override"
+    // from the engine's zh-Hans
+    text  "重载"
+    state draft
+}
+
+DreamCanvas:SetOverrideProjectionMatrix:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideProjectionMatrix:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetOverrideSorting:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideSorting:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetOverrideViewLocation:Override {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewLocation:Override
+    src   "Override"
+    // from the engine's zh-Hans
+    text  "重载"
+    state draft
+}
+
+DreamCanvas:SetOverrideViewLocation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewLocation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetOverrideViewRotation:Override {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewRotation:Override
+    src   "Override"
+    // from the engine's zh-Hans
+    text  "重载"
+    state draft
+}
+
+DreamCanvas:SetOverrideViewRotation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewRotation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetProjectionParameters:InFarClipPlane {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionParameters:InFarClipPlane
+    src   "In Far Clip Plane"
+    text  "远裁剪平面"
+    state machine
+}
+
+DreamCanvas:SetProjectionParameters:InFovAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionParameters:InFovAngle
+    src   "In Fov Angle"
+    text  "视野角度"
+    state machine
+}
+
+DreamCanvas:SetProjectionParameters:InNearClipPlane {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionParameters:InNearClipPlane
+    src   "In Near Clip Plane"
+    text  "近裁剪平面"
+    state machine
+}
+
+DreamCanvas:SetProjectionParameters:InProjectionType {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionParameters:InProjectionType
+    src   "In Projection Type"
+    text  "投影类型"
+    state machine
+}
+
+DreamCanvas:SetProjectionType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetReferenceResolution:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetReferenceResolution:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderTarget:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderTargetClearColor:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTargetClearColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderTargetResolutionScale:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTargetResolutionScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderTargetSizeMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTargetSizeMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRenderTargetUpdateMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTargetUpdateMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetRequireNormalAndTangent:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRequireNormalAndTangent:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetScaleMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetScaleMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetScreenMatchMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetScreenMatchMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetScreenSpaceRenderScale:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetScreenSpaceRenderScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetSortOrder:PropagateToChildrenCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrder:PropagateToChildrenCanvas
+    src   "Propagate to Children Canvas"
+    text  "传播到子 Canvas"
+    state machine
+}
+
+DreamCanvas:SetSortOrder:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrder:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamCanvas:SetSortOrderToHighestOfHierarchy:PropagateToChildrenCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrderToHighestOfHierarchy:PropagateToChildrenCanvas
+    src   "Propagate to Children Canvas"
+    text  "传播到子 Canvas"
+    state machine
+}
+
+DreamCanvas:SetSortOrderToLowestOfHierarchy:PropagateToChildrenCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrderToLowestOfHierarchy:PropagateToChildrenCanvas
+    src   "Propagate to Children Canvas"
+    text  "传播到子 Canvas"
+    state machine
+}
+
+DreamCanvas:SetTraceChannel:InTraceChannel {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetTraceChannel:InTraceChannel
+    src   "In Trace Channel"
+    text  "跟踪通道"
+    state machine
+}
+
+DreamCanvas:SetViewportPlayerIndex:InLocalPlayerIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetViewportPlayerIndex:InLocalPlayerIndex
+    src   "In Local Player Index"
+    text  "本地玩家索引"
+    state machine
+}
+
+DreamCanvas:SizeInEditMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SizeInEditMode
+    src   "Size in Edit Mode"
+    text  "编辑模式大小"
+    state machine
+}
+
+DreamCanvas:SortOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SortOrder
+    src   "Sort Order"
+    // from the engine's zh-Hans
+    text  "排序顺序"
+    state draft
+}
+
+DreamCanvas:TraceChannel {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:TraceChannel
+    src   "Trace Channel"
+    // from the engine's zh-Hans
+    text  "检测通道"
+    state draft
+}
+
+DreamCanvas:UIMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:UIMesh
+    src   "UIMesh"
+    text  "UI 网格"
+    state machine
+}
+
+DreamCanvas:VisualList {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:VisualList
+    src   "Visual List"
+    text  "可视化列表"
+    state machine
+}
+
+DreamCanvas:WidgetList {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:WidgetList
+    src   "Widget List"
+    // from the engine's zh-Hans
+    text  "控件列表"
+    state draft
+}
+
+DreamCanvas:WidgetPropertyDataAsTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:WidgetPropertyDataAsTexture
+    src   "Widget Property Data as Texture"
+    text  "控件属性数据作为纹理"
+    state machine
+}
+
+DreamCanvasCustomScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale
+    src   "Dream Canvas Custom Scale"
+    text  "Dream Canvas 自定义缩放"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:InCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:InCanvas
+    src   "In Canvas"
+    // from the engine's zh-Hans
+    text  "In Canvas"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:InViewportSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:InViewportSize
+    src   "In Viewport Size"
+    text  "视口尺寸"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:OutDreamCanvasSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:OutDreamCanvasSize
+    src   "Out Dream Canvas Size"
+    text  "Dream Canvas 大小"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:OutScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveCalculateSizeAndScale:OutScale
+    src   "Out Scale"
+    // from the engine's zh-Hans
+    text  "输出范围"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:Result {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:InPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:InPosition
+    src   "In Position"
+    // from the engine's zh-Hans
+    text  "输入位置"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:Result {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamCanvasCustomScale:ReceiveInit:InCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveInit:InCanvas
+    src   "In Canvas"
+    // from the engine's zh-Hans
+    text  "In Canvas"
+    state draft
+}
+
+EDreamCanvasOverrideParameters.BlendDepth {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasOverrideParameters:BlendDepth
+    src   "Blend Depth"
+    // from the engine's zh-Hans
+    text  "混合深度"
+    state draft
+}
+
+EDreamCanvasOverrideParameters.DefaultMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasOverrideParameters:DefaultMaterial
+    src   "Default Material"
+    // from the engine's zh-Hans
+    text  "默认材质"
+    state draft
+}
+
+EDreamCanvasOverrideParameters.DepthFade {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasOverrideParameters:DepthFade
+    src   "Depth Fade"
+    text  "深度淡化"
+    state machine
+}
+
+EDreamCanvasOverrideParameters.EDreamCanvasOverrideParameters_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasOverrideParameters:EDreamCanvasOverrideParameters_MAX
+    src   "EDream Canvas Override Parameters MAX"
+    text  "Dream Canvas 覆盖参数 最大值"
+    state machine
+}
+
+EDreamCanvasOverrideParameters.RequireNormalAndTangent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasOverrideParameters:RequireNormalAndTangent
+    src   "Require Normal and Tangent"
+    text  "需要法线和切线"
+    state machine
+}
+
+EDreamCanvasRenderTargetSizeMode.CanvasFitToRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:CanvasFitToRenderTarget
+    src   "Canvas Fit to Render Target"
+    text  "Canvas 适应渲染目标"
+    state machine
+}
+
+EDreamCanvasRenderTargetSizeMode.EDreamCanvasRenderTargetSizeMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:EDreamCanvasRenderTargetSizeMode_MAX
+    src   "EDream Canvas Render Target Size Mode MAX"
+    text  "Dream Canvas 渲染目标大小模式 最大值"
+    state machine
+}
+
+EDreamCanvasRenderTargetSizeMode.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamCanvasRenderTargetSizeMode.RenderTargetFitToCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:RenderTargetFitToCanvas
+    src   "Render Target Fit to Canvas"
+    text  "渲染目标适应画布"
+    state machine
+}
+
+EDreamCanvasRenderTargetUpdateMode.Always {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:Always
+    src   "Always"
+    // from the engine's zh-Hans
+    text  "始终"
+    state draft
+}
+
+EDreamCanvasRenderTargetUpdateMode.Automatic {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:Automatic
+    src   "Automatic"
+    // from the engine's zh-Hans
+    text  "自动"
+    state draft
+}
+
+EDreamCanvasRenderTargetUpdateMode.EDreamCanvasRenderTargetUpdateMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:EDreamCanvasRenderTargetUpdateMode_MAX
+    src   "EDream Canvas Render Target Update Mode MAX"
+    text  "EDream Canvas 渲染目标更新模式 MAX"
+    state machine
+}
+
+EDreamCanvasRenderTargetUpdateMode.WhenRequest {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:WhenRequest
+    src   "When Request"
+    text  "按请求更新"
+    state machine
+}
+
+EDreamCanvasScaleMode.ConstantPixelSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ConstantPixelSize
+    src   "Constant Pixel Size"
+    text  "恒定像素大小"
+    state machine
+}
+
+EDreamCanvasScaleMode.Custom {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:Custom
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "Custom"
+    state draft
+}
+
+EDreamCanvasScaleMode.EDreamCanvasScaleMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:EDreamCanvasScaleMode_MAX
+    src   "EDream Canvas Scale Mode MAX"
+    text  "EDream Canvas 缩放模式 MAX"
+    state machine
+}
+
+EDreamCanvasScaleMode.ScaleWithEngineDPI {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ScaleWithEngineDPI
+    src   "Scale with Engine DPI"
+    text  "根据引擎 DPI 缩放"
+    state machine
+}
+
+EDreamCanvasScaleMode.ScaleWithScreenSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ScaleWithScreenSize
+    src   "Scale with Screen Size"
+    text  "根据屏幕尺寸缩放"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.EDreamCanvasScreenMatchMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:EDreamCanvasScreenMatchMode_MAX
+    src   "EDream Canvas Screen Match Mode MAX"
+    text  "EDream Canvas 屏幕匹配模式 MAX"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.Expand {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:Expand
+    src   "Expand"
+    // from the engine's zh-Hans
+    text  "展开"
+    state draft
+}
+
+EDreamCanvasScreenMatchMode.MatchWidthOrHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:MatchWidthOrHeight
+    src   "Match Width or Height"
+    text  "匹配宽度或高度"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.Shrink {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:Shrink
+    src   "Shrink"
+    // from the engine's zh-Hans
+    text  "收缩"
+    state draft
+}
+
+EDreamRenderMode.EDreamRenderMode_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:EDreamRenderMode_MAX
+    src   "EDream Render Mode MAX"
+    text  "EDream 渲染模式 MAX"
+    state machine
+}
+
+EDreamRenderMode.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamRenderMode.RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:RenderTarget
+    src   "Render Target"
+    // from the engine's zh-Hans
+    text  "渲染目标"
+    state draft
+}
+
+EDreamRenderMode.ScreenSpaceOverlay {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:ScreenSpaceOverlay
+    src   "Screen Space Overlay"
+    text  "屏幕空间叠加"
+    state machine
+}
+
+EDreamRenderMode.WorldSpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:WorldSpace
+    src   "World Space - UE Renderer"
+    text  "世界空间 - UE 渲染器"
+    state machine
+}
+
+EDreamRenderMode.WorldSpace_DreamUI {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:WorldSpace_DreamUI
+    src   "World Space - DreamUI Renderer"
+    text  "世界空间 - DreamUI 渲染器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas
+    src   "Canvas is for render and update all UI elements.\nDefault UV channels-\n            UV0: Texture coordinate\n            UV1: X- Widget property data coordinate, including clipData coordinate in data texture; Y- Slice index of texture array, mostly for font rendering\nOther UV channels are defined by DreamVisual, check DreamText and DreamRectBlock."
+    text  "Canvas 用于渲染和更新所有 UI 元素。\n默认 UV 通道：\n            UV0: 纹理坐标\n            UV1: X - 控件属性数据坐标，包括数据纹理中的裁剪数据坐标；Y - 纹理数组的切片索引，主要用于字体渲染\n其他 UV 通道由 DreamVisual 定义，请查看 DreamText 和 DreamRectBlock。"
+    state machine
+}
+
+DreamCanvas:AttachedRootSceneComponent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:AttachedRootSceneComponent
+    src   "DrawCall that represent this canvas when the canvas is render as child."
+    text  "绘制此画布时使用的绘制调用，表示画布作为子级时的情况。"
+    state machine
+}
+
+DreamCanvas:AutoRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:AutoRenderTarget
+    src   "The render target this canvas made for itself because none was assigned. Held apart from RenderTarget,\nwhich is the author's: never saved, duplicated or copied, so a copy of the canvas makes its own rather\nthan drawing into this one."
+    text  "此画布因未指定渲染目标而自行创建的渲染目标。与 RenderTarget 分开保存，\n后者由作者设置：从不保存、复制或拷贝，因此画布的副本会创建自己的渲染目标，\n而不是绘制到这一个中。"
+    state machine
+}
+
+DreamCanvas:bAllowDropFrame {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bAllowDropFrame
+    src   "Allow drop canvas frame when canvas draw-call take too much time. This may cause some delay for UI response, but can improve performance."
+    text  "当画布绘制调用耗时过长时，允许放弃画布帧。这可能会导致 UI 响应出现延迟，但可以提高性能。"
+    state machine
+}
+
+DreamCanvas:bCullElementsOutsideCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bCullElementsOutsideCanvas
+    src   "Leave elements that are entirely outside this canvas's rect out of the draw-call list.\n\nOnly has an effect when this canvas's rect is the surface being drawn -- a root canvas, or one\nwith bForceRenderToTarget. A plain child canvas draws into its parent's surface and a canvas is\nnot a clipper, so its own rect says nothing about what is visible; culling is skipped there\nwhatever this says. Turn it off if you rely on off-screen elements still being assembled (for\ninstance to read a draw-call's vertex data for something other than drawing)."
+    text  "将完全位于此画布矩形之外的元素排除在绘制调用列表之外。\n\n仅当此画布的矩形是要绘制的表面时才有效——根画布，或\n启用 bForceRenderToTarget 的画布。普通子画布绘制到其父级表面中，而画布\n不是裁剪器，因此其自身矩形并不能说明什么是可见的；在那里会跳过剔除，\n无论此设置如何。如果你依赖屏幕外元素仍被组装（例如\n读取绘制调用的顶点数据用于绘制之外的其他用途），请关闭此项。"
+    state machine
+}
+
+DreamCanvas:bEnableDepthTest {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bEnableDepthTest
+    src   "Create a depth texture so we can do depth test. This is very useful for UIStaticMesh which use Opaque material.\nOnly valid for ScreenSpaceOverlay and RenderTarget mode."
+    text  "创建深度纹理，以便进行深度测试。这对于使用不透明材质的 UIStaticMesh 非常有用。\n仅适用于 ScreenSpaceOverlay 和 RenderTarget 模式。"
+    state machine
+}
+
+DreamCanvas:bFixedSizeInEditMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bFixedSizeInEditMode
+    src   "When Canvas use ScreenSpaceOverlay, in edit mode it will try to match editor viewport's size. So make this true to use a fixed size."
+    text  "当 Canvas 使用 ScreenSpaceOverlay 时，在编辑模式下，它会尝试匹配编辑器视口的尺寸。启用此选项以使用固定尺寸。"
+    state machine
+}
+
+DreamCanvas:bForceRenderToTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bForceRenderToTarget
+    src   "Force this canvas render to a TextureRenderTarget, no matter what render mode of the root canvas is.\nThis will break canvas link and make this canvas as root canvas."
+    text  "强制此画布渲染到纹理渲染目标，无论根画布的渲染模式是什么。\n这会断开画布链接，并让此画布成为根画布。"
+    state machine
+}
+
+DreamCanvas:BlendDepth {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BlendDepth
+    src   "For \"World Space - DreamUI Renderer\" only, render with blend depth, 0-occlude by scene depth, 1-all visible, 0.5-half transparent."
+    text  "仅在 \"World Space - DreamUI Renderer\" 模式下，使用混合深度进行渲染，0 表示由场景深度遮挡，1 表示所有可见，0.5 表示半透明。"
+    state machine
+}
+
+DreamCanvas:bOverrideSorting {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bOverrideSorting
+    src   "true- Use custom sort order.\nfalse- Use default sort order management, which is based on hierarchy order."
+    text  "启用自定义排序。\n禁用默认排序管理，该管理基于层次结构顺序。"
+    state machine
+}
+
+DreamCanvas:bRequireNormalAndTangent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:bRequireNormalAndTangent
+    src   "Enable/disable normal and tangent in vertex data."
+    text  "启用或禁用顶点数据的法线和切线。"
+    state machine
+}
+
+DreamCanvas:ChildrenCanvasArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ChildrenCanvasArray
+    src   "canvas array belong to this canvas in hierarchy."
+    text  "在层级中属于此画布的画布数组。"
+    state machine
+}
+
+DreamCanvas:ConvertPositionFromCanvasToViewport {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromCanvasToViewport
+    src   "Convert position from DreamCanvas space to viewport.\n@param InPosition The point's position in DreamCanvas space.\n@param Result in viewport, pixel unit, left top is zero point.\n@return convert will fail if this DreamCanvas is not root canvas"
+    text  "将位置从 DreamCanvas 空间转换到视口。\n@param InPosition 点在 DreamCanvas 空间中的位置。\n@param Result 视口中的位置，像素单位，左上角为零点。\n@return 如果此 DreamCanvas 不是根画布，转换将失败"
+    state machine
+}
+
+DreamCanvas:ConvertPositionFromViewportToCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ConvertPositionFromViewportToCanvas
+    src   "Convert position from viewport to DreamCanvas space.\n@param InPosition The point's pixel position on viewport.\n@param Result DreamCanvas space position, left bottom is zero point.\n@return convert will fail if this DreamCanvas is not root canvas"
+    text  "将位置从视口转换到 DreamCanvas 空间。\n@param InPosition 点在视口上的像素位置。\n@param Result DreamCanvas 空间中的位置，左下角为零点。\n@return 如果此 DreamCanvas 不是根画布，转换将失败"
+    state machine
+}
+
+DreamCanvas:CustomScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:CustomScale
+    src   "Use this to do custom scale. Only valid if ScaleMode = Custom.\nWill fallback to \"ConstantPixelSize\" if not assign this value."
+    text  "用于进行自定义缩放。仅在 ScaleMode = Custom 时有效。\n如果未指定此值，将回退到“ConstantPixelSize”。"
+    state machine
+}
+
+DreamCanvas:DefaultMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DefaultMaterial
+    src   "Default materials, for render default UI elements."
+    text  "默认材质，用于渲染默认 UI 元素。"
+    state machine
+}
+
+DreamCanvas:DefaultMeshType {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DefaultMeshType
+    src   "DreamCanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.\nYou can set \"OwnerNoSee\" \"CastShadow\" properties for your mesh.\n@todo: override this property from parent canvas?"
+    text  "DreamCanvas 会创建网格来渲染 UI 元素，此属性让我们有机会使用自定义类型的网格进行渲染。\n你可以为网格设置“OwnerNoSee”“CastShadow”属性。\n@todo: 是否从父画布重载此属性？"
+    state machine
+}
+
+DreamCanvas:DepthFade {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:DepthFade
+    src   "For \"World Space - DreamUI Renderer\" only, render with depth fade effect."
+    text  "仅用于“World Space - DreamUI Renderer”，使用深度衰减效果渲染。"
+    state machine
+}
+
+DreamCanvas:FieldOfView {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:FieldOfView
+    src   "Virtual Camera field of view (in degrees), horizontal. Sets how far back the canvas's eye\nstands: distance = Width * 0.5 / tan(FOV/2), the standoff at which the canvas rect exactly\nfills the frame. Widening it brings the eye closer and deepens every Perspective scope below."
+    text  "虚拟相机的水平视野（单位为度）。设置画布视点\n后退多远：distance = Width * 0.5 / tan(FOV/2)，即画布矩形恰好\n填满画面的距离。增大该值会使视点更近，并加深下方的每个透视范围。"
+    state machine
+}
+
+DreamCanvas:GetActualBlendDepth {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualBlendDepth
+    src   "Get actual BlendDepth value of canvas. This property may inherit from parent canvas depend on OverrideParameters property."
+    text  "获取画布实际的 BlendDepth 值。根据重载参数（OverrideParameters）属性，此属性可能继承自父画布。"
+    state machine
+}
+
+DreamCanvas:GetActualDepthFade {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualDepthFade
+    src   "Get actual DepthFade value of canvas. This property may inherit from parent canvas depend on OverrideParameters property."
+    text  "获取画布实际的 DepthFade 值。根据重载参数（OverrideParameters）属性，此属性可能继承自父画布。"
+    state machine
+}
+
+DreamCanvas:GetActualRenderMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualRenderMode
+    src   "Get actual render mode of this canvas.\nNormally canvas's render-mode is inherited from parent canvas."
+    text  "获取此画布的实际渲染模式。\n通常画布的渲染模式从父画布继承。"
+    state machine
+}
+
+DreamCanvas:GetActualRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualRenderTarget
+    src   "Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas."
+    text  "如果实际渲染模式为 RenderTarget，则获取此画布的实际渲染目标。画布的渲染目标从根画布继承。"
+    state machine
+}
+
+DreamCanvas:GetActualSortOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetActualSortOrder
+    src   "Get actual SortOrder of canvas. This property may inherit from parent canvas depend on OverrideSorting property."
+    text  "获取画布实际的 SortOrder 值。根据重载排序（OverrideSorting）属性，此属性可能继承自父画布。"
+    state machine
+}
+
+DreamCanvas:GetAttachedRootSceneComponent {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetAttachedRootSceneComponent
+    src   "return root SceneComponent if the root canvas is attached to a SceneComponent"
+    text  "如果根画布附加到某个 SceneComponent 组件，则返回根 SceneComponent"
+    state machine
+}
+
+DreamCanvas:GetBlendDepth {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetBlendDepth
+    src   "Get blendDepth value of this canvas."
+    text  "获取此画布的 blendDepth 值。"
+    state machine
+}
+
+DreamCanvas:GetDepthFade {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetDepthFade
+    src   "Get blendDepth value of this canvas."
+    text  "获取此画布的 blendDepth 值。"
+    state machine
+}
+
+DreamCanvas:GetRenderMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderMode
+    src   "Get render mode of this canvas."
+    text  "获取此画布的渲染模式。"
+    state machine
+}
+
+DreamCanvas:GetRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRenderTarget
+    src   "Get render target of this canvas: the one assigned, or the one it made when none was."
+    text  "获取此画布的渲染目标：已指定的那个，或在未指定时自行创建的那个。"
+    state machine
+}
+
+DreamCanvas:GetRootCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetRootCanvas
+    src   "get root canvas on hierarchy"
+    text  "获取层级上的根画布"
+    state machine
+}
+
+DreamCanvas:GetViewportPlayerIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:GetViewportPlayerIndex
+    src   "The local player this canvas fills the part of the viewport of, or INDEX_NONE for the whole viewport."
+    text  "此画布所填充视口部分对应的本地玩家，若为整个视口则为 INDEX_NONE。"
+    state machine
+}
+
+DreamCanvas:IsRootCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:IsRootCanvas
+    src   "is this the root canvas in hierarchy"
+    text  "这是否为层级中的根画布"
+    state machine
+}
+
+DreamCanvas:MaterialProxyReferences {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:MaterialProxyReferences
+    src   "What those proxies point at -- their sources and the textures they answer with -- kept from the collector."
+    text  "这些代理所指向的内容——它们的源以及它们响应的纹理——从收集器保留。"
+    state machine
+}
+
+DreamCanvas:OverrideParameters {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:OverrideParameters
+    src   "For not root canvas, inherit or override parent canvas parameters."
+    text  "对于非根画布，继承或覆盖父画布的参数。"
+    state machine
+}
+
+DreamCanvas:ParentCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ParentCanvas
+    src   "nearest up parent Canvas"
+    text  "向上最近的父画布"
+    state machine
+}
+
+DreamCanvas:Project3DToScreen {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:Project3DToScreen
+    src   "Project 3D screen-space-UI element's position to 2D screen-space-UI.\nNOTE!!! This is only for screen-space-UI, DON'T use this for convert world space position!!!\n@param       Position3D      GetWorldLocation from the UI element (world location).\n@param       OutPosition2D   2D Position in screen-space, left bottom is zero point.\n@return      convert will fail if this DreamCanvas is not root canvas."
+    text  "将3D屏幕空间UI元素的位置投影到2D屏幕空间UI。\n注意！！！此函数仅适用于屏幕空间UI，请勿用于转换世界空间位置！！！\n@param       Position3D      UI元素的GetWorldLocation（世界位置）。\n@param       OutPosition2D   屏幕空间中的2D位置，左下角为零点。\n@return      如果此DreamCanvas不是根画布，转换将失败。"
+    state machine
+}
+
+DreamCanvas:ProjectionType {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectionType
+    src   "Virtual Camera Projection Type. Deliberately NOT AdvancedDisplay: together with FieldOfView\nthis defines the projection every widget Perspective scope is calibrated against, and an\northographic canvas disables Perspective outright (its eye is at infinity, which no affine\nremap can reach). An author who cannot find these two cannot calibrate the feature."
+    text  "虚拟相机投影类型。刻意不放入AdvancedDisplay：它与FieldOfView共同\n定义了每个控件Perspective作用域所校准的投影，而正交画布会直接禁用Perspective\n（其视点位于无穷远，任何仿射重映射都无法到达）。作者如果找不到这两项，\n就无法校准该功能。"
+    state machine
+}
+
+DreamCanvas:ProjectWorldToScreenWithPlayerCamera {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ProjectWorldToScreenWithPlayerCamera
+    src   "Project 3D world position to 2D screen-space-UI position with specific player's camera.\nThis function need player pawn contains a camera component, and use this camera to do projection, so it can be used for world space UI.\n@param Player\n@param InPosition\n@param OutPosition2D\n@return"
+    text  "使用指定玩家的相机将3D世界位置投影到2D屏幕空间UI位置。\n此函数要求玩家Pawn包含相机组件，并使用该相机进行投影，因此可用于世界空间UI。\n@param Player\n@param InPosition\n@param OutPosition2D\n@return"
+    state machine
+}
+
+DreamCanvas:RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTarget
+    src   "Render to RenderTarget, if not specified then DreamGUI will create a new one (AutoRenderTarget)."
+    text  "渲染到RenderTarget，如果未指定，DreamGUI将创建一个新的（AutoRenderTarget）。"
+    state machine
+}
+
+DreamCanvas:RenderTargetClearColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetClearColor
+    src   "Clear color for TextureRenderTarget"
+    text  "纹理渲染目标（TextureRenderTarget）的清除颜色"
+    state machine
+}
+
+DreamCanvas:RenderTargetResolutionScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetResolutionScale
+    src   "RenderTarget size scale.\nOnly valid if RenderTargetSizeMode is RenderTargetFitToCanvas."
+    text  "RenderTarget尺寸缩放。\n仅当RenderTargetSizeMode为RenderTargetFitToCanvas时有效。"
+    state machine
+}
+
+DreamCanvas:RenderTargetSizeMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetSizeMode
+    src   "How RenderTarget and DreamCanvas's size change depend on the other."
+    text  "RenderTarget与DreamCanvas的尺寸如何相互影响变化。"
+    state machine
+}
+
+DreamCanvas:RenderTargetUpdateMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RenderTargetUpdateMode
+    src   "Controls how DreamCanvas render to RenderTarget."
+    text  "控制DreamCanvas如何渲染到RenderTarget。"
+    state machine
+}
+
+DreamCanvas:RequestUpdateForRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RequestUpdateForRenderTarget
+    src   "Only valid when call this on root canvas."
+    text  "仅当在根画布上调用时有效。"
+    state machine
+}
+
+DreamCanvas:RootCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:RootCanvas
+    src   "Root DreamCanvas on hierarchy. DreamGUI's update start from the RootCanvas, and goes all down to every UI elements under it"
+    text  "层级中的根DreamCanvas。DreamGUI的更新从RootCanvas开始，并向下传递到其下的每个UI元素"
+    state machine
+}
+
+DreamCanvas:ScreenSpaceRenderScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:ScreenSpaceRenderScale
+    src   "Resolution this canvas's screen-space UI is rendered at, as a fraction of the viewport.\n\n1 draws at full resolution. Below 1 draws into a smaller intermediate target and upscales, which\ntrades UI sharpness for fill rate -- the usual knob on mobile and on a lower-end console profile.\nOnly applies to a root canvas rendering ScreenSpaceOverlay through DreamGUI's own renderer;\nRenderTarget mode already has RenderTargetResolutionScale, and WorldSpace UI is scaled by the\nscene's own resolution settings."
+    text  "此画布的屏幕空间 UI 渲染时所用的分辨率，为视口大小的一个比例。\n\n1 表示按全分辨率绘制。小于 1 时绘制到更小的中间目标再放大，用 UI 的\n清晰度换取填充率——这是移动端和低端主机配置上常用的调节项。\n仅适用于通过 DreamGUI 自身渲染器渲染 ScreenSpaceOverlay 的根画布；\nRenderTarget 模式已有 RenderTargetResolutionScale，而 WorldSpace UI 则由\n场景自身的分辨率设置缩放。"
+    state machine
+}
+
+DreamCanvas:SetDrawCallRebuildSuspended {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetDrawCallRebuildSuspended
+    src   "Hold this canvas's draw-call list as it is, however dirty its contents become.\n\nWhat UInvalidationBox does for Slate's cached draw elements, for DreamGUI's equivalent: the\ndraw-call list. Vertex refreshes still run (a widget that only moves or changes colour keeps\nupdating); what is suspended is the rebuild that re-batches the subtree. Any rebuild requested\nwhile suspended is remembered and happens the moment it is released, so nothing is lost -- only\ndeferred. UDreamInvalidationBox drives this; setting it by hand is for code that knows a subtree\nis structurally frozen."
+    text  "保持此画布的绘制调用列表原样不变，无论其内容变得多脏。\n\nUInvalidationBox 为 Slate 缓存的绘制元素所做的，正是 DreamGUI 中的对应物：\n绘制调用列表。顶点刷新仍会执行（仅仅移动或改变颜色的控件仍会\n继续更新）；被挂起的是重新批处理子树的重建。挂起期间请求的\n任何重建都会被记住，并在解除挂起的那一刻执行，所以什么都不会丢失——只是\n被推迟。UDreamInvalidationBox 驱动这一行为；手动设置它是给那些知道某个子树\n在结构上已冻结的代码用的。"
+    state machine
+}
+
+DreamCanvas:SetOverrideFovAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideFovAngle
+    src   "Override DreamUI's screen space UI render's camera's fov in degree, will affect projection matrix.\nIf SetOverrideProjectionMatrix is true, then this will not take effect."
+    text  "重载 DreamUI 屏幕空间 UI 渲染相机的 FOV（单位为度），会影响投影矩阵。\n如果 SetOverrideProjectionMatrix 为 true，则此项不生效。"
+    state machine
+}
+
+DreamCanvas:SetOverrideProjectionMatrix {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideProjectionMatrix
+    src   "Override DreamUI's screen space UI render's camera's projection matrix.\nIf this is set to true, then SetOverrideFovAngle will not take effect."
+    text  "重载 DreamUI 屏幕空间 UI 渲染的摄像机投影矩阵。\n如果此选项设置为 true，则 SetOverrideFovAngle 将不生效。"
+    state machine
+}
+
+DreamCanvas:SetOverrideViewLocation {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewLocation
+    src   "Override DreamUI's screen space UI render's camera location."
+    text  "重载 DreamUI 屏幕空间 UI 渲染的摄像机位置。"
+    state machine
+}
+
+DreamCanvas:SetOverrideViewRotation {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetOverrideViewRotation
+    src   "Override DreamUI's screen space UI render's camera rotation."
+    text  "重载 DreamUI 屏幕空间 UI 渲染的摄像机旋转。"
+    state machine
+}
+
+DreamCanvas:SetProjectionParameters {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetProjectionParameters
+    src   "Set parameters for calculating projection matrix. Only valid for ScreenSpace/RenderTarget mode."
+    text  "设置用于计算投影矩阵的参数。仅在屏幕空间/渲染目标模式下有效。"
+    state machine
+}
+
+DreamCanvas:SetRenderMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderMode
+    src   "Set render mode of this canvas. This may not take effect if the canvas is not a root canvas."
+    text  "设置此画布的渲染模式。如果此画布不是根画布，则此设置可能无效。"
+    state machine
+}
+
+DreamCanvas:SetRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetRenderTarget
+    src   "if renderMode is RenderTarget, then this will change the renderTarget"
+    text  "如果渲染模式为渲染目标，则会更改渲染目标。"
+    state machine
+}
+
+DreamCanvas:SetSortOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrder
+    src   "Set DreamCanvas SortOrder\n@param       PropagateToChildrenCanvas       if true, set this Canvas's SortOrder and all children Canvas, not just set absolute value, but keep child Canvas's relative order to this one"
+    text  "设置 DreamCanvas 的 SortOrder\n@param       PropagateToChildrenCanvas       如果为 true，则设置此 Canvas 及其所有子 Canvas 的 SortOrder，不只是设置绝对值，还要保持子 Canvas 相对此 Canvas 的相对顺序"
+    state machine
+}
+
+DreamCanvas:SetSortOrderToHighestOfHierarchy {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrderToHighestOfHierarchy
+    src   "Set SortOrder to highest, so this canvas will render on top of all canvas that belong to same hierarchy."
+    text  "将排序设置为最高，以便此画布在同一层级的所有画布之上进行渲染。"
+    state machine
+}
+
+DreamCanvas:SetSortOrderToLowestOfHierarchy {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetSortOrderToLowestOfHierarchy
+    src   "Set SortOrder to lowest, so this canvas will render behind all canvas that belong to same hierarchy."
+    text  "将排序设置为最低，以便此画布在同一层级的所有画布之后进行渲染。"
+    state machine
+}
+
+DreamCanvas:SetViewportPlayerIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SetViewportPlayerIndex
+    src   "Give this ScreenSpaceOverlay root canvas to one local player, by its index in the game instance's local players\n(the UserIndex an event system and a raycaster carry), or to none with INDEX_NONE.\n\nUMG's AddToPlayerScreen puts a widget on its owning player's layer, and the game layer manager lays that layer out\nover the part of the viewport the split-screen layout gives the player (SGameLayerManager::AddOrUpdatePlayerLayers,\nfrom the player's ULocalPlayer::Origin and Size). A canvas given a player does the same: it is sized to that\nplayer's part, a pointer is measured from the part's top-left corner and one outside the part reaches nothing on\nit, and the renderer draws it only in that player's view. Without a split screen the part is the whole viewport,\nso a player's canvas is exactly the canvas it always was. UDreamScreenUISubsystem gives every screen root it makes\nits player.\n\nINDEX_NONE, the default, is the shared layer: the whole viewport whoever is looking, as every canvas nobody gives\na player has always been."
+    text  "将此 ScreenSpaceOverlay 根画布交给某一个本地玩家，用其在游戏实例的本地玩家中的索引\n（事件系统和射线检测器携带的 UserIndex），或用 INDEX_NONE 不交给任何玩家。\n\nUMG 的 AddToPlayerScreen 会把控件放到其所属玩家的层上，游戏层管理器再把该层铺在\n分屏布局分给该玩家的那部分视口上（SGameLayerManager::AddOrUpdatePlayerLayers，\n依据玩家的 ULocalPlayer::Origin 和 Size）。被指定了玩家的画布也是如此：它按该\n玩家的那部分调整尺寸，指针从该部分的左上角开始测量，位于该部分之外时在该部分上\n什么都碰不到，渲染器也只在该玩家的视图中绘制它。没有分屏时，该部分就是整个视口，\n因此玩家的画布与它一贯的样子完全相同。UDreamScreenUISubsystem 会为它创建的每个\n屏幕根指定玩家。\n\n默认值 INDEX_NONE 是共享层：无论谁在看都是整个视口，正如每个未指定玩家的画布\n一贯的样子。"
+    state machine
+}
+
+DreamCanvas:SortOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:SortOrder
+    src   "Canvas with larger order will render on top of lower one.\nNOTE! SortOrder value is stored with int16 type, so valid range is -32768 to 32767"
+    text  "排序值较大的画布将位于排序值较低的画布之上。\n注意：排序值存储为 int16 类型，有效范围为 -32768 到 32767。"
+    state machine
+}
+
+DreamCanvas:TraceChannel {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:TraceChannel
+    src   "TraceChannel for line trace of EventSystem interaction.\nOnly world space UI need this property."
+    text  "事件系统交互的线跟踪通道。\n仅适用于世界空间 UI。"
+    state machine
+}
+
+DreamCanvas:WidgetList {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:WidgetList
+    src   "Use DreamWidget instead of DreamVisual, because we need DreamWidget to get sub-canvas."
+    text  "请使用 DreamWidget 控件而不是 DreamVisual，因为我们需要用 DreamWidget 获取子画布。"
+    state machine
+}
+
+DreamCanvas:WidgetPropertyDataAsTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:WidgetPropertyDataAsTexture
+    src   "clip coordinate stored in UV1.x\nwidget property data is stored in each canvas (not only root canvas)"
+    text  "裁剪坐标存储在 UV1.x 中。\n控件属性数据存储在每个画布中（而不仅仅是根画布）。"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveCalculateSizeAndScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveCalculateSizeAndScale
+    src   "Called when DreamCanvas calculate viewport size and scale."
+    text  "在 DreamCanvas 计算视口大小和比例时调用。"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromCanvasToViewport
+    src   "Convert position from DreamCanvas space to viewport.\n@param InPosition The point's position in DreamCanvas space.\n@param Result in viewport, pixel unit, left top is zero point.\n@return convert will fail if this DreamCanvas is not root canvas"
+    text  "将位置从 DreamCanvas 空间转换到视口。\n@param InPosition 点在 DreamCanvas 空间中的位置。\n@param Result 视口中的位置，像素单位，左上角为零点。\n@return 如果此 DreamCanvas 不是根画布，转换将失败"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveConvertPositionFromViewportToCanvas
+    src   "Convert position from viewport to DreamCanvas space.\n@param InPosition The point's pixel position on viewport.\n@param Result DreamCanvas space position, left bottom is zero point.\n@return convert will fail if this DreamCanvas is not root canvas"
+    text  "将位置从视口转换到 DreamCanvas 空间。\n@param InPosition 点在视口上的像素位置。\n@param Result DreamCanvas 空间中的位置，左下角为零点。\n@return 如果此 DreamCanvas 不是根画布，转换将失败"
+    state machine
+}
+
+DreamCanvasCustomScale:ReceiveInit {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvasCustomScale:ReceiveInit
+    src   "Initialize, called when DreamCanvas Awake."
+    text  "初始化，在 DreamCanvas 激活时调用。"
+    state machine
+}
+
+EDreamCanvasRenderTargetSizeMode.CanvasFitToRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:CanvasFitToRenderTarget
+    src   "Change DreamCanvas's size to fit RenderTarget."
+    text  "将 DreamCanvas 的大小调整为适应 RenderTarget。"
+    state machine
+}
+
+EDreamCanvasRenderTargetSizeMode.RenderTargetFitToCanvas {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetSizeMode:RenderTargetFitToCanvas
+    src   "Change RenderTarget's size to fit DreamCanvas."
+    text  "将 RenderTarget 的大小调整为适应 DreamCanvas。"
+    state machine
+}
+
+EDreamCanvasRenderTargetUpdateMode.Always {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:Always
+    src   "Always draw to RenderTarget every frame."
+    text  "始终绘制到 RenderTarget。"
+    state machine
+}
+
+EDreamCanvasRenderTargetUpdateMode.Automatic {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:Automatic
+    src   "DreamUI will automatically manage update, only draw to RenderTarget when it detect something change."
+    text  "DreamUI 将自动管理更新，仅在检测到更改时才绘制到 RenderTarget。"
+    state machine
+}
+
+EDreamCanvasRenderTargetUpdateMode.WhenRequest {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasRenderTargetUpdateMode:WhenRequest
+    src   "Only draw to RenderTarget when call RequestUpdateForRenderTarget."
+    text  "仅在调用 RequestUpdateForRenderTarget 时才绘制到 RenderTarget。"
+    state machine
+}
+
+EDreamCanvasScaleMode.ConstantPixelSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ConstantPixelSize
+    src   "1 unit is 1 pixel render in screen"
+    text  "1 个单位表示屏幕上 1 个像素。"
+    state machine
+}
+
+EDreamCanvasScaleMode.Custom {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:Custom
+    src   "Assign CustomScale parameter to use a custom class calculate resolution and scale."
+    text  "指定 CustomScale 参数，以便使用自定义类计算分辨率和缩放。"
+    state machine
+}
+
+EDreamCanvasScaleMode.ScaleWithEngineDPI {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ScaleWithEngineDPI
+    src   "UMG's rule: take the scale from the engine's UI Scale Rule and curve\n(Project Settings > User Interface), then lay out in \"viewport / scale\" units -- the same\nthing SGameLayerManager feeds its SDPIScaler. Unlike ScaleWithScreenSize, the layout rect\nkeeps the curve's design size at every resolution, so a layout authored for it never runs\nout of room and gets clipped; it only renders smaller. ReferenceResolution, ScreenMatchMode\nand Match are unused in this mode -- the engine settings are the single source of truth,\nwhich also means a project that tunes its DPI curve moves UMG and DreamUI together."
+    text  "UMG 的规则：从引擎的 UI 缩放规则和曲线\n（项目设置 > 用户界面）取得缩放，然后以“视口 / 缩放”为单位布局——这正是\nSGameLayerManager 提供给其 SDPIScaler 的东西。与 ScaleWithScreenSize 不同，布局矩形\n在任何分辨率下都保持曲线的设计尺寸，因此为其编写的布局永远不会空间不足而被裁剪；\n它只会渲染得更小。此模式下 ReferenceResolution、ScreenMatchMode 和 Match\n均未使用——引擎设置是唯一的事实来源，\n这也意味着调整了 DPI 曲线的项目会让 UMG 和 DreamGUI 一同改变。"
+    state machine
+}
+
+EDreamCanvasScaleMode.ScaleWithScreenSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScaleMode:ScaleWithScreenSize
+    src   "scale UI with reference resolution and screen resolution"
+    text  "根据参考分辨率和屏幕分辨率缩放UI。"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.Expand {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:Expand
+    src   "If viewport's aspect ratio not match \"ReferenceResolution\"'s aspect ratio, then expand size and scale UI"
+    text  "如果视口的长宽比与“参考分辨率”的长宽比不匹配，则扩展大小并缩放UI。"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.MatchWidthOrHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:MatchWidthOrHeight
+    src   "Use \"MatchFromWidthToHeight\" and \"ReferenceResolution\" properties to control size and scale UI"
+    text  "使用“MatchFromWidthToHeight”和“ReferenceResolution”属性来控制大小和缩放UI。"
+    state machine
+}
+
+EDreamCanvasScreenMatchMode.Shrink {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamCanvasScreenMatchMode:Shrink
+    src   "if viewport's aspect ratio not match \"ReferenceResolution\"'s aspect ratio, then shrink size and scale UI"
+    text  "如果视口的长宽比与“参考分辨率”的长宽比不匹配，则缩小大小并缩放UI。"
+    state machine
+}
+
+EDreamRenderMode.RenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:RenderTarget
+    src   "Render to a custom render target."
+    text  "渲染到自定义渲染目标。"
+    state machine
+}
+
+EDreamRenderMode.ScreenSpaceOverlay {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:ScreenSpaceOverlay
+    src   "Render in screen space. If there are multiple screen-space-ui-root in world, they will be sorted by SortOrder property.\nThis mode use DreamUI's custom render pipeline.\nThis mode need a DreamCanvasScaler to control the size and scale."
+    text  "在屏幕空间渲染。如果世界中存在多个屏幕空间UI根节点，它们将按SortOrder属性排序。\n此模式使用DreamUI的自定义渲染管道。\n此模式需要一个DreamCanvasScaler来控制大小和缩放。"
+    state machine
+}
+
+EDreamRenderMode.WorldSpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:WorldSpace
+    src   "Render in world space by UE default render pipeline.\nThis mode use engine's default render pipeline, so post process will affect ui."
+    text  "在UE默认渲染管道中进行世界空间渲染。\n此模式使用引擎的默认渲染管道，因此后处理效果会影响UI。"
+    state machine
+}
+
+EDreamRenderMode.WorldSpace_DreamUI {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#EDreamRenderMode:WorldSpace_DreamUI
+    src   "Render in world space by DreamUI's custom render pipeline,\nThis mode use DreamUI's custom render pipeline, will not be affected by post process."
+    text  "在DreamUI的自定义渲染管道中进行世界空间渲染。\n此模式使用DreamUI的自定义渲染管道，不会受到后处理效果的影响。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-CanvasScaler {
+    at    Source/DreamGUI/Public/Core/Components/DreamCanvas.h#DreamCanvas:BuildViewProjectionMatrixForPlayerCamera
+    src   "DreamGUI-CanvasScaler"
+    text  "DreamGUI-CanvasScaler"
+    state machine
+}

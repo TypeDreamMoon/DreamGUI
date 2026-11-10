@@ -1,0 +1,291 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWorldWidgetComponent {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent
+    src   "DreamUI World Widget"
+    text  "DreamUI世界控件"
+    state machine
+}
+
+DreamWorldWidgetComponent:Backend {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:Backend
+    src   "Backend"
+    // from the engine's zh-Hans
+    text  "后端"
+    state draft
+}
+
+DreamWorldWidgetComponent:bUseDesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:bUseDesignSize
+    src   "Use Design Size"
+    text  "使用设计尺寸"
+    state machine
+}
+
+DreamWorldWidgetComponent:DrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:DrawSize
+    src   "Draw Size"
+    // from the engine's zh-Hans
+    text  "绘制大小"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetBackend:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetBackend:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetDrawSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetDrawSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetPivot:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetPivot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetSortOrder:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetSortOrder:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetTraceChannel:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetTraceChannel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetUseDesignSize:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetUseDesignSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetWidgetClass:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetWidgetClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:Pivot {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:Pivot
+    src   "Pivot"
+    // from the engine's zh-Hans
+    text  "枢轴点"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetBackend:InBackend {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetBackend:InBackend
+    src   "In Backend"
+    text  "后端"
+    state machine
+}
+
+DreamWorldWidgetComponent:SetDrawSize:InSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetDrawSize:InSize
+    src   "In Size"
+    // from the engine's zh-Hans
+    text  "输入尺寸"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetPivot:InPivot {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetPivot:InPivot
+    src   "In Pivot"
+    // from the engine's zh-Hans
+    text  "输入枢轴"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetSortOrder:InSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetSortOrder:InSortOrder
+    src   "In Sort Order"
+    text  "排序方式"
+    state machine
+}
+
+DreamWorldWidgetComponent:SetTraceChannel:InChannel {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetTraceChannel:InChannel
+    src   "In Channel"
+    // from the engine's zh-Hans
+    text  "输入通道"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetUseDesignSize:bInUse {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetUseDesignSize:bInUse
+    src   "In Use"
+    // from the engine's zh-Hans
+    text  "In Use"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetWidgetClass:InClass {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetWidgetClass:InClass
+    src   "In Class"
+    // from the engine's zh-Hans
+    text  "在类中"
+    state draft
+}
+
+DreamWorldWidgetComponent:SortOrder {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SortOrder
+    src   "Sort Order"
+    // from the engine's zh-Hans
+    text  "排序顺序"
+    state draft
+}
+
+DreamWorldWidgetComponent:TraceChannel {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:TraceChannel
+    src   "Trace Channel"
+    // from the engine's zh-Hans
+    text  "检测通道"
+    state draft
+}
+
+DreamWorldWidgetComponent:WidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:WidgetClass
+    src   "Widget Class"
+    // from the engine's zh-Hans
+    text  "Widget Class"
+    state draft
+}
+
+EDreamWorldWidgetBackend.DreamUIRenderer {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend:DreamUIRenderer
+    src   "Dream UIRenderer"
+    text  "Dream UI渲染器"
+    state machine
+}
+
+EDreamWorldWidgetBackend.EDreamWorldWidgetBackend_MAX {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend:EDreamWorldWidgetBackend_MAX
+    src   "EDream World Widget Backend MAX"
+    text  "EDream世界控件后端MAX"
+    state machine
+}
+
+EDreamWorldWidgetBackend.UERenderer {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend:UERenderer
+    src   "UERenderer"
+    text  "UE渲染器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWorldWidgetComponent {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent
+    src   "Hosts a DreamUI hierarchy in the world: the component that puts a panel, a health bar or a sign\nwhere an actor is.\n\nIt is the one host for world-space UI, and it owns every decision a world-space root has to make,\nbecause none of them can come from the hierarchy itself: how big it is in centimetres (a screen\nstretches to a viewport, a world panel has no viewport to stretch to), which renderer draws it,\nwhat it sorts against, and which trace channel a pointer must use to reach it. The hierarchy is\ninstanced from WidgetClass unchanged -- its own root canvas is kept, so whatever the designer set\nthere is what the level gets, and a hierarchy authored with no canvas is given one.\n\nThe properties are live: changing the size, the pivot, the backend or the sort order re-applies to\nthe tree that is already loaded. Only a change of class rebuilds it."
+    text  "在世界中承载DreamUI层级：该组件把面板、血条或标牌\n放在Actor所在的位置。\n\n它是世界空间UI的唯一宿主，世界空间根需要做出的每个决定都由它负责，\n因为其中任何一个都无法来自层级本身：它以厘米为单位的尺寸（屏幕\n会拉伸到视口，而世界面板没有可拉伸的视口）、由哪个渲染器绘制、\n它与什么进行排序，以及指针必须使用哪个追踪通道才能命中它。层级\n从控件类（WidgetClass）原样实例化——其自身的根画布会被保留，因此设计器在其\n中设置的内容就是关卡得到的内容；对于创作时没有画布的层级，会为其提供一个画布。\n\n这些属性是实时的：更改尺寸、轴心、后端或排序顺序会重新应用到\n已经加载的树上。只有更改类才会重建它。"
+    state machine
+}
+
+DreamWorldWidgetComponent:bUseDesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:bUseDesignSize
+    src   "Take the size from the class instead of from DrawSize. On by default: the canvas the hierarchy\nwas authored against is the only size anyone has actually chosen for it, and a host that lands\nat that size is a host that looks in the level like it looked in the designer."
+    text  "从类而不是从 DrawSize 获取尺寸。默认开启：层级创作时所依据的画布\n是唯一有人真正为它选定的尺寸，而落在该尺寸上的宿主，\n在关卡中看起来就与在设计器中的样子一致。"
+    state machine
+}
+
+DreamWorldWidgetComponent:DrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:DrawSize
+    src   "The root's size in world units, when it is not taken from the class."
+    text  "未从类中获取时，根在世界单位下的尺寸。"
+    state machine
+}
+
+DreamWorldWidgetComponent:GetDrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetDrawSize
+    src   "The size the root is actually given: the class's design size while bUseDesignSize is on."
+    text  "根实际获得的尺寸：当 bUseDesignSize 开启时为类的设计尺寸。"
+    state machine
+}
+
+DreamWorldWidgetComponent:Pivot {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:Pivot
+    src   "Where on the root this component sits: (0.5, 0.5) centres the panel on the actor."
+    text  "该组件位于根上的位置：(0.5, 0.5) 会将面板居中到 Actor 上。"
+    state machine
+}
+
+DreamWorldWidgetComponent:SetDrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetDrawSize
+    src   "Sets an explicit size, which means turning the design-size default off."
+    text  "设置显式尺寸，这意味着关闭设计尺寸的默认值。"
+    state machine
+}
+
+DreamWorldWidgetComponent:SortOrder {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SortOrder
+    src   "Draw order against the other canvases in the world. Written through to the root canvas."
+    text  "在世界中与其他画布的绘制顺序一致。此值会传递到根画布。"
+    state machine
+}
+
+DreamWorldWidgetComponent:TraceChannel {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:TraceChannel
+    src   "The channel a world-space raycaster must be set to for its rays to reach this hierarchy, and\nthe channel its occlusion trace uses. Visibility by default, which is what a raycaster created\nfor a player defaults to, so the two meet without anyone configuring either."
+    text  "世界空间射线检测器必须设置的通道，其射线才能到达此层级，\n也是其遮挡追踪使用的通道。默认为可视性，即为玩家创建的射线检测器\n默认使用的通道，因此两者无需任何配置即可匹配。"
+    state machine
+}
+
+DreamWorldWidgetComponent:WidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:WidgetClass
+    src   "The hierarchy class to present. Changing it is the one edit that rebuilds the tree."
+    text  "要呈现的层次结构类。更改此项是重建树的唯一编辑操作。"
+    state machine
+}
+
+EDreamWorldWidgetBackend {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend
+    src   "Which renderer draws a world-space hierarchy. Maps to the root canvas's render mode."
+    text  "用于绘制世界空间层次结构的渲染器。映射到根画布的渲染模式。"
+    state machine
+}
+
+EDreamWorldWidgetBackend.DreamUIRenderer {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend:DreamUIRenderer
+    src   "DreamUI's own renderer: the hierarchy is drawn by the view extension, after the scene, with\nDreamUI's sorting. Sharper text and exact draw order, no scene lighting or post processing."
+    text  "DreamGUI自带的渲染器：层级由视图扩展在场景之后绘制，使用\nDreamGUI的排序。文本更清晰、绘制顺序精确，但没有场景光照和后处理。"
+    state machine
+}
+
+EDreamWorldWidgetBackend.UERenderer {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#EDreamWorldWidgetBackend:UERenderer
+    src   "UE's renderer: the meshes are ordinary primitives in the scene, so they light, cast, fog and\nocclude like anything else, and sort by translucency rules rather than by DreamUI's."
+    text  "UE的渲染器：网格是场景中的普通图元，因此会像其他物体一样接受光照、投射阴影、受雾影响并\n参与遮挡，且按半透明规则排序，而不是按DreamGUI的规则。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"World Widget" {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:WidgetClass
+    src   "World Widget"
+    text  "世界控件"
+    state machine
+}

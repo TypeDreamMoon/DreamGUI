@@ -1,0 +1,262 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamContentWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget
+    src   "Dream Content Widget"
+    text  "Dream内容控件"
+    state machine
+}
+
+DreamContentWidget:CanAcceptChild:Child {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:CanAcceptChild:Child
+    src   "Child"
+    // from the engine's zh-Hans
+    text  "子项"
+    state draft
+}
+
+DreamContentWidget:CanAcceptChild:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:CanAcceptChild:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamContentWidget:ClearContent:bDetach {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:ClearContent:bDetach
+    src   "Detach"
+    // from the engine's zh-Hans
+    text  "分离"
+    state draft
+}
+
+DreamContentWidget:Content {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:Content
+    src   "Content"
+    // from the engine's zh-Hans
+    text  "内容"
+    state draft
+}
+
+DreamContentWidget:GetContent:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamContentWidget:GetContentSlot:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContentSlot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamContentWidget:SetContent:NewContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:SetContent:NewContent
+    src   "New Content"
+    text  "新内容"
+    state machine
+}
+
+DreamContentWidget:SetContent:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:SetContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNamedSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot
+    src   "Dream Named Slot"
+    text  "Dream命名插槽"
+    state machine
+}
+
+DreamNamedSlot:bAcceptsSeveral {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:bAcceptsSeveral
+    src   "Accepts Several"
+    text  "接受多个"
+    state machine
+}
+
+DreamNamedSlot:bIsDefaultSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:bIsDefaultSlot
+    src   "Is Default Slot"
+    text  "是否为默认插槽"
+    state machine
+}
+
+DreamNamedSlot:GetSlotContent:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:GetSlotContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNamedSlotHost {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost
+    src   "Dream Named Slot Host"
+    text  "Dream命名插槽宿主"
+    state machine
+}
+
+DreamNamedSlotHost:ClearSlot:bDetach {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:ClearSlot:bDetach
+    src   "Detach"
+    // from the engine's zh-Hans
+    text  "分离"
+    state draft
+}
+
+DreamNamedSlotHost:ClearSlot:SlotName {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:ClearSlot:SlotName
+    src   "Slot Name"
+    // from the engine's zh-Hans
+    text  "插槽名称"
+    state draft
+}
+
+DreamNamedSlotHost:GetContentForSlot:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetContentForSlot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNamedSlotHost:GetContentForSlot:SlotName {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetContentForSlot:SlotName
+    src   "Slot Name"
+    // from the engine's zh-Hans
+    text  "插槽名称"
+    state draft
+}
+
+DreamNamedSlotHost:GetSlotNames:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetSlotNames:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNamedSlotHost:NamedSlots {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:NamedSlots
+    src   "Named Slots"
+    // from the engine's zh-Hans
+    text  "命名的插槽"
+    state draft
+}
+
+DreamNamedSlotHost:SetContentForSlot:Content {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:SetContentForSlot:Content
+    src   "Content"
+    // from the engine's zh-Hans
+    text  "内容"
+    state draft
+}
+
+DreamNamedSlotHost:SetContentForSlot:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:SetContentForSlot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamNamedSlotHost:SetContentForSlot:SlotName {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:SetContentForSlot:SlotName
+    src   "Slot Name"
+    // from the engine's zh-Hans
+    text  "插槽名称"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamContentWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget
+    src   "Single-child host equivalent to UContentWidget."
+    text  "等同于UContentWidget的单子控件宿主。"
+    state machine
+}
+
+DreamContentWidget:ClearContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:ClearContent
+    src   "ContentWidget always removes its actual child; bDetach is retained for Blueprint compatibility."
+    text  "ContentWidget始终会移除其实际子控件；保留bDetach是为了蓝图兼容性。"
+    state machine
+}
+
+DreamContentWidget:GetContentSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContentSlot
+    src   "UMG's UContentWidget::GetContentSlot: the layout slot of the one child, or null while there is no\nchild or the host's container hands out no slots. It is a hop rather than a field because the slot\nbelongs to the child here, which is what makes one slot class enough for every panel."
+    text  "UMG的UContentWidget::GetContentSlot：唯一子控件的布局插槽；当没有\n子控件，或宿主的容器不提供插槽时，为null。它是一次跳转而不是一个字段，因为这里的插槽\n属于子控件，正因如此，一个插槽类就足以应对所有面板。"
+    state machine
+}
+
+DreamNamedSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot
+    src   "Marks its widget as a hole in a widget blueprint that whoever PLACES that blueprint fills in.\n\nThe other half of the boundary DreamWidget_ShouldEditorExpandContents draws. Folding a nested\ninstance into one row is right for a Button or a Slider, which are finished things; it makes a\nCard, a Panel or a dialogue shell impossible, because the whole point of those is that the parent\nsupplies the middle. This is the sanctioned opening: the class says WHERE, the host says WHAT.\n\nThe name is the widget's display name, which is what the author already types and already sees in\nthe hierarchy -- the same choice UMG makes for UNamedSlot. One child, like UContentWidget: a slot\nthat took several would be a panel, and panels are a thing the class can put here itself.\n\nNot to be confused with UDreamNamedSlotHost above, which is the INamedSlotInterface analogue: a\nruntime name->child map inside ONE hierarchy, with no other asset involved."
+    text  "将其控件标记为控件蓝图中的一个空洞，由放置该蓝图的人来填充。\n\n这是DreamWidget_ShouldEditorExpandContents所划边界的另一半。把嵌套\n实例折叠成一行对Button或Slider这类成品来说是对的；但这样会让\nCard、Panel或对话外壳无法实现，因为它们的全部意义就在于由父级\n提供中间部分。这是被认可的开口：类指明在哪里，宿主指明放什么。\n\n名称是该控件的显示名称，也就是作者已经输入、并且已经在层级中看到的\n名称——与UMG为UNamedSlot所做的选择相同。与UContentWidget一样只有一个子控件：一个\n能容纳多个子控件的插槽就会变成面板，而面板是类自己就可以放在这里的东西。\n\n不要与上面的UDreamNamedSlotHost混淆，它是INamedSlotInterface的对应物：同一个\n层级内的运行时名称到子控件映射，不涉及其他资产。"
+    state machine
+}
+
+DreamNamedSlot:bAcceptsSeveral {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:bAcceptsSeveral
+    src   "Whether this hole takes more than one widget.\n\nOne is the default and the norm -- UMG's UNamedSlot, our own UContentWidget -- for the reason\nabove: a hole that took several would be a panel, and a panel is a thing the class can put\nhere itself. A class that ALREADY put one here says so with this. The expander's content\ncolumn is a vertical box and its hole is that box; without this, `Native.ExpandableArea {\nText {} Text {} }` would place the first line and refuse the second.\n\nOnly NESTED content can arrive in numbers. NamedSlotContent maps a name to one widget, so a\ndesigner drop or an explicit binding is one either way -- this widens what an author can nest,\nnot what the binding map can hold."
+    text  "该空洞是否接受多个控件。\n\n一个控件是默认值，也是常态——UMG的UNamedSlot、我们自己的UContentWidget——原因\n同上：能容纳多个控件的空洞就会成为面板，而面板是类自己就能放在\n这里的东西。已经在这里放了一个控件的类用这个属性来说明这一点。展开器的内容\n列是一个垂直框，它的空洞就是这个框；没有这个属性，`Native.ExpandableArea {\nText {} Text {} }`会放置第一行而拒绝第二行。\n\n只有嵌套内容才能以多个的形式到达。命名插槽内容（NamedSlotContent）将一个名称映射到一个控件，因此\n设计器拖放或显式绑定无论如何都只有一个——这扩展的是作者可以嵌套的内容，\n而不是绑定映射能容纳的内容。"
+    state machine
+}
+
+DreamNamedSlot:bIsDefaultSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:bIsDefaultSlot
+    src   "The hole content goes to when its host names no slot -- `slot Rows default` in a .dui. What\nUDreamUserWidget::GetDefaultSlotName answers when a class does not override it, so a component written entirely\nin .dui has a default slot without a line of C++. One per class; the builder refuses a second (DUI3022)."
+    text  "当宿主未指定插槽时，空洞内容所去的地方——.dui中的`slot Rows default`。这是类未重写时\nUDreamUserWidget::GetDefaultSlotName的返回值，因此完全用.dui编写的控件\n无需一行C++就有默认插槽。每个类只有一个；构建器会拒绝第二个（DUI3022）。"
+    state machine
+}
+
+DreamNamedSlot:GetSlotContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:GetSlotContent
+    src   "The content the host put here, or null while the slot is empty."
+    text  "此插槽中宿主放置的内容，如果插槽为空则为 null。"
+    state machine
+}
+
+DreamNamedSlotHost {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost
+    src   "Named child attachment points equivalent to INamedSlotInterface."
+    text  "相当于INamedSlotInterface的具名子级插槽附加点。"
+    state machine
+}
+
+namespace UObjectCategory
+
+ContentWidget {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:CanAcceptChild
+    src   "ContentWidget"
+    text  "控件"
+    state machine
+}
+
+NamedSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:GetSlotContent
+    src   "NamedSlot"
+    text  "插槽"
+    state machine
+}
+
+NamedSlots {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:ClearSlot
+    src   "NamedSlots"
+    text  "命名插槽"
+    state machine
+}

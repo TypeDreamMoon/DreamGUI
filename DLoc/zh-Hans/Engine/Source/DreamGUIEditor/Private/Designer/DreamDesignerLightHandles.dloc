@@ -1,0 +1,38 @@
+dloc 1
+culture zh-Hans
+namespace DreamDesignerLightHandles
+
+PointerLight {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerLightHandles.cpp
+    src   "Pointer Light"
+    text  "指向光"
+    state machine
+}
+
+LightReach {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerLightHandles.cpp
+    src   "Change Pointer Light Reach"
+    text  "调整指向光范围"
+    state machine
+}
+
+MoveLight {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerLightHandles.cpp
+    src   "Move Pointer Light"
+    text  "移动指向光"
+    state machine
+}
+
+GlobalLight {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerLightHandles.cpp
+    src   "Global Light"
+    text  "全局光"
+    state machine
+}
+
+MoveGlobalLight {
+    at    Source/DreamGUIEditor/Private/Designer/DreamDesignerLightHandles.cpp
+    src   "Move Global Light"
+    text  "移动全局光"
+    state machine
+}

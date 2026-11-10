@@ -1,0 +1,345 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRadioButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton
+    src   "Dream Radio Button"
+    text  "Dream单选按钮"
+    state machine
+}
+
+DreamRadioButton:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:AcceptedMouseButtons
+    src   "Accepted Mouse Buttons"
+    text  "接受的鼠标按键"
+    state machine
+}
+
+DreamRadioButton:bAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:bAutoGroupWithSiblings
+    src   "Auto Group with Siblings"
+    text  "自动与同级分组"
+    state machine
+}
+
+DreamRadioButton:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:bIsOn
+    src   "Is On"
+    text  "是否开启"
+    state machine
+}
+
+DreamRadioButton:BoxNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:BoxNode
+    src   "Box Node"
+    text  "方框节点"
+    state machine
+}
+
+DreamRadioButton:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:CheckedState
+    src   "Checked State"
+    // from the engine's zh-Hans
+    text  "已勾选状态"
+    state draft
+}
+
+DreamRadioButton:DotNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:DotNode
+    src   "Dot Node"
+    text  "圆点节点"
+    state machine
+}
+
+DreamRadioButton:GetAcceptedMouseButtons:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAcceptedMouseButtons:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetAutoGroupWithSiblings:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAutoGroupWithSiblings:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetCheckedState:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetCheckedState:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetIsOn:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetIsOn:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetToggleGroup:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetToggleGroup:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:IsChecked:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:IsChecked:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRadioButton:OnCheckStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnCheckStateChanged
+    src   "On Check State Changed"
+    // from the engine's zh-Hans
+    text  "勾选状态变化时"
+    state draft
+}
+
+DreamRadioButton:OnToggleChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnToggleChanged
+    src   "On Toggle Changed"
+    text  "切换状态改变时"
+    state machine
+}
+
+DreamRadioButton:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamRadioButton:SetAcceptedMouseButtons:InAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAcceptedMouseButtons:InAcceptedMouseButtons
+    src   "In Accepted Mouse Buttons"
+    text  "传入的可接受鼠标按键"
+    state machine
+}
+
+DreamRadioButton:SetAutoGroupWithSiblings:bInAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAutoGroupWithSiblings:bInAutoGroupWithSiblings
+    src   "In Auto Group with Siblings"
+    text  "输入自动与同级分组"
+    state machine
+}
+
+DreamRadioButton:SetCheckedState:InCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetCheckedState:InCheckedState
+    src   "In Checked State"
+    // from the engine's zh-Hans
+    text  "在已勾选状态中"
+    state draft
+}
+
+DreamRadioButton:SetIsChecked:bInIsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsChecked:bInIsChecked
+    src   "In Is Checked"
+    // from the engine's zh-Hans
+    text  "在已勾选中"
+    state draft
+}
+
+DreamRadioButton:SetIsOn:bInIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsOn:bInIsOn
+    src   "In Is On"
+    text  "输入是否开启"
+    state machine
+}
+
+DreamRadioButton:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamRadioButton:SetToggleGroup:InGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetToggleGroup:InGroup
+    src   "In Group"
+    // from the engine's zh-Hans
+    text  "In Group"
+    state draft
+}
+
+DreamRadioButton:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamRadioButton:ToggleBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:ToggleBehaviour
+    src   "Toggle Behaviour"
+    text  "切换行为"
+    state machine
+}
+
+DreamRadioButtonChangedEvent__DelegateSignature:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButtonChangedEvent__DelegateSignature:bIsOn
+    src   "Is On"
+    text  "是否开启"
+    state machine
+}
+
+DreamRadioCheckStateChangedEvent__DelegateSignature:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioCheckStateChangedEvent__DelegateSignature:CheckedState
+    src   "Checked State"
+    // from the engine's zh-Hans
+    text  "已勾选状态"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamRadioButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton
+    src   "A radio button whose hierarchy is code, not an asset.\n\nThe toggle's anatomy with the toggle's own behaviour underneath -- a box, a mark centred in it, a\nlabel beside it in a row -- differing in exactly two places, which is why it is a class and not a\nstyle: the mark is an image dot sized by the style rather than a glyph, and the box's corner\nradius defaults to half its size, which is the whole of what makes it read as a radio.\n\nWhat makes a radio a radio at runtime is the GROUP, and the group is not this control's: it is a\nUUIToggleGroup behaviour living on a shared ancestor, and membership is handed over through\nSetToggleGroup. Ungrouped, this control is honest about being a round toggle -- clicking it again\nturns it off; a group with bAllowNoneSelected=false is what forbids that.\n\n    /Script/DreamGUIControls.DreamRadioButton OptionA {\n        bIsOn = true\n        OnToggleChanged -> HandleOptionA\n    }"
+    text  "层级由代码而非资源构成的单选按钮。\n\n沿用开关的结构，底层是开关自身的行为——一个方框、居中于其中的标记、\n同一行上位于其旁的标签——仅有两处不同，这正是它是类而不是样式的原因：\n标记是由样式决定尺寸的图像圆点，而不是字形；方框的圆角半径\n默认为其尺寸的一半，而正是这一点让它看起来像单选按钮。\n\n在运行时让单选按钮成为单选按钮的是组，而组并不属于此控件：它是\n位于共享祖先上的 UUIToggleGroup 行为，成员关系通过\nSetToggleGroup 移交。未分组时，此控件实际上就是一个圆形开关——再次点击\n会将其关闭；bAllowNoneSelected=false 的组才会禁止这一点。\n\n    /Script/DreamGUIControls.DreamRadioButton OptionA {\n        bIsOn = true\n        OnToggleChanged -> HandleOptionA\n    }"
+    state machine
+}
+
+DreamRadioButton:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:AcceptedMouseButtons
+    src   "WHICH mouse buttons press and choose this radio -- a bitmask over EDreamUIMouseButtonType, the\nleft button alone by default: a radio is a check box to UMG, and SCheckBox answers the left\nbutton and nothing else, so a right click neither presses nor chooses it.\n\nUDreamButton's knob, with the same spelling (in .dui a number, one bit per\nEDreamUIMouseButtonType value: 1 is Left, 4 is Right). A touch and a gamepad or keyboard press\nalways count. Pushed onto the behaviour with the rest of the look."
+    text  "哪些鼠标按键按下并选中此单选按钮——EDreamUIMouseButtonType 的位掩码，\n默认只有左键：对 UMG 而言单选按钮就是一个复选框，而 SCheckBox 只响应左键、\n别的都不响应，因此右键既不会按下也不会选中它。\n\nUDreamButton 的配置项，写法相同（在 .dui 中是一个数字，\n每个 EDreamUIMouseButtonType 值占一位：1 为 Left，4 为 Right）。触摸以及手柄或键盘按键\n始终有效。随其余外观一并推送到行为上。"
+    state machine
+}
+
+DreamRadioButton:bAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:bAutoGroupWithSiblings
+    src   "Find a UUIToggleGroup on an ancestor at Awake and join it -- with a group behaviour on the\nshared parent, sibling radios exclude each other with nothing wired. Default on, because a\nradio that does not exclude is a round toggle; off, grouping goes through SetToggleGroup."
+    text  "Awake 时在祖先上查找 UUIToggleGroup 并加入它——在\n共享父级上放置一个组行为后，同级单选按钮无需任何连线即可互斥。默认开启，因为\n不互斥的单选按钮就是一个圆形开关；关闭后，分组需通过 SetToggleGroup 进行。"
+    state machine
+}
+
+DreamRadioButton:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:bIsOn
+    src   "Selected or not. A property rather than the getter/setter pair alone, because the pair alone\nis invisible: .dui writes properties, the designer lists properties, and a binding resolves a\nproperty. Authored value in, mirror of the behaviour's out -- HandleValueChanged keeps it\nhonest when the user (or the group switching this one off) is the writer."
+    text  "是否已选中。这里用属性而不是仅提供 getter/setter 对，因为仅有这对函数\n是不可见的：.dui 写入的是属性，设计器列出的是属性，绑定解析的也是\n属性。写入的是编辑时的值，镜像的是行为对象的输出——当写入方是用户\n（或关闭此项的组）时，由 HandleValueChanged 保持其准确。"
+    state machine
+}
+
+DreamRadioButton:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:CheckedState
+    src   "The full state, in UMG's check-box vocabulary -- the same EDreamCheckState UDreamToggle carries,\nand the same three answers.\n\nA radio WITH a third state is not a contradiction: a mixed multi-select (\"these four objects\ndisagree about which option they are on\") is exactly the case Undetermined exists for, and it\nis as ordinary for a radio group as for a check box. The asymmetry with the toggle was the\ndefect -- one of the pair could say \"I do not know\" and the other could not.\n\nAuthorable, never clickable-into: the click lands as Checked -- a radio clicked is a radio chosen,\nwhich is what a group of them is for. The check box differs on purpose: it clears instead, because\nthat is UMG's SCheckBox rule, and UMG has no radio whose rule this could follow; a radio a click\nmerely cleared would take a second click to be chosen. The behaviour underneath stays two-state\nand is parked at unchecked while this stands, so the GROUP reads an undetermined radio as\nnot-selected -- which is the honest answer to \"is this the one\"."
+    text  "完整状态，沿用 UMG 复选框的术语——即 UDreamToggle 携带的同一个 EDreamCheckState，\n同样三种取值。\n\n带第三态的单选按钮并不矛盾：混合多选（“这四个对象\n对它们各自处于哪个选项意见不一”）正是 Undetermined 存在的场合，\n对单选按钮组来说它与复选框一样普通。与开关之间的不对称才是\n缺陷——这一对里一个能说“我不知道”，另一个不能。\n\n可编辑，但永远不能通过点击进入：点击落定为 Checked——单选按钮被点击就是被选中，\n这正是单选按钮组的用途。复选框则有意不同：它会改为清除，因为\n那是 UMG 的 SCheckBox 规则，而 UMG 没有单选按钮可供遵循这条规则；一次点击\n只是清除的单选按钮需要再点一次才能被选中。底层的行为对象保持两态，\n在此状态生效期间停在未选中，因此组会把未确定的单选按钮读作\n未选中——这才是对“是不是它”的诚实回答。"
+    state machine
+}
+
+DreamRadioButton:GetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetCheckedState
+    src   "The full state. The behaviour is the truth for the two states it can hold; Undetermined is the\ncontrol's own and reads from here."
+    text  "完整状态。对于行为对象能持有的两种状态，以行为对象为准；Undetermined 属于\n控件自身，从此处读取。"
+    state machine
+}
+
+DreamRadioButton:IsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:IsChecked
+    src   "UMG's convenience: exactly GetCheckedState() == Checked."
+    text  "UMG 的便捷写法：正好等价于 GetCheckedState() == Checked。"
+    state machine
+}
+
+DreamRadioButton:OnCheckStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnCheckStateChanged
+    src   "UMG's spelling of the same moment, carrying the full state. Fires whenever CheckedState changes\n-- alongside OnToggleChanged when the bool projection moved too."
+    text  "UMG 对同一时刻的写法，携带完整状态。每当 CheckedState 变化时触发\n——若布尔投影也随之变化，则与 OnToggleChanged 一同触发。"
+    state machine
+}
+
+DreamRadioButton:OnToggleChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnToggleChanged
+    src   "Fired by the toggle underneath, re-broadcast here so a consumer never reaches into the parts."
+    text  "由底层的开关触发，在此重新广播，使使用方无需深入到内部部件。"
+    state machine
+}
+
+DreamRadioButton:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamRadioButton:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAcceptedMouseButtons
+    src   "Writes the bitmask and pushes it onto the behaviour at once."
+    text  "写入位掩码并立即推送到行为对象。"
+    state machine
+}
+
+DreamRadioButton:SetAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAutoGroupWithSiblings
+    src   "Turn the automatic grouping on or off, and act on it now.\n\nThe behaviour reads its own copy of this at Awake, so a radio created after begin play -- a\nlist of options built from save data, which is the ordinary case -- would otherwise never\nsearch at all. Turning it ON therefore does the search the behaviour would have done, and only\nwhen this radio is in no group yet.\n\nTurning it OFF leaves any group already joined alone: leaving is SetToggleGroup(null), which\nis a separate thing to want and already has a spelling."
+    text  "开启或关闭自动分组，并立即生效。\n\n行为对象在 Awake 时读取自己的这份副本，因此在开始游戏之后创建的单选按钮——\n由存档数据构建的选项列表，也就是常见情形——否则根本不会\n进行查找。因此开启时会执行行为对象本应执行的查找，且仅在\n此单选按钮尚未加入任何组时才执行。\n\n关闭时不会影响已经加入的组：离开组是 SetToggleGroup(null)，\n那是另一种需求，且已有对应的写法。"
+    state machine
+}
+
+DreamRadioButton:SetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetCheckedState
+    src   "Set any of the three. Checked/Unchecked go through the behaviour WITH notify -- the path a\nclick takes, and the path the group hears -- while Undetermined parks the behaviour at\nunchecked without notify and lives on the control."
+    text  "设置三种状态中的任意一种。Checked/Unchecked 带通知地经由行为对象处理——这是点击\n所走的路径，也是组能听到的路径——而 Undetermined 不通知，把行为对象停在\n未选中状态，自身则驻留在控件上。"
+    state machine
+}
+
+DreamRadioButton:SetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsOn
+    src   "The compatibility spelling of SetCheckedState(Checked/Unchecked), exactly as on the toggle."
+    text  "SetCheckedState(Checked/Unchecked) 的兼容写法，与开关上的完全一致。"
+    state machine
+}
+
+DreamRadioButton:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamRadioButton:SetToggleGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetToggleGroup
+    src   "Membership, passed straight through to the behaviour.\n\nA passthrough and nothing more on purpose: UUIToggle already owns joining, leaving and the\njoin-time reconcile, and this control adds no second copy of that state. (The behaviour's\nbAutoFindToggleGroupInParent would make grouping declarative, but it has no setter today and\nis only read in Awake -- so wiring a group from code is this call, made after Initialize.)"
+    text  "组成员关系，直接透传给行为对象。\n\n有意只做透传，不做更多：UUIToggle 已负责加入、离开以及\n加入时的协调，本控件不再额外保存该状态的第二份副本。（行为对象的\nbAutoFindToggleGroupInParent 本可以让分组变为声明式的，但它目前没有 setter，\n且只在 Awake 时读取——因此从代码中接入组就是这次调用，需在 Initialize 之后进行。）"
+    state machine
+}
+
+DreamRadioButton:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Radio Button" {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAcceptedMouseButtons
+    src   "Radio Button"
+    // from the engine's zh-Hans
+    text  "单选按钮"
+    state draft
+}

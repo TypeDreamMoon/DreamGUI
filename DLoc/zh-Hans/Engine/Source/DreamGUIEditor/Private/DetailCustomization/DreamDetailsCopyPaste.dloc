@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace DreamDetailsCopyPaste
+
+PasteProperty {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamDetailsCopyPaste.h
+    src   "Paste Property"
+    // from the engine's zh-Hans
+    text  "粘贴属性"
+    state draft
+}

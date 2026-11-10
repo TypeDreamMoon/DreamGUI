@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace SDreamUIEyedropper
+
+Tooltip {
+    at    Source/DreamGUIEditor/Private/Widget/SDreamUIEyedropper.cpp
+    src   "Pick a colour: click here, then click a pixel of the designer viewport -- as it is drawn, after its effects -- or anywhere on the screen. Escape or a right click cancels."
+    text  "选择颜色：点击此处，然后点击设计器视口的像素（显示效果已应用），或点击屏幕上的任意位置。按 Esc 键或右键单击可取消。"
+    state machine
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUITabSwitchTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITabSwitchTarget.h#DreamUITabSwitchTarget
+    src   "Dream UITab Switch Target"
+    text  "Dream UI 标签切换目标"
+    state machine
+}

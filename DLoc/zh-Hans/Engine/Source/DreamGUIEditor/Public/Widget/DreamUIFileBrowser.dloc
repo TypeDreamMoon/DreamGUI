@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIFileBrowser
+
+BrowseForFile {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIFileBrowser.h
+    src   "Browse for a file"
+    // from the engine's zh-Hans
+    text  "浏览文件"
+    state draft
+}
+
+... {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIFileBrowser.h
+    src   "..."
+    // from the engine's zh-Hans
+    text  "……"
+    state draft
+}

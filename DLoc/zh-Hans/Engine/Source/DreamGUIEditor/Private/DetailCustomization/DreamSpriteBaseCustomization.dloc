@@ -1,0 +1,38 @@
+dloc 1
+culture zh-Hans
+namespace DreamUISpriteBaseCustomization
+
+NotSupportVisiblePixelRaycast_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteBaseCustomization.cpp
+    src   "NotSupportVisiblePixelRaycast"
+    text  "不支持可见像素射线投射"
+    state machine
+}
+
+NotSupportVisiblePixelRaycast_Text {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteBaseCustomization.cpp
+    src   "Use RaycastType of VisiblePixel, but this Sprite does not support this type."
+    text  "请使用可见像素的射线投射类型，但此精灵不支持此类型。"
+    state machine
+}
+
+AdditionalButton {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteBaseCustomization.cpp
+    src   "AdditionalButton"
+    text  "附加按钮"
+    state machine
+}
+
+SpriteSnapSize_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteBaseCustomization.cpp
+    src   "UISprite snap size"
+    text  "精灵对齐尺寸"
+    state machine
+}
+
+MakePixelPerfectButton {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamSpriteBaseCustomization.cpp
+    src   "Snap Size"
+    text  "缩放比例"
+    state machine
+}

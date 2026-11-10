@@ -1,0 +1,220 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamGestureEventData {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData
+    src   "Dream Gesture Event Data"
+    text  "手势事件数据"
+    state machine
+}
+
+DreamGestureEventData:GestureType {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:GestureType
+    src   "Gesture Type"
+    text  "手势类型"
+    state machine
+}
+
+DreamGestureEventData:PinchDistance {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchDistance
+    src   "Pinch Distance"
+    text  "捏合距离"
+    state machine
+}
+
+DreamGestureEventData:PinchDistanceDelta {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchDistanceDelta
+    src   "Pinch Distance Delta"
+    text  "捏合距离变化量"
+    state machine
+}
+
+DreamGestureEventData:PinchScale {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchScale
+    src   "Pinch Scale"
+    text  "捏合缩放比例"
+    state machine
+}
+
+DreamGestureEventData:PointerIDs {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PointerIDs
+    src   "Pointer IDs"
+    text  "指针 ID"
+    state machine
+}
+
+DreamGestureEventData:ScreenPosition {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:ScreenPosition
+    src   "Screen Position"
+    // from the engine's zh-Hans
+    text  "屏幕位置"
+    state draft
+}
+
+DreamGestureEventData:SwipeDelta {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDelta
+    src   "Swipe Delta"
+    text  "滑动偏移量"
+    state machine
+}
+
+DreamGestureEventData:SwipeDirection {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDirection
+    src   "Swipe Direction"
+    text  "滑动方向"
+    state machine
+}
+
+DreamGestureEventData:SwipeDuration {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDuration
+    src   "Swipe Duration"
+    text  "滑动持续时间"
+    state machine
+}
+
+DreamGestureEventData:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamGestureEventData:Widget {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+EDreamUIGestureType.EDreamUIGestureType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:EDreamUIGestureType_MAX
+    src   "EDream UIGesture Type MAX"
+    text  "EDream UIGesture Type 最大值"
+    state machine
+}
+
+EDreamUIGestureType.None {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIGestureType.Pinch {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:Pinch
+    src   "Pinch"
+    // from the engine's zh-Hans
+    text  "捏握"
+    state draft
+}
+
+EDreamUIGestureType.Swipe {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:Swipe
+    src   "Swipe"
+    text  "滑动"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamGestureEventData {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData
+    src   "What a multi-pointer gesture was, once the recognizer has decided.\n\nMulti-touch has always produced one independent pointer per finger, which is the right foundation\nand by itself never adds up to anything: nothing looked at two of them together, so pinch-to-zoom\nand swipe-to-dismiss had to be hand-rolled by every project out of raw pointer positions.\n\nA gesture is deliberately NOT a pointer. It has no press widget, no drag, no hover -- it is a\nconclusion drawn from pointers that already dispatched their own events. It is still a\nUDreamBaseEventData so that it travels the same dispatch path as everything else: handlers on the\nwidget, bubbling up the hierarchy, and the event system's InputEvent for anyone watching globally."
+    text  "识别器判定之后，多点手势所表示的内容。\n\n多点触控一向为每根手指生成一个独立的指针，这是正确的基础，\n但仅凭这一点永远无法构成任何东西：没有任何逻辑会同时查看其中两个指针，因此双指缩放\n和滑动关闭只能由每个项目根据原始指针位置自行实现。\n\n手势刻意不是指针。它没有按下控件、没有拖动、没有悬停——它是\n从已经派发自身事件的指针中得出的结论。它仍然是\nUDreamBaseEventData，因此会沿与其他一切相同的派发路径传递：控件上的\n处理程序、沿层级冒泡，以及供全局监听者使用的事件系统 InputEvent。"
+    state machine
+}
+
+DreamGestureEventData:PinchDistance {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchDistance
+    src   "Pinch: the current distance between the two fingers, in viewport pixels."
+    text  "双指缩放：两根手指之间的当前距离，单位为视口像素。"
+    state machine
+}
+
+DreamGestureEventData:PinchDistanceDelta {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchDistanceDelta
+    src   "Pinch: the change in finger distance since the previous report, in viewport pixels."
+    text  "双指缩放：自上次报告以来手指距离的变化量，单位为视口像素。"
+    state machine
+}
+
+DreamGestureEventData:PinchScale {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PinchScale
+    src   "Pinch: current finger distance over the distance when the two fingers were first both down."
+    text  "双指缩放：当前手指距离与两根手指首次同时按下时距离的比值。"
+    state machine
+}
+
+DreamGestureEventData:PointerIDs {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:PointerIDs
+    src   "The pointers involved: two for a pinch, one for a swipe."
+    text  "涉及的指针：双指缩放为两个，滑动为一个。"
+    state machine
+}
+
+DreamGestureEventData:ScreenPosition {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:ScreenPosition
+    src   "Where the gesture is happening: the midpoint for a pinch, the current position for a swipe."
+    text  "手势发生的位置：双指缩放为两指中点，滑动为当前位置。"
+    state machine
+}
+
+DreamGestureEventData:SwipeDelta {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDelta
+    src   "Swipe: from press to release, in viewport pixels."
+    text  "滑动：从按下到松开，单位为视口像素。"
+    state machine
+}
+
+DreamGestureEventData:SwipeDirection {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDirection
+    src   "Swipe: which way, snapped to the four directions.\n\nThe same enum directional navigation uses, on purpose: a swipe and a stick flick mean the same\nthing to a screen, and a handler that already knows what Left means should not have to learn a\nsecond spelling of it."
+    text  "滑动：方向，吸附到四个方向。\n\n刻意使用与方向导航相同的枚举：滑动和摇杆拨动对屏幕而言含义相同，\n已经知道 Left 含义的处理程序不应该再去学\n第二种写法。"
+    state machine
+}
+
+DreamGestureEventData:SwipeDuration {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:SwipeDuration
+    src   "Swipe: how long the finger was down, in seconds."
+    text  "滑动：手指按下的时长，单位为秒。"
+    state machine
+}
+
+DreamGestureEventData:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:UserIndex
+    src   "Whose gesture. Matches the user index of the pointers it was recognized from."
+    text  "手势所属的用户。与其识别来源指针的用户索引一致。"
+    state machine
+}
+
+DreamGestureEventData:Widget {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#DreamGestureEventData:Widget
+    src   "The widget the gesture is dispatched to -- what the first of its pointers was pressed on."
+    text  "手势派发到的控件——即其第一个指针按下时所在的控件。"
+    state machine
+}
+
+EDreamUIGestureType {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType
+    src   "Which gesture this is. One type per recognizer; the fields below say which ones are meaningful."
+    text  "这是哪种手势。每个识别器一种类型；下面的字段说明哪些是有意义的。"
+    state machine
+}
+
+EDreamUIGestureType.Pinch {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:Pinch
+    src   "Two pointers moving apart (Scale > 1) or together (Scale < 1)."
+    text  "两个指针分开移动（Scale > 1）或靠拢移动（Scale < 1）。"
+    state machine
+}
+
+EDreamUIGestureType.Swipe {
+    at    Source/DreamGUI/Public/Event/DreamGestureEventData.h#EDreamUIGestureType:Swipe
+    src   "One pointer travelling far enough, fast enough, in one direction, and then released."
+    text  "一个指针沿一个方向移动足够远、足够快，然后释放。"
+    state machine
+}

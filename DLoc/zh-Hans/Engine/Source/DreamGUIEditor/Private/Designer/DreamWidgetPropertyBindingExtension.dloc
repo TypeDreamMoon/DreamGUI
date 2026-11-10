@@ -1,0 +1,180 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetPropertyBindingExtension
+
+NoTemplateOwner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "this object has no counterpart in the Blueprint's own hierarchy"
+    text  "此对象在蓝图自身的层级结构中没有对应项。"
+    state machine
+}
+
+NoSpelling {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "its value has no spelling in a .dui; remove the binding, then set the value"
+    text  "此值的拼写未在 .dui 文件中定义；请移除绑定，然后设置值。"
+    state machine
+}
+
+CreateBinding {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Create Binding"
+    // from the engine's zh-Hans
+    text  "创建绑定"
+    state draft
+}
+
+BindingCategory {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Bindings"
+    // from the engine's zh-Hans
+    text  "绑定"
+    state draft
+}
+
+Bind {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Bind"
+    // from the engine's zh-Hans
+    text  "绑定"
+    state draft
+}
+
+TwoWayLabel {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "<-> {0}"
+    text  "<-> {0}"
+    state machine
+}
+
+BindTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Drive this property from a function, evaluated every frame."
+    text  "从函数驱动此属性，每帧计算一次。"
+    state machine
+}
+
+BindSection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Bind"
+    // from the engine's zh-Hans
+    text  "绑定"
+    state draft
+}
+
+CreateBindingEntry {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Create Binding"
+    // from the engine's zh-Hans
+    text  "创建绑定"
+    state draft
+}
+
+CreateBindingEntryTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Add a function of the right shape, bind it, and open it."
+    text  "添加一个形状正确的函数，绑定它，然后打开它。"
+    state machine
+}
+
+ExistingSection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Functions"
+    // from the engine's zh-Hans
+    text  "函数"
+    state draft
+}
+
+SetBinding {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Set Binding"
+    // from the engine's zh-Hans
+    text  "设置绑定"
+    state draft
+}
+
+TwoWaySection {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Two-Way Bind to Variable"
+    text  "双向绑定到变量"
+    state machine
+}
+
+TwoWayEntry {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "<-> {0}"
+    text  "<-> {0}"
+    state machine
+}
+
+TwoWayEntryTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Mirror this property and the variable both ways: the variable drives the control, and the control's changes are written back into it."
+    text  "将此属性和变量双向同步：变量驱动控件，控件的更改会写回变量。"
+    state machine
+}
+
+SetTwoWayBinding {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Two-Way Bind to Variable"
+    text  "双向绑定到变量"
+    state machine
+}
+
+NoTwoWayVariable {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "No variable of a matching type"
+    text  "没有匹配类型的变量。"
+    state machine
+}
+
+NoTwoWayVariableTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Declare one in the file's props, or a viewmodel with a member of this type, and compile."
+    text  "在文件的属性中声明一个，或者在视图模型中添加一个该类型的成员，然后编译。"
+    state machine
+}
+
+RemoveBindingEntry {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Remove Binding"
+    // from the engine's zh-Hans
+    text  "移除绑定"
+    state draft
+}
+
+RemoveBindingEntryTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Leave the property at its authored value."
+    text  "保持该属性为手动设置的值。"
+    state machine
+}
+
+RemoveBinding {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Remove Binding"
+    // from the engine's zh-Hans
+    text  "移除绑定"
+    state draft
+}
+
+UnbindAndSetEntry {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Unbind and Set to This Value"
+    text  "取消绑定并设置为当前值"
+    state machine
+}
+
+UnbindAndSetEntryTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Replace the binding's line in the file with the value this property shows now."
+    text  "将此属性显示的当前值替换为绑定所使用的行。"
+    state machine
+}
+
+UnbindAndSet {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetPropertyBindingExtension.cpp
+    src   "Unbind and Set Value"
+    text  "取消绑定并设置值"
+    state machine
+}

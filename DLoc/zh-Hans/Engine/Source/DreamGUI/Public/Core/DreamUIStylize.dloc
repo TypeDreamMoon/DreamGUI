@@ -1,0 +1,593 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamStylizeLayer {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer
+    src   "Dream Stylize Layer"
+    text  "Dream 风格化图层"
+    state machine
+}
+
+DreamStylizeLayer:AberrationAmount {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:AberrationAmount
+    src   "Aberration Amount"
+    text  "畸变量"
+    state machine
+}
+
+DreamStylizeLayer:AberrationAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:AberrationAngle
+    src   "Aberration Angle"
+    text  "畸变角度"
+    state machine
+}
+
+DreamStylizeLayer:AberrationMode {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:AberrationMode
+    src   "Aberration Mode"
+    text  "畸变模式"
+    state machine
+}
+
+DreamStylizeLayer:bAnimateGrain {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:bAnimateGrain
+    src   "Animate Grain"
+    text  "动画噪点"
+    state machine
+}
+
+DreamStylizeLayer:bCMYK {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:bCMYK
+    src   "CMYK"
+    text  "CMYK"
+    state machine
+}
+
+DreamStylizeLayer:bEnabled {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamStylizeLayer:BlockShift {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:BlockShift
+    src   "Block Shift"
+    text  "块状偏移"
+    state machine
+}
+
+DreamStylizeLayer:BlockSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:BlockSize
+    src   "Block Size"
+    // from the engine's zh-Hans
+    text  "块大小"
+    state draft
+}
+
+DreamStylizeLayer:CellSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:CellSize
+    src   "Cell Size"
+    // from the engine's zh-Hans
+    text  "单元大小"
+    state draft
+}
+
+DreamStylizeLayer:ColorSplit {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ColorSplit
+    src   "Color Split"
+    text  "色彩分离"
+    state machine
+}
+
+DreamStylizeLayer:Curvature {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Curvature
+    src   "Curvature"
+    // from the engine's zh-Hans
+    text  "曲率"
+    state draft
+}
+
+DreamStylizeLayer:FlickerFrequency {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:FlickerFrequency
+    src   "Flicker Frequency"
+    text  "闪烁频率"
+    state machine
+}
+
+DreamStylizeLayer:FlickerStrength {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:FlickerStrength
+    src   "Flicker Strength"
+    text  "闪烁强度"
+    state machine
+}
+
+DreamStylizeLayer:GlitchIntensity {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:GlitchIntensity
+    src   "Glitch Intensity"
+    text  "故障强度"
+    state machine
+}
+
+DreamStylizeLayer:GrainIntensity {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:GrainIntensity
+    src   "Grain Intensity"
+    text  "颗粒强度"
+    state machine
+}
+
+DreamStylizeLayer:GrainSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:GrainSize
+    src   "Grain Size"
+    text  "颗粒大小"
+    state machine
+}
+
+DreamStylizeLayer:HalftoneShape {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:HalftoneShape
+    src   "Halftone Shape"
+    text  "半色调形状"
+    state machine
+}
+
+DreamStylizeLayer:Levels {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Levels
+    src   "Levels"
+    // from the engine's zh-Hans
+    text  "关卡"
+    state draft
+}
+
+DreamStylizeLayer:LineDensity {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:LineDensity
+    src   "Line Density"
+    text  "线条密度"
+    state machine
+}
+
+DreamStylizeLayer:LineJitter {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:LineJitter
+    src   "Line Jitter"
+    text  "线条抖动"
+    state machine
+}
+
+DreamStylizeLayer:MatrixSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:MatrixSize
+    src   "Matrix Size"
+    text  "矩阵大小"
+    state machine
+}
+
+DreamStylizeLayer:PaperColor {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PaperColor
+    src   "Paper Color"
+    text  "纸张颜色"
+    state machine
+}
+
+DreamStylizeLayer:PhosphorSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PhosphorSize
+    src   "Phosphor Size"
+    text  "磷光体大小"
+    state machine
+}
+
+DreamStylizeLayer:PhosphorStrength {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PhosphorStrength
+    src   "Phosphor Strength"
+    text  "磷光体强度"
+    state machine
+}
+
+DreamStylizeLayer:PixelSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PixelSize
+    src   "Pixel Size"
+    // from the engine's zh-Hans
+    text  "像素大小"
+    state draft
+}
+
+DreamStylizeLayer:Rate {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Rate
+    src   "Rate"
+    // from the engine's zh-Hans
+    text  "速率"
+    state draft
+}
+
+DreamStylizeLayer:ScanlineSpacing {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ScanlineSpacing
+    src   "Scanline Spacing"
+    text  "扫描线间距"
+    state machine
+}
+
+DreamStylizeLayer:ScanlineStrength {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ScanlineStrength
+    src   "Scanline Strength"
+    text  "扫描线强度"
+    state machine
+}
+
+DreamStylizeLayer:ScreenAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ScreenAngle
+    src   "Screen Angle"
+    text  "屏幕角度"
+    state machine
+}
+
+DreamStylizeLayer:Seed {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Seed
+    src   "Seed"
+    // from the engine's zh-Hans
+    text  "种子"
+    state draft
+}
+
+DreamStylizeLayer:Type {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Type
+    src   "Type"
+    // from the engine's zh-Hans
+    text  "类型"
+    state draft
+}
+
+DreamStylizeLayer:VignetteColor {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteColor
+    src   "Vignette Color"
+    // from the engine's zh-Hans
+    text  "晕映颜色"
+    state draft
+}
+
+DreamStylizeLayer:VignetteIntensity {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteIntensity
+    src   "Vignette Intensity"
+    // from the engine's zh-Hans
+    text  "晕映强度"
+    state draft
+}
+
+DreamStylizeLayer:VignetteRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteRadius
+    src   "Vignette Radius"
+    text  "暗角半径"
+    state machine
+}
+
+DreamStylizeLayer:VignetteRoundness {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteRoundness
+    src   "Vignette Roundness"
+    text  "晕影圆角"
+    state machine
+}
+
+DreamStylizeLayer:VignetteSoftness {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteSoftness
+    src   "Vignette Softness"
+    // from the engine's zh-Hans
+    text  "晕映柔和度"
+    state draft
+}
+
+EDreamChromaticAberrationMode.Directional {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamChromaticAberrationMode:Directional
+    src   "Directional"
+    // from the engine's zh-Hans
+    text  "Directional"
+    state draft
+}
+
+EDreamChromaticAberrationMode.EDreamChromaticAberrationMode_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamChromaticAberrationMode:EDreamChromaticAberrationMode_MAX
+    src   "EDream Chromatic Aberration Mode MAX"
+    text  "色差模式 (最大值)"
+    state machine
+}
+
+EDreamChromaticAberrationMode.Radial {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamChromaticAberrationMode:Radial
+    src   "Radial"
+    // from the engine's zh-Hans
+    text  "Radial"
+    state draft
+}
+
+EDreamHalftoneShape.Dots {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamHalftoneShape:Dots
+    src   "Dots"
+    text  "点"
+    state machine
+}
+
+EDreamHalftoneShape.EDreamHalftoneShape_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamHalftoneShape:EDreamHalftoneShape_MAX
+    src   "EDream Halftone Shape MAX"
+    text  "半色调形状 (最大值)"
+    state machine
+}
+
+EDreamHalftoneShape.Lines {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamHalftoneShape:Lines
+    src   "Lines"
+    // from the engine's zh-Hans
+    text  "线条"
+    state draft
+}
+
+EDreamStylizeType.ChromaticAberration {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:ChromaticAberration
+    src   "Chromatic Aberration"
+    // from the engine's zh-Hans
+    text  "色差"
+    state draft
+}
+
+EDreamStylizeType.CRT {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:CRT
+    src   "CRT"
+    text  "CRT"
+    state machine
+}
+
+EDreamStylizeType.Dither {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Dither
+    src   "Dither"
+    text  "抖动"
+    state machine
+}
+
+EDreamStylizeType.EDreamStylizeType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:EDreamStylizeType_MAX
+    src   "EDream Stylize Type MAX"
+    text  "风格化类型 (最大值)"
+    state machine
+}
+
+EDreamStylizeType.FilmGrain {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:FilmGrain
+    src   "Film Grain"
+    // from the engine's zh-Hans
+    text  "胶片粒度"
+    state draft
+}
+
+EDreamStylizeType.Glitch {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Glitch
+    src   "Glitch"
+    text  "故障"
+    state machine
+}
+
+EDreamStylizeType.Halftone {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Halftone
+    src   "Halftone"
+    text  "半色调"
+    state machine
+}
+
+EDreamStylizeType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamStylizeType.Posterize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Posterize
+    src   "Posterize"
+    text  "色阶"
+    state machine
+}
+
+EDreamStylizeType.Vignette {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Vignette
+    src   "Vignette"
+    // from the engine's zh-Hans
+    text  "渐晕"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamStylizeLayer {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer
+    src   "One layer of a stylize effect (UDreamStylizeEffect), in the order they are listed: each works on what the ones before it\nmade. Sizes are in units of the canvas, so the look keeps its size with the UI's scale; a pattern laid on the screen\n(scanlines, a halftone screen, the dither, grain) stays put as the element moves."
+    text  "风格化效果（UDreamStylizeEffect）的一层，按列出顺序排列：每一层都作用于前一层所\n生成的结果。尺寸以画布为单位，因此外观会随UI的缩放保持原有大小；铺在屏幕上的图案\n（扫描线、半色调网屏、抖动、颗粒）会在元素移动时保持不动。"
+    state machine
+}
+
+DreamStylizeLayer:AberrationAmount {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:AberrationAmount
+    src   "How far red and blue are sampled apart: at the edge for Radial, everywhere for Directional."
+    text  "红色和蓝色采样相距的距离：对于径向效果，在边缘处采样；对于定向效果，在所有位置采样。"
+    state machine
+}
+
+DreamStylizeLayer:AberrationAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:AberrationAngle
+    src   "Directional: degrees, 0 up, clockwise."
+    text  "定向效果：以度为单位，0 度为向上，顺时针方向。"
+    state machine
+}
+
+DreamStylizeLayer:bAnimateGrain {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:bAnimateGrain
+    src   "A new grain 24 times a second, rather than one that holds still."
+    text  "每秒生成新的颗粒，而不是静态的颗粒。"
+    state machine
+}
+
+DreamStylizeLayer:bCMYK {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:bCMYK
+    src   "Four screens, cyan, magenta, yellow and black, rather than one of black ink."
+    text  "青色、品红、黄色和黑色四个网屏，而不是一个黑色油墨网屏。"
+    state machine
+}
+
+DreamStylizeLayer:BlockSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:BlockSize
+    src   "The height of a shifted block, and the most it shifts."
+    text  "错位块的高度，以及它的最大偏移量。"
+    state machine
+}
+
+DreamStylizeLayer:CellSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:CellSize
+    src   "A cell of the screen, and the screen's angle in degrees."
+    text  "网屏的单元格大小，以及网屏的角度（度）。"
+    state machine
+}
+
+DreamStylizeLayer:ColorSplit {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ColorSplit
+    src   "How far red and blue split apart."
+    text  "红色与蓝色分离的距离。"
+    state machine
+}
+
+DreamStylizeLayer:Curvature {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Curvature
+    src   "How much the screen bulges: 0 flat."
+    text  "网屏凸起的程度：0为平面。"
+    state machine
+}
+
+DreamStylizeLayer:GlitchIntensity {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:GlitchIntensity
+    src   "How much there is of it without a burst: 0 none, 1 plenty."
+    text  "未爆发时故障的强度：0为无，1为大量。"
+    state machine
+}
+
+DreamStylizeLayer:LineJitter {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:LineJitter
+    src   "The most a jittered line moves, and how many lines jitter (0 to 1)."
+    text  "抖动行的最大移动量，以及抖动行的比例（0到1）。"
+    state machine
+}
+
+DreamStylizeLayer:MatrixSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:MatrixSize
+    src   "4 or 8: the Bayer matrix's size."
+    text  "4或8：Bayer矩阵的大小。"
+    state machine
+}
+
+DreamStylizeLayer:PaperColor {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PaperColor
+    src   "The paper one ink is laid on."
+    text  "承载油墨的纸张颜色。"
+    state machine
+}
+
+DreamStylizeLayer:PhosphorSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PhosphorSize
+    src   "A column of the phosphor mask, one of red, green and blue."
+    text  "荧光掩膜的一列，即红色、绿色、蓝色之一。"
+    state machine
+}
+
+DreamStylizeLayer:PixelSize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:PixelSize
+    src   "How big a dither cell is: 1 a unit of the canvas."
+    text  "抖动单元格的大小：1为一个画布单位。"
+    state machine
+}
+
+DreamStylizeLayer:Rate {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Rate
+    src   "How many times a second the glitch changes."
+    text  "闪烁效果每秒变化的次数。"
+    state machine
+}
+
+DreamStylizeLayer:ScanlineStrength {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:ScanlineStrength
+    src   "How dark the gaps between scanlines are, and how far apart the lines are."
+    text  "扫描线之间的间隙深浅，以及线条之间的距离。"
+    state machine
+}
+
+DreamStylizeLayer:VignetteRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteRadius
+    src   "Where the darkening starts, 0 the middle and 1 the corners, and how far it takes to reach full."
+    text  "暗影开始的位置，0 为中间，1 为角落，以及达到完全暗影所需的距离。"
+    state machine
+}
+
+DreamStylizeLayer:VignetteRoundness {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:VignetteRoundness
+    src   "1 round in the element's units, 0 following its box."
+    text  "圆形程度，1 为基于元素单位的圆形，0 为跟随其边界。"
+    state machine
+}
+
+EDreamChromaticAberrationMode.Directional {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamChromaticAberrationMode:Directional
+    src   "Along Angle, the same everywhere."
+    text  "沿角度方向，数值相同。"
+    state machine
+}
+
+EDreamChromaticAberrationMode.Radial {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamChromaticAberrationMode:Radial
+    src   "Outward from the element's middle, more the further out."
+    text  "从元素中心向外扩散，距离越远程度越大。"
+    state machine
+}
+
+EDreamStylizeType {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType
+    src   "What a stylize layer does. The numbers are DreamUIStylize.ush's DREAMUI_STYLIZE_*; only appended to."
+    text  "样式图层的作用。数值对应 DreamUIStylize.ush 中的 DREAMUI_STYLIZE_*，仅作为后缀。"
+    state machine
+}
+
+EDreamStylizeType.ChromaticAberration {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:ChromaticAberration
+    src   "Red and blue sampled apart: outward from the middle, or along a direction."
+    text  "红色和蓝色采样分离：从中心向外，或沿方向。"
+    state machine
+}
+
+EDreamStylizeType.CRT {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:CRT
+    src   "A CRT screen: scanlines, the screen's curve, a phosphor mask, flicker."
+    text  "CRT 屏幕：扫描线、屏幕曲面、磷光体面罩、闪烁。"
+    state machine
+}
+
+EDreamStylizeType.Dither {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Dither
+    src   "Ordered dithering to a few levels, through a 4 by 4 or 8 by 8 Bayer matrix."
+    text  "通过 4x4 或 8x8 的贝叶斯矩阵，对颜色进行抖动处理，生成少量级别。"
+    state machine
+}
+
+EDreamStylizeType.Glitch {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Glitch
+    src   "Blocks shifted, lines jittered, red and blue split apart; TriggerBurst makes it flare."
+    text  "块状偏移、线条抖动、红色和蓝色分离；TriggerBurst 触发闪烁。"
+    state machine
+}
+
+EDreamStylizeType.Halftone {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#EDreamStylizeType:Halftone
+    src   "A halftone screen: dots or lines, one ink or four (CMYK)."
+    text  "半色调屏幕：点或线，可以是单色或四色（CMYK）。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Stylize {
+    at    Source/DreamGUI/Public/Core/DreamUIStylize.h#DreamStylizeLayer:Type
+    src   "Stylize"
+    text  "样式"
+    state machine
+}

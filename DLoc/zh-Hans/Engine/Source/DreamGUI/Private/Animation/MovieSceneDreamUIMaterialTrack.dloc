@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAnimation
+
+MaterialTrackFormat {
+    at    Source/DreamGUI/Private/Animation/MovieSceneDreamUIMaterialTrack.cpp
+    src   "{0} Material"
+    // from the engine's zh-Hans
+    text  "{0} 材质"
+    state draft
+}

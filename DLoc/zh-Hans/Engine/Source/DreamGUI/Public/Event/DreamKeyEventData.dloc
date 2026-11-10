@@ -1,0 +1,216 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamKeyEventData {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData
+    src   "Dream Key Event Data"
+    text  "Dream 键盘事件数据"
+    state machine
+}
+
+DreamKeyEventData:AnalogValue {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:AnalogValue
+    src   "Analog Value"
+    text  "模拟值"
+    state machine
+}
+
+DreamKeyEventData:bAltDown {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bAltDown
+    src   "Alt Down"
+    // from the engine's zh-Hans
+    text  "Alt按下"
+    state draft
+}
+
+DreamKeyEventData:bCmdDown {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bCmdDown
+    src   "Cmd Down"
+    text  "Cmd 键按下"
+    state machine
+}
+
+DreamKeyEventData:bCtrlDown {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bCtrlDown
+    src   "Ctrl Down"
+    // from the engine's zh-Hans
+    text  "Ctrl按下"
+    state draft
+}
+
+DreamKeyEventData:bHandled {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bHandled
+    src   "Handled"
+    // from the engine's zh-Hans
+    text  "已处理"
+    state draft
+}
+
+DreamKeyEventData:bIsPressed {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bIsPressed
+    src   "Is Pressed"
+    // from the engine's zh-Hans
+    text  "是否按下"
+    state draft
+}
+
+DreamKeyEventData:bIsRepeat {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bIsRepeat
+    src   "Is Repeat"
+    text  "是否重复"
+    state machine
+}
+
+DreamKeyEventData:bShiftDown {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bShiftDown
+    src   "Shift Down"
+    // from the engine's zh-Hans
+    text  "Shift按下"
+    state draft
+}
+
+DreamKeyEventData:Character {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:Character
+    src   "Character"
+    // from the engine's zh-Hans
+    text  "角色"
+    state draft
+}
+
+DreamKeyEventData:FocusedWidget {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:FocusedWidget
+    src   "Focused Widget"
+    text  "焦点控件"
+    state machine
+}
+
+DreamKeyEventData:Key {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:Key
+    src   "Key"
+    // from the engine's zh-Hans
+    text  "键"
+    state draft
+}
+
+DreamKeyEventData:KeyEventType {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:KeyEventType
+    src   "Key Event Type"
+    text  "键盘事件类型"
+    state machine
+}
+
+DreamKeyEventData:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+EDreamUIKeyEventType.AnalogValueChanged {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType:AnalogValueChanged
+    src   "Analog Value Changed"
+    text  "模拟值已更改"
+    state machine
+}
+
+EDreamUIKeyEventType.EDreamUIKeyEventType_MAX {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType:EDreamUIKeyEventType_MAX
+    src   "EDream UIKey Event Type MAX"
+    text  "EDream UI键盘事件类型 最大值"
+    state machine
+}
+
+EDreamUIKeyEventType.KeyChar {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType:KeyChar
+    src   "Key Char"
+    text  "按键字符"
+    state machine
+}
+
+EDreamUIKeyEventType.KeyDown {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType:KeyDown
+    src   "Key Down"
+    text  "键按下"
+    state machine
+}
+
+EDreamUIKeyEventType.KeyUp {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType:KeyUp
+    src   "Key Up"
+    text  "键释放"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamKeyEventData {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData
+    src   "One key, character or analog sample, on its way to the focused widget.\n\nThe counterpart of UDreamPointerEventData for the keyboard and the stick. It exists because the\npointer event data answers \"where\", and a key has no where -- it has a key, a chord and a player.\n\nHandled is the bubble switch, spelled the other way round from the pointer interfaces because that\nis what a key means: a pointer event asks \"may this keep bubbling\", a key event asks \"did anybody\ntake it\", and a taken key must not also be read as navigation or fire a bound action. Whoever\nhandles it sets Handled and the walk stops there, which is Slate's rule and UMG's."
+    text  "一次按键、字符或模拟量采样，正送往拥有焦点的控件。\n\n它是 UDreamPointerEventData 在键盘和摇杆上的对应物。之所以存在，是因为\n指针事件数据回答的是“哪里”，而按键没有“哪里”——它有的是按键、组合键和玩家。\n\nHandled 是冒泡开关，与指针接口的写法正好相反，因为\n按键的含义就是如此：指针事件问“能否继续冒泡”，按键事件问“有没有人\n接手”，而一个已被接手的按键不能再被当作导航读取，也不能触发绑定的操作。谁\n处理了它，谁就设置 Handled，遍历到此为止，这既是 Slate 的规则，也是 UMG 的。"
+    state machine
+}
+
+DreamKeyEventData:AnalogValue {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:AnalogValue
+    src   "The analog sample, for AnalogValueChanged. Zero elsewhere."
+    text  "模拟量采样，用于 AnalogValueChanged。其他情况下为零。"
+    state machine
+}
+
+DreamKeyEventData:bHandled {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bHandled
+    src   "Set by whoever consumed this key. Once true the walk up the hierarchy stops."
+    text  "由消费此按键的一方设置。一旦为 true，向层级上方的遍历即停止。"
+    state machine
+}
+
+DreamKeyEventData:bIsPressed {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bIsPressed
+    src   "True for KeyDown, false for KeyUp; meaningless on the other two channels."
+    text  "KeyDown 时为 true，KeyUp 时为 false；在另外两个通道上没有意义。"
+    state machine
+}
+
+DreamKeyEventData:bIsRepeat {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:bIsRepeat
+    src   "Repeat of a held key, rather than the first press."
+    text  "按住某键时的重复触发，而非首次按下。"
+    state machine
+}
+
+DreamKeyEventData:Character {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:Character
+    src   "The character produced, for KeyChar. A string rather than a TCHAR because one keystroke can\nproduce more than one code unit, and because Blueprint has no character type."
+    text  "为 KeyChar 生成的字符。用字符串而非 TCHAR，是因为一次击键可能\n产生多个代码单元，也因为蓝图没有字符类型。"
+    state machine
+}
+
+DreamKeyEventData:FocusedWidget {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:FocusedWidget
+    src   "The widget the key was offered to first -- the focused one."
+    text  "按键最先送达的控件——即拥有焦点的那个。"
+    state machine
+}
+
+DreamKeyEventData:KeyEventType {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:KeyEventType
+    src   "Which channel this is. A handler bound to one channel should check before reading Character.\n\nNOT called EventType: the base class already has one of those, carrying\nEDreamUIPointerEventType, and that enum has no room for a key -- its values are Click, Enter,\nDrag, Scroll and the rest of the pointer's vocabulary. Shadowing it is a UHT error, and it\nwould be the wrong shape even if it were allowed, so the key channel gets a name of its own."
+    text  "这是哪个通道。绑定到某个通道的处理程序在读取 Character 之前应先检查。\n\n不叫 EventType：基类已有一个同名成员，携带的是\nEDreamUIPointerEventType，而该枚举没有为按键留出位置——它的值是 Click、Enter、\nDrag、Scroll 以及指针词汇表中的其余项。遮蔽它是 UHT 错误，而且\n即便允许，形状也不对，因此按键通道另取了一个名字。"
+    state machine
+}
+
+DreamKeyEventData:UserIndex {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:UserIndex
+    src   "The local player this key belongs to -- the same index as their event system and screen."
+    text  "此按键所属的本地玩家——与其事件系统和屏幕使用相同的索引。"
+    state machine
+}
+
+EDreamUIKeyEventType {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#EDreamUIKeyEventType
+    src   "Which of the four key channels an event data is carrying. See IDreamKeyInterface."
+    text  "事件数据携带的是四个按键通道中的哪一个。参见 IDreamKeyInterface。"
+    state machine
+}

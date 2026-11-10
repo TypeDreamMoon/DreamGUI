@@ -1,0 +1,421 @@
+dloc 1
+culture zh-Hans
+namespace UObjectCategory
+
+DreamGUI {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode
+    src   "DreamGUI"
+    text  "DreamGUI"
+    state machine
+}
+
+namespace UObjectToolTips
+
+EDreamUIBlendMode {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode
+    src   "How an element's colour is combined with what is already in the render target.\n\nThree ways of doing it, picked by the mode and by what draws the element, never by the user:\n\n- The blend hardware alone, for Alpha, Additive, Multiply, Screen, Exclusion and Dissolve: these batch like any element\n  and are exact for a partly transparent source. (Subtract and linear burn are not: the hardware clamps a partly\n  transparent element's result where the formula does not, so they read what is behind like the rest.)\n- Reading what is behind first, for every other mode: the region a draw covers is copied, and the shader blends the\n  element over the copy by the W3C compositing formula, Cs' = (1 - Da) * Cs + Da * B(Cb, Cs). Elements of one such mode\n  that do not overlap still share a draw and a copy; elements that overlap are drawn apart.\n- A group of its own, for an element drawn through a material with any of the modes added after Multiply: the element\n  is drawn into a texture and the texture blended over what is behind (UDreamLayerGroup does the same for a subtree).\n  An element with a material and Alpha, Additive or Multiply composites the way its material says, as it always did.\n\nThe modes blend encoded (sRGB) values, the way image editors do: a viewport target holds them already, and on a linear\nrender target both colours are encoded for the blend and the result decoded again. The hardware modes blend whatever\nthe target holds, so on a linear target they differ a little from an image editor's.\n\nOnly appended to: a value once saved keeps its meaning."
+    text  "元素的颜色如何与渲染目标中已有的内容组合。\n\n有三种方式，由模式和绘制该元素的方式决定，绝不会由用户选择：\n\n- 对于Alpha、Additive、Multiply、Screen、Exclusion和Dissolve，仅使用混合硬件：它们像任何元素一样合批，\n  并且对部分透明的源是精确的。（Subtract和线性加深则不是这样：硬件会钳制部分透明元素的结果，而公式不会，\n  因此它们像其余模式一样读取背后的内容。）\n- 对于所有其他模式，先读取背后的内容：每次绘制覆盖的区域都会被复制，着色器再按W3C合成公式\n  将元素混合到副本上：Cs' = (1 - Da) * Cs + Da * B(Cb, Cs)。同一此类模式中\n  不重叠的元素仍共享一次绘制和一次复制；重叠的元素则分开绘制。\n- 对于通过材质绘制、且使用了Multiply之后添加的任一模式的元素，使用独立的组：元素会\n  绘制到纹理中，再将纹理混合到背后的内容上（UDreamLayerGroup对子树执行相同的操作）。\n  带有材质以及Alpha、Additive或Multiply的元素按其材质所声明的方式合成，与以往一样。\n\n这些模式混合编码后的（sRGB）值，与图像编辑器的方式相同：视口目标中保存的已经是这些值，而在\n线性渲染目标上，两种颜色都会先为混合编码，结果随后再解码。硬件模式混合目标中保存的任何值，\n因此在线性目标上它们与图像编辑器略有不同。\n\n仅追加：已保存的值会保留其含义。"
+    state machine
+}
+
+EDreamUIBlendMode.Additive {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Additive
+    src   "Added to the target, so the element can only brighten it: glows, sparks, highlights. Also called linear dodge."
+    text  "与目标相加，因此元素只能使目标变亮：辉光、火花、高光。也称为线性减淡。"
+    state machine
+}
+
+EDreamUIBlendMode.Alpha {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Alpha
+    src   "Premultiplied alpha composite. The default, and what every element did before this existed."
+    text  "预乘Alpha合成。默认模式，也是此模式出现之前每个元素所采用的方式。"
+    state machine
+}
+
+EDreamUIBlendMode.Color {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Color
+    src   "The element's hue and saturation, with the luminosity of what is behind."
+    text  "元素颜色的色相和饱和度，以及背后内容的明度。"
+    state machine
+}
+
+EDreamUIBlendMode.ColorBurn {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:ColorBurn
+    src   "Darkens what is behind to reflect the element, raising its contrast."
+    text  "使背后的内容变暗以反映元素，从而提高其对比度。"
+    state machine
+}
+
+EDreamUIBlendMode.ColorDodge {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:ColorDodge
+    src   "Brightens what is behind to reflect the element, lowering its contrast."
+    text  "使背后的内容变亮以反映元素，从而降低其对比度。"
+    state machine
+}
+
+EDreamUIBlendMode.Darken {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Darken
+    src   "The darker of the two, channel by channel."
+    text  "按通道取两者中较暗的颜色。"
+    state machine
+}
+
+EDreamUIBlendMode.DarkerColor {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:DarkerColor
+    src   "Whichever of the two colours is darker, as a whole colour."
+    text  "将两种颜色作为整体，取较暗的一种。"
+    state machine
+}
+
+EDreamUIBlendMode.Difference {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Difference
+    src   "The difference of the two, channel by channel."
+    text  "按通道取两种颜色的差值。"
+    state machine
+}
+
+EDreamUIBlendMode.Dissolve {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Dissolve
+    src   "Each pixel either fully drawn or not drawn, at random, as often as its alpha says."
+    text  "按Alpha值所表示的概率，随机将每个像素完全绘制或不绘制。"
+    state machine
+}
+
+EDreamUIBlendMode.Divide {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Divide
+    src   "What is behind divided by the element."
+    text  "用背后的内容除以元素颜色。"
+    state machine
+}
+
+EDreamUIBlendMode.Exclusion {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Exclusion
+    src   "Difference with less contrast: white over a colour inverts it, black leaves it."
+    text  "与背景颜色相减，对比度降低：白色会反转颜色，黑色则不改变。"
+    state machine
+}
+
+EDreamUIBlendMode.HardLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:HardLight
+    src   "Multiply or screen, by the element: like a harsh light on what is behind."
+    text  "与背景颜色相乘或相加，产生类似强烈光照的效果。"
+    state machine
+}
+
+EDreamUIBlendMode.HardMix {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:HardMix
+    src   "Every channel pushed to black or white: white where the two add up to one or more."
+    text  "将每个通道推向黑色或白色：当两个值相加等于或大于1时，变为白色。"
+    state machine
+}
+
+EDreamUIBlendMode.Hue {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Hue
+    src   "The element's hue, with the saturation and luminosity of what is behind."
+    text  "采用元素的色相，以及背景的饱和度和亮度。"
+    state machine
+}
+
+EDreamUIBlendMode.Lighten {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Lighten
+    src   "The lighter of the two, channel by channel."
+    text  "选择两个颜色中较亮的那个，逐个通道。"
+    state machine
+}
+
+EDreamUIBlendMode.LighterColor {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LighterColor
+    src   "Whichever of the two colours is lighter, as a whole colour."
+    text  "选择两个颜色中较亮的那个，作为一个整体颜色。"
+    state machine
+}
+
+EDreamUIBlendMode.LinearBurn {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LinearBurn
+    src   "Darkens what is behind by the element's darkness: the sum of the two, less one."
+    text  "通过元素的亮度来加深背景：两个值的总和减去1。"
+    state machine
+}
+
+EDreamUIBlendMode.LinearLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LinearLight
+    src   "Linear burn or linear dodge, by the element."
+    text  "通过元素进行线性混合或线性加深。"
+    state machine
+}
+
+EDreamUIBlendMode.Luminosity {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Luminosity
+    src   "The element's luminosity, with the hue and saturation of what is behind."
+    text  "采用元素的亮度，以及背景的色相和饱和度。"
+    state machine
+}
+
+EDreamUIBlendMode.Multiply {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Multiply
+    src   "Multiplies the target, so the element can only darken it: shadows, tints, grading overlays."
+    text  "将元素应用于目标，使其只能变暗：用于创建阴影、色调和分级效果。"
+    state machine
+}
+
+EDreamUIBlendMode.Overlay {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Overlay
+    src   "Multiply or screen, by what is behind: its highlights and shadows kept."
+    text  "与背景颜色相乘或相加，保留其高光和阴影。"
+    state machine
+}
+
+EDreamUIBlendMode.PinLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:PinLight
+    src   "Darken or lighten, by the element."
+    text  "通过元素进行加深或提亮。"
+    state machine
+}
+
+EDreamUIBlendMode.Saturation {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Saturation
+    src   "The element's saturation, with the hue and luminosity of what is behind."
+    text  "元素的饱和度，同时保留其背后的色相和亮度。"
+    state machine
+}
+
+EDreamUIBlendMode.Screen {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Screen
+    src   "The inverse of multiplying the inverses: always lighter, never past white."
+    text  "与相乘的逆运算相同，始终更亮，且不会超过白色。"
+    state machine
+}
+
+EDreamUIBlendMode.SoftLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:SoftLight
+    src   "A gentle darken or lighten by the element, like a diffuse light on what is behind."
+    text  "元素对背景产生轻微的加深或提亮效果，如同柔和的光照。"
+    state machine
+}
+
+EDreamUIBlendMode.Subtract {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Subtract
+    src   "The element taken away from what is behind."
+    text  "从背景中减去元素。"
+    state machine
+}
+
+EDreamUIBlendMode.VividLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:VividLight
+    src   "Color burn or color dodge, by the element."
+    text  "元素对背景产生色彩烧蚀或色彩提亮效果。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+EDreamUIBlendMode.Additive {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Additive
+    src   "Additive"
+    // from the engine's zh-Hans
+    text  "Additive"
+    state draft
+}
+
+EDreamUIBlendMode.Alpha {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Alpha
+    src   "Alpha"
+    // from the engine's zh-Hans
+    text  "透明度"
+    state draft
+}
+
+EDreamUIBlendMode.Color {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+EDreamUIBlendMode.ColorBurn {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:ColorBurn
+    src   "Color Burn"
+    text  "色彩烧蚀"
+    state machine
+}
+
+EDreamUIBlendMode.ColorDodge {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:ColorDodge
+    src   "Color Dodge"
+    text  "色彩提亮"
+    state machine
+}
+
+EDreamUIBlendMode.Darken {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Darken
+    src   "Darken"
+    // from the engine's zh-Hans
+    text  "变暗"
+    state draft
+}
+
+EDreamUIBlendMode.DarkerColor {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:DarkerColor
+    src   "Darker Color"
+    text  "更深的颜色"
+    state machine
+}
+
+EDreamUIBlendMode.Difference {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Difference
+    src   "Difference"
+    // from the engine's zh-Hans
+    text  "差异"
+    state draft
+}
+
+EDreamUIBlendMode.Dissolve {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Dissolve
+    src   "Dissolve"
+    text  "溶解"
+    state machine
+}
+
+EDreamUIBlendMode.Divide {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Divide
+    src   "Divide"
+    // from the engine's zh-Hans
+    text  "除"
+    state draft
+}
+
+EDreamUIBlendMode.EDreamUIBlendMode_MAX {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:EDreamUIBlendMode_MAX
+    src   "EDream UIBlend Mode MAX"
+    text  "EDream UI混合模式 最大值"
+    state machine
+}
+
+EDreamUIBlendMode.Exclusion {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Exclusion
+    src   "Exclusion"
+    // from the engine's zh-Hans
+    text  "排除"
+    state draft
+}
+
+EDreamUIBlendMode.HardLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:HardLight
+    src   "Hard Light"
+    text  "硬光"
+    state machine
+}
+
+EDreamUIBlendMode.HardMix {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:HardMix
+    src   "Hard Mix"
+    text  "硬混合"
+    state machine
+}
+
+EDreamUIBlendMode.Hue {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Hue
+    src   "Hue"
+    // from the engine's zh-Hans
+    text  "色调"
+    state draft
+}
+
+EDreamUIBlendMode.Lighten {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Lighten
+    src   "Lighten"
+    // from the engine's zh-Hans
+    text  "淡化"
+    state draft
+}
+
+EDreamUIBlendMode.LighterColor {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LighterColor
+    src   "Lighter Color"
+    text  "更浅的颜色"
+    state machine
+}
+
+EDreamUIBlendMode.LinearBurn {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LinearBurn
+    src   "Linear Burn"
+    text  "线性叠加"
+    state machine
+}
+
+EDreamUIBlendMode.LinearLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:LinearLight
+    src   "Linear Light"
+    text  "线性光照"
+    state machine
+}
+
+EDreamUIBlendMode.Luminosity {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Luminosity
+    src   "Luminosity"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+EDreamUIBlendMode.Multiply {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Multiply
+    src   "Multiply"
+    // from the engine's zh-Hans
+    text  "乘"
+    state draft
+}
+
+EDreamUIBlendMode.Overlay {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Overlay
+    src   "Overlay"
+    // from the engine's zh-Hans
+    text  "Overlay"
+    state draft
+}
+
+EDreamUIBlendMode.PinLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:PinLight
+    src   "Pin Light"
+    text  "点光"
+    state machine
+}
+
+EDreamUIBlendMode.Saturation {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Saturation
+    src   "Saturation"
+    // from the engine's zh-Hans
+    text  "饱和度"
+    state draft
+}
+
+EDreamUIBlendMode.Screen {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Screen
+    src   "Screen"
+    // from the engine's zh-Hans
+    text  "屏幕"
+    state draft
+}
+
+EDreamUIBlendMode.SoftLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:SoftLight
+    src   "Soft Light"
+    text  "柔和光照"
+    state machine
+}
+
+EDreamUIBlendMode.Subtract {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:Subtract
+    src   "Subtract"
+    // from the engine's zh-Hans
+    text  "减"
+    state draft
+}
+
+EDreamUIBlendMode.VividLight {
+    at    Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIBlendMode.h#EDreamUIBlendMode:VividLight
+    src   "Vivid Light"
+    text  "鲜艳光照"
+    state machine
+}

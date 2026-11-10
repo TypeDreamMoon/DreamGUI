@@ -1,0 +1,152 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamStylizeEffect {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect
+    src   "Dream Stylize Effect"
+    text  "梦幻风格化效果"
+    state machine
+}
+
+DreamStylizeEffect:EffectBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:EffectBlendMode
+    src   "Effect Blend Mode"
+    text  "效果混合模式"
+    state machine
+}
+
+DreamStylizeEffect:GetEffectBlendMode:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetEffectBlendMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetLayers:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayers:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetOpacity:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetTarget:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:Layers {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Layers
+    src   "Layers"
+    // from the engine's zh-Hans
+    text  "Layers"
+    state draft
+}
+
+DreamStylizeEffect:Opacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Opacity
+    src   "Opacity"
+    // from the engine's zh-Hans
+    text  "不透明度"
+    state draft
+}
+
+DreamStylizeEffect:SetEffectBlendMode:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetEffectBlendMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStylizeEffect:SetLayers:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayers:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStylizeEffect:SetOpacity:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetOpacity:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStylizeEffect:SetTarget:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStylizeEffect:Target {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamStylizeEffect:TriggerBurst:InDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:TriggerBurst:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamStylizeEffect:TriggerBurst:InIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:TriggerBurst:InIntensity
+    src   "In Intensity"
+    text  "输入强度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamStylizeEffect {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect
+    src   "A stylize effect: its layers, in order, on what is behind it or on its own children -- a CRT screen, a glitch, chromatic\naberration, a halftone screen, ordered dithering, film grain, a vignette, posterization. Up to eight layers, mixed with\nwhat they were made from by a blend mode and an opacity. What moves moves with the world's time.\n\nDrawn by DreamGUI's own renderer, as the adjustment layer is. The pixel sort stays the visual of its own it always was."
+    text  "样式化效果：按顺序将其各层作用于其背后的内容或其自身的子项——CRT屏幕、故障、色差\n半调网屏、有序抖动、胶片颗粒、暗角、色调分离。最多八层，通过混合模式和不透明度\n与生成它们的来源混合。会动的部分随世界时间运动。\n\n由DreamGUI自带的渲染器绘制，调整层也是如此。像素排序仍是它一贯的那个视觉效果。"
+    state machine
+}
+
+DreamStylizeEffect:Layers {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Layers
+    src   "The layers, in order: each works on what the one before made. The first eight enabled ones are drawn."
+    text  "图层按顺序排列，每个图层作用于前一个图层的结果。前八个启用的图层会被绘制。"
+    state machine
+}
+
+DreamStylizeEffect:TriggerBurst {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:TriggerBurst
+    src   "Every glitch layer flares: InIntensity more intensity at once, fading to none over InDuration seconds of the world's\ntime -- a hit taken, a signal lost."
+    text  "每个故障层都会爆发：瞬间增加InIntensity的强度，然后在世界时间的InDuration秒内\n衰减至无——一次受击，一次信号丢失。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Stylize {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Layers
+    src   "DreamGUI|Stylize"
+    text  "DreamGUI|样式化"
+    state machine
+}

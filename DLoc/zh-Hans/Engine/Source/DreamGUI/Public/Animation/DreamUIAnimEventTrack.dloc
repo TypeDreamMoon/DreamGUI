@@ -1,0 +1,56 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAnimEventSection {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventSection
+    src   "Dream UIAnim Event Section"
+    text  "DreamUI 动画事件分段"
+    state machine
+}
+
+DreamUIAnimEventSection:EventChannel {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventSection:EventChannel
+    src   "Event Channel"
+    // from the engine's zh-Hans
+    text  "事件通道"
+    state draft
+}
+
+DreamUIAnimEventTrack {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventTrack
+    src   "Dream UIAnim Event Track"
+    text  "DreamUI 动画事件轨道"
+    state machine
+}
+
+DreamUIAnimEventTrack:Sections {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventTrack:Sections
+    src   "Sections"
+    // from the engine's zh-Hans
+    text  "分段"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIAnimEventSection {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventSection
+    src   "One named trigger key on the animation timeline. The name is broadcast through the hosting\nUDreamWidgetAnimationComponent's OnAnimationEvent delegate when playback crosses the key.\n\nThis is DreamUI's stand-in for the engine's event track. The engine track needs a director\nblueprint instance and refuses to fire in an editor world unless the endpoint is CallInEditor;\na plain FName broadcast has neither restriction, survives renames and cooking, and any listener\n(the companion behaviour blueprint above all) can bind to it."
+    text  "动画时间轴上的一个具名触发键。当播放经过该键时，其名称会通过承载它的\nUDreamWidgetAnimationComponent（控件动画组件）的OnAnimationEvent委托广播出去。\n\n这是DreamUI对引擎事件轨道的替代实现。引擎轨道需要导演蓝图实例，且在编辑器世界中，\n除非端点为CallInEditor，否则不会触发；而普通的FName广播没有这两种限制，能经受重命名和烘焙，\n任何监听者\n（尤其是上方的配套行为蓝图）都可以绑定到它。"
+    state machine
+}
+
+DreamUIAnimEventSection:EventChannel {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventSection:EventChannel
+    src   "Each key's value is the event name to broadcast."
+    text  "每个键的值是要广播的事件名称。"
+    state machine
+}
+
+DreamUIAnimEventTrack {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimEventTrack.h#DreamUIAnimEventTrack
+    src   "The timeline row holding UDreamUIAnimEventSection. Lives at the root of the sequence, unbound."
+    text  "持有UDreamUIAnimEventSection的时间轴行。位于序列的根级，未绑定。"
+    state machine
+}

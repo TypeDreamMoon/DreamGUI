@@ -1,0 +1,333 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIInputModeLibrary {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary
+    src   "Dream UIInput Mode Library"
+    text  "DreamUI输入模式库"
+    state machine
+}
+
+DreamUIInputModeLibrary:GetPlayerControllerForUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputModeLibrary:GetPlayerControllerForUser:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:GetPlayerControllerForUser:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:GetShowMouseCursor:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetShowMouseCursor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIInputModeLibrary:GetShowMouseCursor:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetShowMouseCursor:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:GetShowMouseCursor:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetShowMouseCursor:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:bFlushInput {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:bFlushInput
+    src   "Flush Input"
+    // from the engine's zh-Hans
+    text  "清空输入"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:bHideCursorDuringCapture {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:bHideCursorDuringCapture
+    src   "Hide Cursor During Capture"
+    // from the engine's zh-Hans
+    text  "捕获时隐藏光标"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:InWidgetToFocus {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:InWidgetToFocus
+    src   "In Widget to Focus"
+    // from the engine's zh-Hans
+    text  "在要聚焦的控件中"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:MouseLockMode {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:MouseLockMode
+    src   "Mouse Lock Mode"
+    // from the engine's zh-Hans
+    text  "鼠标锁定模式"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameOnly:bFlushInput {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameOnly:bFlushInput
+    src   "Flush Input"
+    // from the engine's zh-Hans
+    text  "清空输入"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameOnly:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameOnly:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeGameOnly:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameOnly:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly:bFlushInput {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly:bFlushInput
+    src   "Flush Input"
+    // from the engine's zh-Hans
+    text  "清空输入"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly:InWidgetToFocus {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly:InWidgetToFocus
+    src   "In Widget to Focus"
+    // from the engine's zh-Hans
+    text  "在要聚焦的控件中"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly:MouseLockMode {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly:MouseLockMode
+    src   "Mouse Lock Mode"
+    // from the engine's zh-Hans
+    text  "鼠标锁定模式"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetMouseLockMode:MouseLockMode {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetMouseLockMode:MouseLockMode
+    src   "Mouse Lock Mode"
+    // from the engine's zh-Hans
+    text  "鼠标锁定模式"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetMouseLockMode:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetMouseLockMode:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetMouseLockMode:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetMouseLockMode:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetShowMouseCursor:bShowCursor {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetShowMouseCursor:bShowCursor
+    src   "Show Cursor"
+    text  "显示光标"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetShowMouseCursor:UserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetShowMouseCursor:UserIndex
+    src   "User Index"
+    // from the engine's zh-Hans
+    text  "用户索引"
+    state draft
+}
+
+DreamUIInputModeLibrary:SetShowMouseCursor:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetShowMouseCursor:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+EDreamUIInputMode.EDreamUIInputMode_MAX {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:EDreamUIInputMode_MAX
+    src   "EDream UIInput Mode MAX"
+    text  "EDream UIInput Mode MAX"
+    state machine
+}
+
+EDreamUIInputMode.GameAndUI {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:GameAndUI
+    src   "Game and UI"
+    text  "游戏和UI"
+    state machine
+}
+
+EDreamUIInputMode.GameOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:GameOnly
+    src   "Game Only"
+    text  "仅游戏"
+    state machine
+}
+
+EDreamUIInputMode.UIOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:UIOnly
+    src   "UIOnly"
+    text  "仅UI"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIInputModeLibrary {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary
+    src   "Input mode and cursor control, addressed by DreamGUI's user index rather than by a raw controller.\n\nEverything here is a thin, honest wrapper over APlayerController: the engine owns input modes and\nthe cursor, and a UI plugin that tried to own them too would be the thing a project fights with.\nWhat the wrapper adds is the user index -- the same index an event system, a pointer and a\nraycaster all speak -- so that a split-screen game does not have to rediscover which controller a\ngiven piece of UI belongs to at every call site."
+    text  "输入模式与光标控制，通过DreamGUI的用户索引寻址，而非直接使用原始控制器。\n\n这里的一切都是对APlayerController的轻量而忠实的封装：输入模式和光标\n由引擎掌管，而一个试图同时掌管它们的UI插件，只会成为项目处处对抗的对象。\n封装额外提供的只是用户索引——事件系统、指针和射线检测器\n所说的都是同一个索引——这样分屏游戏就不必在每个调用点\n重新确认某一块UI属于哪个控制器。"
+    state machine
+}
+
+DreamUIInputModeLibrary:GetPlayerControllerForUser {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser
+    src   "The player controller a DreamGUI user index names. Null when there is no such local player."
+    text  "DreamGUI用户索引所指的玩家控制器。当不存在这样的本地玩家时为空。"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetInputModeGameAndUI {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameAndUI
+    src   "Both the game and the UI see input."
+    text  "游戏和UI都能接收到输入。"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetInputModeGameOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeGameOnly
+    src   "Only the game sees input."
+    text  "只有游戏能接收到输入。"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetInputModeUIOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly
+    src   "Only the UI sees input, and the cursor is shown -- while the player is on the keyboard and mouse:\nwith UDreamGUISettings::bHideCursorOnGamepad, DreamGUI hides it while they use a pad and shows it\nagain when they go back to the mouse, for as long as this mode holds.\n\nThe engine's UI-only mode ignores input at the game viewport client, and DreamGUI's input arrives\nbehind it, so DreamGUI hears nothing in it unless the client is UDreamGameViewportClient (or\nderives from it): that client routes the input on while this mode holds, and holds the player's\nmovement and look input still. With any other client a warning says so once.\n@param InWidgetToFocus       Optional. Focused through UDreamWidget::SetFocus, which is DreamGUI's\n                                                     equivalent of the Slate widget UMG's version takes."
+    text  "只有UI能看到输入，并显示光标——前提是玩家正在使用键盘和鼠标：\n启用UDreamGUISettings::bHideCursorOnGamepad时，DreamGUI会在玩家使用手柄期间隐藏光标，\n并在其回到鼠标时再次显示，只要该模式持续有效。\n\n引擎的仅UI模式会在游戏视口客户端处忽略输入，而DreamGUI的输入在其后到达，\n因此DreamGUI在该模式下什么也收不到，除非客户端是UDreamGameViewportClient（或\n由其派生）：该客户端会在该模式持续期间转发输入，并让玩家的\n移动和视角输入保持静止。使用其他客户端时会给出一次警告。\n@param InWidgetToFocus       可选。通过UDreamWidget::SetFocus设置焦点，它是DreamGUI对\n                                                     UMG版本所接收的Slate控件的等价形式。"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetMouseLockMode {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetMouseLockMode
+    src   "Lock the cursor to the viewport (or stop locking it) without changing the input mode.\n\nSeparate because the two are separate decisions: a game can want the cursor confined while still\nrouting input to both halves, and re-setting the whole input mode to change only the lock is how\na project accidentally takes focus away from its own menu."
+    text  "在不改变输入模式的情况下，将光标锁定到视口（或取消锁定）。\n\n之所以分开，是因为这是两个独立的决定：游戏可能希望限制光标范围，同时仍\n将输入路由到两方；而为了只改变锁定状态就重新设置整个输入模式，正是\n项目意外夺走自身菜单焦点的原因。"
+    state machine
+}
+
+DreamUIInputModeLibrary:SetShowMouseCursor {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetShowMouseCursor
+    src   "Show or hide the hardware cursor for a player."
+    text  "显示或隐藏玩家的硬件光标。"
+    state machine
+}
+
+EDreamUIInputMode {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode
+    src   "Who is listening to the mouse and the keys: the game, the UI, or both.\n\nThe same three states UMG offers through UWidgetBlueprintLibrary::SetInputMode_*, because a project\nusing DreamGUI needs them for exactly the same reasons -- open a menu and the camera should stop\nfollowing the mouse; close it and it should start again -- and having to reach for the UMG library\nto get them is how a project ends up with two half-answers."
+    text  "谁在接收鼠标和键盘的输入：游戏、UI，还是两者。\n\n它与UMG的控件蓝图库通过UWidgetBlueprintLibrary::SetInputMode_*提供的三种状态相同，因为使用DreamGUI\n的项目需要它们的原因完全相同——打开菜单后相机应停止跟随鼠标；\n关闭菜单后应重新跟随——而为了获得这些状态不得不去调用UMG库，\n正是一个项目最终得到两套半吊子答案的原因。"
+    state machine
+}
+
+EDreamUIInputMode.GameAndUI {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:GameAndUI
+    src   "Both see it. The usual mode for a HUD with clickable parts."
+    text  "两者都能看到。带有可点击部件的 HUD 的常用模式。"
+    state machine
+}
+
+EDreamUIInputMode.GameOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:GameOnly
+    src   "Only the game sees input. The cursor is hidden and captured."
+    text  "只有游戏能看到输入。光标被隐藏并捕获。"
+    state machine
+}
+
+EDreamUIInputMode.UIOnly {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#EDreamUIInputMode:UIOnly
+    src   "Only the UI sees it. The usual mode for a full-screen menu."
+    text  "只有 UI 能看到。全屏菜单的常用模式。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Input {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser
+    src   "DreamGUI-Input"
+    text  "DreamGUI-Input"
+    state machine
+}

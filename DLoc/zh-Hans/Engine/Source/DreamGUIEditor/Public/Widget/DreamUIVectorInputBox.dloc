@@ -1,0 +1,70 @@
+dloc 1
+culture zh-Hans
+namespace SDreamGUIVectorInputBox
+
+X_ToolTip {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "X: {0}"
+    // from the engine's zh-Hans
+    text  "X：{0}"
+    state draft
+}
+
+X_ToolTip_Control {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "X Value Controlled by DreamGUI's Anchors"
+    text  "X 值由 DreamGUI 的锚点控制。"
+    state machine
+}
+
+MultipleValues {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "Multiple Values"
+    // from the engine's zh-Hans
+    text  "多个值"
+    state draft
+}
+
+Y_ToolTip {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "Y: {0}"
+    // from the engine's zh-Hans
+    text  "Y：{0}"
+    state draft
+}
+
+Y_ToolTip_Control {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "Y Value Controlled by DreamGUI's Anchors"
+    text  "Y 值由 DreamGUI 的锚点控制。"
+    state machine
+}
+
+Z_ToolTip {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "Z: {0}"
+    // from the engine's zh-Hans
+    text  "Z：{0}"
+    state draft
+}
+
+Z_ToolTip_Control {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "Z Value Controlled by DreamGUI's Anchors"
+    text  "Z 值由 DreamGUI 的锚点控制。"
+    state machine
+}
+
+W_ToolTip {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "W: {0}"
+    text  "W: {0}"
+    state machine
+}
+
+W_ToolTip_Control {
+    at    Source/DreamGUIEditor/Public/Widget/DreamUIVectorInputBox.cpp
+    src   "W Value Controlled by DreamGUI's Anchors"
+    text  "W 值由 DreamGUI 的锚点控制。"
+    state machine
+}

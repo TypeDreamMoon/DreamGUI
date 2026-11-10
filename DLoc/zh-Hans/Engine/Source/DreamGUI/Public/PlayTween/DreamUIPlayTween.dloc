@@ -1,0 +1,334 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIPlayTween {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween
+    src   "Dream UIPlay Tween"
+    text  "Dream UI 播放缓动"
+    state machine
+}
+
+DreamUIPlayTween:bAffectByGamePause {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:bAffectByGamePause
+    src   "Affect by Game Pause"
+    text  "受游戏暂停影响"
+    state machine
+}
+
+DreamUIPlayTween:bAffectByTimeDilation {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:bAffectByTimeDilation
+    src   "Affect by Time Dilation"
+    text  "受时间缩放影响"
+    state machine
+}
+
+DreamUIPlayTween:Duration {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamUIPlayTween:EaseCurve {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:EaseCurve
+    src   "Ease Curve"
+    // from the engine's zh-Hans
+    text  "Ease Curve"
+    state draft
+}
+
+DreamUIPlayTween:EaseType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:EaseType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamUIPlayTween:GetAffectByGamePause:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByGamePause:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetAffectByTimeDilation:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByTimeDilation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetDuration:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetEaseCurve:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetEaseCurve:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetEaseType:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetEaseType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetLoopCount:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetLoopCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetLoopType:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetLoopType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetStartDelay:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetStartDelay:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetTweener:ReturnValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetTweener:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:LoopCount {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:LoopCount
+    src   "Loop Count"
+    // from the engine's zh-Hans
+    text  "循环次数"
+    state draft
+}
+
+DreamUIPlayTween:LoopType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:LoopType
+    src   "Loop Type"
+    text  "循环类型"
+    state machine
+}
+
+DreamUIPlayTween:OnComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnComplete
+    src   "On Complete"
+    // from the engine's zh-Hans
+    text  "On Complete"
+    state draft
+}
+
+DreamUIPlayTween:OnCompleteBP {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnCompleteBP
+    src   "OnComplete"
+    // from the engine's zh-Hans
+    text  "完成时"
+    state draft
+}
+
+DreamUIPlayTween:OnCycleComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnCycleComplete
+    src   "On Cycle Complete"
+    text  "循环完成事件"
+    state machine
+}
+
+DreamUIPlayTween:OnCycleCompleteBP {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnCycleCompleteBP
+    src   "OnCycleComplete"
+    text  "循环完成事件 (Blueprint)"
+    state machine
+}
+
+DreamUIPlayTween:OnStart {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnStart
+    src   "On Start"
+    text  "开始事件"
+    state machine
+}
+
+DreamUIPlayTween:OnStartBP {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnStartBP
+    src   "OnStart"
+    text  "开始事件 (Blueprint)"
+    state machine
+}
+
+DreamUIPlayTween:OnUpdateProgress {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnUpdateProgress
+    src   "On Update Progress"
+    text  "更新进度事件"
+    state machine
+}
+
+DreamUIPlayTween:OnUpdateProgressBP {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnUpdateProgressBP
+    src   "OnUpdateProgress"
+    text  "更新进度事件 (Blueprint)"
+    state machine
+}
+
+DreamUIPlayTween:SetAffectByGamePause:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByGamePause:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetAffectByTimeDilation:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByTimeDilation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetDuration:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetDuration:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetEaseCurve:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetEaseCurve:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetEaseType:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetEaseType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetLoopCount:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetLoopCount:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetLoopType:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetLoopType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetStartDelay:Value {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetStartDelay:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIPlayTween:StartDelay {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:StartDelay
+    src   "Start Delay"
+    // from the engine's zh-Hans
+    text  "开始延迟"
+    state draft
+}
+
+DreamUIPlayTween:Tweener {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:Tweener
+    src   "Tweener"
+    text  "缓动器"
+    state machine
+}
+
+OnDreamUIPlayTweenCycleCompleteDynamicDelegate__DelegateSignature:InCycleCompleteCount {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#OnDreamUIPlayTweenCycleCompleteDynamicDelegate__DelegateSignature:InCycleCompleteCount
+    src   "In Cycle Complete Count"
+    text  "循环完成次数"
+    state machine
+}
+
+OnDreamUIPlayTweenUpdateProgressDynamicDelegate__DelegateSignature:InProgress {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#OnDreamUIPlayTweenUpdateProgressDynamicDelegate__DelegateSignature:InProgress
+    src   "In Progress"
+    // from the engine's zh-Hans
+    text  "在进行中"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIPlayTween:EaseCurve {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:EaseCurve
+    src   "only valid if easeType=CurveFloat"
+    text  "仅在 easeType 为 CurveFloat 时有效。如果循环类型不是一次，则每当循环结束时，此事件都会被调用，参数为“循环完成次数”。"
+    state machine
+}
+
+DreamUIPlayTween:LoopCount {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:LoopCount
+    src   "Number of cycles to play; -1 for infinite.\n\nOne, not infinite. The default used to be -1, which is invisible until the author picks a loop\ntype -- and then the tween never ends: it is never taken out of the manager, it holds this play\ntween and the widget behind it for the rest of the run, a sequence component waiting on its\nOnComplete never advances past it, and a sequence refuses it outright\n(UDreamTweenerSequence::Insert). \"Loop forever\" is a thing to ask for, not a thing to get by\nnot asking. Assets saved before this change that left the field alone come back as 1."
+    text  "要播放的循环次数；-1表示无限。\n\n是1，不是无限。默认值原本是-1，在作者选择循环类型之前看不出来——\n而一旦选定，补间就永不结束：它永远不会被从管理器中移除，会在本次运行的剩余时间里一直持有这个播放\n补间及其背后的控件；等待其OnComplete的序列组件永远不会越过它，\n而序列会直接拒绝它（UDreamTweenerSequence::Insert）。\n“永久循环”是应当主动要求的东西，而不是因为没有要求就能得到的东西。\n在此更改之前保存、未改动该字段的资产，恢复为1。"
+    state machine
+}
+
+DreamUIPlayTween:OnCycleComplete {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnCycleComplete
+    src   "if LoopType is not Once, then this will be called every time when the cycle end, with parameter \"cycle complete count\"."
+    text  "如果循环类型不是“一次”，则每当循环结束时，此函数会被调用，参数为“循环完成次数”。"
+    state machine
+}
+
+DreamUIPlayTween:OnUpdateProgress {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnUpdateProgress
+    src   "parameter float is the progress in range 0-1, not affected by ease type (linear on time)"
+    text  "参数 float 表示进度，范围为 0-1，不受缓动类型影响（按时间线性）。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Property {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:LoopType
+    src   "Property"
+    // from the engine's zh-Hans
+    text  "属性们"
+    state draft
+}
+
+Event {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:OnStart
+    src   "Event"
+    // from the engine's zh-Hans
+    text  "事件"
+    state draft
+}

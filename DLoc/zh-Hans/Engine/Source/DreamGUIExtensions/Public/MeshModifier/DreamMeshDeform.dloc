@@ -1,0 +1,331 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+EDreamWarpBounds {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds
+    src   "The box a warp bends."
+    text  "包围扭曲区域的矩形框。"
+    state machine
+}
+
+EDreamWarpBounds.Geometry {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds:Geometry
+    src   "The box around what the visual draws: a text's glyphs, a rect block with its shadow."
+    text  "包围视觉效果绘制区域的矩形框：例如，文本的字形、带有阴影的矩形块。"
+    state machine
+}
+
+EDreamWarpBounds.Widget {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds:Widget
+    src   "The widget's own rect."
+    text  "小部件自身的矩形框。"
+    state machine
+}
+
+EDreamWarpOrientation {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation
+    src   "Which way along the box a warp style runs."
+    text  "扭曲效果沿矩形框的方向。"
+    state machine
+}
+
+EDreamWarpOrientation.Horizontal {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation:Horizontal
+    src   "Along the box's width."
+    text  "沿矩形框的宽度方向。"
+    state machine
+}
+
+EDreamWarpOrientation.Vertical {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation:Vertical
+    src   "Along its height, as if the box were turned a quarter turn clockwise before the warp and back after it."
+    text  "沿矩形框的高度方向，就像将矩形框顺时针旋转四分之一后再旋转回来一样。"
+    state machine
+}
+
+EDreamWarpStyle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle
+    src   "The warp styles of the image editors' text warp, by the names they have there and in that order, so that a document's\nwarp maps by name. Each bends the box the mesh sits in as its comment says; Bend runs -100 to 100 and turns each the\nother way when negative. The formulas are this plugin's own (FDreamMeshDeform::WarpPoint): they look like the\neditors' styles without being the same to the pixel."
+    text  "图像编辑器中文本扭曲的扭曲样式，按它们在其中的名称和顺序排列，以便文档的\n扭曲按名称映射。每种样式都按各自的注释所述弯曲网格所在的盒体；Bend 的取值范围为 -100 到 100，为负时会将每种样式朝相反的\n方向扭转。公式为本插件自有（FDreamMeshDeform::WarpPoint）：它们看起来像\n编辑器的样式，但并非逐像素完全相同。"
+    state machine
+}
+
+EDreamWarpStyle.Arc {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Arc
+    src   "Bent along a circle: the top and bottom become arcs about one centre, the sides turn to point at it."
+    text  "沿圆形弯曲：顶部和底部形成弧形，侧面指向中心。"
+    state machine
+}
+
+EDreamWarpStyle.Arch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Arch
+    src   "Both edges bow up together; every column keeps its height and stays upright."
+    text  "两条边同时向上弯曲；每列的高度保持不变，并且保持垂直。"
+    state machine
+}
+
+EDreamWarpStyle.ArcLower {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ArcLower
+    src   "The bottom edge bows down, the top stays straight."
+    text  "底部边缘向下弯曲，顶部保持水平。"
+    state machine
+}
+
+EDreamWarpStyle.ArcUpper {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ArcUpper
+    src   "The top edge bows up, the bottom stays straight."
+    text  "顶部边缘向上弯曲，底部保持水平。"
+    state machine
+}
+
+EDreamWarpStyle.Bulge {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Bulge
+    src   "Taller in the middle: the top bows up and the bottom down."
+    text  "中间部分隆起：顶部向上弯曲，底部向下弯曲。"
+    state machine
+}
+
+EDreamWarpStyle.Fish {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Fish
+    src   "A fish's outline: a swollen head on the left, a narrow waist, a tail at the right end."
+    text  "鱼的轮廓：头部位于左侧，呈膨胀状，中部收窄，尾部位于右端。"
+    state machine
+}
+
+EDreamWarpStyle.Fisheye {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Fisheye
+    src   "Magnified in the middle, as through a lens, the ellipse inside the box holding the effect."
+    text  "中间放大，如同通过透镜，效果位于矩形框内。"
+    state machine
+}
+
+EDreamWarpStyle.Flag {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Flag
+    src   "One wave along the length, the whole height moving together. Phase moves it."
+    text  "一列波纹沿长度方向延伸，整个高度同步移动。相位控制其移动。"
+    state machine
+}
+
+EDreamWarpStyle.Inflate {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Inflate
+    src   "Puffed out: the middle of each side pushed outward, the corners kept."
+    text  "中间膨胀：两侧中间部分向外推，四个角保持不变。"
+    state machine
+}
+
+EDreamWarpStyle.Rise {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Rise
+    src   "Rises from the left end to the right in an S, columns upright."
+    text  "从左端向上延伸至右端，呈S形，柱状。"
+    state machine
+}
+
+EDreamWarpStyle.ShellLower {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ShellLower
+    src   "The bottom edge rises in the middle and draws in, like a shell's ribs meeting below."
+    text  "底部边缘在中间处向上隆起并收缩，如同贝壳的肋骨相遇。"
+    state machine
+}
+
+EDreamWarpStyle.ShellUpper {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ShellUpper
+    src   "The top edge sinks in the middle and draws in, like a shell's ribs meeting above."
+    text  "顶部边缘在中间处向下凹陷并收缩，如同贝壳的肋骨相遇。"
+    state machine
+}
+
+EDreamWarpStyle.Squeeze {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Squeeze
+    src   "Pinched across in the middle rows and stretched up in the middle columns."
+    text  "中间行收缩，中间列拉伸。"
+    state machine
+}
+
+EDreamWarpStyle.Twist {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Twist
+    src   "Swirled about the middle: turned most at the centre, the ends held, so the length runs through in an S."
+    text  "中间扭曲：中心部分扭曲最多，两端保持不变，长度呈S形。"
+    state machine
+}
+
+EDreamWarpStyle.Wave {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Wave
+    src   "A wave whose phase changes from the bottom to the top, so the height swells and narrows along it. Phase moves it."
+    text  "波浪：相位从底部到顶部变化，使高度沿长度方向膨胀和收缩。相位控制其移动。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+EDreamWarpBounds.EDreamWarpBounds_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds:EDreamWarpBounds_MAX
+    src   "EDream Warp Bounds MAX"
+    text  "EDream Warp Bounds MAX"
+    state machine
+}
+
+EDreamWarpBounds.Geometry {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds:Geometry
+    src   "Geometry"
+    // from the engine's zh-Hans
+    text  "几何体"
+    state draft
+}
+
+EDreamWarpBounds.Widget {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpBounds:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+EDreamWarpOrientation.EDreamWarpOrientation_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation:EDreamWarpOrientation_MAX
+    src   "EDream Warp Orientation MAX"
+    text  "EDream Warp Orientation MAX"
+    state machine
+}
+
+EDreamWarpOrientation.Horizontal {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation:Horizontal
+    src   "Horizontal"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+EDreamWarpOrientation.Vertical {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpOrientation:Vertical
+    src   "Vertical"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+EDreamWarpStyle.Arc {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Arc
+    src   "Arc"
+    // from the engine's zh-Hans
+    text  "弧度"
+    state draft
+}
+
+EDreamWarpStyle.Arch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Arch
+    src   "Arch"
+    text  "拱形"
+    state machine
+}
+
+EDreamWarpStyle.ArcLower {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ArcLower
+    src   "Arc Lower"
+    text  "弧形（下部）"
+    state machine
+}
+
+EDreamWarpStyle.ArcUpper {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ArcUpper
+    src   "Arc Upper"
+    text  "弧形（上部）"
+    state machine
+}
+
+EDreamWarpStyle.Bulge {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Bulge
+    src   "Bulge"
+    text  "凸起"
+    state machine
+}
+
+EDreamWarpStyle.EDreamWarpStyle_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:EDreamWarpStyle_MAX
+    src   "EDream Warp Style MAX"
+    text  "EDreamWarpStyle_MAX"
+    state machine
+}
+
+EDreamWarpStyle.Fish {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Fish
+    src   "Fish"
+    text  "鱼眼"
+    state machine
+}
+
+EDreamWarpStyle.Fisheye {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Fisheye
+    src   "Fisheye"
+    text  "鱼眼"
+    state machine
+}
+
+EDreamWarpStyle.Flag {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Flag
+    src   "Flag"
+    // from the engine's zh-Hans
+    text  "标记"
+    state draft
+}
+
+EDreamWarpStyle.Inflate {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Inflate
+    src   "Inflate"
+    // from the engine's zh-Hans
+    text  "膨胀"
+    state draft
+}
+
+EDreamWarpStyle.None {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamWarpStyle.Rise {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Rise
+    src   "Rise"
+    // from the engine's zh-Hans
+    text  "升高"
+    state draft
+}
+
+EDreamWarpStyle.ShellLower {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ShellLower
+    src   "Shell Lower"
+    text  "贝壳形（下部）"
+    state machine
+}
+
+EDreamWarpStyle.ShellUpper {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:ShellUpper
+    src   "Shell Upper"
+    text  "贝壳形（上部）"
+    state machine
+}
+
+EDreamWarpStyle.Squeeze {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Squeeze
+    src   "Squeeze"
+    text  "挤压"
+    state machine
+}
+
+EDreamWarpStyle.Twist {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Twist
+    src   "Twist"
+    // from the engine's zh-Hans
+    text  "扭曲"
+    state draft
+}
+
+EDreamWarpStyle.Wave {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshDeform.h#EDreamWarpStyle:Wave
+    src   "Wave"
+    // from the engine's zh-Hans
+    text  "波"
+    state draft
+}

@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIWidgetBinding
+
+BindingTypePrettyName {
+    at    Source/DreamGUI/Private/Animation/DreamUIWidgetBinding.cpp
+    src   "DreamUI Widget"
+    text  "DreamUI 控件"
+    state machine
+}

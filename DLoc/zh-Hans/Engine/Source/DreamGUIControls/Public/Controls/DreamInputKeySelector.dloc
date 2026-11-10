@@ -1,0 +1,633 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamInputKeySelector {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector
+    src   "Dream Input Key Selector"
+    text  "Dream Input 键选择器"
+    state machine
+}
+
+DreamInputKeySelector:AllowGamepadKeys:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowGamepadKeys:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:AllowModifierKeys:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowModifierKeys:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:bAllowGamepadKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bAllowGamepadKeys
+    src   "Allow Gamepad Keys"
+    // from the engine's zh-Hans
+    text  "允许手柄键"
+    state draft
+}
+
+DreamInputKeySelector:bAllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bAllowModifierKeys
+    src   "Allow Modifier Keys"
+    // from the engine's zh-Hans
+    text  "允许辅助键"
+    state draft
+}
+
+DreamInputKeySelector:bCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bCaptureKeysWhileListening
+    src   "Capture Keys While Listening"
+    text  "捕获监听时的键"
+    state machine
+}
+
+DreamInputKeySelector:bEscapeCancels {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bEscapeCancels
+    src   "Escape Cancels"
+    text  "按下 Esc 键取消"
+    state machine
+}
+
+DreamInputKeySelector:bIsListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bIsListening
+    src   "Is Listening"
+    text  "正在监听"
+    state machine
+}
+
+DreamInputKeySelector:ButtonBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:ButtonBehaviour
+    src   "Button Behaviour"
+    text  "按钮行为"
+    state machine
+}
+
+DreamInputKeySelector:EscapeKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:EscapeKeys
+    src   "Escape Keys"
+    // from the engine's zh-Hans
+    text  "退出键"
+    state draft
+}
+
+DreamInputKeySelector:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamInputKeySelector:GetCaptureKeysWhileListening:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetCaptureKeysWhileListening:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetEscapeCancels:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetEscapeCancels:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetEscapeKeys:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetEscapeKeys:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetIsListening:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsListening:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetIsSelectingKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsSelectingKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetListeningText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetListeningText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetNoKeyText:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetNoKeyText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetSelectedChord:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedChord:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetSelectedKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:InputAgent {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:InputAgent
+    src   "Input Agent"
+    text  "输入代理"
+    state machine
+}
+
+DreamInputKeySelector:LabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:LabelNode
+    src   "Label Node"
+    text  "标签节点"
+    state machine
+}
+
+DreamInputKeySelector:ListeningText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:ListeningText
+    src   "Listening Text"
+    text  "监听文本"
+    state machine
+}
+
+DreamInputKeySelector:NoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NoKeyText
+    src   "No Key Text"
+    text  "无键文本"
+    state machine
+}
+
+DreamInputKeySelector:NotifyChordPressed:InChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyChordPressed:InChord
+    src   "In Chord"
+    text  "组合键"
+    state machine
+}
+
+DreamInputKeySelector:NotifyChordPressed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyChordPressed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:NotifyKeyPressed:InKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyKeyPressed:InKey
+    src   "In Key"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamInputKeySelector:NotifyKeyPressed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyKeyPressed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:OnChordSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnChordSelected
+    src   "On Chord Selected"
+    text  "组合键已选择"
+    state machine
+}
+
+DreamInputKeySelector:OnIsListeningChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnIsListeningChanged
+    src   "On Is Listening Changed"
+    text  "监听状态已更改"
+    state machine
+}
+
+DreamInputKeySelector:OnKeySelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnKeySelected
+    src   "On Key Selected"
+    // from the engine's zh-Hans
+    text  "选定键时"
+    state draft
+}
+
+DreamInputKeySelector:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamInputKeySelector:SelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SelectedChord
+    src   "Selected Chord"
+    text  "已选组合键"
+    state machine
+}
+
+DreamInputKeySelector:SelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SelectedKey
+    src   "Selected Key"
+    // from the engine's zh-Hans
+    text  "选定键"
+    state draft
+}
+
+DreamInputKeySelector:SetAllowGamepadKeys:bInAllowGamepadKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetAllowGamepadKeys:bInAllowGamepadKeys
+    src   "In Allow Gamepad Keys"
+    // from the engine's zh-Hans
+    text  "在允许的手柄键中"
+    state draft
+}
+
+DreamInputKeySelector:SetAllowModifierKeys:bInAllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetAllowModifierKeys:bInAllowModifierKeys
+    src   "In Allow Modifier Keys"
+    // from the engine's zh-Hans
+    text  "在允许的辅助键中"
+    state draft
+}
+
+DreamInputKeySelector:SetCaptureKeysWhileListening:bInCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetCaptureKeysWhileListening:bInCaptureKeysWhileListening
+    src   "In Capture Keys While Listening"
+    text  "正在捕获键"
+    state machine
+}
+
+DreamInputKeySelector:SetEscapeCancels:bInEscapeCancels {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeCancels:bInEscapeCancels
+    src   "In Escape Cancels"
+    text  "Esc 取消"
+    state machine
+}
+
+DreamInputKeySelector:SetEscapeKeys:InKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeKeys:InKeys
+    src   "In Keys"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamInputKeySelector:SetKeySelectionText:InKeySelectionText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetKeySelectionText:InKeySelectionText
+    src   "In Key Selection Text"
+    // from the engine's zh-Hans
+    text  "在键选项文本中"
+    state draft
+}
+
+DreamInputKeySelector:SetListeningText:InListeningText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetListeningText:InListeningText
+    src   "In Listening Text"
+    text  "监听文本"
+    state machine
+}
+
+DreamInputKeySelector:SetNoKeySpecifiedText:InNoKeySpecifiedText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeySpecifiedText:InNoKeySpecifiedText
+    src   "In No Key Specified Text"
+    // from the engine's zh-Hans
+    text  "在未指定键文本中"
+    state draft
+}
+
+DreamInputKeySelector:SetNoKeyText:InNoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeyText:InNoKeyText
+    src   "In No Key Text"
+    text  "无按键文本"
+    state machine
+}
+
+DreamInputKeySelector:SetSelectedChord:InChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedChord:InChord
+    src   "In Chord"
+    text  "组合键"
+    state machine
+}
+
+DreamInputKeySelector:SetSelectedKey:InKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedKey:InKey
+    src   "In Key"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamInputKeySelector:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamInputKeySelector:SetTextBlockVisibility:InVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetTextBlockVisibility:InVisibility
+    src   "In Visibility"
+    // from the engine's zh-Hans
+    text  "在可视性中"
+    state draft
+}
+
+DreamInputKeySelector:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamInputKeySelectorChordEvent__DelegateSignature:SelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelectorChordEvent__DelegateSignature:SelectedChord
+    src   "Selected Chord"
+    text  "已选组合键"
+    state machine
+}
+
+DreamInputKeySelectorKeyEvent__DelegateSignature:SelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelectorKeyEvent__DelegateSignature:SelectedKey
+    src   "Selected Key"
+    // from the engine's zh-Hans
+    text  "选定键"
+    state draft
+}
+
+DreamInputKeySelectorListeningEvent__DelegateSignature:bIsListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelectorListeningEvent__DelegateSignature:bIsListening
+    src   "Is Listening"
+    text  "正在监听"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamInputKeySelector {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector
+    src   "A button whose label is a bound key, and which listens for the next one when clicked.\n\nTwo nodes and one behaviour, the button's anatomy exactly -- the face IS the root, with the key's\nname centred on it -- because that is what this control is: a button carrying a value. Clicking it\nARMS it (bIsListening), the next key it is told about becomes the value, and it disarms.\n\nWHERE THE KEY COMES FROM, plainly, because this plugin has no hook that would supply it and this\nclass does not pretend otherwise. What exists here is:\n  - UDreamUIActionRouter, which routes NAMED actions from a data table. It resolves a key to an\n    action and fires that action's callback; it cannot report the key itself, and a rebinder needs\n    the key, not the meaning.\n  - ADreamStandaloneInputEventSystemActor, which does hold real FKeys -- its AnyKey binding is\n    where they arrive -- but forwards them straight into navigation and the router and broadcasts\n    nothing. OnAnyKeyPressed is private and not virtual.\n  - UDreamUserWidget's Blueprint surface, which is pointer, drag, focus and navigation. No keys.\n(UUITextInput does capture raw keys, by spawning an actor with AutoReceiveInput and binding every\nkey on it. That is a text field's bargain -- one actor per active field, consuming what it binds --\nand inventing a second copy of it inside a control is not something this class does quietly.)\n\nSo the arming, the state, the visual and the value live here, and the KEY IS FED IN: while this is\nlistening, the project's input layer calls NotifyKeyPressed with whatever the player pressed, and\nit returns true when it took it. That layer is wherever the project already sees keys -- its\nPlayerController, an Enhanced Input action, or a subclass of ADreamStandaloneInputEventSystemActor\noverriding BindActionRouting (which is virtual for exactly this kind of extension). SetSelectedKey\nwrites the value with no listening involved, for a settings screen restoring saved bindings.\n\nUMG parity is UInputKeySelector's core: SelectedChord (with SelectedKey as its bare-key spelling),\nbIsListening, OnKeySelected, OnIsSelectingKey -- plus the library's OnValueChangedBP, because the\nkey is a value and `<->` binds against it.\n\n    /Script/DreamGUIControls.DreamInputKeySelector JumpBinding {\n        SelectedKey = (KeyName=\"SpaceBar\")\n        OnKeySelected -> HandleJumpRebound\n    }"
+    text  "标签为已绑定按键、并在点击后监听下一个按键的按钮。\n\n两个节点、一种行为，完全就是按钮的构造——正面就是根节点，按键名称居中显示在其上——\n因为这个控件本身就是：一个携带值的按钮。点击它会进入待命状态（bIsListening），随后被告知的\n下一个按键成为值，它便解除待命。\n\n按键从何而来，这里直说，因为此插件没有可供应该值的钩子，本类也不假装有。\n现有的是：\n  - UDreamUIActionRouter，它从数据表路由具名操作。它把按键解析为\n    操作并触发该操作的回调；它无法报告按键本身，而重绑定器需要的\n    是按键，不是含义。\n  - ADreamStandaloneInputEventSystemActor，它确实持有真实的FKey——其AnyKey绑定正是\n    按键到达之处——但它直接转发给导航和路由器，不广播\n    任何内容。OnAnyKeyPressed是私有的，且不是虚函数。\n  - UDreamUserWidget的蓝图接口，涵盖指针、拖拽、焦点和导航。没有按键。\n（UUITextInput确实会捕获原始按键，方式是生成一个带AutoReceiveInput的Actor并在其上绑定每个\n按键。那是文本字段的取舍——每个活动字段一个Actor，消费它所绑定的内容——\n而在控件内再造一份副本，并不是本类会悄悄做的事。）\n\n因此，待命、状态、视觉和值都在这里，而按键是外部喂入的：在监听\n期间，项目的输入层会以玩家按下的任意按键调用NotifyKeyPressed，\n若接受则返回true。该层就是项目已经能获取按键的地方——其\nPlayerController、一个Enhanced Input操作，或重写BindActionRouting的ADreamStandaloneInputEventSystemActor\n子类（该函数正是为此类扩展而设为虚函数）。SetSelectedKey\n直接写入值，不涉及监听，供设置界面恢复已保存的绑定。\n\nUMG对齐是UInputKeySelector的核心：SelectedChord（SelectedKey是其单键写法）、\nbIsListening、OnKeySelected、OnIsSelectingKey——再加上本库的OnValueChangedBP，因为\n按键是一个值，`<->`对它进行绑定。\n\n    /Script/DreamGUIControls.DreamInputKeySelector JumpBinding {\n        SelectedKey = (KeyName=\"SpaceBar\")\n        OnKeySelected -> HandleJumpRebound\n    }"
+    state machine
+}
+
+DreamInputKeySelector:AllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowModifierKeys
+    src   "UMG's spelling of GetAllowModifierKeys, which is the name its own getter carries."
+    text  "UMG 对 GetAllowModifierKeys 的拼写，即其自身 getter 所带的名称。"
+    state machine
+}
+
+DreamInputKeySelector:bAllowGamepadKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bAllowGamepadKeys
+    src   "Whether a PAD key can become the binding -- UMG's bAllowGamepadKeys.\n\nOn by default, because that is what this selector has always done: the capture agent binds\nevery non-axis, non-mouse key, and a pad's face buttons are exactly that. Off, a pad key is\nneither bound nor consumed -- the selector stays armed, waiting for a keyboard key, and the\npad press goes on to whatever else wanted it. That is UMG's behaviour and the only one that\nleaves a keyboard-only binding screen usable with a controller in hand.\n\nThe escape keys are checked FIRST and are not subject to this: the pad's B is one of them by\ndefault, and a selector that refused to look at pad keys at all would have no way out on a pad."
+    text  "手柄按键能否成为绑定——即UMG的bAllowGamepadKeys。\n\n默认开启，因为这个选择器一直如此：捕获代理会绑定\n所有非轴、非鼠标的按键，而手柄的面键恰恰就是。关闭后，手柄按键\n既不会被绑定也不会被消费——选择器保持待命，等待键盘按键，而\n手柄按下会继续传给其他需要它的地方。这是UMG的行为，也是唯一\n能让纯键盘绑定界面在手握手柄时仍然可用的行为。\n\n退出键会最先检查，且不受此项影响：手柄的B键默认就是\n其中之一，而一个完全拒绝检视手柄按键的选择器，在手柄上就无路可退。"
+    state machine
+}
+
+DreamInputKeySelector:bAllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bAllowModifierKeys
+    src   "Whether a captured key takes the modifiers held with it.\n\nOn, Ctrl held while G is pressed binds Ctrl+G, and a modifier pressed ALONE binds nothing --\nit is consumed and the control stays armed, waiting for the key the player is reaching for.\nOff, every capture is the bare key and a modifier binds itself like any other.\n\nOnly the CAPTURE path reads this. NotifyKeyPressed and NotifyChordPressed are fed by a project\nthat already knows what was held, so they say so themselves rather than being second-guessed."
+    text  "捕获的按键是否携带同时按下的修饰键。\n\n开启时，按住Ctrl再按G会绑定Ctrl+G，而单独按下修饰键不会绑定任何内容——\n它被消费，控件保持待命，等待玩家真正想按的键。\n关闭时，每次捕获都是裸按键，修饰键也会像其他按键一样绑定自身。\n\n只有捕获路径读取此项。NotifyKeyPressed和NotifyChordPressed由已经知道按下了什么的项目\n喂入，因此它们自己会说明，而不被二次猜测。"
+    state machine
+}
+
+DreamInputKeySelector:bCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bCaptureKeysWhileListening
+    src   "Whether arming also listens for the key itself.\n\nOn, the control spawns an input agent for exactly as long as it is armed -- an actor whose\nInputComponent is pushed on top of the OWNING player's input stack, with every key the selector\nmay bind bound on it (a pad key a keyboard-only selector refuses is left unbound, so it goes on to\nwhatever else wanted it). It is created on arming and destroyed on disarming, so nothing is\nintercepted at any other moment: a key binder that consumed keys while idle would be a key binder\nnobody could play past.\n\nKeyboard and gamepad only -- not axes, and not mouse buttons. A click is how the player arms\nthis and how they disarm it again, so a mouse button reaching the capture would bind itself on\nthe way in and leave no way out. A project that wants mouse buttons bindable feeds them\nthrough NotifyKeyPressed, which takes any key.\n\nOff, the control is state and visuals only and the project calls NotifyKeyPressed from\nwherever it already sees keys. Both were true before this flag; only the default changed."
+    text  "待命时是否也自行监听按键。\n\n开启时，控件在处于待命状态的整段时间内生成一个输入代理——一个Actor，其\nInputComponent组件被压入所属玩家的输入栈顶部，选择器可绑定的每个按键\n都绑定在其上（纯键盘选择器拒绝的手柄按键不绑定，因此会继续传给\n其他需要它的地方）。它在待命时创建、解除待命时销毁，因此其他任何时刻\n都不会拦截任何东西：一个空闲时就消费按键的按键绑定器，会让人\n没法继续玩下去。\n\n仅限键盘和手柄——不含轴，也不含鼠标键。点击是玩家进入待命\n和再次解除待命的方式，因此若鼠标键进入捕获，它会在进入的途中绑定自身，从而\n无路可退。若项目希望鼠标键可绑定，可通过\nNotifyKeyPressed喂入，它接受任意按键。\n\n关闭时，控件只有状态和视觉，由项目在它已经能看到按键的地方调用\nNotifyKeyPressed。在此标志之前两者都成立；改变的只是默认值。"
+    state machine
+}
+
+DreamInputKeySelector:BeginListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:BeginListening
+    src   "Arm it: the next key fed to NotifyKeyPressed is the new binding. What a click does."
+    text  "使其待命：喂给 NotifyKeyPressed 的下一个按键即为新绑定。点击所做的事。"
+    state machine
+}
+
+DreamInputKeySelector:bEscapeCancels {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bEscapeCancels
+    src   "Escape disarms instead of binding. On by default and for the reason UMG reserves its escape\nkeys: a player who opened this by accident needs one key that is guaranteed to be a way out,\nand a control that will bind ANY key does not have one."
+    text  "Escape解除待命而不是绑定。默认开启，原因与UMG保留其退出\n键相同：误打开此控件的玩家需要有一个保证能退出的键，\n而一个会绑定任意按键的控件并没有这样的键。"
+    state machine
+}
+
+DreamInputKeySelector:bIsListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bIsListening
+    src   "Whether it is armed. Transient and read-only, never authored: arming is something the player\ndid a moment ago, and a .dui that could author it would author a control that eats the next\nkey of whatever screen it is on. SetIsListening is the only writer."
+    text  "是否处于待命状态。瞬态且只读，从不用于编辑：待命是玩家\n刚才做的事，而一个能编辑它的.dui就等于编辑出一个会吞掉所在界面下一个\n按键的控件。SetIsListening是唯一的写入者。"
+    state machine
+}
+
+DreamInputKeySelector:CancelListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:CancelListening
+    src   "Disarm without binding anything. What Escape does, and what a closing screen should do."
+    text  "解除待命且不绑定任何内容。Escape 所做的事，也是关闭界面时应当做的事。"
+    state machine
+}
+
+DreamInputKeySelector:EscapeKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:EscapeKeys
+    src   "WHICH keys are the way out -- UMG's EscapeKeys, a list rather than the one hard-coded Escape\nthis control used to reserve.\n\nA list because the way out has to exist on every device the screen can be reached with: a\nplayer rebinding on a pad has no Escape key, and before this there was no key they could press\nthat did not become the new binding. Seeded with Escape and the pad's B, which are the two the\nstandalone input actor already treats as Back.\n\nEmptying it is legal and means \"no reserved key\" -- and then the click is the only way out,\nwhich is the state this control documents as a trap. Left non-empty by default for that reason."
+    text  "哪些键是退出方式——UMG的EscapeKeys，这是一个列表，而不是本控件过去预留的\n那个硬编码的Escape。\n\n之所以是列表，是因为退出方式必须在能够到达该界面的每一种设备上都存在：\n在手柄上重新绑定按键的玩家没有Escape键，而在此之前，他们按下的\n任何键都会变成新的绑定。初始为Escape和手柄的B键，也就是\n独立输入Actor已经视为“返回”的那两个键。\n\n清空它是合法的，表示“没有预留键”——此时点击就成了唯一的退出方式，\n本控件把这种状态记录为陷阱。正因如此，默认保持非空。"
+    state machine
+}
+
+DreamInputKeySelector:GetIsSelectingKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsSelectingKey
+    src   "UMG's GetIsSelectingKey: the armed state under the name UMG gives it."
+    text  "UMG的GetIsSelectingKey：用UMG给出的名称表示的待命状态。"
+    state machine
+}
+
+DreamInputKeySelector:InputAgent {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:InputAgent
+    src   "Lives only while armed. Weak because the world owns it: a level transition mid-arming takes\nit, and this control must not be the thing that keeps a dead actor alive."
+    text  "仅在待命期间存在。使用弱引用是因为它归世界所有：待命途中发生关卡切换会把它\n带走，而本控件绝不能成为让已销毁Actor继续存活的东西。"
+    state machine
+}
+
+DreamInputKeySelector:ListeningText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:ListeningText
+    src   "Shown while armed. Empty keeps the built-in words."
+    text  "待命时显示。留空则保留内置文字。"
+    state machine
+}
+
+DreamInputKeySelector:NoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NoKeyText
+    src   "Shown while nothing is bound. Empty keeps the built-in words, as an empty brush keeps a glyph."
+    text  "未绑定任何键时显示。留空则保留内置文字，如同空画刷仍保留字形。"
+    state machine
+}
+
+DreamInputKeySelector:NotifyChordPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyChordPressed
+    src   "The chord-shaped twin, for a project whose input layer knows which modifiers were down.\nNotifyKeyPressed is exactly this with no modifiers, so the two cannot come to mean different\nthings: it forwards here."
+    text  "组合键形式的对应项，适用于输入层知道按下了哪些修饰键的项目。\nNotifyKeyPressed就是不带修饰键的本函数，因此两者不会产生不同含义：\n它会转发到这里。"
+    state machine
+}
+
+DreamInputKeySelector:NotifyKeyPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyKeyPressed
+    src   "Offer a key to this selector. THE ENTRY POINT the class comment is about: nothing in this\nplugin calls it, the project's own input layer does.\n\n@return true when the selector took the key -- it bound it, or it was the cancel key -- which\n        the caller must read as \"do not also treat this as anything else\", the same contract\n        UDreamUIActionRouter::HandleKey states. False while it is not listening, so a project\n        may route every key here unconditionally."
+    text  "向此选择器提供一个按键。这就是类注释所讲的入口点：本插件中没有任何地方调用它，\n调用它的是项目自己的输入层。\n\n@return 当选择器接受了该键——它绑定了该键，或该键是取消键——时返回true，调用方\n        必须将其理解为“不要同时把它当作其他任何东西”，这与\n        UDreamUIActionRouter::HandleKey所声明的约定相同。未在监听时返回false，因此项目\n        可以无条件地把每个按键都路由到这里。"
+    state machine
+}
+
+DreamInputKeySelector:OnChordSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnChordSelected
+    src   "The same moment, carrying the whole chord. Fires alongside OnKeySelected."
+    text  "同一时刻，携带完整的组合键。与OnKeySelected一同触发。"
+    state machine
+}
+
+DreamInputKeySelector:OnIsListeningChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnIsListeningChanged
+    src   "Fired when the armed state moves, so a screen can dim the rest of itself while one is armed."
+    text  "待命状态发生变化时触发，以便界面在某个控件待命时把其余部分变暗。"
+    state machine
+}
+
+DreamInputKeySelector:OnKeySelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnKeySelected
+    src   "Fired when a key is bound, from a listen or from SetSelectedKey. Carries the chord's KEY."
+    text  "绑定按键时触发，可来自监听，也可来自SetSelectedKey。携带组合键中的按键。"
+    state machine
+}
+
+DreamInputKeySelector:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamInputKeySelector:SelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SelectedChord
+    src   "The bound key WITH its modifiers -- UMG's FInputChord, and the control's real value.\n\nA chord rather than a bare key because \"Ctrl+S\" is one binding and not two: a rebinder that\ncould only store the key would silently drop the half the player was holding down, and the\nscreen would show \"S\" for a chord the game never fires on a bare S."
+    text  "绑定的按键及其修饰键——即UMG的FInputChord，也是本控件的真实值。\n\n之所以用组合键而不是裸按键，是因为“Ctrl+S”是一个绑定而不是两个：只能保存按键的\n重绑定器会悄悄丢掉玩家按住的那一半，界面便会为一个游戏在单独按下S时\n根本不会触发的组合键显示“S”。"
+    state machine
+}
+
+DreamInputKeySelector:SelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SelectedKey
+    src   "The compatibility spelling: the chord's KEY alone, with its modifiers dropped. Kept as a\nproperty because existing .dui authors it (`SelectedKey = (KeyName=\"SpaceBar\")`) and binds\nagainst it, and because `<->` resolves a property; kept coherent with SelectedChord through\nevery path. Where the two are authored to disagree see ReconcileKeySpellings."
+    text  "兼容写法：仅组合键中的按键，丢弃其修饰键。之所以保留为\n属性，是因为现有的.dui会编写它（`SelectedKey = (KeyName=\"SpaceBar\")`）并针对它绑定，\n而且`<->`解析的是属性；它在所有路径上都与SelectedChord保持一致。\n若两者在编写时出现分歧，请参阅ReconcileKeySpellings。"
+    state machine
+}
+
+DreamInputKeySelector:SetCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetCaptureKeysWhileListening
+    src   "Turning it off while armed releases the agent at once; a capture nobody can stop is a trap."
+    text  "在待命时关闭此项会立即释放捕获代理；没人能停止的捕获就是个陷阱。"
+    state machine
+}
+
+DreamInputKeySelector:SetEscapeKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeKeys
+    src   "Which keys are the way out. An empty list means there is none -- see the property."
+    text  "哪些按键用于退出。空列表表示没有——参见该属性。"
+    state machine
+}
+
+DreamInputKeySelector:SetKeySelectionText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetKeySelectionText
+    src   "UMG's name for the prompt shown while armed."
+    text  "UMG对处于待命状态时显示的提示的称呼。"
+    state machine
+}
+
+DreamInputKeySelector:SetNoKeySpecifiedText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeySpecifiedText
+    src   "UMG's name for the same words. One field, two spellings."
+    text  "UMG对同样文字的称呼。一个字段，两种拼写。"
+    state machine
+}
+
+DreamInputKeySelector:SetNoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeyText
+    src   "Re-labels at once when nothing is bound, which is the only state that shows these words."
+    text  "未绑定任何内容时立即刷新标签，这也是唯一显示这些文字的状态。"
+    state machine
+}
+
+DreamInputKeySelector:SetSelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedChord
+    src   "The whole binding, modifiers included. The one writer both spellings go through."
+    text  "完整的绑定，包含修饰键。两种拼写共用的唯一写入器。"
+    state machine
+}
+
+DreamInputKeySelector:SetSelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedKey
+    src   "Writes the value and re-labels; broadcasts only when the binding actually moves. Never listens.\n\nA bare key, so this CLEARS any modifiers the binding carried -- \"bind exactly this key\" is what\na caller of the key-shaped setter is saying."
+    text  "写入值并刷新标签；仅在绑定确实发生变化时才广播。从不监听。\n\n裸键，因此这会清除绑定携带的任何修饰键——“精确绑定此键”正是\n以键形式调用该设置器的调用者所表达的意思。"
+    state machine
+}
+
+DreamInputKeySelector:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetStyle
+    src   "The whole look at once, re-pushed -- including the face colours, which follow the armed state."
+    text  "一次性重新推送整体外观——包括随待命状态变化的表面颜色。"
+    state machine
+}
+
+DreamInputKeySelector:SetTextBlockVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetTextBlockVisibility
+    src   "Show or hide the words on the face -- UMG's SetTextBlockVisibility.\n\nFor the selector that is drawn as a glyph, or as a row where the key's name lives somewhere\nelse: the face, the click and the armed state all keep working with the label put away."
+    text  "显示或隐藏表面上的文字，即UMG的SetTextBlockVisibility（文本可视性）。\n\n对于以字形绘制的选择器，或键名位于别处的行式选择器：\n即使收起标签，表面、点击和待命状态也都照常工作。"
+    state machine
+}
+
+DreamInputKeySelector:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Input Key Selector" {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowGamepadKeys
+    src   "Input Key Selector"
+    // from the engine's zh-Hans
+    text  "输入键选择器"
+    state draft
+}

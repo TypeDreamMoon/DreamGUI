@@ -1,0 +1,166 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIInputServices {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#DreamUIInputServices
+    src   "Dream UIInput Services"
+    text  "Dream UI输入服务"
+    state machine
+}
+
+EDreamUIFocusCause.EDreamUIFocusCause_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:EDreamUIFocusCause_MAX
+    src   "EDream UIFocus Cause MAX"
+    text  "EDreamUIFocusCause_MAX"
+    state machine
+}
+
+EDreamUIFocusCause.Navigation {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Navigation
+    src   "Navigation"
+    // from the engine's zh-Hans
+    text  "导航"
+    state draft
+}
+
+EDreamUIFocusCause.None {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIFocusCause.Pointer {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Pointer
+    src   "Pointer"
+    text  "指针"
+    state machine
+}
+
+EDreamUIFocusCause.Script {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Script
+    src   "Script"
+    // from the engine's zh-Hans
+    text  "脚本"
+    state draft
+}
+
+EDreamUIFocusCause.Tab {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Tab
+    src   "Tab"
+    // from the engine's zh-Hans
+    text  "选项卡"
+    state draft
+}
+
+EDreamUIScopeInputMode.All {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:All
+    src   "All"
+    // from the engine's zh-Hans
+    text  "All"
+    state draft
+}
+
+EDreamUIScopeInputMode.EDreamUIScopeInputMode_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:EDreamUIScopeInputMode_MAX
+    src   "EDream UIScope Input Mode MAX"
+    text  "EDreamUIScopeInputMode_MAX"
+    state machine
+}
+
+EDreamUIScopeInputMode.Game {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:Game
+    src   "Game"
+    // from the engine's zh-Hans
+    text  "游戏"
+    state draft
+}
+
+EDreamUIScopeInputMode.Menu {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:Menu
+    src   "Menu"
+    // from the engine's zh-Hans
+    text  "菜单"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIInputServices {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#DreamUIInputServices
+    src   "Everything the core asks of the input system, and the only way it asks.\n\nThe event systems, the raycasters' setup, the action router and drag and drop belong to the input system.\nThe core states here what it needs from them, and the input system's subclass answers. A world the\ninput system provides nothing for gets no subclass: Get answers null, and every caller reads that the way\nit always read a world without an event system -- no focus, no hover, no capture, nothing heard.\n\nAbstract, so the engine never creates this class itself: GetSubsystem finds the concrete subclass. The\nbodies below are the answers of a world with no input at all."
+    text  "核心对输入系统所要求的一切，也是它提出要求的唯一方式。\n\n事件系统、射线检测器的设置、操作路由以及拖放都归输入系统所有。\n核心在这里说明它需要它们提供什么，并由输入系统的子类作出应答。对于输入系统\n未提供任何支持的世界不会获得子类：Get 返回 null，每个调用方都会按以往读取\n没有事件系统的世界的方式读取它——没有焦点，没有悬停，没有捕获，什么也听不到。\n\n抽象类，因此引擎从不自行创建这个类：GetSubsystem 会找到具体的子类。下面\n的实现体是一个完全没有输入的世界所作出的应答。"
+    state machine
+}
+
+EDreamUIFocusCause {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause
+    src   "What last moved a player's focus (UDreamUIInputServices::GetFocusCause)."
+    text  "指示上次移动玩家焦点的原因（UDreamUIInputServices::GetFocusCause）。"
+    state machine
+}
+
+EDreamUIFocusCause.Navigation {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Navigation
+    src   "A directional step: the arrow keys, the D-pad, the stick."
+    text  "方向移动：方向键、D 键、摇杆。"
+    state machine
+}
+
+EDreamUIFocusCause.None {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:None
+    src   "Nothing has, or the focus was cleared."
+    text  "没有移动，或者焦点已清除。"
+    state machine
+}
+
+EDreamUIFocusCause.Pointer {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Pointer
+    src   "A pointer: a click, a tap."
+    text  "指针操作：点击或轻触。"
+    state machine
+}
+
+EDreamUIFocusCause.Script {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Script
+    src   "Code: SetFocus, a scope taking focus, focus given back as a popup or a dialog closed."
+    text  "代码：SetFocus，一个获取焦点的范围，或者焦点通过弹出窗口或对话框返回。"
+    state machine
+}
+
+EDreamUIFocusCause.Tab {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIFocusCause:Tab
+    src   "Tab or Shift+Tab."
+    text  "Tab 键或 Shift+Tab 键。"
+    state machine
+}
+
+EDreamUIScopeInputMode {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode
+    src   "What a player's keys and pad do while a screen is in front: CommonUI's input modes, per navigation scope\n(UDreamUINavigationScope::InputMode), and for a player with no active scope UDreamGUISettings::InputModeWithoutScope."
+    text  "当有界面前置时，玩家的按键和手柄会做什么：CommonUI 的输入模式，按导航作用域\n(UDreamUINavigationScope::InputMode) 设置；对于没有活动作用域的玩家，则使用 UDreamGUISettings::InputModeWithoutScope。"
+    state machine
+}
+
+EDreamUIScopeInputMode.All {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:All
+    src   "DreamGUI's built-in keys work -- navigation, confirm, Back, paging, tab switching -- and the game hears what DreamGUI does not keep: as before."
+    text  "DreamGUI 内置的按键（导航、确认、返回、分页、标签切换）有效，游戏可以接收到 DreamGUI 未处理的输入。"
+    state machine
+}
+
+EDreamUIScopeInputMode.Game {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:Game
+    src   "Gameplay: DreamGUI's built-in navigation, confirm and Back are off for the player -- a HUD's buttons are not walked\nonto by the D-pad, nor pressed by the jump button. Bindings registered by widgets, pointers and typing still work."
+    text  "游戏玩法：对玩家而言，DreamGUI 的内置导航、确认和返回均关闭——HUD 的按钮不会被\n方向键走到，也不会被跳跃键按下。由控件、指针和键入注册的绑定仍然有效。"
+    state machine
+}
+
+EDreamUIScopeInputMode.Menu {
+    at    Source/DreamGUI/Public/Core/DreamUIInputServices.h#EDreamUIScopeInputMode:Menu
+    src   "A menu: DreamGUI's built-in keys work as with All, and the game is expected to stand down -- a project's gameplay\ninput asks UDreamUINavigationStack::GetEffectiveInputMode and ignores the player while it says Menu."
+    text  "菜单：DreamGUI 的内置按键与 All 时一样工作，而游戏应当让位——项目的玩法\n输入会查询 UDreamUINavigationStack::GetEffectiveInputMode，并在其返回 Menu 时忽略玩家。"
+    state machine
+}

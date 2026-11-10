@@ -1,0 +1,445 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLyricsLineChangedEvent__DelegateSignature:LineIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsLineChangedEvent__DelegateSignature:LineIndex
+    src   "Line Index"
+    text  "行索引"
+    state machine
+}
+
+DreamLyricsView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView
+    src   "Dream Lyrics View"
+    text  "歌词视图"
+    state machine
+}
+
+DreamLyricsView:ActiveLineAnchor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:ActiveLineAnchor
+    src   "Active Line Anchor"
+    text  "活动行锚点"
+    state machine
+}
+
+DreamLyricsView:AlphaSmoothing {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:AlphaSmoothing
+    src   "Alpha Smoothing"
+    text  "透明度平滑"
+    state machine
+}
+
+DreamLyricsView:BackgroundLineScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:BackgroundLineScale
+    src   "Background Line Scale"
+    text  "背景行缩放"
+    state machine
+}
+
+DreamLyricsView:BlurMaxLines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:BlurMaxLines
+    src   "Blur Max Lines"
+    text  "最大模糊行数"
+    state machine
+}
+
+DreamLyricsView:BlurPerLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:BlurPerLine
+    src   "Blur Per Line"
+    text  "每行模糊度"
+    state machine
+}
+
+DreamLyricsView:bPlaying {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:bPlaying
+    src   "Playing"
+    // from the engine's zh-Hans
+    text  "正在播放"
+    state draft
+}
+
+DreamLyricsView:bShowTranslation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:bShowTranslation
+    src   "Show Translation"
+    text  "显示翻译"
+    state machine
+}
+
+DreamLyricsView:EmphasisGlowBoost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:EmphasisGlowBoost
+    src   "Emphasis Glow Boost"
+    text  "强调光晕增强"
+    state machine
+}
+
+DreamLyricsView:EmphasisMinDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:EmphasisMinDuration
+    src   "Emphasis Min Duration"
+    text  "强调最小持续时间"
+    state machine
+}
+
+DreamLyricsView:Font {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Font
+    src   "Font"
+    // from the engine's zh-Hans
+    text  "字体"
+    state draft
+}
+
+DreamLyricsView:FontSize {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:FontSize
+    src   "Font Size"
+    // from the engine's zh-Hans
+    text  "字体大小"
+    state draft
+}
+
+DreamLyricsView:GetActiveLineIndex:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetActiveLineIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:GetLineCount:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:GetLineText:LineIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineText:LineIndex
+    src   "Line Index"
+    text  "行索引"
+    state machine
+}
+
+DreamLyricsView:GetLineText:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineText:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:GetTime:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:HorizontalPadding {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:HorizontalPadding
+    src   "Horizontal Padding"
+    // from the engine's zh-Hans
+    text  "水平边距"
+    state draft
+}
+
+DreamLyricsView:InactiveAlpha {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:InactiveAlpha
+    src   "Inactive Alpha"
+    text  "非活动透明度"
+    state machine
+}
+
+DreamLyricsView:InactiveScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:InactiveScale
+    src   "Inactive Scale"
+    text  "非活动缩放"
+    state machine
+}
+
+DreamLyricsView:LineSpacing {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LineSpacing
+    src   "Line Spacing"
+    // from the engine's zh-Hans
+    text  "行间距"
+    state draft
+}
+
+DreamLyricsView:LoadLRC:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadLRC:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:LoadLRC:Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadLRC:Text
+    src   "Text"
+    // from the engine's zh-Hans
+    text  "文本"
+    state draft
+}
+
+DreamLyricsView:LoadTTML:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadTTML:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLyricsView:LoadTTML:Xml {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadTTML:Xml
+    src   "Xml"
+    text  "XML"
+    state machine
+}
+
+DreamLyricsView:Lyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Lyrics
+    src   "Lyrics"
+    text  "歌词"
+    state machine
+}
+
+DreamLyricsView:OnActiveLineChanged {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:OnActiveLineChanged
+    src   "On Active Line Changed"
+    text  "活动行更改时"
+    state machine
+}
+
+DreamLyricsView:PlaybackRate {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:PlaybackRate
+    src   "Playback Rate"
+    // from the engine's zh-Hans
+    text  "播放速率"
+    state draft
+}
+
+DreamLyricsView:PositionSpring {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:PositionSpring
+    src   "Position Spring"
+    text  "位置弹簧"
+    state machine
+}
+
+DreamLyricsView:ScaleSpring {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:ScaleSpring
+    src   "Scale Spring"
+    text  "缩放弹簧"
+    state machine
+}
+
+DreamLyricsView:Seek:Seconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Seek:Seconds
+    src   "Seconds"
+    // from the engine's zh-Hans
+    text  "秒"
+    state draft
+}
+
+DreamLyricsView:SetLyrics:InLyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetLyrics:InLyrics
+    src   "In Lyrics"
+    text  "输入歌词"
+    state machine
+}
+
+DreamLyricsView:SetTime:Seconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetTime:Seconds
+    src   "Seconds"
+    // from the engine's zh-Hans
+    text  "秒"
+    state draft
+}
+
+DreamLyricsView:StaggerMaxLines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:StaggerMaxLines
+    src   "Stagger Max Lines"
+    text  "交错最大行数"
+    state machine
+}
+
+DreamLyricsView:StaggerSeconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:StaggerSeconds
+    src   "Stagger Seconds"
+    text  "交错秒数"
+    state machine
+}
+
+DreamLyricsView:SungAlpha {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SungAlpha
+    src   "Sung Alpha"
+    text  "已唱透明度"
+    state machine
+}
+
+DreamLyricsView:TextColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:TextColor
+    src   "Text Color"
+    // from the engine's zh-Hans
+    text  "文本颜色"
+    state draft
+}
+
+DreamLyricsView:TextStyle {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:TextStyle
+    src   "Text Style"
+    // from the engine's zh-Hans
+    text  "文本样式"
+    state draft
+}
+
+DreamLyricsView:TranslationScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:TranslationScale
+    src   "Translation Scale"
+    // from the engine's zh-Hans
+    text  "平移范围"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLyricsView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView
+    src   "An Apple Music-style lyric view: one text line per lyric line, the current line held at a fixed\nheight while the others glide above and below it on springs; words light up as they are sung\nthrough the text's fill channels; lines further from the current one soften and fade.\n\nPut it on a widget that is the view's frame (its width wraps the lines, its height is the visible\narea). Give it lyrics with SetLyrics and drive it with SetTime from your audio clock -- or\nPlay() to let it run on its own for previews."
+    text  "Apple Music 风格的歌词视图：每行歌词对应一个文本行，当前行保持在固定\n高度，其他行则通过弹簧在其上下滑动；演唱时文字通过文本的填充通道逐字\n点亮；距离当前行越远的行越柔和、越淡。\n\n将其放在作为视图框架的控件上（其宽度包裹各行，其高度为可见\n区域）。用 SetLyrics 为其提供歌词，并用音频时钟的 SetTime 驱动它——或\n调用 Play() 让它在预览时自行运行。"
+    state machine
+}
+
+DreamLyricsView:ActiveLineAnchor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:ActiveLineAnchor
+    src   "Where the current line's top sits, as a fraction of the view's height from the top."
+    text  "当前行顶部所在的位置，以距视图顶部占视图高度的比例表示。"
+    state machine
+}
+
+DreamLyricsView:AlphaSmoothing {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:AlphaSmoothing
+    src   "Seconds for alpha changes to mostly settle."
+    text  "透明度变化基本稳定所需的秒数。"
+    state machine
+}
+
+DreamLyricsView:BackgroundLineScale {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:BackgroundLineScale
+    src   "Size of backing-vocal lines relative to FontSize."
+    text  "伴唱行相对字体大小（FontSize）的大小。"
+    state machine
+}
+
+DreamLyricsView:BlurPerLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:BlurPerLine
+    src   "Face softness (em) added per line of distance from the current line; 0 turns the blur off."
+    text  "人脸柔化程度（单位：em），每行距离当前行增加；值为 0 时禁用模糊效果。"
+    state machine
+}
+
+DreamLyricsView:bPlaying {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:bPlaying
+    src   "Advance the clock every tick; off when an external player drives SetTime."
+    text  "每帧推进时间；当外部播放器驱动 SetTime 时禁用。"
+    state machine
+}
+
+DreamLyricsView:EmphasisGlowBoost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:EmphasisGlowBoost
+    src   "Extra glow (as a fraction of the style's glow width) for a word while it is being sung long enough to matter."
+    text  "用于在歌词持续时间足够长的单词上显示的额外高光，该值是样式高光宽度的百分比。"
+    state machine
+}
+
+DreamLyricsView:EmphasisMinDuration {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:EmphasisMinDuration
+    src   "Words at least this long (seconds) get the emphasis glow as they are sung."
+    text  "时长至少为该值的单词（单位：秒）会获得强调高光。"
+    state machine
+}
+
+DreamLyricsView:Lyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Lyrics
+    src   "---- content"
+    text  "---- content"
+    state machine
+}
+
+DreamLyricsView:PositionSpring {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:PositionSpring
+    src   "---- motion"
+    text  "---- motion"
+    state machine
+}
+
+DreamLyricsView:RebuildLines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:RebuildLines
+    src   "Rebuild the line widgets from Lyrics; called by SetLyrics and on Awake."
+    text  "从歌词重新构建行部件；由 SetLyrics 和 Awake 调用。"
+    state machine
+}
+
+DreamLyricsView:Seek {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Seek
+    src   "Jump without animating the lines into place."
+    text  "直接跳转到指定位置，不进行动画。"
+    state machine
+}
+
+DreamLyricsView:SetTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetTime
+    src   "The track position in seconds; call every frame from the audio clock."
+    text  "音轨在时间轴上的位置（单位：秒）；从音频时钟每帧调用。"
+    state machine
+}
+
+DreamLyricsView:StaggerMaxLines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:StaggerMaxLines
+    src   "How many lines away the stagger keeps growing; beyond that every line moves together."
+    text  "歌词行之间的偏移量最多作用于这么多行；超出此范围，所有行将同步移动。"
+    state machine
+}
+
+DreamLyricsView:StaggerSeconds {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:StaggerSeconds
+    src   "Lines start moving this many seconds after the line before them (further lines lag more)."
+    text  "歌词行在开始移动之前需要经过的秒数（后面的行会更多地滞后）。"
+    state machine
+}
+
+DreamLyricsView:SungAlpha {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SungAlpha
+    src   "Alpha of lines already sung."
+    text  "已演唱的歌词行的透明度。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Lyrics|Layout {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:ActiveLineAnchor
+    src   "Lyrics|Layout"
+    text  "歌词|布局"
+    state machine
+}
+
+Lyrics|Playback {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:bPlaying
+    src   "Lyrics|Playback"
+    text  "歌词|播放"
+    state machine
+}
+
+Lyrics|Text {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Font
+    src   "Lyrics|Text"
+    text  "歌词|文本"
+    state machine
+}
+
+Lyrics|Motion {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:PositionSpring
+    src   "Lyrics|Motion"
+    text  "歌词|动画"
+    state machine
+}

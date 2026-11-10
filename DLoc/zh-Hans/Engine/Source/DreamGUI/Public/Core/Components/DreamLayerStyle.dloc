@@ -1,0 +1,179 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayerStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle
+    src   "Dream Layer Style"
+    text  "Dream图层样式"
+    state machine
+}
+
+DreamLayerStyle:GetEffectiveStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetEffectiveStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStyle:GetPath:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPath:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStyle:GetPreset:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPreset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStyle:GetStyle:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerStyle:Preset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:Preset
+    src   "Preset"
+    // from the engine's zh-Hans
+    text  "预设"
+    state draft
+}
+
+DreamLayerStyle:SetPreset:InPreset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:SetPreset:InPreset
+    src   "In Preset"
+    // from the engine's zh-Hans
+    text  "在预设中"
+    state draft
+}
+
+DreamLayerStyle:SetStyle:InStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamLayerStyle:Style {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+EDreamLayerStylePath.EDreamLayerStylePath_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:EDreamLayerStylePath_MAX
+    src   "EDream Layer Style Path MAX"
+    text  "EDream图层样式路径MAX"
+    state machine
+}
+
+EDreamLayerStylePath.Element {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:Element
+    src   "Element"
+    // from the engine's zh-Hans
+    text  "Element"
+    state draft
+}
+
+EDreamLayerStylePath.Group {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:Group
+    src   "Group"
+    // from the engine's zh-Hans
+    text  "分组"
+    state draft
+}
+
+EDreamLayerStylePath.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLayerStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle
+    src   "An image editor's layer style on a widget: drop shadows, an outer glow, inner shadows, an inner glow, a bevel and emboss, a\nsatin, colour, gradient and pattern overlays, strokes (FDreamLayerEffects). Each effect blends by its own mode, at its own\nopacity; the drop shadows and the outer glow lie behind the widget, the rest on it.\n\nWhat it is drawn round: the widget's own element when it has one -- a rect block in its own pixels, anything else drawn apart\nand measured -- and the widget's subtree when it has no element of its own (a container) or is a layer group drawn apart. On a\nshape blend group's widget (UDreamShapeBlendGroup) it is round the melted shape, in the pixels of the member that draws it.\nA preset names a shared style (UDreamLayerStylePreset); while there is one, its style is drawn and this one's is not.\n\nA rect block's own shadows, border and gradient (UDreamRectBlock) are a second way to write four of these effects: see\nUDreamRectBlock::GetEffectsAsLayerStyle. The style does not take part in hit tests."
+    text  "控件上的图像编辑器图层样式：投影、外发光、内阴影、内发光、斜面和浮雕、\n光泽、颜色、渐变和图案叠加、描边（FDreamLayerEffects）。每个效果按各自的模式、各自的\n不透明度混合；投影和外发光位于控件之后，其余效果位于控件之上。\n\n绘制范围：控件有自身元素时为该元素——矩形块按其自身像素，其他元素单独绘制\n并测量——控件没有自身元素（容器）或为单独绘制的图层组时为其子树。在\n形状混合组的控件（UDreamShapeBlendGroup）上，它环绕融合后的形状，以绘制它的成员的像素为单位。\n预设指定一个共享样式（UDreamLayerStylePreset）；存在预设时，绘制预设的样式，而不绘制此样式。\n\n矩形块自身的阴影、边框和渐变（UDreamRectBlock）是编写其中四种效果的另一种方式：参见\nUDreamRectBlock::GetEffectsAsLayerStyle。该样式不参与命中测试。"
+    state machine
+}
+
+DreamLayerStyle:DetachFromPreset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:DetachFromPreset
+    src   "Copy the preset's style into this one and stop following the preset: a starting point to edit."
+    text  "将预设的样式复制到此样式并停止跟随预设：作为编辑的起点。"
+    state machine
+}
+
+DreamLayerStyle:GetEffectiveStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetEffectiveStyle
+    src   "What is drawn: the preset's style while there is one, else this one's."
+    text  "绘制的内容：存在预设时绘制预设的样式，否则绘制此样式。"
+    state machine
+}
+
+DreamLayerStyle:GetPath {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPath
+    src   "How the style is drawn on its widget now."
+    text  "样式当前在其控件上的绘制方式。"
+    state machine
+}
+
+DreamLayerStyle:Preset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:Preset
+    src   "A shared style to draw in place of Style."
+    text  "代替Style绘制的共享样式。"
+    state machine
+}
+
+EDreamLayerStylePath {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath
+    src   "How a layer style is drawn (UDreamLayerStyle::GetPath)."
+    text  "图层样式的绘制方式（UDreamLayerStyle::GetPath）。"
+    state machine
+}
+
+EDreamLayerStylePath.Element {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:Element
+    src   "In the element's own pixels, in the batch it is drawn with: a rect block's shape is measured where it is drawn."
+    text  "以元素自身的像素为单位，在绘制它所用的批次中：矩形块的形状在其绘制位置测量。"
+    state machine
+}
+
+EDreamLayerStylePath.Group {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:Group
+    src   "The widget is drawn into a texture of its own, which is measured (a jump flood of its alpha) and styled as it is put down:\nany other element, a text, an image, a container's subtree, a layer group. Its outer effects blend with what is behind\nby their own modes. Only where the canvas draws groups apart (UDreamLayerGroup); elsewhere the style is not drawn."
+    text  "控件被绘制到其自身的纹理中，该纹理会进行测量（对其 Alpha 做跳跃洪泛）并在放置时应用样式：\n任何其他元素、文本、图像、容器的子树、图层组。其外部效果按各自的模式与其后方的内容混合。\n仅在画布单独绘制组的地方可用（UDreamLayerGroup）；其他位置不绘制该样式。"
+    state machine
+}
+
+EDreamLayerStylePath.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#EDreamLayerStylePath:None
+    src   "Nothing to draw: no effect enabled, or the style is off."
+    text  "无可绘制内容：未启用任何效果，或样式已关闭。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Layer Style" {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:DetachFromPreset
+    src   "DreamGUI|Layer Style"
+    text  "DreamGUI|图层样式"
+    state machine
+}

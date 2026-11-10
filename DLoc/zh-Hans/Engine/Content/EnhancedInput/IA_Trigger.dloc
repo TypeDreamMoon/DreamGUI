@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace ""
+
+5DC24B0341491A2A5FD59AA0196688CA {
+    at    Content/EnhancedInput/IA_Trigger.uasset#IA_Trigger.ActionDescription
+    src   "Left mouse button trigger or touch trigger"
+    text  "左键单击触发或触摸触发"
+    state machine
+}

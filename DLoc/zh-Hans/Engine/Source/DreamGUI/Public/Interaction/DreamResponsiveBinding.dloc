@@ -1,0 +1,219 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamDataBinding {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding
+    src   "Dream Data Binding"
+    text  "Dream 数据绑定"
+    state machine
+}
+
+DreamDataBinding:ApplyBinding:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:ApplyBinding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamDataBinding:SourceObject {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:SourceObject
+    src   "Source Object"
+    // from the engine's zh-Hans
+    text  "源Object"
+    state draft
+}
+
+DreamDataBinding:SourceProperty {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:SourceProperty
+    src   "Source Property"
+    // from the engine's zh-Hans
+    text  "源属性"
+    state draft
+}
+
+DreamDataBinding:TargetObject {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:TargetObject
+    src   "Target Object"
+    // from the engine's zh-Hans
+    text  "目标Object"
+    state draft
+}
+
+DreamDataBinding:TargetProperty {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:TargetProperty
+    src   "Target Property"
+    text  "目标属性"
+    state machine
+}
+
+DreamDataBinding:UpdateMode {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:UpdateMode
+    src   "Update Mode"
+    // from the engine's zh-Hans
+    text  "更新模式"
+    state draft
+}
+
+DreamResponsiveBehaviour {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour
+    src   "Dream Responsive Behaviour"
+    text  "Dream 自适应行为"
+    state machine
+}
+
+DreamResponsiveBehaviour:ActiveRule {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:ActiveRule
+    src   "Active Rule"
+    text  "活动规则"
+    state machine
+}
+
+DreamResponsiveBehaviour:GetActiveRule:ReturnValue {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:GetActiveRule:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamResponsiveBehaviour:Rules {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:Rules
+    src   "Rules"
+    // from the engine's zh-Hans
+    text  "规则"
+    state draft
+}
+
+DreamResponsiveRule {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule
+    src   "Dream Responsive Rule"
+    text  "Dream 自适应规则"
+    state machine
+}
+
+DreamResponsiveRule:MaxHeight {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:MaxHeight
+    src   "Max Height"
+    // from the engine's zh-Hans
+    text  "最大高度"
+    state draft
+}
+
+DreamResponsiveRule:MaxWidth {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:MaxWidth
+    src   "Max Width"
+    // from the engine's zh-Hans
+    text  "最大宽度"
+    state draft
+}
+
+DreamResponsiveRule:MinHeight {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:MinHeight
+    src   "Min Height"
+    // from the engine's zh-Hans
+    text  "最小高度"
+    state draft
+}
+
+DreamResponsiveRule:MinWidth {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:MinWidth
+    src   "Min Width"
+    // from the engine's zh-Hans
+    text  "最小宽度"
+    state draft
+}
+
+DreamResponsiveRule:Name {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:Name
+    src   "Name"
+    // from the engine's zh-Hans
+    text  "名称"
+    state draft
+}
+
+DreamResponsiveRule:RenderOpacity {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:RenderOpacity
+    src   "Render Opacity"
+    // from the engine's zh-Hans
+    text  "渲染不透明度"
+    state draft
+}
+
+DreamResponsiveRule:Visibility {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:Visibility
+    src   "Visibility"
+    // from the engine's zh-Hans
+    text  "可视性"
+    state draft
+}
+
+EDreamBindingUpdateMode.EDreamBindingUpdateMode_MAX {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#EDreamBindingUpdateMode:EDreamBindingUpdateMode_MAX
+    src   "EDream Binding Update Mode MAX"
+    text  "EDream 绑定更新模式 最大值"
+    state machine
+}
+
+EDreamBindingUpdateMode.EveryFrame {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#EDreamBindingUpdateMode:EveryFrame
+    src   "Every Frame"
+    text  "每帧"
+    state machine
+}
+
+EDreamBindingUpdateMode.Manual {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#EDreamBindingUpdateMode:Manual
+    src   "Manual"
+    // from the engine's zh-Hans
+    text  "手动"
+    state draft
+}
+
+EDreamBindingUpdateMode.OnAwake {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#EDreamBindingUpdateMode:OnAwake
+    src   "On Awake"
+    text  "激活时"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamDataBinding {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding
+    src   "Reflection-based one-way binding for compatible UPROPERTY values."
+    text  "基于反射的单向绑定，适用于兼容的 UPROPERTY 值。"
+    state machine
+}
+
+DreamDataBinding:TargetObject {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:TargetObject
+    src   "Defaults to the owning DreamWidget when unset."
+    text  "如果未设置，默认为拥有控件的 DreamWidget。"
+    state machine
+}
+
+DreamResponsiveBehaviour {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour
+    src   "Applies the first matching breakpoint using the parent size (or self size at the root).\n\nThe rules are OVERRIDES on the appearance the widget was authored with, not a complete\ndescription of it: a size that matches no rule puts the widget back the way it was found rather\nthan leaving it wearing the last rule's costume. See EvaluateResponsiveRules for why that is the\nchosen answer and what the baseline it restores actually is."
+    text  "使用父项尺寸（根节点处使用自身尺寸）应用第一个匹配的断点。\n\n这些规则是对控件创作时外观的覆盖，而非对该外观的完整\n描述：未匹配任何规则的尺寸会将控件恢复为发现它时的状态，而不是\n让它继续套用上一条规则的外观。有关为何这是\n所选答案以及它恢复的基线实际是什么，请参见 EvaluateResponsiveRules。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Binding {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:ApplyBinding
+    src   "Binding"
+    // from the engine's zh-Hans
+    text  "绑定"
+    state draft
+}
+
+Responsive {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveRule:Name
+    src   "Responsive"
+    text  "自适应"
+    state machine
+}

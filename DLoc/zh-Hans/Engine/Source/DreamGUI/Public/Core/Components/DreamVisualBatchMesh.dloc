@@ -1,0 +1,502 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIGeometryHelper {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper
+    src   "Dream UIGeometry Helper"
+    text  "Dream UI 几何辅助工具"
+    state machine
+}
+
+DreamUIGeometryHelper:AddTriangle:index0 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddTriangle:index0
+    src   "Index 0"
+    text  "索引 0"
+    state machine
+}
+
+DreamUIGeometryHelper:AddTriangle:index1 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddTriangle:index1
+    src   "Index 1"
+    text  "索引 1"
+    state machine
+}
+
+DreamUIGeometryHelper:AddTriangle:index2 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddTriangle:index2
+    src   "Index 2"
+    text  "索引 2"
+    state machine
+}
+
+DreamUIGeometryHelper:AddVertexFull:color {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:normal {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:normal
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:position {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:tangent {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:tangent
+    src   "Tangent"
+    // from the engine's zh-Hans
+    text  "切线"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:uv0 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:uv0
+    src   "Uv 0"
+    text  "UV 0"
+    state machine
+}
+
+DreamUIGeometryHelper:AddVertexFull:uv1 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:uv1
+    src   "Uv 1"
+    // from the engine's zh-Hans
+    text  "UV 1"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:uv2 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:uv2
+    src   "Uv 2"
+    // from the engine's zh-Hans
+    text  "UV 2"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexFull:uv3 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull:uv3
+    src   "Uv 3"
+    text  "UV 3"
+    state machine
+}
+
+DreamUIGeometryHelper:AddVertexSimple:color {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexSimple:color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexSimple:position {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexSimple:position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexSimple:uv0 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexSimple:uv0
+    src   "Uv 0"
+    text  "UV 0"
+    state machine
+}
+
+DreamUIGeometryHelper:AddVertexStruct:vertex {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexStruct:vertex
+    src   "Vertex"
+    // from the engine's zh-Hans
+    text  "顶点"
+    state draft
+}
+
+DreamUIGeometryHelper:AddVertexTriangleStream:InVertexTriangleStream {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexTriangleStream:InVertexTriangleStream
+    src   "In Vertex Triangle Stream"
+    text  "顶点三角形流"
+    state machine
+}
+
+DreamUIGeometryHelper:CalculatePivotOffset:InHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:CalculatePivotOffset:InHeight
+    src   "In Height"
+    // from the engine's zh-Hans
+    text  "In Height"
+    state draft
+}
+
+DreamUIGeometryHelper:CalculatePivotOffset:InPivot {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:CalculatePivotOffset:InPivot
+    src   "In Pivot"
+    // from the engine's zh-Hans
+    text  "输入枢轴"
+    state draft
+}
+
+DreamUIGeometryHelper:CalculatePivotOffset:InWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:CalculatePivotOffset:InWidth
+    src   "In Width"
+    // from the engine's zh-Hans
+    text  "In Width"
+    state draft
+}
+
+DreamUIGeometryHelper:CalculatePivotOffset:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:CalculatePivotOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIGeometryHelper:GetVertexTriangleStream:OutVertexTriangleStream {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:GetVertexTriangleStream:OutVertexTriangleStream
+    src   "Out Vertex Triangle Stream"
+    text  "顶点三角形流 (输出)"
+    state machine
+}
+
+DreamUIGeometryHelper:SetMesh:InIndices {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:SetMesh:InIndices
+    src   "In Indices"
+    text  "索引 (输入)"
+    state machine
+}
+
+DreamUIGeometryHelper:SetMesh:InVertices {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:SetMesh:InVertices
+    src   "In Vertices"
+    // from the engine's zh-Hans
+    text  "In Vertices"
+    state draft
+}
+
+DreamUIGeometryVertex {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex
+    src   "Dream UIGeometry Vertex"
+    text  "Dream UI 几何体顶点"
+    state machine
+}
+
+DreamUIGeometryVertex:color {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamUIGeometryVertex:normal {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:normal
+    src   "Normal"
+    // from the engine's zh-Hans
+    text  "法线"
+    state draft
+}
+
+DreamUIGeometryVertex:position {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+DreamUIGeometryVertex:tangent {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:tangent
+    src   "Tangent"
+    // from the engine's zh-Hans
+    text  "切线"
+    state draft
+}
+
+DreamUIGeometryVertex:uv0 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:uv0
+    src   "Uv 0"
+    text  "UV 0"
+    state machine
+}
+
+DreamUIGeometryVertex:uv1 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:uv1
+    src   "Uv 1"
+    // from the engine's zh-Hans
+    text  "UV 1"
+    state draft
+}
+
+DreamUIGeometryVertex:uv2 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:uv2
+    src   "Uv 2"
+    // from the engine's zh-Hans
+    text  "UV 2"
+    state draft
+}
+
+DreamUIGeometryVertex:uv3 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryVertex:uv3
+    src   "Uv 3"
+    text  "UV 3"
+    state machine
+}
+
+DreamVisualBatchMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh
+    src   "Dream Visual Batch Mesh"
+    text  "Dream 视觉批处理网格"
+    state machine
+}
+
+DreamVisualBatchMesh:BlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:BlendMode
+    src   "Blend Mode"
+    // from the engine's zh-Hans
+    text  "混合模式"
+    state draft
+}
+
+DreamVisualBatchMesh:GeometryHelper {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:GeometryHelper
+    src   "Geometry Helper"
+    text  "几何辅助工具"
+    state machine
+}
+
+DreamVisualBatchMesh:GetBlendMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:GetBlendMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualBatchMesh:MaterialOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:MaterialOverride
+    src   "Material Override"
+    // from the engine's zh-Hans
+    text  "材质重载"
+    state draft
+}
+
+DreamVisualBatchMesh:PropertiesForMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:PropertiesForMaterial
+    src   "Properties for Material"
+    text  "材质属性"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InGeometryHelper {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InGeometryHelper
+    src   "In Geometry Helper"
+    text  "几何体辅助"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InTriangleChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InTriangleChanged
+    src   "In Triangle Changed"
+    text  "三角形已更改"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexColorChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexColorChanged
+    src   "In Vertex Color Changed"
+    text  "顶点颜色已更改"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexPositionChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexPositionChanged
+    src   "In Vertex Position Changed"
+    text  "顶点位置已更改"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexUVChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry:InVertexUVChanged
+    src   "In Vertex UVChanged"
+    text  "顶点 UV 已更改"
+    state machine
+}
+
+DreamVisualBatchMesh:SetBlendMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:SetBlendMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamVisualPropertiesForMaterial.CenterPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial:CenterPosition
+    src   "Center Position"
+    // from the engine's zh-Hans
+    text  "中央位置"
+    state draft
+}
+
+EDreamVisualPropertiesForMaterial.EDreamVisualPropertiesForMaterial_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial:EDreamVisualPropertiesForMaterial_MAX
+    src   "EDream Visual Properties for Material MAX"
+    text  "材质视觉属性最大值"
+    state machine
+}
+
+EDreamVisualPropertiesForMaterial.Size {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIGeometryHelper {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper
+    src   "a helper class for make DreamGUI geometry"
+    text  "用于创建 DreamGUI 几何体的辅助类。"
+    state machine
+}
+
+DreamUIGeometryHelper:AddVertexTriangleStream {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexTriangleStream
+    src   "Add a list of triangles.\n@param       InVertexTriangleStream  Vertices to add, length should be divisible by 3."
+    text  "添加三角形列表。\n@param       InVertexTriangleStream  要添加的顶点，长度应能被 3 整除。"
+    state machine
+}
+
+DreamUIGeometryHelper:Clear {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:Clear
+    src   "Remove vertices and triangle indices data, left the geometry empty."
+    text  "移除顶点和三角形索引数据，使几何体为空。"
+    state machine
+}
+
+DreamUIGeometryHelper:GetVertexTriangleStream {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:GetVertexTriangleStream
+    src   "Get a stream of vertex in triangles.\n@param       OutVertexTriangleStream         Vertices stream, length is divisible by 3."
+    text  "获取三角形中的顶点流。\n@param       OutVertexTriangleStream         顶点流，长度应能被 3 整除。"
+    state machine
+}
+
+DreamVisualBatchMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh
+    src   "UI element which have render geometry, and can be batched and renderred by DreamGUICanvas"
+    text  "具有可批处理和由 DreamGUICanvas 渲染的渲染几何体的 UI 元素。"
+    state machine
+}
+
+DreamVisualBatchMesh:BlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:BlendMode
+    src   "How this element composites into what is already drawn. Honoured by DreamGUI's built-in shader;\nan element with a material of its own composites the way that material says, and this then only\ntakes part in the batching decision.\n        // In the Layer section of the widget's details, with its opacity and mask, rather than with the visual's own rows."
+    text  "此元素如何与已绘制的内容混合。DreamGUI的内置着色器会遵循此设置；\n拥有自身材质的元素按该材质的方式混合，此时该设置只\n参与合批决策。\n        // 位于控件细节的层部分，与其不透明度和遮罩一起，而不是在视觉自身的行中。"
+    state machine
+}
+
+DreamVisualBatchMesh:MarkVerticesDirty {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:MarkVerticesDirty
+    src   "Mark vertices dirty, then DreamGUI will trigger UpdateGeometry process, and OnUpdateGeometry will execute in next render update.\nCall this if you want to update vertex data.\nFor blueprint easily use."
+    text  "将顶点标记为脏，随后DreamGUI会触发UpdateGeometry流程，OnUpdateGeometry将在下一次渲染更新时执行。\n如需更新顶点数据，请调用此函数。\n便于蓝图使用。"
+    state machine
+}
+
+DreamVisualBatchMesh:MaterialOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:MaterialOverride
+    src   "See SetMaterialOverride."
+    text  "参见SetMaterialOverride（材质重载）。"
+    state machine
+}
+
+DreamVisualBatchMesh:PropertiesForMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:PropertiesForMaterial
+    src   "enable properties for material"
+    text  "启用材质相关属性"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry
+    src   "material to render this UI element. if CustomUIMaterial is not valid, then use this material."
+    text  "用于渲染此UI元素的材质。如果CustomUIMaterial无效，则使用此材质。"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry
+    src   "texture for render this UI element"
+    text  "用于渲染此UI元素的纹理"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnBeforeCreateOrUpdateGeometry {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnBeforeCreateOrUpdateGeometry
+    src   "do anything before actually create or update geometry"
+    text  "在实际创建或更新几何体之前执行任意操作"
+    state machine
+}
+
+DreamVisualBatchMesh:ReceiveOnUpdateGeometry {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveOnUpdateGeometry
+    src   "fill and update ui geometry"
+    text  "填充并更新UI几何体"
+    state machine
+}
+
+DreamVisualBatchMesh:SetBlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:SetBlendMode
+    src   "How this element composites. Elements that composite differently never share a draw-call, so\nscattering blend modes through a screen costs draw-calls -- group them where you can."
+    text  "此元素的混合方式。混合方式不同的元素永远不会共用一次绘制调用，因此\n在屏幕上分散使用混合模式会增加绘制调用——请尽量将它们集中。"
+    state machine
+}
+
+EDreamVisualPropertiesForMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial
+    src   "Widget's properties which can access in material"
+    text  "可在材质中访问的控件属性"
+    state machine
+}
+
+EDreamVisualPropertiesForMaterial.CenterPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial:CenterPosition
+    src   "widget rect center position in canvas space"
+    text  "控件矩形中心在画布空间中的位置"
+    state machine
+}
+
+EDreamVisualPropertiesForMaterial.Size {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#EDreamVisualPropertiesForMaterial:Size
+    src   "width & height"
+    text  "宽度与高度"
+    state machine
+}

@@ -1,0 +1,84 @@
+dloc 1
+culture zh-Hans
+terms
+
+// The UE editor's own Chinese words (Engine/Content/Localization/*/zh-Hans), so DreamGUI reads like the editor around it.
+term "Widget" { text "控件" }
+term "Blueprint" { text "蓝图" }
+term "Designer" { text "设计器" }
+term "Hierarchy" { text "层级" }
+term "Details" { text "细节" }
+term "Anchor" { text "锚点" }
+term "Alignment" { text "对齐" }
+term "Padding" { text "填充" }
+term "Slot" { text "插槽" }
+term "Canvas Panel" { text "画布面板" }
+term "Visibility" { text "可视性" }
+term "Render Transform" { text "渲染变换" }
+term "Pivot" { text "枢轴点" }
+term "Opacity" { text "不透明度" }
+term "Tint" { text "着色" }
+term "Brush" { text "笔刷" }
+term "Font" { text "字体" }
+term "Material" { text "材质" }
+term "Texture" { text "纹理" }
+term "Timeline" { text "时间轴" }
+term "Viewport" { text "视口" }
+term "Component" { text "组件" }
+term "Variable" { text "变量" }
+term "Preview" { text "预览" }
+term "Asset" { text "资产" }
+term "Content Browser" { text "内容浏览器" }
+term "Outliner" { text "大纲视图" }
+term "Binding" { text "绑定" }
+term "Preset" { text "预设" }
+term "Blend Mode" { text "混合模式" }
+term "Corner Radius" { text "角半径" }
+term "Background Blur" { text "背景模糊" }
+term "Screen Space" { text "屏幕空间" }
+term "Keyframe" { text "关键帧" }
+term "Snapshot" { text "快照" }
+term "Glyph" { text "字形" }
+term "Baseline" { text "基线" }
+term "Clipping" { text "裁剪" }
+term "Pixel Snapping" { text "像素对齐" }
+term "Rich Text" { text "多格式文本" }
+term "Text Block" { text "文本块" }
+term "Size Box" { text "尺寸框" }
+term "Scale Box" { text "缩放框" }
+term "Horizontal Box" { text "水平框" }
+term "Vertical Box" { text "垂直框" }
+term "Widget Switcher" { text "控件切换器" }
+term "Grid Panel" { text "网格面板" }
+term "Wrap Box" { text "包裹框" }
+term "Hot Reload" { text "热重载" }
+term "Live Coding" { text "实时代码编写" }
+term "Diagnostic" { text "诊断" }
+term "Override" { text "重载" }
+
+// DreamGUI's layer styles follow Photoshop, so their Chinese names do too.
+term "Layer Style" { text "图层样式" }
+term "Drop Shadow" { text "投影" }
+term "Inner Shadow" { text "内阴影" }
+term "Outer Glow" { text "外发光" }
+term "Inner Glow" { text "内发光" }
+term "Stroke" { text "描边" }
+term "Gradient" { text "渐变" }
+term "Mask" { text "遮罩" }
+
+// Names that stay as they are.
+keep "DreamGUI"
+keep "DreamTween"
+keep "DreamLoc"
+keep "DreamShader"
+keep "UMG"
+keep "Slate"
+keep "PIE"
+keep "RHI"
+keep "MSDF"
+keep "DUI"
+keep "MVVM"
+keep "Niagara"
+keep "PSD"
+keep "Sequencer"
+keep "Actor"

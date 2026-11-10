@@ -1,0 +1,61 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamStandaloneInputEventSystemActor {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor
+    src   "Dream Standalone Input Event System Actor"
+    text  "Dream独立输入事件系统Actor"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:bConsumeBoundInput {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:bConsumeBoundInput
+    src   "Consume Bound Input"
+    text  "消耗绑定输入"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:GamepadScrollSpeed {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:GamepadScrollSpeed
+    src   "Gamepad Scroll Speed"
+    text  "手柄滚动速度"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:InputModule {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:InputModule
+    src   "Input Module"
+    text  "输入模块"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamStandaloneInputEventSystemActor {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor
+    src   "A ready-to-place event system driven by the engine's legacy key bindings.\n\nThe preset Blueprint /DreamGUI/Blueprints/DreamEventSystemActor is a data-only subclass of this\nclass that adds nothing of its own. It used to wire the same keys by hand in an event graph on the\nbare ADreamEventSystemActor; everything that graph did lives here -- the input module component,\nthe BeginPlay registration, and one binding per key -- so the Blueprint now gets exactly what this\nclass binds (DreamGUI.Input.StandalonePreset.* holds it to that).\n\nPlacing this needs no input setup in the project -- AutoReceiveInput claims player 0 and the keys\nare bound directly rather than through action mappings, which is what makes the preset useful as a\ndrop-in. A project that already owns its input should use the Enhanced Input variant instead.\n\nThe actor only watches: no binding consumes its key, so the pawn and the PlayerController keep\nreceiving everything bound here while it sits in the level. Whether the UI swallowed a click is a\nquestion the pointer's hit test answers at the moment the click happens, not one a flag set at bind\ntime can answer. A project that really does want the UI to hold every bound key exclusively sets\nbConsumeBoundInput.\n\nIt keeps listening while the game is paused, because a pause menu is UI: every binding executes\nwhen paused, and whether a paused game's UI still answers is UDreamUISettings::\nbScreenSpaceUIAffectByGamePause, which each handler reads when its key arrives (see\nIsInputSuspendedByGamePause). The bindings used to keep the engine's default -- no execution while\npaused -- so a paused game's menu could not be clicked, navigated or backed out of, whatever the\nsetting said."
+    text  "一个可立即放置的事件系统，由引擎的旧版按键绑定驱动。\n\n预设蓝图 /DreamGUI/Blueprints/DreamEventSystemActor 是本类的纯数据子类，\n自身不添加任何内容。它过去在裸 ADreamEventSystemActor 的事件图表中手动连接相同的按键；\n那个图表所做的一切如今都在这里——输入模块组件、BeginPlay 注册，\n以及每个按键一个绑定——因此蓝图现在得到的正是本类所绑定的内容\n（DreamGUI.Input.StandalonePreset.* 对此加以约束）。\n\n放置它无需在项目中进行任何输入设置——AutoReceiveInput 会占用玩家 0，\n且按键是直接绑定的，而不是通过操作映射，这正是该预设可作为即插即用组件使用的原因。\n已有自己输入系统的项目应改用增强输入版本。\n\n该Actor只做监听：没有任何绑定会消耗其按键，\n因此当它位于关卡中时，Pawn 和 PlayerController 仍会收到这里绑定的所有输入。\nUI 是否吞掉了一次点击，是由指针的命中测试在点击发生的那一刻回答的问题，\n而不是绑定时设置的标志位所能回答的。确实希望 UI 独占所有绑定按键的项目\n可设置 bConsumeBoundInput。\n\n游戏暂停时它仍会继续监听，因为暂停菜单就是 UI：所有绑定在暂停时都会执行，\n而暂停状态下 UI 是否仍然响应取决于\nUDreamUISettings::bScreenSpaceUIAffectByGamePause，每个处理函数都会在其按键到达时读取该设置\n（参见 IsInputSuspendedByGamePause）。这些绑定过去沿用引擎的默认值——\n暂停时不执行——因此无论该设置如何，\n暂停游戏中的菜单都无法点击、导航或返回。"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:bConsumeBoundInput {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:bConsumeBoundInput
+    src   "Restores the old behaviour: every binding this actor makes consumes its key, so neither the pawn\nnor the PlayerController ever sees those keys. Off by default.\n\nThe default matters because a consuming legacy binding is unconditional. UPlayerInput adds a\nbound key to the consume list every frame whether or not an event arrived for it, the AnyKey\nbinding expands to every key the player owns, and AutoReceiveInput has already put this actor\nabove the pawn on the input stack -- Enhanced Input then skips any action whose key is already\nconsumed. Leave this off unless the UI really is meant to be the only thing listening."
+    text  "恢复旧行为：此Actor建立的每个绑定都会消耗其按键，因此 Pawn 和 PlayerController\n都收不到这些按键。默认关闭。\n\n默认值很重要，因为消耗式的旧版绑定是无条件的。无论是否有事件到达，\nUPlayerInput 每帧都会把绑定的按键加入消耗列表，AnyKey 绑定会扩展为\n玩家拥有的每一个按键，而 AutoReceiveInput 已将此Actor置于输入栈中 Pawn 之上——\n此时增强输入会跳过任何按键已被消耗的操作。\n除非确实打算让 UI 成为唯一的监听者，否则请保持关闭。"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:GamepadScrollSpeed {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:GamepadScrollSpeed
+    src   "How fast the right stick scrolls the list under focus, in canvas units per second at full tilt.\n\nA property rather than a constant because the right answer is a function of how tall a row is,\nwhich is a project's decision and not the framework's."
+    text  "右摇杆推到底时滚动焦点下列表的速度，单位为每秒画布单位。\n\n之所以做成属性而非常量，是因为合适的取值取决于行高，这属于项目的决定，\n而非框架的决定。"
+    state machine
+}
+
+DreamStandaloneInputEventSystemActor:InputModule {
+    at    Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h#DreamStandaloneInputEventSystemActor:InputModule
+    src   "The module every binding below feeds. Registered with the event system on BeginPlay."
+    text  "下方每个绑定都向此模块提供输入。在 BeginPlay 时向事件系统注册。"
+    state machine
+}

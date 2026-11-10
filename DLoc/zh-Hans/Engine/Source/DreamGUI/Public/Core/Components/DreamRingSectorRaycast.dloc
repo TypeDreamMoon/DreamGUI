@@ -1,0 +1,147 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamRingSectorRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast
+    src   "Dream Ring Sector Raycast"
+    text  "环形扇区射线检测"
+    state machine
+}
+
+DreamRingSectorRaycast:AngleOfLocalPoint:InLocalPoint {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint:InLocalPoint
+    src   "In Local Point"
+    text  "本地点角度"
+    state machine
+}
+
+DreamRingSectorRaycast:AngleOfLocalPoint:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingSectorRaycast:InnerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:InnerRadius
+    src   "Inner Radius"
+    // from the engine's zh-Hans
+    text  "内部半径"
+    state draft
+}
+
+DreamRingSectorRaycast:IsAngleInSweep:InAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep:InAngle
+    src   "In Angle"
+    // from the engine's zh-Hans
+    text  "In Angle"
+    state draft
+}
+
+DreamRingSectorRaycast:IsAngleInSweep:InStartAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep:InStartAngle
+    src   "In Start Angle"
+    // from the engine's zh-Hans
+    text  "输入起始角度"
+    state draft
+}
+
+DreamRingSectorRaycast:IsAngleInSweep:InSweepAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep:InSweepAngle
+    src   "In Sweep Angle"
+    text  "扫描角度"
+    state machine
+}
+
+DreamRingSectorRaycast:IsAngleInSweep:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamRingSectorRaycast:OuterRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:OuterRadius
+    src   "Outer Radius"
+    // from the engine's zh-Hans
+    text  "外部半径"
+    state draft
+}
+
+DreamRingSectorRaycast:StartAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:StartAngle
+    src   "Start Angle"
+    // from the engine's zh-Hans
+    text  "开始角"
+    state draft
+}
+
+DreamRingSectorRaycast:SweepAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:SweepAngle
+    src   "Sweep Angle"
+    text  "扫描角度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamRingSectorRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast
+    src   "Hit-test an annulus sector rather than the rect it is drawn in.\n\nA ring menu's wedge is a SQUARE widget the size of the whole ring, of which the shader keeps one\nslice (see UDreamRingMenu). Every wedge therefore covers every other wedge, and under the default\nRect raycast the topmost one would answer for the entire circle -- one item permanently hovered,\nthe rest unreachable. The hit shape has to be the shape that is drawn, and this is it.\n\nThe raycast pipeline hands a custom raycast the ray in the widget's LOCAL space and does no rect\ntest of its own (UDreamVisual::LineTraceUICustom), so what this class says is the whole answer:\na sector may claim less than the rect, and -- with no OuterRadius -- more.\n\nANGLES ARE CLOCKWISE FROM TWELVE\n--------------------------------\nThe convention the ring family speaks, and the one a designer means by \"put Attack at the top\".\nLocal space here is the UI plane: X is depth, Y runs right, Z runs up (the same axes\nUUISlider::CalculateInputValue reads), so the angle of a point is atan2(Y, Z) -- zero straight up,\ngrowing toward the right. The shader's own wedge maths speaks a different dialect (clockwise from\nthree, because UV Y runs down); the CONTROL translates once, at the one place it writes the rect's\nRadialFillRotation, and nothing else in the family has to know.\n\nZERO OUTER RADIUS MEANS UNBOUNDED\n---------------------------------\nThe weapon-wheel feel -- flick the mouse anywhere and the nearest slice lights up -- is a sector\nwith no far edge, and it is reachable here because a custom raycast is EXPLICITLY EXCLUDED from\nthe raycaster's coarse reject: UDreamVisual::GetHitGeometryFitsWidgetRect answers false for\nRaycastType Custom, so FDreamBaseRaycaster tests no bounds of its own and hands the ray straight\nto Raycast below. Anything that teaches that function to answer true for a custom raycast takes\nthis sector's far half away with it. A clipping ancestor still bounds it, via\nIsPointVisibleOnClip, which is the correct answer for a menu inside a panel."
+    text  "对视作圆环扇区而非其绘制矩形进行命中测试。\n\n环形菜单的楔形是一个与整个圆环同样大小的方形控件，着色器只保留其中一片\n（见UDreamRingMenu）。因此每个楔形都会覆盖其他所有楔形；在默认的\nRect射线检测下，最上层的那一个会替整个圆环作出响应——一个菜单项会永久处于悬停状态，\n其余项则无法触及。命中形状必须就是绘制出来的形状，而这里正是如此。\n\n射线检测管线会把射线以控件的LOCAL空间交给自定义射线检测，自身不做任何矩形\n测试（UDreamVisual::LineTraceUICustom），因此这个类所说的就是全部答案：\n扇区可以声明比矩形更小的范围，而在没有OuterRadius时可以更大。\n\n角度从十二点方向顺时针计\n--------------------------------\n这是环形一族所采用的约定，也是设计师说“把Attack放在顶部”时所指的约定。\n这里的局部空间是UI平面：X是深度，Y向右，Z向上（与\nUUISlider::CalculateInputValue读取的轴相同），因此某一点的角度是atan2(Y, Z)——正上方为零，\n向右增大。着色器自身的楔形数学使用另一种方言（从三点方向顺时针，\n因为UV的Y向下）；CONTROL只转换一次，即写入矩形的\nRadialFillRotation的那一处，这一族中的其他任何东西都不需要知道。\n\n外半径为零表示无界\n---------------------------------\n武器轮盘的手感——把鼠标朝任意方向一甩，最近的切片就会亮起——是一个没有\n远边的扇区；这里能够实现，是因为自定义射线检测被明确排除在\n射线检测器的粗剔除之外：UDreamVisual::GetHitGeometryFitsWidgetRect对\nRaycastType Custom返回false，因此FDreamBaseRaycaster不测试任何边界，而是把射线直接\n交给下面的Raycast。任何让该函数对自定义射线检测返回true的做法，都会\n连带夺走这个扇区的远端一半。裁剪祖先仍会通过\nIsPointVisibleOnClip限制它，对于面板内的菜单而言，这才是正确的答案。"
+    state machine
+}
+
+DreamRingSectorRaycast:AngleOfLocalPoint {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint
+    src   "The angle of a point on the widget's plane, measured from the RING's centre: degrees\nclockwise from twelve, wrapped into [0, 360).\n\nInLocalPoint is (Y, Z) -- right and up -- which is what LinePlaneIntersection yields on the\nX = 0 plane. Exposed because the control needs the same answer for a gamepad stick, which\narrives as a direction rather than as a ray, and two spellings of one convention is how the\ntwo would drift apart."
+    text  "控件平面上某一点相对于圆环中心的角度：以度为单位，\n从十二点方向顺时针计，并环绕到[0, 360)。\n\nInLocalPoint是(Y, Z)——向右和向上——这正是LinePlaneIntersection在\nX = 0平面上得到的结果。之所以公开它，是因为控件需要为手柄摇杆得到相同的答案，而手柄摇杆\n到达时是方向而非射线；同一种约定若有两种写法，\n二者就会这样逐渐偏离。"
+    state machine
+}
+
+DreamRingSectorRaycast:InnerRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:InnerRadius
+    src   "Inside this, the ray misses -- the hub, or a dead zone bigger than it. In local units."
+    text  "射线未命中的区域，即中心或大于它的死区。以本地单位为单位。"
+    state machine
+}
+
+DreamRingSectorRaycast:IsAngleInSweep {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep
+    src   "True while a clockwise-from-twelve angle falls inside [InStart, InStart + InSweep)."
+    text  "当一个从 12 点开始的顺时针角度落在 [InStart, InStart + InSweep) 范围内时，该值为真。"
+    state machine
+}
+
+DreamRingSectorRaycast:OuterRadius {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:OuterRadius
+    src   "The far edge, in local units. Zero or less is UNBOUNDED -- see the class header."
+    text  "远端边缘，以本地单位为单位。小于或等于 0 表示无边界，请参阅类头文件。"
+    state machine
+}
+
+DreamRingSectorRaycast:StartAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:StartAngle
+    src   "Where the slice begins, in degrees clockwise from twelve o'clock."
+    text  "切片的起始位置，以 12 点开始的顺时针角度计算。"
+    state machine
+}
+
+DreamRingSectorRaycast:SweepAngle {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:SweepAngle
+    src   "How far it runs from there. At or past 360 the sector is the whole annulus."
+    text  "切片的长度，以本地单位为单位。超过 360 度时，扇区将是整个环形。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Ring Sector" {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint
+    src   "Ring Sector"
+    text  "环形扇区"
+    state machine
+}

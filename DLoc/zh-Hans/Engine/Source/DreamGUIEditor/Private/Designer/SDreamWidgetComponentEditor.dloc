@@ -1,0 +1,171 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetDesignerDetails
+
+ReorderComponent {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Reorder component"
+    text  "重新排序组件"
+    state machine
+}
+
+AddWidgetComponent {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Add Component"
+    // from the engine's zh-Hans
+    text  "添加组件"
+    state draft
+}
+
+AddWidgetComponentTooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Add a DreamUI component to the selected widget"
+    text  "将 DreamUI 组件添加到选定的控件中"
+    state machine
+}
+
+DropToAddComponent {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Drop to add component"
+    text  "拖放以添加组件"
+    state machine
+}
+
+CutDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Cut DreamUI Component"
+    text  "剪切 DreamUI 组件"
+    state machine
+}
+
+PasteDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Paste DreamUI Component"
+    text  "粘贴 DreamUI 组件"
+    state machine
+}
+
+DuplicateDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Duplicate DreamUI Component"
+    text  "复制 DreamUI 组件"
+    state machine
+}
+
+ComponentNotSupported {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "{0} was not added: {1}"
+    text  "{0} 未添加：{1}"
+    state machine
+}
+
+AddDreamWidgetComponentByDragDrop_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Add DreamUI Component"
+    text  "添加 DreamUI 组件"
+    state machine
+}
+
+ReorderDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Reorder DreamUI Component"
+    text  "重新排序 DreamUI 组件"
+    state machine
+}
+
+NoWidgetComponents {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "No components on this widget"
+    text  "此控件上没有组件"
+    state machine
+}
+
+SelectWidgetForComponents {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Select a widget to edit components"
+    text  "选择要编辑组件的控件"
+    state machine
+}
+
+EditComponent {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "EDIT"
+    // from the engine's zh-Hans
+    text  "编辑"
+    state draft
+}
+
+ComponentAsset {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "ASSET"
+    // from the engine's zh-Hans
+    text  "资产"
+    state draft
+}
+
+EditComponentClass_Label {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Edit {0}"
+    // from the engine's zh-Hans
+    text  "编辑{0}"
+    state draft
+}
+
+EditComponentClass_LabelNoSel {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Edit"
+    // from the engine's zh-Hans
+    text  "编辑"
+    state draft
+}
+
+EditComponentClass_Tooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Open Blueprint editor or C++ source for this component class"
+    text  "打开此组件类的蓝图编辑器或 C++ 源代码"
+    state machine
+}
+
+FindInContentBrowser_Label {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Find Class in Content Browser"
+    // from the engine's zh-Hans
+    text  "在内容浏览器中查找类"
+    state draft
+}
+
+FindInContentBrowser_Tooltip {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Locate the Blueprint class in the Content Browser"
+    text  "在内容浏览器中查找蓝图类。"
+    state machine
+}
+
+AddComponentSupportedOnly {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Components this widget supports. Others need a different visual, or are one per widget."
+    text  "此组件仅适用于此部件。其他组件需要不同的视觉效果，或者每个部件只能有一个。"
+    state machine
+}
+
+AddDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Add DreamUI Component"
+    text  "添加 DreamUI 组件"
+    state machine
+}
+
+RemoveDreamWidgetComponent_Transaction {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Remove DreamUI Component"
+    text  "移除 DreamUI 组件。"
+    state machine
+}
+
+InvalidDreamWidgetComponent {
+    at    Source/DreamGUIEditor/Private/Designer/SDreamWidgetComponentEditor.h
+    src   "Invalid Component"
+    // from the engine's zh-Hans
+    text  "无效组件"
+    state draft
+}

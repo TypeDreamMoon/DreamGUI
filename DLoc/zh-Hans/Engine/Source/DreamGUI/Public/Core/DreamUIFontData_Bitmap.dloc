@@ -1,0 +1,47 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIFontData_Bitmap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap
+    src   "Dream UIFont Data Bitmap"
+    text  "Dream 字体数据 位图"
+    state machine
+}
+
+DreamUIFontData_Bitmap:BoldRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap:BoldRatio
+    src   "Bold Ratio"
+    text  "粗体比例"
+    state machine
+}
+
+DreamUIFontData_Bitmap:ItalicAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap:ItalicAngle
+    src   "Italic Angle"
+    text  "斜体角度"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIFontData_Bitmap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap
+    src   "Bitmap font asset for render text.\nNOTE!!! This type is not maintained anymore, new features will not implement, use DistanceField font instead."
+    text  "用于渲染文本的位图字体资源。\n注意！！！此类型已不再维护，新功能将不会实现，请使用 DistanceField 字体。"
+    state machine
+}
+
+DreamUIFontData_Bitmap:BoldRatio {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap:BoldRatio
+    src   "bold size radio for bold style, large number create more bold effect"
+    text  "粗体样式下的粗体大小比例，数值越大粗体效果越明显。"
+    state machine
+}
+
+DreamUIFontData_Bitmap:ItalicAngle {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h#DreamUIFontData_Bitmap:ItalicAngle
+    src   "angle of italic style in degree"
+    text  "斜体样式的角度（单位：度）。"
+    state machine
+}

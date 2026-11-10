@@ -1,0 +1,162 @@
+dloc 1
+culture zh-Hans
+namespace SDreamWidgetAnimationEditor
+
+NameOwnedByTheFile {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "The .dui's timeline block makes this animation; rename it there"
+    text  "该 .dui 文件的时间轴块创建了此动画；请在时间轴块中重命名它。"
+    state machine
+}
+
+NameInUseByAnimation {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "An animation with this name already exists, or becomes the same variable name as one that does"
+    text  "已经存在同名的动画，或者它会变成与某个变量相同的名称。"
+    state machine
+}
+
+NameInUseByWidget {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "A widget in this hierarchy already uses this name; the widget would win and this animation would get no variable"
+    text  "此层级结构中的控件已经使用了此名称；该控件会优先，而此动画将无法使用变量。"
+    state machine
+}
+
+NameInUseByMember {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "The Blueprint has a variable or a function of this name; the animation would get no variable"
+    text  "蓝图中的变量或函数使用了此名称；动画将无法使用变量。"
+    state machine
+}
+
+NewAnimation {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "New Animation"
+    // from the engine's zh-Hans
+    text  "新建动画"
+    state draft
+}
+
+RenameAnimation {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Rename Animation"
+    // from the engine's zh-Hans
+    text  "重命名动画"
+    state draft
+}
+
+NewAnimationButtonText {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Add Animation"
+    // from the engine's zh-Hans
+    text  "添加动画"
+    state draft
+}
+
+"Search Animations" {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Search Animations"
+    // from the engine's zh-Hans
+    text  "搜索动画"
+    state draft
+}
+
+RenameKeptGraphReferences {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "The graph references to \"{0}\" were not moved to \"{1}\": {2}. Repoint them by hand."
+    text  "对“{0}”的图表引用未移动到“{1}”：{2}。请手动重新指向它们。"
+    state machine
+}
+
+RenameBreaksBlueprintCalls {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "{0} call(s) in {1} still play \"{2}\". Update them to \"{3}\" or the animation will not be found."
+    text  "{1} 中的 {0} 个调用仍然播放“{2}”。请更新为“{3}”，否则动画将无法找到。"
+    state machine
+}
+
+Edit {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Edit"
+    // from the engine's zh-Hans
+    text  "编辑"
+    state draft
+}
+
+ExportAnimationToAsset {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Export to Asset..."
+    text  "导出为资产..."
+    state machine
+}
+
+ExportAnimationToAssetTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Copy this animation into a standalone DreamUI Animation asset, with bindings converted to widget paths, so a Level Sequence can play it as a subsequence."
+    text  "将此动画复制到独立的 DreamUI 动画资产中，并将绑定转换为控件路径，以便 Level Sequence 可以将其作为子序列播放。"
+    state machine
+}
+
+TryFixObjectReference {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Try fix object reference"
+    text  "尝试修复对象引用。"
+    state machine
+}
+
+TryFixObjectReference_Tooltip {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "DreamUI can search target object by Widget's path relative to ContextObject (Owner Widget of DreamWidgetAnimationComponent), so if Widget's DisplayName and Widget's hierarchy is same as before, it is possible to fix the bad tracks."
+    text  "DreamUI 可以通过控件相对于 ContextObject（DreamWidgetAnimationComponent 组件的所有者控件）的路径来搜索目标对象，因此如果控件的 DisplayName 和控件的层级结构与之前相同，就有可能修复损坏的轨道。"
+    state machine
+}
+
+FixObjectReference_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Fix Animation Object References"
+    text  "修复动画对象引用"
+    state machine
+}
+
+FixObjectReferenceFailed {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "No animation binding could be repaired. A binding is only recoverable while the widget it was made against still sits at the same path under the animation's owner widget."
+    text  "无法修复任何动画引用。只有当引用创建的控件仍然位于动画的拥有者控件下的同一路径时，才能恢复引用。"
+    state machine
+}
+
+FixObjectReferenceSucceeded {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Repaired {0} animation binding(s)."
+    text  "已修复 {0} 个动画绑定。"
+    state machine
+}
+
+AddAnimation_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Add DreamUI Animation"
+    text  "添加 DreamUI 动画"
+    state machine
+}
+
+DuplicateAnimation_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "DreamUISequence Duplicate Animation"
+    text  "DreamUISequence 复制动画"
+    state machine
+}
+
+DeleteAnimation_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "DreamUISequence Delete Animation"
+    text  "DreamUISequence 删除动画"
+    state machine
+}
+
+ExportedAnimation {
+    at    Source/DreamGUIEditor/Private/Animation/SDreamWidgetAnimationEditor.cpp
+    src   "Exported '{0}' to {1} ({2} bindings kept, {3} unresolved dropped)."
+    text  "已导出 '{0}' 到 {1} (保留 {2} 个绑定，{3} 个未解析的已删除)。"
+    state machine
+}

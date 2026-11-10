@@ -1,0 +1,198 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIVirtualCursorSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem
+    src   "Dream UIVirtual Cursor Subsystem"
+    text  "DreamUI虚拟光标子系统"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:Get:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:Get:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:Get:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:Get:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:IsVirtualCursorActive:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:IsVirtualCursorActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:SetConfirmPressed:bInPressed {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:SetConfirmPressed:bInPressed
+    src   "In Pressed"
+    // from the engine's zh-Hans
+    text  "输入按下"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser:bInPressed {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser:bInPressed
+    src   "In Pressed"
+    // from the engine's zh-Hans
+    text  "输入按下"
+    state draft
+}
+
+DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:UserStates {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:UserStates
+    src   "User States"
+    text  "用户状态"
+    state machine
+}
+
+DreamUIVirtualCursorUserState {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorUserState
+    src   "Dream UIVirtual Cursor User State"
+    text  "DreamUI虚拟光标用户状态"
+    state machine
+}
+
+DreamUIVirtualCursorUserState:CursorHolder {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorUserState:CursorHolder
+    src   "Cursor Holder"
+    text  "光标持有者"
+    state machine
+}
+
+DreamUIVirtualCursorUserState:CursorWidget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorUserState:CursorWidget
+    src   "Cursor Widget"
+    // from the engine's zh-Hans
+    text  "光标空间"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIVirtualCursorSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem
+    src   "A pointer for a player who has no pointer. Four-way navigation cannot drive a map, a skill tree or a crafting\ngrid; this integrates the player's left stick into a screen position, substitutes it for the OS mouse through\ntheir input module's override seam, and turns the confirm button into the left mouse button. Everything\ndownstream -- raycast, hover, click, drag, tooltips -- cannot tell the difference, which is the entire design.\n\nOne cursor per player, each driven by that player's own stick and drawn on that player's screen.\n\nActivate it yourself from screens that need it, or set bAutoVirtualCursorOnGamepad in the settings to follow\nthe physical device: gamepad in hand shows the cursor, any other device hides it again."
+    text  "为没有指针的玩家提供指针。四向导航无法驱动地图、技能树或制作\n网格；此功能把玩家的左摇杆整合为屏幕位置，通过其输入模块的覆盖接缝\n替代操作系统鼠标，并把确认按钮变成鼠标左键。下游的一切\n——射线检测、悬停、点击、拖动、工具提示——都无法分辨其中的差别，这正是整个设计的目的。\n\n每个玩家一个光标，各自由该玩家自己的摇杆驱动，并绘制在该玩家的屏幕上。\n\n可在需要它的界面中自行激活，或在设置中设置 bAutoVirtualCursorOnGamepad 以跟随\n物理设备：手持游戏手柄时显示光标，换成任何其他设备时再次隐藏。"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:ActivateVirtualCursor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:ActivateVirtualCursor
+    src   "The first player's cursor."
+    text  "第一个玩家的光标。"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser
+    src   "Player InUserIndex's cursor."
+    text  "玩家InUserIndex的光标。"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition
+    src   "Where the first player's cursor is, in viewport coordinates. Meaningless while it is inactive."
+    text  "第一个玩家的光标在视口坐标系中的位置。未激活时无意义。"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:SetConfirmPressed {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:SetConfirmPressed
+    src   "Push the first player's confirm button, as a left mouse button at their cursor. Edge-triggered: only a change\nfrom what was last pushed is delivered. The preset actor calls it after offering the key to the action\nrouter, so a confirm the router claimed never becomes a click."
+    text  "将第一个玩家的确认按钮作为其光标处的鼠标左键按下。边沿触发：仅在相比上次按下的状态发生变化\n时才会传递。预设Actor在把按键提供给操作\n路由器后调用它，因此被路由器接管的确认操作不会变成点击。"
+    state machine
+}
+
+DreamUIVirtualCursorSubsystem:UserStates {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:UserStates
+    src   "Each player's cursor, by player index."
+    text  "每个玩家的光标，按玩家索引。"
+    state machine
+}
+
+DreamUIVirtualCursorUserState {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorUserState
+    src   "One player's virtual cursor."
+    text  "单个玩家的虚拟光标。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|VirtualCursor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:ActivateVirtualCursor
+    src   "DreamGUI|VirtualCursor"
+    text  "DreamGUI|虚拟光标"
+    state machine
+}

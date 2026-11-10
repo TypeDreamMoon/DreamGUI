@@ -1,0 +1,72 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamVisualCustomRaycast_VisiblePixel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel
+    src   "Dream Visual Custom Raycast Visible Pixel"
+    text  "自定义射线投射可见像素"
+    state machine
+}
+
+DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:GetVisibilityThreshold:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:GetVisibilityThreshold:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:PixelChannel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:PixelChannel
+    src   "Pixel Channel"
+    text  "像素通道"
+    state machine
+}
+
+DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:SetVisibilityThreshold:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:SetVisibilityThreshold:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:VisibilityThreshold {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:VisibilityThreshold
+    src   "Visibility Threshold"
+    text  "可视性阈值"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamVisualCustomRaycast_VisiblePixel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel
+    src   "Raycast hit test in visible pixel.\nOnly support UI element type which can read pixel value from texture:\n                     1. UITexture that use a Texture2D can work perfectly.\n                     2. UISprite which use dynamic atlas packing can not work.\n                     3. UIText which use dynamic font can not work."
+    text  "在可见像素中进行射线命中测试。\n仅支持可从纹理读取像素值的 UI 元素类型：\n                     1. 使用 Texture2D 的 UITexture 可以完美工作。\n                     2. 使用动态图集打包的 UISprite 无法工作。\n                     3. 使用动态字体的 UIText 无法工作。"
+    state machine
+}
+
+DreamVisualCustomRaycast_VisiblePixel:PixelChannel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:PixelChannel
+    src   "Use one of pixel's rgba channel, 0123 as rgba, default is 3 means alpha channel"
+    text  "使用像素的 RGBA 通道之一，0、1、2、3 分别代表红色、绿色、蓝色、透明度通道，默认值为 3，即透明度通道。"
+    state machine
+}

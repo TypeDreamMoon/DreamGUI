@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace SCS
+
+Default {
+    at    Content/Blueprints/DreamEventSystemActor_EnhancedInput.uasset#DreamEventSystemActor_EnhancedInput_C:SimpleConstructionScript_0.SCS_Node_0.CategoryName
+    src   "Default"
+    // from the engine's zh-Hans
+    text  "默认"
+    state draft
+}

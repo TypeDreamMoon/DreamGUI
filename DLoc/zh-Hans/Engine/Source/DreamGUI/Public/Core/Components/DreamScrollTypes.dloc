@@ -1,0 +1,204 @@
+dloc 1
+culture zh-Hans
+namespace UObjectToolTips
+
+EDreamScrollBoxConsumeMouseWheel {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel
+    src   "When a wheel event is swallowed by a scrolling container instead of being handed to whatever is behind it."
+    text  "当滚动容器捕获滚轮事件时，该事件不会传递给其下方的控件。"
+    state machine
+}
+
+EDreamScrollBoxConsumeMouseWheel.Always {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:Always
+    src   "Always consume, even at a limit, so the wheel never reaches an outer box."
+    text  "始终捕获滚轮事件，即使已达到限制，以防止滚轮事件传递到外部控件。"
+    state machine
+}
+
+EDreamScrollBoxConsumeMouseWheel.Never {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:Never
+    src   "Never scroll on the wheel; the event always passes through."
+    text  "从不捕获滚轮事件；事件始终传递通过。"
+    state machine
+}
+
+EDreamScrollBoxConsumeMouseWheel.WhenScrollingPossible {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:WhenScrollingPossible
+    src   "Scroll and consume only while there is somewhere left to scroll -- the nesting-friendly default."
+    text  "仅在仍有内容可滚动时才捕获滚轮事件，这是默认行为。"
+    state machine
+}
+
+EDreamUIScrollDestination {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination
+    src   "Where a revealed widget ends up -- UMG's EDescendantScrollDestination.\n\nIntoView is this library's original answer and stays the default: it moves the LEAST distance that\nreveals the widget, which is the only one that reads well under directional navigation (stepping\none row down must not heave the whole list). The others are for the cases that genuinely want a\nfixed frame -- a menu whose rows all sit in the same place, a carousel that centres its choice."
+    text  "被显示的控件最终落在何处——即UMG的EDescendantScrollDestination。\n\nIntoView是本库最初的方案，并保持为默认值：它移动的距离最小，只求露出该控件，\n这是方向导航下唯一观感良好的方式（向下一行绝不能把整个列表拽动）。其余选项适用于\n确实需要固定框架的情况——如各行位置始终不变的菜单、\n将选中项居中的轮播。"
+    state machine
+}
+
+EDreamUIScrollDestination.BottomOrRight {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:BottomOrRight
+    src   "Always parked against the TRAILING edge -- the right of a horizontal view, the bottom of a\nvertical one. Appended rather than inserted: the three above it are serialized in project assets\nby value, so the order of what was already here is not ours to change."
+    text  "始终停靠在尾缘——水平视图的右侧、垂直视图的底部。以追加而非插入的方式添加：\n其上方的三项按值序列化在项目资产中，\n因此既有项的顺序不由我们更改。"
+    state machine
+}
+
+EDreamUIScrollDestination.Center {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:Center
+    src   "Always centred in the window."
+    text  "始终居中显示在窗口中。"
+    state machine
+}
+
+EDreamUIScrollDestination.Configured {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:Configured
+    src   "Not a destination: \"whichever one this view or control is configured with\". An ARGUMENT value.\nEvery PROPERTY of this type rules it out with InvalidEnumValues -- authoring it on\nNavigationDestination itself would be a property whose value is \"this property\" -- and the\nsetters refuse it too. It cannot be hidden on the enum instead: a hidden entry may not be a\nUFUNCTION's default argument, and being one is the whole of its job.\n\nIt exists so ScrollWidgetIntoView can take a destination the way UMG's does WITHOUT the added\nparameter quietly overriding an authored NavigationDestination on every existing caller: the\ndefault argument has to mean \"carry on doing what you did\", and no real destination can."
+    text  "不是目标位置：表示“此视图或控件所配置的那个目标”。这是一个ARGUMENT值。\n此类型的每个PROPERTY都用InvalidEnumValues将其排除——若把它写在\nNavigationDestination本身上，就会变成一个值为“此属性”的属性——而各个\nsetter也拒绝它。它也不能改为在枚举上隐藏：隐藏项不能作为\nUFUNCTION的默认实参，而作为默认实参正是它的全部职责。\n\n它存在的意义在于：ScrollWidgetIntoView能够像UMG那样接受一个目标位置，同时新增的\n参数不会悄悄覆盖每个现有调用方已设置的NavigationDestination——默认实参\n必须表示“继续做你原来做的事”，而任何真实的目标位置都做不到这一点。"
+    state machine
+}
+
+EDreamUIScrollDestination.IntoView {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:IntoView
+    src   "The least movement that brings it fully inside the window."
+    text  "使其完全进入窗口所需的最小移动量。"
+    state machine
+}
+
+EDreamUIScrollDestination.TopOrLeft {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:TopOrLeft
+    src   "Always parked against the leading edge -- the left of a horizontal view, the top of a vertical one."
+    text  "始终停靠在起始边缘，即水平视图的左侧或垂直视图的顶部。"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges
+    src   "What a scrolling container does when user focus lands on something inside it.\n\nAnimatedScroll is the default because it is what this library already does: directional navigation\ncalls FDreamUINavigationScroll::RevealWidget with animation on, unconditionally, and there was no\nknob to say otherwise. UMG's own default is NoScroll -- a difference recorded in the parity tables\nrather than silently adopted, because adopting it would stop every existing gamepad-driven list\nfrom following its focus."
+    text  "当用户焦点落到滚动容器内的某个控件上时，滚动容器会执行的操作。\n\nAnimatedScroll是默认值，因为这正是本库已有的行为：方向导航会\n无条件地以带动画的方式调用FDreamUINavigationScroll::RevealWidget，此前没有\n可以另行指定的开关。UMG自身的默认值是NoScroll——这一差异记录在对等性表格中，\n而不是被悄悄采用，因为采用它会让所有现有的手柄驱动列表\n不再跟随焦点。"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.AnimatedScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:AnimatedScroll
+    src   "Glide to it."
+    text  "平滑滚动到目标位置。"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.InstantScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:InstantScroll
+    src   "Jump straight to the position NavigationDestination asks for."
+    text  "直接跳转到 NavigationDestination 指定的位置。"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.NoScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:NoScroll
+    src   "Never move. Whatever gave the widget focus is responsible for showing it."
+    text  "始终不移动。 给予该控件焦点的控件负责显示它。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+EDreamScrollBoxConsumeMouseWheel.Always {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:Always
+    src   "Always"
+    // from the engine's zh-Hans
+    text  "始终"
+    state draft
+}
+
+EDreamScrollBoxConsumeMouseWheel.EDreamScrollBoxConsumeMouseWheel_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:EDreamScrollBoxConsumeMouseWheel_MAX
+    src   "EDream Scroll Box Consume Mouse Wheel MAX"
+    text  "EDream 滚动框 鼠标滚轮 最大值"
+    state machine
+}
+
+EDreamScrollBoxConsumeMouseWheel.Never {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:Never
+    src   "Never"
+    // from the engine's zh-Hans
+    text  "永不"
+    state draft
+}
+
+EDreamScrollBoxConsumeMouseWheel.WhenScrollingPossible {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamScrollBoxConsumeMouseWheel:WhenScrollingPossible
+    src   "When Scrolling Possible"
+    text  "可滚动时"
+    state machine
+}
+
+EDreamUIScrollDestination.BottomOrRight {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:BottomOrRight
+    src   "Bottom or Right"
+    text  "底部或右侧"
+    state machine
+}
+
+EDreamUIScrollDestination.Center {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:Center
+    src   "Center"
+    // from the engine's zh-Hans
+    text  "中央"
+    state draft
+}
+
+EDreamUIScrollDestination.Configured {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:Configured
+    src   "Configured (the view's own setting)"
+    text  "已配置（视图自身的设置）"
+    state machine
+}
+
+EDreamUIScrollDestination.EDreamUIScrollDestination_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:EDreamUIScrollDestination_MAX
+    src   "EDream UIScroll Destination MAX"
+    text  "EDream 滚动目标 最大值"
+    state machine
+}
+
+EDreamUIScrollDestination.IntoView {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:IntoView
+    src   "Into View"
+    text  "可见范围内"
+    state machine
+}
+
+EDreamUIScrollDestination.TopOrLeft {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollDestination:TopOrLeft
+    src   "Top or Left"
+    text  "顶部或左侧"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.AnimatedScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:AnimatedScroll
+    src   "Animated Scroll"
+    text  "动画滚动"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.EDreamUIScrollWhenFocusChanges_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:EDreamUIScrollWhenFocusChanges_MAX
+    src   "EDream UIScroll when Focus Changes MAX"
+    text  "EDream 滚动时 焦点变化 最大值"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.InstantScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:InstantScroll
+    src   "Instant Scroll"
+    text  "立即滚动"
+    state machine
+}
+
+EDreamUIScrollWhenFocusChanges.NoScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamScrollTypes.h#EDreamUIScrollWhenFocusChanges:NoScroll
+    src   "No Scroll"
+    text  "不滚动"
+    state machine
+}

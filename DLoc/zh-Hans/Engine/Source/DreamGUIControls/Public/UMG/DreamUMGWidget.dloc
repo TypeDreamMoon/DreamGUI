@@ -1,0 +1,514 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUMGWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget
+    src   "Dream UMGWidget"
+    text  "Dream UMG 控件"
+    state machine
+}
+
+DreamUMGWidget:BackgroundColor {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:BackgroundColor
+    src   "Background Color"
+    // from the engine's zh-Hans
+    text  "背景颜色"
+    state draft
+}
+
+DreamUMGWidget:bApplyGammaCorrection {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bApplyGammaCorrection
+    src   "Apply Gamma Correction"
+    // from the engine's zh-Hans
+    text  "应用伽马修正"
+    state draft
+}
+
+DreamUMGWidget:bManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bManuallyRedraw
+    src   "Manually Redraw"
+    // from the engine's zh-Hans
+    text  "手动重绘制"
+    state draft
+}
+
+DreamUMGWidget:bWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bWindowFocusable
+    src   "Window Focusable"
+    // from the engine's zh-Hans
+    text  "Window Focusable"
+    state draft
+}
+
+DreamUMGWidget:GetCurrentDrawSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetCurrentDrawSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetManuallyRedraw:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetManuallyRedraw:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetRedrawTime:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRedrawTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetRenderTarget:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRenderTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetResolutionScale:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetResolutionScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetTickWhenOffscreen:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetTickWhenOffscreen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetUMGWidget:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUMGWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetUserWidgetObject:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUserWidgetObject:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetWindowFocusable:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowFocusable:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetWindowVisiblility:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowVisiblility:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:IsWidgetVisible:ReturnValue {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:IsWidgetVisible:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:RedrawTime {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RedrawTime
+    src   "Redraw Time"
+    // from the engine's zh-Hans
+    text  "重绘制时间"
+    state draft
+}
+
+DreamUMGWidget:RenderTarget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RenderTarget
+    src   "Render Target"
+    // from the engine's zh-Hans
+    text  "渲染目标"
+    state draft
+}
+
+DreamUMGWidget:ResolutionScale {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:ResolutionScale
+    src   "Resolution Scale"
+    // from the engine's zh-Hans
+    text  "Resolution Scale"
+    state draft
+}
+
+DreamUMGWidget:SetBackgroundColor:NewBackgroundColor {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetBackgroundColor:NewBackgroundColor
+    src   "New Background Color"
+    // from the engine's zh-Hans
+    text  "新背景颜色中"
+    state draft
+}
+
+DreamUMGWidget:SetManuallyRedraw:bUseManualRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetManuallyRedraw:bUseManualRedraw
+    src   "Use Manual Redraw"
+    // from the engine's zh-Hans
+    text  "使用手动重绘制"
+    state draft
+}
+
+DreamUMGWidget:SetRedrawTime:InRedrawTime {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetRedrawTime:InRedrawTime
+    src   "In Redraw Time"
+    // from the engine's zh-Hans
+    text  "在重绘制时间中"
+    state draft
+}
+
+DreamUMGWidget:SetResolutionScale:value {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetResolutionScale:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUMGWidget:SetTickMode:InTickMode {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickMode:InTickMode
+    src   "In Tick Mode"
+    // from the engine's zh-Hans
+    text  "输入Tick模式"
+    state draft
+}
+
+DreamUMGWidget:SetTickWhenOffscreen:bWantTickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickWhenOffscreen:bWantTickWhenOffscreen
+    src   "Want Tick when Offscreen"
+    // from the engine's zh-Hans
+    text  "希望在出屏时tick"
+    state draft
+}
+
+DreamUMGWidget:SetWidget:Widget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWidget:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUMGWidget:SetWindowFocusable:bInWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowFocusable:bInWindowFocusable
+    src   "In Window Focusable"
+    // from the engine's zh-Hans
+    text  "在可聚焦窗口中"
+    state draft
+}
+
+DreamUMGWidget:SetWindowVisibility:InVisibility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowVisibility:InVisibility
+    src   "In Visibility"
+    // from the engine's zh-Hans
+    text  "在可视性中"
+    state draft
+}
+
+DreamUMGWidget:TickMode {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:TickMode
+    src   "Tick Mode"
+    // from the engine's zh-Hans
+    text  "Tick模式"
+    state draft
+}
+
+DreamUMGWidget:TickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:TickWhenOffscreen
+    src   "Tick when Offscreen"
+    // from the engine's zh-Hans
+    text  "屏幕外时tick"
+    state draft
+}
+
+DreamUMGWidget:TimingPolicy {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:TimingPolicy
+    src   "Timing Policy"
+    // from the engine's zh-Hans
+    text  "计时规则"
+    state draft
+}
+
+DreamUMGWidget:UmgWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:UmgWidget
+    src   "Umg Widget"
+    // from the engine's zh-Hans
+    text  "UMG控件"
+    state draft
+}
+
+DreamUMGWidget:WidgetClass {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:WidgetClass
+    src   "Widget Class"
+    // from the engine's zh-Hans
+    text  "Widget Class"
+    state draft
+}
+
+DreamUMGWidget:WindowVisibility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:WindowVisibility
+    src   "Window Visibility"
+    // from the engine's zh-Hans
+    text  "Window Visibility"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUMGWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget
+    src   "DreamUMGWidget can render a UMG widget as DreamUI's element, and interact with it by UIWidgetInteraction component."
+    text  "DreamUMGWidget可以将UMG控件作为DreamUI的元素进行渲染，并通过UIWidgetInteraction组件与之交互。"
+    state machine
+}
+
+DreamUMGWidget:BackgroundColor {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:BackgroundColor
+    src   "The background color of the component"
+    // from the engine's zh-Hans
+    text  "组件的背景颜色"
+    state draft
+}
+
+DreamUMGWidget:bApplyGammaCorrection {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bApplyGammaCorrection
+    src   "Widget components that appear in the world will be gamma corrected by the 3D renderer.\nIn some cases, widget components are blitted directly into the backbuffer, in which case gamma correction should be enabled."
+    // from the engine's zh-Hans
+    text  "出现在场景中的控件组件将被3D渲染器伽马校正。\n在某些情况下，控件组件将直接被位块传送到后台缓冲中，此时便需要启用伽马校正。"
+    state draft
+}
+
+DreamUMGWidget:bManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bManuallyRedraw
+    src   "Should we wait to be told to redraw to actually draw?"
+    // from the engine's zh-Hans
+    text  "是否应等待被告知进行重新绘制后在实际进行绘制？"
+    state draft
+}
+
+DreamUMGWidget:bWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:bWindowFocusable
+    src   "Is the virtual window created to host the widget focusable?"
+    // from the engine's zh-Hans
+    text  "为托管控件而创建的虚拟窗口是否可聚焦？"
+    state draft
+}
+
+DreamUMGWidget:GetCurrentDrawSize {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetCurrentDrawSize
+    src   "Returns the \"actual\" draw size of the quad in the world"
+    // from the engine's zh-Hans
+    text  "返回场景中四边形的“实际”绘制大小"
+    state draft
+}
+
+DreamUMGWidget:GetManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetManuallyRedraw
+    src   "@see bManuallyRedraw"
+    // from the engine's zh-Hans
+    text  "@see bManuallyRedraw"
+    state draft
+}
+
+DreamUMGWidget:GetRenderTarget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRenderTarget
+    src   "Returns the render target to which the user widget is rendered"
+    // from the engine's zh-Hans
+    text  "返回用户控件渲染到的渲染目标"
+    state draft
+}
+
+DreamUMGWidget:GetTickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetTickWhenOffscreen
+    src   "Gets whether the widget ticks when offscreen or not"
+    // from the engine's zh-Hans
+    text  "获取控件在屏幕之外时是否tick"
+    state draft
+}
+
+DreamUMGWidget:GetUMGWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUMGWidget
+    src   "Gets the widget that is used by this Widget Component. It will be null if a Slate Widget was set using SetSlateWidget function."
+    // from the engine's zh-Hans
+    text  "获取此控件组件使用的控件。如果使用SetSlateWidget函数设置了Slate控件，则它将为空。"
+    state draft
+}
+
+DreamUMGWidget:GetUserWidgetObject {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUserWidgetObject
+    src   "Returns the user widget object displayed by this component"
+    // from the engine's zh-Hans
+    text  "返回此组件显示的用户控件对象"
+    state draft
+}
+
+DreamUMGWidget:GetWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowFocusable
+    src   "@see bWindowFocusable"
+    // from the engine's zh-Hans
+    text  "@see bWindowFocusable"
+    state draft
+}
+
+DreamUMGWidget:GetWindowVisiblility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowVisiblility
+    src   "Gets the visibility of the virtual window created to host the widget focusable."
+    // from the engine's zh-Hans
+    text  "获取用于保持控件可聚焦性的虚拟窗口可视性。"
+    state draft
+}
+
+DreamUMGWidget:IsWidgetVisible {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:IsWidgetVisible
+    src   "Returns true if the the Slate window is visible and that the widget is also visible, false otherwise."
+    // from the engine's zh-Hans
+    text  "如果Slate窗口可见并且该控件也可见，则返回true，否则返回false。"
+    state draft
+}
+
+DreamUMGWidget:RedrawTime {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RedrawTime
+    src   "The time in between draws, if 0 - we would redraw every frame.  If 1, we would redraw every second.\nThis will work with bManuallyRedraw as well.  So you can say, manually redraw, but only redraw at this\nmaximum rate."
+    // from the engine's zh-Hans
+    text  "绘制之间的时间。如为0，则每帧进行重新绘制。如为1，则每秒进行重新绘制。\n这也能结合bManuallyRedraw使用。因此可以进行手动重新绘制，但最大速率便是如此。"
+    state draft
+}
+
+DreamUMGWidget:RenderTarget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RenderTarget
+    src   "The target to which the user widget is rendered"
+    // from the engine's zh-Hans
+    text  "用户控件渲染至的目标"
+    state draft
+}
+
+DreamUMGWidget:RequestRenderUpdate {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RequestRenderUpdate
+    src   "Requests that the widget have it's render target updated, if TickMode is disabled, this will force a tick to happen to update the render target."
+    // from the engine's zh-Hans
+    text  "请求控件更新它的渲染目标，如果TickMode被禁用，这将强制执行一次tick来更新渲染目标。"
+    state draft
+}
+
+DreamUMGWidget:ResolutionScale {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:ResolutionScale
+    src   "Scale draw size for the widget."
+    text  "缩放控件的绘制大小。"
+    state machine
+}
+
+DreamUMGWidget:SetBackgroundColor {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetBackgroundColor
+    src   "Sets the background color and opacityscale for this widget"
+    // from the engine's zh-Hans
+    text  "设置此控件的背景颜色和透明度范围"
+    state draft
+}
+
+DreamUMGWidget:SetManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetManuallyRedraw
+    src   "@see bManuallyRedraw"
+    // from the engine's zh-Hans
+    text  "@see bManuallyRedraw"
+    state draft
+}
+
+DreamUMGWidget:SetTickMode {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickMode
+    src   "Sets the Tick mode of the Widget Component."
+    // from the engine's zh-Hans
+    text  "设置控件组件的tick模式。"
+    state draft
+}
+
+DreamUMGWidget:SetTickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickWhenOffscreen
+    src   "Sets whether the widget ticks when offscreen or not"
+    // from the engine's zh-Hans
+    text  "设置控件在屏幕之外时是否tick"
+    state draft
+}
+
+DreamUMGWidget:SetWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWidget
+    src   "Sets the widget to use directly. This function will keep track of the widget till the next time it's called\n    with either a newer widget or a nullptr"
+    // from the engine's zh-Hans
+    text  "设置直接使用的控件。此函数将持续追踪控件，直到其下次随\n    新控件或nullptr调用"
+    state draft
+}
+
+DreamUMGWidget:SetWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowFocusable
+    src   "@see bWindowFocusable"
+    // from the engine's zh-Hans
+    text  "@see bWindowFocusable"
+    state draft
+}
+
+DreamUMGWidget:SetWindowVisibility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowVisibility
+    src   "Sets the visibility of the virtual window created to host the widget focusable."
+    // from the engine's zh-Hans
+    text  "设置用于保持控件可聚焦性的虚拟窗口可视性。"
+    state draft
+}
+
+DreamUMGWidget:TickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:TickWhenOffscreen
+    src   "Should the component tick the widget when it's off screen?"
+    // from the engine's zh-Hans
+    text  "组件处于屏幕之外时是否应tick控件？"
+    state draft
+}
+
+DreamUMGWidget:TimingPolicy {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:TimingPolicy
+    src   "How this widget should deal with timing, pausing, etc."
+    // from the engine's zh-Hans
+    text  "此控件如何处理时间、暂停等机制。"
+    state draft
+}
+
+DreamUMGWidget:UmgWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:UmgWidget
+    src   "The User Widget object displayed and managed by this component"
+    // from the engine's zh-Hans
+    text  "由此组件显示并管理的用户控件Object"
+    state draft
+}
+
+DreamUMGWidget:WidgetClass {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:WidgetClass
+    src   "The class of User Widget to create and display an instance of"
+    // from the engine's zh-Hans
+    text  "创建并显示实例的用户控件的类"
+    state draft
+}
+
+DreamUMGWidget:WindowVisibility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:WindowVisibility
+    src   "The visibility of the virtual window created to host the widget"
+    // from the engine's zh-Hans
+    text  "用于保持控件可聚焦性的虚拟窗口可视性"
+    state draft
+}

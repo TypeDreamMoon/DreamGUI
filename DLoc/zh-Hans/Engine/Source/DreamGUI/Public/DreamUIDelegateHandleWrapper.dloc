@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDelegateHandleWrapper {
+    at    Source/DreamGUI/Public/DreamUIDelegateHandleWrapper.h#DreamUIDelegateHandleWrapper
+    src   "Dream UIDelegate Handle Wrapper"
+    text  "Dream UI委托句柄包装器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIDelegateHandleWrapper {
+    at    Source/DreamGUI/Public/DreamUIDelegateHandleWrapper.h#DreamUIDelegateHandleWrapper
+    src   "Just a wrapper for blueprint to store a delegate handle"
+    text  "用于蓝图存储委托句柄的包装器。"
+    state machine
+}

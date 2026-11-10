@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace LWidgetDataAsTexture
+
+BufferTexture_Size_Error {
+    at    Source/DreamGUI/Private/Core/DreamUIDataAsTexture.cpp
+    src   "{0} Trying to expand buffer texture, result too large size that not supported! Maximum texture size is:{1}."
+    text  "{0} 尝试扩展缓冲区纹理，但结果太大，超出支持范围！最大纹理尺寸为：{1}。"
+    state machine
+}

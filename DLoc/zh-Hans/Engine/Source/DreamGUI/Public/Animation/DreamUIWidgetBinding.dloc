@@ -1,0 +1,62 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIWidgetBinding {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding
+    src   "DreamUI Widget"
+    text  "DreamUI控件"
+    state machine
+}
+
+DreamUIWidgetBinding:PresenterActor {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:PresenterActor
+    src   "Presenter Actor"
+    text  "呈现器Actor"
+    state machine
+}
+
+DreamUIWidgetBinding:SubObjectPathRelativeToWidget {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:SubObjectPathRelativeToWidget
+    src   "Sub Object Path Relative to Widget"
+    text  "相对于控件的子对象路径"
+    state machine
+}
+
+DreamUIWidgetBinding:WidgetPath {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:WidgetPath
+    src   "Widget Path"
+    // from the engine's zh-Hans
+    text  "控件路径"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIWidgetBinding {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding
+    src   "Lets a Level Sequence possess a DreamGUI widget.\n\nA widget is a plain UObject the presenter component deserializes at load, transient in the editor\nworld and auto-named -- three reasons the engine's object locators can neither list nor persist\none. This binding stores what IS stable instead: the actor carrying the presenter, and the\nwidget's display-name path from the loaded root. Resolution walks presenter -> loaded root ->\npath, identically in the editor, PIE, and a cooked game, so what the sequencer preview shows is\nwhat runs.\n\nCreate one by possessing the presenter's actor or component and converting the binding to\n\"DreamUI Widget\", or by adding a binding from a selected widget inside a designer world.\nProperty tracks then key any Interp property on the widget (transform, color, opacity, width...).\n\nA widget loaded after the sequence started stays unresolved until someone pokes the player --\nthe ECS only re-runs resolution on explicit invalidation -- which is what\nUDreamWidgetPresenterComponentBase::NotifyWidgetLoaded does."
+    text  "让关卡序列占有一个DreamGUI控件。\n\n控件是一个普通UObject，由呈现器组件在加载时反序列化，\n在编辑器世界中是瞬态的并且自动命名——这三个原因使得引擎的对象定位器既无法列出它，\n也无法持久化它。此绑定改为存储真正稳定的内容：承载呈现器的Actor，\n以及控件从已加载根节点开始的显示名称路径。解析过程依次经过呈现器 -> 已加载根节点 ->\n路径，在编辑器、PIE和打包游戏中完全一致，因此Sequencer预览显示的就是\n实际运行的结果。\n\n可以通过占有呈现器的Actor或组件并将绑定转换为“DreamUI控件”来创建一个绑定，\n也可以在设计师世界中从选中的控件添加绑定。之后属性轨道可以为控件上的任意Interp属性打关键帧（变换、颜色、不透明度、宽度……）。\n\n在序列开始之后才加载的控件会一直保持未解析状态，直到\n有人去通知播放器——\nECS只在显式失效时才重新执行解析——这正是\nUDreamWidgetPresenterComponentBase::NotifyWidgetLoaded所做的事情。"
+    state machine
+}
+
+DreamUIWidgetBinding:PresenterActor {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:PresenterActor
+    src   "The actor whose presenter component loads the widget tree this binding resolves inside."
+    text  "其呈现器组件加载此绑定所解析的控件树的Actor。"
+    state machine
+}
+
+DreamUIWidgetBinding:SubObjectPathRelativeToWidget {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:SubObjectPathRelativeToWidget
+    src   "Optional: a sub-object of the widget (a behaviour, visual, or layout), as its path name\nrelative to the widget. Empty binds the widget itself. This is how an exported animation\nkeeps its component and visual bindings."
+    text  "可选：控件的一个子对象（行为、视觉或布局），以其相对于控件的\n路径名表示。为空则绑定控件本身。导出的动画\n正是通过这种方式保留其组件和视觉绑定。"
+    state machine
+}
+
+DreamUIWidgetBinding:WidgetPath {
+    at    Source/DreamGUI/Public/Animation/DreamUIWidgetBinding.h#DreamUIWidgetBinding:WidgetPath
+    src   "'/'-joined display names from the loaded root down; empty binds the root widget itself."
+    text  "从已加载根节点向下、以“/”连接的显示名称；为空则绑定根控件本身。"
+    state machine
+}

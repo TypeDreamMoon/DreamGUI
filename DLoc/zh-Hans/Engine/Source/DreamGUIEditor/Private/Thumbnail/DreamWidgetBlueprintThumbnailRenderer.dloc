@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetBlueprintThumbnailRenderer {
+    at    Source/DreamGUIEditor/Private/Thumbnail/DreamWidgetBlueprintThumbnailRenderer.h#DreamWidgetBlueprintThumbnailRenderer
+    src   "Dream Widget Blueprint Thumbnail Renderer"
+    text  "DreamUI 控件蓝图缩略图渲染器"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamWidgetBlueprintThumbnailRenderer {
+    at    Source/DreamGUIEditor/Private/Thumbnail/DreamWidgetBlueprintThumbnailRenderer.h#DreamWidgetBlueprintThumbnailRenderer
+    src   "A DreamUI Widget Blueprint's thumbnail: the screen it authors, drawn.\n\nWithout one, every DreamUI hierarchy in the Content Browser was the same generic Blueprint icon --\nso a folder of twenty screens was twenty identical tiles and the only way to tell them apart was to\nread the names. The first answer was a wireframe of the authored anchor rects, and it did not tell\nthem apart either: anchors are not where a widget ends up once a layout has arranged it, so most\nscreens came out as a grey tile with a frame or two on it. What tells one screen from another is\nhow it looks, so that is what is drawn now.\n\nThe way UMG draws its widget thumbnails: an instance of the class, built exactly as the designer\nbuilds its preview (FDreamWidgetPreviewHost::InstancePreview), laid out on the design canvas and\ndrawn there and then. A DreamUI widget is drawn by a canvas into a render target rather than by\nSlate, so the instance goes into a preview world of the renderer's own, under a render-target canvas\nwhose scaler lays it out at DesignerData.CanvasSize; the manager is ticked and the frame submitted\nby hand until the target holds the picture, and the instance is taken down again before Draw\nreturns. Nothing of the asset outlives the call, so a recompile or an unload never finds a thumbnail\nholding on to its class.\n\nThe wireframe stays for what cannot be drawn: a Blueprint without a compiled class, or a process\nthat never renders."
+    text  "A DreamUI控件蓝图的缩略图：它所编排的界面，以绘制形式呈现。\n\n没有缩略图时，内容浏览器中的每个DreamUI层级都只是同一个通用蓝图图标——\n因此，一个包含二十个界面的文件夹就是二十个完全相同的图块，区分它们的唯一办法就是\n阅读名称。最初的方案是绘制所设置锚点矩形的线框，但它同样无法区分这些界面：锚点并不是\n布局排列后控件最终所在的位置，所以大多数界面最终只是带有一两个边框的灰色图块。\n区分不同界面靠的是外观，\n因此现在绘制的是外观。\n\nUMG绘制其控件缩略图的方式是：创建该类的实例，完全按照设计器\n构建其预览的方式构建（FDreamWidgetPreviewHost::InstancePreview），将其布置在设计画布上并\n当场绘制。DreamUI控件由画布绘制到渲染目标，而不是由\nSlate绘制，因此该实例会进入渲染器自有的预览世界，置于一个渲染目标画布\n之下，该画布的缩放器按DesignerData.CanvasSize对其进行布局；管理器被手动Tick并提交帧\n直到渲染目标中保存了画面，并在Draw返回前再次移除该实例。\n该资产不会在调用结束后留下任何东西，因此重新编译或卸载时，缩略图绝不会\n仍持有其类。\n\n对于无法绘制的内容，仍保留线框：没有已编译类的蓝图，或从不执行渲染的\n进程。"
+    state machine
+}

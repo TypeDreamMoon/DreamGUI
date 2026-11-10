@@ -1,0 +1,457 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMenuAnchor {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor
+    src   "Dream Menu Anchor"
+    text  "菜单锚点"
+    state machine
+}
+
+DreamMenuAnchor:bCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bCloseOnClickOutside
+    src   "Close on Click Outside"
+    text  "点击外部区域关闭"
+    state machine
+}
+
+DreamMenuAnchor:bFitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bFitInWindow
+    src   "Fit in Window"
+    // from the engine's zh-Hans
+    text  "适应窗口"
+    state draft
+}
+
+DreamMenuAnchor:bIsOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bIsOpen
+    src   "Is Open"
+    // from the engine's zh-Hans
+    text  "已打开"
+    state draft
+}
+
+DreamMenuAnchor:bPopupElevated {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bPopupElevated
+    src   "Popup Elevated"
+    text  "弹出层置顶显示"
+    state machine
+}
+
+DreamMenuAnchor:FitInWindow:bInFitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:FitInWindow:bInFitInWindow
+    src   "In Fit in Window"
+    text  "是否适应窗口"
+    state machine
+}
+
+DreamMenuAnchor:GetCloseOnClickOutside:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetCloseOnClickOutside:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetFitInWindow:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetFitInWindow:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetMenuClass:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetMenuPosition:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuPosition:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetMenuSize:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetPlacement:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetPlacement:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:HasOpenSubMenus:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:HasOpenSubMenus:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:IsOpen:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:IsOpen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:MenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuClass
+    src   "Menu Class"
+    // from the engine's zh-Hans
+    text  "菜单类"
+    state draft
+}
+
+DreamMenuAnchor:MenuInstance {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuInstance
+    src   "Menu Instance"
+    text  "菜单实例"
+    state machine
+}
+
+DreamMenuAnchor:MenuNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuNode
+    src   "Menu Node"
+    text  "菜单节点"
+    state machine
+}
+
+DreamMenuAnchor:MenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuSize
+    src   "Menu Size"
+    text  "菜单大小"
+    state machine
+}
+
+DreamMenuAnchor:OnGetUserMenuContentEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:OnGetUserMenuContentEvent
+    src   "On Get User Menu Content Event"
+    // from the engine's zh-Hans
+    text  "获取用户菜单内容事件时"
+    state draft
+}
+
+DreamMenuAnchor:OnMenuOpenChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:OnMenuOpenChanged
+    src   "On Menu Open Changed"
+    // from the engine's zh-Hans
+    text  "菜单打开变更时"
+    state draft
+}
+
+DreamMenuAnchor:Open:bFocusMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Open:bFocusMenu
+    src   "Focus Menu"
+    // from the engine's zh-Hans
+    text  "聚焦菜单"
+    state draft
+}
+
+DreamMenuAnchor:PopupNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:PopupNode
+    src   "Popup Node"
+    text  "弹出层节点"
+    state machine
+}
+
+DreamMenuAnchor:ProvidedMenuContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ProvidedMenuContent
+    src   "Provided Menu Content"
+    text  "提供的菜单内容"
+    state machine
+}
+
+DreamMenuAnchor:SetCloseOnClickOutside:bInCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetCloseOnClickOutside:bInCloseOnClickOutside
+    src   "In Close on Click Outside"
+    text  "是否在点击外部区域时关闭"
+    state machine
+}
+
+DreamMenuAnchor:SetMenuClass:InMenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuClass:InMenuClass
+    src   "In Menu Class"
+    text  "菜单类"
+    state machine
+}
+
+DreamMenuAnchor:SetMenuSize:InMenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuSize:InMenuSize
+    src   "In Menu Size"
+    text  "菜单大小"
+    state machine
+}
+
+DreamMenuAnchor:SetPlacement:InPlacement {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetPlacement:InPlacement
+    src   "In Placement"
+    // from the engine's zh-Hans
+    text  "在放置中"
+    state draft
+}
+
+DreamMenuAnchor:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamMenuAnchor:ShouldOpenDueToClick:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ShouldOpenDueToClick:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamMenuAnchor:ToggleOpen:bFocusOnOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ToggleOpen:bFocusOnOpen
+    src   "Focus on Open"
+    // from the engine's zh-Hans
+    text  "聚焦打开"
+    state draft
+}
+
+DreamMenuAnchorGetContent__DelegateSignature:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchorGetContent__DelegateSignature:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMenuAnchorOpenChangedEvent__DelegateSignature:bIsOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchorOpenChangedEvent__DelegateSignature:bIsOpen
+    src   "Is Open"
+    // from the engine's zh-Hans
+    text  "已打开"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMenuAnchor {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor
+    src   "A place a menu opens from, and the thing that puts it away again.\n\nUMG's MenuAnchor in the DreamGUI idiom. The menu is a popup on UDreamUIPopupLayer's per-player\nstack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in\nits layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor\ngoing away or out of sight; and a menu opened from inside an open menu is its child, closed with\nit. Focus that went into the menu comes back to whatever had it when it opened. A press elsewhere\nthat closes the menu then goes on to what it landed on, as Slate's menu stack lets it, unless the\nproject's UDreamGUISettings::bMenusConsumeOutsideClick keeps it.\n\nTWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:\n\n  - fill the `Menu` slot -- `Native.MenuAnchor { ... }` in .dui, or a designer drop -- and the\n    content is authored in place, which is what a small menu wants;\n  - or set MenuClass, and an instance of it is made the first time the menu opens and kept, which\n    is what a menu shared between several anchors wants. Instancing a user widget needs a world,\n    so with none this quietly stays an empty menu rather than half of one.\n\nWith both, the SLOT wins: content somebody put there is content they meant to see.\n\nWHERE IT OPENS is FDreamMenuAnchorStyle::Placement, which is a style rather than a widget property\non purpose -- a project wants every menu in it to open the same way, and the override bits still\nlet one instance disagree.\n\nTHE SIZE IS STATED, NOT MEASURED. MenuSize is an authored number for the reason the dropdown's\nlist height is: a popup is arranged by nobody until it is on screen, so measuring it would mean\nopening it invisibly for a frame first. A menu whose content states its own size can say so by\nleaving MenuSize at zero on that axis, which hands the axis back to the content."
+    text  "菜单由此打开，也由此收起。\n\nDreamGUI风格下的UMG MenuAnchor。菜单是UDreamUIPopupLayer每玩家\n堆栈上的弹出层，与下拉列表相同：被提升到屏幕根节点，因此没有祖先会裁剪它，也不会将其计入\n自己的布局；在别处按下（bCloseOnClickOutside）、按返回键、以及此锚点\n消失或离开视野时关闭；在已打开的菜单内部打开的菜单是它的子项，随它一同\n关闭。进入菜单的焦点会回到菜单打开时持有它的对象。关闭菜单的别处\n按下随后会继续传递到它落到的位置，如同Slate的菜单堆栈所允许的那样，除非\n项目的UDreamGUISettings::bMenusConsumeOutsideClick将其保留。\n\n说明菜单内容有两种方式，二者互斥：\n\n  - 填充`Menu`槽——在.dui中写`Native.MenuAnchor { ... }`，或在设计器中拖入——内容\n    就地编写，这正是小菜单所需要的；\n  - 或设置MenuClass，菜单首次打开时会创建它的一个实例并保留，这\n    正是多个锚点共用的菜单所需要的。实例化用户控件需要一个世界，\n    因此没有世界时它会静默地保持为空菜单，而不是半个菜单。\n\n两者都有时，槽优先：有人放在那里的内容就是他们想看到的内容。\n\n打开位置由FDreamMenuAnchorStyle::Placement决定，它刻意做成样式而非控件\n属性——项目希望其中每个菜单都以相同方式打开，而覆盖位仍\n允许单个实例有所不同。\n\n尺寸是声明的，不是测量的。MenuSize是一个编写好的数值，原因与下拉列表的\n高度相同：弹出层在出现在屏幕上之前不会被任何人排布，因此测量它意味着先\n隐形地打开一帧。内容自带尺寸的菜单可以在该轴上将MenuSize留为0来表明这一点，\n从而把该轴交还给内容。"
+    state machine
+}
+
+DreamMenuAnchor:bCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bCloseOnClickOutside
+    src   "Whether a press anywhere else closes the menu. Off makes it the caller's job. The press then goes on to whatever\nit landed on, as Slate's menu stack lets it, unless the project's UDreamGUISettings::bMenusConsumeOutsideClick\nkeeps it."
+    text  "在别处按下是否关闭菜单。关闭此项后，这一工作由调用方负责。该次按下随后会继续传递到\n它落到的位置，如同Slate的菜单堆栈所允许的那样，除非项目的UDreamGUISettings::bMenusConsumeOutsideClick\n将其保留。"
+    state machine
+}
+
+DreamMenuAnchor:bFitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bFitInWindow
+    src   "Keep the open menu inside the screen -- UMG's bFitInWindow, and the same arithmetic the panel\nspelling of this anchor uses (UDreamLayoutContainerMenuAnchor::FitMenuInWindow, called here\nrather than copied, so a menu lands in the same place whichever road opened it).\n\nOFF by default, where UMG's and the panel's are on: a menu near a screen edge currently lands\nwhere the placement put it, and turning the clamp on for every existing anchor would move\nmenus that somebody positioned on purpose. New work should turn it on.\n\n\"The window\" is the root widget of the hierarchy, which is the rect everything is laid out\ninside -- the nearest thing here to a Slate window."
+    text  "让打开的菜单保持在屏幕内——即UMG的bFitInWindow，使用与此锚点的面板\n版本相同的算法（UDreamLayoutContainerMenuAnchor::FitMenuInWindow，此处是调用\n而非复制，因此无论从哪条路径打开，菜单都会落在相同的位置）。\n\n默认关闭，而UMG的和面板的该项默认开启：靠近屏幕边缘的菜单目前会落在\n放置方式所指定的地方，而对所有现有锚点开启此钳制会移动\n有人刻意摆好的菜单。新做的内容应将其开启。\n\n“窗口”是层级中的根控件，即所有内容都在其中排布的\n矩形——此处最接近Slate窗口的东西。"
+    state machine
+}
+
+DreamMenuAnchor:bPopupElevated {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:bPopupElevated
+    src   "Set while the popup is up on the popup layer; the popup's resting geometry must not be written while it is."
+    text  "弹出层在弹出层上显示期间置位；在此期间不得写入弹出层的静止几何信息。"
+    state machine
+}
+
+DreamMenuAnchor:Close {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Close
+    src   "Take it off screen and hand it home: any menu opened from inside it first, then every player's\nfocus that was in it back where it was when the menu opened -- unless the player has moved it\nelsewhere meanwhile. A no-op while it is already closed."
+    text  "将其移出屏幕并归还：先关闭在其中打开的任何菜单，然后把每个玩家留在其中的\n焦点送回菜单打开时所处的位置——除非玩家在此期间已将其移到\n别处。已经关闭时为无操作。"
+    state machine
+}
+
+DreamMenuAnchor:FitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:FitInWindow
+    src   "Named as UMG names the call. Re-places an open menu at once."
+    text  "命名与 UMG 的调用一致。立即重新放置已打开的菜单。"
+    state machine
+}
+
+DreamMenuAnchor:GetMenuPosition {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuPosition
+    src   "Where the menu sits, in this anchor's own local space -- UMG's GetMenuPosition.\n\nThe popup's anchored position, which is the answer whether or not the popup has been lifted to\nthe screen layer: it is placed against the anchor BEFORE being lifted, and put back through the\nsame placement when it closes. Zero while there is no popup node at all."
+    text  "菜单所在的位置，在此锚点自身的局部空间中——即UMG的GetMenuPosition。\n\n弹出层的锚定位置；无论弹出层是否已被提升到\n屏幕层，这一答案都成立：它在提升之前就按锚点放置，关闭时再经过相同的\n放置流程放回。完全没有弹出节点时为零。"
+    state machine
+}
+
+DreamMenuAnchor:GetPlacement {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetPlacement
+    src   "Where the menu opens relative to this anchor -- UMG's Placement, read from the style in EFFECT\nrather than from the field beside it, so an anchor driven by the project sheet answers the\nplacement it actually uses."
+    text  "菜单相对于此锚点的打开位置——即UMG的Placement，读取的是实际生效的样式，而非旁边的\n字段，因此由项目样式表驱动的锚点回答的是它\n实际使用的放置方式。"
+    state machine
+}
+
+DreamMenuAnchor:HasOpenSubMenus {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:HasOpenSubMenus
+    src   "Whether anything inside this menu has a menu of ITS own open -- UMG's HasOpenSubMenus.\n\nThe question a menu asks before closing itself on a click elsewhere: the click may have landed\nin a submenu, which is still this menu's business. Answered by walking the menu's subtree for\nopen anchors, because a submenu here is exactly that -- another UDreamMenuAnchor inside the\ncontent -- rather than an entry on an application-wide menu stack."
+    text  "此菜单内部是否有任何东西打开了自己的菜单——即UMG的HasOpenSubMenus。\n\n菜单在因别处点击而关闭自身之前会问的问题：该点击可能落在\n子菜单中，而那仍然属于此菜单的事务。通过遍历菜单子树查找已打开的\n锚点来回答，因为这里的子菜单正是如此——内容中的另一个\nUDreamMenuAnchor——而不是应用程序级菜单堆栈上的一个条目。"
+    state machine
+}
+
+DreamMenuAnchor:MenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuClass
+    src   "The menu's class, for an anchor whose menu is not authored in place."
+    text  "菜单的类，用于菜单未就地编写的锚点。"
+    state machine
+}
+
+DreamMenuAnchor:MenuInstance {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuInstance
+    src   "The instance MenuClass produced, or null while the slot is filled or there is no world."
+    text  "MenuClass 生成的实例；槽已填充或没有世界时为 null。"
+    state machine
+}
+
+DreamMenuAnchor:MenuNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuNode
+    src   "The hole inside it. Whatever a host nests on this control ends up here."
+    text  "它内部的空位。宿主嵌套在此控件上的任何内容都会出现在这里。"
+    state machine
+}
+
+DreamMenuAnchor:MenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:MenuSize
+    src   "How big the menu opens. Zero on an axis leaves that axis to whatever is inside it."
+    text  "菜单打开时的尺寸。某一轴为零时，该轴尺寸由内部内容决定。"
+    state machine
+}
+
+DreamMenuAnchor:OnGetUserMenuContentEvent {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:OnGetUserMenuContentEvent
+    src   "Builds the menu's content the first time it is needed, instead of MenuClass.\n\nAsked once, when there is no menu yet and nothing authored in the hole -- not on every open.\nThe anchor keeps what it is handed and owns it from then on, exactly as it keeps an instance\nmade from MenuClass; a handler that wants different content next time changes what is inside\nthe widget it already gave, or calls SetMenuClass(nullptr) to be asked again.\n\nRanks below authored content and above MenuClass: something a host put in the hole is what a\nhost meant to see, and a delegate is a more specific answer than a class."
+    text  "在首次需要时构建菜单内容，而不是使用MenuClass。\n\n仅在尚无菜单、且空位中没有任何已创作内容时询问一次——而不是每次打开都询问。\n锚点会保留交给它的内容，并从此拥有它，就像它保留由MenuClass\n创建的实例一样；若处理程序下次想要不同内容，应更改它已提供的\n控件内部的内容，或调用SetMenuClass(nullptr)以便再次被询问。\n\n优先级低于已创作内容、高于MenuClass：宿主放入空位的内容才是宿主\n希望看到的内容，而委托是比类更具体的答案。"
+    state machine
+}
+
+DreamMenuAnchor:OnMenuOpenChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:OnMenuOpenChanged
+    src   "Open and closed, as the anchor announces them. Fires after the move, never during. An open that closed again before\nOpen returned -- the focus moving into the menu ran a handler that closed it -- announces neither."
+    text  "打开与关闭，由锚点宣布。在状态变化之后触发，绝不在变化过程中触发。若一次打开在\nOpen 返回前又关闭了——焦点移入菜单时运行的处理程序关闭了它——则两者都不宣布。"
+    state machine
+}
+
+DreamMenuAnchor:Open {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Open
+    src   "Put the menu on screen, positioned by the style. A no-op while it is already open.\n\nbFocusMenu is UMG's, and it means what it says: the first navigable thing inside the menu\ntakes focus, so a pad or a keyboard can walk the menu it just opened without the player first\nhaving to find it. A menu with nothing navigable in it leaves focus where it was rather than\ndropping it somewhere arbitrary -- the same call, and the same rule, as UDreamTabView's.\n\nDefaulted, and last, so every existing Open() keeps compiling and keeps meaning what it did."
+    text  "将菜单显示到屏幕上，并由样式决定其位置。菜单已打开时不执行任何操作。\n\nbFocusMenu 是 UMG 的参数，含义如其名：菜单内第一个可导航内容\n获得焦点，因此手柄或键盘可以直接浏览刚打开的菜单，而无需玩家先\n找到它。菜单内没有任何可导航内容时，焦点会留在原处，而不是\n被丢到任意位置——这与 UDreamTabView 的调用和规则相同。\n\n有默认值且位于最后，因此所有现有 Open() 仍可编译，并保持原有含义。"
+    state machine
+}
+
+DreamMenuAnchor:PopupNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:PopupNode
+    src   "The popup root: what gets lifted to the screen, positioned and faded."
+    text  "弹出根节点：被提升到屏幕、进行定位和淡入淡出的对象。"
+    state machine
+}
+
+DreamMenuAnchor:ProvidedMenuContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ProvidedMenuContent
+    src   "What OnGetUserMenuContentEvent handed over, kept so the handler is asked ONCE.\n\nA second field rather than reusing MenuInstance above, because a handler may hand back any\nwidget at all and MenuInstance is specifically a user widget the anchor built itself. Which of\nthe two is set is also how the anchor knows who owns what."
+    text  "OnGetUserMenuContentEvent所交给的内容，保留它以确保处理程序只被询问一次。\n\n这是一个单独的字段，而不是复用上方的MenuInstance，因为处理程序可以返回任意\n控件，而MenuInstance特指锚点自己构建的用户控件。两者中设置的是哪一个，\n也是锚点判断谁拥有什么的方式。"
+    state machine
+}
+
+DreamMenuAnchor:SetCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetCloseOnClickOutside
+    src   "Decides what a click elsewhere does WHILE the menu is open, rather than only what the next open\ndoes -- a menu that started closing on outside clicks only on its second showing would be a\nswitch that appears not to work."
+    text  "决定菜单打开期间在别处点击会有什么效果，而不只是决定下一次打开\n时的行为——如果菜单只在第二次显示时才开始在外部点击时关闭，那这个开关\n看起来就像没起作用。"
+    state machine
+}
+
+DreamMenuAnchor:SetMenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuClass
+    src   "Which menu this anchor opens. The instance is built on first open and kept, so a class changed\nafterwards throws the old instance away rather than leaving the anchor opening the previous\nmenu forever. A change while the menu is OPEN closes it first: swapping the contents of a menu\nthe player is reading is not a thing this can do quietly."
+    text  "此锚点打开哪个菜单。实例在首次打开时构建并保留，因此之后再更改类\n会丢弃旧实例，而不是让锚点一直打开之前的\n菜单。菜单处于打开状态时更改会先关闭它：替换玩家正在阅读的菜单\n内容，不是此操作能悄悄完成的事。"
+    state machine
+}
+
+DreamMenuAnchor:SetMenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuSize
+    src   "Re-places an open menu at once, so the new size is not something only the next open shows."
+    text  "立即重新定位已打开的菜单，因此新尺寸不会只在下次打开时才显示。"
+    state machine
+}
+
+DreamMenuAnchor:SetPlacement {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetPlacement
+    src   "Edits this instance's style and re-places an open menu at once. See UDreamBorder::SetPadding."
+    text  "编辑此实例的样式并立即重新放置已打开的菜单。关于填充，参见UDreamBorder::SetPadding。"
+    state machine
+}
+
+DreamMenuAnchor:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamMenuAnchor:ShouldOpenDueToClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ShouldOpenDueToClick
+    src   "Whether a click on the anchor should open the menu -- UMG's ShouldOpenDueToClick, and the\nquestion a button wrapping an anchor has to ask before it calls Open: a click that lands while\nthe menu is already up is the click that DISMISSED it, and opening again would make a menu\nimpossible to close by clicking the thing that opened it.\n\nNo, too, for the click of the press that has just closed the menu from outside it: that press\ngoes on to what it landed on (bCloseOnClickOutside), and when that is the trigger, its click\ncomes as the press is let go -- after the close. SMenuAnchor answers it with bDismissedThisTick,\nwhich holds because SComboButton clicks on the press; a trigger here clicks on the release, so\nthe answer holds until the press that closed the menu has been let go."
+    text  "点击锚点是否应打开菜单——这就是UMG的ShouldOpenDueToClick，也是\n包裹锚点的按钮在调用Open之前必须确认的问题：菜单已经打开时落下的那次点击，\n正是关闭菜单的那次点击；若此时再次打开，菜单就无法\n再通过点击打开它的那个东西来关闭。\n\n对于刚刚从菜单外部把菜单关闭的那次按下所产生的点击，答案同样为否：该按下\n会继续传给它落到的控件（bCloseOnClickOutside）；当它正是触发器时，它的点击\n在按下被松开时才到来——也就是在关闭之后。SMenuAnchor用bDismissedThisTick来回答，\n该回答之所以成立，是因为SComboButton在按下时点击；而这里的触发器在松开时点击，所以\n该回答会一直有效，直到关闭菜单的那次按下被松开。"
+    state machine
+}
+
+DreamMenuAnchor:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect."
+    text  "本实例自身的外观。只要StyleSource如此指定且样式表\n确实存在，项目样式表就优先；项目中没有任何样式表时，这里就是实际生效的外观。"
+    state machine
+}
+
+DreamMenuAnchorGetContent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchorGetContent__DelegateSignature
+    src   "Builds the menu's content on demand -- UMG's OnGetUserMenuContentEvent.\n\nSingle-cast, as UMG's is and as it has to be: two handlers would both build a menu and only one\nof them could be shown, which is a leak with a coin toss in front of it."
+    text  "按需构建菜单内容——即 UMG 的 OnGetUserMenuContentEvent。\n\n单播，与 UMG 的该事件一样，也只能如此：两个处理程序都会构建一个菜单，而只有其中一个\n能显示出来，这会造成泄漏，并且还得靠抛硬币来决定。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Menu Anchor" {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Close
+    src   "Menu Anchor"
+    // from the engine's zh-Hans
+    text  "菜单轴点"
+    state draft
+}

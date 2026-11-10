@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerInteger {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerInteger.h#DreamTweenerInteger
+    src   "Dream Tweener Integer"
+    text  "DreamTween 整数"
+    state machine
+}

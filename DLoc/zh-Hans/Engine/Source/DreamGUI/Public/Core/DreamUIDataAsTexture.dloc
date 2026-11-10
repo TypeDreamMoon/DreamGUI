@@ -1,0 +1,83 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIDataAsTexture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#DreamUIDataAsTexture
+    src   "Dream UIData as Texture"
+    text  "Dream UIData作为纹理"
+    state machine
+}
+
+DreamUIDataAsTexture:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#DreamUIDataAsTexture:Texture
+    src   "Texture"
+    // from the engine's zh-Hans
+    text  "纹理"
+    state draft
+}
+
+EDreamUIDataAsTexturePixelFormat.EDreamUIDataAsTexturePixelFormat_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:EDreamUIDataAsTexturePixelFormat_MAX
+    src   "EDream UIData as Texture Pixel Format MAX"
+    text  "EDream UIData作为纹理像素格式MAX"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R16 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R16
+    src   "R16"
+    text  "R16"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R16G16B16A16 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R16G16B16A16
+    src   "R16G16B16A16"
+    text  "R16G16B16A16"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R32 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R32
+    src   "R32"
+    text  "R32"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R32G32B32A32 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R32G32B32A32
+    src   "R32G32B32A32"
+    text  "R32G32B32A32"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R8 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R8
+    src   "R8"
+    text  "R8"
+    state machine
+}
+
+EDreamUIDataAsTexturePixelFormat.R8G8B8A8 {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#EDreamUIDataAsTexturePixelFormat:R8G8B8A8
+    src   "R8G8B8A8"
+    text  "R8G8B8A8"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIDataAsTexture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#DreamUIDataAsTexture
+    src   "Rows of a texture handed out as blocks: a canvas's widget data, its clip data, the rect blocks' data. The rows\nlive in a UDreamUIDataTexture, which grows in place when they run out, so the texture this hands out is the same\nobject for as long as this lives, and whatever binds it follows every growth."
+    text  "以块的形式分发的纹理行：画布的控件数据、其裁剪数据、矩形块的数据。这些行\n存放在UDreamUIDataTexture中，用尽时会就地增长，因此此对象存活期间所分发的纹理始终是同一个\n对象，任何绑定它的对象都会随之跟进每一次增长。"
+    state machine
+}
+
+DreamUIDataAsTexture:Texture {
+    at    Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h#DreamUIDataAsTexture:Texture
+    src   "Texture to fill buffer data, and decode to buffer in shader. Made at run time in the transient\npackage, and never saved, duplicated or copied: a copy would carry none of its size (see CreateTexture)."
+    text  "用于填充缓冲区数据、并在着色器中解码到缓冲区的纹理。在运行时于瞬态\n包中创建，从不保存、复制或拷贝：副本不会带有其大小（参见CreateTexture）。"
+    state machine
+}

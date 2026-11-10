@@ -1,0 +1,172 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIInputActionData {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData
+    src   "Dream UIInput Action Data"
+    text  "DreamUI输入操作数据"
+    state machine
+}
+
+DreamUIInputActionData:bDisplayInActionBar {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bDisplayInActionBar
+    src   "Display in Action Bar"
+    // from the engine's zh-Hans
+    text  "在操作栏中显示"
+    state draft
+}
+
+DreamUIInputActionData:bRequiresAlt {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bRequiresAlt
+    src   "Requires Alt"
+    text  "需要Alt"
+    state machine
+}
+
+DreamUIInputActionData:bRequiresCmd {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bRequiresCmd
+    src   "Requires Cmd"
+    text  "需要Cmd"
+    state machine
+}
+
+DreamUIInputActionData:bRequiresCtrl {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bRequiresCtrl
+    src   "Requires Ctrl"
+    text  "需要Ctrl"
+    state machine
+}
+
+DreamUIInputActionData:bRequiresShift {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bRequiresShift
+    src   "Requires Shift"
+    text  "需要Shift"
+    state machine
+}
+
+DreamUIInputActionData:DisplayName {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:DisplayName
+    src   "Display Name"
+    // from the engine's zh-Hans
+    text  "显示名称"
+    state draft
+}
+
+DreamUIInputActionData:GamepadIcon {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:GamepadIcon
+    src   "Gamepad Icon"
+    text  "手柄图标"
+    state machine
+}
+
+DreamUIInputActionData:GamepadKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:GamepadKey
+    src   "Gamepad Key"
+    text  "手柄按键"
+    state machine
+}
+
+DreamUIInputActionData:GamepadModelIcons {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:GamepadModelIcons
+    src   "Gamepad Model Icons"
+    text  "手柄型号图标"
+    state machine
+}
+
+DreamUIInputActionData:HoldTime {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:HoldTime
+    src   "Hold Time"
+    // from the engine's zh-Hans
+    text  "保留时间"
+    state draft
+}
+
+DreamUIInputActionData:InputAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:InputAction
+    src   "Input Action"
+    // from the engine's zh-Hans
+    text  "输入操作"
+    state draft
+}
+
+DreamUIInputActionData:KeyboardIcon {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:KeyboardIcon
+    src   "Keyboard Icon"
+    text  "键盘图标"
+    state machine
+}
+
+DreamUIInputActionData:KeyboardKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:KeyboardKey
+    src   "Keyboard Key"
+    text  "键盘按键"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIInputActionData {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData
+    src   "One named thing a screen can be asked to do -- Confirm, Back, Delete Save -- with the key it is\nspelled as on each device and the words to put next to that key.\n\nNavigation keys used to be a static array in the input actor's cpp, which meant a project could not\nadd an action, rename one, or draw a prompt for one without editing the plugin. A row here is the\nunit a screen binds a callback to and a prompt bar reads its label and icon from, so those two can\nnever disagree about what the player is being told to press."
+    text  "界面上可以要求执行的一项具名操作——确认、返回、删除存档——并带有该操作\n在各类设备上的按键写法以及要放在该按键旁的文字。\n\n导航按键过去是输入 Actor 的 cpp 中的一个静态数组，这意味着项目若不修改插件\n就无法添加操作、重命名操作，也无法为某个操作绘制提示。此处的每一行既是界面\n绑定回调的单位，也是提示栏读取其标签和图标的来源，因此二者\n对玩家该按什么键的提示永远不会出现分歧。"
+    state machine
+}
+
+DreamUIInputActionData:bDisplayInActionBar {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bDisplayInActionBar
+    src   "Offer this to a prompt bar while it is bound. Off for something the player should not be told about."
+    text  "绑定期间将此操作提供给提示栏。对于不应告知玩家的操作，请关闭此项。"
+    state machine
+}
+
+DreamUIInputActionData:bRequiresShift {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:bRequiresShift
+    src   "Modifier keys this action is spelled with -- what makes Ctrl+S and Shift+Tab expressible at all.\nThey qualify the keyboard key only; a gamepad has no modifiers to hold.\n\nRequired, not exclusive. An action that authors none still fires with a modifier incidentally\nheld, which is what keeps every binding that predates these flags behaving exactly as it did.\nWhen two actions both match the key, the one requiring more modifiers wins, so adding Ctrl+S to a\nproject that already binds S does not silently break S -- and does not lose to it either."
+    text  "此操作所用的修饰键——正是它让 Ctrl+S 和 Shift+Tab 得以表达。\n它们只修饰键盘按键；手柄没有可按住的修饰键。\n\n必需，但不排他。未指定任何修饰键的操作，在偶然按住修饰键时仍会触发，\n这正是所有早于这些标志的绑定行为完全不变的原因。\n当两个操作都匹配该按键时，需要更多修饰键的那个胜出，因此向已绑定 S 的\n项目添加 Ctrl+S 不会悄悄破坏 S——也不会输给它。"
+    state machine
+}
+
+DreamUIInputActionData:DisplayName {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:DisplayName
+    src   "Shown beside the key on a prompt bar."
+    text  "显示在提示栏中按键的旁边。"
+    state machine
+}
+
+DreamUIInputActionData:GamepadModelIcons {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:GamepadModelIcons
+    src   "Per-pad glyphs, for a project that ships both an A button and a Cross.\n\nOptional in every sense: a model with no entry here falls back to GamepadIcon, which is what a\nproject with one set of pad glyphs wants and is never wrong-brand."
+    text  "按手柄型号区分的图标，适用于同时提供 A 键和 Cross 键的项目。\n\n在任何意义上都是可选的：此处没有条目的型号会回退到 GamepadIcon，这正是只有一套手柄图标的\n项目所需要的，也绝不会弄错品牌。"
+    state machine
+}
+
+DreamUIInputActionData:HoldTime {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:HoldTime
+    src   "Seconds the key must be held before this fires. Zero fires the moment it goes down."
+    text  "触发前必须按住按键的秒数。为零时按下即触发。"
+    state machine
+}
+
+DreamUIInputActionData:InputAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:InputAction
+    src   "An Enhanced Input action this row also answers to.\n\nThe bridge between the two ways a project can spell a key. The action table stays the authority:\nthe keys typed above are matched first, and an action reached only through its Input Action loses\nto any row that names the same key outright (the router says so in the log when that happens).\nWhat this buys is a project that already defines its keys in mapping contexts -- it can bind a\nscreen action to the Input Action and get prompts and routing without typing the keys twice.\n\nThe keys behind it are resolved once per binding, from the local player's mapping contexts. A\nproject that swaps contexts at runtime calls UDreamUIActionRouter::RefreshInputActionKeys."
+    text  "此行还响应的一个 Enhanced Input 操作。\n\n它是项目表达按键的两种方式之间的桥梁。操作表仍是权威：\n先匹配上面键入的按键，而仅通过其 Input Action 触达的操作会输给\n任何直接指定同一按键的行（发生这种情况时，路由器会在日志中说明）。\n它的价值在于：已在映射上下文中定义按键的项目，可以把\n屏幕操作绑定到 Input Action，从而获得提示和路由，而无需重复键入按键。\n\n其背后的按键在每次绑定时从本地玩家的映射上下文中解析一次。在运行时\n切换上下文的项目需调用 UDreamUIActionRouter::RefreshInputActionKeys。"
+    state machine
+}
+
+DreamUIInputActionData:KeyboardIcon {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:KeyboardIcon
+    src   "Optional glyph for the key. Without one a bar falls back to the key's own display name."
+    text  "按键的可选图标。没有图标时，提示栏会回退到按键自身的显示名称。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-InputAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h#DreamUIInputActionData:DisplayName
+    src   "DreamGUI-InputAction"
+    text  "DreamGUI-InputAction"
+    state machine
+}

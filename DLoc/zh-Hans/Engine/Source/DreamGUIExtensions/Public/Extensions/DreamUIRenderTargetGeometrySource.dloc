@@ -1,0 +1,298 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIRenderTargetGeometrySource {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource
+    src   "Dream UIRender Target Geometry Source"
+    text  "Dream UI 渲染目标几何体源"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:bEnableInteractOnBackside {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bEnableInteractOnBackside
+    src   "Enable Interact on Backside"
+    text  "启用背面交互"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:bFlipVerticalOnGLES {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bFlipVerticalOnGLES
+    src   "Flip Vertical on GLES"
+    text  "垂直翻转 (GLES)"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:BodySetup {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:BodySetup
+    src   "Body Setup"
+    // from the engine's zh-Hans
+    text  "形体设置"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:bOverrideStaticMeshMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bOverrideStaticMeshMaterial
+    src   "Override Static Mesh Material"
+    text  "重载静态网格材质"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:CylinderArcAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:CylinderArcAngle
+    src   "Cylinder Arc Angle"
+    // from the engine's zh-Hans
+    text  "圆柱体弧形角度"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GeometryMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GeometryMode
+    src   "Geometry Mode"
+    // from the engine's zh-Hans
+    text  "几何体模式"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetCanvas:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetCanvas:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetCylinderArcAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetCylinderArcAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetGeometryMode:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetGeometryMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetMaterialInstance:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetMaterialInstance:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetPivot:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetPivot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetRenderTarget:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetRenderTargetSize:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTargetSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:MaterialInstance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:MaterialInstance
+    src   "Material Instance"
+    // from the engine's zh-Hans
+    text  "材质实例"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:Pivot {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:Pivot
+    src   "Pivot"
+    // from the engine's zh-Hans
+    text  "枢轴点"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetCanvas:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetCanvas:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetCylinderArcAngle:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetCylinderArcAngle:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetGeometryMode:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetGeometryMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetPivot:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetPivot:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:TargetWidgetPresenter {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:TargetWidgetPresenter
+    src   "Target Widget Presenter"
+    text  "目标控件呈现器"
+    state machine
+}
+
+EDreamUIRenderTargetGeometryMode.Cylinder {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#EDreamUIRenderTargetGeometryMode:Cylinder
+    src   "Cylinder"
+    // from the engine's zh-Hans
+    text  "圆柱体"
+    state draft
+}
+
+EDreamUIRenderTargetGeometryMode.EDreamUIRenderTargetGeometryMode_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#EDreamUIRenderTargetGeometryMode:EDreamUIRenderTargetGeometryMode_MAX
+    src   "EDream UIRender Target Geometry Mode MAX"
+    text  "EDream UI 渲染目标几何模式 (最大值)"
+    state machine
+}
+
+EDreamUIRenderTargetGeometryMode.Plane {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#EDreamUIRenderTargetGeometryMode:Plane
+    src   "Plane"
+    // from the engine's zh-Hans
+    text  "平面"
+    state draft
+}
+
+EDreamUIRenderTargetGeometryMode.StaticMesh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#EDreamUIRenderTargetGeometryMode:StaticMesh
+    src   "Static Mesh"
+    // from the engine's zh-Hans
+    text  "静态网格体"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIRenderTargetGeometrySource {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource
+    src   "This component can generate a geometry to display DreamUI's render target, and perform interaction source for DreamUIRenderTargetInteraction component."
+    text  "此组件可以生成几何体以显示 DreamUI 的渲染目标，并为 DreamUIRenderTargetInteraction 组件提供交互源。"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:bEnableInteractOnBackside {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bEnableInteractOnBackside
+    src   "Enable backside interaction? Front side always interactable."
+    text  "启用背面交互？正面始终可交互。"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:bFlipVerticalOnGLES {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bFlipVerticalOnGLES
+    src   "INERT. Android GLES rendered the target flipped, and this set the material's \"FlipY\" scalar to\nflip it back; the engine stopped needing that at UE 5.1, and the code that read this flag has\nbeen compiled out since (it was `#if PLATFORM_ANDROID && 0`). The property is kept so assets\nthat stored it still load, and setting it does nothing on any platform."
+    text  "已失效。Android GLES 渲染目标时是翻转的，此项会将材质的“FlipY”标量设为\n翻转回来；从 UE 5.1 起引擎不再需要这样做，读取此标志的代码\n此后已被编译排除（原为 `#if PLATFORM_ANDROID && 0`）。保留该属性是为了让\n存储过它的资产仍能加载，在任何平台上设置它都不会产生任何效果。"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:BodySetup {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:BodySetup
+    src   "The body setup of the displayed quad"
+    // from the engine's zh-Hans
+    text  "显示四边形的形体设置"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:bOverrideStaticMeshMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:bOverrideStaticMeshMaterial
+    src   "Use this component's material for target static mesh component."
+    text  "使用此组件的材质，用于目标静态网格组件。"
+    state machine
+}
+
+DreamUIRenderTargetGeometrySource:CylinderArcAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:CylinderArcAngle
+    src   "Curvature of a cylindrical widget in degrees."
+    // from the engine's zh-Hans
+    text  "圆柱形控件的曲率（按角度计）。"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:MaterialInstance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:MaterialInstance
+    src   "The dynamic instance of the material that the render target is attached to"
+    // from the engine's zh-Hans
+    text  "渲染目标附加到的材质的动态实例"
+    state draft
+}
+
+EDreamUIRenderTargetGeometryMode.StaticMesh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#EDreamUIRenderTargetGeometryMode:StaticMesh
+    src   "RenderTarget mapped onto a static mesh. This component must attach to target StaticMeshComponent so we can find and use it.\nAnd in order to interact by DreamUIRenderTargetInteraction, the 'Support UV From Hit Results' must be enabled in project settings."
+    text  "将渲染目标映射到静态网格上。此组件必须附加到目标 StaticMeshComponent，以便我们找到并使用它。\n要通过 DreamUIRenderTargetInteraction 进行交互，必须在项目设置中启用“支持从命中结果 UV”。"
+    state machine
+}

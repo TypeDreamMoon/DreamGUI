@@ -1,0 +1,684 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual
+    src   "Dream Visual"
+    text  "Dream Visual"
+    state machine
+}
+
+DreamVisual:AlphaFrom:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamVisual:AlphaFrom:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamVisual:AlphaFrom:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamVisual:AlphaFrom:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:AlphaFrom:startValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:startValue
+    src   "Start Value"
+    // from the engine's zh-Hans
+    text  "Start Value"
+    state draft
+}
+
+DreamVisual:AlphaTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamVisual:AlphaTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamVisual:AlphaTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamVisual:AlphaTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamVisual:AlphaTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:bRaycastTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:bRaycastTarget
+    src   "Raycast Target"
+    text  "射线投射目标"
+    state machine
+}
+
+DreamVisual:Color {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:Color
+    src   "Color"
+    // from the engine's zh-Hans
+    text  "颜色"
+    state draft
+}
+
+DreamVisual:ColorFrom:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamVisual:ColorFrom:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamVisual:ColorFrom:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamVisual:ColorFrom:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:ColorFrom:startValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:startValue
+    src   "Start Value"
+    // from the engine's zh-Hans
+    text  "Start Value"
+    state draft
+}
+
+DreamVisual:ColorTo:delay {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamVisual:ColorTo:duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamVisual:ColorTo:ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo:ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamVisual:ColorTo:endValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamVisual:ColorTo:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:CustomRaycastObject {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:CustomRaycastObject
+    src   "Custom Raycast Object"
+    text  "自定义射线投射对象"
+    state machine
+}
+
+DreamVisual:GetAlpha:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetAlpha:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetColorMultiplier:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetColorMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetCustomRaycastObject:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetCustomRaycastObject:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetFinalAlpha01:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalAlpha01:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetFinalColor:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalColor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetRaycastTarget:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetRaycastTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetRaycastType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetRaycastType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:GetVisualType:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetVisualType:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:LineTraceUI:End {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+DreamVisual:LineTraceUI:OutHit {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI:OutHit
+    src   "Out Hit"
+    // from the engine's zh-Hans
+    text  "命中外"
+    state draft
+}
+
+DreamVisual:LineTraceUI:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisual:LineTraceUI:Start {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+DreamVisual:RaycastType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:RaycastType
+    src   "Raycast Type"
+    text  "射线投射类型"
+    state machine
+}
+
+DreamVisual:SetAlpha:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetAlpha:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:SetColor:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:SetColorMultiplier:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColorMultiplier:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:SetCustomRaycastObject:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetCustomRaycastObject:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:SetRaycastTarget:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetRaycastTarget:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:SetRaycastType:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetRaycastType:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamVisual:VisiblePixelThreshold {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:VisiblePixelThreshold
+    src   "Visible Pixel Threshold"
+    text  "可见像素阈值"
+    state machine
+}
+
+DreamVisualCustomRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast
+    src   "Dream Visual Custom Raycast"
+    text  "Dream Visual 自定义射线投射"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InLocalSpaceRayEnd {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InLocalSpaceRayEnd
+    src   "In Local Space Ray End"
+    text  "局部空间射线结束"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InLocalSpaceRayStart {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InLocalSpaceRayStart
+    src   "In Local Space Ray Start"
+    text  "局部空间射线开始"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InVisual
+    src   "In Visual"
+    text  "输入视觉"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutHitNormal {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutHitNormal
+    src   "Out Hit Normal"
+    text  "命中法线"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutHitPoint {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutHitPoint
+    src   "Out Hit Point"
+    text  "命中点"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutPixel {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutPixel
+    src   "Out Pixel"
+    text  "输出像素"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutUV {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:OutUV
+    src   "Out UV"
+    text  "输出 UV 坐标"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:InLocalSpaceRayEnd {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:InLocalSpaceRayEnd
+    src   "In Local Space Ray End"
+    text  "局部空间射线结束"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:InLocalSpaceRayStart {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:InLocalSpaceRayStart
+    src   "In Local Space Ray Start"
+    text  "局部空间射线开始"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:InVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:InVisual
+    src   "In Visual"
+    text  "输入视觉"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:OutHitNormal {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:OutHitNormal
+    src   "Out Hit Normal"
+    text  "命中法线"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:OutHitPoint {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:OutHitPoint
+    src   "Out Hit Point"
+    text  "命中点"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+EDreamVisualRaycastType.Custom {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Custom
+    src   "Custom"
+    // from the engine's zh-Hans
+    text  "Custom"
+    state draft
+}
+
+EDreamVisualRaycastType.EDreamVisualRaycastType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:EDreamVisualRaycastType_MAX
+    src   "EDream Visual Raycast Type MAX"
+    text  "EDreamVisualRaycastType 最大值"
+    state machine
+}
+
+EDreamVisualRaycastType.Mesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Mesh
+    src   "Mesh"
+    // from the engine's zh-Hans
+    text  "网格体"
+    state draft
+}
+
+EDreamVisualRaycastType.Rect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Rect
+    src   "Rect"
+    // from the engine's zh-Hans
+    text  "矩形"
+    state draft
+}
+
+EDreamVisualRaycastType.VisiblePixel {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:VisiblePixel
+    src   "Visible Pixel"
+    text  "可见像素"
+    state machine
+}
+
+EDreamVisualType.BatchMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualType:BatchMesh
+    src   "Batch Mesh"
+    text  "批处理网格"
+    state machine
+}
+
+EDreamVisualType.DirectMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualType:DirectMesh
+    src   "Direct Mesh"
+    text  "直接网格"
+    state machine
+}
+
+EDreamVisualType.EDreamVisualType_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualType:EDreamVisualType_MAX
+    src   "EDream Visual Type MAX"
+    text  "EDreamVisualType 最大值"
+    state machine
+}
+
+EDreamVisualType.None {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamVisualType.PostProcess {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualType:PostProcess
+    src   "Post Process"
+    // from the engine's zh-Hans
+    text  "后期处理"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual
+    src   "Base class of UI element that can be rendered by DreamCanvas"
+    text  "DreamCanvas 可渲染的 UI 元素的基类。"
+    state machine
+}
+
+DreamVisual:Color {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:Color
+    src   "Render color of UI element."
+    text  "UI 元素的渲染颜色。"
+    state machine
+}
+
+DreamVisual:CustomRaycastObject {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:CustomRaycastObject
+    src   "Custom raycast object to handle raycast behaviour when DreamUI do raycast hit test. Only valid if RaycastType is Custom."
+    text  "用于处理 DreamUI 进行光线投射测试时光线投射行为的自定义光线投射对象。仅当 RaycastType 为 Custom 时有效。"
+    state machine
+}
+
+DreamVisual:GetFinalAlpha01 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalAlpha01
+    src   "get final alpha, calculated with CanvasGroup's alpha"
+    text  "获取最终 alpha 值，由 CanvasGroup 计算得出。"
+    state machine
+}
+
+DreamVisual:GetFinalColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalColor
+    src   "The colour this visual is drawn with: Color, times the content tint of every widget above it\n(UDreamWidget::GetInheritedContentTint) and ColorMultiplier, in linear space, with the alpha then scaled by the\nhierarchy's render opacity. Exactly Color with that alpha while both tints are white."
+    text  "此视觉对象绘制所用的颜色：Color 乘以它上方每个控件的内容着色\n（UDreamWidget::GetInheritedContentTint）以及 ColorMultiplier，在线性空间中计算，随后 alpha 按\n层级的渲染不透明度缩放。两个着色均为白色时，恰好等于带有该 alpha 的 Color。"
+    state machine
+}
+
+DreamVisual:GetVisualType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetVisualType
+    src   "get visual type"
+    text  "获取视觉类型。"
+    state machine
+}
+
+DreamVisual:SetColorMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColorMultiplier
+    src   "A colour this visual's own Color is multiplied by on its way to the screen, in linear space -- what something\nthat tints a visual without owning its Color writes: a border's BrushColor, and the alpha it draws at while\ndisabled; a scroll box's bar track, dimmed while it is idle. Runtime state, not saved. White changes nothing."
+    text  "此视觉对象自身的 Color 在输送到屏幕途中要乘上的颜色，在线性空间中计算——即某些在不拥有其 Color 的情况下为视觉对象着色的对象所写入的值：\n边框的笔刷颜色（BrushColor），以及它在禁用状态下绘制时的 alpha；滚动框的滚动条轨道，在空闲时变暗。\n运行时状态，不保存。白色不改变任何内容。"
+    state machine
+}
+
+DreamVisual:SetCustomRaycastObject {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetCustomRaycastObject
+    src   "Set custom raycast object to handle raycast behaviour, only valid if RaycastType is Custom"
+    text  "设置自定义的射线投射对象，用于处理射线投射行为，仅当 RaycastType 为 Custom 时有效。"
+    state machine
+}
+
+DreamVisual:VisiblePixelThreshold {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:VisiblePixelThreshold
+    src   "Pixel's alpha value threshold, if hit a pixel which alpha value is less than this value, then hit test return false."
+    text  "像素的 alpha 值阈值。如果命中的像素的 alpha 值小于此值，则射线投射测试将返回 false。"
+    state machine
+}
+
+DreamVisualCustomRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast
+    src   "This component is only used when DreamVisual's RaycastType = Custom"
+    text  "此组件仅在 DreamVisual 的 RaycastType 为 Custom 时使用。"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual
+    src   "Get pixel value at hit point.\nOnly support UI element type which can read pixel value from texture:\n             1. UISprite which use DreamGUIStaticSpriteAtlasData can work perfectly.\n             2. UITexture can work with some specific setting.\n             3. UIText which use dynamic font can not work. (Currently all DreamGUI's built-in font is dynamic)\nWill fallback to Geometry if ui element not support this raycast type."
+    text  "获取命中的像素值。\n仅支持以下类型的 UI 元素，这些元素可以从纹理中读取像素值：\n             1. 使用 DreamGUIStaticSpriteAtlasData 的 UISprite 可以完美工作。\n             2. UITexture 可以通过某些特定设置工作。\n             3. 使用动态字体的 UIText 无法工作。（目前所有 DreamGUI 的内置字体都是动态的）\n如果 UI 元素不支持此射线投射类型，则会回退到几何体。"
+    state machine
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast
+    src   "Called by DreamVisual when do raycast hit test.\n@param       InVisual                        The DreamVisual object which call this Raycast function\n@param       InLocalSpaceRayStart    Ray start point in this UI's local space\n@param       InLocalSpaceRayEnd              Ray end point in this UI's local space\n@param       OutHitPoint                             Hit point position in this UI's local space\n@param       OutHitNormal                    Hit point normal in this UI's local space\n@return      true if hit this UI object"
+    text  "由 DreamVisual 调用以执行射线投射测试。\n@param       InVisual                        调用此射线投射函数的 DreamVisual 对象。\n@param       InLocalSpaceRayStart    射线起点，以此 UI 的本地坐标系表示。\n@param       InLocalSpaceRayEnd              射线终点，以此 UI 的本地坐标系表示。\n@param       OutHitPoint                             命中的点位置，以此 UI 的本地坐标系表示。\n@param       OutHitNormal                    命中的点的法线，以此 UI 的本地坐标系表示。\n@return      如果命中此 UI 对象，则返回 true。"
+    state machine
+}
+
+EDreamVisualRaycastType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType
+    src   "Defines how mouse or ray hit on DreamVisual"
+    text  "定义鼠标或射线如何命中 DreamVisual。"
+    state machine
+}
+
+EDreamVisualRaycastType.Custom {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Custom
+    src   "Use a user defined UDreamVisualCustomRaycast to process the raycast hit."
+    text  "使用用户定义的 UDreamVisualCustomRaycast 对象来处理射线投射命中。"
+    state machine
+}
+
+EDreamVisualRaycastType.Mesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Mesh
+    src   "Hit on actual triangle mesh"
+    text  "命中实际的三角形网格。"
+    state machine
+}
+
+EDreamVisualRaycastType.Rect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:Rect
+    src   "Hit on rect range"
+    text  "命中矩形范围。"
+    state machine
+}
+
+EDreamVisualRaycastType.VisiblePixel {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#EDreamVisualRaycastType:VisiblePixel
+    src   "Hit on main texture's pixel, if the pixel is not transparent then hit test success.\nOnly support UI element type which can read pixel value from texture:\n             1. UISprite which use DreamUIStaticSpriteAtlasData can work perfectly.\n             2. UITexture can work with some specific setting.\n             3. UIText which use dynamic font can NOT work. (Currently all DreamGUI's built-in font is dynamic)\nWill fallback to Mesh if ui element not support this raycast type."
+    text  "命中主纹理上的像素，如果该像素不透明，则射线投射测试成功。\n仅支持以下类型的 UI 元素，这些元素可以从纹理中读取像素值：\n             1. 使用 DreamGUIStaticSpriteAtlasData 的 UISprite 可以完美工作。\n             2. UITexture 可以通过某些特定设置工作。\n             3. 使用动态字体的 UIText 无法工作。（目前所有 DreamGUI 的内置字体都是动态的）\n如果 UI 元素不支持此射线投射类型，则会回退到几何体。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamTweenGUI {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom
+    src   "DreamTweenGUI"
+    text  "DreamTweenGUI"
+    state machine
+}
+
+DreamGUI-Raycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:bRaycastTarget
+    src   "DreamGUI-Raycast"
+    text  "DreamGUI-Raycast"
+    state machine
+}
+
+DreamUI {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI
+    src   "DreamUI"
+    text  "DreamUI"
+    state machine
+}

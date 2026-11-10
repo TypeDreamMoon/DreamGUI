@@ -1,0 +1,123 @@
+dloc 1
+culture zh-Hans
+namespace FDreamGUIEditorModule
+
+DreamUIDynamicSpriteAtlasTextureViewerName {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamUI Dynamic-Sprite-Atlas Texture Viewer"
+    text  "DreamUI 动态精灵图集纹理查看器"
+    state machine
+}
+
+DreamUIInspectorTabName {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamUI Inspector"
+    text  "DreamUI 检查器"
+    state machine
+}
+
+DreamUIAssetCategory {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamGUI"
+    text  "DreamGUI 资源"
+    state machine
+}
+
+DreamUISettingsName {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamUI"
+    text  "DreamUI 设置"
+    state machine
+}
+
+DreamUISettingsDescription {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamGUI Settings"
+    text  "DreamGUI 设置"
+    state machine
+}
+
+DreamUIEditorSettingsName {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamGUI Editor"
+    text  "DreamGUI 编辑器设置"
+    state machine
+}
+
+DreamUIEditorSettingsDescription {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamGUI Editor Settings"
+    text  "DreamGUI 编辑器设置"
+    state machine
+}
+
+DreamWidgetAnimationSequencerSettingsName {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamGUI Animation Editor"
+    text  "DreamGUI 动画编辑器设置"
+    state machine
+}
+
+DreamWidgetAnimationSequencerSettingsDescription {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Configure the look and feel of the DreamGUI Animation Editor."
+    text  "配置 DreamGUI 动画编辑器的外观和感觉。"
+    state machine
+}
+
+"DreamUI Widget" {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "DreamUI Widget Operations"
+    text  "DreamUI 控件"
+    state machine
+}
+
+CreateUIElementSubMenu {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Element"
+    text  "创建 UI 元素"
+    state machine
+}
+
+CreateUIElementSubMenu_Tooltip {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Element"
+    text  "创建 UI 元素"
+    state machine
+}
+
+CreateUIExtensionSubMenu {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Extension Element"
+    text  "创建 UI 扩展元素"
+    state machine
+}
+
+CreateUIExtensionSubMenu_Tooltip {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Extension Element"
+    text  "创建 UI 扩展元素"
+    state machine
+}
+
+CreateUIPostProcessSubMenu {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Post Process"
+    text  "创建 UI 后处理子菜单"
+    state machine
+}
+
+CreateUIPostProcessSubMenu_Tooltip {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create UI Post Process"
+    text  "创建 UI 后处理子菜单"
+    state machine
+}
+
+CreateUIElementTitle {
+    at    Source/DreamGUIEditor/Private/DreamGUIEditorModule.cpp
+    src   "Create {0}"
+    // from the engine's zh-Hans
+    text  "创建{0}"
+    state draft
+}

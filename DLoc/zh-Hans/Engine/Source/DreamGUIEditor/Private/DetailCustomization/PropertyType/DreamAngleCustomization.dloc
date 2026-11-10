@@ -1,0 +1,32 @@
+dloc 1
+culture zh-Hans
+namespace DreamAngleCustomization
+
+TurnAngle {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamAngleCustomization.cpp
+    src   "Turn Angle"
+    text  "旋转角度"
+    state machine
+}
+
+WheelTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamAngleCustomization.cpp
+    src   "Drag to turn; Shift snaps to 15 degrees."
+    text  "拖动以旋转；按住 Shift 键可精确到 15 度对齐。"
+    state machine
+}
+
+GlobalLight {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamAngleCustomization.cpp
+    src   "Global"
+    // from the engine's zh-Hans
+    text  "全局"
+    state draft
+}
+
+GlobalLightTip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamAngleCustomization.cpp
+    src   "Use Global Light is on: this turns the style's global light, which every effect using it shares."
+    text  "启用全局光照：这会调整样式中的全局光照，所有使用该光照的效果都会受到影响。"
+    state machine
+}

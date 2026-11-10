@@ -1,0 +1,431 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierJelly {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly
+    src   "Jelly"
+    text  "果冻"
+    state machine
+}
+
+DreamMeshModifierJelly:Anchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Anchor
+    src   "Anchor"
+    // from the engine's zh-Hans
+    text  "锚点"
+    state draft
+}
+
+DreamMeshModifierJelly:Bounds {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Bounds
+    src   "Bounds"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+DreamMeshModifierJelly:CellLength {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:CellLength
+    src   "Cell Length"
+    text  "单元格长度"
+    state machine
+}
+
+DreamMeshModifierJelly:Columns {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Columns
+    src   "Columns"
+    // from the engine's zh-Hans
+    text  "列"
+    state draft
+}
+
+DreamMeshModifierJelly:DampingRatio {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DampingRatio
+    src   "Damping Ratio"
+    // from the engine's zh-Hans
+    text  "Damping Ratio"
+    state draft
+}
+
+DreamMeshModifierJelly:DragStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragStretch
+    src   "Drag Stretch"
+    text  "拖动拉伸"
+    state machine
+}
+
+DreamMeshModifierJelly:DragTo:InLocalPoint {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragTo:InLocalPoint
+    src   "In Local Point"
+    text  "本地点角度"
+    state machine
+}
+
+DreamMeshModifierJelly:Frequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Frequency
+    src   "Frequency"
+    // from the engine's zh-Hans
+    text  "频率"
+    state draft
+}
+
+DreamMeshModifierJelly:GetAnchor:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetAnchor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierJelly:GetDampingRatio:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetDampingRatio:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierJelly:GetFrequency:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetFrequency:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierJelly:GetInertia:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetInertia:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierJelly:Inertia {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Inertia
+    src   "Inertia"
+    text  "惯性"
+    state machine
+}
+
+DreamMeshModifierJelly:IsAtRest:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:IsAtRest:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierJelly:MaxStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:MaxStretch
+    src   "Max Stretch"
+    text  "最大拉伸"
+    state machine
+}
+
+DreamMeshModifierJelly:MaxVertices {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:MaxVertices
+    src   "Max Vertices"
+    text  "最大顶点数"
+    state machine
+}
+
+DreamMeshModifierJelly:Poke:InVelocity {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Poke:InVelocity
+    src   "In Velocity"
+    // from the engine's zh-Hans
+    text  "在速度中"
+    state draft
+}
+
+DreamMeshModifierJelly:PressSquash {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:PressSquash
+    src   "Press Squash"
+    text  "按压挤压"
+    state machine
+}
+
+DreamMeshModifierJelly:Rows {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Rows
+    src   "Rows"
+    // from the engine's zh-Hans
+    text  "行数"
+    state draft
+}
+
+DreamMeshModifierJelly:SetAnchor:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetAnchor:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetDampingRatio:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetDampingRatio:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetDragStretch:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetDragStretch:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetFrequency:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetFrequency:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetInertia:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetInertia:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetLatticeSize:InColumns {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetLatticeSize:InColumns
+    src   "In Columns"
+    text  "列数"
+    state machine
+}
+
+DreamMeshModifierJelly:SetLatticeSize:InRows {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetLatticeSize:InRows
+    src   "In Rows"
+    text  "行数"
+    state machine
+}
+
+DreamMeshModifierJelly:SetMaxStretch:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetMaxStretch:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetPressed:bInPressed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressed:bInPressed
+    src   "In Pressed"
+    // from the engine's zh-Hans
+    text  "输入按下"
+    state draft
+}
+
+DreamMeshModifierJelly:SetPressed:InLocalPoint {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressed:InLocalPoint
+    src   "In Local Point"
+    text  "本地点角度"
+    state machine
+}
+
+DreamMeshModifierJelly:SetPressSquash:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressSquash:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamJellyAnchor.Bottom {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:Bottom
+    src   "Bottom"
+    // from the engine's zh-Hans
+    text  "底部"
+    state draft
+}
+
+EDreamJellyAnchor.Centre {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:Centre
+    src   "Centre"
+    text  "中心"
+    state machine
+}
+
+EDreamJellyAnchor.EDreamJellyAnchor_MAX {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:EDreamJellyAnchor_MAX
+    src   "EDream Jelly Anchor MAX"
+    text  "EDream Jelly锚点MAX"
+    state machine
+}
+
+EDreamJellyAnchor.Left {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:Left
+    src   "Left"
+    // from the engine's zh-Hans
+    text  "左"
+    state draft
+}
+
+EDreamJellyAnchor.None {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamJellyAnchor.Right {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:Right
+    src   "Right"
+    // from the engine's zh-Hans
+    text  "右"
+    state draft
+}
+
+EDreamJellyAnchor.Top {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:Top
+    src   "Top"
+    // from the engine's zh-Hans
+    text  "顶部"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierJelly {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly
+    src   "A wobble: the mesh on a lattice of control points held by springs (FDreamJellySprings), which lag behind as the widget\nmoves and spring back, squash while the widget is pressed and bounce when it is let go, and stretch after a drag. The\nmesh is cut and bent as the warp does it (FDreamMeshDeform), so the corners of a rect block and the glyphs of a text\nbend with it. Still and untouched, it costs nothing.\n\nPresses and drags reach it as they reach any component of a widget that takes pointer events -- the widget must be hit\nby the pointer -- and it passes them on: a button under it still clicks, a scroll view above it still scrolls."
+    text  "一种晃动：网格建立在由弹簧（FDreamJellySprings）保持的控制点晶格上，这些点会滞后于控件\n的移动再弹回，控件被按下时被压扁、松开时弹跳，拖动后则被拉伸。网格\n像扭曲那样被切割和弯曲（FDreamMeshDeform），因此矩形块的角和文本的字形也会\n随之弯曲。静止未受触及时，它不产生任何开销。\n\n按下和拖动会像到达任何接受指针事件的控件组件那样到达它——控件必须被指针\n命中——并将它们传递下去：它下面的按钮仍然可以点击，它上面的滚动视图仍然可以滚动。"
+    state machine
+}
+
+DreamMeshModifierJelly:Anchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Anchor
+    src   "What holds still."
+    text  "固定点。"
+    state machine
+}
+
+DreamMeshModifierJelly:Bounds {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Bounds
+    src   "The box the lattice spans: the widget's rect, or what the visual draws."
+    text  "晶格所跨越的盒子：控件的矩形，或视觉元素所绘制的内容。"
+    state machine
+}
+
+DreamMeshModifierJelly:Columns {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Columns
+    src   "Control points across, 2 to 5."
+    text  "横向控制点数，2 到 5。"
+    state machine
+}
+
+DreamMeshModifierJelly:DampingRatio {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DampingRatio
+    src   "1 settles without overshoot, less wobbles longer."
+    text  "为 1 时无过冲地稳定下来，越小晃动得越久。"
+    state machine
+}
+
+DreamMeshModifierJelly:DragStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragStretch
+    src   "How much of a drag's distance the nearest points follow while the widget is dragged: 0 ignores drags."
+    text  "拖动控件时，最近的点跟随拖动距离的比例：0 表示忽略拖动。"
+    state machine
+}
+
+DreamMeshModifierJelly:DragTo {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragTo
+    src   "A drag as the pointer would make it: from where it was pressed to InLocalPoint. EndDrag lets go."
+    text  "按指针的方式拖动：从按下处到 InLocalPoint。EndDrag 松开。"
+    state machine
+}
+
+DreamMeshModifierJelly:Frequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Frequency
+    src   "Oscillations a second: higher is stiffer."
+    text  "每秒振荡次数：越高越僵硬。"
+    state machine
+}
+
+DreamMeshModifierJelly:Inertia {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Inertia
+    src   "How much the widget's own acceleration pushes the points: 0 ignores its moves."
+    text  "控件自身加速度对点的推动程度：0 表示忽略其移动。"
+    state machine
+}
+
+DreamMeshModifierJelly:MaxStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:MaxStretch
+    src   "How far a point may stretch, as a share of the box's larger side."
+    text  "单个点可拉伸的最大距离，以盒子较长边的占比表示。"
+    state machine
+}
+
+DreamMeshModifierJelly:Poke {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Poke
+    src   "A push at once: every point's velocity changed by InVelocity (local units a second) times its share."
+    text  "一次性推动：每个点的速度改变 InVelocity（本地单位每秒）乘以其占比。"
+    state machine
+}
+
+DreamMeshModifierJelly:PressSquash {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:PressSquash
+    src   "How far the points draw in towards the press while the widget is pressed, as a share of their distance from it."
+    text  "控件被按下时，点向按下处收拢的程度，以它们到该处距离的占比表示。"
+    state machine
+}
+
+DreamMeshModifierJelly:Rows {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Rows
+    src   "Control points down, 2 to 5."
+    text  "纵向控制点数，2 到 5。"
+    state machine
+}
+
+DreamMeshModifierJelly:SetPressed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressed
+    src   "The press as the pointer would make it, at InLocalPoint; false lets go."
+    text  "按指针的方式在InLocalPoint处按下；设为false则松开。"
+    state machine
+}
+
+DreamMeshModifierJelly:Settle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Settle
+    src   "Every point at rest at once, still."
+    text  "所有点同时静止不动。"
+    state machine
+}
+
+EDreamJellyAnchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor
+    src   "The part of a jelly that holds still while the rest wobbles: the points far from it lag the most."
+    text  "果冻中保持静止的部分，远离该部分的点会滞后。"
+    state machine
+}
+
+EDreamJellyAnchor.None {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#EDreamJellyAnchor:None
+    src   "Nothing holds: every point lags alike, and the whole mesh trails behind its widget."
+    text  "没有任何约束：每个点滞后程度相同，整个网格会落后于其控件。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Jelly|Subdivision {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:CellLength
+    src   "Jelly|Subdivision"
+    text  "果冻|细分"
+    state machine
+}
+
+Jelly {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Columns
+    src   "Jelly"
+    text  "果冻"
+    state machine
+}

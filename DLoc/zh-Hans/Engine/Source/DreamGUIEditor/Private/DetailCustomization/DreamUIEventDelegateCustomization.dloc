@@ -1,0 +1,242 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIEventDelegateCustomization
+
+NotSupportMultipleEdit_Content {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(Not support multiple edit)"
+    text  "(不支持多重编辑)"
+    state machine
+}
+
+NotSupportMultipleEdit_Row {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "NotSupportMultipleEdit"
+    text  "不支持多重编辑"
+    state machine
+}
+
+LegacyEventBanner_Filter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy Event List"
+    text  "旧事件列表"
+    state machine
+}
+
+LegacyEventBanner {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy event list. Existing entries still fire, and can be removed here, but new ones are authored as a route instead: use the Events section of this panel, or write EventName -> YourHandler on the widget in the .dui. A route calls a function on the user widget, which is where UMG puts event handling too."
+    text  "旧事件列表。现有条目仍然生效，可以从这里移除，但新的条目应通过路由方式创建：请使用此面板的“事件”部分，或在控件的 .dui 文件中编写 EventName -> YourHandler。路由会调用用户控件上的函数，UMG 也是这样处理事件的。"
+    state machine
+}
+
+EventDelegate {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "EventDelegate"
+    text  "事件委托"
+    state machine
+}
+
+AddLegacyBindingTooltip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy list: new bindings are authored as a route instead. See the Events section."
+    text  "旧列表：新的绑定应通过路由方式创建。请参阅此面板的“事件”部分。"
+    state machine
+}
+
+ParameterTypeWrong {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Parameter type is wrong!"
+    text  "参数类型错误！"
+    state machine
+}
+
+(NativeParameter) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(NativeParameter)"
+    text  "(原生参数)"
+    state machine
+}
+
+(NotValid) {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(NotValid)"
+    text  "(无效)"
+    state machine
+}
+
+Parameter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Set parameter for the function of this event"
+    text  "设置此事件的函数参数"
+    state machine
+}
+
+C {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "C"
+    // from the engine's zh-Hans
+    text  "C"
+    state draft
+}
+
+Copy {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Copy this function"
+    text  "复制此函数"
+    state machine
+}
+
+P {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "P"
+    // from the engine's zh-Hans
+    text  "P"
+    state draft
+}
+
+Paste {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy list: new bindings are authored as a route instead. See the Events section."
+    text  "旧列表：新的绑定应通过路由方式创建。请参阅此面板的“事件”部分。"
+    state machine
+}
+
+D {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "D"
+    // from the engine's zh-Hans
+    text  "D"
+    state draft
+}
+
+Duplicate {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy list: new bindings are authored as a route instead. See the Events section."
+    text  "旧列表：新的绑定应通过路由方式创建。请参阅此面板的“事件”部分。"
+    state machine
+}
+
++ {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "+"
+    // from the engine's zh-Hans
+    text  "+"
+    state draft
+}
+
+Add {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Legacy list: new bindings are authored as a route instead. See the Events section."
+    text  "旧列表：新的绑定应通过路由方式创建。请参阅此面板的“事件”部分。"
+    state machine
+}
+
+- {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "-"
+    // from the engine's zh-Hans
+    text  "-"
+    state draft
+}
+
+Delete {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Delete this one"
+    text  "删除此项"
+    state machine
+}
+
+▲ {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "▲"
+    text  "▲"
+    state machine
+}
+
+MoveUp {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Move up"
+    // from the engine's zh-Hans
+    text  "上移"
+    state draft
+}
+
+▼ {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "▼"
+    text  "▼"
+    state machine
+}
+
+MoveDown {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Move down"
+    // from the engine's zh-Hans
+    text  "下移"
+    state draft
+}
+
+Component {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Pick component for this event"
+    text  "选择组件"
+    state machine
+}
+
+Function {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Pick a function to execute of this event"
+    text  "选择要执行的函数"
+    state machine
+}
+
+None {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "None"
+    // from the engine's zh-Hans
+    text  "无"
+    state draft
+}
+
+"(No parameter)" {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(No parameter)"
+    text  "(无参数)"
+    state machine
+}
+
+PointerEventDataNotEditableError {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(PointerEventData not editable! You can only pass native parameter!)"
+    text  "(PointerEventData不可编辑！只能传递原生参数！)"
+    state machine
+}
+
+"(Not handled)" {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(Not handled)"
+    text  "(未处理)"
+    state machine
+}
+
+UObjectTips {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "UObject only reference asset, dont use for HelperWidget"
+    text  "UObject 仅作引用资源，请勿用于 HelperWidget 控件"
+    state machine
+}
+
+StructParameterUnavailable {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "(Struct)"
+    text  "(结构体)"
+    state machine
+}
+
+ChangeParameterType_Transaction {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamUIEventDelegateCustomization.cpp
+    src   "Change Event Parameter Type"
+    text  "更改事件参数类型"
+    state machine
+}

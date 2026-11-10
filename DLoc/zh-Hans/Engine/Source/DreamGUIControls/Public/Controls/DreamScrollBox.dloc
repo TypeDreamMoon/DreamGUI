@@ -1,0 +1,1222 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamScrollBox {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox
+    src   "Dream Scroll Box"
+    text  "Dream滚动框"
+    state machine
+}
+
+DreamScrollBox:AddContent:InWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamScrollBox:AddContent:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:AnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AnalogMouseWheelKey
+    src   "Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Analog Mouse Wheel Key"
+    state draft
+}
+
+DreamScrollBox:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAllowOverscroll
+    src   "Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "允许过度滚动"
+    state draft
+}
+
+DreamScrollBox:bAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAllowRightClickDragScrolling
+    src   "Allow Right Click Drag Scrolling"
+    // from the engine's zh-Hans
+    text  "允许点击右键拖动滚动"
+    state draft
+}
+
+DreamScrollBox:bAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAlwaysShowScrollbarTrack
+    src   "Always Show Scrollbar Track"
+    // from the engine's zh-Hans
+    text  "固定显示滚动条轨道"
+    state draft
+}
+
+DreamScrollBox:bAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAnimateWheelScrolling
+    src   "Animate Wheel Scrolling"
+    // from the engine's zh-Hans
+    text  "动画滚轮滚动"
+    state draft
+}
+
+DreamScrollBox:bBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bBackPadScrolling
+    src   "Back Pad Scrolling"
+    // from the engine's zh-Hans
+    text  "背填充滚动"
+    state draft
+}
+
+DreamScrollBox:bConsumePointerInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bConsumePointerInput
+    src   "Consume Pointer Input"
+    // from the engine's zh-Hans
+    text  "消耗指针输入"
+    state draft
+}
+
+DreamScrollBox:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bEnableTouchScrolling
+    src   "Enable Touch Scrolling"
+    // from the engine's zh-Hans
+    text  "启用触摸滚动"
+    state draft
+}
+
+DreamScrollBox:bFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bFrontPadScrolling
+    src   "Front Pad Scrolling"
+    // from the engine's zh-Hans
+    text  "前填充滚动"
+    state draft
+}
+
+DreamScrollBox:bShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bShowScrollBar
+    src   "Show Scroll Bar"
+    // from the engine's zh-Hans
+    text  "显示滚动条"
+    state draft
+}
+
+DreamScrollBox:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ConsumeMouseWheel
+    src   "Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "消耗鼠标滚轮"
+    state draft
+}
+
+DreamScrollBox:ContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ContentNode
+    src   "Content Node"
+    text  "内容节点"
+    state machine
+}
+
+DreamScrollBox:ContentStack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ContentStack
+    src   "Content Stack"
+    text  "内容堆栈"
+    state machine
+}
+
+DreamScrollBox:DecelerateRate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:DecelerateRate
+    src   "Decelerate Rate"
+    text  "减速率"
+    state machine
+}
+
+DreamScrollBox:FaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:FaceNode
+    src   "Face Node"
+    text  "表面节点"
+    state machine
+}
+
+DreamScrollBox:FocusSelectable {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:FocusSelectable
+    src   "Focus Selectable"
+    text  "可聚焦选择"
+    state machine
+}
+
+DreamScrollBox:GetAllowOverscroll:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowOverscroll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetAllowRightClickDragScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowRightClickDragScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetAnalogMouseWheelKey:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnalogMouseWheelKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetAnimateWheelScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnimateWheelScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetBackPadScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetBackPadScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetConsumeMouseWheel:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetConsumeMouseWheel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetConsumePointerInput:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetConsumePointerInput:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetContentNode:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetContentNode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetDecelerateRate:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetDecelerateRate:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetEnableTouchScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetEnableTouchScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetFrontPadScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetFrontPadScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetIsScrolling:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetIsScrolling:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetNavigationDestination:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetNavigationDestination:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetNavigationScrollPadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetNavigationScrollPadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetOrientation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOrientation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetOverscrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetOverscrollPercentage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollPercentage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollbarPadding:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarPadding:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollbarThickness:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarThickness:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollBarVisibility:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollBarVisibility:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollOffset:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffset:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollOffsetOfEnd:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffsetOfEnd:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollProgress:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollProgress:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollSensitivity:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollSensitivity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollWhenFocusChanges:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollWhenFocusChanges:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetShowScrollBar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetShowScrollBar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetViewFraction:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewFraction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetViewOffsetFraction:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewOffsetFraction:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetWheelScrollAnimationDuration:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetWheelScrollAnimationDuration:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetWheelScrollMultiplier:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetWheelScrollMultiplier:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:IsAlwaysShowScrollbarTrack:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbarTrack:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:NavigationDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:NavigationDestination
+    src   "Navigation Destination"
+    // from the engine's zh-Hans
+    text  "导航目标"
+    state draft
+}
+
+DreamScrollBox:NavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:NavigationScrollPadding
+    src   "Navigation Scroll Padding"
+    // from the engine's zh-Hans
+    text  "导航滚动填充"
+    state draft
+}
+
+DreamScrollBox:OnFocusUpdated {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnFocusUpdated
+    src   "On Focus Updated"
+    // from the engine's zh-Hans
+    text  "On Focus Updated"
+    state draft
+}
+
+DreamScrollBox:OnScrollBarVisibilityChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnScrollBarVisibilityChanged
+    src   "On Scroll Bar Visibility Changed"
+    // from the engine's zh-Hans
+    text  "滚动条可视性变更时"
+    state draft
+}
+
+DreamScrollBox:OnScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnScrolled
+    src   "On Scrolled"
+    text  "滚动时"
+    state machine
+}
+
+DreamScrollBox:OnUserScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnUserScrolled
+    src   "On User Scrolled"
+    // from the engine's zh-Hans
+    text  "用户滚动时"
+    state draft
+}
+
+DreamScrollBox:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamScrollBox:Orientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:Orientation
+    src   "Orientation"
+    // from the engine's zh-Hans
+    text  "朝向"
+    state draft
+}
+
+DreamScrollBox:ScrollBarNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollBarNode
+    src   "Scroll Bar Node"
+    text  "滚动条节点"
+    state machine
+}
+
+DreamScrollBox:ScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollBarVisibility
+    src   "Scroll Bar Visibility"
+    // from the engine's zh-Hans
+    text  "滚动条可视性"
+    state draft
+}
+
+DreamScrollBox:ScrollProgress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollProgress
+    src   "Scroll Progress"
+    text  "滚动进度"
+    state machine
+}
+
+DreamScrollBox:ScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollSensitivity
+    src   "Scroll Sensitivity"
+    text  "滚动灵敏度"
+    state machine
+}
+
+DreamScrollBox:ScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollView
+    src   "Scroll View"
+    text  "滚动视图"
+    state machine
+}
+
+DreamScrollBox:ScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWhenFocusChanges
+    src   "Scroll when Focus Changes"
+    // from the engine's zh-Hans
+    text  "聚焦变化时滚动"
+    state draft
+}
+
+DreamScrollBox:ScrollWidgetIntoView:bInAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView:bInAnimate
+    src   "In Animate"
+    text  "是否动画"
+    state machine
+}
+
+DreamScrollBox:ScrollWidgetIntoView:InDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView:InDestination
+    src   "In Destination"
+    // from the engine's zh-Hans
+    text  "输入目的地"
+    state draft
+}
+
+DreamScrollBox:ScrollWidgetIntoView:InPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView:InPadding
+    src   "In Padding"
+    // from the engine's zh-Hans
+    text  "在填充中"
+    state draft
+}
+
+DreamScrollBox:ScrollWidgetIntoView:InWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamScrollBox:ScrollWidgetIntoView:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamScrollBox:SetAllowOverscroll:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAllowOverscroll:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamScrollBox:SetAllowRightClickDragScrolling:bInAllow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAllowRightClickDragScrolling:bInAllow
+    src   "In Allow"
+    // from the engine's zh-Hans
+    text  "在允许中"
+    state draft
+}
+
+DreamScrollBox:SetAlwaysShowScrollbar:bInAlwaysShow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAlwaysShowScrollbar:bInAlwaysShow
+    src   "In Always Show"
+    text  "始终显示"
+    state machine
+}
+
+DreamScrollBox:SetAlwaysShowScrollbarTrack:bInAlwaysShow {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAlwaysShowScrollbarTrack:bInAlwaysShow
+    src   "In Always Show"
+    text  "始终显示"
+    state machine
+}
+
+DreamScrollBox:SetAnalogMouseWheelKey:InKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAnalogMouseWheelKey:InKey
+    src   "In Key"
+    // from the engine's zh-Hans
+    text  "在键中"
+    state draft
+}
+
+DreamScrollBox:SetAnimateWheelScrolling:bInAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAnimateWheelScrolling:bInAnimate
+    src   "In Animate"
+    text  "是否动画"
+    state machine
+}
+
+DreamScrollBox:SetBackPadScrolling:bInPad {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetBackPadScrolling:bInPad
+    src   "In Pad"
+    text  "输入手柄"
+    state machine
+}
+
+DreamScrollBox:SetConsumeMouseWheel:InConsume {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetConsumeMouseWheel:InConsume
+    src   "In Consume"
+    text  "是否消费鼠标滚轮"
+    state machine
+}
+
+DreamScrollBox:SetConsumePointerInput:bInConsume {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetConsumePointerInput:bInConsume
+    src   "In Consume"
+    text  "是否消费鼠标滚轮"
+    state machine
+}
+
+DreamScrollBox:SetDecelerateRate:InRate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetDecelerateRate:InRate
+    src   "In Rate"
+    // from the engine's zh-Hans
+    text  "输入速率"
+    state draft
+}
+
+DreamScrollBox:SetEnableTouchScrolling:bInEnable {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetEnableTouchScrolling:bInEnable
+    src   "In Enable"
+    // from the engine's zh-Hans
+    text  "输入启用"
+    state draft
+}
+
+DreamScrollBox:SetFrontPadScrolling:bInPad {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetFrontPadScrolling:bInPad
+    src   "In Pad"
+    text  "输入手柄"
+    state machine
+}
+
+DreamScrollBox:SetNavigationDestination:InDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetNavigationDestination:InDestination
+    src   "In Destination"
+    // from the engine's zh-Hans
+    text  "输入目的地"
+    state draft
+}
+
+DreamScrollBox:SetNavigationScrollPadding:InPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetNavigationScrollPadding:InPadding
+    src   "In Padding"
+    // from the engine's zh-Hans
+    text  "在填充中"
+    state draft
+}
+
+DreamScrollBox:SetOrientation:InOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetOrientation:InOrientation
+    src   "In Orientation"
+    // from the engine's zh-Hans
+    text  "输入朝向"
+    state draft
+}
+
+DreamScrollBox:SetScrollbarPadding:InPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarPadding:InPadding
+    src   "In Padding"
+    // from the engine's zh-Hans
+    text  "在填充中"
+    state draft
+}
+
+DreamScrollBox:SetScrollbarThickness:InThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarThickness:InThickness
+    src   "In Thickness"
+    // from the engine's zh-Hans
+    text  "输入厚度"
+    state draft
+}
+
+DreamScrollBox:SetScrollBarVisibility:InVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollBarVisibility:InVisibility
+    src   "In Visibility"
+    // from the engine's zh-Hans
+    text  "在可视性中"
+    state draft
+}
+
+DreamScrollBox:SetScrollOffset:InOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollOffset:InOffset
+    src   "In Offset"
+    // from the engine's zh-Hans
+    text  "输入偏移"
+    state draft
+}
+
+DreamScrollBox:SetScrollProgress:InProgress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollProgress:InProgress
+    src   "In Progress"
+    // from the engine's zh-Hans
+    text  "在进行中"
+    state draft
+}
+
+DreamScrollBox:SetScrollSensitivity:InSensitivity {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollSensitivity:InSensitivity
+    src   "In Sensitivity"
+    text  "输入灵敏度"
+    state machine
+}
+
+DreamScrollBox:SetScrollWhenFocusChanges:InRule {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollWhenFocusChanges:InRule
+    src   "In Rule"
+    // from the engine's zh-Hans
+    text  "输入规则"
+    state draft
+}
+
+DreamScrollBox:SetShowScrollBar:bInShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetShowScrollBar:bInShowScrollBar
+    src   "In Show Scroll Bar"
+    text  "是否显示滚动条"
+    state machine
+}
+
+DreamScrollBox:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamScrollBox:SetWheelScrollAnimationDuration:InDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetWheelScrollAnimationDuration:InDuration
+    src   "In Duration"
+    // from the engine's zh-Hans
+    text  "输入时长"
+    state draft
+}
+
+DreamScrollBox:SetWheelScrollMultiplier:InMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetWheelScrollMultiplier:InMultiplier
+    src   "In Multiplier"
+    text  "滚轮倍率"
+    state machine
+}
+
+DreamScrollBox:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamScrollBox:ViewportNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ViewportNode
+    src   "Viewport Node"
+    text  "视口节点"
+    state machine
+}
+
+DreamScrollBox:WheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:WheelScrollAnimationDuration
+    src   "Wheel Scroll Animation Duration"
+    text  "滚轮滚动动画时长"
+    state machine
+}
+
+DreamScrollBox:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:WheelScrollMultiplier
+    src   "Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "滚轮滚动乘数"
+    state draft
+}
+
+DreamScrollBoxBarVisibilityChangedEvent__DelegateSignature:bVisible {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxBarVisibilityChangedEvent__DelegateSignature:bVisible
+    src   "Visible"
+    // from the engine's zh-Hans
+    text  "可见"
+    state draft
+}
+
+DreamScrollBoxFocusUpdatedEvent__DelegateSignature:FocusedWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxFocusUpdatedEvent__DelegateSignature:FocusedWidget
+    src   "Focused Widget"
+    text  "焦点控件"
+    state machine
+}
+
+DreamScrollBoxScrolledEvent__DelegateSignature:Progress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxScrolledEvent__DelegateSignature:Progress
+    src   "Progress"
+    // from the engine's zh-Hans
+    text  "进度"
+    state draft
+}
+
+DreamScrollBoxUserScrolledOffsetEvent__DelegateSignature:CurrentOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxUserScrolledOffsetEvent__DelegateSignature:CurrentOffset
+    src   "Current Offset"
+    // from the engine's zh-Hans
+    text  "当前偏移"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamScrollBox {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox
+    src   "A scroll box whose hierarchy is code, not an asset.\n\nThree nodes and a bar: a face that carries the box's look, a viewport clipped inside it that holds\nthe scrolling behaviour, and the content stack that slides within the viewport. It is the dropdown\nlist's arrangement -- a UUIScrollView on a clipping node with one scrolled column under it --\ngeneralised until the column is anyone's to fill.\n\nBP_HorizontalScrollView and BP_VerticalScrollView are two assets because an asset cannot branch on\na property. Orientation is the branch: it picks the scrolling axis, the direction the content\nstacks, and which edge the bar sits on. Deliberately not a third \"both\" case -- there is no such\npreset, a content stack has one direction, and one axis means one bar that can actually reach\neverything.\n\nThe bar is a real UDreamScrollBar rather than a track and a handle rebuilt here, so the handle\ngeometry that the anchor-resolution rule dictates exists once. The box only tells it which view to\nfollow; the two-way link lives in the bar."
+    text  "层级由代码而非资产构成的滚动框。\n\n三个节点加一条滚动条：承载滚动框外观的face，一个剪裁在其内部、\n承载滚动行为的视口，以及在视口内滑动的内容堆栈。它沿用下拉\n列表的布局——剪裁节点上的一个UUIScrollView，其下只有一列可滚动内容——\n并加以泛化，直到这一列可由任何人填充。\n\nBP_HorizontalScrollView和BP_VerticalScrollView之所以是两个资产，是因为资产无法根据\n属性分支。Orientation就是那个分支：它决定滚动轴向、内容\n堆叠的方向，以及滚动条位于哪一侧。刻意不设第三种“两者兼具”的情况——不存在这样的\n预设，内容堆栈只有一个方向，而单一轴向意味着一条真正能到达\n全部内容的滚动条。\n\n滚动条是真正的UDreamScrollBar，而不是在此处重建的轨道与滑块，因此锚点解析规则所规定的滑块\n几何只存在一份。滚动框只告诉它要跟随哪个视图，\n而双向链接位于滚动条内部。"
+    state machine
+}
+
+DreamScrollBox:AddContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent
+    src   "Put a widget in the content stack and re-measure."
+    text  "将一个控件放入内容堆栈并重新测量。"
+    state machine
+}
+
+DreamScrollBox:AnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AnalogMouseWheelKey
+    src   "The analog key that acts as this box's mouse wheel -- UMG's AnalogMouseWheelKey. Invalid (the\ndefault) means \"whatever the input preset already routes here\", which is the right stick and\ntherefore exactly what every existing box does."
+    text  "充当此滚动框鼠标滚轮的模拟键——即UMG的AnalogMouseWheelKey。Invalid\n（默认值）表示“沿用输入预设已经路由到此的输入”，也就是右摇杆，\n因而正是所有现有滚动框的行为。"
+    state machine
+}
+
+DreamScrollBox:bAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAllowOverscroll
+    src   "Let the content be pulled past an end and spring back -- UMG's AllowOverscroll."
+    text  "允许内容被拉过端点后再弹回——即 UMG 的 AllowOverscroll。"
+    state machine
+}
+
+DreamScrollBox:bAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAllowRightClickDragScrolling
+    src   "Whether a drag with the RIGHT button scrolls it -- UMG's bAllowRightClickDragScrolling. The drag\nscrolls from the press, the move that crossed the drag threshold included, as SScrollBox's does,\nso the content stays under the pointer that grabbed it. Over the content only: a right drag that\nstarts on the box's own bar is the bar's, and the bar answers the left button alone (see\nUDreamScrollBar::AcceptedMouseButtons), so it scrolls nothing."
+    text  "是否可用右键拖动来滚动——即 UMG 的 bAllowRightClickDragScrolling。拖动\n从按下时起就滚动，包括越过拖动阈值的那次移动，与 SScrollBox 的行为相同，\n因此内容始终停留在抓住它的指针下方。仅限内容区域：从框自身的滚动条上\n开始的右键拖动属于滚动条，而滚动条只响应左键（参见\nUDreamScrollBar::AcceptedMouseButtons），所以它不会滚动任何内容。"
+    state machine
+}
+
+DreamScrollBox:bAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAlwaysShowScrollbarTrack
+    src   "Whether the bar's TRACK is drawn while the bar is idle -- UMG's AlwaysShowScrollbarTrack, which raises\nan idle track from invisible to half its alpha (SScrollBar::GetTrackOpacity). Hovering or dragging the\nbar draws the track at full alpha whatever this says, and Permanent draws an idle one at half.\n\nThat is all it does, as in UMG: it keeps neither the bar nor its gutter while nothing scrolls. Only\nScrollBarVisibility set to Permanent keeps the bar out then."
+    text  "滚动条空闲时是否绘制其轨道——即UMG的AlwaysShowScrollbarTrack，该设置把\n空闲轨道从不可见提升到一半的不透明度（SScrollBar::GetTrackOpacity）。无论此项如何，悬停或拖动\n滚动条时轨道都以完整不透明度绘制，而Permanent时空闲轨道绘制为一半。\n\n与UMG一样，它仅此而已：没有任何滚动时，它既不保留滚动条，也不保留其留白。只有\n滚动条可视性（ScrollBarVisibility）设为Permanent时，才会让滚动条继续显示。"
+    state machine
+}
+
+DreamScrollBox:bAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bAnimateWheelScrolling
+    src   "A wheel notch GLIDES instead of teleporting -- UMG's AnimateWheelScrolling. Off by default,\nwhich is what every existing box already does."
+    text  "滚轮的一格是滑行而不是瞬移——即 UMG 的 AnimateWheelScrolling。默认关闭，\n这也是现有每个框本来就有的行为。"
+    state machine
+}
+
+DreamScrollBox:bBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bBackPadScrolling
+    src   "A whole window of empty space BEFORE the content, so the first item can be scrolled all the way\nto the trailing edge -- UMG's BackPadScrolling. A window, not half of one, which is Slate's\narithmetic."
+    text  "在内容之前留出整整一屏的空白，好让第一个项目能一直滚动\n到后缘——即 UMG 的 BackPadScrolling。是一整屏而非半屏，这是 Slate 的\n计算方式。"
+    state machine
+}
+
+DreamScrollBox:bConsumePointerInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bConsumePointerInput
+    src   "Whether a pointer event this box acted on is swallowed -- UMG's bConsumePointerInput. Off lets\nit reach whatever is drawn behind the box."
+    text  "此框已处理的指针事件是否被吞掉——即 UMG 的 bConsumePointerInput。关闭时，\n事件会传递给框后面绘制的内容。"
+    state machine
+}
+
+DreamScrollBox:bEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bEnableTouchScrolling
+    src   "Whether a TOUCH drag scrolls this box -- UMG's bEnableTouchScrolling. A mouse drag is unaffected."
+    text  "触摸拖动是否滚动此框——即 UMG 的 bEnableTouchScrolling。鼠标拖动不受影响。"
+    state machine
+}
+
+DreamScrollBox:bFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bFrontPadScrolling
+    src   "A whole window of empty space AFTER the content -- UMG's FrontPadScrolling."
+    text  "在内容之后留出整整一屏的空白——即 UMG 的 FrontPadScrolling。"
+    state machine
+}
+
+DreamScrollBox:bShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:bShowScrollBar
+    src   "Off means no bar at all, and the viewport keeps the gutter it would have cost."
+    text  "关闭表示完全不显示滚动条，视口则保留原本要留给它的那条空边。"
+    state machine
+}
+
+DreamScrollBox:ConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ConsumeMouseWheel
+    src   "Whether the wheel is swallowed here or handed to an outer scrolling ancestor at a limit."
+    text  "到达边界时，滚轮是在此处被吞掉，还是交给外层的滚动祖先。"
+    state machine
+}
+
+DreamScrollBox:DecelerateRate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:DecelerateRate
+    src   "How quickly a flick stops. Zero never slows down; larger stops sooner."
+    text  "轻扫停止的快慢。为零时永不减速；值越大停得越快。"
+    state machine
+}
+
+DreamScrollBox:EndInertialScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:EndInertialScrolling
+    src   "Drop the fling, keeping the position -- UMG's EndInertialScrolling."
+    text  "停止惯性滑动并保持当前位置——即 UMG 的 EndInertialScrolling。"
+    state machine
+}
+
+DreamScrollBox:FocusSelectable {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:FocusSelectable
+    src   "The face's focus behaviour, made the first time bIsFocusable is on. Null until then."
+    text  "该表面的焦点行为，在 bIsFocusable 首次开启时创建。在此之前为空。"
+    state machine
+}
+
+DreamScrollBox:GetAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnimateWheelScrolling
+    src   "The four scroll commands UMG's box offers, forwarded to the behaviour.\n\nForwarded rather than left to GetScrollView(): the behaviour has had all of them since it was\nwritten, and a consumer reaching through the accessor to call them is a consumer reaching past\nthe control into a part the control owns -- which is the one thing this whole family exists to\nmake unnecessary. GetScrollView() stays for everything genuinely beyond the control's surface."
+    text  "UMG 的框提供的四个滚动命令，转发给该行为。\n\n选择转发而不是留给 GetScrollView()：该行为自编写之初就已具备全部这些命令，\n而使用者通过访问器去调用它们，就等于越过控件伸进控件自己拥有的部分——\n而这正是这一整个系列存在的意义，即让这种做法变得不必要。GetScrollView()\n仍然保留，用于确实超出控件表面的一切。"
+    state machine
+}
+
+DreamScrollBox:GetContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetContentNode
+    src   "Where things go. Parent into this, or use AddContent, and the stack piles them up in order."
+    text  "内容放置的位置。将子项添加到此，或使用AddContent，堆栈会按顺序堆叠。"
+    state machine
+}
+
+DreamScrollBox:GetIsScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetIsScrolling
+    src   "True while momentum, a spring-back or a glide (an animated reveal or wheel notch) still has the content moving."
+    text  "在惯性、回弹或滑行（动画显示或滚轮一格）仍使内容移动的期间为true。"
+    state machine
+}
+
+DreamScrollBox:GetOverscrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollOffset
+    src   "Signed distance past an end, in local units; zero in range and zero while overscroll is off."
+    text  "超出端点的带符号距离，以本地单位计；在范围内时为零，关闭过度滚动时也为零。"
+    state machine
+}
+
+DreamScrollBox:GetOverscrollPercentage {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollPercentage
+    src   "The same distance as a percentage of the window -- UMG's GetOverscrollPercentage."
+    text  "同一距离占窗口的百分比——对应UMG的GetOverscrollPercentage。"
+    state machine
+}
+
+DreamScrollBox:GetScrollbarPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarPadding
+    src   "The margin around the bar. The same arrangement as the thickness: the style holds it."
+    text  "滚动条周围的边距。与粗细采用相同的安排：由样式持有。"
+    state machine
+}
+
+DreamScrollBox:GetScrollbarThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarThickness
+    src   "The bar's thickness, in local units. A READER of the style rather than a second copy: the\nnumber lives in FDreamScrollBarStyle::Thickness, because it is what the bar is drawn from, and\na control-level field beside it would be the same measurement written twice.\n\nUMG's is an FVector2D; a bar here has one thickness, across its own axis, because its length is\nwhatever it is scrolling."
+    text  "滚动条的粗细，以本地单位计。它是对样式的读取，而不是第二份副本：该\n数值位于FDreamScrollBarStyle::Thickness中，因为滚动条正是由它绘制而来，而\n在其旁边再设一个控件级字段，不过是同一次测量写了两遍。\n\nUMG的对应项是FVector2D；此处的滚动条在自身轴向上只有一个粗细，因为它的长度\n取决于它所滚动的内容。"
+    state machine
+}
+
+DreamScrollBox:GetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffset
+    src   "How far the window has travelled from the content's start edge, in local units."
+    text  "窗口从内容起始边缘起已移动的距离，以本地单位计。"
+    state machine
+}
+
+DreamScrollBox:GetScrollOffsetOfEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffsetOfEnd
+    src   "The offset at which the END of the content is in view: the whole scrollable extent."
+    text  "内容末端进入视野时的偏移量：即整个可滚动的范围。"
+    state machine
+}
+
+DreamScrollBox:GetScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollView
+    src   "The behaviour, for anything this control does not wrap -- ScrollTo, inertia, a second bar."
+    text  "行为对象，用于此控件未封装的一切——ScrollTo、惯性、第二个滚动条。"
+    state machine
+}
+
+DreamScrollBox:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetStyle
+    src   "By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct."
+    text  "按值而非按引用：UFUNCTION 返回值必须是值，而样式是一个小型结构体。"
+    state machine
+}
+
+DreamScrollBox:GetViewFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewFraction
+    src   "Fraction of the content currently visible, 0..1. One when everything fits."
+    text  "当前可见内容所占的比例，0..1。全部内容都能容纳时为1。"
+    state machine
+}
+
+DreamScrollBox:GetViewOffsetFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewOffsetFraction
+    src   "How far through the scrollable range the window sits, 0..1. Zero when nothing can scroll."
+    text  "窗口在可滚动范围中所处的位置，0..1。无法滚动时为0。"
+    state machine
+}
+
+DreamScrollBox:IsAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbar
+    src   "Whether the bar stays put with nothing to scroll -- UMG's AlwaysShowScrollbar.\n\nA reader of ScrollBarVisibility rather than a flag beside it: Permanent IS \"always show\", and\ntwo properties that both answered would be two answers to keep in step."
+    text  "无内容可滚动时滚动条是否保持显示——即UMG的AlwaysShowScrollbar。\n\n它是对滚动条可视性（ScrollBarVisibility）的读取，而不是在其旁边另设的标志：Permanent本身就是“始终显示”，而\n两个都能回答同一问题的属性，就是两份需要保持同步的答案。"
+    state machine
+}
+
+DreamScrollBox:NavigationDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:NavigationDestination
+    src   "Where a widget revealed by NAVIGATION ends up -- UMG's NavigationDestination. IntoView moves\nthe least distance that shows it; the other two always frame it the same way."
+    text  "由导航显现的控件最终落到的位置——即UMG的NavigationDestination。IntoView以\n显示它所需的最小距离移动；另外两个则总是以相同方式为它定位。"
+    state machine
+}
+
+DreamScrollBox:NavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:NavigationScrollPadding
+    src   "How much of the window to keep clear around it -- UMG's NavigationScrollPadding."
+    text  "在它周围要留出多少填充空间——即UMG的NavigationScrollPadding。"
+    state machine
+}
+
+DreamScrollBox:OnFocusUpdated {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnFocusUpdated
+    src   "Focus moved to something INSIDE the box -- UMG's OnFocusUpdated.\n\nNot gated on bIsFocusable, and that is the point: this is about the box's CONTENT, which is\nfocusable whether or not the box is. Raised from the navigation reveal, the one place that\nknows both which widget took focus and which scrolling ancestors contain it -- a box cannot\nwork that out alone, and polling HasFocusedDescendants would be a tick for an edge."
+    text  "焦点移到了滚动框内部的某个对象——即UMG的OnFocusUpdated。\n\n不受bIsFocusable约束，而这正是关键：这里说的是滚动框的内容，无论框本身是否\n可聚焦，内容都是可聚焦的。由导航显现触发，那是唯一同时\n知道哪个控件获得了焦点、哪些滚动祖先包含它的地方——滚动框自身\n无法判断这一点，而轮询HasFocusedDescendants会为一个边沿事件而每帧执行。"
+    state machine
+}
+
+DreamScrollBox:OnScrollBarVisibilityChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnScrollBarVisibilityChanged
+    src   "The bar appeared or went away -- UMG's OnScrollBarVisibilityChanged. Fired from the style push,\nwhich is the one place that decides, and only when the answer actually moved."
+    text  "滚动条出现或消失（滚动条可视性发生变化）——即UMG的OnScrollBarVisibilityChanged。由样式推送\n触发，那是唯一做出决定的地方，且仅在结果确实发生变化时触发。"
+    state machine
+}
+
+DreamScrollBox:OnScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnScrolled
+    src   "Re-broadcast from the scroll behaviour, so a consumer binds to the control, not to a part of it."
+    text  "从滚动行为重新广播，因此使用方绑定的是控件本身，而不是它的某个部件。"
+    state machine
+}
+
+DreamScrollBox:OnUserScrolled {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnUserScrolled
+    src   "The USER moved it -- UMG's OnUserScrolled, and its unit, which is an OFFSET rather than a\nprogress.\n\nSeparate from OnScrolled because the question is different: OnScrolled fires for every change,\nincluding the ones this control made itself (a style push re-states the progress; a setter\nwrites it). A consumer saving \"where the player left the list\" wants the ones the player made,\nand nothing else could tell them apart afterwards."
+    text  "用户移动了它——即UMG的OnUserScrolled，以及它的单位，即偏移量而不是\n进度。\n\n与OnScrolled分开是因为问题不同：OnScrolled对每一次变化都会触发，\n包括此控件自身造成的变化（样式推送会重述进度；setter会\n写入进度）。保存“玩家把列表留在哪里”的使用方想要的是玩家造成的变化，\n而事后没有别的办法能把两者区分开。"
+    state machine
+}
+
+DreamScrollBox:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:OnValueChangedBP
+    src   "The `<->` convention: a two-way binding synthesizes its reverse route against this exact name.\nA scroll box's value is where it is scrolled to, so it carries one and fires it with OnScrolled."
+    text  "`<->`约定：双向绑定会针对这个确切的名称合成其反向路由。\n滚动框的值就是它滚动到的位置，因此它携带该值并用OnScrolled触发。"
+    state machine
+}
+
+DreamScrollBox:Orientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:Orientation
+    src   "Which way it scrolls, and which way its content stacks. One property instead of two Blueprint\nassets.\n\nBlueprintSetter, like the four knobs below it: every one of these is read only by ApplyStyle,\nso a runtime write straight onto the variable used to change the number and nothing else --\nnothing in this family re-derives a control from a property that moved, which is the\nSynchronizeProperties tax UDreamUIControl documents. Through the setter the re-push is not\nsomething a caller has to know to make."
+    text  "它沿哪个方向滚动，以及它的内容沿哪个方向堆叠。用一个属性而非两个蓝图\n资产。\n\n与下面四个开关一样是BlueprintSetter：这里的每一项都只由ApplyStyle读取，\n因此直接对变量做运行时写入只会改变数值而别无其他——\n这一族里没有任何东西会因属性变动而重新派生控件，那正是\nUDreamUIControl所记录的SynchronizeProperties代价。经由setter，重新推送就不再是\n调用方必须知道要做的事。"
+    state machine
+}
+
+DreamScrollBox:RefreshContentExtent {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:RefreshContentExtent
+    src   "Re-take the content's extent from the stack and tell the behaviour its range moved -- and, when\nthat changed whether anything overflows, bring an auto-hiding bar out or put it away.\n\nThe counterpart of UUIScrollView::RectRangeChanged, and it exists for the same reason: nothing\nre-measures a scrolled column on its own, because the column's size is not layout output -- it\nis the control's statement of how far there is to scroll."
+    text  "从堆叠中重新获取内容的范围，并告知行为其范围已移动——并且，当\n这改变了是否有内容溢出时，让自动隐藏的滚动条出现或收起。\n\n对应 UUIScrollView::RectRangeChanged，它存在的理由也相同：没有任何东西\n会自行重新测量被滚动的列，因为列的大小不是布局输出——它是\n控件对可滚动距离的声明。"
+    state machine
+}
+
+DreamScrollBox:ScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollBarVisibility
+    src   "Whether the bar stays put or disappears while the content already fits. AutoHide follows the\ncontent at run time: every re-measure (AddContent, RefreshContentExtent, a resize) asks again, so\na box that starts or stops overflowing brings its bar out or puts it away, as UMG's does -- the bar and\nits gutter both collapse while nothing scrolls. Hidden never draws the bar but keeps its gutter while\nthere is something to scroll, as a Hidden Slate bar keeps its slot; Permanent is UMG's AlwaysShowScrollbar."
+    text  "当内容已经放得下时，滚动条是保持不动还是消失。AutoHide 在运行时跟随\n内容：每次重新测量（AddContent、RefreshContentExtent、调整大小）都会再次询问，因此\n开始或停止溢出的框会像 UMG 那样让滚动条出现或收起——在无可滚动内容时，滚动条及其\n槽位都会折叠。Hidden 从不绘制滚动条，但在有内容可滚动时保留其槽位，就像 Hidden 的\nSlate 滚动条保留其槽位一样；Permanent 即 UMG 的 AlwaysShowScrollbar。"
+    state machine
+}
+
+DreamScrollBox:ScrollProgress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollProgress
+    src   "Position along the scrolling axis, 0 to 1. Authored in; mirror of the behaviour's out, so a\n`.dui` binding and the designer can both see it.\n\nThe authored value is pushed until it lands on content that can scroll -- a box built empty\nand filled later still opens where it was authored to -- and again whenever it is set or edited.\nEvery other style push reads the view's progress back into it instead, so restyling a box never\nmoves its content."
+    text  "沿滚动轴的位置，0 到 1。在编辑时设定；镜像行为的输出，因此\n`.dui` 绑定和设计器都能看到它。\n\n设定的值会被推送，直到落到可滚动的内容上——一个先建空、之后再填充的\n框仍会打开在设定值所指的位置——并在每次被设置或编辑时再次推送。\n其他每次样式推送则会把视图的进度读回其中，因此重新设置样式永远不会\n移动内容。"
+    state machine
+}
+
+DreamScrollBox:ScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollSensitivity
+    src   "Local units travelled per mouse-wheel notch. It used to be documented as a MULTIPLIER and\npushed straight into a view that multiplied the raw axis by it, so the default of 1 moved the\ncontent one unit a notch -- a wheel that visibly did nothing. 40 is what\nUDreamLayoutContainerScrollBox already uses for the same gesture."
+    text  "每个鼠标滚轮格移动的本地单位数。它过去被记录为乘数，并被直接\n推入按它乘以原始轴值的视图，因此默认值 1 每格只把内容\n移动一个单位——滚轮看上去毫无效果。UDreamLayoutContainerScrollBox\n对同一手势已经使用 40。"
+    state machine
+}
+
+DreamScrollBox:ScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWhenFocusChanges
+    src   "What this box does when user focus lands inside it -- UMG's ScrollWhenFocusChanges.\n\nAnimatedScroll rather than UMG's NoScroll, because it is what every box here already does:\ndirectional navigation reveals its target unconditionally, and shipping NoScroll would stop\nevery gamepad-driven list in every existing project from following its focus."
+    text  "用户焦点落入此框内时的行为——即 UMG 的 ScrollWhenFocusChanges。\n\n采用 AnimatedScroll 而非 UMG 的 NoScroll，因为这里每个框本来就是这样：\n方向导航会无条件显示其目标，而若采用 NoScroll，所有现有项目中每个由手柄驱动的列表\n都将无法跟随其焦点。"
+    state machine
+}
+
+DreamScrollBox:ScrollWidgetIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView
+    src   "Scroll the least distance that brings InWidget fully into view; nothing when it already is.\n\n@param InDestination Where it ends up. Configured (the default) leaves it to NavigationDestination,\n                     which is what this call meant before the parameter existed.\n@param InPadding     How much of the window to keep clear around it. Negative leaves it to\n                     NavigationScrollPadding, for the same reason."
+    text  "以最小距离滚动，使 InWidget（控件）完全进入视野；若已在视野内则不滚动。\n\n@param InDestination 其最终位置。Configured（默认值）将其交由 NavigationDestination 决定，\n                     这也是该参数出现之前此调用的含义。\n@param InPadding（填充） 在其周围保留多少窗口空白。负值出于同样的原因交由\n                     NavigationScrollPadding 决定。"
+    state machine
+}
+
+DreamScrollBox:SetBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetBackPadScrolling
+    src   "Changes how far there is to go, so the range is re-stated and the bar re-measured."
+    text  "改变可滚动的总距离，因此会重新声明范围并重新测量滚动条。"
+    state machine
+}
+
+DreamScrollBox:SetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetOrientation
+    src   "Re-states the axis on the view, the stack and the bar, and re-cuts the gutter."
+    text  "在视图、堆栈和滚动条上重新声明轴向，并重新裁切边槽。"
+    state machine
+}
+
+DreamScrollBox:SetScrollbarThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarThickness
+    src   "Writes FDreamScrollBarStyle::Thickness and re-cuts the gutter, which is what it decides."
+    text  "写入 FDreamScrollBarStyle::Thickness 并重新裁切边槽，这正是它决定的内容。"
+    state machine
+}
+
+DreamScrollBox:SetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollOffset
+    src   "Clamped to how far there is to go. The absolute counterpart of SetScrollProgress."
+    text  "会被限制在可滚动范围内。是 SetScrollProgress 的绝对量对应项。"
+    state machine
+}
+
+DreamScrollBox:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetStyle
+    src   "Replace the whole look and re-push it. The one road a Blueprint write has to take."
+    text  "替换整套外观并重新推送。这是蓝图写入必经的唯一途径。"
+    state machine
+}
+
+DreamScrollBox:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually\nexists; with no sheet in the project this IS the look in effect -- which is why it stays\neditable instead of being gated on the enum."
+    text  "此实例自身的外观。当 StyleSource 指明使用项目样式表且项目中确实存在\n样式表时，以项目样式表为准；若项目中没有样式表，则这里就是实际生效的外观——这正是它保持\n可编辑，而不受枚举值限制的原因。"
+    state machine
+}
+
+DreamScrollBox:WheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:WheelScrollAnimationDuration
+    src   "How long one animated notch takes. Ignored while bAnimateWheelScrolling is off."
+    text  "一格动画滚动所需的时间。bAnimateWheelScrolling 关闭时忽略。"
+    state machine
+}
+
+DreamScrollBox:WheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:WheelScrollMultiplier
+    src   "A plain multiplier on whatever one wheel notch already travels -- UMG's name, and the list\ncontrols' too, so the three agree.\n\nScrollSensitivity above is the DISTANCE a notch covers, in local units. This scales it, which is\nwhy both exist: a project that wants \"the same feel, twice as fast\" writes 2 here rather than\nre-tuning a distance that then disagrees with every other box in the game."
+    text  "对滚轮一格原本移动距离的纯倍率——沿用 UMG 的名称，列表\n控件也是如此，三者因此保持一致。\n\n上方的 ScrollSensitivity 是一格覆盖的距离，以本地单位计。此项对其缩放，这\n也是两者并存的原因：想要“相同手感、两倍速度”的项目在此填 2，而不必\n重新调整距离，否则该距离就会与游戏中其他所有框不一致。"
+    state machine
+}
+
+DreamScrollBoxBarVisibilityChangedEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxBarVisibilityChangedEvent__DelegateSignature
+    src   "The bar appeared or went away. A bool rather than a Slate visibility, which this library has none of."
+    text  "滚动条出现或消失。使用 bool 而非 Slate 可见性，因为本库没有后者。"
+    state machine
+}
+
+DreamScrollBoxFocusUpdatedEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxFocusUpdatedEvent__DelegateSignature
+    src   "Focus moved to a widget inside the box -- which one, so a consumer need not go looking."
+    text  "焦点移动到了框内的某个控件——并指明是哪一个，消费方无需再自行查找。"
+    state machine
+}
+
+DreamScrollBoxUserScrolledOffsetEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBoxUserScrolledOffsetEvent__DelegateSignature
+    src   "The USER moved it, and where to -- an OFFSET in local units, which is what UMG reports."
+    text  "用户移动了控件，移动的距离（偏移量）以本地单位表示，这是 UMG 的默认行为。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Scroll Box" {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent
+    src   "Scroll Box"
+    // from the engine's zh-Hans
+    text  "Scroll Box"
+    state draft
+}

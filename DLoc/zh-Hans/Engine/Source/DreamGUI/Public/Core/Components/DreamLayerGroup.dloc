@@ -1,0 +1,237 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayerGroup {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup
+    src   "Dream Layer Group"
+    text  "图层组"
+    state machine
+}
+
+DreamLayerGroup:bEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:bEnabled
+    src   "Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
+DreamLayerGroup:GetGroupBlendMode:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupBlendMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:GetGroupMask:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupMask:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:GetGroupOpacity:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupOpacity:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:GetIsolation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetIsolation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:GroupBlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupBlendMode
+    src   "Group Blend Mode"
+    text  "组混合模式"
+    state machine
+}
+
+DreamLayerGroup:GroupMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupMask
+    src   "Group Mask"
+    // from the engine's zh-Hans
+    text  "组遮罩"
+    state draft
+}
+
+DreamLayerGroup:GroupOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupOpacity
+    src   "Group Opacity"
+    text  "组不透明度"
+    state machine
+}
+
+DreamLayerGroup:IsEnabled:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:IsIsolated:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsIsolated:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayerGroup:Isolation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:Isolation
+    src   "Isolation"
+    text  "隔离"
+    state machine
+}
+
+DreamLayerGroup:SetEnabled:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayerGroup:SetGroupBlendMode:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupBlendMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayerGroup:SetGroupMask:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupMask:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayerGroup:SetGroupOpacity:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupOpacity:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayerGroup:SetIsolation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetIsolation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+EDreamLayerGroupIsolation.EDreamLayerGroupIsolation_MAX {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation:EDreamLayerGroupIsolation_MAX
+    src   "EDream Layer Group Isolation MAX"
+    text  "EDream图层组隔离最大值"
+    state machine
+}
+
+EDreamLayerGroupIsolation.Isolated {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation:Isolated
+    src   "Isolated"
+    // from the engine's zh-Hans
+    text  "孤立"
+    state draft
+}
+
+EDreamLayerGroupIsolation.PassThrough {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation:PassThrough
+    src   "Pass Through"
+    // from the engine's zh-Hans
+    text  "通过"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLayerGroup {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup
+    src   "Makes the widget's subtree one layer: drawn into a texture of its own, cleared to transparent, then put over what is\nbehind it once -- by its own blend mode, at its own opacity, through its own mask.\n\n- GroupOpacity fades the subtree as one: children that overlap do not show through each other on the way out, as they do\n  when each takes the widget's RenderOpacity.\n- GroupBlendMode blends the whole subtree with what is behind it (EDreamUIBlendMode): a group of a few elements over a\n  picture, in Multiply, darkens it by what the group looks like, not by each element.\n- Inside an isolated group, a child's blend mode blends with what the group has drawn so far, never with what is behind\n  the group.\n- GroupMask masks the group as it is put down, in the widget's rect (FDreamClipMask): a mask of the composite, not of\n  each element. It does not take part in hit tests.\n\nThe texture covers what the subtree draws on the target, and no more, and is the frame's alone: a group costs a texture\nthe size of what it draws, a clear and a full-screen pass over that rect, every frame it is drawn. Groups nest. On a\nworld-space canvas a group is drawn as if passed through, and a warning says so."
+    text  "将控件的子树合并为一个图层：绘制到独立纹理中，清除为透明，然后一次性覆盖到其\n背后的内容之上——按自身的混合模式、不透明度、遮罩。\n\n- GroupOpacity 将子树作为一个整体淡出：重叠的子项在淡出时不会互相透出，而各自应用控件的\n  RenderOpacity 时则会如此。\n- GroupBlendMode 将整个子树与其背后的内容混合（EDreamUIBlendMode）：一组元素以 Multiply 叠加在\n  图片上时，是按整个组的外观压暗图片，而不是按每个元素分别压暗。\n- 在隔离组中，子项的混合模式只与组内迄今已绘制的内容混合，绝不与组\n  背后的内容混合。\n- GroupMask 在组落地合成时按控件的矩形遮罩整个组（FDreamClipMask）：遮罩的是合成结果，而不是\n  每个元素。它不参与命中测试。\n\n该纹理只覆盖子树在目标上实际绘制的内容，不多不少，且仅属于当前帧：每绘制一帧，组都要消耗一张与其\n绘制范围同样大小的纹理、一次清除，以及一次覆盖该矩形的全屏通道。组可以嵌套。在世界空间\n画布上，组按穿透方式绘制，并给出警告提示。"
+    state machine
+}
+
+DreamLayerGroup:bEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:bEnabled
+    src   "Off, the subtree is drawn as if there were no group: to compare with and without it."
+    text  "关闭时，子树如同没有组一样绘制：用于对比有无组时的效果。"
+    state machine
+}
+
+DreamLayerGroup:GroupBlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupBlendMode
+    src   "How the composited subtree blends with what is behind it."
+    text  "如何将组合的子树与后面的内容混合。"
+    state machine
+}
+
+DreamLayerGroup:GroupMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupMask
+    src   "Masks the composited subtree as it is put down, measured in this widget's rect; not in hit tests."
+    text  "将组合的子树进行遮罩，遮罩位置由此小部件的矩形区域确定，不参与碰撞检测。"
+    state machine
+}
+
+DreamLayerGroup:GroupOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GroupOpacity
+    src   "Applied once to the composited subtree, so overlapping children fade together."
+    text  "对合成后的子树整体应用一次，因此重叠的子项会一起淡出。"
+    state machine
+}
+
+DreamLayerGroup:IsIsolated {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsIsolated
+    src   "Whether the subtree is drawn apart: Isolated, or an opacity, a mode or a mask other than the default asks for it."
+    text  "子树是否单独绘制：由 Isolated 指定，或由非默认的不透明度、混合模式或遮罩触发。"
+    state machine
+}
+
+DreamLayerGroup:SetEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetEnabled
+    src   "Off, the subtree is drawn as if there were no group; every other setting is kept for when it is turned on again."
+    text  "关闭时，子树会像没有组一样绘制；其他设置在打开时会保留。"
+    state machine
+}
+
+DreamLayerGroup:SetGroupOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupOpacity
+    src   "Applied once to the composited subtree. Changing it redraws nothing but the composite."
+    text  "应用于合成的子树一次。修改它只会重绘合成结果，而不会影响其他部分。"
+    state machine
+}
+
+EDreamLayerGroupIsolation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation
+    src   "Whether a layer group's subtree is drawn apart before it is put down (UDreamLayerGroup)."
+    text  "是否在绘制图层组的子树之前将其分离 (UDreamLayerGroup)。"
+    state machine
+}
+
+EDreamLayerGroupIsolation.Isolated {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation:Isolated
+    src   "Drawn into a texture of its own first, then put down as one: its children's blend modes blend with each other only."
+    text  "首先绘制到自己的纹理中，然后作为一个整体进行绘制：其子元素的混合模式相互混合。"
+    state machine
+}
+
+EDreamLayerGroupIsolation.PassThrough {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#EDreamLayerGroupIsolation:PassThrough
+    src   "Drawn as if there were no group, unless an opacity, a mode or a mask below asks for it to be drawn apart."
+    text  "如果下方没有透明度、模式或遮罩，则按未分组的方式绘制。"
+    state machine
+}

@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+SpriteAtlas {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticSpriteAtlasDataFactory.cpp
+    src   "Sprite Atlas"
+    text  "精灵图集"
+    state machine
+}
+
+SpriteAtlasToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticSpriteAtlasDataFactory.cpp
+    src   "The atlas that sprites set to static packing are packed into in the editor, mipmaps included."
+    text  "用于存储设置为静态打包的精灵图的图集，包括mipmap。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIStaticSpriteAtlasDataFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIStaticSpriteAtlasDataFactory.cpp#DreamUIStaticSpriteAtlasDataFactory
+    src   "Dream UIStatic Sprite Atlas Data Factory"
+    text  "Dream UI 静态精灵图集数据工厂"
+    state machine
+}

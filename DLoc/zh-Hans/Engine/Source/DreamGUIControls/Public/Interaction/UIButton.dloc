@@ -1,0 +1,77 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+UIButton {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton
+    src   "UIButton"
+    text  "按钮"
+    state machine
+}
+
+UIButton:OnClick {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnClick
+    src   "On Click"
+    text  "单击"
+    state machine
+}
+
+UIButton:OnClickBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnClickBP
+    src   "OnClick"
+    text  "单击"
+    state machine
+}
+
+UIButton:OnDoubleClickBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnDoubleClickBP
+    src   "OnDoubleClick"
+    text  "双击"
+    state machine
+}
+
+UIButton:OnHoveredBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnHoveredBP
+    src   "OnHovered"
+    text  "悬停"
+    state machine
+}
+
+UIButton:OnPressedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnPressedBP
+    src   "OnPressed"
+    text  "按下"
+    state machine
+}
+
+UIButton:OnReleasedBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnReleasedBP
+    src   "OnReleased"
+    text  "释放"
+    state machine
+}
+
+UIButton:OnUnhoveredBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnUnhoveredBP
+    src   "OnUnhovered"
+    text  "鼠标离开"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI-Button {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnClick
+    src   "DreamGUI-Button"
+    text  "DreamGUI 按钮"
+    state machine
+}
+
+namespace UObjectToolTips
+
+UIButton:OnDoubleClickBP {
+    at    Source/DreamGUIControls/Public/Interaction/UIButton.h#UIButton:OnDoubleClickBP
+    src   "Two clicks inside the event system's DoubleClickTime, on this button: said at the SECOND PRESS,\nwhich the event system delivers as the double click in place of that press's down, as Slate does.\n\nThe clock is the event system's and nobody else's: UUITextInput already takes its\nselect-the-word gesture from that one, and a control that measured its own would disagree with\nthe field beside it on what \"a double click\" is -- and would be measuring click EVENTS rather\nthan pointer presses, which is not the same thing once anything else can raise a click.\nUDreamListViewBase's OnItemDoubleClicked rides this.\n\nThe press is not lost to it. SButton treats a double click its own handler does not take as a\nsingle click, and these listeners cannot take it, so after they are told the second press goes on\nas a press: OnPressed, then OnReleased and OnClick at the release. A double click on this button\nis two full clicks with this in between -- and a list row that opens on a double click has\nalready selected on the first."
+    text  "在此按钮上，事件系统 DoubleClickTime 内的两次点击：在第二次按下时触发，\n事件系统以此作为双击送达，取代该次按下的按下事件，与 Slate 的做法一致。\n\n计时只归事件系统所有，不归任何其他方：UUITextInput 的选词手势\n就取自它，而自行计时的控件会与旁边的输入框在“什么是双击”上\n产生分歧——而且它计量的会是点击事件而非指针按下，\n一旦有其他来源能触发点击，这两者并不相同。\nUDreamListViewBase 的 OnItemDoubleClicked 即依赖于此。\n\n这次按下不会因此丢失。SButton 会把自身处理程序未接下的双击当作\n单击，而这些监听器无法接下它，所以在它们收到通知后，第二次按下会继续\n作为一次按下传递：OnPressed，然后在释放时依次触发 OnReleased 和 OnClick。在此按钮上双击\n就是两次完整的点击，中间夹着这些——而在双击时打开的列表行，\n其实在第一次点击时就已经选中。"
+    state machine
+}

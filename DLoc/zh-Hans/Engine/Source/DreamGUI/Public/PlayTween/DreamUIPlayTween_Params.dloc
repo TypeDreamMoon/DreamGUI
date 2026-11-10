@@ -1,0 +1,375 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIPlayTween_Color {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Color
+    src   "DreamUIPlayTween Color"
+    text  "DreamUI缓动动画 颜色"
+    state machine
+}
+
+DreamUIPlayTween_Color:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Color:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Color:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Color:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Color:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Color:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Double {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Double
+    src   "DreamUIPlayTween Float (Double)"
+    text  "DreamUI缓动动画 双精度浮点数"
+    state machine
+}
+
+DreamUIPlayTween_Double:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Double:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Double:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Double:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Double:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Double:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Float {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Float
+    src   "DreamUIPlayTween Float (Single)"
+    text  "DreamUI缓动动画 单精度浮点数"
+    state machine
+}
+
+DreamUIPlayTween_Float:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Float:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Float:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Float:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Float:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Float:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Int {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Int
+    src   "DreamUIPlayTween Int"
+    text  "DreamUI缓动动画 整数"
+    state machine
+}
+
+DreamUIPlayTween_Int:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Int:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Int:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Int:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Int:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Int:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_LinearColor {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_LinearColor
+    src   "DreamUIPlayTween LinearColor"
+    text  "DreamUI缓动动画 线性颜色"
+    state machine
+}
+
+DreamUIPlayTween_LinearColor:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_LinearColor:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_LinearColor:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_LinearColor:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_LinearColor:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_LinearColor:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Quaternion {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Quaternion
+    src   "DreamUIPlayTween Quaternion"
+    text  "DreamUI缓动动画 四元数"
+    state machine
+}
+
+DreamUIPlayTween_Quaternion:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Quaternion:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Quaternion:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Quaternion:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Quaternion:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Quaternion:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Rotator {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Rotator
+    src   "DreamUIPlayTween Rotator"
+    text  "DreamUI缓动动画 旋转"
+    state machine
+}
+
+DreamUIPlayTween_Rotator:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Rotator:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Rotator:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Rotator:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Rotator:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Rotator:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Vector2 {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector2
+    src   "DreamUIPlayTween Vector2"
+    text  "DreamUI缓动动画 2D 向量"
+    state machine
+}
+
+DreamUIPlayTween_Vector2:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector2:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Vector2:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector2:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Vector2:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector2:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Vector3 {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector3
+    src   "DreamUIPlayTween Vector3"
+    text  "DreamUI缓动动画 3D 向量"
+    state machine
+}
+
+DreamUIPlayTween_Vector3:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector3:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Vector3:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector3:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Vector3:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector3:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+DreamUIPlayTween_Vector4 {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector4
+    src   "DreamUIPlayTween Vector4"
+    text  "DreamUI缓动动画 4D 向量"
+    state machine
+}
+
+DreamUIPlayTween_Vector4:From {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector4:From
+    src   "From"
+    // from the engine's zh-Hans
+    text  "自"
+    state draft
+}
+
+DreamUIPlayTween_Vector4:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector4:OnUpdateValue
+    src   "On Update Value"
+    text  "更新值"
+    state machine
+}
+
+DreamUIPlayTween_Vector4:To {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector4:To
+    src   "To"
+    // from the engine's zh-Hans
+    text  "到"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIPlayTween_Color:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Color:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Double:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Double:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Float:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Float:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Int:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Int:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_LinearColor:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_LinearColor:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Quaternion:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Quaternion:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Rotator:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Rotator:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Vector2:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector2:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Vector3:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector3:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}
+
+DreamUIPlayTween_Vector4:OnUpdateValue {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween_Params.h#DreamUIPlayTween_Vector4:OnUpdateValue
+    src   "parameter float is interpolated value From->To"
+    text  "参数 float 为插值值，从起始值到目标值。"
+    state machine
+}

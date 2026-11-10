@@ -1,0 +1,137 @@
+dloc 1
+culture zh-Hans
+namespace DreamUISourceWatcher
+
+DreamUIDesignerEditsReplaced {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0} changed outside the editor, and the designer's edits that had not been written to it were replaced by the external version."
+    text  "DreamUI: {0} 在编辑器外部被修改，并且未写入到其中的设计器编辑内容已被外部版本覆盖。"
+    state machine
+}
+
+DreamUIDesignerEditsReplacedSaved {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0} changed outside the editor, and the designer's edits that had not been written to it were replaced by the external version. The replaced text was saved to {1}"
+    text  "DreamUI: {0} 在编辑器外部被修改，并且未写入到其中的设计器编辑内容已被外部版本覆盖。已将覆盖的内容保存到 {1}。"
+    state machine
+}
+
+DreamUIUndoHistoryCut {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "{0} changed outside the editor; the undo history was cut at this point."
+    text  "{0} 在编辑器外部被修改；撤销历史在此处中断。"
+    state machine
+}
+
+DreamUIUndoHistoryCutPrefixed {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0}"
+    text  "DreamUI: {0}"
+    state machine
+}
+
+DreamUIConflictTwoLines {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "{0}\n{1}"
+    // from the engine's zh-Hans
+    text  "{0}\n{1}"
+    state draft
+}
+
+DreamUIOpenSavedCopy {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "Open the saved copy"
+    text  "打开已保存的副本"
+    state machine
+}
+
+DreamUIApplied {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: applied {0}"
+    text  "DreamUI: 已应用 {0}"
+    state machine
+}
+
+DreamUIAppliedMany {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: applied {0} and {1} more"
+    text  "DreamUI: 已应用 {0}，还有 {1} 个。"
+    state machine
+}
+
+DreamUICompileFailed {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0}"
+    text  "DreamUI: {0}"
+    state machine
+}
+
+DreamUIGoToError {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "Go to the error"
+    text  "转到错误"
+    state machine
+}
+
+DreamUIOpenFailedSource {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "Open the file"
+    text  "打开文件"
+    state machine
+}
+
+DreamUINothingToRebuild {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: no text-backed widget Blueprint to rebuild."
+    text  "DreamUI: 没有可重建的基于文本的小部件蓝图。"
+    state machine
+}
+
+DreamUICompileSucceeded {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0} class(es) rebuilt, {1} file(s) with no class."
+    text  "DreamUI：已重新构建 {0} 个类，{1} 个文件没有类。"
+    state machine
+}
+
+DreamUISourceRemoved {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: a source file was deleted or renamed. {0} class(es) are now built from nothing: {1}"
+    text  "DreamUI: 源代码文件已被删除或重命名。{0} 个类现在是从无重建的：{1}"
+    state machine
+}
+
+DreamUIBulkBacklog {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: {0} source files changed at once. Rebuilding them all now would queue that many Blueprint compiles."
+    text  "DreamUI: {0} 个源文件同时被修改。现在重建所有文件将排队那么多蓝图编译。"
+    state machine
+}
+
+DreamUIRebuildBacklog {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "Rebuild them now"
+    text  "立即重建"
+    state machine
+}
+
+DreamUIBusy {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: not rebuilding right now -- play, a save, a drag or an open edit is in progress. Try again in a moment."
+    text  "DreamUI：当前无法重建，因为游戏正在运行、正在保存、正在拖动或正在进行编辑。请稍后再试。"
+    state machine
+}
+
+DreamUIDesignerWriteRefused {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "DreamUI: the designer's change was not written to {0}, because the file was changed outside the editor first. The editor brings the new text in next, and this change does not survive that: make it again afterwards."
+    text  "DreamUI：设计者的更改未写入到 {0}，因为该文件首先在编辑器外部被修改。编辑器随后会导入新的文本，此更改将无法保留：请稍后再次进行修改。"
+    state machine
+}
+
+DreamUIRebuildAll {
+    at    Source/DreamGUIEditor/Private/Text/DreamUISourceWatcher.cpp
+    src   "Rebuilding DreamUI text widgets..."
+    text  "正在重建 DreamUI 文本控件..."
+    state machine
+}

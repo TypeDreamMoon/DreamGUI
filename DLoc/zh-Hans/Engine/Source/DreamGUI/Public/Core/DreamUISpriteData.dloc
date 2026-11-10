@@ -1,0 +1,233 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUISpriteData {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData
+    src   "Dream UISprite Data"
+    text  "DreamUI 贴图数据"
+    state machine
+}
+
+DreamUISpriteData:AtlasTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:AtlasTexture
+    src   "Atlas Texture"
+    text  "图集纹理"
+    state machine
+}
+
+DreamUISpriteData:AtlasTextureIndex {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:AtlasTextureIndex
+    src   "Atlas Texture Index"
+    text  "图集纹理索引"
+    state machine
+}
+
+DreamUISpriteData:bUseEdgePixelPadding {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:bUseEdgePixelPadding
+    src   "Use Edge Pixel Padding"
+    text  "使用边沿像素填充"
+    state machine
+}
+
+DreamUISpriteData:CreateDreamUISpriteData:InBorder {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:InBorder
+    src   "In Border"
+    text  "内边距"
+    state machine
+}
+
+DreamUISpriteData:CreateDreamUISpriteData:InPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:InPackingTag
+    src   "In Packing Tag"
+    text  "输入打包标记"
+    state machine
+}
+
+DreamUISpriteData:CreateDreamUISpriteData:InSpriteTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:InSpriteTexture
+    src   "In Sprite Texture"
+    text  "输入精灵纹理"
+    state machine
+}
+
+DreamUISpriteData:CreateDreamUISpriteData:Outer {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:Outer
+    src   "Outer"
+    // from the engine's zh-Hans
+    text  "外部"
+    state draft
+}
+
+DreamUISpriteData:CreateDreamUISpriteData:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData:GetPackingTag:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetPackingTag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData:GetSpriteTexture:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetSpriteTexture:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData:HavePackingTag:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:HavePackingTag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUISpriteData:PackingAtlas {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingAtlas
+    src   "Packing Atlas"
+    text  "打包图集"
+    state machine
+}
+
+DreamUISpriteData:PackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingTag
+    src   "Packing Tag"
+    text  "打包标记"
+    state machine
+}
+
+DreamUISpriteData:PackingType {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingType
+    src   "Packing Type"
+    text  "打包类型"
+    state machine
+}
+
+DreamUISpriteData:SpriteInfo {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamUISpriteData:SpriteTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:SpriteTexture
+    src   "Sprite Texture"
+    // from the engine's zh-Hans
+    text  "Sprite纹理"
+    state draft
+}
+
+EDreamUISpritePackingType.Dynamic {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#EDreamUISpritePackingType:Dynamic
+    src   "Dynamic"
+    // from the engine's zh-Hans
+    text  "动态"
+    state draft
+}
+
+EDreamUISpritePackingType.EDreamUISpritePackingType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#EDreamUISpritePackingType:EDreamUISpritePackingType_MAX
+    src   "EDream UISprite Packing Type MAX"
+    text  "EDreamUI 贴图打包类型 最大值"
+    state machine
+}
+
+EDreamUISpritePackingType.Static {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#EDreamUISpritePackingType:Static
+    src   "Static"
+    // from the engine's zh-Hans
+    text  "Static"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUISpriteData {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData
+    src   "A Sprite-data type that can do automatic packing"
+    text  "一种可以自动打包的贴图数据类型。"
+    state machine
+}
+
+DreamUISpriteData:AtlasTextureIndex {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:AtlasTextureIndex
+    src   "Texture index in atlas texture array"
+    text  "图集纹理数组中的纹理索引。"
+    state machine
+}
+
+DreamUISpriteData:bUseEdgePixelPadding {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:bUseEdgePixelPadding
+    src   "Repeat edge pixel fill spaced between other sprites in atlas texture"
+    text  "在图集纹理中，用重复的边缘像素填充其他精灵之间的间隔"
+    state machine
+}
+
+DreamUISpriteData:CreateDreamUISpriteData {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData
+    src   "Create a DreamUISpriteData with provided parameter. This can use at runtime\n@param Outer                                         Outer of the result DreamUISpriteData\n@param InSpriteTexture                       Use this texture to create\n@param InBorder                                      Border value\n@param InPackingTag                          See \"PackingTag\" property\n@return                                                      Created DreamUISpriteData, nullptr if something wrong."
+    text  "使用给定参数创建 DreamUISpriteData。可在运行时使用\n@param Outer                                         返回的 DreamUISpriteData 的 Outer\n@param InSpriteTexture                       用于创建的纹理\n@param InBorder                                      边框值\n@param InPackingTag                          参见“PackingTag”属性\n@return                                                      创建的 DreamUISpriteData，出错时为 nullptr。"
+    state machine
+}
+
+DreamUISpriteData:PackingAtlas {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingAtlas
+    src   "Use a StaticSpriteAtlasData to pack multiple sprites into single atlas texture. The packing process is in editor and cook time, no performance impact at runtime.\nSupport mipmaps."
+    text  "使用 StaticSpriteAtlasData 将多个精灵打包到单个图集纹理中。打包过程在编辑器和 cook 期间完成，运行时没有性能影响。\n支持 mipmap。"
+    state machine
+}
+
+DreamUISpriteData:PackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingTag
+    src   "Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the DreamSprite which render this DreamUISpriteData will be treated as a DreamTexture.\nNot support mipmaps.\n        // DreamGUI_Hidden: the Packing Tag row, a list of the tags the atlases use, edits it."
+    text  "具有相同 PackingTag 的精灵将在运行时被打包到同一个图集纹理中。如果 PackingTag 为 None，则渲染此 DreamUISpriteData 的 DreamSprite 将被视为 DreamTexture。\n不支持 mipmap。\n        // DreamGUI_Hidden：Packing Tag 行，图集所使用的标签列表，可对其进行编辑。"
+    state machine
+}
+
+DreamUISpriteData:SpriteInfo {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:SpriteInfo
+    src   "Information needed for render this Sprite"
+    text  "渲染此精灵所需的信息"
+    state machine
+}
+
+DreamUISpriteData:SpriteTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:SpriteTexture
+    src   "Texture of this Sprite. Sprite is actually rendered from atlas texture, so SpriteTexture is not needed if atlas-data is packed; But! since atlas texture is packed at runtime, we must include SpriteTexture inside final package.\nDoNot modify SpriteTexture's setting unless you know what you do"
+    text  "此精灵的纹理。精灵实际上由图集纹理渲染，因此如果图集数据已打包，则不需要 SpriteTexture；但是！由于图集纹理在运行时打包，我们必须将 SpriteTexture 包含在最终包中。\n除非你知道自己在做什么，否则不要修改 SpriteTexture 的设置"
+    state machine
+}
+
+EDreamUISpritePackingType.Dynamic {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#EDreamUISpritePackingType:Dynamic
+    src   "Dynamic packing. Sprite will be packed when using, support runtime packing, not support mipmap."
+    text  "动态打包。精灵在使用时打包，支持运行时打包，不支持 mipmap。"
+    state machine
+}
+
+EDreamUISpritePackingType.Static {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#EDreamUISpritePackingType:Static
+    src   "Static packing, Sprite will be packed in editor no matter if it used, not support runtime packing, support mipmap."
+    text  "静态打包，无论是否使用，精灵都会在编辑器中打包，不支持运行时打包，支持 mipmap。"
+    state machine
+}
+
+namespace UObjectCategory
+
+AtlasPacking {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:PackingType
+    src   "AtlasPacking"
+    text  "AtlasPacking"
+    state machine
+}

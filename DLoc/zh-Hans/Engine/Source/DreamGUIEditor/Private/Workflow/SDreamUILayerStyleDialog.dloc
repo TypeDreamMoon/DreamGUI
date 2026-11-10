@@ -1,0 +1,112 @@
+dloc 1
+culture zh-Hans
+namespace SDreamUILayerStyleDialog
+
+SeveralTargets {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "{0} and {1} more"
+    // from the engine's zh-Hans
+    text  "{0}和{1}更多"
+    state draft
+}
+
+Styles {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Styles: {0}"
+    text  "样式：{0}"
+    state machine
+}
+
+OK {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "OK"
+    // from the engine's zh-Hans
+    text  "确定"
+    state draft
+}
+
+Cancel {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Cancel"
+    // from the engine's zh-Hans
+    text  "取消"
+    state draft
+}
+
+NewStyle {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "New Style..."
+    text  "新建样式..."
+    state machine
+}
+
+NewStyleTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Keep the style as a preset: an asset widgets can follow, or text in the project settings."
+    text  "将样式保留为预设：可供控件遵循的资产，或项目设置中的文本。"
+    state machine
+}
+
+PreviewTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Show the style on the widgets while it is edited. Nothing is written until OK."
+    text  "在编辑时，在控件上显示样式。点击确定后才会生效。"
+    state machine
+}
+
+Preview {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Preview"
+    // from the engine's zh-Hans
+    text  "预览"
+    state draft
+}
+
+GeneralBlending {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "General Blending"
+    text  "通用混合"
+    state machine
+}
+
+LayerEffects {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Layer Effects"
+    text  "图层效果"
+    state machine
+}
+
+GlobalLight {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Global Light"
+    text  "全局光"
+    state machine
+}
+
+AddInstance {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Add another {0}"
+    text  "添加另一个 {0}"
+    state machine
+}
+
+RemoveInstance {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Remove this {0}"
+    text  "移除此 {0}"
+    state machine
+}
+
+MultiTooltip {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Drag onto another of its kind to change the order they draw in: a later one draws over an earlier one."
+    text  "拖动到相同类型的实例上以更改它们的绘制顺序：后面的实例会覆盖前面的实例。"
+    state machine
+}
+
+Title {
+    at    Source/DreamGUIEditor/Private/Workflow/SDreamUILayerStyleDialog.cpp
+    src   "Layer Style"
+    text  "图层样式"
+    state machine
+}

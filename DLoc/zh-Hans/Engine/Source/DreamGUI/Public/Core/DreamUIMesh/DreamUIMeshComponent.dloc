@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIMeshComponent {
+    at    Source/DreamGUI/Public/Core/DreamUIMesh/DreamUIMeshComponent.h#DreamUIMeshComponent
+    src   "Dream UIMesh Component"
+    text  "Dream UI 网格组件"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIMeshComponent {
+    at    Source/DreamGUI/Public/Core/DreamUIMesh/DreamUIMeshComponent.h#DreamUIMeshComponent
+    src   "DreamUI render mesh\n@todo: split this class to: one for UE renderer && one for DreamUI renderer, will it be more efficient?"
+    text  "DreamUI 网格渲染组件。\n@todo: 将此类拆分为：一个用于 UE 渲染器，一个用于 DreamUI 渲染器，这会更有效率吗？"
+    state machine
+}

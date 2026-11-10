@@ -1,0 +1,55 @@
+dloc 1
+culture zh-Hans
+namespace DreamTextAlignmentCustomization
+
+AlignTextLeft {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Align Text Left"
+    // from the engine's zh-Hans
+    text  "将文本左对齐"
+    state draft
+}
+
+AlignTextCenter {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Align Text Center"
+    // from the engine's zh-Hans
+    text  "将文本中对齐"
+    state draft
+}
+
+AlignTextRight {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Align Text Right"
+    // from the engine's zh-Hans
+    text  "将文本右对齐"
+    state draft
+}
+
+JustifyText {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Justify Text: lines that wrap are spread to both edges"
+    text  "对齐文本：换行的内容会均匀分布在左右两边"
+    state machine
+}
+
+VAlignBottom {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Vertically Align Bottom"
+    text  "垂直对齐底部"
+    state machine
+}
+
+VAlignMiddle {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Vertically Align Middle"
+    text  "垂直对齐居中"
+    state machine
+}
+
+VAlignTop {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamTextAlignmentCustomization.h
+    src   "Vertically Align Top"
+    text  "垂直对齐顶部"
+    state machine
+}

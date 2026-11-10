@@ -1,0 +1,712 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTabView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView
+    src   "Dream Tab View"
+    text  "Dream 标签视图"
+    state machine
+}
+
+DreamTabView:ActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:ActiveTabIndex
+    src   "Active Tab Index"
+    text  "活动标签索引"
+    state machine
+}
+
+DreamTabView:AddPage:InPage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:AddPage:InPage
+    src   "In Page"
+    text  "页面"
+    state machine
+}
+
+DreamTabView:bFocusPageOnTabChange {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bFocusPageOnTabChange
+    src   "Focus Page on Tab Change"
+    text  "切换标签时聚焦页面"
+    state machine
+}
+
+DreamTabView:BodyNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:BodyNode
+    src   "Body Node"
+    text  "内容区域"
+    state machine
+}
+
+DreamTabView:bTabChangeFromUser {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabChangeFromUser
+    src   "Tab Change from User"
+    text  "用户触发的标签切换"
+    state machine
+}
+
+DreamTabView:bTabsClosable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabsClosable
+    src   "Tabs Closable"
+    text  "标签可关闭"
+    state machine
+}
+
+DreamTabView:bTabsDraggable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabsDraggable
+    src   "Tabs Draggable"
+    text  "标签可拖动"
+    state machine
+}
+
+DreamTabView:CloseTab:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:CloseTab:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:DraggingTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:DraggingTabIndex
+    src   "Dragging Tab Index"
+    text  "拖动中标签索引"
+    state machine
+}
+
+DreamTabView:GetActivePage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActivePage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTabView:GetActiveTabIndex:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActiveTabIndex:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTabView:GetPage:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPage:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:GetPage:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPage:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTabView:GetPageCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPageCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTabView:IndicatorNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IndicatorNode
+    src   "Indicator Node"
+    text  "指示器节点"
+    state machine
+}
+
+DreamTabView:IsTabEnabled:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IsTabEnabled:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:IsTabEnabled:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IsTabEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTabView:MoveTab:InFromIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:MoveTab:InFromIndex
+    src   "In from Index"
+    text  "从索引"
+    state machine
+}
+
+DreamTabView:MoveTab:InToIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:MoveTab:InToIndex
+    src   "In to Index"
+    text  "到索引"
+    state machine
+}
+
+DreamTabView:OnTabChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabChanged
+    src   "On Tab Changed"
+    text  "标签已更改"
+    state machine
+}
+
+DreamTabView:OnTabClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabClosed
+    src   "On Tab Closed"
+    text  "选项卡关闭"
+    state machine
+}
+
+DreamTabView:OnTabGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabGenerated
+    src   "On Tab Generated"
+    text  "选项卡生成"
+    state machine
+}
+
+DreamTabView:OnTabReordered {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabReordered
+    src   "On Tab Reordered"
+    text  "选项卡重新排序"
+    state machine
+}
+
+DreamTabView:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamTabView:PageHostNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:PageHostNode
+    src   "Page Host Node"
+    text  "页面宿主节点"
+    state machine
+}
+
+DreamTabView:PageSwitcher {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:PageSwitcher
+    src   "Page Switcher"
+    text  "页面切换器"
+    state machine
+}
+
+DreamTabView:SetActiveTabIndex:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndex:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:SetActiveTabIndexWithoutNotify:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndexWithoutNotify:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:SetFocusPageOnTabChange:bInFocusPageOnTabChange {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetFocusPageOnTabChange:bInFocusPageOnTabChange
+    src   "In Focus Page on Tab Change"
+    text  "切换选项卡时设置焦点页面"
+    state machine
+}
+
+DreamTabView:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamTabView:SetTabEnabled:bInEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabled:bInEnabled
+    src   "In Enabled"
+    // from the engine's zh-Hans
+    text  "输入已启用"
+    state draft
+}
+
+DreamTabView:SetTabEnabled:InIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabled:InIndex
+    src   "In Index"
+    // from the engine's zh-Hans
+    text  "输入索引"
+    state draft
+}
+
+DreamTabView:SetTabEnabledStates:InTabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabledStates:InTabEnabled
+    src   "In Tab Enabled"
+    text  "选项卡启用状态"
+    state machine
+}
+
+DreamTabView:SetTabLabels:InLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabLabels:InLabels
+    src   "In Labels"
+    text  "选项卡标签"
+    state machine
+}
+
+DreamTabView:SetTabsClosable:bInTabsClosable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsClosable:bInTabsClosable
+    src   "In Tabs Closable"
+    text  "是否可关闭选项卡"
+    state machine
+}
+
+DreamTabView:SetTabsDraggable:bInTabsDraggable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsDraggable:bInTabsDraggable
+    src   "In Tabs Draggable"
+    text  "是否可拖动选项卡"
+    state machine
+}
+
+DreamTabView:SetTabTemplateClass:InTabTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabTemplateClass:InTabTemplateClass
+    src   "In Tab Template Class"
+    text  "选项卡模板类"
+    state machine
+}
+
+DreamTabView:StripNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:StripNode
+    src   "Strip Node"
+    text  "条目节点"
+    state machine
+}
+
+DreamTabView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamTabView:TabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabEnabled
+    src   "Tab Enabled"
+    text  "选项卡启用"
+    state machine
+}
+
+DreamTabView:TabGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabGroup
+    src   "Tab Group"
+    text  "选项卡组"
+    state machine
+}
+
+DreamTabView:TabLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabLabels
+    src   "Tab Labels"
+    text  "选项卡标签"
+    state machine
+}
+
+DreamTabView:Tabs {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:Tabs
+    src   "Tabs"
+    // from the engine's zh-Hans
+    text  "标签"
+    state draft
+}
+
+DreamTabView:TabTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabTemplateClass
+    src   "Tab Template Class"
+    text  "选项卡模板类"
+    state machine
+}
+
+DreamTabViewChangedEvent__DelegateSignature:ActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewChangedEvent__DelegateSignature:ActiveTabIndex
+    src   "Active Tab Index"
+    text  "活动标签索引"
+    state machine
+}
+
+DreamTabViewReorderEvent__DelegateSignature:FromIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewReorderEvent__DelegateSignature:FromIndex
+    src   "From Index"
+    text  "起始索引"
+    state machine
+}
+
+DreamTabViewReorderEvent__DelegateSignature:ToIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewReorderEvent__DelegateSignature:ToIndex
+    src   "To Index"
+    text  "目标索引"
+    state machine
+}
+
+DreamTabViewTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab
+    src   "Dream Tab View Tab"
+    text  "Dream选项卡视图选项卡"
+    state machine
+}
+
+DreamTabViewTab:CloseBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:CloseBehaviour
+    src   "Close Behaviour"
+    text  "关闭行为"
+    state machine
+}
+
+DreamTabViewTab:CloseNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:CloseNode
+    src   "Close Node"
+    text  "关闭节点"
+    state machine
+}
+
+DreamTabViewTab:LabelNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:LabelNode
+    src   "Label Node"
+    text  "标签节点"
+    state machine
+}
+
+DreamTabViewTab:SelectedNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:SelectedNode
+    src   "Selected Node"
+    // from the engine's zh-Hans
+    text  "选定节点"
+    state draft
+}
+
+DreamTabViewTab:TabNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:TabNode
+    src   "Tab Node"
+    text  "选项卡节点"
+    state machine
+}
+
+DreamTabViewTab:Toggle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:Toggle
+    src   "Toggle"
+    // from the engine's zh-Hans
+    text  "Toggle"
+    state draft
+}
+
+DreamTabViewTabEvent__DelegateSignature:Tab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTabEvent__DelegateSignature:Tab
+    src   "Tab"
+    // from the engine's zh-Hans
+    text  "选项卡"
+    state draft
+}
+
+DreamTabViewTabEvent__DelegateSignature:TabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTabEvent__DelegateSignature:TabIndex
+    src   "Tab Index"
+    // from the engine's zh-Hans
+    text  "选项卡索引"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamTabView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView
+    src   "A tab view whose hierarchy is code, not an asset: a strip of tabs over a switcher of pages.\n\nWHERE THE PAGES COME FROM, which is the only interesting question a tab view asks.\n\nThe control owns the switcher, and a page is simply a child the consumer nested inside the tab\nview. Nothing is copied and nothing is bound by name: a UDreamUserWidget placed in a host tree\nkeeps whatever the host authored UNDER it, and InitializeWidgetStatic runs a nested instance's\nInitialize -- so by the time NativeOnInitialized runs, the pages are already sitting on this\nwidget. All this control does is snapshot them before it builds anything of its own, then hang\neach one under the switcher. So this is a working tab view, from .dui, with nothing else:\n\n    Native.TabView Settings {\n        Widget Video    { ... }\n        Widget Audio    { ... }\n        Widget Controls { ... }\n    }\n\nThe two routes that were considered and are NOT what this does:\n\n  - A NamedSlot. UDreamNamedSlot takes exactly one child, so pages would need a panel wrapped\n    around them; worse, the host-fills-the-slot step lives inside InitializeWidgetStatic behind\n    an `InWidgetTreeArchetype != nullptr` gate, and a NATIVE class never has a widget-tree\n    archetype. A native control cannot receive named-slot content at all.\n  - Pages as a TArray property. The language cannot write a container: a tuple on a non-short-form\n    destination is refused outright (ValueTypeMismatch), and a bare string cannot spell an array\n    for ImportText. Nesting is the one thing .dui does natively, so nesting is the door.\n\nWHERE THE TABS COME FROM. One tab per index, for as many indices as there are labels OR pages --\nwhichever is more, so the strip is never emptier than the thing it drives. TabLabels names tab i\nwhen it has an entry; otherwise the tab wears the page's own node id. That fallback is what makes\nthe file above work with no label list at all, and TabLabels stays the spelling that a details\npanel, a Blueprint and a binding can all reach:\n\n    Native.TabView Settings {\n        TabLabels      <-  GetSettingsTabs()      // localizable, from the host class\n        ActiveTabIndex <-> CurrentSettingsTab\n        ...\n    }\n\nThe same container limit bites the assignment form -- `TabLabels = (...)` does not parse into an\narray -- so a .dui that wants translated labels binds them rather than writing them inline. A node\nid is an identifier and not a translatable string, which is why the fallback is deliberately\nculture-invariant instead of pretending otherwise.\n\nWHY A TAB IS TWO VISUALS. A tab is a radio button that looks like a button: the toggles share one\nUUIToggleGroup, so mutual exclusion is the group's, not this control's. But a UUISelectable owns\nexactly two transitions and a tab needs three appearances -- pointer states, selected, and the\nlabel. The pointer transition tints the face; the CHECKED transition tints a separate full-bleed\nplate over it (aimed at one visual they overwrite each other and the selected colour would live\nonly until the next hover -- the toggle's box-and-tick split, restated); and the label colour has\nno transition left, so the control pushes it directly. Three appearances, two transitions, one\nexplicit push.\n\nTHE SHOULDER BUTTONS switch tabs (IDreamUITabSwitchTarget): the project's PreviousTabKeys and\nNextTabKeys, LB and RB by default, reach the tab view the player's focus is in -- else the first one on\ntheir active screen -- and step to the previous or next enabled tab, round at the ends, as\nCommonUI's tab list does; the action bar shows the two prompts while there is such a tab view."
+    text  "一种选项卡视图，其层级结构由代码而非资产定义：一排选项卡位于页面切换器之上。\n\n页面从何而来，这是选项卡视图唯一值得关心的问题。\n\n该控件拥有切换器，而页面不过是使用者在选项卡视图\n中嵌套的子项。不会复制任何内容，也不按名称绑定：放置在宿主树中的UDreamUserWidget\n会保留宿主在其下方编写的任何内容，而InitializeWidgetStatic会运行嵌套实例的\nInitialize —— 因此等到NativeOnInitialized运行时，页面已经位于此\n控件上。此控件所做的只是在构建自身任何内容之前对它们做快照，然后把每个页面\n挂到切换器下。因此，仅靠.dui就能得到一个可用的选项卡视图，无需其他内容：\n\n    Native.TabView Settings {\n        Widget Video    { ... }\n        Widget Audio    { ... }\n        Widget Controls { ... }\n    }\n\n曾考虑过、但并非此功能实现方式的两种途径：\n\n  - 命名插槽（NamedSlot）。UDreamNamedSlot只接受一个子项，因此页面需要一个面板包裹\n    在其周围；更糟的是，宿主填充插槽的步骤位于InitializeWidgetStatic内部，受\n    `InWidgetTreeArchetype != nullptr`判断保护，而原生类永远不会有控件树\n    原型。原生控件根本无法接收命名插槽内容。\n  - 将页面作为TArray属性。该语言无法书写容器：非短格式目标上的元组\n    会被直接拒绝（ValueTypeMismatch），而裸字符串无法拼出数组\n    以供ImportText使用。嵌套是.dui原生支持的唯一一件事，所以嵌套就是入口。\n\n选项卡从何而来。每个索引对应一个选项卡，索引数量等于标签数或页面数 ——\n取较多者，这样选项卡条永远不会比它驱动的对象更空。当TabLabels有第i项时，它命名第i个选项卡；\n否则选项卡使用页面自身的节点id。正是这一回退让\n上面的文件在完全没有标签列表时也能工作，而TabLabels仍然是详情\n面板、蓝图和绑定都能访问的写法：\n\n    Native.TabView Settings {\n        TabLabels      <-  GetSettingsTabs()      // localizable, from the host class\n        ActiveTabIndex <-> CurrentSettingsTab\n        ...\n    }\n\n同样的容器限制也影响赋值形式 —— `TabLabels = (...)`无法解析为\n数组 —— 因此想要翻译标签的.dui会绑定它们，而不是内联书写。节点\nid是标识符而非可翻译字符串，这就是回退有意\n采用文化无关形式、而非假装可翻译的原因。\n\n为什么一个选项卡是两个视觉元素。选项卡是一个看起来像按钮的单选按钮：这些开关共享一个\nUUIToggleGroup，因此互斥由组负责，而非此控件。但UUISelectable恰好拥有\n两个过渡，而选项卡需要三种外观 —— 指针状态、选中状态和\n标签。指针过渡为表面着色；CHECKED过渡为一个单独的、覆盖其上的全出血\n板着色（若指向同一个视觉元素，它们会互相覆盖，选中颜色只会维持\n到下一次悬停 —— 也就是重述开关把框和勾拆开的做法）；而标签颜色已\n没有过渡可用，所以控件直接推送它。三种外观，两个过渡，一次\n显式推送。\n\n肩键切换选项卡（IDreamUITabSwitchTarget）：项目的PreviousTabKeys和\nNextTabKeys（默认为LB和RB）会作用于玩家焦点所在的选项卡视图 —— 否则作用于其活动屏幕上的第一个\n—— 并切换到上一个或下一个已启用的选项卡，在两端循环，与\nCommonUI的选项卡列表一致；当存在这样的选项卡视图时，操作栏会显示这两个提示。"
+    state machine
+}
+
+DreamTabView:ActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:ActiveTabIndex
+    src   "Which tab is open, and therefore which page the switcher shows. A property rather than the\ngetter/setter pair alone, because the pair alone is invisible: .dui writes properties, the\ndesigner lists properties, and a binding resolves a property.\n\nStored as the REQUEST, never clamped against the current page count -- the index is routinely\nauthored before the pages attach, and the switcher resolves it at layout time for the same\nreason."
+    text  "哪个选项卡处于打开状态，从而决定切换器显示哪个页面。使用属性而非仅用\ngetter/setter对，因为仅凭这对函数是不可见的：.dui书写属性，设计器列出属性，\n绑定解析属性。\n\n以请求的形式存储，绝不针对当前页面数进行钳制 —— 索引常常在页面附加之前\n就被编写，切换器出于同样的\n原因在布局时解析它。"
+    state machine
+}
+
+DreamTabView:AddPage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:AddPage
+    src   "Put a widget in as the next page, for a screen assembled in code rather than in .dui. The\nstrip regenerates, so a page added past the end of TabLabels still gets a tab."
+    text  "将一个控件作为下一页加入，适用于在代码中而非.dui中组装的界面。标签条会\n重新生成，因此即使添加的页超出TabLabels末尾，仍会获得一个选项卡。"
+    state machine
+}
+
+DreamTabView:bFocusPageOnTabChange {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bFocusPageOnTabChange
+    src   "Switching tabs moves focus into the new page.\n\nWhat a gamepad needs and a pointer does not care about: without it, opening a tab leaves focus\non the tab itself, so the next stick press walks along the strip rather than into the page the\nplayer just opened. Only for a switch the USER made -- an authored index or a two-way binding\npushing a value in must not steal focus from wherever it is.\n\nWhatever this says, focus that is inside the page being left moves onto the tab now open\nbefore that page is hidden, rather than being cleared with it."
+    text  "切换选项卡时会将焦点移入新页面。\n\n手柄需要这一点，指针设备则不在意：若没有此项，打开选项卡后焦点仍留在\n选项卡自身上，下一次推动摇杆会沿着选项卡条移动，而不是进入玩家刚刚打开的\n页面。仅对用户发起的切换生效 —— 编写的索引或双向绑定\n推入的值不得从当前所在位置抢走焦点。\n\n无论此项如何设置，位于被离开页面内部的焦点都会在该页面隐藏之前移到当前打开的\n选项卡上，而不是随页面一起被清除。"
+    state machine
+}
+
+DreamTabView:BodyNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:BodyNode
+    src   "The parts, in the shape the rest of the framework expects to find them.\n\nUPROPERTY rather than bare pointers on purpose: a part nothing reflects is a part the designer,\nthe write-back and the bindings cannot see. Transient because they are rebuilt on every\ninitialization and never belong to a saved package."
+    text  "各个部件，按框架其余部分期望的形式提供。\n\n有意使用UPROPERTY而非裸指针：无法被反射的部件，设计器、\n回写和绑定都看不到。标记为Transient，因为它们会在每次\n初始化时重建，且从不属于已保存的包。"
+    state machine
+}
+
+DreamTabView:bTabChangeFromUser {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabChangeFromUser
+    src   "True while a tab change came from the USER rather than from a push.\n\nThe only thing that separates \"the player opened this tab\" from \"a binding wrote the index\",\nand focus may only follow the first -- a two-way binding echoing a value back must not take\nfocus away from whatever the player is actually on."
+    text  "当选项卡切换来自用户而非推送时为true。\n\n这是区分“玩家打开了此选项卡”与“某个绑定写入了索引”的唯一依据，\n且焦点只可跟随前者 —— 回显值的双向绑定不得\n从玩家实际所在的控件上夺走焦点。"
+    state machine
+}
+
+DreamTabView:bTabsClosable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabsClosable
+    src   "Every tab carries a close button, and clicking one closes that tab -- the browser's arrangement.\n\nOff by default: a settings view's tabs are its structure and must not be dismissable. Closing\nDESTROYS the page (it is the tab's content and nothing else holds it) and drops the caption,\nafter OnTabClosed has been broadcast with the index -- so a consumer that wants to keep the\npage takes it out of the switcher from that handler."
+    text  "每个选项卡都带有一个关闭按钮，点击即可关闭该选项卡 —— 与浏览器一致。\n\n默认关闭：设置视图的选项卡即其结构，不应可被关闭。关闭会\n销毁页面（页面即选项卡的内容，除此之外没有其他持有者）并移除标题，\n在此之前已用该索引广播OnTabClosed —— 因此希望保留页面的\n使用方可在该处理函数中将其从切换器里取出。"
+    state machine
+}
+
+DreamTabView:bTabsDraggable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:bTabsDraggable
+    src   "Tabs can be dragged along the strip to reorder them, carrying their pages with them.\n\nOff by default, for the same reason: a strip whose order is structure must not shuffle under a\nstray drag. The reorder is LIVE -- the tab under the pointer swaps with the dragged one as it\npasses, which is what every browser does and what makes the gesture readable without a ghost."
+    text  "可沿标签条拖动标签页以重新排序，页面会随之移动。\n\n出于同样的原因默认关闭：顺序即结构的标签条不应因一次\n误拖而被打乱。重排是实时的——指针下的标签页会在拖动的标签页经过时\n与之交换，浏览器皆如此，这也让该手势无需拖影即可读懂。"
+    state machine
+}
+
+DreamTabView:CloseTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:CloseTab
+    src   "Close a tab: broadcast, then drop its caption and destroy its page, then regrow the strip.\n\nThe active index follows the way a browser's does -- closing the open tab opens its neighbour,\nclosing one before it shifts the index down so the SAME page stays open. Either way OnTabChanged\nreports it, because the open tab or its index moved.\n\nPad focus on the closed tab (its close button, say) or in its page goes to the tab that took its\nplace; focus on any other tab stays on that tab, although every tab is rebuilt."
+    text  "关闭一个标签页：先广播，再移除其标题并销毁其页面，然后重新生成标签条。\n\n活动索引的行为与浏览器一致——关闭当前打开的标签页会打开其相邻标签页，\n关闭其之前的标签页会使索引前移，从而保持同一页面打开。无论哪种情况，OnTabChanged\n都会报告，因为打开的标签页或其索引发生了变化。\n\n位于被关闭的标签页上（例如其关闭按钮）或其页面内的手柄焦点会转到顶替其\n位置的标签页；位于其他标签页上的焦点仍留在该标签页，尽管所有标签页都会重建。"
+    state machine
+}
+
+DreamTabView:DraggingTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:DraggingTabIndex
+    src   "The tab a reorder drag picked up, or INDEX_NONE while none is being dragged."
+    text  "重排拖动所拾取的标签页；未拖动任何标签页时为 INDEX_NONE。"
+    state machine
+}
+
+DreamTabView:GetActivePage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActivePage
+    src   "The page the switcher is showing, or null before any page is attached."
+    text  "切换器当前显示的页面；在任何页面附着之前为 null。"
+    state machine
+}
+
+DreamTabView:GetPageCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPageCount
+    src   "How many pages the switcher holds. Not necessarily how many tabs the strip shows."
+    text  "切换器持有的页面数量。不一定等于标签条显示的标签页数量。"
+    state machine
+}
+
+DreamTabView:IndicatorNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IndicatorNode
+    src   "The line under the open tab. Layout-ignoring; this control is the only thing that places it."
+    text  "打开的标签页下方的线条。不参与布局；只有此控件负责放置它。"
+    state machine
+}
+
+DreamTabView:IsTabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IsTabEnabled
+    src   "A missing entry means enabled -- see TabEnabled."
+    text  "缺少条目表示已启用——参见 TabEnabled。"
+    state machine
+}
+
+DreamTabView:MoveTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:MoveTab
+    src   "Move a tab, carrying its page. Both indices are into the strip as it stands. The tab's widget\nmoves with it rather than the strip being rebuilt, and OnTabChanged reports the open tab's new\nindex when the move shifted it."
+    text  "移动标签页，并携带其页面。两个索引都基于当前状态的标签栏。标签页的\n控件随之移动，而不是重建标签栏；当移动改变了打开标签页的索引时，\nOnTabChanged 会报告它的新索引。"
+    state machine
+}
+
+DreamTabView:OnTabChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabChanged
+    src   "Fired when the open tab changes, whoever changed it -- a click, SetActiveTabIndex, or a close or a\nreorder that moved it. A consumer binds to this, not to a tab."
+    text  "打开标签页发生变化时触发，无论由谁改变——点击、SetActiveTabIndex，或关闭，\n或使其位置移动的重排。使用者绑定此事件，而非绑定到某个标签页。"
+    state machine
+}
+
+DreamTabView:OnTabClosed {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabClosed
+    src   "A tab is closing. Fired BEFORE the page is destroyed and the caption dropped, so a consumer\nthat wants to keep the page can take it out of the switcher from here -- the same order\nUDreamDialog::Close broadcasts in, and for the same reason."
+    text  "某个标签页即将关闭。此事件在页面被销毁、标题被丢弃之前触发，因此想要\n保留该页面的使用者可以在此把它从切换器中取出——与\nUDreamDialog::Close 广播的顺序相同，原因也相同。"
+    state machine
+}
+
+DreamTabView:OnTabGenerated {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabGenerated
+    src   "One per tab, as the strip is built. The hook for a consumer whose tabs are richer than a word\nbut who would rather not author a whole class: everything under the tab is reachable from here\nby display name. The tab view's counterpart of the list's OnRowGenerated."
+    text  "构建标签栏时，每个标签页触发一次。供标签页内容比一个词更丰富、\n却不愿编写整个类的使用者使用的钩子：标签页下的所有内容都可从此处\n按显示名称访问。相当于列表的 OnRowGenerated 在标签视图中的对应物。"
+    state machine
+}
+
+DreamTabView:OnTabReordered {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnTabReordered
+    src   "A tab was dragged to a new place. Both indices are into the strip as it was before the move."
+    text  "某个标签页被拖到了新位置。两个索引都基于移动前的标签栏。"
+    state machine
+}
+
+DreamTabView:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamTabView:PageHostNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:PageHostNode
+    src   "The page area: the switcher's widget, and the panel a page's background is drawn on."
+    text  "页面区域：切换器的控件，以及绘制页面背景的面板。"
+    state machine
+}
+
+DreamTabView:SetActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndex
+    src   "Open a tab. Broadcasts when the index actually moved, exactly as a click on the tab would."
+    text  "打开某个标签页。索引确实发生变化时广播，与点击该标签页的效果完全一致。"
+    state machine
+}
+
+DreamTabView:SetActiveTabIndexWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndexWithoutNotify
+    src   "The same move without the broadcast. The `<->` desugar looks for precisely this name (the\nsetter's plus \"WithoutNotify\") so the forward half of a two-way binding cannot echo back into\nthe variable that just drove it."
+    text  "同样的移动，但不广播。`<->` 语法糖查找的正是这个名称（setter 名称加上\n\"WithoutNotify\"），因此双向绑定的正向部分无法回传到\n刚驱动它的变量中。"
+    state machine
+}
+
+DreamTabView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetStyle
+    src   "Replace the look and push it."
+    text  "替换外观并推送。"
+    state machine
+}
+
+DreamTabView:SetTabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabled
+    src   "Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. Disabling a\ntab that has focus moves it to the tab's right neighbour, else the last enabled tab."
+    text  "必要时扩展 TabEnabled 以覆盖 InIndex，然后重新推送标签栏的颜色。禁用\n拥有焦点的标签页时，焦点会移到它右侧的邻居，否则移到最后一个启用的标签页。"
+    state machine
+}
+
+DreamTabView:SetTabEnabledStates {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabledStates
+    src   "Every tab's enabled flag at once; a missing entry means enabled. SetTabEnabled changes one."
+    text  "一次性设置每个标签页的启用标志；缺少条目表示启用。SetTabEnabled 用于更改单个。"
+    state machine
+}
+
+DreamTabView:SetTabLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabLabels
+    src   "Replace the captions and regenerate the strip."
+    text  "替换标题并重新生成标签栏。"
+    state machine
+}
+
+DreamTabView:SetTabsClosable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsClosable
+    src   "Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. Hiding\nthem moves focus that is on one onto its tab first."
+    text  "显示或隐藏每个标签页的关闭按钮。属于重新设置样式：按钮在样式循环中唤醒。隐藏\n它们时，会先把落在某个按钮上的焦点移到其所属的标签页上。"
+    state machine
+}
+
+DreamTabView:SetTabTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabTemplateClass
+    src   "The authored tab content. Instanced into each tab at build, so a new class means a rebuild."
+    text  "创作时指定的选项卡内容。构建时实例化到每个选项卡中，因此更换类就意味着需要重建。"
+    state machine
+}
+
+DreamTabView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+DreamTabView:TabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabEnabled
+    src   "Which tabs can be picked, index-matched to the strip -- the same parallel-array idiom TabLabels\nuses, and for the same reason: a struct per tab would make the common case (no opinion at all)\ncost an array literal the language cannot write.\n\nA missing entry means ENABLED, so a shorter list than the strip is an ordinary state and the\ndefault empty one disables nothing. A disabled tab is drawn in the style's TabDisabled colour\nand cannot be clicked; code may still open it through SetActiveTabIndex, which is the rule\neverywhere else in this library -- an interactable flag stops the PLAYER, not the program."
+    text  "哪些选项卡可以被选中，按索引与选项卡条对应——与 TabLabels\n使用相同的平行数组惯用法，理由也相同：若为每个选项卡使用结构体，就会让最常见的情况（完全不表态）\n付出语言无法书写的数组字面量代价。\n\n缺少条目表示启用，因此列表比选项卡条短是普通状态，\n默认的空列表不会禁用任何选项卡。被禁用的选项卡以样式中的 TabDisabled 颜色\n绘制，且无法点击；代码仍可通过 SetActiveTabIndex 打开它，这也是本库其他地方的规则\n——可交互标志阻止的是玩家，而不是程序。"
+    state machine
+}
+
+DreamTabView:TabGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabGroup
+    src   "Mutual exclusion, borrowed whole from the radio button's mechanism."
+    text  "互斥，完整借用单选按钮的机制。"
+    state machine
+}
+
+DreamTabView:TabLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabLabels
+    src   "The tab captions, index-matched to the pages. An entry names that tab; a missing or empty one\nleaves the tab wearing its page's node id (see the class comment). Longer than the page list\nis allowed and grows the strip -- a screen that authors its tabs before its pages should see\nthe strip it is building."
+    text  "选项卡标题，按索引与页面匹配。条目为该选项卡命名；缺少或为空的条目\n会让选项卡沿用其页面的节点 ID（参见类注释）。允许比页面列表\n更长，并会扩展选项卡条——先编写选项卡再编写页面的界面应当能看到\n它正在构建的选项卡条。"
+    state machine
+}
+
+DreamTabView:Tabs {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:Tabs
+    src   "One entry per tab in the strip, in strip order."
+    text  "选项卡条中每个选项卡对应一个条目，按选项卡条顺序排列。"
+    state machine
+}
+
+DreamTabView:TabTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:TabTemplateClass
+    src   "A tab's CONTENT, authored elsewhere: one instance of this class is created inside every tab\nwidget, filling it, and the built-in label steps aside. The tab's face, its selected plate,\nits hover and its place in the toggle group stay the control's, so a template only has to draw\na tab.\n\nRebuilt with the strip rather than pooled -- tabs are not recycled, there is one per page --\nand OnTabGenerated fires for each as it is made.\n\nNull (the default) is the built-in label tab. Instancing a user widget needs a world, so with\nnone this quietly stays the built-in tab rather than producing half a strip. Exactly the\nbargain UDreamListViewBase::RowTemplateClass makes, in the same words."
+    text  "选项卡的内容，在别处编写：每个选项卡\n控件内都会创建该类的一个实例来填充它，内置标签则让位。选项卡的外观、选中底板，\n其悬停效果及其在切换组中的位置仍由控件负责，因此模板只需绘制\n一个选项卡。\n\n随选项卡条一起重建，而非池化——选项卡不会被回收，每个页面一个——\n并且每生成一个都会触发 OnTabGenerated。\n\n空值（默认）为内置标签选项卡。实例化用户控件需要世界，因此没有\n世界时会静默保留内置选项卡，而不会产生半个选项卡条。与\nUDreamListViewBase::RowTemplateClass 所做的取舍完全相同，措辞也相同。"
+    state machine
+}
+
+DreamTabViewReorderEvent__DelegateSignature {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewReorderEvent__DelegateSignature
+    src   "A tab moved from one place in the strip to another."
+    text  "某个选项卡从选项卡条的一处移动到另一处。"
+    state machine
+}
+
+DreamTabViewTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab
+    src   "One generated tab's parts.\n\nA struct rather than four parallel arrays: the four are created together, restyled together and\ndestroyed together, and four arrays that must stay the same length is a bug waiting for the first\nearly-out that returns between two of them."
+    text  "一个生成的选项卡的各个部件。\n\n使用结构体而非四个平行数组：这四者一起创建、一起重新设置样式，\n一起销毁，而四个必须保持等长的数组，就是在等待第一个\n在其中两者之间提前返回的 bug。"
+    state machine
+}
+
+DreamTabViewTab:CloseNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:CloseNode
+    src   "The close button, present only while the view offers closing."
+    text  "关闭按钮，仅当视图提供关闭功能时存在。"
+    state machine
+}
+
+DreamTabViewTab:SelectedNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:SelectedNode
+    src   "The full-bleed plate the CHECKED transition tints. See UDreamTabView's class comment."
+    text  "CHECKED 状态过渡所着色的满幅底板。参见 UDreamTabView 的类注释。"
+    state machine
+}
+
+DreamTabViewTab:TabNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:TabNode
+    src   "The clickable face. Carries the overlay, the toggle, and the pointer transition."
+    text  "可点击的表面。承载覆盖层、切换开关和指针过渡。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Tab View" {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabViewTab:TabNode
+    src   "Tab View"
+    text  "选项卡视图"
+    state machine
+}

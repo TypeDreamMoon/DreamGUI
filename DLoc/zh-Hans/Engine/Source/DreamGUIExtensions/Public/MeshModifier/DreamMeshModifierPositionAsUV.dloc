@@ -1,0 +1,67 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierPositionAsUV {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV
+    src   "PositionAsUV"
+    text  "顶点位置作为UV"
+    state machine
+}
+
+DreamMeshModifierPositionAsUV:GetScale:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:GetScale:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierPositionAsUV:GetUVChannel:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:GetUVChannel:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierPositionAsUV:Scale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:Scale
+    src   "Scale"
+    // from the engine's zh-Hans
+    text  "缩放"
+    state draft
+}
+
+DreamMeshModifierPositionAsUV:SetScale:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:SetScale:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierPositionAsUV:SetUVChannel:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:SetUVChannel:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierPositionAsUV:UVChannel {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:UVChannel
+    src   "UVChannel"
+    // from the engine's zh-Hans
+    text  "UV通道"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierPositionAsUV:UVChannel {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:UVChannel
+    src   "Which texture coordinate the vertex position is written into. Not every channel is free. The\ncanvas owns UV1 -- X carries the widget property data coordinate and Y the texture array slice\nthat font rendering looks glyphs up by -- and it stamps X back over this modifier's work later\nin the same rebuild, so a position written there loses half of itself and breaks glyph lookup\nwith the other half. UV2 and UV3 are claimed per visual rather than globally: DreamText uses\nboth and DreamRectBlock uses UV3, while a plain image leaves them alone. Only UV0 is\nunconditionally the caller's, and it is the texture coordinate, so writing it replaces the\nimage. Pick the channel against the visual this sits on.\n\nUV1 is refused outright -- by the setter and by the write -- rather than merely discouraged,\nand the default is UV0 for the same reason. The canvas-owned channel used to be the default,\nwhich meant the out-of-the-box configuration of this modifier corrupted glyph lookup."
+    text  "顶点位置写入哪个纹理坐标。并非所有通道都可用。\n画布拥有UV1——X承载控件属性数据坐标，Y承载字体渲染用于查找字形的\n纹理数组切片——并且它会在同一次重建的稍后阶段把X重新盖写到此修改器的\n处理结果上，因此写入该通道的位置会丢失自身的一半，另一半还会破坏字形\n查找。UV2和UV3按视觉元素占用，而非全局占用：DreamText使用\n两者，DreamRectBlock使用UV3，而普通图像不占用它们。只有UV0\n无条件属于调用方，而它又是纹理坐标，因此写入它会替换\n图像。请根据此修改器所在的视觉元素选择通道。\n\nUV1会被直接拒绝——设置器和写入操作都会拒绝——而不只是不推荐，\n出于同样的原因，默认值是UV0。画布拥有的通道以前是默认值，\n这意味着此修改器的默认配置会破坏字形查找。"
+    state machine
+}

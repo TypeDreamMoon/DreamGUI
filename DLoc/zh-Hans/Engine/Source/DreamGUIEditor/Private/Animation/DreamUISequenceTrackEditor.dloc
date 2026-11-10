@@ -1,0 +1,87 @@
+dloc 1
+culture zh-Hans
+namespace DreamUISequenceTrackEditor
+
+BindNestedWidget {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Bind Nested Widget"
+    text  "绑定嵌套控件"
+    state machine
+}
+
+BindNestedWidgetTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Possess a widget inside the nested widget this binding presents; property tracks can then key it directly."
+    text  "将一个控件嵌入到此绑定的嵌套控件中；属性轨道可以直接键入它。"
+    state machine
+}
+
+AddDreamUISequence {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "DreamUI Animation"
+    text  "DreamUI 动画"
+    state machine
+}
+
+AddDreamUISequenceTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Play a DreamUI animation asset on this widget: the asset's root binding resolves as this binding's object."
+    text  "在此控件上播放 DreamUI 动画资源：该资源的根绑定解析为该绑定的对象。"
+    state machine
+}
+
+AddEmbeddedAnimation {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Embedded Animation"
+    text  "嵌入动画"
+    state machine
+}
+
+AddEmbeddedAnimationTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Play another animation of this component as a section of this one. It animates its own widgets, at the time this section sits at -- a long animation assembled out of short ones."
+    text  "将此组件的另一个动画作为该动画的一个部分进行播放。它在动画播放时动画其自身的控件。"
+    state machine
+}
+
+NoLoadedWidgetTree {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "No loaded widget tree"
+    text  "未加载的控件树"
+    state machine
+}
+
+BindNestedWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Bind Nested Widget"
+    text  "绑定嵌套控件"
+    state machine
+}
+
+AddEmbeddedEntryTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Play this animation as a section of the one being edited."
+    text  "将此动画作为正在编辑的动画的一个部分进行播放。"
+    state machine
+}
+
+NoEmbeddedAnimations {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "No other animations on this component"
+    text  "此组件上没有其他动画"
+    state machine
+}
+
+NoEmbeddedAnimationsTooltip {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Only the embedded animations of the component this one belongs to can be nested; a standalone asset is offered under DreamUI Animation instead."
+    text  "只有此组件所属的嵌入式动画才能被嵌套；独立的资源在 DreamUI 动画中提供。"
+    state machine
+}
+
+AddDreamUISequence_Transaction {
+    at    Source/DreamGUIEditor/Private/Animation/DreamUISequenceTrackEditor.cpp
+    src   "Add DreamUI Animation"
+    text  "添加 DreamUI 动画"
+    state machine
+}

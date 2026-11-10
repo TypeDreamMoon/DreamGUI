@@ -1,0 +1,18 @@
+dloc 1
+culture zh-Hans
+namespace UIToggleCustomization
+
+Transition {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UIToggleCustomization.cpp
+    src   "Transition"
+    // from the engine's zh-Hans
+    text  "过渡"
+    state draft
+}
+
+TransitionTarget_ImageBrush_Tip {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/UIToggleCustomization.cpp
+    src   "If use ImageBrush, Target must be DreamImage"
+    text  "如果使用笔刷，目标必须是 DreamImage。"
+    state machine
+}

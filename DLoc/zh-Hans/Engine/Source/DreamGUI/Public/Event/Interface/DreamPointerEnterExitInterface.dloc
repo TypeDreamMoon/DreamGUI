@@ -1,0 +1,58 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerEnterExitInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface
+    src   "Dream Pointer Enter Exit Interface"
+    text  "Dream 指针进入/退出 接口"
+    state machine
+}
+
+DreamPointerEnterExitInterface:OnPointerEnter:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerEnter:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerEnterExitInterface:OnPointerEnter:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerEnter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPointerEnterExitInterface:OnPointerExit:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerExit:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerEnterExitInterface:OnPointerExit:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerExit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerEnterExitInterface:OnPointerEnter {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerEnter
+    src   "Called when pointer enter this object.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当指针进入此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}
+
+DreamPointerEnterExitInterface:OnPointerExit {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerExit
+    src   "Called when pointer exit this object.\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当指针退出此对象时调用。\n@return 是否允许事件冒泡？如果同一 Actor 的所有组件的接口都返回 true，则事件可以冒泡。"
+    state machine
+}

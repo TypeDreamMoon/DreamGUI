@@ -1,0 +1,229 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPolygonLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine
+    src   "Dream Polygon Line"
+    text  "多边线"
+    state machine
+}
+
+DreamPolygonLine:CurrentPointArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:CurrentPointArray
+    src   "Current Point Array"
+    text  "当前点数组"
+    state machine
+}
+
+DreamPolygonLine:EndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngle
+    src   "End Angle"
+    // from the engine's zh-Hans
+    text  "结束角"
+    state draft
+}
+
+DreamPolygonLine:EndAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamPolygonLine:EndAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamPolygonLine:EndAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamPolygonLine:EndAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamPolygonLine:EndAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:EndAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:FullCycle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:FullCycle
+    src   "Full Cycle"
+    text  "完整循环"
+    state machine
+}
+
+DreamPolygonLine:GetEndAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:GetEndAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:GetFullCycle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:GetFullCycle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:GetSides:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:GetSides:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:GetStartAngle:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:GetStartAngle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:GetVertexOffsetArray:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:GetVertexOffsetArray:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:SetEndAngle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:SetEndAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygonLine:SetFullCycle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:SetFullCycle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygonLine:SetSides:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:SetSides:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygonLine:SetStartAngle:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:SetStartAngle:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygonLine:SetVertexOffsetArray:value {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:SetVertexOffsetArray:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPolygonLine:Sides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:Sides
+    src   "Sides"
+    // from the engine's zh-Hans
+    text  "侧边"
+    state draft
+}
+
+DreamPolygonLine:StartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngle
+    src   "Start Angle"
+    // from the engine's zh-Hans
+    text  "开始角"
+    state draft
+}
+
+DreamPolygonLine:StartAngleTo:delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngleTo:delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamPolygonLine:StartAngleTo:duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngleTo:duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamPolygonLine:StartAngleTo:easeType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngleTo:easeType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamPolygonLine:StartAngleTo:endValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngleTo:endValue
+    src   "End Value"
+    // from the engine's zh-Hans
+    text  "End Value"
+    state draft
+}
+
+DreamPolygonLine:StartAngleTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:StartAngleTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPolygonLine:VertexOffsetArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:VertexOffsetArray
+    src   "Vertex Offset Array"
+    text  "顶点偏移数组"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamPolygonLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine
+    src   "render a polygon line shape"
+    text  "渲染多边线形状。"
+    state machine
+}
+
+DreamPolygonLine:Sides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h#DreamPolygonLine:Sides
+    src   "Sides of polygon"
+    text  "多边形边数。"
+    state machine
+}

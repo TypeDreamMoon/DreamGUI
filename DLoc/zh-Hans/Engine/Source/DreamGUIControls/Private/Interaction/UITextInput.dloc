@@ -1,0 +1,51 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUI
+
+TextInputContextMenu_Undo {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Undo"
+    // from the engine's zh-Hans
+    text  "取消"
+    state draft
+}
+
+TextInputContextMenu_Redo {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Redo"
+    // from the engine's zh-Hans
+    text  "恢复"
+    state draft
+}
+
+TextInputContextMenu_Cut {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Cut"
+    // from the engine's zh-Hans
+    text  "剪切"
+    state draft
+}
+
+TextInputContextMenu_Copy {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Copy"
+    // from the engine's zh-Hans
+    text  "拷贝"
+    state draft
+}
+
+TextInputContextMenu_Paste {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Paste"
+    // from the engine's zh-Hans
+    text  "粘贴"
+    state draft
+}
+
+TextInputContextMenu_SelectAll {
+    at    Source/DreamGUIControls/Private/Interaction/UITextInput.cpp
+    src   "Select All"
+    // from the engine's zh-Hans
+    text  "选择所有"
+    state draft
+}

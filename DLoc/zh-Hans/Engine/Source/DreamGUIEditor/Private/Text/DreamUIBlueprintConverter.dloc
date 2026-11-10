@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIBlueprintConverter
+
+ConfirmLoss {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIBlueprintConverter.cpp
+    src   "Converting '{0}' to {1} will not keep the following:\n\n{2}\n\nConvert anyway? A backup of the asset is made first."
+    text  "将 '{0}' 转换为 {1} 时，以下内容将无法保留：\n\n{2}\n\n是否继续转换？ 会先备份该资源。"
+    state machine
+}
+
+ConversionSummary {
+    at    Source/DreamGUIEditor/Private/Text/DreamUIBlueprintConverter.cpp
+    src   "Converted {0} of {1}.\n\n{2}"
+    text  "已转换 {0} 个 {1}。\n\n{2}"
+    state machine
+}

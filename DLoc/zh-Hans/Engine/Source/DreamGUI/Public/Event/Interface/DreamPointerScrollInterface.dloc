@@ -1,0 +1,35 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPointerScrollInterface {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface
+    src   "Dream Pointer Scroll Interface"
+    text  "梦指针滚动接口"
+    state machine
+}
+
+DreamPointerScrollInterface:OnPointerScroll:EventData {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface:OnPointerScroll:EventData
+    src   "Event Data"
+    // from the engine's zh-Hans
+    text  "事件数据"
+    state draft
+}
+
+DreamPointerScrollInterface:OnPointerScroll:ReturnValue {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface:OnPointerScroll:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPointerScrollInterface:OnPointerScroll {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface:OnPointerScroll
+    src   "Called when pointer inside this object and scroll(mouse wheel).\n@return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up."
+    text  "当指针位于此对象内部且发生滚动（鼠标滚轮）时调用。\n@return 是否允许事件冒泡？如果同一Actor的所有组件的接口都返回true，则事件可以冒泡。"
+    state machine
+}

@@ -1,0 +1,111 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamShapeBlendGroup {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup
+    src   "Dream Shape Blend Group"
+    text  "形状混合组"
+    state machine
+}
+
+DreamShapeBlendGroup:bBlendEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:bBlendEnabled
+    src   "Blend Enabled"
+    text  "启用混合"
+    state machine
+}
+
+DreamShapeBlendGroup:GetBlendEnabled:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetBlendEnabled:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShapeBlendGroup:GetSmoothness:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetSmoothness:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShapeBlendGroup:IsActive:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:IsActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShapeBlendGroup:SetBlendEnabled:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetBlendEnabled:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamShapeBlendGroup:SetSmoothness:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetSmoothness:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamShapeBlendGroup:Smoothness {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:Smoothness
+    src   "Smoothness"
+    // from the engine's zh-Hans
+    text  "光滑度"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamShapeBlendGroup {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup
+    src   "Melts the rect blocks among the widget's children into one shape: their rounded rects joined by a smooth minimum, so that\ntwo of them close together flow into each other, each by its own operation (UDreamRectBlock's ShapeBlendOperation: a union,\na cut, an intersection), the colour across the shape each one's as much as it makes the shape there. A blob of a menu, a\ntab indicator that stretches as it moves, a loader of drops: move the children and the shape follows.\n\nThe children are no longer drawn each on its own: the first of them draws the whole shape, in one quad over all of them,\nwith the built-in shader or its material, batched as any rect block is. Its body is the members' colours; a layer style on\nthis widget (UDreamLayerStyle) is drawn round the melted shape, in the same pixels. A click lands on the member nearest it,\nwherever the melted shape covers it -- the same formula on the CPU.\n\nGlass can take its shape from a group (MakeShapeInFrame)."
+    text  "将控件子级中的矩形块融合为一个形状：它们的圆角矩形通过平滑最小值连接，使\n靠得很近的两个矩形块彼此流动过渡，各自按自身的运算（UDreamRectBlock的ShapeBlendOperation：并集、\n切除、交集）进行；形状各处的颜色，由在该处塑造形状的成员按其贡献多少决定。菜单的融合团块、\n随移动而拉伸的标签指示器、由水滴组成的加载动画：移动子级，形状便随之变化。\n\n子级不再各自单独绘制：由其中第一个绘制整个形状，用一个覆盖全部子级的四边形，\n使用内置着色器或其材质，与任何矩形块一样合批绘制。其主体是各成员的颜色；此控件上的\n图层样式（UDreamLayerStyle）围绕融合后的形状绘制在同一批像素上。单击会落在离它最近的成员上，\n只要融合后的形状覆盖该处——CPU上使用同一套公式。\n\nGlass可以从组中获取其形状（MakeShapeInFrame）。"
+    state machine
+}
+
+DreamShapeBlendGroup:IsActive {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:IsActive
+    src   "Whether the children are melted now: on, registered, with a rect block among them."
+    text  "是否启用组件的融合：启用，已注册，包含一个矩形块。"
+    state machine
+}
+
+DreamShapeBlendGroup:SetBlendEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetBlendEnabled
+    src   "Off, the children are drawn each on its own again."
+    text  "禁用组件的融合，每个组件单独绘制。"
+    state machine
+}
+
+DreamShapeBlendGroup:SetSmoothness {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetSmoothness
+    src   "How far apart, in units, two edges still melt into each other: 0 joins them with a hard corner."
+    text  "两个边缘在单位上的距离，决定它们是否融合：0 表示硬角连接。"
+    state machine
+}
+
+DreamShapeBlendGroup:Smoothness {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:Smoothness
+    src   "How far apart, in units, two edges still melt into each other."
+    text  "两个边缘在单位上的距离。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Shape Blend" {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetBlendEnabled
+    src   "DreamGUI|Shape Blend"
+    text  "DreamGUI|形状混合"
+    state machine
+}

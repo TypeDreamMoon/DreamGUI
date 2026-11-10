@@ -1,0 +1,85 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamEnhancedInputEventSystemActor {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor
+    src   "Dream Enhanced Input Event System Actor"
+    text  "Dream增强输入事件系统Actor"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:MappingContext {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MappingContext
+    src   "Mapping Context"
+    // from the engine's zh-Hans
+    text  "映射上下文"
+    state draft
+}
+
+DreamEnhancedInputEventSystemActor:MappingContextPriority {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MappingContextPriority
+    src   "Mapping Context Priority"
+    text  "映射上下文优先级"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:MouseWheelAction {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MouseWheelAction
+    src   "Mouse Wheel Action"
+    text  "鼠标滚轮操作"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:TriggerLeftAction {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:TriggerLeftAction
+    src   "Trigger Left Action"
+    text  "左键触发操作"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:TriggerMiddleAction {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:TriggerMiddleAction
+    src   "Trigger Middle Action"
+    text  "中键触发操作"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:TriggerRightAction {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:TriggerRightAction
+    src   "Trigger Right Action"
+    text  "右键触发操作"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamEnhancedInputEventSystemActor {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor
+    src   "The event system preset for projects on Enhanced Input.\n\nOnly the mouse half differs from the legacy preset: the three buttons and the wheel arrive as Input\nActions from a mapping context this actor pushes, while navigation keys and touch stay on the\nlegacy bindings it inherits. Enhanced Input has no equivalent of the Mouse2D vector axis that the\nlegacy preset listens to, so mouse movement is polled on tick instead.\n\nThe four actions and the context are empty on this class, and every one is EditDefaultsOnly. The\nplugin fills them in the preset Blueprint /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput\n-- a data-only subclass of this class, with IMC_DreamUIInputContext and the four IA_* actions under\n/DreamGUI/EnhancedInput -- which is the class to spawn; a project with actions of its own points\nthem there in a subclass of its own.\n\nIt binds the actions and pushes the context it is given, as they are, and never writes to them. A\npaused game is decided per event, as the legacy preset decides it for its keys and the Slate input\nsource for everything it hears: while the game is paused and UDreamUISettings say the UI pauses with\nit, the handlers drop what arrives (ShouldIgnoreInput). For a paused frame's click to arrive at all,\nits action has to trigger while paused -- Enhanced Input drops a paused frame's triggers for an action\nwhose bTriggerWhenPaused is false -- and the shipped actions do; a project's own actions for this\nactor want the flag set as well.\n\nSuperseded by the Slate input source (UDreamGUISettings::bUseSlateInputSource), which hears every\npointer, key and stick before the viewport, with no context of the UI's own; this actor stands down\nwhile the Slate source is on."
+    text  "适用于使用增强输入的项目的事件系统预设。\n\n与旧版预设相比只有鼠标部分不同：三个按键与滚轮以输入操作的形式\n从此 Actor 推入的映射上下文到达，而导航键与触摸仍留在它继承的旧版\n绑定上。增强输入没有旧版预设所监听的 Mouse2D 向量轴的对应物，因此\n鼠标移动改为在 Tick 中轮询。\n\n本类上的四个操作与上下文均为空，且每一项都是 EditDefaultsOnly。插件\n在预设蓝图 /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput 中填入它们\n——这是本类的一个仅含数据的子类，带有 IMC_DreamUIInputContext 与四个 IA_* 操作，位于\n/DreamGUI/EnhancedInput——应当生成的就是这个类；若项目有自己的操作，可在自己的\n子类中把它们指到那里。\n\n它按原样绑定这些操作并推入传给它的上下文，从不写入它们。暂停游戏\n按事件逐个判定，正如旧版预设对其按键、Slate 输入源对其听到的一切所做的\n那样：当游戏暂停且 UDreamUISettings 指明 UI 随之暂停时，处理程序会丢弃\n到达的内容（ShouldIgnoreInput）。要让暂停帧的单击得以到达，其操作必须\n在暂停时触发——增强输入会丢弃 bTriggerWhenPaused 为 false 的操作在暂停帧\n的触发——而随附的操作已如此设置；项目为本 Actor 自备的操作也需要\n设置该标志。\n\n已被 Slate 输入源（UDreamGUISettings::bUseSlateInputSource）取代，后者在\n视口之前接收每一次指针、按键与摇杆输入，且不带 UI 自己的上下文；Slate\n源开启时，本 Actor 会停止工作。"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:MappingContext {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MappingContext
+    src   "Pushed onto the local player on BeginPlay so the actions below resolve without project setup."
+    text  "在 BeginPlay 时推送到本地玩家，使下面的操作无需项目设置即可解析。"
+    state machine
+}
+
+DreamEnhancedInputEventSystemActor:MappingContextPriority {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MappingContextPriority
+    src   "Priority the context is pushed at. 0 is Enhanced Input's own default, the priority a gameplay\ncontext usually has too. A context of higher priority is applied first, and a key one of its\nactions consumes is taken from the contexts below it -- raise this when the UI's buttons have to\nwin a key that a gameplay context also maps."
+    text  "推入上下文时使用的优先级。0 是增强输入自身的默认值，也是玩法\n上下文通常使用的优先级。优先级更高的上下文先被应用，其某个操作\n消耗的按键会从它下方的上下文取走——当 UI 的按钮必须\n抢过玩法上下文同样映射的按键时，请调高此值。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"DreamGUI|Enhanced Input" {
+    at    Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h#DreamEnhancedInputEventSystemActor:MappingContext
+    src   "DreamGUI|Enhanced Input"
+    text  "DreamGUI|Enhanced Input"
+    state machine
+}

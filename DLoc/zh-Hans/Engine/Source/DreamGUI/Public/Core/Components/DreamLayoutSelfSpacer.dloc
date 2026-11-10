@@ -1,0 +1,37 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayoutSelfSpacer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfSpacer.h#DreamLayoutSelfSpacer
+    src   "LayoutSelf-Spacer"
+    text  "布局自适应间距"
+    state machine
+}
+
+DreamLayoutSelfSpacer:Size {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfSpacer.h#DreamLayoutSelfSpacer:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLayoutSelfSpacer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfSpacer.h#DreamLayoutSelfSpacer
+    src   "Desired-space widget equivalent to UMG Spacer."
+    text  "相当于 UMG Spacer 的空间调整组件。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Spacer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfSpacer.h#DreamLayoutSelfSpacer:Size
+    src   "Spacer"
+    // from the engine's zh-Hans
+    text  "间隔区"
+    state draft
+}

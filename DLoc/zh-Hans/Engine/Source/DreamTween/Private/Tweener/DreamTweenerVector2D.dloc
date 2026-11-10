@@ -1,0 +1,10 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTweenerVector2D {
+    at    Source/DreamTween/Private/Tweener/DreamTweenerVector2D.h#DreamTweenerVector2D
+    src   "Dream Tweener Vector 2D"
+    text  "DreamTweener 矢量 2D"
+    state machine
+}

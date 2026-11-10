@@ -1,0 +1,80 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamWidgetAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation
+    src   "DreamUI Widget Animation"
+    text  "DreamUI 控件动画"
+    state machine
+}
+
+DreamWidgetAnimation:bHasBeenInitialized {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:bHasBeenInitialized
+    src   "Has Been Initialized"
+    // from the engine's zh-Hans
+    text  "已初始化"
+    state draft
+}
+
+DreamWidgetAnimation:bLanguageOwned {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:bLanguageOwned
+    src   "Language Owned"
+    text  "是否使用本地化"
+    state machine
+}
+
+DreamWidgetAnimation:DisplayNameString {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:DisplayNameString
+    src   "Display Name String"
+    text  "显示名称"
+    state machine
+}
+
+DreamWidgetAnimation:MovieScene {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:MovieScene
+    src   "Movie Scene"
+    // from the engine's zh-Hans
+    text  "影片场景"
+    state draft
+}
+
+DreamWidgetAnimation:ObjectReferences {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:ObjectReferences
+    src   "Object References"
+    // from the engine's zh-Hans
+    text  "Object References"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamWidgetAnimation {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation
+    src   "Movie scene animation embedded within DreamGUI prefab."
+    text  "嵌入在 DreamGUI 预制件中的电影素材动画。"
+    state machine
+}
+
+DreamWidgetAnimation:bLanguageOwned {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:bLanguageOwned
+    src   "See IsLanguageOwned. False for everything the animation editor made, which is the default."
+    text  "请参阅 IsLanguageOwned。动画编辑器创建的所有动画默认为否。"
+    state machine
+}
+
+DreamWidgetAnimation:MovieScene {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:MovieScene
+    src   "Pointer to the movie scene that controls this animation."
+    // from the engine's zh-Hans
+    text  "控制此动画的影片场景的指针。"
+    state draft
+}
+
+DreamWidgetAnimation:ObjectReferences {
+    at    Source/DreamGUI/Public/Animation/DreamWidgetAnimation.h#DreamWidgetAnimation:ObjectReferences
+    src   "Collection of object references."
+    // from the engine's zh-Hans
+    text  "对象引用的集。"
+    state draft
+}

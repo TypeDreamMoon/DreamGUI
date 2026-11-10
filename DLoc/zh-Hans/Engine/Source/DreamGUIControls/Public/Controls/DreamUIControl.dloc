@@ -1,0 +1,266 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIControl {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl
+    src   "Dream UIControl"
+    text  "Dream UI控件"
+    state machine
+}
+
+DreamUIControl:bStateFacePaddingStated {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:bStateFacePaddingStated
+    src   "State Face Padding Stated"
+    text  "状态面填充已设置"
+    state machine
+}
+
+DreamUIControl:FindPart:InName {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:FindPart:InName
+    src   "In Name"
+    // from the engine's zh-Hans
+    text  "输入名称"
+    state draft
+}
+
+DreamUIControl:FindPart:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:FindPart:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControl:GetStyleSource:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetStyleSource:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControl:GetStyleVariant:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetStyleVariant:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControl:GetUnboundRequiredParts:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetUnboundRequiredParts:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIControl:SetStyleSource:InStyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleSource:InStyleSource
+    src   "In Style Source"
+    text  "样式源"
+    state machine
+}
+
+DreamUIControl:SetStyleVariant:InStyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleVariant:InStyleVariant
+    src   "In Style Variant"
+    text  "样式变体"
+    state machine
+}
+
+DreamUIControl:StateFaceFallback {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceFallback
+    src   "State Face Fallback"
+    text  "状态面备用"
+    state machine
+}
+
+DreamUIControl:StateFaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceNode
+    src   "State Face Node"
+    text  "状态面节点"
+    state machine
+}
+
+DreamUIControl:StateFaceNormalPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceNormalPadding
+    src   "State Face Normal Padding"
+    text  "状态面正常填充"
+    state machine
+}
+
+DreamUIControl:StateFaces {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaces
+    src   "State Faces"
+    text  "状态贴图"
+    state machine
+}
+
+DreamUIControl:StateFaceSelectable {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceSelectable
+    src   "State Face Selectable"
+    text  "状态面可选择"
+    state machine
+}
+
+DreamUIControl:StateFaceState {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceState
+    src   "State Face State"
+    text  "状态面状态"
+    state machine
+}
+
+DreamUIControl:StateFaceTint {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceTint
+    src   "State Face Tint"
+    text  "状态面着色"
+    state machine
+}
+
+DreamUIControl:StateForegroundNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateForegroundNode
+    src   "State Foreground Node"
+    text  "状态前置节点"
+    state machine
+}
+
+DreamUIControl:StyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StyleSource
+    src   "Style Source"
+    text  "样式源"
+    state machine
+}
+
+DreamUIControl:StyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StyleVariant
+    src   "Style Variant"
+    text  "样式变体"
+    state machine
+}
+
+DreamUIControl:Template {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:Template
+    src   "Template"
+    // from the engine's zh-Hans
+    text  "模板"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIControl {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl
+    src   "A control whose hierarchy is code, not an asset.\n\nWHAT EVERY ONE OF THEM SHARES is not the tree but the four steps that produce one. This class owns\nNativeOnInitialized and runs them in order:\n\n    1. a tree           -- RealizeTemplate(), or RealizeBuiltIn() when nothing replaces it\n    2. the parts        -- BindParts(), by NAME, from the one list CollectParts declares\n    3. the behaviours   -- WireParts(), on whichever nodes step 2 found\n    4. the look         -- ApplyStyle(), and again whenever a knob changes\n\nSplitting 1 from 2 is what makes Template possible. A control used to reach its parts through the\nbuilder's .Out(), which writes a pointer at construction and therefore only ever works for a tree\nthis code wrote; binding by name afterwards works for any tree with the right names in it, so the\ntwo roads differ in step 1 alone. That is also why CollectParts is ONE list rather than a name\nlookup beside a pointer list: two lists of the same names is how a template silently stops driving\na part the code tree still names.\n\nSplitting 3 out is what keeps \"a control always carries its own behaviour\" true for a templated\none -- the argument DreamButton was written for. A template's author draws a face; WireParts is\nwhat puts the UUIButton on it.\n\nTHE STYLE CONTRACT is the other half: where the look comes from (the project sheet by default,\nthis instance on request), which named variant, and the obligation to re-push every knob when one\nchanges, because nothing re-derives from a property the way instancing a changed template would.\nThat last part is UMG's SynchronizeProperties, and it is the tax the whole family pays.\n\nThe concrete style struct stays on the derived class, typed; a control resolves it as\n\n    const FDreamToggleStyle& S = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);\n\nwhich reads the sheet when StyleSource says to and this instance's Style otherwise."
+    text  "层级结构由代码而非资产构成的控件。\n\n它们共同拥有的不是那棵树，而是生成一棵树的四个步骤。本类接管\nNativeOnInitialized，并按顺序执行它们：\n\n    1. 树           —— RealizeTemplate()；若无任何东西替换它，则用 RealizeBuiltIn()\n    2. 部件         —— BindParts()，按 NAME，从 CollectParts 声明的唯一列表中取\n    3. 行为         —— WireParts()，作用于第 2 步找到的那些节点\n    4. 外观         —— ApplyStyle()，并在任一参数变化时再次执行\n\n把第 1 步与第 2 步拆开，才让 Template 成为可能。控件过去通过\n构建器的 .Out() 取得部件，那会在构造时写入一个指针，因此只对\n这段代码自己写出的树有效；之后按名称绑定，则对任何含有正确名称的树都有效，所以\n两条路只在第 1 步不同。这也是为什么 CollectParts 是一份列表，而不是在\n指针列表旁边再做一次名称查找：两份相同名称的列表，正是模板悄悄停止驱动\n某个代码树仍在命名的部件的方式。\n\n把第 3 步单独拆出来，才让“控件始终携带自己的行为”对模板化\n控件同样成立——这正是 DreamButton 的写作用意。模板作者画出一张脸；WireParts\n负责把 UUIButton 放上去。\n\n样式契约是另一半：外观来自哪里（默认是项目样式表，\n按需为当前实例）、使用哪个具名变体，以及当某个参数\n变化时有义务重新推送每一个参数，因为没有东西会像实例化一个改动过的模板那样，从属性重新推导。\n最后这一点就是 UMG 的 SynchronizeProperties，也是整个家族都要付出的代价。\n\n具体样式结构体仍以强类型留在派生类上；控件这样解析它：\n\n    const FDreamToggleStyle& S = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);\n\n当 StyleSource 指示读取样式表时，它读取样式表，否则读取当前实例的 Style。"
+    state machine
+}
+
+DreamUIControl:ApplyStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:ApplyStyle
+    src   "Re-push the resolved style, and every other knob, into the parts. Called for you after the\ntree is built and whenever a property changes in the editor; call it yourself after editing\na style in place at runtime."
+    text  "把解析后的样式以及其他所有参数重新推送到各部件。树构建完成后以及\n在编辑器中属性发生变化时，会自动为你调用；在运行时\n就地编辑样式后，请自行调用。"
+    state machine
+}
+
+DreamUIControl:bStateFacePaddingStated {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:bStateFacePaddingStated
+    src   "Whether a resting padding was ever stated. Without one PressedPadding has nothing to return to."
+    text  "是否曾指定过静止状态的填充。若没有，PressedPadding 就没有可返回的值。"
+    state machine
+}
+
+DreamUIControl:FindPart {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:FindPart
+    src   "The widget of that display name among this control's OWN contents, or null."
+    text  "此控件自身内容中该显示名称对应的控件；若没有则为 null。"
+    state machine
+}
+
+DreamUIControl:GetUnboundRequiredParts {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetUnboundRequiredParts
+    src   "Every REQUIRED part this control did not find. Empty is the healthy answer.\n\nThe diagnostic a template's author actually needs -- \"which names is my tree missing\" -- and\nthe same question a test can ask of every control at once. That sweep is not hypothetical\nhygiene: the first run of it found three controls whose part list named a node the built-in\ntree does not have (\"List\" for a node called \"ListRoot\", and two more), each of which left a\npart permanently null on BOTH roads."
+    text  "此控件未能找到的所有必需部件。为空才是正常结果。\n\n这是模板作者真正需要的诊断信息——“我的树缺了哪些名称”——也是\n测试可以一次性对所有控件提出的同一个问题。那次普查并非假想的\n卫生工作：第一次运行时就发现三个控件的部件列表所指的节点在内置\n树中并不存在（名为“ListRoot”的节点被写成了“List”，另有两处类似情况），每一处都让\n某个部件在两条路径上都永久为 null。"
+    state machine
+}
+
+DreamUIControl:OnControlReady {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:OnControlReady
+    src   "The control is fully built: its tree exists, its parts are bound, its behaviours are wired and\nits style has been pushed once.\n\nThis -- not On Initialized -- is the moment a Blueprint subclass of a native control can touch\nthe control's parts. On Initialized fires from UDreamUserWidget::Initialize, which is BEFORE\nthis class's NativeOnInitialized has run any of the four steps, so a graph that reaches for a\npart there finds nothing. Moving On Initialized would change when an existing graph's style\nedits land relative to ApplyStyle, so the missing moment is added rather than the existing one\nmoved."
+    text  "控件已完全构建：树已存在，部件已绑定，行为已接线，\n样式已推送一次。\n\n此时——而不是 On Initialized——原生控件的蓝图子类才能访问\n该控件的部件。On Initialized 由 UDreamUserWidget::Initialize 触发，而那时本类的\nNativeOnInitialized 尚未执行四个步骤中的任何一个，因此在那里访问\n部件的图表什么也找不到。移动 On Initialized 会改变现有图表的样式\n编辑相对于 ApplyStyle 生效的时机，所以这里选择新增缺失的时机，而不是移动\n已有的时机。"
+    state machine
+}
+
+DreamUIControl:SetStyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleSource
+    src   "Where the look comes from, at runtime. Re-pushes, because a style that changed source without\nre-resolving would be a property whose whole effect is invisible until something else happens\nto push -- which is the failure this family's setters exist to prevent."
+    text  "运行时外观的来源。会重新推送，因为一个改变了来源却没有\n重新解析的样式，其全部效果在别的什么东西碰巧推送之前都不可见\n——这正是这一家族的 setter 所要防止的故障。"
+    state machine
+}
+
+DreamUIControl:SetStyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleVariant
+    src   "Which named entry of the sheet. Re-pushes, for the reason above."
+    text  "使用样式表中的哪个具名条目。会重新推送，原因同上。"
+    state machine
+}
+
+DreamUIControl:StateFaceFallback {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceFallback
+    src   "The control's own single brush: what a state with nothing of its own falls back to."
+    text  "控件自身唯一的一支画刷：自身没有任何设置的状态会回退到它。"
+    state machine
+}
+
+DreamUIControl:StateFaceNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceNode
+    src   "What the state faces paint, what they tint, and what reports the state. All null until used."
+    text  "状态外观用于绘制的内容、用于着色的内容，以及用于报告状态的内容。未使用前均为 null。"
+    state machine
+}
+
+DreamUIControl:StateFaceState {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StateFaceState
+    src   "The last state reported, so a style push can repaint the face the control is actually in."
+    text  "最后报告的状态，以便样式推送时重绘控件实际所处的状态外观。"
+    state machine
+}
+
+DreamUIControl:StyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StyleSource
+    src   "See EDreamUIStyleSource: the sheet is the default because one-place-changes-all is the point."
+    text  "请参考 EDreamUIStyleSource：样式表是默认值，因为“一处修改，处处生效”是其设计理念。"
+    state machine
+}
+
+DreamUIControl:StyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:StyleVariant
+    src   "Named entry in the sheet (\"Danger\", \"Compact\"); none means the family default."
+    text  "命名条目在样式表中（例如“危险”、“紧凑”）；如果为空，则使用家族默认值。"
+    state machine
+}
+
+DreamUIControl:Template {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:Template
+    src   "A hierarchy to use INSTEAD of the one this control builds for itself -- WPF's ControlTemplate.\n\nThe bargain is the same one WPF makes: the control keeps the behaviour, the state machine and\nthe style contract; the template decides what the thing looks like, down to which nodes exist.\nParts are matched BY NAME -- the names in CollectParts, which are the names the built-in tree\nalready gives them -- so a template is \"a widget blueprint with a Face and a Label in it\", not\na subclass of anything and not an interface anybody has to implement.\n\nIts TREE is what gets used, instanced straight into this control, exactly as a class's own\narchetype would be. Deliberately not placed as a nested widget: the parts have to be this\ncontrol's own to drive, and reaching into another instance to write its widgets is the\ncross-asset difference record this codebase spent P4 deleting.\n\nA required part the template omits is reported once, by name. Silence there is how a control\nends up half-driven -- the missing node is simply never written to, and the symptom is a label\nthat never changes with nothing anywhere saying why."
+    text  "一种层级结构，用来替代此控件为自身构建的那一个——即WPF的ControlTemplate。\n\nThe bargain is the same one WPF makes: the control keeps the behaviour, the state machine and\nthe style contract; the template decides what the thing looks like, down to which nodes exist.\nParts are matched BY NAME -- the names in CollectParts, which are the names the built-in tree\nalready gives them -- so a template is \"a widget blueprint with a Face and a Label in it\", not\na subclass of anything and not an interface anybody has to implement.\n\n它的树才是被使用的部分，会直接实例化到此控件中，就像类自身的\n原型那样。它有意不作为嵌套控件放置：部件必须是此\n控件自身的部件才能驱动，而进入另一个实例去写入其控件，正是\n此代码库花P4删除的跨资产差异记录。\n\n模板省略的必需部件会按名称报告一次。若此处沉默，控件就会\n最终变成半驱动状态——缺失的节点根本不会被写入，而症状就是一个标签\n从不变化，且任何地方都不说明原因。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:ApplyStyle
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamGUI|Control {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:FindPart
+    src   "DreamGUI|Control"
+    text  "DreamGUI|Control"
+    state machine
+}

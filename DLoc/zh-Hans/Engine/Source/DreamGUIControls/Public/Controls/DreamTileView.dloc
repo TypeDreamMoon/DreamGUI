@@ -1,0 +1,368 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamTileView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView
+    src   "Dream Tile View"
+    text  "Dream平铺视图"
+    state machine
+}
+
+DreamTileView:bWrapHorizontalNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:bWrapHorizontalNavigation
+    src   "Wrap Horizontal Navigation"
+    // from the engine's zh-Hans
+    text  "包裹水平导航"
+    state draft
+}
+
+DreamTileView:GetColumnCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetColumnCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetEntryHeight:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryHeight:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetEntryWidth:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryWidth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetNavigationTarget:InDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetNavigationTarget:InDirection
+    src   "In Direction"
+    // from the engine's zh-Hans
+    text  "输入方向"
+    state draft
+}
+
+DreamTileView:GetNavigationTarget:InDisplayIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetNavigationTarget:InDisplayIndex
+    src   "In Display Index"
+    text  "显示索引"
+    state machine
+}
+
+DreamTileView:GetNavigationTarget:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetNavigationTarget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetRowLineCount:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetRowLineCount:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetTileAlignment:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetTileAlignment:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:GetWrapHorizontalNavigation:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetWrapHorizontalNavigation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTileView:SetEntryHeight:InHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryHeight:InHeight
+    src   "In Height"
+    // from the engine's zh-Hans
+    text  "In Height"
+    state draft
+}
+
+DreamTileView:SetEntryWidth:InWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryWidth:InWidth
+    src   "In Width"
+    // from the engine's zh-Hans
+    text  "In Width"
+    state draft
+}
+
+DreamTileView:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamTileView:SetTileAlignment:InAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetTileAlignment:InAlignment
+    src   "In Alignment"
+    // from the engine's zh-Hans
+    text  "在对齐中"
+    state draft
+}
+
+DreamTileView:SetWrapHorizontalNavigation:bInWrap {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetWrapHorizontalNavigation:bInWrap
+    src   "In Wrap"
+    text  "换行"
+    state machine
+}
+
+DreamTileView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamTileView:TileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:TileAlignment
+    src   "Tile Alignment"
+    // from the engine's zh-Hans
+    text  "瓦片对齐"
+    state draft
+}
+
+EDreamTileAlignment.CenterAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:CenterAligned
+    src   "Center Aligned"
+    text  "居中对齐"
+    state machine
+}
+
+EDreamTileAlignment.EDreamTileAlignment_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EDreamTileAlignment_MAX
+    src   "EDream Tile Alignment MAX"
+    text  "EDream平铺对齐 MAX"
+    state machine
+}
+
+EDreamTileAlignment.EvenlyDistributed {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlyDistributed
+    src   "Evenly Distributed"
+    text  "均匀分布"
+    state machine
+}
+
+EDreamTileAlignment.EvenlySize {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlySize
+    src   "Evenly Size"
+    text  "均匀大小"
+    state machine
+}
+
+EDreamTileAlignment.EvenlyWide {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlyWide
+    src   "Evenly Wide"
+    text  "均匀宽度"
+    state machine
+}
+
+EDreamTileAlignment.Fill {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:Fill
+    src   "Fill"
+    // from the engine's zh-Hans
+    text  "填充"
+    state draft
+}
+
+EDreamTileAlignment.LeftAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:LeftAligned
+    src   "Left Aligned"
+    text  "左对齐"
+    state machine
+}
+
+EDreamTileAlignment.RightAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:RightAligned
+    src   "Right Aligned"
+    text  "右对齐"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamTileView {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView
+    src   "A tile view whose hierarchy is code, not an asset: a list whose rows are laid out across as well\nas down.\n\nUMG's TileView derives from its ListView and adds an entry WIDTH; this is the same relationship,\nfor the same reason. Everything that makes a list -- the viewport, the bar, the scrolled column,\nthe row template, the pool, the selection, the recycling threshold -- is UDreamListViewBase's and\nis not restated here. What a tile view adds is one question answered differently: how many rows sit\nside by side.\n\nTHE COLUMN COUNT IS MEASURED, NOT AUTHORED\n------------------------------------------\nUMG's tile view fits as many entries across as the width allows and re-flows when it changes, and\nso does this one: ResolveColumnCount divides the viewport by the tile pitch. An authored count\nwould be a second number that has to agree with the width, and the first resize would end that\nagreement -- the same equation-in-two-places the row placement was rewritten to remove.\n\nA floor of one, always: a viewport narrower than a tile shows one tile per line and clips it,\nwhich is visible and recoverable, where zero columns is a division by zero and a blank control.\n\nWHAT A TILE'S SIZE IS\n---------------------\nIts height is FDreamListStyle::RowHeight -- the SAME field a list's row height comes from, because\nit is the same measurement -- and its width is FDreamTileViewStyle::TileWidth. There is no aspect\nlock and no \"square\" flag: two numbers already say every shape those flags could, and a lock would\nmake one of the two unreadable in the panel.\n\nSee UDreamListViewBase for the rest, and UDreamListView for the flat case."
+    text  "一种层级由代码而非资产构建的平铺视图：一种行既横向排布\n又纵向排布的列表。\n\nUMG的TileView派生自其ListView，并增加了一个条目WIDTH；此处是同样的关系，\n出于同样的原因。构成列表的一切——视口、滚动条、可滚动的列、\n行模板、对象池、选择、回收阈值——都归UDreamListViewBase所有，\n此处不再赘述。平铺视图所增加的，是一个以不同方式回答的问题：有多少行\n并排。\n\n列数是测量出来的，不是创作出来的\n------------------------------------------\nUMG的平铺视图按宽度尽可能多地横向容纳条目，并在宽度变化时重新排布，\n本视图也是如此：ResolveColumnCount用平铺间距来除视口。创作出来的数量\n会是第二个数字，必须与宽度保持一致，而第一次调整尺寸就会终结这种\n一致——而行摆放被重写，正是为了消除这种“同一个等式写在两处”。\n\n下限始终为一：视口比一个平铺还窄时，每行显示一个平铺并将其裁剪，\n这是可见且可恢复的；而零列则意味着除以零和一个空白控件。\n\n平铺的尺寸是什么\n---------------------\n它的高度是FDreamListStyle::RowHeight——列表行高所用的同一个字段，因为\n它们是同一个测量——而宽度则是FDreamTileViewStyle::TileWidth。没有宽高比\n锁定，也没有“正方形”标记：两个数字已经能表达那些标记所能表达的一切，而锁定会\n让两者之一在面板中无法读取。\n\n其余内容参见UDreamListViewBase，扁平的情形参见UDreamListView。"
+    state machine
+}
+
+DreamTileView:bWrapHorizontalNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:bWrapHorizontalNavigation
+    src   "Whether stepping off the end of a line lands on the next one -- UMG's bWrapHorizontalNavigation.\n\nAnswered by INDEX rather than by geometry: \"the tile after this one\" is a fact about the\nsource, and the geometric navigator would have to infer it from rects that say nothing about\nwhich line they are on. A navigation press on a tile is answered by GetNavigationTarget, so this\nreaches the player as well as the API. Off by default, as UMG's is: a press off the end of a line\nthen leaves the tile view for whatever is beside it."
+    text  "从一行末尾移出时，是否会落到下一行——即UMG的bWrapHorizontalNavigation。\n\n这由索引而非几何来回答：“此后的那个平铺”是关于\n源的事实，而几何导航器只能从矩形去推断，那些矩形并不说明\n它们位于哪一行。平铺上的导航按下由GetNavigationTarget回答，因此这\n不仅作用于API，也抵达玩家。默认关闭，与UMG一致：此时从一行末尾按下，\n会离开平铺视图，转到它旁边的任何控件。"
+    state machine
+}
+
+DreamTileView:GetColumnCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetColumnCount
+    src   "How many tiles fit across the viewport right now: the measured answer the layout is using.\n\nPublic because it is the one thing about a tile view a consumer cannot work out for itself --\nthe viewport's width is the control's business -- and because a test that cannot see it can\nonly assert positions, which is the same claim written less clearly."
+    text  "当前视口横向能容纳多少个图块：布局正在使用的实测结果。\n\n之所以公开，是因为这是使用方唯一无法自行推算的图块视图信息——\n视口宽度是控件自己的事——也因为看不到它的测试\n只能断言位置，那是同一个结论的较不清晰写法。"
+    state machine
+}
+
+DreamTileView:GetEntryHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryHeight
+    src   "A tile's height -- UMG's EntryHeight, which is FDreamListStyle::RowHeight here because it is\nthe same measurement a list's row height is. One tile, one size, and the style holds it."
+    text  "图块的高度——即UMG的EntryHeight，在这里是FDreamListStyle::RowHeight，因为它与列表行高是\n同一个度量。一个图块，一个尺寸，由样式持有。"
+    state machine
+}
+
+DreamTileView:GetEntryWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryWidth
+    src   "A tile's width -- UMG's EntryWidth, which is FDreamTileViewStyle::TileWidth."
+    text  "图块的宽度——即UMG的EntryWidth，在这里是FDreamTileViewStyle::TileWidth。"
+    state machine
+}
+
+DreamTileView:GetNavigationTarget {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetNavigationTarget
+    src   "The display index one step in a direction from InDisplayIndex, or INDEX_NONE for \"off the grid\".\n\nThe tile view's own answer, because a grid's neighbours are arithmetic: across is plus or minus\none WITHIN a line, down is plus or minus the column count. Wrapping is what happens at a line's\nends when bWrapHorizontalNavigation is on -- and it is exactly the step the geometric navigator\ncannot make, because the tile it should land on is at the opposite edge of the control.\n\nWhat a navigation press on a tile steps by, for the four directions STileView and SListView\nanswer: the tile it names is selected while bSelectItemOnNavigation is on and scrolled into view,\nand INDEX_NONE hands the press on. Next and Prev are no press's to step: a tile view is one Tab\nstop, which Tab and Shift+Tab leave (UDreamListViewBase::HandleRowNavigation). Their answer here is\nthe source order, which is the order Tab enters the view in -- at its first tile, or Shift+Tab at its\nlast, while nothing is selected (UDreamListViewBase::ResolveTabEntry)."
+    text  "从InDisplayIndex沿某个方向走一步后的显示索引，若为“在网格之外”则为INDEX_NONE。\n\n这是图块视图自己的答案，因为网格的邻居是算术：横向是在一行之内加或减\n一，纵向是加或减列数。换行发生在bWrapHorizontalNavigation开启时一行的\n两端——而这正是几何导航器迈不出的一步，因为它该落到的图块位于控件的\n对侧边缘。\n\n图块上的导航按键按什么步进，对应STileView和SListView会应答的四个方向：\n它指名的图块在bSelectItemOnNavigation开启时会被选中并滚动到可见处，\n而INDEX_NONE则把按键继续传递下去。Next和Prev不归任何按键步进：图块视图\n是一个Tab停靠点，Tab和Shift+Tab会离开它（UDreamListViewBase::HandleRowNavigation）。\n它们在这里的答案是源顺序，也就是Tab进入视图的顺序——在第一个图块处进入，\n或在没有选中项时用Shift+Tab从最后一个图块进入（UDreamListViewBase::ResolveTabEntry）。"
+    state machine
+}
+
+DreamTileView:GetRowLineCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetRowLineCount
+    src   "How many LINES of tiles the source makes at the current column count."
+    text  "在当前列数下，源会排出多少行图块。"
+    state machine
+}
+
+DreamTileView:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetStyle
+    src   "By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct."
+    text  "按值而非按引用：UFUNCTION 返回值必须是值，而样式是一个小型结构体。"
+    state machine
+}
+
+DreamTileView:SetEntryWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryWidth
+    src   "Changes how many tiles fit across, so it re-flows rather than repaints."
+    text  "会改变横向能容纳的图块数量，因此是重新流式布局而非重绘。"
+    state machine
+}
+
+DreamTileView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetStyle
+    src   "Replace the whole look and re-push it. A tile's size is style, so this rebuilds the tiles."
+    text  "替换整套外观并重新推送。图块的尺寸属于样式，因此这会重建图块。"
+    state machine
+}
+
+DreamTileView:SetTileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetTileAlignment
+    src   "Changes where every tile sits without changing how many fit, so it re-places rather than re-flows."
+    text  "改变每个图块的位置而不改变能容纳的数量，因此是重新放置而非重新流式布局。"
+    state machine
+}
+
+DreamTileView:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect."
+    text  "本实例自身的外观。只要StyleSource如此指定且样式表\n确实存在，项目样式表就优先；项目中没有任何样式表时，这里就是实际生效的外观。"
+    state machine
+}
+
+DreamTileView:TileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:TileAlignment
+    src   "How a line's tiles are distributed across the width -- UMG's TileAlignment.\n\nLeftAligned, not UMG's EvenlyDistributed: it is what every tile view in this library has drawn,\nand a grid that silently re-spaced itself on upgrade would be a layout change nobody asked for."
+    text  "一行图块在其宽度上如何分布——即对齐，UMG的TileAlignment。\n\n默认为LeftAligned，而非UMG的EvenlyDistributed：这是本库中每个图块视图一直绘制出的样子，\n而一个在升级时悄悄改变间距的网格，是没人要求过的布局变化。"
+    state machine
+}
+
+EDreamTileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment
+    src   "How a line's tiles are distributed across the width it has -- UMG's EListItemAlignment, with its\nseven answers and its names.\n\nThe distinction worth holding on to is WHAT each one spends the leftover space on. Three of them\nmove the line without changing it (Left/Right/Center), two put the slack into the gaps or the\ncells and leave the tile alone (EvenlyDistributed, EvenlyWide), and two grow the tile itself\n(EvenlySize, Fill) -- differing only in whether a short last line grows with the rest."
+    text  "一行图块在其拥有的宽度上如何分布——即对齐，UMG的EListItemAlignment及其\n七种取值和名称。\n\n值得把握的区别在于每一种把剩余空间花在哪里。其中三种\n只移动整行而不改变它（Left/Right/Center），两种把余量放进间隙或\n单元格而保持图块不变（EvenlyDistributed、EvenlyWide），还有两种会放大图块\n本身（EvenlySize、Fill）——区别仅在于较短的末行是否随其余行一起放大。"
+    state machine
+}
+
+EDreamTileAlignment.CenterAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:CenterAligned
+    src   "The line is centred and the slack is split between both ends."
+    text  "整行居中，余量在两端之间平分。"
+    state machine
+}
+
+EDreamTileAlignment.EvenlyDistributed {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlyDistributed
+    src   "Slack into the gaps; the end tiles stay flush with both edges. One tile centres instead."
+    text  "余量放进间隙；两端的图块与两侧边缘齐平。只有一个图块时则居中。"
+    state machine
+}
+
+EDreamTileAlignment.EvenlySize {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlySize
+    src   "Slack into the TILES, at the count the authored size fits -- every line's tiles the same size."
+    text  "调整间距，使所有行的瓦片大小相同，并匹配预设尺寸。"
+    state machine
+}
+
+EDreamTileAlignment.EvenlyWide {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:EvenlyWide
+    src   "Slack into equal CELLS; the tile keeps its size and floats in the middle of its cell."
+    text  "调整间距，使瓦片保持其大小并在单元格中居中。"
+    state machine
+}
+
+EDreamTileAlignment.Fill {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:Fill
+    src   "Like EvenlySize, but a short last line stretches to fill the width on its own."
+    text  "类似于 EvenlySize，但如果最后一行较短，它会拉伸以填充整个宽度。"
+    state machine
+}
+
+EDreamTileAlignment.LeftAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:LeftAligned
+    src   "The line packs against the near edge and the slack sits after it. What this control has always done."
+    text  "行紧贴近边缘，间距位于其后。这是该控件一直的功能。"
+    state machine
+}
+
+EDreamTileAlignment.RightAligned {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#EDreamTileAlignment:RightAligned
+    src   "The line packs against the far edge."
+    text  "行紧贴远端边缘。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Tile View" {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetColumnCount
+    src   "Tile View"
+    // from the engine's zh-Hans
+    text  "瓦片视图"
+    state draft
+}

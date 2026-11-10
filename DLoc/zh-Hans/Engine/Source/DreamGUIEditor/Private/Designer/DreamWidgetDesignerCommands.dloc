@@ -1,0 +1,41 @@
+dloc 1
+culture zh-Hans
+namespace UICommands.DreamWidgetDesignerCommands
+
+ToggleScreenSpacePreview {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerCommands.cpp
+    src   "Screen Space"
+    // from the engine's zh-Hans
+    text  "屏幕空间"
+    state draft
+}
+
+ToggleScreenSpacePreview_ToolTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerCommands.cpp
+    src   "Build the preview the way play builds it: as a ScreenSpaceOverlay canvas. This is what lets a declared Perspective take effect at all -- the remap is baked into the geometry, so it then shows in any viewport. It does NOT change what projects the image; the editor always draws through the editor camera. To also stand where play stands, use Canvas Eye. Off previews in world space, better for inspecting geometry in 3D. Persisted with the prefab's editor data when the asset is saved."
+    text  "构建预览时，采用与运行时相同的 ScreenSpaceOverlay 方式。这是使声明的 Perspective 能够生效的关键，因为重映射信息会被烘焙到几何体中，从而在任何视口中显示。它不会改变投影图像的来源；编辑器始终通过编辑器相机进行绘制。要模拟运行时效果，请使用 Canvas Eye。关闭世界空间预览，更适合检查 3D 几何体。该设置会与预制件的编辑器数据一起保存。"
+    state machine
+}
+
+FrameFromCanvasEye {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerCommands.cpp
+    src   "Canvas Eye"
+    text  "Canvas Eye"
+    state machine
+}
+
+FrameFromCanvasEye_ToolTip {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerCommands.cpp
+    src   "Switch to the 3D view and stand the camera exactly where the canvas's own virtual camera stands, with its field of view. Perspective bakes geometry for that eye, so this is the one pose where the editor shows the foreshortening play will show -- anywhere else exaggerates or skews it. The canvas rect then exactly fills the frame, so the framing matches the 2D view and only content with real depth looks different. Orbit away afterwards to inspect; press again to return."
+    text  "切换到 3D 视图，并将相机放置在与画布自身虚拟相机完全相同的位置，并使用相同的视野。Perspective 会根据该视角烘焙几何体，因此这是编辑器显示与运行时相同的透视效果的唯一姿势；其他任何位置都会夸大或扭曲透视效果。画布矩形将完全填充视口，从而使构图与 2D 视图匹配，只有具有真实深度的内容才会显示不同。之后可以围绕画布进行观察；再次按下以返回。"
+    state machine
+}
+
+namespace Contexts
+
+DreamWidgetDesigner {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetDesignerCommands.cpp
+    src   "DreamUI Designer"
+    text  "DreamUI 设计器"
+    state machine
+}

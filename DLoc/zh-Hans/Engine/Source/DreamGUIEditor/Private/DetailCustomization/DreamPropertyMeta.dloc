@@ -1,0 +1,59 @@
+dloc 1
+culture zh-Hans
+namespace DreamPropertyMeta
+
+Layer {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Layer"
+    // from the engine's zh-Hans
+    text  "层"
+    state draft
+}
+
+Layout {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Layout"
+    // from the engine's zh-Hans
+    text  "布局"
+    state draft
+}
+
+Visual {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Visual"
+    // from the engine's zh-Hans
+    text  "视觉效果"
+    state draft
+}
+
+Appearance {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Appearance"
+    // from the engine's zh-Hans
+    text  "外观"
+    state draft
+}
+
+Effect {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Effects"
+    // from the engine's zh-Hans
+    text  "效果"
+    state draft
+}
+
+Behavior {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Behavior"
+    // from the engine's zh-Hans
+    text  "行为"
+    state draft
+}
+
+Advanced {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/DreamPropertyMeta.cpp
+    src   "Advanced"
+    // from the engine's zh-Hans
+    text  "高级"
+    state draft
+}

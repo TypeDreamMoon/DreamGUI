@@ -1,0 +1,77 @@
+dloc 1
+culture zh-Hans
+namespace FNiagaraConstants
+
+VelocityDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Fall_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_5B03D297410B7846841A0BAFA82B7F0F.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_0.Metadata.Description
+    src   "The velocity in cm/s of the particle."
+    // from the engine's zh-Hans
+    text  "粒子的速度（厘米/秒）。"
+    state draft
+}
+
+PositionDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_0.Metadata.Description
+    src   "The position of the particle."
+    // from the engine's zh-Hans
+    text  "粒子的位置。"
+    state draft
+}
+
+SpriteSizeDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_1.Metadata.Description
+    src   "The size of the sprite quad."
+    // from the engine's zh-Hans
+    text  "Sprite四边形的大小。"
+    state draft
+}
+
+ColorDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_2.Metadata.Description
+    src   "The color of the particle."
+    // from the engine's zh-Hans
+    text  "粒子的颜色。"
+    state draft
+}
+
+SpriteRotDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_3.Metadata.Description
+    src   "The screen aligned roll of the particle in degrees."
+    // from the engine's zh-Hans
+    text  "屏幕对齐粒子的roll（按角度计）。"
+    state draft
+}
+
+SubImageIndexDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_4.Metadata.Description
+    src   "A value from 0 to the number of entries in the table of SubUV images."
+    // from the engine's zh-Hans
+    text  "从0到SubUV图像表中的条目数量。"
+    state draft
+}
+
+RibbonLinkOrderDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Trail_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_A5F6822E465CAEC0DE401FB7BF58D319.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_1.Metadata.Description
+    src   "Explicit order for linking particles within a ribbon. Particles of the same ribbon id will be connected into a ribbon in incrementing order of this attribute value."
+    // from the engine's zh-Hans
+    text  "条带中相连粒子的显式排序。拥有相同条带ID的粒子将以此属性值递增的顺序连接到条带中。"
+    state draft
+}
+
+RibbonWidthDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Trail_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_A5F6822E465CAEC0DE401FB7BF58D319.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraScriptVariable_2.Metadata.Description
+    src   "Sets the ribbon width for a particle, in Unreal units."
+    // from the engine's zh-Hans
+    text  "设置粒子的条带宽度（虚幻单位）。"
+    state draft
+}
+
+namespace NiagaraNodeAssigment
+
+AssignmentNodeDesc {
+    at    Content/Tests/Niagara/NS_DreamUITest_Particles.uasset#NS_DreamUITest_Particles:Grid_0.NiagaraScriptSource_0.NiagaraGraph_0.NiagaraNodeAssignment_1.SetVariables_6C24BA3F48BE09956B79A491ED994219.VersionData(0).VersionData.Description
+    src   "Sets one or more variables in the stack."
+    // from the engine's zh-Hans
+    text  "在堆栈中设置一个或多个变量。"
+    state draft
+}

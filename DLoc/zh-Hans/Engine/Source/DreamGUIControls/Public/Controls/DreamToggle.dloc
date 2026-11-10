@@ -1,0 +1,495 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamCheckStateChangedEvent__DelegateSignature:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamCheckStateChangedEvent__DelegateSignature:CheckedState
+    src   "Checked State"
+    // from the engine's zh-Hans
+    text  "已勾选状态"
+    state draft
+}
+
+DreamToggle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle
+    src   "Dream Toggle"
+    text  "Dream 开关"
+    state machine
+}
+
+DreamToggle:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:AcceptedMouseButtons
+    src   "Accepted Mouse Buttons"
+    text  "接受的鼠标按键"
+    state machine
+}
+
+DreamToggle:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:bIsOn
+    src   "Is On"
+    text  "是否开启"
+    state machine
+}
+
+DreamToggle:BoxNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:BoxNode
+    src   "Box Node"
+    text  "方框节点"
+    state machine
+}
+
+DreamToggle:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:CheckedState
+    src   "Checked State"
+    // from the engine's zh-Hans
+    text  "已勾选状态"
+    state draft
+}
+
+DreamToggle:ClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:ClickMethod
+    src   "Click Method"
+    // from the engine's zh-Hans
+    text  "点击方法"
+    state draft
+}
+
+DreamToggle:GetAcceptedMouseButtons:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetAcceptedMouseButtons:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetCheckedState:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetCheckedState:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetClickMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetClickMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetIsOn:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetIsOn:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetPressMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetPressMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetStyle:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetStyle:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:GetTouchMethod:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetTouchMethod:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:IsChecked:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsChecked:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:IsPressed:ReturnValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsPressed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamToggle:MarkNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:MarkNode
+    src   "Mark Node"
+    text  "标记节点"
+    state machine
+}
+
+DreamToggle:OnCheckStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnCheckStateChanged
+    src   "On Check State Changed"
+    // from the engine's zh-Hans
+    text  "勾选状态变化时"
+    state draft
+}
+
+DreamToggle:OnHovered {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnHovered
+    src   "On Hovered"
+    // from the engine's zh-Hans
+    text  "悬停时"
+    state draft
+}
+
+DreamToggle:OnPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnPressed
+    src   "On Pressed"
+    // from the engine's zh-Hans
+    text  "按压时"
+    state draft
+}
+
+DreamToggle:OnReleased {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnReleased
+    src   "On Released"
+    // from the engine's zh-Hans
+    text  "释放时"
+    state draft
+}
+
+DreamToggle:OnToggleChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnToggleChanged
+    src   "On Toggle Changed"
+    text  "切换状态改变时"
+    state machine
+}
+
+DreamToggle:OnUnhovered {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnUnhovered
+    src   "On Unhovered"
+    // from the engine's zh-Hans
+    text  "未悬停时"
+    state draft
+}
+
+DreamToggle:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnValueChangedBP
+    src   "On Value Changed BP"
+    text  "值改变事件 (Blueprint)"
+    state machine
+}
+
+DreamToggle:PressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:PressMethod
+    src   "Press Method"
+    // from the engine's zh-Hans
+    text  "按压方法"
+    state draft
+}
+
+DreamToggle:SetAcceptedMouseButtons:InAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetAcceptedMouseButtons:InAcceptedMouseButtons
+    src   "In Accepted Mouse Buttons"
+    text  "传入的可接受鼠标按键"
+    state machine
+}
+
+DreamToggle:SetCheckedState:InCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetCheckedState:InCheckedState
+    src   "In Checked State"
+    // from the engine's zh-Hans
+    text  "在已勾选状态中"
+    state draft
+}
+
+DreamToggle:SetClickMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetClickMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamToggle:SetIsChecked:bInIsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsChecked:bInIsChecked
+    src   "In Is Checked"
+    // from the engine's zh-Hans
+    text  "在已勾选中"
+    state draft
+}
+
+DreamToggle:SetIsOn:bInIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsOn:bInIsOn
+    src   "In Is On"
+    text  "输入是否开启"
+    state machine
+}
+
+DreamToggle:SetPressMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetPressMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamToggle:SetStyle:InStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetStyle:InStyle
+    src   "In Style"
+    // from the engine's zh-Hans
+    text  "输入风格"
+    state draft
+}
+
+DreamToggle:SetTouchMethod:InMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetTouchMethod:InMethod
+    src   "In Method"
+    text  "传入的方法"
+    state machine
+}
+
+DreamToggle:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:Style
+    src   "Style"
+    // from the engine's zh-Hans
+    text  "样式"
+    state draft
+}
+
+DreamToggle:TickNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:TickNode
+    src   "Tick Node"
+    text  "勾选标记节点"
+    state machine
+}
+
+DreamToggle:ToggleBehaviour {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:ToggleBehaviour
+    src   "Toggle Behaviour"
+    text  "切换行为"
+    state machine
+}
+
+DreamToggle:TouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:TouchMethod
+    src   "Touch Method"
+    // from the engine's zh-Hans
+    text  "触控方法"
+    state draft
+}
+
+DreamToggleChangedEvent__DelegateSignature:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggleChangedEvent__DelegateSignature:bIsOn
+    src   "Is On"
+    text  "是否开启"
+    state machine
+}
+
+EDreamCheckState.Checked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#EDreamCheckState:Checked
+    src   "Checked"
+    // from the engine's zh-Hans
+    text  "Checked"
+    state draft
+}
+
+EDreamCheckState.EDreamCheckState_MAX {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#EDreamCheckState:EDreamCheckState_MAX
+    src   "EDream Check State MAX"
+    text  "EDream 检查状态 MAX"
+    state machine
+}
+
+EDreamCheckState.Unchecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#EDreamCheckState:Unchecked
+    src   "Unchecked"
+    // from the engine's zh-Hans
+    text  "未勾选"
+    state draft
+}
+
+EDreamCheckState.Undetermined {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#EDreamCheckState:Undetermined
+    src   "Undetermined"
+    text  "不确定"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamToggle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle
+    src   "A toggle whose hierarchy is code, not an asset.\n\nThe same four nodes BP_Toggle has -- a box, a tick inside it, a label beside it -- built in\nNativeOnInitialized instead of instanced from a template. What that buys is that the control\ncannot be half-built: BP_Button shipped for months with no UIButton on it and nothing said so,\nand a class that always adds its own behaviour cannot have that happen to it.\n\nWhat it costs is the tree nobody can open. Everything an author would otherwise have reached into\nthe hierarchy to change has to be a property here, which is what FDreamToggleStyle is, and the\nmoment a project wants all its toggles to agree that stops being enough.\n\nIt composes into .dui with no language change at all, because a class path is already a node tag:\n\n    Native.Toggle Mute {\n        Style.TickChecked = #FF3355\n        OnToggleChanged -> HandleMute\n    }\n\nDeliberately label-less: a check box is one square and its mark, and the text beside it is the\nconsumer's layout. Pair it with a Text node in whatever row the screen wants.\n\nAPI-wise it speaks UMG's check box: CheckedState (Unchecked/Checked/Undetermined) with\nGetCheckedState/SetCheckedState, IsChecked/SetIsChecked, and OnCheckStateChanged. bIsOn with\nGetIsOn/SetIsOn and OnToggleChanged are the compatibility spelling of the two-state subset and\nstay fully bindable; the two spellings mirror each other through every path, and when authored\nvalues disagree CheckedState wins (see ReconcileCheckSpellings).\n\nThe third state is the control's own. The behaviour underneath stays two-state and is parked at\nunchecked while Undetermined stands; the tick swaps its check mark for a bar in the TickChecked\ncolour. A click leaves Undetermined by becoming unchecked, as UMG's SCheckBox does."
+    text  "层级结构由代码而非资产构建的开关。\n\n与 BP_Toggle 相同的四个节点——一个方框、方框内的勾选标记、旁边的标签——在\nNativeOnInitialized 中构建，而不是从模板实例化。这样做的好处是控件不可能只建一半：\nBP_Button 曾在没有 UIButton 的情况下发布了好几个月，却没有任何提示，而一个始终\n自行添加行为的类不会遇到这种情况。\n\n代价是一棵谁也打不开的树。作者原本需要深入层级结构去修改的一切，在这里都必须\n是属性，FDreamToggleStyle 正是如此；而一旦某个项目希望它的所有开关都保持一致，\n这就不再够用了。\n\n它能原封不动地组合进 .dui，因为类路径本身就已经是节点标签：\n\n    Native.Toggle Mute {\n        Style.TickChecked = #FF3355\n        OnToggleChanged -> HandleMute\n    }\n\n刻意不带标签：复选框就是一个方块和它的标记，旁边的文字属于使用者的布局。\n把它与 Text 节点搭配，放进屏幕所需的任意行中。\n\n在 API 层面，它沿用 UMG 复选框的接口：CheckedState（Unchecked/Checked/Undetermined）\n配合 GetCheckedState/SetCheckedState、IsChecked/SetIsChecked 以及\nOnCheckStateChanged。bIsOn 配合 GetIsOn/SetIsOn 和 OnToggleChanged 是两态子集的\n兼容写法，并且完全可绑定；两种写法在每条路径上互为镜像，当作者设置的取值冲突时，\n以 CheckedState 为准（见 ReconcileCheckSpellings）。\n\n第三个状态是控件自己的。底层行为仍是两态，在 Undetermined 成立期间保持在未选中；\n勾选标记会换成一个 TickChecked 颜色的横条。单击会让 Undetermined 变为未选中，\n与 UMG 的 SCheckBox 一致。"
+    state machine
+}
+
+DreamToggle:AcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:AcceptedMouseButtons
+    src   "WHICH mouse buttons press and flip this check box -- a bitmask over EDreamUIMouseButtonType, the\nleft button alone by default, which is UMG's rule: SCheckBox toggles on the left button and\nnothing else, so a right click neither presses nor flips it and goes on to whatever is behind.\n\nUDreamButton's knob, for the same reason and with the same spelling (in .dui a number, one bit\nper EDreamUIMouseButtonType value: 1 is Left, 4 is Right). A touch and a gamepad or keyboard\npress always count. Pushed onto the behaviour with the three methods above."
+    text  "决定哪些鼠标按键能按下并切换此复选框——基于 EDreamUIMouseButtonType 的位掩码，\n默认只有左键，这也是 UMG 的规则：SCheckBox 只在左键上切换，其他按键都不行，\n因此右键既不会按下也不会切换它，而是继续传给后面的内容。\n\n这是 UDreamButton 的同名旋钮，出于同样的原因、采用同样的写法（在 .dui 中是一个\n数字，每个 EDreamUIMouseButtonType 值占一位：1 是 Left，4 是 Right）。触摸以及\n手柄或键盘按键始终计入。它通过上述三个方法推送到行为上。"
+    state machine
+}
+
+DreamToggle:bIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:bIsOn
+    src   "The compatibility spelling: CheckedState as a bool. Checked mirrors true; Unchecked and\nUndetermined mirror false. Kept as a property because existing .dui two-way-binds it\n(`bIsOn <-> ...`) and a binding resolves a property; kept coherent with CheckedState through\nevery path (authored push, user click, programmatic set). New code speaks CheckedState."
+    text  "兼容写法：以布尔值表示的 CheckedState。Checked 对应 true；Unchecked 和\nUndetermined 对应 false。之所以保留为属性，是因为现有的 .dui 会对它做双向绑定\n（`bIsOn <-> ...`），而绑定解析的是属性；它在每条路径上（作者赋值、用户单击、\n程序设置）都与 CheckedState 保持一致。新代码请使用 CheckedState。"
+    state machine
+}
+
+DreamToggle:BoxNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:BoxNode
+    src   "The parts, in the shape the rest of the framework expects to find them.\n\nUPROPERTY rather than bare pointers on purpose: a part nothing reflects is a part the designer,\nthe write-back and the bindings cannot see. Transient because they are rebuilt on every\ninitialization and never belong to a saved package."
+    text  "各个部件，按框架其余部分期望的形式提供。\n\n有意使用UPROPERTY而非裸指针：无法被反射的部件，设计器、\n回写和绑定都看不到。标记为Transient，因为它们会在每次\n初始化时重建，且从不属于已保存的包。"
+    state machine
+}
+
+DreamToggle:CheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:CheckedState
+    src   "The authored state, in UMG's spelling and with UMG's third value. A click moves it the way UMG's\ncheck box does: Unchecked to Checked, and Checked or Undetermined to Unchecked -- a mixed state\nis cleared by a click, never ticked. A property rather than the getter/setter pair alone,\nbecause the pair alone is invisible: .dui writes properties, the designer lists properties, and\na binding resolves a property -- so a knob that exists only as two UFUNCTIONs is a knob nothing\noutside C++ can turn.\n\nIt is the authored value going in and a mirror of the behaviour's coming out;\nHandleValueChanged keeps it honest when the user is the one who changed it. Where it and\nbIsOn are authored to disagree, this spelling wins."
+    text  "作者设置的状态，采用 UMG 的写法，也采用 UMG 的第三个值。单击会像 UMG 的复选框\n那样改变它：从未选中变为已选中，而已选中或不确定变为未选中——混合状态只会被单击\n清除，绝不会被勾选。它是属性，而不只是 getter/setter 对，因为仅有一对函数是不可见的：\n.dui 写入的是属性，设计器列出的是属性，绑定解析的也是属性——所以一个仅以两个\nUFUNCTION 存在的旋钮，\n是 C++ 之外任何东西都拧不动的旋钮。\n\n它既是传入的作者取值，也是行为输出结果的镜像；\n当改动来自用户时，HandleValueChanged 会让它保持同步。当它与\nbIsOn 的作者取值冲突时，以此写法为准。"
+    state machine
+}
+
+DreamToggle:ClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:ClickMethod
+    src   "WHEN the tick flips, per input kind -- UMG's three enums, surfaced at the control exactly as\nUDreamButton surfaces them and for the same reason: they live on the selectable underneath,\nand a control that never stated them left every check box on the desktop's DownAndUp."
+    text  "勾选标记在何时翻转，按输入类型区分——UMG 的三个枚举，在控件上暴露的方式与\nUDreamButton 完全相同，原因也相同：它们位于底层的可选择对象上，而一个从不声明\n它们的控件会让所有复选框都停留在桌面平台的 DownAndUp 上。"
+    state machine
+}
+
+DreamToggle:GetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetCheckedState
+    src   "The full state. The behaviour is the truth for the two states it can hold; Undetermined is\nthe control's own and reads from here."
+    text  "完整状态。对于行为所能持有的两个状态，以行为为准；Undetermined 是控件自己的\n状态，从此处读取。"
+    state machine
+}
+
+DreamToggle:GetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetIsOn
+    src   "The compatibility spelling of IsChecked(): the behaviour's bool once it exists, bIsOn before."
+    text  "IsChecked() 的兼容写法：行为存在后返回其布尔值，在此之前返回 bIsOn。"
+    state machine
+}
+
+DreamToggle:IsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsChecked
+    src   "UMG's convenience: exactly GetCheckedState() == Checked."
+    text  "UMG 的便捷写法：正好等价于 GetCheckedState() == Checked。"
+    state machine
+}
+
+DreamToggle:IsPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsPressed
+    src   "Whether a pointer is holding the box down -- UMG's IsPressed, which a check box has for the\nsame reason a button does. Asked of the behaviour rather than remembered here: a second copy\nof \"is it down\" goes stale the first time a press ends somewhere this control does not hear."
+    text  "指针是否正按着框 —— UMG 的 IsPressed，复选框拥有它，原因与按钮相同。\n向行为询问，而不是在这里记住：“是否按下”的第二份副本，会在某次按压结束于\n此控件听不到的地方时第一次失效。"
+    state machine
+}
+
+DreamToggle:MarkNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:MarkNode
+    src   "The image mark -- active only while the current state's brush holds an image."
+    text  "图像标记 —— 仅当当前状态的画刷包含图像时激活。"
+    state machine
+}
+
+DreamToggle:OnCheckStateChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnCheckStateChanged
+    src   "UMG's spelling of the same moment, carrying the full state. Fires whenever CheckedState\nchanges -- alongside OnToggleChanged when the bool projection moved too."
+    text  "UMG 对同一时刻的写法，携带完整状态。每当 CheckedState\n变化时触发 —— 当布尔投影也发生变化时，与 OnToggleChanged 一同触发。"
+    state machine
+}
+
+DreamToggle:OnPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnPressed
+    src   "The four pointer moments, re-broadcast from the behaviour exactly as the value change is.\n\nA check box is a button that keeps a value, and every argument for a button speaking about\npress and hover applies to it unchanged -- a sound on press, a tooltip on hover, a row that\nhighlights while the pointer is over its box. Press and release are the POINTER's rather than\nthe click's: a press that slides off releases without ever toggling. A disabled toggle\nbroadcasts neither of the press pair."
+    text  "四个指针时刻，像值变化一样从行为重新广播。\n\n复选框是保存值的按钮，\n所有支持按钮播报按下与悬停的理由都原样适用——按下时播放声音、\n悬停时显示工具提示、指针位于框上时高亮一行。\n按下与释放属于指针，而非点击：滑出后释放的按压从不切换。\n禁用的切换控件不会广播按下这一对中的任何一个。"
+    state machine
+}
+
+DreamToggle:OnToggleChanged {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnToggleChanged
+    src   "Fired by the toggle underneath, re-broadcast here so a consumer never has to reach into the\nparts. The compatibility spelling of OnCheckStateChanged: fires whenever the BOOL projection\nof the state changes (so Unchecked <-> Undetermined moves are silent here)."
+    text  "由底层的切换控件触发，在此重新广播，使使用方无需深入内部部件。\nOnCheckStateChanged 的兼容写法：每当状态的 BOOL 投影变化时触发\n（因此 Unchecked <-> Undetermined 的变动在此静默）。"
+    state machine
+}
+
+DreamToggle:OnValueChangedBP {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:OnValueChangedBP
+    src   "The `<->` convention: two-way bindings synthesize their reverse route against this exact\nname, so a value control carries it alongside its spoken events. Fires with them."
+    text  "`<->` 约定：双向绑定会针对这个确切的\n名称合成其反向路由，因此值控件会连同它一起携带自身事件。与它们一同触发。"
+    state machine
+}
+
+DreamToggle:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetAcceptedMouseButtons
+    src   "Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do."
+    text  "写入位掩码并立即将其推送到行为上，与那三个方法设置器相同。"
+    state machine
+}
+
+DreamToggle:SetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetCheckedState
+    src   "Set any of the three states. Checked/Unchecked go through the behaviour with notify, the path\na click takes; Undetermined parks the behaviour at unchecked without notify and lives on the\ncontrol (see the class comment)."
+    text  "设置三种状态中的任意一种。Checked/Unchecked 通过行为并带通知，走\n点击的路径；Undetermined 在不带通知的情况下将行为置于未选中，并留在\n控件上（见类注释）。"
+    state machine
+}
+
+DreamToggle:SetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetClickMethod
+    src   "Each of the four setters below writes the field and re-pushes it onto the behaviour."
+    text  "下面四个设置器各自写入字段，并重新推送到行为上。"
+    state machine
+}
+
+DreamToggle:SetIsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsChecked
+    src   "UMG's convenience spelling of SetIsOn."
+    text  "UMG 对 SetIsOn 的便捷写法。"
+    state machine
+}
+
+DreamToggle:SetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsOn
+    src   "The compatibility spelling of SetCheckedState(Checked/Unchecked)."
+    text  "SetCheckedState(Checked/Unchecked) 的兼容写法。"
+    state machine
+}
+
+DreamToggle:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetStyle
+    src   "This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat."
+    text  "本实例的完整外观，整体替换并推送。注意事项参见 UDreamButton::SetStyle。"
+    state machine
+}
+
+DreamToggle:Style {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:Style
+    src   "This instance's own look. The project sheet wins while StyleSource says so AND a sheet\nactually exists; with no sheet in the project this IS the look in effect -- which is why\nit stays editable instead of being gated on the enum: the old edit condition greyed the\nexact values that were driving the control."
+    text  "此实例自身的外观。当 StyleSource 如此指定且确实存在样式表时，\n项目样式表优先；项目中没有任何样式表时，这就是实际生效的外观——因此\n它保持可编辑，而不是由枚举控制：旧的编辑条件恰恰把\n正在驱动控件的那些值置灰了。"
+    state machine
+}
+
+EDreamCheckState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#EDreamCheckState
+    src   "The three states a check box can show -- UMG's ECheckBoxState vocabulary in our own type, because\nthis header must not include UMG and because .dui, the designer and Blueprint all see a UENUM the\nsame way regardless.\n\nUndetermined is authorable, not clickable-into: authored (a mixed multi-select, a folder of\npart-checked children), it stands until the user clicks, and the click lands as UNCHECKED -- the\nrule UMG's check box follows (SCheckBox::ToggleCheckedState takes Checked or Undetermined to\nUnchecked, and only Unchecked to Checked), so a mixed state is cleared by a click, never ticked."
+    text  "复选框可以显示的三种状态——在我们自己的类型中使用 UMG 的 ECheckBoxState 词汇，因为\n此头文件不得包含 UMG，也因为 .dui、设计器和蓝图都以\n相同方式看待 UENUM。\n\nUndetermined 可被创作，但不能通过点击进入：被创作时（混合多选、\n包含部分选中子项的文件夹），它保持不变，直到用户点击，而点击会落入 UNCHECKED——\n这是 UMG 复选框遵循的规则（SCheckBox::ToggleCheckedState 将 Checked 或\nUndetermined 变为 Unchecked，且仅将 Unchecked 变为 Checked），因此混合状态会被点击清除，而绝不会被勾选。"
+    state machine
+}
+
+namespace UObjectCategory
+
+Toggle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetAcceptedMouseButtons
+    src   "Toggle"
+    // from the engine's zh-Hans
+    text  "切换"
+    state draft
+}

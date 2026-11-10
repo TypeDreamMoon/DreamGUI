@@ -1,0 +1,210 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIModalResultDynamicDelegate__DelegateSignature:Result {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalResultDynamicDelegate__DelegateSignature:Result
+    src   "Result"
+    // from the engine's zh-Hans
+    text  "结果"
+    state draft
+}
+
+DreamUIModalScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalScope
+    src   "Dream UIModal Scope"
+    text  "Dream UI模态范围"
+    state machine
+}
+
+DreamUIModalSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem
+    src   "Dream UIModal Subsystem"
+    text  "Dream UI模态子系统"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseAllModals:InResult {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals:InResult
+    src   "In Result"
+    text  "结果"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseAllModals:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseTopModal:InResult {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal:InResult
+    src   "In Result"
+    text  "结果"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseTopModal:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:Get:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:Get:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIModalSubsystem:Get:WorldContextObject {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:Get:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIModalSubsystem:GetActiveModalWidget:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:GetActiveModalWidget:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIModalSubsystem:GetModalDepth:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetModalDepth:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:GetModalDepth:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetModalDepth:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIModalSubsystem:IsAnyModalActive:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsAnyModalActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIModalSubsystem:IsModalActive:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsModalActive:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:IsModalActive:ReturnValue {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsModalActive:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIModalSubsystem:ShowModal:InDialogClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:ShowModal:InDialogClass
+    src   "In Dialog Class"
+    text  "对话框类"
+    state machine
+}
+
+DreamUIModalSubsystem:ShowModal:InUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:ShowModal:InUserIndex
+    src   "In User Index"
+    text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:ShowModal:OnResult {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:ShowModal:OnResult
+    src   "On Result"
+    text  "结果时"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIModalScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalScope
+    src   "The navigation scope a modal wears. Exists to give Back one meaning here -- close the modal with\nthe \"Back\" result -- and to keep a runtime-added scope from pushing itself twice (the base class\nauto-pushes on enable; the subsystem pushes explicitly, once, after configuring it)."
+    text  "模态所使用的导航范围。它的存在使“返回”在这里只有一个含义——以“Back”结果关闭模态——\n并防止运行时添加的范围重复压入自身（基类在启用时会自动压入；\n子系统在配置完成后显式压入一次）。"
+    state machine
+}
+
+DreamUIModalSubsystem {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem
+    src   "Show a dialog, await its result, keep the world honest underneath: the scrim eats every pointer\nevent, the navigation scope confines gamepad focus and restores it afterwards, and Back means\n\"close with the Back result\".\n\nModals NEST. A second ShowModal while one is up puts its dialog on top of the first -- its own\nscrim, its own scope, a higher sort order -- and closing it reveals the one underneath, still\nlive and still waiting for its own result. That is what the name CloseTopModal always promised;\nwhat it used to do was close the only modal there could be, because a second ShowModal was queued\nuntil the first finished. Queuing made the ordinary \"are you sure?\" raised from a settings dialog\narrive AFTER the dialog that asked it had already closed, with its answer delivered to nobody.\n\nThe pieces all predate this: UUIEventBlocker blocks, UDreamUINavigationStack confines and\nrestores, the screen subsystem layers. What no piece did was compose them or carry a result back\nto a caller -- which is the entire job of a modal service.\n\nThe dialog itself is any UDreamUserWidget class. Its buttons end the modal by calling\nCloseTopModal with whatever result name they mean (\"Confirm\", \"Cancel\", ...)."
+    text  "显示一个对话框，等待它的结果，同时让底层世界保持正常：遮罩吞掉所有指针事件，\n导航范围限制手柄焦点并在之后恢复，而“返回”意味着\n“以Back结果关闭”。\n\n模态可以嵌套。当已有模态显示时再次调用ShowModal，会把它的对话框放在第一个之上——\n自有遮罩、自有范围、更高的排序顺序——关闭它会露出下面那个，\n它仍然存活，仍然在等待自己的结果。这正是CloseTopModal这个名字一直承诺的；\n它过去的行为只是关闭唯一可能存在的模态，因为第二次ShowModal会被排队\n直到第一个结束。排队使得从设置对话框弹出的普通“确定吗？”\n在提问的对话框已经关闭之后才到达，而它的答案无人接收。\n\n这些部件都早于它存在：UUIEventBlocker负责阻挡，UDreamUINavigationStack负责限制与\n恢复，屏幕子系统负责分层。但没有任何部件把它们组合起来，或把结果回传\n给调用方——而这正是模态服务的全部职责。\n\n对话框本身可以是任意UDreamUserWidget控件类。它的按钮通过调用\nCloseTopModal并传入各自想要的结果名（“Confirm”、“Cancel”等）来结束模态。"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseAllModals {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals
+    src   "Close the current modals of InUserIndex, top down. Dialogs opened by callbacks belong to a later request."
+    text  "从最上层开始，关闭InUserIndex当前的模态。由回调打开的对话框属于稍后的请求。"
+    state machine
+}
+
+DreamUIModalSubsystem:CloseTopModal {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal
+    src   "Close InUserIndex's topmost modal with InResult and deliver it; the one underneath becomes top."
+    text  "以InResult关闭InUserIndex最上层的模态并交付该结果；下面那个成为最上层。"
+    state machine
+}
+
+DreamUIModalSubsystem:GetActiveModalWidget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget
+    src   "InUserIndex's topmost dialog, or null when that player has no modal up."
+    text  "InUserIndex最上层的对话框；该玩家没有显示模态时为null。"
+    state machine
+}
+
+DreamUIModalSubsystem:GetModalDepth {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetModalDepth
+    src   "How many modals InUserIndex has stacked. Zero when none is up; the top one is what Back closes."
+    text  "InUserIndex已堆叠的模态数量。没有模态时为0；最上层的那一个就是“返回”所关闭的。"
+    state machine
+}
+
+DreamUIModalSubsystem:IsAnyModalActive {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsAnyModalActive
+    src   "True when ANY player has a modal up. For code that pauses the world rather than one view."
+    text  "任一玩家显示模态时为true。适用于暂停整个世界而非单个视图的代码。"
+    state machine
+}
+
+DreamUIModalSubsystem:ShowModal {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:ShowModal
+    src   "Show InDialogClass modally for InUserIndex, on top of any modal that player already has up.\nOnResult fires exactly once.\n\nThe player's open popups -- a dropdown's list, a menu -- close first (UDreamUIPopupLayer, reason Replaced): the\nmodal comes up in front of them, and the popups hear a press and Back before anything else does, so one left open\nbehind the scrim would take the modal's first click and its first Back.\n\nEvery call takes a user index because a modal is a per-PLAYER thing: on a split screen, player\none's \"are you sure?\" must not scrim player two's half of the display, must not take player\ntwo's gamepad focus, and must not be closed by player two's Back. There was one stack and one\nscrim for the whole world, so all three of those happened."
+    text  "为InUserIndex以模态方式显示InDialogClass，置于该玩家已打开的任何模态之上。\nOnResult只会触发一次。\n\n该玩家已打开的弹窗——下拉列表、菜单——会先关闭（UDreamUIPopupLayer，原因Replaced）：\n模态会出现在它们前面，而弹窗会比任何其他对象更早收到按下和返回事件，因此留在\n遮罩后面的弹窗会抢走模态的第一次点击和第一次返回。\n\n每次调用都带用户索引，因为模态是按玩家划分的：在分屏下，玩家\n一的“确定吗？”不能遮挡玩家二的半屏，不能夺走玩家\n二的手柄焦点，也不能被玩家二的返回关闭。以前整个世界只有一个栈和一个\n遮罩，所以这三种情况都发生过。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|Modal {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals
+    src   "DreamGUI|Modal"
+    text  "DreamGUI 模态窗口"
+    state machine
+}

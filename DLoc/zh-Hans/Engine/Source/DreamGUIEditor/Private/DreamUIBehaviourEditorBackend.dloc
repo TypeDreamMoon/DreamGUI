@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIBehaviourEditorBackend
+
+PromoteRetired {
+    at    Source/DreamGUIEditor/Private/DreamUIBehaviourEditorBackend.cpp
+    src   "Widget variables are minted by the Widget Blueprint compiler from the display names in the hierarchy. Rename the widget in the designer instead."
+    text  "控件变量由控件蓝图编译器从层级结构中的显示名称生成。请在设计器中重命名控件。"
+    state machine
+}
+
+AddEventRetired {
+    at    Source/DreamGUIEditor/Private/DreamUIBehaviourEditorBackend.cpp
+    src   "Bind the event in the Widget Blueprint's own graph; it has the widget variables the handler needs."
+    text  "在控件蓝图的自身图中绑定事件；该图中包含处理程序所需的控件变量。"
+    state machine
+}

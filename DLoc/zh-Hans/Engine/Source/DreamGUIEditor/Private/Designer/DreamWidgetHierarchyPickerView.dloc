@@ -1,0 +1,11 @@
+dloc 1
+culture zh-Hans
+namespace DreamWidgetHierarchyPickerView
+
+SearchWidgets {
+    at    Source/DreamGUIEditor/Private/Designer/DreamWidgetHierarchyPickerView.cpp
+    src   "Search Widgets"
+    // from the engine's zh-Hans
+    text  "搜索控件"
+    state draft
+}

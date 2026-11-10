@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIConvertBlueprintsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUIConvertBlueprintsCommandlet.h#DreamUIConvertBlueprintsCommandlet
+    src   "Dream UIConvert Blueprints Commandlet"
+    text  "Dream UI 蓝图转换命令"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUIConvertBlueprintsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUIConvertBlueprintsCommandlet.h#DreamUIConvertBlueprintsCommandlet
+    src   "Converts hand-authored DreamUI Widget Blueprints to `.dui` in bulk, for a migration or a CI check.\n\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints\n        (-Assets=/Game/UI/WBP_A,/Game/UI/WBP_B | -Path=/Game/UI) [-DryRun] [-AllowLoss]\n\nEach Blueprint gets the report the editor shows (FDreamUIBlueprintConverter): what cannot be converted, what would not\nreach the file. -DryRun stops there and changes nothing. Otherwise each is converted to its default file under DUI/,\nwith its `_PreDui` backup, and both packages are saved -- except one with anything that would not reach the file,\nwhich is skipped unless -AllowLoss says the loss is accepted. Exits non-zero when any Blueprint was skipped or failed."
+}

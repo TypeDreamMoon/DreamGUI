@@ -1,0 +1,550 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIAtlasSettings {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings
+    src   "Dream UIAtlas Settings"
+    text  "Dream UI 图集设置"
+    state machine
+}
+
+DreamUIAtlasSettings:AtlasTextureFilter {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureFilter
+    src   "Atlas Texture Filter"
+    text  "图集纹理过滤"
+    state machine
+}
+
+DreamUIAtlasSettings:AtlasTextureMaxSize {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureMaxSize
+    src   "Atlas Texture Max Size"
+    text  "图集纹理最大尺寸"
+    state machine
+}
+
+DreamUIAtlasSettings:AtlasTextureUseSRGB {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureUseSRGB
+    src   "Atlas Texture Use SRGB"
+    text  "图集纹理是否使用 SRGB"
+    state machine
+}
+
+DreamUIAtlasSettings:SpaceBetweenSprites {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:SpaceBetweenSprites
+    src   "Space Between Sprites"
+    text  "精灵间距"
+    state machine
+}
+
+DreamUIEditorSettings {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings
+    src   "Dream UIEditor Settings"
+    text  "Dream UI 编辑器设置"
+    state machine
+}
+
+DreamUIEditorSettings:bDrawHelperFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bDrawHelperFrame
+    src   "Draw Helper Frame"
+    text  "绘制辅助线框"
+    state machine
+}
+
+DreamUIEditorSettings:bDrawSelectableNavigationVisualizer {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bDrawSelectableNavigationVisualizer
+    src   "Draw Selectable Navigation Visualizer"
+    text  "绘制可选择导航视觉化器"
+    state machine
+}
+
+DreamUIEditorSettings:bShowDesignResolutionGuides {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bShowDesignResolutionGuides
+    src   "Show Design Resolution Guides"
+    text  "显示设计分辨率辅助线"
+    state machine
+}
+
+DreamUIEditorSettings:bShowLayoutDebugVisualization {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bShowLayoutDebugVisualization
+    src   "Show Layout Debug Visualization"
+    text  "显示布局调试视觉化"
+    state machine
+}
+
+DreamUISettings {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings
+    src   "Dream UISettings"
+    text  "Dream UI 设置"
+    state machine
+}
+
+DreamUISettings:AntiAliasingMethod {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AntiAliasingMethod
+    src   "Anti-Aliasing Method"
+    // from the engine's zh-Hans
+    text  "抗锯齿方法"
+    state draft
+}
+
+DreamUISettings:AsyncGlyphSyncBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AsyncGlyphSyncBudgetPerFrame
+    src   "Async Glyph Sync Budget Per Frame"
+    text  "每帧异步字形同步预算"
+    state machine
+}
+
+DreamUISettings:AtlasSettingForSpecificPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AtlasSettingForSpecificPackingTag
+    src   "Atlas Setting for Specific Packing Tag"
+    text  "特定打包标签的图集设置"
+    state machine
+}
+
+DreamUISettings:AutoBatchThreshold {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AutoBatchThreshold
+    src   "Auto Batch Threshold"
+    text  "自动批处理阈值"
+    state machine
+}
+
+DreamUISettings:bAsyncGlyphRasterization {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bAsyncGlyphRasterization
+    src   "Async Glyph Rasterization"
+    text  "异步字形渲染"
+    state machine
+}
+
+DreamUISettings:bFrustumCulling {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bFrustumCulling
+    src   "Frustum Culling"
+    // from the engine's zh-Hans
+    text  "视锥体剔除"
+    state draft
+}
+
+DreamUISettings:bScreenSpaceUIAffectByGamePause {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bScreenSpaceUIAffectByGamePause
+    src   "ScreenSpaceUI Affect by GamePause"
+    text  "屏幕空间 UI 受游戏暂停影响"
+    state machine
+}
+
+DreamUISettings:bScreenSpaceUIAffectByTimeDilation {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bScreenSpaceUIAffectByTimeDilation
+    src   "ScreenSpaceUI Affect by TimeDilation"
+    text  "屏幕空间 UI 受时间膨胀影响"
+    state machine
+}
+
+DreamUISettings:bUseBuiltInUIShader {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bUseBuiltInUIShader
+    src   "Use Built-in UI Shader"
+    text  "使用内置 UI 材质"
+    state machine
+}
+
+DreamUISettings:bWorldSpaceUIAffectByGamePause {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bWorldSpaceUIAffectByGamePause
+    src   "WorldSpaceUI Affect by GamePause"
+    text  "世界空间 UI 受游戏暂停影响"
+    state machine
+}
+
+DreamUISettings:bWorldSpaceUIAffectByTimeDilation {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bWorldSpaceUIAffectByTimeDilation
+    src   "WorldSpaceUI Affect by TimeDilation"
+    text  "世界空间 UI 受时间膨胀影响"
+    state machine
+}
+
+DreamUISettings:CoverageGlyphSyncBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:CoverageGlyphSyncBudgetPerFrame
+    src   "Coverage Glyph Sync Budget Per Frame"
+    text  "覆盖字形同步预算 (每帧)"
+    state machine
+}
+
+DreamUISettings:DefaultAtlasSetting {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:DefaultAtlasSetting
+    src   "Default Atlas Setting"
+    text  "默认图集设置"
+    state machine
+}
+
+DreamUISettings:MaxCoverageCells {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MaxCoverageCells
+    src   "Max Coverage Cells"
+    text  "最大覆盖单元"
+    state machine
+}
+
+DreamUISettings:MaxFontAtlasSlices {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MaxFontAtlasSlices
+    src   "Max Font Atlas Slices"
+    text  "最大字体图集切片"
+    state machine
+}
+
+DreamUISettings:MSAASampleCount {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MSAASampleCount
+    src   "MSAA Sample Count"
+    // from the engine's zh-Hans
+    text  "MSAA取样数"
+    state draft
+}
+
+DreamUISettings:ParkedWidgetLifetimeSeconds {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:ParkedWidgetLifetimeSeconds
+    src   "Parked Widget Lifetime Seconds"
+    text  "控件停放时的生命周期（秒）"
+    state machine
+}
+
+DreamUISettings:PriorityInSceneViewExtension {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:PriorityInSceneViewExtension
+    src   "Priority in Scene View Extension"
+    text  "场景视图扩展中的优先级"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_1024x1024 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_1024x1024
+    src   "1024x1024"
+    text  "1024x1024"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_2048x2048 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_2048x2048
+    src   "2048x2048"
+    text  "2048x2048"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_256x256 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_256x256
+    src   "256x256"
+    text  "256x256"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_4096x4096 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_4096x4096
+    src   "4096x4096"
+    text  "4096x4096"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_512x512 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_512x512
+    src   "512x512"
+    text  "512x512"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_8192x8192 {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_8192x8192
+    src   "8192x8192"
+    text  "8192x8192"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType.SIZE_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType:SIZE_MAX
+    src   "SIZE MAX"
+    // from the engine's zh-Hans
+    text  "尺寸最大"
+    state draft
+}
+
+EDreamUIRendererAntiAliasingMethod.EDreamUIRendererAntiAliasingMethod_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererAntiAliasingMethod:EDreamUIRendererAntiAliasingMethod_MAX
+    src   "EDream UIRenderer Anti Aliasing Method MAX"
+    text  "抗锯齿方法 (最大值)"
+    state machine
+}
+
+EDreamUIRendererAntiAliasingMethod.MSAA {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererAntiAliasingMethod:MSAA
+    src   "Multisample Anti-Aliasing (MSAA)"
+    // from the engine's zh-Hans
+    text  "多重取样抗锯齿（MSAA）"
+    state draft
+}
+
+EDreamUIRendererAntiAliasingMethod.None {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererAntiAliasingMethod:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIRendererMSAASampleCount.EDreamUIRendererMSAASampleCount_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:EDreamUIRendererMSAASampleCount_MAX
+    src   "EDream UIRenderer MSAASample Count MAX"
+    text  "多重采样抗锯齿 (MSAA) 采样数 (最大值)"
+    state machine
+}
+
+EDreamUIRendererMSAASampleCount.Eight {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:Eight
+    src   "8x MSAA"
+    text  "8x MSAA"
+    state machine
+}
+
+EDreamUIRendererMSAASampleCount.Four {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:Four
+    src   "4x MSAA"
+    text  "4x MSAA"
+    state machine
+}
+
+EDreamUIRendererMSAASampleCount.Hidden {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:Hidden
+    src   "Hidden"
+    // from the engine's zh-Hans
+    text  "隐藏"
+    state draft
+}
+
+EDreamUIRendererMSAASampleCount.One {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:One
+    src   "No MSAA"
+    text  "无 MSAA"
+    state machine
+}
+
+EDreamUIRendererMSAASampleCount.Two {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount:Two
+    src   "2x MSAA"
+    text  "2x MSAA"
+    state machine
+}
+
+namespace UObjectCategory
+
+Sprite {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureMaxSize
+    src   "Sprite"
+    // from the engine's zh-Hans
+    text  "精灵"
+    state draft
+}
+
+"DreamGUI Editor" {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bDrawHelperFrame
+    src   "DreamGUI Editor"
+    text  "DreamGUI 编辑器"
+    state machine
+}
+
+"DreamGUI Editor|Layout" {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bShowLayoutDebugVisualization
+    src   "DreamGUI Editor|Layout"
+    text  "DreamGUI 编辑器 | 布局"
+    state machine
+}
+
+Game {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bScreenSpaceUIAffectByGamePause
+    src   "Game"
+    // from the engine's zh-Hans
+    text  "游戏"
+    state draft
+}
+
+Runtime {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:ParkedWidgetLifetimeSeconds
+    src   "Runtime"
+    // from the engine's zh-Hans
+    text  "运行时"
+    state draft
+}
+
+Rendering {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:PriorityInSceneViewExtension
+    src   "Rendering"
+    // from the engine's zh-Hans
+    text  "渲染"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIAtlasSettings:AtlasTextureMaxSize {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureMaxSize
+    src   "when packing sprites into one atlas texture, DreamUI will use this size to create a blank texture then insert sprites."
+    text  "当将精灵打包到单个纹理集中时，DreamUI 将使用此大小创建一个空白纹理，然后插入精灵。"
+    state machine
+}
+
+DreamUIAtlasSettings:AtlasTextureUseSRGB {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:AtlasTextureUseSRGB
+    src   "weather or not use srgb for generate atlas texture"
+    text  "是否使用 srgb 生成纹理集。"
+    state machine
+}
+
+DreamUIAtlasSettings:SpaceBetweenSprites {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIAtlasSettings:SpaceBetweenSprites
+    src   "space between two sprites when package into atlas"
+    text  "打包到纹理集中时，精灵之间的间距。"
+    state machine
+}
+
+DreamUIEditorSettings:bDrawHelperFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bDrawHelperFrame
+    src   "Draw helper box on selected UI element."
+    text  "在选定的 UI 元素上绘制辅助框。"
+    state machine
+}
+
+DreamUIEditorSettings:bDrawSelectableNavigationVisualizer {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bDrawSelectableNavigationVisualizer
+    src   "Draw navigation visualizer"
+    text  "绘制导航可视化器。"
+    state machine
+}
+
+DreamUIEditorSettings:bShowDesignResolutionGuides {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bShowDesignResolutionGuides
+    src   "Overlay common device resolutions on the designer canvas, like UMG's designer surface."
+    text  "在设计器画布上覆盖常用设备分辨率，类似于 UMG 的设计器表面。"
+    state machine
+}
+
+DreamUIEditorSettings:bShowLayoutDebugVisualization {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUIEditorSettings:bShowLayoutDebugVisualization
+    src   "Show selected widget measurement, arrangement, slot, ownership, and clipping diagnostics."
+    text  "显示所选控件的测量、排列、插槽、归属和裁剪诊断信息。"
+    state machine
+}
+
+DreamUISettings {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings
+    src   "for DreamUI config"
+    text  "用于 DreamUI 配置。"
+    state machine
+}
+
+DreamUISettings:AntiAliasingMethod {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AntiAliasingMethod
+    src   "This will affect all DreamUI-Renderer (ScreenSpaceOverlay, WorldSpace-DreamUIRenderer, RenderTarget).\nTested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).\n\n\"Not valid\" is enforced rather than merely stated: FDreamUIRenderer asks the RHI whether the\nrunning shader platform supports MSAA and falls back to no anti-aliasing when it does not,\nwarning once. That keeps a project that turns MSAA on globally -- the ordinary thing to do --\nfrom carrying it onto a platform that cannot honour it. Override this per platform\n(a [/Script/DreamGUI.DreamUISettings] section in the platform config) to make the choice\nexplicit rather than letting the fallback make it."
+    text  "这将影响所有 DreamUI-Renderer（ScreenSpaceOverlay、WorldSpace-DreamUIRenderer、RenderTarget）。\n已在 Windows DX11 和 DX12、Mac（intel）、Android（vulkan）上测试，在 Android（gles）上无效。\n\n“无效”是强制执行的结果，而不只是声明：FDreamUIRenderer 会向 RHI 询问\n当前运行的着色器平台是否支持 MSAA，不支持时回退为不抗锯齿，\n并警告一次。这样可避免那些在全局开启 MSAA 的项目（这是常见做法）\n把它带到无法支持它的平台上。可按平台重载此项\n（平台配置中的 [/Script/DreamGUI.DreamUISettings] 节），以显式做出选择，\n而不是让回退逻辑代为决定。"
+    state machine
+}
+
+DreamUISettings:AsyncGlyphSyncBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AsyncGlyphSyncBudgetPerFrame
+    src   "How many new glyphs a frame may generate on the game thread before the rest go to the worker."
+    text  "每帧可以由游戏线程生成多少个新字形，然后将它们发送到工作线程。"
+    state machine
+}
+
+DreamUISettings:AtlasSettingForSpecificPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AtlasSettingForSpecificPackingTag
+    src   "override atlasSettings for your PackingTag, otherwise use defaultAtlasSettings"
+    text  "覆盖您的 PackingTag 的 atlasSettings，否则使用默认 atlasSettings。"
+    state machine
+}
+
+DreamUISettings:AutoBatchThreshold {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:AutoBatchThreshold
+    src   "3D UI elements is almost not possible to check overlap, so a 3D UI element only allowed to batch to last draw-call from draw-call list, as long as common check is passed (material/ texture).\nOnly 2D elements are easier to check overlap and batch together.\n             Rules for telling if a UI element is 2D (convert the UI element in Canvas's relative space):\n                     Relative location.Z less than threshold.\n                     Relative rotation.X/Y less than threshold.\nThis is the threshold for determine if the UI element is 2D."
+    text  "3D UI 元素几乎无法检查重叠，因此 3D UI 元素只能批处理到最后一个绘制调用，只要通过了常见的检查（材质/纹理）。\n2D 元素更容易检查重叠并一起批处理。\n             判断 UI 元素是否为 2D 的规则（将 UI 元素转换为 Canvas 的相对空间）：\n                     相对位置的 Z 值小于阈值。\n                     相对旋转的 X/Y 值小于阈值。\n这是确定 UI 元素是否为 2D 的阈值。"
+    state machine
+}
+
+DreamUISettings:bAsyncGlyphRasterization {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bAsyncGlyphRasterization
+    src   "Rasterize outline (MTSDF) glyphs on a worker thread. A glyph that is not in the atlas yet is laid\nout with its real advance and drawn once it lands, instead of stalling the frame while every new\nglyph is generated. The first few glyphs of a frame are still generated synchronously so short\nlabels appear whole; see AsyncGlyphSyncBudgetPerFrame."
+    text  "在工作线程上光栅化轮廓（MTSDF）字形。尚未进入图集的字形会按\n其真实步进参与布局，并在生成完成后绘制，而不是在生成每个新字形时\n阻塞当前帧。一帧中最开始的几个字形仍会同步生成，以便短标签完整显示；\n参见 AsyncGlyphSyncBudgetPerFrame。"
+    state machine
+}
+
+DreamUISettings:bFrustumCulling {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bFrustumCulling
+    src   "Enable frustum culling for DreamGUI Renderer."
+    text  "启用 DreamGUI 渲染器的视锥体裁剪。"
+    state machine
+}
+
+DreamUISettings:bScreenSpaceUIAffectByGamePause {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bScreenSpaceUIAffectByGamePause
+    src   "If false, ScreenSpaceUI can still do interaction and animation when GamePause"
+    text  "如果为 false，则 ScreenSpaceUI 可以在游戏暂停时继续进行交互和动画。"
+    state machine
+}
+
+DreamUISettings:bUseBuiltInUIShader {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:bUseBuiltInUIShader
+    src   "Draw widgets that have no custom material with DreamGUI's built-in shader instead of the default UI material.\nOnly applies to canvases rendered by the DreamUI renderer (ScreenSpaceOverlay, RenderTarget, WorldSpace-DreamUI);\nUE-rendered world-space canvases always use a material. Text effects (outline, underlay, glow, MTSDF fonts)\nneed this on."
+    text  "使用 DreamGUI 内置着色器而非默认 UI 材质来绘制没有自定义材质的控件。\n仅适用于由 DreamUI 渲染器渲染的画布（ScreenSpaceOverlay、RenderTarget、WorldSpace-DreamUI）；\n由 UE 渲染的世界空间画布始终使用材质。文本效果（描边、衬底、发光、MTSDF 字体）\n需要开启此项。"
+    state machine
+}
+
+DreamUISettings:CoverageGlyphSyncBudgetPerFrame {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:CoverageGlyphSyncBudgetPerFrame
+    src   "How many new small-text coverage glyphs a frame may rasterize on the game thread before the rest go to the worker. A\nbudget of its own, separate from the field glyphs': a coverage glyph is far cheaper to make than a field, and an\nitem whose coverage glyph is still on the worker draws from the field meanwhile rather than not at all."
+    text  "一帧内可在游戏线程上光栅化的新小文本覆盖字形数量，其余的交由工作线程处理。\n这是一份独立的预算，与距离场字形的预算分开：覆盖字形的生成成本远低于距离场字形，\n而某项的覆盖字形仍在工作线程上处理时，该项会先以距离场字形绘制，而不是完全不绘制。"
+    state machine
+}
+
+DreamUISettings:DefaultAtlasSetting {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:DefaultAtlasSetting
+    src   "default atlas setting"
+    text  "默认纹理图设置。"
+    state machine
+}
+
+DreamUISettings:MaxCoverageCells {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MaxCoverageCells
+    src   "How many of a font's atlas cells (512x512 on a distance-field font, so about 1 MB each) its small-text coverage glyphs\nmay borrow. They are packed apart from the field glyphs, from the same pool of cells; when they need more than this,\nevery coverage glyph of the font is flushed at the next frame boundary and the cells are given back, which costs a\nrepaint of the texts drawing from them and no layout. The field glyphs are never touched by it."
+    text  "字体的图集单元（在距离场字体上为 512x512，因此每个约 1 MB）中，可供其小文本\n覆盖字形借用的数量。它们与距离场字形分开打包，但来自同一个单元池；当需要超过此数量时，\n该字体的所有覆盖字形会在下一个帧边界刷新，并归还这些单元，代价是重绘使用它们的文本，\n而不会触发重新布局。距离场字形不受影响。"
+    state machine
+}
+
+DreamUISettings:MaxFontAtlasSlices {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MaxFontAtlasSlices
+    src   "How many Texture2DArray slices a font's glyph atlas may grow to. The atlas only grows -- a\nrect-packed atlas cannot hand one glyph's rectangle to a glyph of another size without repacking,\nso there is no \"evict one glyph\" -- and when it reaches this budget the whole cache is thrown away\nand refilled on demand, which is what Slate's own font cache does when its atlas fills. The atlas\nthat fills grows one slice for the rest of the frame and is flushed before the next frame's first\nglyph, never in the middle of a layout, and every text using the font is re-laid-out then, so a\nflush costs one frame. When the glyphs on screen need more than the budget, the atlas fills again\nbefore it has settled after a flush; it then grows up to twice the budget instead of flushing every\nframe. If either happens repeatedly, raise this or the atlas texture size, or use fewer distinct\nfont sizes (a bitmap font caches a separate glyph per size, and Best Fit walks several sizes per search).\nClamped to what the RHI can address (GMaxTextureArrayLayers)."
+    text  "字体的字形图集最多可增长到多少个 Texture2DArray 切片。图集只会增长——一个\n按矩形打包的图集无法在不重新打包的情况下把某个字形的矩形让给另一尺寸的字形，\n因此不存在“淘汰单个字形”——当它达到此预算时，整个缓存会被丢弃\n并按需重新填充，这正是 Slate 自身的字体缓存在其图集填满时的做法。填满的\n图集会在该帧剩余时间内增长一个切片，并在下一帧的第一个字形之前刷新，\n绝不会在布局过程中刷新，届时所有使用该字体的文本都会重新布局，因此一次\n刷新会花费一帧。当屏幕上的字形需要的量超过预算时，图集会在一次刷新后尚未\n稳定之前再次填满；此时它会增长到预算的两倍，而不是每帧都刷新。\n如果上述任一情况反复出现，请调高此值或图集纹理尺寸，或减少不同字体尺寸\n的数量（位图字体为每个尺寸缓存单独的字形，而 Best Fit 每次搜索会遍历多个尺寸）。\n会被限制在 RHI 可寻址的范围内（GMaxTextureArrayLayers）。"
+    state machine
+}
+
+DreamUISettings:MSAASampleCount {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:MSAASampleCount
+    src   "This will affect all DreamUI-Renderer (ScreenSpaceOverlay, WorldSpace-DreamUIRenderer, RenderTarget).\nTested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).\n\nIgnored, with the same one-time warning, wherever the RHI reports no MSAA support -- see\nAntiAliasingMethod above."
+    text  "这将影响所有 DreamUI-Renderer（ScreenSpaceOverlay、WorldSpace-DreamUIRenderer、RenderTarget）。\n已在 Windows DX11 和 DX12、Mac（intel）、Android（vulkan）上测试，在 Android（gles）上无效。\n\n在 RHI 报告不支持 MSAA 的情况下会被忽略，并给出相同的一次性警告——参见上文的\nAntiAliasingMethod。"
+    state machine
+}
+
+DreamUISettings:ParkedWidgetLifetimeSeconds {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:ParkedWidgetLifetimeSeconds
+    src   "Seconds a widget may sit created-but-never-added before it is reported and destroyed. Zero\nturns the check off, which is the default.\n\nThis is a development-time leak detector, not a lifetime policy. A created widget is held by\nthe DreamUI manager, so forgetting to add one is invisible until the world tears down -- but a\nlegitimately slow path (waiting on an async load, say) looks exactly the same from here, and\ndestroying that caller's widget would be a fault of our own making. Turn it on to find leaks,\nleave it off in shipping."
+    text  "控件在已创建但从未添加的状态下可停留的秒数，超过后会报告并将其销毁。值为零时\n会关闭该检查，这也是默认值。\n\n这是开发期的泄漏检测，而不是生命周期策略。已创建的控件由\nDreamUI 管理器持有，因此忘记添加某个控件在世界销毁之前是不可见的——但一条\n合法的较慢路径（例如等待异步加载）从这里看完全一样，销毁\n该调用方的控件反而会是我们自己造成的错误。开启它以查找泄漏，\n在发布版本中保持关闭。"
+    state machine
+}
+
+DreamUISettings:PriorityInSceneViewExtension {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#DreamUISettings:PriorityInSceneViewExtension
+    src   "DreamUI Renderer use ISceneViewExtension to render, so this value can sort with other view extensions, higher comes first."
+    text  "DreamUI 渲染器使用 ISceneViewExtension 进行渲染，因此此值可以用于对其他视图扩展进行排序，值越大优先级越高。"
+    state machine
+}
+
+EDreamUIAtlasTextureSizeType {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIAtlasTextureSizeType
+    src   "Atlas texture size must be power of 2"
+    text  "纹理大小必须是 2 的幂。"
+    state machine
+}
+
+EDreamUIRendererMSAASampleCount {
+    at    Source/DreamGUI/Public/Core/DreamUISettings.h#EDreamUIRendererMSAASampleCount
+    src   "Anti Aliasing(MSAA) for DreamUI Renderer"
+    text  "DreamUI 渲染器的抗锯齿 (MSAA) 设置。"
+    state machine
+}

@@ -1,0 +1,386 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayout
+    src   "Dream Layout"
+    text  "布局"
+    state machine
+}
+
+DreamLayoutAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation
+    src   "Dream Layout Animation"
+    text  "布局动画"
+    state machine
+}
+
+DreamLayoutAnimation:GetLayoutContainer:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:GetLayoutContainer:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayoutAnimation:OwnerLayoutContainer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:OwnerLayoutContainer
+    src   "LayoutContainer"
+    text  "布局容器"
+    state machine
+}
+
+DreamLayoutAnimation:ReceiveOnApplyLayoutResults:ResultTweenerArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:ReceiveOnApplyLayoutResults:ResultTweenerArray
+    src   "Result Tweener Array"
+    text  "结果缓动器数组"
+    state machine
+}
+
+DreamLayoutAnimation:ReceiveOnApplyLayoutResults:SnapshotDataArray {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:ReceiveOnApplyLayoutResults:SnapshotDataArray
+    src   "Snapshot Data Array"
+    text  "快照数据数组"
+    state machine
+}
+
+DreamLayoutAnimation_CommonTween {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_CommonTween
+    src   "Dream Layout Animation Common Tween"
+    text  "布局动画通用缓动"
+    state machine
+}
+
+DreamLayoutAnimation_CommonTween:Duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_CommonTween:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamLayoutAnimation_CommonTween:Ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_CommonTween:Ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamLayoutAnimation_CommonTween:EaseCurve {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_CommonTween:EaseCurve
+    src   "Ease Curve"
+    // from the engine's zh-Hans
+    text  "Ease Curve"
+    state draft
+}
+
+DreamLayoutAnimation_SlideIn {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn
+    src   "Dream Layout Animation Slide In"
+    text  "布局动画滑入"
+    state machine
+}
+
+DreamLayoutAnimation_SlideIn:Duration {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamLayoutAnimation_SlideIn:Ease {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:Ease
+    src   "Ease"
+    // from the engine's zh-Hans
+    text  "缓动"
+    state draft
+}
+
+DreamLayoutAnimation_SlideIn:EaseCurve {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:EaseCurve
+    src   "Ease Curve"
+    // from the engine's zh-Hans
+    text  "Ease Curve"
+    state draft
+}
+
+DreamLayoutAnimation_SlideIn:OpacityOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:OpacityOffset
+    src   "Opacity Offset"
+    text  "不透明度偏移"
+    state machine
+}
+
+DreamLayoutAnimation_SlideIn:PositionOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:PositionOffset
+    src   "Position Offset"
+    // from the engine's zh-Hans
+    text  "Position Offset"
+    state draft
+}
+
+DreamLayoutAnimation_SlideIn:SizeOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation_SlideIn:SizeOffset
+    src   "Size Offset"
+    text  "尺寸偏移"
+    state machine
+}
+
+DreamLayoutContainer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer
+    src   "Dream Layout Container"
+    text  "布局容器"
+    state machine
+}
+
+DreamLayoutContainer:AnimationHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:AnimationHandler
+    src   "Animation Handler"
+    text  "动画处理器"
+    state machine
+}
+
+DreamLayoutContainer:bUseAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:bUseAnimation
+    src   "Use Animation"
+    text  "使用动画"
+    state machine
+}
+
+DreamLayoutContainer:Children {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:Children
+    src   "Children"
+    // from the engine's zh-Hans
+    text  "子项"
+    state draft
+}
+
+DreamLayoutContainer:CreateNewLayoutAnimation:Class {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:CreateNewLayoutAnimation:Class
+    src   "Class"
+    // from the engine's zh-Hans
+    text  "类"
+    state draft
+}
+
+DreamLayoutContainer:CreateNewLayoutAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:CreateNewLayoutAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayoutContainer:GetUseAnimation:ReturnValue {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:GetUseAnimation:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamLayoutContainer:SetAnimationHandler:InAnimationHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetAnimationHandler:InAnimationHandler
+    src   "In Animation Handler"
+    text  "动画处理器"
+    state machine
+}
+
+DreamLayoutContainer:SetLayoutAnimation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetLayoutAnimation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayoutContainer:SetUseAnimation:Value {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetUseAnimation:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamLayoutDebugInfo {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo
+    src   "Dream Layout Debug Info"
+    text  "布局调试信息"
+    state machine
+}
+
+DreamLayoutDebugInfo:Algorithm {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:Algorithm
+    src   "Algorithm"
+    // from the engine's zh-Hans
+    text  "算法"
+    state draft
+}
+
+DreamLayoutDebugInfo:ArrangedPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:ArrangedPosition
+    src   "Arranged Position"
+    text  "排列位置"
+    state machine
+}
+
+DreamLayoutDebugInfo:ArrangedSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:ArrangedSize
+    src   "Arranged Size"
+    text  "排列尺寸"
+    state machine
+}
+
+DreamLayoutDebugInfo:AuthoredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:AuthoredSize
+    src   "Authored Size"
+    text  "原始尺寸"
+    state machine
+}
+
+DreamLayoutDebugInfo:Clipping {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:Clipping
+    src   "Clipping"
+    // from the engine's zh-Hans
+    text  "裁剪"
+    state draft
+}
+
+DreamLayoutDebugInfo:ContentBounds {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:ContentBounds
+    src   "Content Bounds"
+    // from the engine's zh-Hans
+    text  "内容绑定"
+    state draft
+}
+
+DreamLayoutDebugInfo:DesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:DesiredSize
+    src   "Desired Size"
+    // from the engine's zh-Hans
+    text  "所需大小"
+    state draft
+}
+
+DreamLayoutDebugInfo:PositionOwner {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:PositionOwner
+    src   "Position Owner"
+    text  "位置拥有者"
+    state machine
+}
+
+DreamLayoutDebugInfo:SizeOwner {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:SizeOwner
+    src   "Size Owner"
+    text  "尺寸拥有者"
+    state machine
+}
+
+DreamLayoutDebugInfo:SlotRule {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:SlotRule
+    src   "Slot Rule"
+    text  "插槽规则"
+    state machine
+}
+
+DreamLayoutDebugInfo:Widget {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamLayoutSelf {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutSelf
+    src   "Dream Layout Self"
+    text  "布局自身"
+    state machine
+}
+
+LayoutAnimationSnapshotData {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#LayoutAnimationSnapshotData
+    src   "Layout Animation Snapshot Data"
+    text  "布局动画快照数据"
+    state machine
+}
+
+LayoutAnimationSnapshotData:Position {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#LayoutAnimationSnapshotData:Position
+    src   "Position"
+    // from the engine's zh-Hans
+    text  "位置"
+    state draft
+}
+
+LayoutAnimationSnapshotData:Size {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#LayoutAnimationSnapshotData:Size
+    src   "Size"
+    // from the engine's zh-Hans
+    text  "大小"
+    state draft
+}
+
+LayoutAnimationSnapshotData:Widget {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#LayoutAnimationSnapshotData:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamLayoutContainer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer
+    src   "LayoutContainer can handle children position"
+    text  "布局容器可以处理子元素的定位。"
+    state machine
+}
+
+DreamLayoutContainer:Children {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:Children
+    src   "Scratch list of participating children. Each container fills this itself, on its own filter rules."
+    text  "编辑器布局诊断中使用的只读快照。"
+    state machine
+}
+
+DreamLayoutContainer:SetAnimationHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetAnimationHandler
+    src   "The property setter behind AnimationHandler, so writing it from Blueprint goes through the same\npath an author gets from the details panel instead of dropping a handler in with nothing told\nthat it changed. SetLayoutAnimation is the older name and stays; this forwards to it."
+    text  "AnimationHandler 背后的属性设置器，因此从蓝图写入它会走与作者从细节面板获得的相同\n路径，而不是直接塞入一个处理程序，\n却不告知它已更改。SetLayoutAnimation 是旧名称，予以保留；此属性会转发到它。"
+    state machine
+}
+
+DreamLayoutDebugInfo {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo
+    src   "Read-only snapshot used by editor layout diagnostics."
+    text  "编辑器布局诊断中使用的只读快照。"
+    state machine
+}
+
+DreamLayoutSelf {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutSelf
+    src   "LayoutSelf can handle self size.\nThis base class just provide IgnoreLayout."
+    text  "LayoutSelf 可以处理自身大小。\n此基类仅提供 IgnoreLayout 功能。"
+    state machine
+}
+
+namespace UObjectCategory
+
+"Layout Debug" {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutDebugInfo:Widget
+    src   "Layout Debug"
+    text  "布局调试"
+    state machine
+}
+
+LayoutContainer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#LayoutAnimationSnapshotData:Widget
+    src   "LayoutContainer"
+    text  "布局容器"
+    state machine
+}

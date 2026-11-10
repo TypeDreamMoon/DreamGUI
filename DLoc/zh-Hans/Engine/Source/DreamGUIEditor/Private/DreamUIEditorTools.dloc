@@ -1,0 +1,76 @@
+dloc 1
+culture zh-Hans
+namespace DreamGUIEditorTools
+
+CreateChildWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "DreamUI Child Widget"
+    text  "创建子控件"
+    state machine
+}
+
+CreateUIControl_Transaction {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "DreamUI Create UI Control"
+    text  "创建 UI 控件"
+    state machine
+}
+
+DuplicateWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "DreamUI Duplicate Widgets"
+    text  "复制控件"
+    state machine
+}
+
+PasteWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "DreamUI Paste Widgets"
+    text  "粘贴控件"
+    state machine
+}
+
+BehaviourBinding {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "{0} -> {1}"
+    // from the engine's zh-Hans
+    text  "{0} -> {1}"
+    state draft
+}
+
+ConfirmDeleteReferencedWidgets {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "One or more widgets are used by this Blueprint's graphs. Deleting them removes the variables those nodes read, and the Blueprint will not compile until the nodes are fixed. Delete anyway?\n\n{0}"
+    text  "一个或多个控件被此蓝图的图表使用。删除它们会移除这些节点读取的变量，并且蓝图将无法编译，直到这些节点被修复。是否继续删除？\n\n{0}"
+    state machine
+}
+
+ConfirmDeleteReferencedWidgetsTitle {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "Delete Widgets"
+    // from the engine's zh-Hans
+    text  "删除控件"
+    state draft
+}
+
+ConfirmDeleteBoundWidgets {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "One or more widgets are bound to variables on this prefab's behaviour blueprint. Deleting them leaves those variables holding nothing. The blueprint still compiles, so the loss only shows up at runtime. Delete anyway?\n\n{0}"
+    text  "一个或多个控件绑定到此预制件的行为蓝图上的变量。删除它们会使这些变量为空。蓝图仍然可以编译，因此只有在运行时才会出现问题。是否继续删除？\n\n{0}"
+    state machine
+}
+
+ConfirmDeleteBoundWidgetsTitle {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "Delete Widgets"
+    // from the engine's zh-Hans
+    text  "删除控件"
+    state draft
+}
+
+DestroyWidget_Transaction {
+    at    Source/DreamGUIEditor/Private/DreamUIEditorTools.cpp
+    src   "DreamUI Destroy Widgets"
+    text  "销毁控件"
+    state machine
+}

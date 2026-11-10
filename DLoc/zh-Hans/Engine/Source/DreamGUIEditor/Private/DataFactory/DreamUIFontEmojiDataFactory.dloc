@@ -1,0 +1,26 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIAssetMenu
+
+EmojiFont {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontEmojiDataFactory.cpp
+    src   "Emoji Font"
+    text  "表情字体"
+    state machine
+}
+
+EmojiFontToolTip {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontEmojiDataFactory.cpp
+    src   "Emoji for a font: each one a sprite, or a run of sprites to animate, drawn in place of its characters."
+    text  "表情字体：每个表情符号都是一个精灵，或者是一系列精灵，用于动画，它们会替代字符绘制在屏幕上。"
+    state machine
+}
+
+namespace UObjectDisplayNames
+
+DreamUIFontEmojiDataFactory {
+    at    Source/DreamGUIEditor/Private/DataFactory/DreamUIFontEmojiDataFactory.cpp#DreamUIFontEmojiDataFactory
+    src   "Dream UIFont Emoji Data Factory"
+    text  "DreamUI字体表情数据工厂"
+    state machine
+}

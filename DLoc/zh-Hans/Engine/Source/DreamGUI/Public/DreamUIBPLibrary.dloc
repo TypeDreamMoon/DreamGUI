@@ -1,0 +1,2330 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIBPLibrary {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary
+    src   "Dream UIBPLibrary"
+    text  "Dream UIBPLibrary"
+    state machine
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen:InCallbackBeforeAlive {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:InCallbackBeforeAlive
+    src   "In Callback Before Alive"
+    text  "激活前回调"
+    state machine
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen:InWidgetClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen:SortOrder {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:SortOrder
+    src   "Sort Order"
+    // from the engine's zh-Hans
+    text  "排序顺序"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToViewport:InWidgetClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToViewport:SortOrder {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport:SortOrder
+    src   "Sort Order"
+    // from the engine's zh-Hans
+    text  "排序顺序"
+    state draft
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:AttachWidgetToSceneComponent:InRoot {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamUIBPLibrary:AttachWidgetToSceneComponent:InSceneComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent:InSceneComponent
+    src   "In Scene Component"
+    // from the engine's zh-Hans
+    text  "输入的场景组件"
+    state draft
+}
+
+DreamUIBPLibrary:AttachWidgetToSceneComponent:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget:OwningPlayer {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget:OwningPlayer
+    src   "Owning Player"
+    // from the engine's zh-Hans
+    text  "拥有播放器"
+    state draft
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget:WidgetType {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget:WidgetType
+    src   "Widget Type"
+    // from the engine's zh-Hans
+    text  "控件类型"
+    state draft
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:ConstructWidget:DisplayName {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget:DisplayName
+    src   "Display Name"
+    // from the engine's zh-Hans
+    text  "显示名称"
+    state draft
+}
+
+DreamUIBPLibrary:ConstructWidget:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:ConstructWidget:VisualClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget:VisualClass
+    src   "Visual Class"
+    text  "视觉类"
+    state machine
+}
+
+DreamUIBPLibrary:ConstructWidget:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:CreateDreamWidgetOfClass:InWidgetClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass:InWidgetClass
+    src   "In Widget Class"
+    // from the engine's zh-Hans
+    text  "输入控件类"
+    state draft
+}
+
+DreamUIBPLibrary:CreateDreamWidgetOfClass:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:CreateDreamWidgetOfClass:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:inputKey {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:inputKey
+    src   "Input Key"
+    // from the engine's zh-Hans
+    text  "输入键"
+    state draft
+}
+
+DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:pressOrRelease {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:pressOrRelease
+    src   "Press or Release"
+    text  "按下或释放"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetActor:InDreamUIComponentReference {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetActor:InDreamUIComponentReference
+    src   "In Dream UIComponent Reference"
+    text  "Dream UI组件引用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetActor:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetActor:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetComponent:InComponentType {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetComponent:InComponentType
+    src   "In Component Type"
+    text  "组件类型"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetComponent:InDreamUIComponentReference {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetComponent:InDreamUIComponentReference
+    src   "In Dream UIComponent Reference"
+    text  "Dream UI组件引用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetComponent:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetComponent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:InDelegate {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:InDelegate
+    src   "In Delegate"
+    // from the engine's zh-Hans
+    text  "在委托中"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InDelegateHandle {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InDelegateHandle
+    src   "In Delegate Handle"
+    text  "委托句柄"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InEvent
+    src   "In Event"
+    // from the engine's zh-Hans
+    text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InParameter {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InParameter
+    src   "In Parameter"
+    text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:inputKey {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:inputKey
+    src   "Input Key"
+    // from the engine's zh-Hans
+    text  "输入键"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:value {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidget:Parent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget:Parent
+    src   "Parent"
+    // from the engine's zh-Hans
+    text  "父项"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidget:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidget:Target {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidget:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Data {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Data
+    src   "Data"
+    // from the engine's zh-Hans
+    text  "数据"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Parent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Parent
+    src   "Parent"
+    // from the engine's zh-Hans
+    text  "父项"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:FinishDeferredCreateDreamWidget:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:FinishDeferredCreateDreamWidget:Widget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget:Widget
+    src   "Widget"
+    // from the engine's zh-Hans
+    text  "控件"
+    state draft
+}
+
+DreamUIBPLibrary:ForceLayoutPrepass:InWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ForceLayoutPrepass:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInChildren:ComponentClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren:ComponentClass
+    src   "Component Class"
+    // from the engine's zh-Hans
+    text  "组件类"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInChildren:InActor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren:InActor
+    src   "In Actor"
+    // from the engine's zh-Hans
+    text  "输入Actor"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInChildren:IncludeSelf {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren:IncludeSelf
+    src   "Include Self"
+    // from the engine's zh-Hans
+    text  "包括自身"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInChildren:InExcludeNode {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren:InExcludeNode
+    src   "In Exclude Node"
+    text  "排除节点"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentInChildren:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInParent:ComponentClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:ComponentClass
+    src   "Component Class"
+    // from the engine's zh-Hans
+    text  "组件类"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInParent:InActor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:InActor
+    src   "In Actor"
+    // from the engine's zh-Hans
+    text  "输入Actor"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInParent:IncludeSelf {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:IncludeSelf
+    src   "Include Self"
+    // from the engine's zh-Hans
+    text  "包括自身"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentInParent:InStopNode {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:InStopNode
+    src   "In Stop Node"
+    text  "停止节点"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentInParent:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentsInChildren:ComponentClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren:ComponentClass
+    src   "Component Class"
+    // from the engine's zh-Hans
+    text  "组件类"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentsInChildren:InActor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren:InActor
+    src   "In Actor"
+    // from the engine's zh-Hans
+    text  "输入Actor"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentsInChildren:IncludeSelf {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren:IncludeSelf
+    src   "Include Self"
+    // from the engine's zh-Hans
+    text  "包括自身"
+    state draft
+}
+
+DreamUIBPLibrary:GetComponentsInChildren:InExcludeNode {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren:InExcludeNode
+    src   "In Exclude Node"
+    text  "排除节点"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentsInChildren:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize:borderBottom {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize:borderBottom
+    src   "Border Bottom"
+    text  "下边框"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize:borderLeft {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize:borderLeft
+    src   "Border Left"
+    text  "左边框"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize:borderRight {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize:borderRight
+    src   "Border Right"
+    text  "右边框"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize:borderTop {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize:borderTop
+    src   "Border Top"
+    text  "边框顶部"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize:SpriteInfo {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteBorderUV:borderUV0X {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:borderUV0X
+    src   "Border UV0X"
+    text  "边框UV0X"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderUV:borderUV0Y {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:borderUV0Y
+    src   "Border UV0Y"
+    text  "边框UV0Y"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderUV:borderUV3X {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:borderUV3X
+    src   "Border UV3X"
+    text  "边框UV3X"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderUV:borderUV3Y {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:borderUV3Y
+    src   "Border UV3Y"
+    text  "边框UV3Y"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteBorderUV:SpriteInfo {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteSize:height {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteSize:height
+    src   "Height"
+    // from the engine's zh-Hans
+    text  "高度"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteSize:SpriteInfo {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteSize:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteSize:width {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteSize:width
+    src   "Width"
+    // from the engine's zh-Hans
+    text  "宽度"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteUV:SpriteInfo {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV:SpriteInfo
+    src   "Sprite Info"
+    // from the engine's zh-Hans
+    text  "Sprite信息"
+    state draft
+}
+
+DreamUIBPLibrary:GetSpriteUV:UV0X {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV:UV0X
+    src   "UV0X"
+    text  "UV0X"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteUV:UV0Y {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV:UV0Y
+    src   "UV0Y"
+    text  "UV0Y"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteUV:UV3X {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV:UV3X
+    src   "UV3X"
+    text  "UV3X"
+    state machine
+}
+
+DreamUIBPLibrary:GetSpriteUV:UV3Y {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV:UV3Y
+    src   "UV3Y"
+    text  "UV3Y"
+    state machine
+}
+
+DreamUIBPLibrary:InvalidateLayout:InWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:InvalidateLayout:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUIBPLibrary:IsInViewport:InRoot {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsInViewport:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamUIBPLibrary:IsInViewport:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsInViewport:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:IsInViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsInViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIBPLibrary:IsWidgetParked:InWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsWidgetParked:InWidget
+    src   "In Widget"
+    // from the engine's zh-Hans
+    text  "输入控件"
+    state draft
+}
+
+DreamUIBPLibrary:IsWidgetParked:ReturnValue {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsWidgetParked:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:K2_DreamUICompRef_GetComponent:InDreamUICompRef {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:K2_DreamUICompRef_GetComponent:InDreamUICompRef
+    src   "In Dream UIComp Ref"
+    text  "输入Dream UIComp Ref"
+    state machine
+}
+
+DreamUIBPLibrary:K2_DreamUICompRef_GetComponent:OutResult {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:K2_DreamUICompRef_GetComponent:OutResult
+    src   "Out Result"
+    // from the engine's zh-Hans
+    text  "结果外"
+    state draft
+}
+
+DreamUIBPLibrary:PrepareDuplicateData:Data {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:PrepareDuplicateData:Data
+    src   "Data"
+    // from the engine's zh-Hans
+    text  "数据"
+    state draft
+}
+
+DreamUIBPLibrary:PrepareDuplicateData:Target {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:PrepareDuplicateData:Target
+    src   "Target"
+    // from the engine's zh-Hans
+    text  "目标"
+    state draft
+}
+
+DreamUIBPLibrary:RemoveFromViewport:InRoot {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:RemoveFromViewport:InRoot
+    src   "In Root"
+    text  "根节点"
+    state machine
+}
+
+DreamUIBPLibrary:RemoveFromViewport:WorldContextObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:RemoveFromViewport:WorldContextObject
+    src   "World Context Object"
+    // from the engine's zh-Hans
+    text  "场景情境对象"
+    state draft
+}
+
+DreamUIDuplicateDataContainer {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIDuplicateDataContainer
+    src   "Dream UIDuplicate Data Container"
+    text  "Dream UIDuplicate数据容器"
+    state machine
+}
+
+DreamUIDuplicateDataContainer:Template {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIDuplicateDataContainer:Template
+    src   "Template"
+    // from the engine's zh-Hans
+    text  "模板"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIBPLibrary:AddWidgetOfClassToScreen {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen
+    src   "Load a prefab under the shared screen root and track it as a viewport page. Return pin follows InWidgetClass."
+    text  "在共享屏幕根下加载预制体，并将其作为视口页面跟踪。返回引脚的类型与InWidgetClass一致，为控件类。"
+    state machine
+}
+
+DreamUIBPLibrary:AddWidgetOfClassToViewport {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport
+    src   "UMG-style CreateWidget + AddToViewport convenience node for a DreamUI prefab. Return pin follows InWidgetClass."
+    text  "用于DreamUI预制体的UMG风格CreateWidget + AddToViewport便捷节点，可把控件添加到视口。返回引脚的类型与InWidgetClass一致。"
+    state machine
+}
+
+DreamUIBPLibrary:AttachWidgetToSceneComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent
+    src   "Put a root widget made with ConstructWidget into the world: the counterpart of AddToViewport\nfor world-space UI, and what a prefab presenter does for the tree it loads. The root must carry\na DreamCanvas (the canvas decides the render mode and owns the meshes); it is attached to\nInSceneComponent, which gives it its world transform, and leaves the not-yet-added state.\nReturns false, and changes nothing, when InRoot has a parent or no canvas."
+    text  "将通过ConstructWidget创建的根控件放入世界：它是AddToViewport（加入视口）在\n世界空间UI中的对应物，也是预制体呈现器为其加载的控件树所做的事情。根控件必须带有\nDreamCanvas（由画布决定渲染模式并持有网格体）；它被附加到\nInSceneComponent场景组件上，由后者提供世界变换，并脱离尚未添加的状态。\n当InRoot已有父项或没有画布时，返回false，且不做任何更改。"
+    state machine
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget
+    src   "The two calls the Create Dream Widget node compiles to, with its Expose on Spawn assignments in\nbetween -- the node is their face, as UMG's Create Widget is UWidgetBlueprintLibrary::Create's.\nSee BeginCreateDreamWidget for why the assignments go in the middle.\n\nBegin makes the widget and points it at OwningPlayer, refusing a controller that is not local as\nUMG does. Finish initializes and registers it and leaves it in CreateDreamWidgetOfClass's state:\nheld by the manager, off screen until it is added somewhere."
+    text  "Create Dream Widget节点编译成的两个调用，中间夹着它的Expose on Spawn赋值\n——该节点是它们的门面，正如UMG的Create Widget是蓝图函数库UWidgetBlueprintLibrary::Create的门面。\n赋值为何放在中间，请参见BeginCreateDreamWidget。\n\nBegin创建控件并将其指向OwningPlayer，像UMG那样拒绝非本地的控制器。\nFinish初始化并注册它，使其处于CreateDreamWidgetOfClass的状态：\n由管理器持有，在添加到某处之前不在屏幕上。"
+    state machine
+}
+
+DreamUIBPLibrary:ConstructWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget
+    src   "Make a widget that exists but is not on screen -- the counterpart of UMG's\nWidgetTree::ConstructWidget<T>(). It draws nothing and its behaviours do not run until you\nhand it to AddChild or AddToViewport; until then it is held by the DreamUI manager, so it will\nnot be collected out from under you while you configure it.\n\nVisualClass is what the widget looks like (DreamImage, DreamText, ...). Leave it null for a bare\nwidget, which is what a pure container is. Give it a layout container afterwards to make it a\npanel -- in this fork \"panel\" is a subobject, not a separate class."
+}
+
+DreamUIBPLibrary:CreateDreamWidgetOfClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass
+    src   "Instantiate a prefab without putting it anywhere -- the counterpart of UMG's\nCreateWidget(WidgetBlueprintClass). Same not-on-screen state as ConstructWidget, including a\nprefab whose root carries its own UDreamCanvas, which would otherwise start rendering the\nmoment it existed.\n\nThe prefab's own logic lives on the root widget's behaviour components, so reach it with\nGetComponent rather than by casting the returned pointer.\n\nThe return pin takes the shape of InWidgetClass, so a Blueprint subclass's own variables and\nfunctions are reachable without a Cast, as with UMG's Create Widget node.\n\nNot in the Blueprint menu, as UWidgetBlueprintLibrary::Create is not: the Create Dream Widget node\nstands for it there and offers the class's Expose on Spawn properties as well. A graph that already\ncalls it keeps compiling."
+    text  "实例化一个预制体，但不将其放到任何位置——即UMG的\nCreateWidget(WidgetBlueprintClass)的对应物。与ConstructWidget一样处于不在屏幕上的状态，包括\n根节点自带UDreamCanvas的预制体，否则它一存在\n就会开始渲染。\n\n预制体自身的逻辑位于根控件的行为组件上，因此请用\nGetComponent访问它，而不是对返回的指针进行类型转换。\n\n返回引脚采用InWidgetClass的类型，因此无需Cast即可访问蓝图子类自己的变量和\n函数，与UMG的Create Widget节点相同。\n\n不在蓝图菜单中，正如UWidgetBlueprintLibrary::Create也不在其中：在那里由Create Dream Widget节点\n代表它，并且还提供该类的Expose on Spawn属性。已经在\n调用它的图表仍可继续编译。"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetComponent
+    src   "InComponentType must be the same as InDreamUIComponentReference's component type"
+    text  "InComponentType 必须与 InDreamUIComponentReference 的组件类型相同"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt16_Execute(const FDreamUIEventDelegate_UInt16& InEvent, uint16 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt16_Register(const FDreamUIEventDelegate_UInt16& InEvent, FDreamUIEventDelegate_UInt16_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt16_Unregister(const FDreamUIEventDelegate_UInt16& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle);"
+    text  "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt16_Execute(const FDreamUIEventDelegate_UInt16& InEvent, uint16 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt16_Register(const FDreamUIEventDelegate_UInt16& InEvent, FDreamUIEventDelegate_UInt16_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt16_Unregister(const FDreamUIEventDelegate_UInt16& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle); // 蓝图可调用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt32_Execute(const FDreamUIEventDelegate_UInt32& InEvent, uint32 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt32_Register(const FDreamUIEventDelegate_UInt32& InEvent, FDreamUIEventDelegate_UInt32_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt32_Unregister(const FDreamUIEventDelegate_UInt32& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle);"
+    text  "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt32_Execute(const FDreamUIEventDelegate_UInt32& InEvent, uint32 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt32_Register(const FDreamUIEventDelegate_UInt32& InEvent, FDreamUIEventDelegate_UInt32_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt32_Unregister(const FDreamUIEventDelegate_UInt32& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle); // 蓝图可调用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_Int8_Execute(const FDreamUIEventDelegate_Int8& InEvent, int8 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_Int8_Register(const FDreamUIEventDelegate_Int8& InEvent, FDreamUIEventDelegate_Int8_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_Int8_Unregister(const FDreamUIEventDelegate_Int8& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle);"
+    text  "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_Int8_Execute(const FDreamUIEventDelegate_Int8& InEvent, int8 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_Int8_Register(const FDreamUIEventDelegate_Int8& InEvent, FDreamUIEventDelegate_Int8_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_Int8_Unregister(const FDreamUIEventDelegate_Int8& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle); // 蓝图可调用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt64_Execute(const FDreamUIEventDelegate_UInt64& InEvent, uint64 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt64_Register(const FDreamUIEventDelegate_UInt64& InEvent, FDreamUIEventDelegate_UInt64_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt64_Unregister(const FDreamUIEventDelegate_UInt64& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle);"
+    text  "UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Execute\"))\n       static void DreamUIEventDelegate_UInt64_Execute(const FDreamUIEventDelegate_UInt64& InEvent, uint64 InParameter) { InEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Register\"))\n       static FDreamGUIDelegateHandleWrapper DreamUIEventDelegate_UInt64_Register(const FDreamUIEventDelegate_UInt64& InEvent, FDreamUIEventDelegate_UInt64_DynamicDelegate InDelegate);\nUFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (DisplayName = \"Unregister\"))\n       static void DreamUIEventDelegate_UInt64_Unregister(const FDreamUIEventDelegate_UInt64& InEvent, const FDreamGUIDelegateHandleWrapper& InDelegateHandle); // 蓝图可调用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt16(const FDreamGUIEventDelegate& InEvent, const int16& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt16(const FDreamGUIEventDelegate& InEvent, const uint16& InParameter) { InEvent.FireEvent(InParameter); }"
+    text  "UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt16(const FDreamGUIEventDelegate& InEvent, const int16& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt16(const FDreamGUIEventDelegate& InEvent, const uint16& InParameter) { InEvent.FireEvent(InParameter); } // 蓝图可调用"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteDouble(const FDreamGUIEventDelegate& InEvent, const double& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt8(const FDreamGUIEventDelegate& InEvent, const int8& InParameter) { InEvent.FireEvent(InParameter); }"
+    text  "蓝图可调用函数：UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteDouble(const FDreamGUIEventDelegate& InEvent, const double& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt8(const FDreamGUIEventDelegate& InEvent, const int8& InParameter) { InEvent.FireEvent(InParameter); }"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2
+    src   "UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt32(const FDreamGUIEventDelegate& InEvent, const uint32& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt64(const FDreamGUIEventDelegate& InEvent, const int64& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt64(const FDreamGUIEventDelegate& InEvent, const uint64& InParameter) { InEvent.FireEvent(InParameter); }"
+    text  "蓝图可调用函数：UFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt32(const FDreamGUIEventDelegate& InEvent, const uint32& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteInt64(const FDreamGUIEventDelegate& InEvent, const int64& InParameter) { InEvent.FireEvent(InParameter); }\nUFUNCTION(BlueprintCallable, Category = DreamGUI)static void DreamGUIEventDelegateExecuteUInt64(const FDreamGUIEventDelegate& InEvent, const uint64& InParameter) { InEvent.FireEvent(InParameter); }"
+    state machine
+}
+
+DreamUIBPLibrary:DuplicateWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget
+    src   "Duplicate actor with hierarchy"
+    text  "按层级复制Actor"
+    state machine
+}
+
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData
+    src   "Use this with PrepareDuplicateData node."
+    text  "与PrepareDuplicateData节点配合使用。"
+    state machine
+}
+
+DreamUIBPLibrary:FinishDeferredCreateDreamWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget
+    src   "The other half of BeginDeferredCreateDreamWidget, run after the Expose on Spawn assignments."
+    text  "控件创建函数BeginDeferredCreateDreamWidget的另一半，在Expose on Spawn赋值之后运行。"
+    state machine
+}
+
+DreamUIBPLibrary:ForceLayoutPrepass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ForceLayoutPrepass
+    src   "Lay this widget's tree out NOW rather than on the next pass -- UMG's ForceLayoutPrepass.\n\nThe manager has done this since the beginning; it simply had no Blueprint face, and the manager\nitself is not a Blueprint type, so a graph that needed a size before the frame ended had no way\nto ask. Use it when you have just changed content and need the resulting size in the same frame."
+    text  "立即布局此控件的树，而不是等到下一轮——即UMG的ForceLayoutPrepass。\n\n管理器从一开始就这样做；只是它没有蓝图接口，而管理器\n本身也不是蓝图类型，因此需要在帧结束前拿到尺寸的图表无从\n询问。当你刚修改了内容并需要在同一帧内得到结果尺寸时使用它。"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentInChildren {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren
+    src   "Find the first component in children with type.\n@param InActor Root actor to start from.\n@param ComponentClass The component type that need to search.\n@param IncludeSelf true- also search component at InActor.\n@param InExcludeNode If any child actor is included in this InExcludeNode, will skip that child actor and all it's children."
+    text  "按类型在子级中查找第一个组件。\n@param InActor 起始的根Actor。\n@param ComponentClass 要搜索的组件类型。\n@param IncludeSelf true——同时搜索InActor上的组件。\n@param InExcludeNode 如果某个子Actor包含在此InExcludeNode中，将跳过该子Actor及其所有子级。"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentInParent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent
+    src   "Find the first component in parent and up parent hierarchy with type.\n@param IncludeSelf   Include actor self.\n@param InStopNode    If parent is InStopNode then break the search chain. Can be null to ignore it."
+    text  "按类型在父级及向上的父级层级中查找第一个组件。\n@param IncludeSelf   包含Actor自身。\n@param InStopNode    如果父级是InStopNode则中断搜索链。可为null以忽略。"
+    state machine
+}
+
+DreamUIBPLibrary:GetComponentsInChildren {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren
+    src   "Find all compoents in children with type.\n@param InActor Root actor to start from.\n@param ComponentClass The component type that need to search.\n@param IncludeSelf true- also search component at InActor.\n@param InExcludeNode If any child actor is included in this InExcludeNode, will skip that child actor and all it's children."
+    text  "按类型在子级中查找所有组件。\n@param InActor 起始的根Actor。\n@param ComponentClass 要搜索的组件类型。\n@param IncludeSelf true——同时搜索InActor上的组件。\n@param InExcludeNode 如果某个子Actor包含在此InExcludeNode中，将跳过该子Actor及其所有子级。"
+    state machine
+}
+
+DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot
+    src   "Return the world's shared ScreenSpaceOverlay root, creating it on demand."
+    text  "返回世界共享的ScreenSpaceOverlay根节点，必要时创建它。"
+    state machine
+}
+
+DreamUIBPLibrary:InvalidateLayout {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:InvalidateLayout
+    src   "Mark this widget for the next layout pass -- UMG's InvalidateLayoutAndVolatility."
+    text  "将此控件标记为在下一轮布局中处理——即UMG的InvalidateLayoutAndVolatility。"
+    state machine
+}
+
+DreamUIBPLibrary:IsWidgetParked {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsWidgetParked
+    src   "True while a widget has been created but not yet added to anything. See ConstructWidget."
+    text  "控件已创建但尚未添加到任何对象时为true。参见ConstructWidget。"
+    state machine
+}
+
+DreamUIBPLibrary:PrepareDuplicateData {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:PrepareDuplicateData
+    src   "Optimized version of DuplicateActor node when you need to duplicate same actor for multiple times. Use the result data in DuplicateActorWithPreparedData node."
+    text  "复制Actor节点的优化版本，适用于需要多次复制相同Actor的情况。将结果数据用于DuplicateActorWithPreparedData节点。"
+    state machine
+}
+
+DreamUIBPLibrary:RemoveFromViewport {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:RemoveFromViewport
+    src   "Destroy a tracked viewport page and remove it from the screen registry."
+    text  "销毁已跟踪的视窗页面，并将其从屏幕注册表中移除。"
+    state machine
+}
+
+DreamUIDuplicateDataContainer {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIDuplicateDataContainer
+    src   "What PrepareDuplicateData hands to DuplicateWidgetWithPreparedData.\n\nIt used to carry a serialised blob, because duplication meant a save/load round trip and the point\nof preparing was to pay for the save once. Duplication instances the template now, so there is\nnothing to prepare: the template itself is the data, and the pair is kept because Blueprints call\nit and because holding the template strongly is what keeps it alive between the two calls."
+    text  "PrepareDuplicateData 交给 DuplicateWidgetWithPreparedData 的内容，用于复制控件。\n\n它过去携带一个序列化的数据块，因为复制意味着一次保存/加载往返，而\n准备的意义在于只支付一次保存的开销。现在复制控件会实例化模板，因此没有\n需要准备的东西：模板本身就是数据；保留这一对函数，是因为蓝图会调用\n它，而且强引用模板正是让它在两次调用之间保持存活的原因。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamGUI|World {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent
+    src   "DreamGUI|World"
+    text  "DreamGUI|World"
+    state machine
+}
+
+DreamGUI|Create {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget
+    src   "DreamGUI|Create"
+    text  "DreamGUI|Create"
+    state machine
+}

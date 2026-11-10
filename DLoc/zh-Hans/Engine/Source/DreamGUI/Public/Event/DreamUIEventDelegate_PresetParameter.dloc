@@ -1,0 +1,385 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIEventDelegate_Asset {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Asset
+    src   "Dream UIEvent Delegate Asset"
+    text  "Dream UI 事件委托 资产"
+    state machine
+}
+
+DreamUIEventDelegate_Asset_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Asset_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Bool {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Bool
+    src   "Dream UIEvent Delegate Bool"
+    text  "Dream UI 事件委托 布尔值"
+    state machine
+}
+
+DreamUIEventDelegate_Bool_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Bool_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Class {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Class
+    src   "Dream UIEvent Delegate Class"
+    text  "Dream UI 事件委托 类"
+    state machine
+}
+
+DreamUIEventDelegate_Class_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Class_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Color {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Color
+    src   "Dream UIEvent Delegate Color"
+    text  "Dream UI 事件委托 颜色"
+    state machine
+}
+
+DreamUIEventDelegate_Color_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Color_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Double {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Double
+    src   "Dream UIEvent Delegate Double"
+    text  "Dream UI 事件委托 双精度浮点数"
+    state machine
+}
+
+DreamUIEventDelegate_Double_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Double_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_DreamWidget {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_DreamWidget
+    src   "Dream UIEvent Delegate Dream Widget"
+    text  "Dream UI 事件委托 Dream 控件"
+    state machine
+}
+
+DreamUIEventDelegate_DreamWidget_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_DreamWidget_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Empty {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Empty
+    src   "Dream UIEvent Delegate Empty"
+    text  "Dream UI 事件委托 空值"
+    state machine
+}
+
+DreamUIEventDelegate_Float {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Float
+    src   "Dream UIEvent Delegate Float"
+    text  "Dream UI 事件委托 单精度浮点数"
+    state machine
+}
+
+DreamUIEventDelegate_Float_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Float_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Int16 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int16
+    src   "Dream UIEvent Delegate Int 16"
+    text  "Dream UI 事件委托 16 位整数"
+    state machine
+}
+
+DreamUIEventDelegate_Int16_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int16_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Int32 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int32
+    src   "Dream UIEvent Delegate Int 32"
+    text  "Dream UI 事件委托 32 位整数"
+    state machine
+}
+
+DreamUIEventDelegate_Int32_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int32_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Int64 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int64
+    src   "Dream UIEvent Delegate Int 64"
+    text  "Dream UI 事件委托 64 位整数"
+    state machine
+}
+
+DreamUIEventDelegate_Int64_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int64_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Int8 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int8
+    src   "Dream UIEvent Delegate Int 8"
+    text  "Dream UI 事件委托 8 位整数"
+    state machine
+}
+
+DreamUIEventDelegate_Int8_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Int8_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_LinearColor {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_LinearColor
+    src   "Dream UIEvent Delegate Linear Color"
+    text  "Dream UI 事件委托：线性颜色"
+    state machine
+}
+
+DreamUIEventDelegate_LinearColor_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_LinearColor_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Name {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Name
+    src   "Dream UIEvent Delegate Name"
+    text  "Dream UI 事件委托：名称"
+    state machine
+}
+
+DreamUIEventDelegate_Name_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Name_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_PointerEvent {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_PointerEvent
+    src   "Dream UIEvent Delegate Pointer Event"
+    text  "Dream UI 事件委托：指针事件"
+    state machine
+}
+
+DreamUIEventDelegate_PointerEvent_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_PointerEvent_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Quaternion {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Quaternion
+    src   "Dream UIEvent Delegate Quaternion"
+    text  "Dream UI 事件委托：四元数"
+    state machine
+}
+
+DreamUIEventDelegate_Quaternion_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Quaternion_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Rotator {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Rotator
+    src   "Dream UIEvent Delegate Rotator"
+    text  "Dream UI 事件委托：旋转器"
+    state machine
+}
+
+DreamUIEventDelegate_Rotator_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Rotator_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_String {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_String
+    src   "Dream UIEvent Delegate String"
+    text  "Dream UI 事件委托：字符串"
+    state machine
+}
+
+DreamUIEventDelegate_String_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_String_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Text {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Text
+    src   "Dream UIEvent Delegate Text"
+    text  "Dream UI 事件委托：文本"
+    state machine
+}
+
+DreamUIEventDelegate_Text_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Text_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_UInt16 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt16
+    src   "Dream UIEvent Delegate UInt 16"
+    text  "Dream UI 事件委托：UInt16"
+    state machine
+}
+
+DreamUIEventDelegate_UInt16_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt16_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_UInt32 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt32
+    src   "Dream UIEvent Delegate UInt 32"
+    text  "Dream UI 事件委托：UInt32"
+    state machine
+}
+
+DreamUIEventDelegate_UInt32_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt32_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_UInt64 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt64
+    src   "Dream UIEvent Delegate UInt 64"
+    text  "Dream UI 事件委托：UInt64"
+    state machine
+}
+
+DreamUIEventDelegate_UInt64_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt64_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_UInt8 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt8
+    src   "Dream UIEvent Delegate UInt 8"
+    text  "Dream UI 事件委托：UInt8"
+    state machine
+}
+
+DreamUIEventDelegate_UInt8_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_UInt8_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Vector2 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector2
+    src   "Dream UIEvent Delegate Vector 2"
+    text  "Dream UI 事件委托：Vector2"
+    state machine
+}
+
+DreamUIEventDelegate_Vector2_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector2_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Vector3 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector3
+    src   "Dream UIEvent Delegate Vector 3"
+    text  "Dream UI 事件委托 向量 3"
+    state machine
+}
+
+DreamUIEventDelegate_Vector3_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector3_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamUIEventDelegate_Vector4 {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector4
+    src   "Dream UIEvent Delegate Vector 4"
+    text  "Dream UI 事件委托 向量 4"
+    state machine
+}
+
+DreamUIEventDelegate_Vector4_DynamicDelegate__DelegateSignature:value {
+    at    Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h#DreamUIEventDelegate_Vector4_DynamicDelegate__DelegateSignature:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}

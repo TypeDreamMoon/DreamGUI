@@ -1,0 +1,332 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUIImageBrush {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush
+    src   "Dream UIImage Brush"
+    text  "Dream 图像笔刷"
+    state machine
+}
+
+DreamUIImageBrush:CornerRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:CornerRadius
+    src   "Corner Radius"
+    // from the engine's zh-Hans
+    text  "角半径"
+    state draft
+}
+
+DreamUIImageBrush:CornerSegments {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:CornerSegments
+    src   "Corner Segments"
+    text  "圆角分段"
+    state machine
+}
+
+DreamUIImageBrush:DrawAs {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:DrawAs
+    src   "Draw As"
+    // from the engine's zh-Hans
+    text  "绘制为"
+    state draft
+}
+
+DreamUIImageBrush:FillAmount {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillAmount
+    src   "Fill Amount"
+    text  "填充量"
+    state machine
+}
+
+DreamUIImageBrush:FillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillDirectionFlip
+    src   "Fill Direction Flip"
+    text  "填充方向翻转"
+    state machine
+}
+
+DreamUIImageBrush:FillMethod {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillMethod
+    src   "Fill Method"
+    // from the engine's zh-Hans
+    text  "填充方法"
+    state draft
+}
+
+DreamUIImageBrush:FillOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillOrigin
+    src   "Fill Origin"
+    text  "填充原点"
+    state machine
+}
+
+DreamUIImageBrush:ImageSize {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:ImageSize
+    src   "Image Size"
+    // from the engine's zh-Hans
+    text  "图像大小"
+    state draft
+}
+
+DreamUIImageBrush:Margin {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:Margin
+    src   "Margin"
+    // from the engine's zh-Hans
+    text  "边缘"
+    state draft
+}
+
+DreamUIImageBrush:PixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:PixelsPerUnitMultiplier
+    src   "Pixels Per Unit Multiplier"
+    text  "像素/单位倍数"
+    state machine
+}
+
+DreamUIImageBrush:ResourceObject {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:ResourceObject
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}
+
+DreamUIImageBrush:TintColor {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:TintColor
+    src   "Tint Color"
+    // from the engine's zh-Hans
+    text  "着色"
+    state draft
+}
+
+DreamUIImageBrush:UVRegion {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:UVRegion
+    src   "UVRegion"
+    // from the engine's zh-Hans
+    text  "UV区域"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.Border {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Border
+    src   "Border"
+    // from the engine's zh-Hans
+    text  "边界"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.Box {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Box
+    src   "Box"
+    // from the engine's zh-Hans
+    text  "盒体"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.EDreamUIImageBrushDrawType_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:EDreamUIImageBrushDrawType_MAX
+    src   "EDream UIImage Brush Draw Type MAX"
+    text  "EDream 图像笔刷绘制类型 MAX"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Filled {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Filled
+    src   "Filled"
+    text  "填充"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Image {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Image
+    src   "Image"
+    // from the engine's zh-Hans
+    text  "图像"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.None {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.RoundedBox {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:RoundedBox
+    src   "Rounded Box"
+    text  "圆角框"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Tiled {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Tiled
+    src   "Tiled"
+    text  "平铺"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod.EDreamUIImageBrushFillMethod_MAX {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:EDreamUIImageBrushFillMethod_MAX
+    src   "EDream UIImage Brush Fill Method MAX"
+    text  "EDream 图像笔刷填充方式 MAX"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod.Horizontal {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:Horizontal
+    src   "Horizontal"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+EDreamUIImageBrushFillMethod.Radial180 {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:Radial180
+    src   "Radial 180"
+    text  "径向180度"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod.Radial360 {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:Radial360
+    src   "Radial 360"
+    text  "径向 360 度"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod.Radial90 {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:Radial90
+    src   "Radial 90"
+    text  "径向 90 度"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod.Vertical {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod:Vertical
+    src   "Vertical"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamUIImageBrush:CornerRadius {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:CornerRadius
+    src   "RoundedBox only: corner radius in pixels, X top-left, Y top-right, Z bottom-right, W\nbottom-left -- clockwise from the top left, the order CSS and UDreamRectBlock both use. Each is\nclamped to half the shorter side, so a big enough radius gives a capsule rather than an error."
+    text  "仅限RoundedBox：圆角半径，单位为像素，X为左上角、Y为右上角、Z为右下角、W\n为左下角——从左上角起顺时针，与CSS和UDreamRectBlock采用的顺序相同。每个值\n都会钳制到较短边的一半，因此半径足够大时会得到胶囊形，而不是报错。"
+    state machine
+}
+
+DreamUIImageBrush:CornerSegments {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:CornerSegments
+    src   "RoundedBox only: points along each corner arc. More is smoother and costs two triangles each."
+    text  "仅限 RoundedBox：每个圆角弧线上的点数。点数越多越平滑，每个点消耗两个三角形。"
+    state machine
+}
+
+DreamUIImageBrush:FillAmount {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillAmount
+    src   "Filled only: how much of the image is shown, 0 shows none of it and 1 all of it."
+    text  "仅限 Filled：图像显示的比例，0 表示完全不显示，1 表示全部显示。"
+    state machine
+}
+
+DreamUIImageBrush:FillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillDirectionFlip
+    src   "Filled only: fill from the other end."
+    text  "仅限 Filled：从另一端开始填充。"
+    state machine
+}
+
+DreamUIImageBrush:FillMethod {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillMethod
+    src   "Filled only: the shape of the cut."
+    text  "仅限 Filled：切口的形状。"
+    state machine
+}
+
+DreamUIImageBrush:FillOrigin {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:FillOrigin
+    src   "Filled only: which corner or edge a radial fill starts from. Held as a byte for the same reason\nUDreamSprite holds it as one: which enum it means depends on FillMethod\n(EDreamUISpriteFillOriginType_Radial90 / _Radial180 / _Radial360), and only one of them applies\nat a time. Ignored by the horizontal and vertical methods."
+    text  "仅限 Filled：径向填充从哪个角或边开始。之所以用字节保存，原因与\nUDreamSprite 用字节保存相同：它代表哪个枚举取决于 FillMethod\n（EDreamUISpriteFillOriginType_Radial90 / _Radial180 / _Radial360），同一时间只有一个适用。\n水平和垂直方式会忽略它。"
+    state machine
+}
+
+DreamUIImageBrush:Margin {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:Margin
+    src   "Margin size from 0 to 1."
+    text  "边距大小，从 0 到 1。"
+    state machine
+}
+
+DreamUIImageBrush:UVRegion {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:UVRegion
+    src   "UV region for an image, xy for min and zw for max."
+    text  "图像的 UV 区域，xy 为最小值，zw 为最大值。"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Border {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Border
+    src   "Draw a 3x3 border where the sides tile and the middle is empty"
+    // from the engine's zh-Hans
+    text  "绘制一个3x3边界，侧面块和中部为空"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.Box {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Box
+    src   "Draw a 3x3 box, where the sides and the middle stretch based on the Margin"
+    // from the engine's zh-Hans
+    text  "绘制一个3x3的框，侧面和中部基于边距进行拉伸"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.Filled {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Filled
+    src   "Show only part of the image and leave the rest transparent, the way a progress bar does.\nFillAmount is how much (0..1), FillMethod is the shape of the cut and FillOrigin which end it\nstarts from. The same geometry the sprite element fills with, so the two agree."
+    text  "只显示图像的一部分，其余部分保持透明，就像进度条那样。\nFillAmount是填充量（0..1），FillMethod是切口的形状，FillOrigin是起始的一端。\n与Sprite元素填充所用的几何体相同，因此两者一致。"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Image {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Image
+    src   "Draw an image; margin is ignored"
+    // from the engine's zh-Hans
+    text  "绘制一张图像，无视边距"
+    state draft
+}
+
+EDreamUIImageBrushDrawType.RoundedBox {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:RoundedBox
+    src   "Draw the image inside a rounded rectangle, with a radius per corner (CornerRadius) and\nCornerSegments points along each arc.\n\nThis is an OUTLINE, cut out of geometry: the corners are tessellated rather than evaluated in a\nshader, so they are as smooth as the segment count and they do not antialias themselves. Where\nan exact, resolution-independent rounded rect is wanted -- with a border, gradients or shadows\n-- UDreamRectBlock does the same shape as a signed distance field in the material and is the\nbetter tool; this exists so a brush can round its corners without changing element type."
+    text  "在圆角矩形内绘制图像，每个角可设置半径（CornerRadius），每条弧由\nCornerSegments个点构成。\n\n这是一个由几何体裁出的轮廓：圆角经过细分而非在\n着色器中求值，因此平滑程度取决于段数，且不会自行抗锯齿。在需要\n精确、与分辨率无关的圆角矩形时（带边框、渐变或阴影），\nUDreamRectBlock在材质中以有符号距离场生成同样的形状，是更合适的工具；\n此项的存在是为了让笔刷在不改变元素类型的前提下实现圆角。"
+    state machine
+}
+
+EDreamUIImageBrushDrawType.Tiled {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushDrawType:Tiled
+    src   "Repeat the image at its own size across the rect, instead of stretching one copy over it.\nThe tile is the sprite's authored size, or Brush.ImageSize when the resource is not a sprite."
+    text  "按图像自身尺寸在整个矩形上重复平铺，而不是把单份副本拉伸覆盖整个矩形。\n平铺单元是Sprite的原始尺寸；当资源不是Sprite时，取自笔刷的Brush.ImageSize。"
+    state machine
+}
+
+EDreamUIImageBrushFillMethod {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#EDreamUIImageBrushFillMethod
+    src   "How a Filled brush cuts its image. Mirrors EDreamUISpriteFillMethod value for value."
+    text  "说明填充笔刷如何裁剪图像。与 EDreamUISpriteFillMethod 的值对应。"
+    state machine
+}
+
+namespace UObjectCategory
+
+ImageBrush {
+    at    Source/DreamGUI/Public/Core/DreamUIImageBrush.h#DreamUIImageBrush:ResourceObject
+    src   "ImageBrush"
+    text  "图像笔刷"
+    state machine
+}

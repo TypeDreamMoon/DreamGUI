@@ -1,0 +1,87 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIControlRegistry
+
+MissingControlClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "Missing control class: {0}"
+    text  "缺少控件类: {0}"
+    state machine
+}
+
+WrongControlType {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "Control resource is not a DreamUI Widget Blueprint: {0}"
+    text  "控件资源不是 DreamUI 控件蓝图: {0}"
+    state machine
+}
+
+MissingControlClassObject {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "The control has no class to instance."
+    text  "该控件没有可用的类。"
+    state machine
+}
+
+ControlClassNotUserWidget {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "ControlClass must derive from UDreamUserWidget, and {0} does not."
+    text  "控件类必须派生自 UDreamUserWidget，但 {0} 不是。"
+    state machine
+}
+
+ControlClassNotConcrete {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "{0} cannot be instanced."
+    text  "{0} 无法实例化。"
+    state machine
+}
+
+EmptyRecipe {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "The native control has no creation recipe."
+    text  "该控件没有创建配方。"
+    state machine
+}
+
+InvalidContainerClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "LayoutContainerClass must derive from UDreamLayoutContainer."
+    text  "布局容器类必须派生自 UDreamLayoutContainer。"
+    state machine
+}
+
+InvalidVisualClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "VisualClass must derive from UDreamVisual."
+    text  "视觉类必须派生自 UDreamVisual。"
+    state machine
+}
+
+InvalidLayoutSelfClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "LayoutSelfClass must derive from UDreamLayoutSelf."
+    text  "布局自适应类必须派生自 UDreamLayoutSelf。"
+    state machine
+}
+
+InvalidBehaviourClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "BehaviourClass must derive from UDreamUIBehaviour."
+    text  "行为类必须派生自 UDreamUIBehaviour。"
+    state machine
+}
+
+InvalidMeshModifierClass {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "MeshModifierClass must derive from UDreamMeshModifierBase."
+    text  "网格修改器类必须派生自 UDreamMeshModifierBase。"
+    state machine
+}
+
+MeshModifierRequiresVisual {
+    at    Source/DreamGUIEditor/Private/DreamUIControlRegistry.cpp
+    src   "A mesh modifier requires a UDreamVisualBatchMesh visual class."
+    text  "网格修改器需要一个 UDreamVisualBatchMesh 视觉类。"
+    state machine
+}

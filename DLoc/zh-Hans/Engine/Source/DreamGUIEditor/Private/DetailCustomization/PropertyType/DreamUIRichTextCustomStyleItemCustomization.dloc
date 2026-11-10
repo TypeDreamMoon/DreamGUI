@@ -1,0 +1,17 @@
+dloc 1
+culture zh-Hans
+namespace DreamUIRichTextCustomStyleItemCustomization
+
+PaintPreset {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.cpp
+    src   "Paint Preset"
+    text  "笔刷预设"
+    state machine
+}
+
+PaintGradient {
+    at    Source/DreamGUIEditor/Private/DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.cpp
+    src   "Paint Gradient"
+    text  "笔刷渐变"
+    state machine
+}

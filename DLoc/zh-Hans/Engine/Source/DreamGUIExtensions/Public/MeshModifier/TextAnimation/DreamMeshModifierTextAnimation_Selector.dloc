@@ -1,0 +1,355 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamMeshModifierTextAnimation_RandomSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector
+    src   "Random Selector (UI Effect TextAnimation)"
+    text  "随机选择器 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:GetEnd:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:GetEnd:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:GetSeed:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:GetSeed:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:GetStart:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:GetStart:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:Seed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:Seed
+    src   "Seed"
+    // from the engine's zh-Hans
+    text  "种子"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:SetEnd:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:SetEnd:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:SetSeed:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:SetSeed:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:SetStart:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:SetStart:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector
+    src   "Range Selector (UI Effect TextAnimation)"
+    text  "范围选择器 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:bFlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:bFlipDirection
+    src   "Flip Direction"
+    text  "翻转方向"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:End
+    src   "End"
+    // from the engine's zh-Hans
+    text  "结束"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:GetEnd:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:GetEnd:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:GetFlipDirection:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:GetFlipDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:GetRange:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:GetRange:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:GetStart:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:GetStart:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:Range {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:Range
+    src   "Range"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:SetEnd:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:SetEnd:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:SetFlipDirection:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:SetFlipDirection:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:SetRange:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:SetRange:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:SetStart:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:SetStart:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector
+    src   "RichTextTag Selector (UI Effect TextAnimation)"
+    text  "富文本标签选择器 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:bFlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:bFlipDirection
+    src   "Flip Direction"
+    text  "翻转方向"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:GetFlipDirection:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:GetFlipDirection:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:GetRange:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:GetRange:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:GetTagName:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:GetTagName:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:Range {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:Range
+    src   "Range"
+    // from the engine's zh-Hans
+    text  "范围"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:SetFlipDirection:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:SetFlipDirection:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:SetRange:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:SetRange:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:SetTagName:Value {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:SetTagName:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:TagName {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:TagName
+    src   "Tag Name"
+    // from the engine's zh-Hans
+    text  "Tag Name"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamMeshModifierTextAnimation_RandomSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector
+    src   "Random selector will select characters randomly, and generate random value from 0 to 1 for interpolation."
+    text  "随机选择器会随机选择字符，并为插值生成 0 到 1 之间的随机值。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:End
+    src   "End character position from 0 to 1, 0 is first character of text, 1 is last one."
+    text  "字符位置的结束位置，范围为 0 到 1，0 表示文本的第一个字符，1 表示最后一个字符。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:Seed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:Seed
+    src   "Random seed."
+    text  "随机种子。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RandomSelector:Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RandomSelector:Start
+    src   "Start character position from 0 to 1, 0 is first character of text, 1 is last one."
+    text  "字符位置的起始位置，范围为 0 到 1，0 表示文本的第一个字符，1 表示最后一个字符。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector
+    src   "Range selector defines start and end range of characters in UIText, and provide 0 to 1 value(for interpolation) from start to end."
+    text  "范围选择器定义了 UIText 中字符的起始和结束范围，并提供从起始到结束的 0 到 1 值的插值。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:bFlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:bFlipDirection
+    src   "Selector* can provide 0 to 1 value from start to end when this value is false, if it is true then 1 to 0 from start to end."
+    text  "当此值为 false 时，选择器可以提供从起始到结束的 0 到 1 值；如果为 true，则提供从结束到起始的 1 到 0 值。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:End {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:End
+    src   "End character position from 0 to 1, 0 is first character of text, 1 is last one."
+    text  "字符位置的结束位置，范围为 0 到 1，0 表示文本的第一个字符，1 表示最后一个字符。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:Range {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:Range
+    src   "Selector* can provide 0 to 1 value from start to end, but sometime *Properties* effect may look too smooth, so lower this value can let *Properties* effect more sharp."
+    text  "选择器可以提供 0 到 1 的值，但有时 *属性* 效果可能看起来过于平滑，因此降低此值可以使 *属性* 效果更锐利。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RangeSelector:Start {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RangeSelector:Start
+    src   "Start character position from 0 to 1, 0 is first character of text, 1 is last one."
+    text  "字符位置的起始位置，范围为 0 到 1，0 表示文本的第一个字符，1 表示最后一个字符。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector
+    src   "RichTextTag selector can select characters by rich-text custom-tag, and provide 0 to 1 value(for interpolation) from start to end."
+    text  "富文本标签选择器可以通过富文本自定义标签选择字符，并提供从起始到结束的 0 到 1 值的插值。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:bFlipDirection {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:bFlipDirection
+    src   "Like the property in RangeSelector, flip 0-1 to 1-0."
+    text  "与范围选择器中的属性一样，翻转 0-1 到 1-0。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:Range {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:Range
+    src   "Like the property in RangeSelector. Lower this value can let *Properties* effect more sharp."
+    text  "与范围选择器中的属性一样，降低此值可以使 *属性* 效果更锐利。"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_RichTextTagSelector:TagName {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h#DreamMeshModifierTextAnimation_RichTextTagSelector:TagName
+    src   "Custom tag name"
+    text  "自定义标签名称"
+    state machine
+}

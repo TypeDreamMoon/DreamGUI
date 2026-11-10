@@ -1,0 +1,545 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamPixelSort {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort
+    src   "Dream Pixel Sort"
+    text  "像素排序"
+    state machine
+}
+
+DreamPixelSort:bDescending {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:bDescending
+    src   "Descending"
+    // from the engine's zh-Hans
+    text  "降序"
+    state draft
+}
+
+DreamPixelSort:GetDescending:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetDescending:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetIntervalLength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetIntervalLength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetIntervalMode:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetIntervalMode:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetMaxSortPasses:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetMaxSortPasses:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetRandomness:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetRandomness:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetSortAxis:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortAxis:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetSortKey:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortKey:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetSortStrength:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortStrength:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetThresholdMax:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetThresholdMax:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:GetThresholdMin:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetThresholdMin:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamPixelSort:IntervalLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:IntervalLength
+    src   "Interval Length"
+    text  "间隔长度"
+    state machine
+}
+
+DreamPixelSort:IntervalMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:IntervalMode
+    src   "Interval Mode"
+    text  "间隔模式"
+    state machine
+}
+
+DreamPixelSort:MaxSortPasses {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:MaxSortPasses
+    src   "Max Sort Passes"
+    text  "最大排序次数"
+    state machine
+}
+
+DreamPixelSort:Randomness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:Randomness
+    src   "Randomness"
+    // from the engine's zh-Hans
+    text  "随机性"
+    state draft
+}
+
+DreamPixelSort:SetDescending:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetDescending:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetIntervalLength:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetIntervalLength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetIntervalMode:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetIntervalMode:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetMaxSortPasses:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetMaxSortPasses:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetRandomness:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetRandomness:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetSortAxis:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortAxis:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetSortKey:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortKey:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetSortStrength:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortStrength:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetThresholdMax:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetThresholdMax:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SetThresholdMin:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetThresholdMin:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamPixelSort:SortAxis {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortAxis
+    src   "Sort Axis"
+    text  "排序轴"
+    state machine
+}
+
+DreamPixelSort:SortKey {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortKey
+    src   "Sort Key"
+    // from the engine's zh-Hans
+    text  "Sort Key"
+    state draft
+}
+
+DreamPixelSort:SortStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortStrength
+    src   "Sort Strength"
+    text  "排序强度"
+    state machine
+}
+
+DreamPixelSort:ThresholdMax {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:ThresholdMax
+    src   "Threshold Max"
+    text  "阈值上限"
+    state machine
+}
+
+DreamPixelSort:ThresholdMin {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:ThresholdMin
+    src   "Threshold Min"
+    text  "阈值下限"
+    state machine
+}
+
+EDreamPixelSortAxis.EDreamPixelSortAxis_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortAxis:EDreamPixelSortAxis_MAX
+    src   "EDream Pixel Sort Axis MAX"
+    text  "EDreamPixelSortAxis_MAX"
+    state machine
+}
+
+EDreamPixelSortAxis.Horizontal {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortAxis:Horizontal
+    src   "Horizontal"
+    // from the engine's zh-Hans
+    text  "水平"
+    state draft
+}
+
+EDreamPixelSortAxis.Vertical {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortAxis:Vertical
+    src   "Vertical"
+    // from the engine's zh-Hans
+    text  "垂直"
+    state draft
+}
+
+EDreamPixelSortInterval.EDreamPixelSortInterval_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:EDreamPixelSortInterval_MAX
+    src   "EDream Pixel Sort Interval MAX"
+    text  "EDreamPixelSortInterval_MAX"
+    state machine
+}
+
+EDreamPixelSortInterval.None {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:None
+    src   "None"
+    // from the engine's zh-Hans
+    text  "None"
+    state draft
+}
+
+EDreamPixelSortInterval.Random {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Random
+    src   "Random"
+    // from the engine's zh-Hans
+    text  "随机"
+    state draft
+}
+
+EDreamPixelSortInterval.Threshold {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Threshold
+    src   "Threshold"
+    // from the engine's zh-Hans
+    text  "阈值"
+    state draft
+}
+
+EDreamPixelSortInterval.Waves {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Waves
+    src   "Waves"
+    // from the engine's zh-Hans
+    text  "波"
+    state draft
+}
+
+EDreamPixelSortKey.Alpha {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Alpha
+    src   "Alpha"
+    // from the engine's zh-Hans
+    text  "透明度"
+    state draft
+}
+
+EDreamPixelSortKey.Brightness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Brightness
+    src   "Brightness"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+EDreamPixelSortKey.EDreamPixelSortKey_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:EDreamPixelSortKey_MAX
+    src   "EDream Pixel Sort Key MAX"
+    text  "EDreamPixelSortKey_MAX"
+    state machine
+}
+
+EDreamPixelSortKey.Hue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Hue
+    src   "Hue"
+    // from the engine's zh-Hans
+    text  "色调"
+    state draft
+}
+
+EDreamPixelSortKey.Intensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Intensity
+    src   "Intensity"
+    // from the engine's zh-Hans
+    text  "强度"
+    state draft
+}
+
+EDreamPixelSortKey.Luminance {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Luminance
+    src   "Luminance"
+    // from the engine's zh-Hans
+    text  "亮度"
+    state draft
+}
+
+EDreamPixelSortKey.Minimum {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Minimum
+    src   "Minimum"
+    // from the engine's zh-Hans
+    text  "最小"
+    state draft
+}
+
+EDreamPixelSortKey.Saturation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Saturation
+    src   "Saturation"
+    // from the engine's zh-Hans
+    text  "饱和度"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamPixelSort {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort
+    src   "UI element that pixel-sorts whatever is behind it: within each row or column, runs of pixels whose\nkey falls inside a threshold band are sorted, and pixels outside the band stay put and act as the\nwalls between runs.\n\nUse it in ScreenSpace or WorldSpace-DreamUIRenderer.\nIf android OpenGL ES3.1, need to enable \"ProjectSettings/Platforms/Android/Build/Support Backbuffer\nSampling on OpenGL\".\n\nCost is linear in SortStrength x area and is bandwidth-bound: each phase reads and writes every\ntexel of the widget's rect. It is comfortable on desktop and wants a low strength on mobile."
+    text  "对背后内容进行像素排序的 UI 元素：在每一行或每一列内，key 落在阈值区间内的像素段\n会被排序，区间外的像素保持不动，并充当\n各段之间的边界。\n\n在 ScreenSpace 或 WorldSpace-DreamUIRenderer 中使用。\n若为 Android OpenGL ES3.1，需要启用 \"ProjectSettings/Platforms/Android/Build/Support Backbuffer\nSampling on OpenGL\"。\n\n开销与 SortStrength x 面积成正比，且受带宽限制：每个阶段都会读写控件矩形内的每个\n纹素。在桌面端表现轻松，在移动端则需要较低的强度。"
+    state machine
+}
+
+DreamPixelSort:bDescending {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:bDescending
+    src   "Sort bright-to-dark instead of dark-to-bright."
+    text  "按从亮到暗排序，而不是从暗到亮。"
+    state machine
+}
+
+DreamPixelSort:IntervalLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:IntervalLength
+    src   "Run length in texels for Random (average) and Waves (exact). Unused by the other modes."
+    text  "Random（平均值）和 Waves（精确值）模式下每段的长度，以纹素为单位。其他模式不使用。"
+    state machine
+}
+
+DreamPixelSort:IntervalMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:IntervalMode
+    src   "How runs are carved out of each line. This changes the character of the result more than any\nother setting -- Threshold drapes the effect over the image, Random and Waves impose a pattern\non it regardless of what is behind."
+    text  "每一行如何划分像素段。该设置对结果特征的影响比其他任何设置都大——\nThreshold 将效果覆盖在图像之上，Random 和 Waves 则不管背后是什么，\n直接施加一种图案。"
+    state machine
+}
+
+DreamPixelSort:MaxSortPasses {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:MaxSortPasses
+    src   "The ceiling on how far a pixel may travel, in texels of the widget's own UI units rather than\nscreen pixels. It is the effect's cost dial as much as its reach dial: each pixel scans this\nfar in both directions, so cost is linear in it.\n\nKEEP THIS AT OR ABOVE THE RUN LENGTH YOU ARE SORTING, or the result is speckle rather than a\nmilder version of the effect. A pixel that cannot scan to the start of its own run disagrees\nwith its neighbours about where the run begins, their destinations collide, and the pixels\nnobody claims are left where they are. Hence the ceiling of 512: it matches IntervalLength's,\nso Random and Waves runs can always be covered. Threshold runs follow the image and can be\nlonger than any clamp, which is the one case where this still has to be judged by eye."
+    text  "像素最远可移动距离的上限，以控件自身 UI 单位的纹素计，而不是\n屏幕像素。它既是效果的作用范围调节，也是开销调节：每个像素都会向两个\n方向扫描这么远，因此开销与之成正比。\n\n请务必保持其大于或等于你所排序的段长，否则结果会变成散点，而不是效果的\n缓和版本。无法扫描到自己所在段起点的像素，会与相邻像素在段起点上产生\n分歧，它们的目标位置相互冲突，而无人认领的像素则留在原地。因此上限为 512：\n它与 IntervalLength 的上限一致，这样 Random 和 Waves 的段总能被覆盖。\nThreshold 的段跟随图像，可能比任何限制都长，\n这是唯一仍需靠肉眼判断的情况。"
+    state machine
+}
+
+DreamPixelSort:Randomness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:Randomness
+    src   "Fraction of runs left untouched. Mostly used to break up how regular Waves looks."
+    text  "保持不变的段所占比例。主要用于打散 Waves 过于规则的外观。"
+    state machine
+}
+
+DreamPixelSort:SortAxis {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortAxis
+    src   "Which way the runs lie. This is the WIDGET's axis, so rotating the widget rotates the sort."
+    text  "像素段的走向。这是控件自身的轴，因此旋转控件会同时旋转排序方向。"
+    state machine
+}
+
+DreamPixelSort:SortKey {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortKey
+    src   "What orders the pixels, and what the threshold band is measured against."
+    text  "决定像素的排序依据，以及阈值区间的比较基准。"
+    state machine
+}
+
+DreamPixelSort:SortStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SortStrength
+    src   "How far pixels are allowed to travel, as a fraction of MaxSortPasses. 0 disables the effect\nentirely -- and note that disables the whole visual, so the widget shows nothing rather than\nshowing the untouched background."
+    text  "像素允许移动的距离，以 MaxSortPasses 的比例表示。设为 0 会完全禁用该效果——\n注意这会禁用整个视觉效果，控件将什么都不显示，而不是\n显示未经处理的背景。"
+    state machine
+}
+
+DreamPixelSort:ThresholdMax {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:ThresholdMax
+    src   "Pixels whose key is above this are left alone and act as run boundaries."
+    text  "key 高于此值的像素保持不动，并作为段边界。"
+    state machine
+}
+
+DreamPixelSort:ThresholdMin {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:ThresholdMin
+    src   "Pixels whose key is below this are left alone and act as run boundaries. The default of 0.25\nwith an upper of 0.8 is the pair the reference implementations settled on."
+    text  "key 低于此值的像素保持不动，并作为段边界。默认值 0.25、\n上限 0.8 是各参考实现最终采用的组合。"
+    state machine
+}
+
+EDreamPixelSortAxis {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortAxis
+    src   "Which way runs are sorted. The axis is the WIDGET's, so a rotated widget rotates the effect."
+    text  "像素段排序的方向。该轴属于控件，因此旋转控件会同时旋转效果。"
+    state machine
+}
+
+EDreamPixelSortInterval {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval
+    src   "How runs are carved out of a line -- which is a SEPARATE question from what orders the pixels\ninside them, and the one that decides most of the character of the result.\n\nThreshold follows the picture: runs end where the image stops being mid-tone, so the effect\ndrapes itself over whatever is behind. Random and Waves ignore the picture entirely and cut on a\nspatial rule, which is where the regular banded look comes from. They are not variations on each\nother; they produce recognisably different images from the same source."
+    text  "区段是如何从一条线中切分出来的——这是一个与区段内像素排序依据相互独立的\n问题，也是决定结果大部分特征的问题。\n\nThreshold 跟随画面：图像不再是中间调的地方区段就结束，因此效果会贴合其背后的内容。\nRandom 和 Waves 完全忽略画面，按空间规则切分，规则的条带外观正源于此。\n它们并非彼此的变体；\n对同一源图，它们会产生明显不同的图像。"
+    state machine
+}
+
+EDreamPixelSortInterval.None {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:None
+    src   "No runs -- each whole line sorts end to end."
+    text  "无区段——每条整线从头到尾排序。"
+    state machine
+}
+
+EDreamPixelSortInterval.Random {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Random
+    src   "Runs of pseudo-random length, averaging IntervalLength. Ignores the image."
+    text  "伪随机长度的区段，平均为 IntervalLength。忽略图像。"
+    state machine
+}
+
+EDreamPixelSortInterval.Threshold {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Threshold
+    src   "Runs end where a pixel's key leaves the threshold band. Content-driven."
+    text  "像素的键值离开阈值范围时区段结束。由内容驱动。"
+    state machine
+}
+
+EDreamPixelSortInterval.Waves {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortInterval:Waves
+    src   "Runs of near-uniform length, IntervalLength, lightly jittered per line. Ignores the image."
+    text  "长度近乎均匀的区段，即 IntervalLength，每行轻微抖动。忽略图像。"
+    state machine
+}
+
+EDreamPixelSortKey {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey
+    src   "What decides a pixel's place in the sort, and which pixels take part."
+    text  "决定像素在排序中的位置，以及哪些像素参与排序。"
+    state machine
+}
+
+EDreamPixelSortKey.Alpha {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Alpha
+    src   "Alpha. Note that on a 10-bit backbuffer alpha carries two bits, so this collapses to four\nvalues and the sort becomes close to a no-op -- it is only useful on an 8-bit or float target."
+    text  "Alpha。注意在 10 位后台缓冲区上 alpha 只占两位，因此会退化为四个\n值，排序几乎不起作用——它只在 8 位或浮点目标上有用。"
+    state machine
+}
+
+EDreamPixelSortKey.Brightness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Brightness
+    src   "Largest of R/G/B. Picks out highlights harder than luminance does."
+    text  "R/G/B 中的最大值。比亮度更能突出高光。"
+    state machine
+}
+
+EDreamPixelSortKey.Hue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Hue
+    src   "Hue, 0..1 around the wheel. Sorts by colour rather than by tone, which gives the rainbow\nbanding the effect is known for. Note it WRAPS: red is at both ends, so a run spanning red\nsplits rather than sorting smoothly. That is inherent to sorting an angle, not a defect."
+    text  "色相，在色轮上取 0..1。按颜色而不是按明暗排序，这正是该效果著称的彩虹\n条带的来源。注意它是环绕的：红色位于两端，因此跨越红色的区段会分裂，\n而不能平滑排序。这是按角度排序的固有特性，并非缺陷。"
+    state machine
+}
+
+EDreamPixelSortKey.Intensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Intensity
+    src   "R+G+B over three. Flatter than luminance -- it does not privilege green."
+    text  "R+G+B 除以三。比亮度更平缓——它不会偏向绿色。"
+    state machine
+}
+
+EDreamPixelSortKey.Luminance {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Luminance
+    src   "Rec.709 luminance. The usual choice, and the one the threshold defaults are tuned for."
+    text  "Rec.709 亮度。最常用的选择，也是阈值默认值所针对调校的对象。"
+    state machine
+}
+
+EDreamPixelSortKey.Minimum {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Minimum
+    src   "Smallest of R/G/B. Picks out how close a pixel is to a pure hue."
+    text  "R/G/B 中的最小值。用于突出像素接近纯色的程度。"
+    state machine
+}
+
+EDreamPixelSortKey.Saturation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#EDreamPixelSortKey:Saturation
+    src   "max-min over max. Sorts by colourfulness, leaving greys alone."
+    text  "max-min 除以 max。按色彩鲜艳度排序，灰色不受影响。"
+    state machine
+}
