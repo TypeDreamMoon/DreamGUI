@@ -4478,6 +4478,12 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 		return -1;
 	};
 
+	// The geometry the preview just resolved against its new parent, onto the templates BEFORE they move: a template
+	// moves without keeping its world position, so the values travel with it unchanged, and a `.dui`-backed class
+	// writes the move -- and the values reported dirty with it -- when the batch below closes, then compiles and
+	// rebuilds the preview from the file. Committed after that, it was the rebuilt preview's values, read from the
+	// file, that were copied back: the widget landed in its new group at the place it had held in the old one.
+	CommitWidgetGeometryToTemplate(InPreviewWidgets);
 	bool bMoved = false;
 	{
 		// A drop of several widgets is one skeleton compile.
@@ -4495,12 +4501,6 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 				: IsValid(PreviewWidget->GetParent()) ? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
 			bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex, SlotName);
 		}
-	}
-	if (bMoved)
-	{
-		// The geometry the preview just resolved against its new parent. Ordered after the reparent
-		// so the values land on templates that are already in the right place.
-		CommitWidgetGeometryToTemplate(InPreviewWidgets);
 	}
 	return bMoved;
 }
