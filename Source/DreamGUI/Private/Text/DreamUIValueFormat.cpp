@@ -811,6 +811,39 @@ FString DreamUIValueFormat::PrintScalar(const double InValue, const bool bSingle
 	return DreamUIValueFormatLocal::PrintScalar(InValue, bSinglePrecision);
 }
 
+FString DreamUIValueFormat::PrintWithin(const double InValue, const double InTolerance, const int32 InMinDecimals, double* OutRounded)
+{
+	// Nine decimals is a billionth of whatever the unit is, finer than any hand's precision this is for; a tolerance so
+	// tight that nine do not reach it is asking for the number itself.
+	constexpr int32 MaxDecimals = 9;
+	if (InTolerance > 0.0 && FMath::IsFinite(InValue))
+	{
+		for (int32 Decimals = FMath::Clamp(InMinDecimals, 0, MaxDecimals); Decimals <= MaxDecimals; ++Decimals)
+		{
+			FString Candidate = FString::Printf(TEXT("%.*f"), Decimals, InValue);
+			const double Rounded = FCString::Atod(*Candidate);
+			if (FMath::Abs(Rounded - InValue) <= InTolerance)
+			{
+				// A value a hair below zero rounds to "-0" or "-0.00", which reads as a sign nobody meant.
+				if (Rounded == 0.0)
+				{
+					Candidate.RemoveFromStart(TEXT("-"));
+				}
+				if (OutRounded != nullptr)
+				{
+					*OutRounded = Rounded;
+				}
+				return Candidate;
+			}
+		}
+	}
+	if (OutRounded != nullptr)
+	{
+		*OutRounded = InValue;
+	}
+	return DreamUIValueFormatLocal::PrintScalar(InValue, /*bSinglePrecision*/ false);
+}
+
 FString DreamUIValueFormat::PrintColorHex(const FLinearColor& InColor)
 {
 	return DreamUIValueFormatLocal::MakeHexText(InColor.ToFColor(/*bSRGB*/ true));
