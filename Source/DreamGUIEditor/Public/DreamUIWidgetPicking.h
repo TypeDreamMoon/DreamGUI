@@ -43,13 +43,16 @@ namespace DreamUIWidgetPicking
 	DREAMGUIEDITOR_API UDreamWidget* PickTopmostWidget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, int32& InOutCycleIndex);
 
 	/**
-	 * The widget a drop on InHitWidget should parent to: the nearest ancestor-or-self owning a layout
-	 * container that still has room. Null when there is none -- callers fall back to the prefab root,
-	 * which is what a container-less prefab wants anyway.
+	 * The widget a drop on InHitWidget should parent to: the nearest ancestor-or-self that places
+	 * children and still has room -- one owning a layout container, or a group: a widget with no panel
+	 * that holds children, which stand where their anchors put them as on a Canvas Panel. Null when
+	 * there is none -- callers fall back to the prefab root, which is what a container-less prefab
+	 * wants anyway.
 	 *
 	 * Resolving to a container rather than to the hit widget is what makes a drop land somewhere that
 	 * will arrange it. Dropping onto a Text inside a VerticalBox means the VerticalBox; nesting into
-	 * the Text itself is a deliberate act and stays available from the hierarchy tree.
+	 * the Text itself -- or into any widget that holds nothing yet -- is a deliberate act and stays
+	 * available from the hierarchy tree.
 	 *
 	 * InTreeRoot is where the walk stops, and a designer has to pass it. The widget being authored is
 	 * not the top of the preview world: the designer stands it inside a wrapper of its own, and that
