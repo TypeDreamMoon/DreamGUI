@@ -107,5 +107,19 @@
 			"Type": "Editor",
 			"LoadingPhase": "PostEngineInit"
 		}
+	],
+	"LocalizationTargets": [
+		{
+			"Name": "DreamGUI",
+			"LoadingPolicy": "Editor"
+		},
+		{
+			"Name": "DreamGUIPropertyNames",
+			"LoadingPolicy": "PropertyNames"
+		},
+		{
+			"Name": "DreamGUIToolTips",
+			"LoadingPolicy": "ToolTips"
+		}
 	]
 }
