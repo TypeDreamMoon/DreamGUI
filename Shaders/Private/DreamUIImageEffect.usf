@@ -187,7 +187,9 @@ void StylizePS(float4 SvPosition : SV_POSITION, out float4 OutColor : SV_Target0
 				const float2 CentreTarget = DreamUIStylize_Rotate((floor(P) + 0.5) * CellPixels, P0.z + Angles[Plate]);
 				const float3 C = DreamUIEffect_Straight(DreamUIStylize_SampleAt(CentreTarget - DreamUI_EffectOrigin.xy), Alpha);
 				const float K = 1.0 - max(C.r, max(C.g, C.b));
-				const float Coverage = Plate == 3 ? K : (K >= 1.0 ? 0.0 : (1.0 - C[Plate] - K) / (1.0 - K));
+				// C[min(Plate, 2)]: the black plate never reads C, but FXC unrolls the loop and evaluates both sides of
+				// the ?:, so C[3] would be an out-of-bounds read it refuses to compile (X3504).
+				const float Coverage = Plate == 3 ? K : (K >= 1.0 ? 0.0 : (1.0 - C[min(Plate, 2)] - K) / (1.0 - K));
 				Ink[Plate] = DreamUIStylize_HalftoneInk(P, Coverage, bLines, Aa);
 			}
 			const float3 Paper = float3((1.0 - Ink[0]), (1.0 - Ink[1]), (1.0 - Ink[2])) * (1.0 - Ink[3]);
