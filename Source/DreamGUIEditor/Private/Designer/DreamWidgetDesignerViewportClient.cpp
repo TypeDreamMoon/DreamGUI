@@ -51,6 +51,7 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Text/DreamUIValueFormat.h"
 #include "KeyPropertyParams.h"
 #include "PropertyPath.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -900,6 +901,22 @@ bool FDreamWidgetDesignerViewportClient::IntersectDesignerPlane(const FVector2D&
 	OutPoint = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0f,
 		PlaneTransform.GetLocation(), PlaneTransform.GetUnitAxis(EAxis::X));
 	return true;
+}
+
+double FDreamWidgetDesignerViewportClient::MeasureUnitsPerPixel(const FVector2D& InPixel, const FTransform& InPlaneTransform) const
+{
+	FVector Here, Right, Down;
+	if (!IntersectDesignerPlane(InPixel, InPlaneTransform, Here)
+		|| !IntersectDesignerPlane(InPixel + FVector2D(1.0, 0.0), InPlaneTransform, Right)
+		|| !IntersectDesignerPlane(InPixel + FVector2D(0.0, 1.0), InPlaneTransform, Down))
+	{
+		return 0.0;
+	}
+	// In the plane's own units, which is the frame a position in it is written in: its parent's scale is in here.
+	const FVector LocalHere = InPlaneTransform.InverseTransformPosition(Here);
+	return FMath::Max(
+		FVector::Dist(InPlaneTransform.InverseTransformPosition(Right), LocalHere),
+		FVector::Dist(InPlaneTransform.InverseTransformPosition(Down), LocalHere));
 }
 
 void FDreamWidgetDesignerViewportClient::DrawWidgetScreenOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas,
@@ -2086,6 +2103,7 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			Target.Pivot = Snapshot.Pivot;
 			Target.bHorizontalFree = Snapshot.bHorizontalPositionFree;
 			Target.bVerticalFree = Snapshot.bVerticalPositionFree;
+			Target.UnitsPerPixel = MeasureUnitsPerPixel(MousePixel, Snapshot.PlaneTransform);
 			Moving.Add(SelectedWidget);
 			Targets.Add(Target);
 		}
@@ -3720,11 +3738,21 @@ void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDr
 {
 	OutResults.Reset();
 	OutResults.Reserve(InTargets.Num());
-	auto RawPositionOf = [](const FMoveDragTarget& InTarget)
+	auto TravelOf = [](const FMoveDragTarget& InTarget)
 	{
 		const FVector StartLocal = InTarget.PlaneTransform.InverseTransformPosition(InTarget.StartPlanePoint);
 		const FVector CurrentLocal = InTarget.PlaneTransform.InverseTransformPosition(InTarget.CurrentPlanePoint);
-		return InTarget.StartPosition + FVector2D(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
+		return FVector2D(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
+	};
+	auto RawPositionOf = [&TravelOf](const FMoveDragTarget& InTarget)
+	{
+		return InTarget.StartPosition + TravelOf(InTarget);
+	};
+	// Whether the pointer moved the target along an axis at all: by half a pixel or more, the least it can move.
+	auto Travels = [&TravelOf](const FMoveDragTarget& InTarget, bool bHorizontal)
+	{
+		const FVector2D Travel = TravelOf(InTarget);
+		return FMath::Abs(bHorizontal ? Travel.X : Travel.Y) > FMath::Max(InTarget.UnitsPerPixel * 0.5, UE_DOUBLE_SMALL_NUMBER);
 	};
 	// Snapping every target onto its own nearest gridline collapses the gaps between widgets that
 	// started at different sub-grid offsets: the selection deforms as it is dragged and two of them
@@ -3744,12 +3772,14 @@ void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDr
 	bool bSnappedY = false;
 	// The leader for an axis: the first target anything may be written to on it. Shared by both
 	// passes below, so the sibling edge and the gridline are read off the same widget.
-	auto LeaderFor = [&InTargets](bool bHorizontal) -> const FMoveDragTarget*
+	auto LeaderFor = [&InTargets, &Travels](bool bHorizontal) -> const FMoveDragTarget*
 	{
-		return InTargets.FindByPredicate([bHorizontal](const FMoveDragTarget& InTarget)
+		const FMoveDragTarget* Leader = InTargets.FindByPredicate([bHorizontal](const FMoveDragTarget& InTarget)
 		{
 			return bHorizontal ? InTarget.bHorizontalFree : InTarget.bVerticalFree;
 		});
+		// No leader on an axis the pointer did not travel along: nothing is snapped there, so nothing is moved there.
+		return Leader != nullptr && Travels(*Leader, bHorizontal) ? Leader : nullptr;
 	};
 	// Local Y is the horizontal axis of a widget's plane and local Z the vertical one, which is the
 	// same mapping RawPositionOf reads back out.
@@ -3803,14 +3833,32 @@ void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDr
 	for (const FMoveDragTarget& Target : InTargets)
 	{
 		const FVector Local = Target.PlaneTransform.InverseTransformVector(CorrectionWorld);
-		const FVector2D Snapped = RawPositionOf(Target) + FVector2D(Local.Y, Local.Z);
+		const FVector2D Travel = TravelOf(Target);
+		const bool bTravelsX = Travels(Target, true);
+		const bool bTravelsY = Travels(Target, false);
+		// A snapped axis lands on its line exactly. An unsnapped one carries the travel to the pointer's precision --
+		// the same for every target in one parent, so the selection keeps its shape -- because a ray met a plane to
+		// measure it, and sixty pixels came back 59.9999999.
+		auto Carry = [&Target](double InTravel, double InCorrection, bool bInSnapped)
+		{
+			if (bInSnapped)
+			{
+				return InTravel + InCorrection;
+			}
+			double Tidy = InTravel;
+			DreamUIValueFormat::PrintWithin(InTravel, Target.UnitsPerPixel * 0.5, 0, &Tidy);
+			return Tidy;
+		};
+		const FVector2D Delta(
+			bTravelsX ? Carry(Travel.X, Local.Y, bSnappedX) : 0.0,
+			bTravelsY ? Carry(Travel.Y, Local.Z, bSnappedY) : 0.0);
 		FDreamLayoutControlAnchorData Control;
 		Control.bCanControlHorizontalPosition = !Target.bHorizontalFree;
 		Control.bCanControlVerticalPosition = !Target.bVerticalFree;
 		FMoveDragResult& Result = OutResults.AddDefaulted_GetRef();
-		Result.Position = Target.StartPosition + FilterMoveDelta(Snapped - Target.StartPosition, Control);
-		Result.bSnappedHorizontal = Target.bHorizontalFree && bSnappedX;
-		Result.bSnappedVertical = Target.bVerticalFree && bSnappedY;
+		Result.Position = Target.StartPosition + FilterMoveDelta(Delta, Control);
+		Result.bSnappedHorizontal = Target.bHorizontalFree && bTravelsX && bSnappedX;
+		Result.bSnappedVertical = Target.bVerticalFree && bTravelsY && bSnappedY;
 	}
 }
 

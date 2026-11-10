@@ -172,6 +172,12 @@ public:
 		FVector2D Pivot = FVector2D(0.5, 0.5);
 		bool bHorizontalFree = true;
 		bool bVerticalFree = true;
+		/**
+		 * How far one screen pixel reaches in the parent's frame: the pointer's own precision. An axis the pointer
+		 * travelled less than half of it along did not move, and keeps its number exactly; on one it did travel, the
+		 * travel is spelled to within half of it. Zero for no such precision: any travel moves, and is taken exactly.
+		 */
+		double UnitsPerPixel = 0.0;
 	};
 	struct FMoveDragResult
 	{
@@ -226,6 +232,11 @@ public:
 	 * designer snapping to a gridline a few units away from the edge it is visibly trying to meet is
 	 * the grid getting in the way of the alignment the author can see. Defaulted to nothing, so a
 	 * caller that does not gather siblings behaves exactly as before.
+	 *
+	 * Only an axis the pointer travelled along is written, snapped or not (see FMoveDragTarget::
+	 * UnitsPerPixel). A row dragged sideways keeps its height in its group to the digit, off the grid
+	 * or beside a sibling's edge as it was: neither the grid nor an edge was asked about that axis, and
+	 * pulling it to one moved the row the author was not moving.
 	 */
 	static void ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults,
 		const FSiblingSnapLines& InSnapLines = FSiblingSnapLines());
@@ -451,6 +462,8 @@ private:
 	FBox2D GetDesignerMarqueeBox() const;
 	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
+	/** How far one viewport pixel at InPixel reaches in the plane's own frame -- the pointer's precision there. Zero when unmeasurable. */
+	double MeasureUnitsPerPixel(const FVector2D& InPixel, const FTransform& InPlaneTransform) const;
 	void DrawWidgetScreenOutline(UDreamWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
 	/** Outline + name of whatever the cursor is over, so a click's target is knowable before it happens. */
 	void DrawHoverOutline(FSceneView& View, FCanvas& Canvas) const;
