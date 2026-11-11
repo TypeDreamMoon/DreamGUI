@@ -20,6 +20,17 @@ struct FDreamGlyphSdfResult
 	float Advance = 0.0f;
 	/** Width * Height BGRA pixels: RGB the multi-channel field, A the true signed distance. 0.5 is the edge. */
 	TArray<uint8> Pixels;
+	/**
+	 * Area, in square pixels at the rasterization size, where two or more of the outline's contours fill the same point
+	 * (a nonzero winding of two or more): strokes drawn as separate overlapping contours, which a static instance cut
+	 * from a variable font keeps unless its overlaps were removed. 0 for an outline whose contours only meet.
+	 */
+	float OverlapPixels = 0.0f;
+
+	/** Overlap below this many square pixels at the rasterization size is two contours meeting, not overlapping. */
+	static constexpr float MinOverlapPixels = 1.0f;
+	/** Whether the outline's overlaps are big enough to matter. */
+	bool HasOverlappingContours() const { return OverlapPixels >= MinOverlapPixels; }
 };
 
 /**

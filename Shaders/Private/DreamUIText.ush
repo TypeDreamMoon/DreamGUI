@@ -24,15 +24,17 @@
 //   code < -0.5    a colour glyph (an emoji: premultiplied BGRA from a bitmap strike or COLR layers) in any atlas. -1 is
 //                  its face, -17 (below -8.5) its effects copy, which draws the underlay from its alpha. UV3.y is the
 //                  cell's texels per em. Outline, glow, dilation and the small-text correction never apply to it.
+//   code > 55.5    56 + DilateEm: a field glyph's underlay copy, its underlay alone (layer 4 below).
 //   layer 3        48 + phase: a coverage glyph, small text hinted for its pixel size, four subpixel phases in the four
 //                  channels of one texel (DreamUIText_ShadeCoverage). UV3.y is the contrast, plus 16 when the target
 //                  blends in linear space.
 //   layers 0-2     a field glyph as below; a bitmap font's plain glyphs write 0.
 //
 // Per-glyph channels of a field glyph (written by FDreamTextPainter):
-//   UV2.x  DilateEm + 16 * Layer. Layer 0 = face only, 1 = effects only (underlay, glow, outline),
-//          2 = everything in one quad. A text with effects emits its effect quads first and its face
-//          quads after, so a neighbour's glow never lands on top of a face.
+//   UV2.x  DilateEm + 16 * Layer, or 56 + DilateEm for the underlay copy. Layer 0 = face only, 1 = glow and outline,
+//          2 = everything in one quad, underlay included; the underlay copy (layer 4) = the underlay alone. A text with
+//          effects emits every glyph's underlay quad first, then every glow-and-outline quad, then the faces, so a
+//          neighbour's glow never lands on top of a face, nor a neighbour's underlay on top of an outline.
 //   UV2.y  the glyph's position across its fill run, 0..1 (every kind of quad)
 //   UV3.x  fill progress of the run (every kind of quad), UV3.y glow boost
 //
@@ -62,6 +64,12 @@
 // The per-quad codes in UV2.x and UV3.y (DreamTextQuadCode in DreamTextPainter.h): change one, change both.
 #define DREAMUI_TEXT_CODE_FIELD_LAYER_STRIDE 16.0
 #define DREAMUI_TEXT_CODE_COVERAGE_LINEAR_TARGET 16.0
+// A field glyph's underlay copy (DreamTextQuadCode::UnderlayBase, UnderlayThreshold): 56 + DilateEm.
+#define DREAMUI_TEXT_CODE_UNDERLAY_BASE 56.0
+#define DREAMUI_TEXT_CODE_UNDERLAY_THRESHOLD 55.5
+// The layers DreamUIText_UnpackGlyphChannel gives besides a field glyph's 0 (face), 1 (glow and outline) and 2 (both).
+#define DREAMUI_TEXT_LAYER_COVERAGE 3.0
+#define DREAMUI_TEXT_LAYER_UNDERLAY 4.0
 #define DREAMUI_TEXT_CODE_COLOR_THRESHOLD (-0.5)
 #define DREAMUI_TEXT_CODE_COLOR_EFFECTS_THRESHOLD (-8.5)
 // A colour glyph a mesh modifier copied (DreamTextQuadCode::ColorSilhouette, -33): its silhouette, in the vertex colour.
@@ -239,9 +247,16 @@ float DreamUIText_Median(float3 V)
 }
 
 // UV2.x of a glyph that is not a colour glyph: dilate in em plus 16 * layer (see the header). A coverage glyph is layer
-// 3, and what this calls its dilate is its phase.
+// 3 (DREAMUI_TEXT_LAYER_COVERAGE), and what this calls its dilate is its phase; a field glyph's underlay copy, 56 + dilate,
+// is layer 4 (DREAMUI_TEXT_LAYER_UNDERLAY).
 void DreamUIText_UnpackGlyphChannel(float Packed, out float Layer, out float DilateEm)
 {
+	if (Packed > DREAMUI_TEXT_CODE_UNDERLAY_THRESHOLD)
+	{
+		Layer = DREAMUI_TEXT_LAYER_UNDERLAY;
+		DilateEm = Packed - DREAMUI_TEXT_CODE_UNDERLAY_BASE;
+		return;
+	}
 	Layer = floor((Packed + 0.5 * DREAMUI_TEXT_CODE_FIELD_LAYER_STRIDE) / DREAMUI_TEXT_CODE_FIELD_LAYER_STRIDE);
 	DilateEm = Packed - Layer * DREAMUI_TEXT_CODE_FIELD_LAYER_STRIDE;
 }
@@ -370,9 +385,9 @@ FDreamUIGlyphSample DreamUIText_SampleField(Texture2DArray FontTex, SamplerState
  * The whole text look for one pixel: underlay behind, glow outside, outline around, face on top.
  * Returns straight (non-premultiplied) colour and alpha. FaceColor is what the face is drawn in: the vertex colour, or a
  * painted face's colour (DreamUIPaint_PaintFace).
- * Layer selects what this quad draws (0 face, 1 effects, 2 both); GlyphDilateEm is the glyph's own
- * dilation (synthetic bold) on top of the style's. FontEmTexels is the atlas's texels per em, negated
- * when the font has the small-text correction off.
+ * Layer selects what this quad draws: 0 the face, 1 the glow and the outline, 2 all of it with the underlay, 4
+ * (DREAMUI_TEXT_LAYER_UNDERLAY) the underlay alone. GlyphDilateEm is the glyph's own dilation (synthetic bold) on top of
+ * the style's. FontEmTexels is the atlas's texels per em, negated when the font has the small-text correction off.
  * OutlinePaint multiplies the outline's colour: a painted outline's gradient, white and opaque otherwise.
  * EffectAlpha is what the underlay, the glow and the outline fade by together: an effects copy's vertex alpha, which the
  * painter makes the text's opacity (render opacity, tint, TextAnimation) and never its colour's alpha -- so a faded text
@@ -392,8 +407,9 @@ float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, 
 	float PxPerTexel = DreamUIText_ScreenPxPerTexel(UV, AtlasSize);
 	float PxRange = max(PxPerTexel * FieldRangeTexels, 1.0);
 	FDreamUIGlyphSample S = DreamUIText_SampleField(FontTex, FontSampler, UV, Slice, bMultiChannel);
-	const bool bDrawFace = Layer != 1.0;
-	const bool bDrawEffects = Layer != 0.0;
+	const bool bDrawFace = Layer == 0.0 || Layer == 2.0;
+	const bool bDrawEffects = Layer == 1.0 || Layer == 2.0;
+	const bool bDrawUnderlay = Layer == 2.0 || Layer == DREAMUI_TEXT_LAYER_UNDERLAY;
 
 	// The field is valid out to the spread; every reach stops 1.5 texels short of it so the
 	// anti-aliasing band and the bilinear footprint still land on real data.
@@ -447,9 +463,10 @@ float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, 
 	// leave this glyph's atlas cell near the quad's edge and read a neighbour; it is only trusted where
 	// the unshifted distance proves the shifted sample is still inside the cell (distance to the glyph
 	// is never more than the distance to the cell's edge minus the spread). A hard underlay is the
-	// outlined glyph's own shape, mitred like it; a soft one is a blur and rounds (DreamUIText_MedianWeight).
+	// outlined glyph's own shape, mitred like it; a soft one is a blur and rounds (DreamUIText_MedianWeight). Its own
+	// quad draws it under every glyph's outline (the header).
 	float Underlay = 0.0;
-	if (bDrawEffects && Style.UnderlayColor.a > 0.0)
+	if (bDrawUnderlay && Style.UnderlayColor.a > 0.0)
 	{
 		float OffsetLenEm = length(Style.UnderlayOffset);
 		float MaxOffsetEm = 0.5 * SpreadEm;

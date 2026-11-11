@@ -456,15 +456,18 @@ bool FDreamTextPainterEffectsAlphaTest::RunTest(const FString& Parameters)
 		FDreamUIGeometry Geometry;
 		TArray<FDreamUITextCharProperty> Chars;
 		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
-		if (!TestEqual(TEXT("field: two quads a glyph"), Geometry.Vertices.Num(), 6 * 4))return false;
-		TestEqual(TEXT("field: the clear glyph's effects copy is at the effect opacity"), Geometry.Vertices[0].Color.A, (uint8)128);
-		TestEqual(TEXT("field: its face is clear"), Geometry.Vertices[4].Color.A, (uint8)0);
-		TestEqual(TEXT("field: the colour glyph's underlay copy is at the effect opacity"), Geometry.Vertices[8].Color.A, (uint8)128);
-		TestTrue(TEXT("field: and white"), Geometry.Vertices[8].Color == FColor(255, 255, 255, 128));
-		TestEqual(TEXT("field: the colour glyph's face keeps the item's alpha"), Geometry.Vertices[12].Color.A, (uint8)0);
-		TestEqual(TEXT("field: the <color> glyph's effects copy is at the effect opacity too"), Geometry.Vertices[16].Color.A, (uint8)128);
-		TestEqual(TEXT("field: while its face is the tag's"), Geometry.Vertices[20].Color.A, (uint8)255);
-		TestEqual(TEXT("field: an effects copy keeps its face's colour"), Geometry.Vertices[16].Color.R, (uint8)200);
+		// A field glyph: its underlay copy, its effects copy, its face; the colour glyph: its underlay copy, its face.
+		if (!TestEqual(TEXT("field: three quads a field glyph, two the colour glyph"), Geometry.Vertices.Num(), 8 * 4))return false;
+		TestEqual(TEXT("field: the clear glyph's underlay copy is at the effect opacity"), Geometry.Vertices[0].Color.A, (uint8)128);
+		TestEqual(TEXT("field: and its effects copy"), Geometry.Vertices[4].Color.A, (uint8)128);
+		TestEqual(TEXT("field: its face is clear"), Geometry.Vertices[8].Color.A, (uint8)0);
+		TestEqual(TEXT("field: the colour glyph's underlay copy is at the effect opacity"), Geometry.Vertices[12].Color.A, (uint8)128);
+		TestTrue(TEXT("field: and white"), Geometry.Vertices[12].Color == FColor(255, 255, 255, 128));
+		TestEqual(TEXT("field: the colour glyph's face keeps the item's alpha"), Geometry.Vertices[16].Color.A, (uint8)0);
+		TestEqual(TEXT("field: the <color> glyph's underlay copy is at the effect opacity too"), Geometry.Vertices[20].Color.A, (uint8)128);
+		TestEqual(TEXT("field: and its effects copy"), Geometry.Vertices[24].Color.A, (uint8)128);
+		TestEqual(TEXT("field: while its face is the tag's"), Geometry.Vertices[28].Color.A, (uint8)255);
+		TestEqual(TEXT("field: an effects copy keeps its face's colour"), Geometry.Vertices[24].Color.R, (uint8)200);
 	}
 
 	// A bitmap font: the shadow and the outline at their own alpha times the effect opacity, the glyph's alpha left out.
@@ -503,7 +506,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * Slot 0 always: a colour glyph's copies keep their codes (-17 for the underlay, -1 for the face) and UV4 (0, 0) in a painted
  * text, while the field glyphs around them carry slot 1 on their face and -- the outline being painted -- on their effects
- * copy; a bitmap font's shadow and outline copies paint nothing either, only its faces do.
+ * copy, and nothing on their underlay copy; a bitmap font's shadow and outline copies paint nothing either, only its faces do.
  */
 bool FDreamTextPainterUnpaintedCopiesTest::RunTest(const FString& Parameters)
 {
@@ -528,19 +531,22 @@ bool FDreamTextPainterUnpaintedCopiesTest::RunTest(const FString& Parameters)
 		FDreamUIGeometry Geometry;
 		TArray<FDreamUITextCharProperty> Chars;
 		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
-		if (!TestEqual(TEXT("field: two quads a glyph"), Geometry.Vertices.Num(), 6 * 4))return false;
-		for (int32 Glyph = 0; Glyph < 3; Glyph += 2)
+		// 'a': quads 0 to 2; the colour glyph: 3 and 4; 'b': 5 to 7.
+		if (!TestEqual(TEXT("field: three quads a field glyph, two the colour glyph"), Geometry.Vertices.Num(), 8 * 4))return false;
+		for (int32 First = 0; First < 8; First += 5)
 		{
-			const FString What = FString::Printf(TEXT("field: '%c'"), Glyph == 0 ? TEXT('a') : TEXT('b'));
-			TestTrue(*(What + TEXT("'s effects copy paints with slot 1")), QuadIsMeasuredIn(Geometry, Glyph * 2, DreamTextQuadCode::TextSlot, DL.TextBlockBox));
-			TestEqual(*(What + TEXT("'s effects copy keeps its effects code")), CodeOf(Geometry, Glyph * 2), DreamTextQuadCode::FieldLayerStride);
-			TestTrue(*(What + TEXT("'s face paints with slot 1")), QuadIsMeasuredIn(Geometry, Glyph * 2 + 1, DreamTextQuadCode::TextSlot, DL.TextBlockBox));
-			TestEqual(*(What + TEXT("'s face keeps its face code")), CodeOf(Geometry, Glyph * 2 + 1), 0.0f);
+			const FString What = FString::Printf(TEXT("field: '%c'"), First == 0 ? TEXT('a') : TEXT('b'));
+			TestTrue(*(What + TEXT("'s underlay copy paints nothing")), QuadPaintsNothing(Geometry, First));
+			TestEqual(*(What + TEXT("'s underlay copy keeps its underlay code")), CodeOf(Geometry, First), DreamTextQuadCode::UnderlayBase);
+			TestTrue(*(What + TEXT("'s effects copy paints with slot 1")), QuadIsMeasuredIn(Geometry, First + 1, DreamTextQuadCode::TextSlot, DL.TextBlockBox));
+			TestEqual(*(What + TEXT("'s effects copy keeps its effects code")), CodeOf(Geometry, First + 1), DreamTextQuadCode::FieldLayerStride);
+			TestTrue(*(What + TEXT("'s face paints with slot 1")), QuadIsMeasuredIn(Geometry, First + 2, DreamTextQuadCode::TextSlot, DL.TextBlockBox));
+			TestEqual(*(What + TEXT("'s face keeps its face code")), CodeOf(Geometry, First + 2), 0.0f);
 		}
-		TestTrue(TEXT("field: the colour glyph's underlay copy paints nothing"), QuadPaintsNothing(Geometry, 2));
-		TestEqual(TEXT("field: and is the colour effects code"), Geometry.Vertices[8].TextureCoordinate[2].X, DreamTextQuadCode::ColorEffects);
-		TestTrue(TEXT("field: the colour glyph's face paints nothing"), QuadPaintsNothing(Geometry, 3));
-		TestEqual(TEXT("field: and is the colour face code"), Geometry.Vertices[12].TextureCoordinate[2].X, DreamTextQuadCode::ColorFace);
+		TestTrue(TEXT("field: the colour glyph's underlay copy paints nothing"), QuadPaintsNothing(Geometry, 3));
+		TestEqual(TEXT("field: and is the colour effects code"), Geometry.Vertices[12].TextureCoordinate[2].X, DreamTextQuadCode::ColorEffects);
+		TestTrue(TEXT("field: the colour glyph's face paints nothing"), QuadPaintsNothing(Geometry, 4));
+		TestEqual(TEXT("field: and is the colour face code"), Geometry.Vertices[16].TextureCoordinate[2].X, DreamTextQuadCode::ColorFace);
 	}
 
 	{

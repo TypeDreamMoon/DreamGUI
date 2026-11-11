@@ -212,9 +212,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * A text with effects draws every field glyph twice, effects then face. A colour glyph has no outline or glow to draw:
- * without an underlay it is its face alone; with one it gets an effects copy in the effects block, drawn before every
- * face, inset by half the field's spread so the shader's offset sample never leaves its cell.
+ * A text with an outline draws every field glyph twice, effects then face, and with an underlay too three times,
+ * underlay first. A colour glyph has no outline or glow to draw: without an underlay it is its face alone; with one it
+ * gets an effects copy in the underlay block, drawn before every outline and every face, inset by half the field's spread
+ * so the shader's offset sample never leaves its cell.
  */
 bool FDreamTextColorGlyphEffectsCopyTest::RunTest(const FString& Parameters)
 {
@@ -245,35 +246,37 @@ bool FDreamTextColorGlyphEffectsCopyTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("the plain glyphs' effects draw first, then every face"), bBlocks);
 	}
 
-	// An underlay: the colour glyph's effects copy joins the effects block.
+	// An underlay beside the outline: each plain glyph gets an underlay copy too, and the colour glyph's effects copy -- its
+	// underlay -- joins theirs in the underlay block, before every outline and every face.
 	{
 		Params.bHasUnderlay = true;
 		FDreamUIGeometry Geometry;
 		TArray<FDreamUITextCharProperty> Chars;
 		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
-		if (!TestEqual(TEXT("two quads each"), Geometry.OriginVertices.Num(), 6 * 4) || !TestEqual(TEXT("still three characters"), Chars.Num(), 3))return false;
-		TestTrue(TEXT("the colour glyph's range covers both its copies"), Chars[1].StartVertIndex == 8 && Chars[1].VertCount == 8 && Chars[1].IndicesCount == 6);
+		if (!TestEqual(TEXT("three quads, two, three"), Geometry.OriginVertices.Num(), 8 * 4) || !TestEqual(TEXT("still three characters"), Chars.Num(), 3))return false;
+		TestTrue(TEXT("the colour glyph's range covers both its copies"), Chars[1].StartVertIndex == 12 && Chars[1].VertCount == 8 && Chars[1].IndicesCount == 6);
 		// An effects copy fades with the effect opacity (1 here), never with the text colour's alpha (FDreamTextPaintParams::EffectOpacity).
-		TestTrue(TEXT("its first copy is the effects copy, white at the effect opacity"), IsColorCopy(Geometry, 2, DreamTextQuadCode::ColorEffects, 255));
-		TestTrue(TEXT("its second the face"), IsColorCopy(Geometry, 3, DreamTextQuadCode::ColorFace, 128));
+		TestTrue(TEXT("its first copy is the effects copy, white at the effect opacity"), IsColorCopy(Geometry, 3, DreamTextQuadCode::ColorEffects, 255));
+		TestTrue(TEXT("its second the face"), IsColorCopy(Geometry, 4, DreamTextQuadCode::ColorFace, 128));
+		// Underlays (two plain glyphs' and the colour glyph's), then the plain glyphs' outlines, then every face.
 		bool bBlocks = true;
 		for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
 		{
 			const float Code = Geometry.Vertices[Geometry.Triangles[Index]].TextureCoordinate[2].X;
-			const bool bEffects = Code < DreamTextQuadCode::ColorEffectsThreshold
-				|| (Code > DreamTextQuadCode::ColorThreshold && FieldLayer(Code) == 1);
-			bBlocks &= Index < 3 * 6 ? bEffects : !bEffects;
+			const bool bUnderlay = Code < DreamTextQuadCode::ColorEffectsThreshold || Code > DreamTextQuadCode::UnderlayThreshold;
+			const bool bEffects = !bUnderlay && Code > DreamTextQuadCode::ColorThreshold && FieldLayer(Code) == 1;
+			bBlocks &= Index < 3 * 6 ? bUnderlay : (Index < 5 * 6 ? bEffects : !bUnderlay && !bEffects);
 		}
-		TestTrue(TEXT("every effects copy, the colour glyph's too, draws before any face"), bBlocks);
+		TestTrue(TEXT("every underlay, the colour glyph's too, draws before any outline, and every outline before any face"), bBlocks);
 
 		// Inset by half the spread: 0.5 * 16 / 64 = 0.125 em, 6 of the cell's 48 texels per em, 4.5 of its 30 units.
-		const FVector2f FaceLeftBottom = Corner(Geometry, 12);
-		const FVector2f FaceRightTop = Corner(Geometry, 15);
-		TestTrue(TEXT("the effects copy's left-bottom corner is inset"), Corner(Geometry, 8).Equals(FaceLeftBottom + FVector2f(4.5f, 4.5f), 1e-4f));
-		TestTrue(TEXT("its right-top corner too"), Corner(Geometry, 11).Equals(FaceRightTop - FVector2f(4.5f, 4.5f), 1e-4f));
-		const FVector2f FaceUV = Geometry.Vertices[12].TextureCoordinate[0];
+		const FVector2f FaceLeftBottom = Corner(Geometry, 16);
+		const FVector2f FaceRightTop = Corner(Geometry, 19);
+		TestTrue(TEXT("the effects copy's left-bottom corner is inset"), Corner(Geometry, 12).Equals(FaceLeftBottom + FVector2f(4.5f, 4.5f), 1e-4f));
+		TestTrue(TEXT("its right-top corner too"), Corner(Geometry, 15).Equals(FaceRightTop - FVector2f(4.5f, 4.5f), 1e-4f));
+		const FVector2f FaceUV = Geometry.Vertices[16].TextureCoordinate[0];
 		TestTrue(TEXT("and its texels with it"),
-			Geometry.Vertices[8].TextureCoordinate[0].Equals(FaceUV + FVector2f(6.0f * AtlasTexel, -6.0f * AtlasTexel), 1e-6f));
+			Geometry.Vertices[12].TextureCoordinate[0].Equals(FaceUV + FVector2f(6.0f * AtlasTexel, -6.0f * AtlasTexel), 1e-6f));
 	}
 	return true;
 }
@@ -380,8 +383,10 @@ bool FDreamTextColorGlyphFillTest::RunTest(const FString& Parameters)
 	Params.FillSegments = &Segments;
 	Params.FillProgress = 0.8f;
 	Params.GlowBoost = 0.5f;
+	// An underlay and nothing else: an underlay copy and a face for every glyph.
 	Params.bSeparateEffectLayer = true;
 	Params.bHasUnderlay = true;
+	Params.bHasOutlineOrGlow = false;
 	FDreamUIGeometry Geometry;
 	TArray<FDreamUITextCharProperty> Chars;
 	FDreamTextPainter::Paint(DL, Params, Geometry, Chars);

@@ -66,6 +66,9 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 - **Boxes, or nothing, where Chinese, Japanese or Korean text should be.** The font has no glyph for the character, and
   DreamGUI logged a warning once naming it. The default font covers these through `/DreamGUI/DefaultFont_DistanceField_CJK`;
   a font of your own needs a fallback. [Fonts](../concepts/text.md#fonts).
+- **Gaps or seams where a glyph's strokes cross.** The font file keeps its strokes as overlapping contours — a static
+  instance cut from a variable font does unless its overlaps were removed — and DreamGUI logged a warning once naming the
+  glyph. Run the file through fontTools' `removeOverlaps` and use the result. [Fonts](../concepts/text.md#fonts).
 - **A control's text has the wrong typeface.** Styles with a `Font` field: text input, spin box, rich text, expandable
   area, ring menu. [Styles](../controls/styles.md).
 

@@ -337,6 +337,151 @@ bool FDreamTextPainterEffectLayerTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPainterUnderlayLayerTest,
+	"DreamGUI.Text.Painter.EveryUnderlayDrawsBeforeAnyOutlineOrFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * An underlay is a shadow of the whole text: every glyph's underlay draws before any glyph's glow or outline, and those
+ * before any face, so where tight letters overlap the next one's shadow never lands on this one's outline. A glyph with
+ * an underlay and an outline is three quads, neighbours in the vertex buffer -- its underlay copy (UnderlayBase plus its
+ * dilate), its effects copy (layer 1) and its face -- each in its own block of the index buffer. An underlay alone is two:
+ * the underlay copy and the face.
+ */
+bool FDreamTextPainterUnderlayLayerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextStyleTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<b>ab</b>c"));
+	In.bRichText = true;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	FDreamTextPaintParams Params;
+	Params.bDistanceField = true;
+	Params.EmTexels = 48.0f;
+	Params.FieldSpreadTexels = 16.0f;
+	Params.QuadMarginTexels = 1.0f;
+	Params.TexelToUV = 1.0f / 2048.0f;
+	Params.BoldDilateEm = 0.04f;
+	Params.FaceReachEm = 0.04f;
+	Params.bSeparateEffectLayer = true;
+	Params.EffectReachEm = 0.2f;
+	Params.bHasUnderlay = true;
+	Params.bHasOutlineOrGlow = true;
+	Params.EffectOpacity = 0.5f;
+
+	auto CodeOf = [](const FDreamUIGeometry& InGeometry, int32 InQuad) { return InGeometry.Vertices[InQuad * 4].TextureCoordinate[2].X; };
+	auto IsUnderlayCode = [](float InCode) { return InCode > DreamTextQuadCode::UnderlayThreshold; };
+	auto LayerOf = [](float InCode) { return FMath::FloorToInt32((InCode + 8.0f) / 16.0f); };
+
+	// An underlay and an outline: three quads a glyph.
+	{
+		FDreamUIGeometry Geometry;
+		TArray<FDreamUITextCharProperty> Chars;
+		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+		const int32 GlyphCount = Chars.Num();
+		if (!TestEqual(TEXT("three glyphs"), GlyphCount, 3) || !TestEqual(TEXT("three quads a glyph"), Geometry.Vertices.Num(), GlyphCount * 3 * 4))
+		{
+			return false;
+		}
+		TestEqual(TEXT("and their indices"), Geometry.Triangles.Num(), GlyphCount * 3 * 6);
+		bool bCopies = true;
+		for (int32 Glyph = 0; Glyph < GlyphCount; Glyph++)
+		{
+			const float Dilate = Glyph < 2 ? 0.04f : 0.0f;
+			bCopies &= FMath::IsNearlyEqual(CodeOf(Geometry, Glyph * 3), DreamTextQuadCode::UnderlayBase + Dilate, 1.0e-5f);
+			bCopies &= FMath::IsNearlyEqual(CodeOf(Geometry, Glyph * 3 + 1), DreamTextQuadCode::FieldLayerStride + Dilate, 1.0e-5f);
+			bCopies &= FMath::IsNearlyEqual(CodeOf(Geometry, Glyph * 3 + 2), Dilate, 1.0e-5f);
+		}
+		TestTrue(TEXT("each glyph's copies are its underlay (UnderlayBase plus its dilate), its glow and outline (layer 1), its face"), bCopies);
+		TestTrue(TEXT("the underlay code lies in [-64, 64), where the paint slot's decode is exact"),
+			DreamTextQuadCode::UnderlayBase + 0.04f < 0.5f * DreamTextQuadCode::SlotStride);
+		// The underlay copy is the effects copy's quad, at the effect opacity like it.
+		bool bSameQuad = true;
+		for (int32 Corner = 0; Corner < 4; Corner++)
+		{
+			bSameQuad &= Geometry.OriginVertices[Corner].Position.Equals(Geometry.OriginVertices[4 + Corner].Position, 1.0e-4f);
+			bSameQuad &= Geometry.Vertices[Corner].TextureCoordinate[0].Equals(Geometry.Vertices[4 + Corner].TextureCoordinate[0], 1.0e-6f);
+		}
+		TestTrue(TEXT("the underlay copy covers what the effects copy covers"), bSameQuad);
+		TestEqual(TEXT("and fades with the effect opacity"), Geometry.Vertices[0].Color.A, (uint8)128);
+
+		// The index buffer: every underlay, then every glow and outline, then every face.
+		bool bBlocks = true;
+		const int32 Block = GlyphCount * 6;
+		for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
+		{
+			const float Code = Geometry.Vertices[Geometry.Triangles[Index]].TextureCoordinate[2].X;
+			if (Index < Block)
+			{
+				bBlocks &= IsUnderlayCode(Code);
+			}
+			else
+			{
+				bBlocks &= !IsUnderlayCode(Code) && LayerOf(Code) == (Index < 2 * Block ? 1 : 0);
+			}
+		}
+		TestTrue(TEXT("every underlay draws first, then every glow and outline, then every face"), bBlocks);
+		bool bChars = true;
+		for (int32 Glyph = 0; Glyph < GlyphCount; Glyph++)
+		{
+			bChars &= Chars[Glyph].StartVertIndex == Glyph * 12 && Chars[Glyph].VertCount == 12;
+			bChars &= Chars[Glyph].StartTriangleIndex == 2 * Block + Glyph * 6 && Chars[Glyph].IndicesCount == 6;
+		}
+		TestTrue(TEXT("a character's vertices cover its three copies, its triangles its face's"), bChars);
+	}
+
+	// An underlay and nothing else: its copy and the face.
+	{
+		FDreamTextPaintParams Alone = Params;
+		Alone.bHasOutlineOrGlow = false;
+		FDreamUIGeometry Geometry;
+		TArray<FDreamUITextCharProperty> Chars;
+		FDreamTextPainter::Paint(DL, Alone, Geometry, Chars);
+		if (!TestEqual(TEXT("an underlay alone: two quads a glyph"), Geometry.Vertices.Num(), 3 * 2 * 4))
+		{
+			return false;
+		}
+		bool bCopies = true;
+		for (int32 Glyph = 0; Glyph < 3; Glyph++)
+		{
+			bCopies &= IsUnderlayCode(CodeOf(Geometry, Glyph * 2)) && LayerOf(CodeOf(Geometry, Glyph * 2 + 1)) == 0;
+		}
+		TestTrue(TEXT("each glyph's underlay copy, then its face"), bCopies);
+		bool bBlocks = true;
+		for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
+		{
+			const float Code = Geometry.Vertices[Geometry.Triangles[Index]].TextureCoordinate[2].X;
+			bBlocks &= Index < 3 * 6 ? IsUnderlayCode(Code) : LayerOf(Code) == 0;
+		}
+		TestTrue(TEXT("every underlay before every face"), bBlocks);
+	}
+
+	// An outline and no underlay: an effects copy and the face, as ever.
+	{
+		FDreamTextPaintParams NoUnderlay = Params;
+		NoUnderlay.bHasUnderlay = false;
+		FDreamUIGeometry Geometry;
+		TArray<FDreamUITextCharProperty> Chars;
+		FDreamTextPainter::Paint(DL, NoUnderlay, Geometry, Chars);
+		if (TestEqual(TEXT("no underlay: two quads a glyph"), Geometry.Vertices.Num(), 3 * 2 * 4))
+		{
+			TestEqual(TEXT("the first an effects copy"), LayerOf(CodeOf(Geometry, 4)), 1);
+			bool bNoUnderlayCopy = true;
+			for (int32 Quad = 0; Quad < 6; Quad++)
+			{
+				bNoUnderlayCopy &= !IsUnderlayCode(CodeOf(Geometry, Quad));
+			}
+			TestTrue(TEXT("and no underlay copy among them"), bNoUnderlayCopy);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextPaintParamsUnderlayAndContentTintTest,
 	"DreamGUI.Text.Style.PaintParamsSayWhetherThereIsAnUnderlayAndFadeTagColoursByTheContentTintsAlpha",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -373,6 +518,18 @@ bool FDreamTextPaintParamsUnderlayAndContentTintTest::RunTest(const FString& Par
 	Shadowed.UnderlayColor = FColor(0, 0, 0, 128);
 	Text->SetTextStyle(Shadowed);
 	TestTrue(TEXT("An underlay colour with alpha is an underlay"), UDreamText::MakePaintParams(Text).bHasUnderlay);
+	TestFalse(TEXT("...and an underlay alone draws no outline or glow"), UDreamText::MakePaintParams(Text).bHasOutlineOrGlow);
+	FDreamTextStyle Outlined = Shadowed;
+	Outlined.OutlineColor = FColor(255, 255, 255, 255);
+	Outlined.OutlineWidth = 0.05f;
+	Text->SetTextStyle(Outlined);
+	TestTrue(TEXT("An outline beside it is one"), UDreamText::MakePaintParams(Text).bHasOutlineOrGlow);
+	Outlined.OutlineWidth = 0.0f;
+	Outlined.GlowColor = FColor(255, 200, 0, 255);
+	Outlined.GlowWidth = 0.1f;
+	Text->SetTextStyle(Outlined);
+	TestTrue(TEXT("...and so is a glow"), UDreamText::MakePaintParams(Text).bHasOutlineOrGlow);
+	Text->SetTextStyle(Shadowed);
 	Shadowed.UnderlayColor.A = 0;
 	Text->SetTextStyle(Shadowed);
 	TestFalse(TEXT("...and one without is none"), UDreamText::MakePaintParams(Text).bHasUnderlay);

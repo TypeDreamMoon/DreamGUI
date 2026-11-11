@@ -12,8 +12,8 @@
 // Vertex layout it reads (FDreamUIMeshVertex):
 //   UV0    texture / atlas coordinate
 //   UV1.x  widget property record index, UV1.y atlas slice
-//   UV2    glyphs: the per-quad code (colour glyph, coverage glyph, or a field glyph's DilateEm + 16 * Layer) plus 128 times
-//          its paint slot, position across the fill run (see DreamUIText.ush)
+//   UV2    glyphs: the per-quad code (colour glyph, coverage glyph, a field glyph's DilateEm + 16 * Layer, or its underlay
+//          copy's 56 + DilateEm) plus 128 times its paint slot, position across the fill run (see DreamUIText.ush)
 //   UV3    glyphs: fill progress; a field glyph's glow boost, a coverage glyph's contrast, a colour glyph's texels per em
 //   UV4    painted glyphs: where the quad sits in its paint slot's boxes (DreamUIPaint.ush); (0, 0) on everything else
 //   A particle (mark DREAMUI_PARTICLE_MARK): UV0 its frame, UV2 the next, UV3.x its colour scale and frame blend (DreamUIParticle.ush)
@@ -116,7 +116,7 @@ float4 DreamUIShade_ShadeUnclipped(float2 UV0, float2 UV1, float2 UV2, float2 UV
 		{
 			float Layer, GlyphDilateEm;
 			DreamUIText_UnpackGlyphChannel(Code, Layer, GlyphDilateEm);
-			if (Layer > 2.5)
+			if (Layer == DREAMUI_TEXT_LAYER_COVERAGE)
 			{
 				// A coverage glyph (small text), whose phase is what the unpack calls its dilate. Of the style it reads the fill.
 				// A painted face goes into the correction with the colour it has at this pixel.
@@ -148,24 +148,25 @@ float4 DreamUIShade_ShadeUnclipped(float2 UV0, float2 UV1, float2 UV2, float2 UV
 				// multi-channel one from the outline (3). Same style, same channels; 3 only adds sharp corners.
 				FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
 				// The slot's gradients, on the parts of the glyph this quad draws: the face (and the overlay over it) on a
-				// face, the outline on an effects copy.
+				// face, the outline on an effects copy. An underlay copy paints nothing.
 				float4 FaceColor = VertexColor;
 				float4 OutlinePaint = float4(1.0, 1.0, 1.0, 1.0);
 				BRANCH
 				if (bPainted)
 				{
-					if (Layer != 1.0)
+					if (Layer == 0.0 || Layer == 2.0)
 					{
 						FaceColor = DreamUIPaint_PaintFace(PaintDataTex, Paint, UV4, VertexColor);
 					}
-					if (Layer != 0.0)
+					if (Layer == 1.0 || Layer == 2.0)
 					{
 						OutlinePaint = DreamUIPaint_PaintOutline(PaintDataTex, Paint, UV4);
 					}
 				}
-				// An effects copy carries the text's opacity, not its colour's alpha, in its vertex alpha (the painter's
-				// EffectOpacity): its outline, glow and underlay fade by it. A quad that draws the face leaves them as they are.
-				float EffectAlpha = Layer == 1.0 ? VertexColor.a : 1.0;
+				// An effects or underlay copy carries the text's opacity, not its colour's alpha, in its vertex alpha (the
+				// painter's EffectOpacity): its outline, glow and underlay fade by it. A quad that draws the face leaves them as
+				// they are.
+				float EffectAlpha = (Layer == 1.0 || Layer == DREAMUI_TEXT_LAYER_UNDERLAY) ? VertexColor.a : 1.0;
 				Color = DreamUIText_ShadeField(FontTex, FontSampler, UV0, UV1.y, FontMark > 2.5,
 					FontAtlasInfo.xy, FieldRangeTexels, FontAtlasInfo.w, FaceColor, Style,
 					UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer, OutlinePaint, EffectAlpha, bFieldCorrection, bLinearTarget);

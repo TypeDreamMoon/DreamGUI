@@ -92,6 +92,60 @@ namespace DreamGlyphSdfLocal
 		InOutShape.contours.swap(Oriented.contours);
 		return true;
 	}
+
+	// How far apart, in sample pixels, the rows are that measure where contours overlap, and at most how many there are.
+	constexpr double OverlapRowPixels = 0.5;
+	constexpr int32 MaxOverlapRows = 1024;
+
+	/**
+	 * Area, in square sample pixels, where two or more contours fill the same point: along rows half a sample pixel apart,
+	 * the length over which the nonzero winding is two or more. A glyph drawn the usual way -- one contour per closed shape,
+	 * holes wound the other way -- winds 0 or 1 everywhere and measures 0; so does a glyph whose contours only meet.
+	 */
+	double MeasureOverlapPixels(const DreamMsdfgen::msdfgen::Shape& InShape, double UnitsPerPixel)
+	{
+		using namespace DreamMsdfgen;
+		// One contour can overlap itself as well as another: a stroke that loops back over the one before it.
+		const msdfgen::Shape::Bounds Bounds = InShape.getBounds();
+		if (!(Bounds.t > Bounds.b))
+		{
+			return 0.0;
+		}
+		const int32 RowCount = FMath::Clamp((int32)FMath::CeilToDouble((Bounds.t - Bounds.b) / (OverlapRowPixels * UnitsPerPixel)), 1, MaxOverlapRows);
+		const double RowStep = (Bounds.t - Bounds.b) / RowCount;
+		TArray<TPair<double, int32>> Crossings;
+		double OverlapUnits = 0.0;
+		double X[3];
+		int Dy[3];
+		for (int32 Row = 0; Row < RowCount; Row++)
+		{
+			// Off the integer font units a vertex sits at, so no row runs exactly along one.
+			const double Y = Bounds.b + (Row + 0.5618) * RowStep;
+			Crossings.Reset();
+			for (const msdfgen::Contour& Contour : InShape.contours)
+			{
+				for (const msdfgen::EdgeHolder& Edge : Contour.edges)
+				{
+					const int Count = Edge->scanlineIntersections(X, Dy, Y);
+					for (int Index = 0; Index < Count; Index++)
+					{
+						Crossings.Emplace(X[Index], Dy[Index]);
+					}
+				}
+			}
+			Crossings.Sort([](const TPair<double, int32>& A, const TPair<double, int32>& B) { return A.Key < B.Key; });
+			int32 Winding = 0;
+			for (int32 Index = 0; Index < Crossings.Num(); Index++)
+			{
+				if (Index > 0 && FMath::Abs(Winding) >= 2)
+				{
+					OverlapUnits += (Crossings[Index].Key - Crossings[Index - 1].Key) * RowStep;
+				}
+				Winding += Crossings[Index].Value;
+			}
+		}
+		return OverlapUnits / (UnitsPerPixel * UnitsPerPixel);
+	}
 }
 #endif
 
@@ -178,6 +232,12 @@ bool FDreamGlyphSdf::GenerateMTSDFFromOutline(FT_Outline_* Outline, double Units
 	// Then contour by contour: a contour wound against the rest -- the dot of an i, say -- would otherwise be read as a
 	// hole in nothing and vanish from the field. Only where the fill stays what FreeType fills (see the helper).
 	OrientKeepingNonzeroFill(Shape, 1.0 / Scale);
+	// Contours that overlap rather than meet: measured on the outline as it will be drawn, so the font can say so. msdfgen's
+	// overlap support keeps most of such a glyph, but where strokes cross -- worst where one contour loops back over itself
+	// -- its distances, the true one in alpha included, can read the wrong side of the outline: a gap, or a seam along the
+	// edge that runs inside the other stroke. No mend of the texels afterwards puts that right; merging the contours before
+	// the field is made does, and a font file with its overlaps removed needs nothing.
+	Out.OverlapPixels = (float)MeasureOverlapPixels(Shape, 1.0 / Scale);
 
 	const double SpreadUnits = SpreadPixels / Scale;
 	const double WidthPx = (Bounds.r - Bounds.l) * Scale + 2.0 * SpreadPixels;

@@ -23,10 +23,12 @@ enum class EDreamSmallTextEffectFace : uint8;
  *     the copy is (the painter moved it by the shadow offset, as it does its plain glyphs' shadows); otherwise
  *     (ColorFace) its face. UV3.y holds the cell's texels per em (FDreamUICharData::ColorTexelsPerEm), which turns the
  *     offset in em into UV.
- *  2. Otherwise Layer = floor((UV2.x + 8) / 16) and DilateEm = UV2.x - 16 * Layer (DreamUIText_UnpackGlyphChannel).
+ *  2. From UnderlayThreshold up (UnderlayBase + DilateEm): a field glyph's underlay copy, its underlay alone.
+ *  3. Otherwise Layer = floor((UV2.x + 8) / 16) and DilateEm = UV2.x - 16 * Layer (DreamUIText_UnpackGlyphChannel).
  *     Layer 3 (CoverageBase + phase): a coverage glyph, the phase (0 to 3) being what DilateEm holds; UV3.y holds the
  *     contrast plus CoverageLinearTarget when the target blends in linear space. Layers 0, 1 and 2
- *     (DilateEm + FieldLayerStride * layer): a field glyph's face, effects, or both, as ever; UV3.y holds the glow boost.
+ *     (DilateEm + FieldLayerStride * layer): a field glyph's face, its glow and outline, or all of it with the underlay;
+ *     UV3.y holds the glow boost.
  * UV2.y and UV3.x hold the lyric fill on every kind of quad. A bitmap font's plain glyphs write 0 and are not decoded.
  * Every code without its slot lies in [-SlotStride / 2, SlotStride / 2), which is what makes the slot's decode exact.
  *
@@ -55,10 +57,19 @@ namespace DreamTextQuadCode
 	/** A quad's UV2.x with its slot taken off: what every decode below reads. */
 	inline float StripSlot(float InPacked) { return InPacked - SlotStride * (float)GetSlot(InPacked); }
 
-	/** A field glyph writes DilateEm + FieldLayerStride * Layer: Layer 0 its face, 1 its effects, 2 both. DilateEm >= 0. */
+	/**
+	 * A field glyph writes DilateEm + FieldLayerStride * Layer: Layer 0 its face, 1 its glow and outline, 2 its face and every
+	 * effect, underlay included. 0 <= DilateEm < 8.
+	 */
 	constexpr float FieldLayerStride = 16.0f;
 	/** A coverage glyph writes CoverageBase + phase, the phase being 0 to 3: layer 3. */
 	constexpr float CoverageBase = 48.0f;
+	/**
+	 * A field glyph's underlay copy writes UnderlayBase + DilateEm: its underlay alone, which the painter draws in a block of
+	 * its own under every glyph's glow, outline and face. A code from UnderlayThreshold up is one.
+	 */
+	constexpr float UnderlayBase = 56.0f;
+	constexpr float UnderlayThreshold = 55.5f;
 	/** Added to a coverage glyph's UV3.y (its contrast, below 16) when the target blends in linear space. */
 	constexpr float CoverageLinearTarget = 16.0f;
 	/** A colour glyph's face copy, and its effects copy. */
@@ -260,11 +271,19 @@ struct FDreamTextPaintParams
 	 */
 	bool bDistanceField = false;
 	/**
-	 * Draw the effects (underlay, glow, outline) of every glyph in a first set of quads and the faces
-	 * in a second, so a glyph's glow never lands on top of its neighbour's face. Doubles the quads, so
-	 * only for texts whose style has effects.
+	 * Draw the effects of every glyph in sets of quads of their own before any face, so a glyph's glow never lands on top of
+	 * its neighbour's face: first every glyph's underlay (with bHasUnderlay), then every glyph's glow and outline (unless the
+	 * style has an underlay and nothing else, bHasOutlineOrGlow), then the faces -- the way a shadow goes under a whole run
+	 * of text, outline and all, so the next letter's shadow never lands on this one's outline where tight letters overlap.
+	 * Two or three quads a glyph, so only for texts whose style has effects.
 	 */
 	bool bSeparateEffectLayer = false;
+	/**
+	 * With bSeparateEffectLayer and bHasUnderlay: whether the style also draws an outline or a glow, which takes a second
+	 * effects copy over the underlay's. False leaves a style with an underlay and nothing else one copy under each face, the
+	 * underlay's. True (the default) never leaves an outline or a glow out.
+	 */
+	bool bHasOutlineOrGlow = true;
 	/** Synthetic bold as a dilation of the face, in em per side; 0 when the atlas bakes bold. */
 	float BoldDilateEm = 0.0f;
 	/** How far beyond the glyph's edge the face and the effects reach, in em (see FDreamTextStyle). */
@@ -276,9 +295,10 @@ struct FDreamTextPaintParams
 	float QuadMarginTexels = 0.0f;
 	float TexelToUV = 0.0f;
 	/**
-	 * Distance-field fonts: the text style draws an underlay (its UnderlayColor has alpha). A colour glyph gets an effects
-	 * copy (DreamTextQuadCode::ColorEffects) only then; its outline and glow are never drawn. Bitmap fonts say the same with
-	 * BitmapShadowColor.
+	 * Distance-field fonts: the text style draws an underlay (its UnderlayColor has alpha). With bSeparateEffectLayer every
+	 * field glyph gets an underlay copy (DreamTextQuadCode::UnderlayBase), and a colour glyph an effects copy
+	 * (DreamTextQuadCode::ColorEffects), only then -- both in the underlay block, under every outline, glow and face; a
+	 * colour glyph's outline and glow are never drawn. Bitmap fonts say the same with BitmapShadowColor.
 	 */
 	bool bHasUnderlay = false;
 
