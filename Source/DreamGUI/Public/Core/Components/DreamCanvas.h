@@ -783,6 +783,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-CanvasScaler")
 	bool Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const;
 	/**
+	 * Where a world point lands on this screen-space root canvas, as the AnchoredPosition of a widget anchored to the middle
+	 * of the root: (0,0) at the root's centre, x right, y up, in the canvas's own units. What a marker over an actor sets
+	 * every frame -- the player's projection, then ConvertPositionFromViewportToCanvas, then the move to the centre, which
+	 * every caller used to put together by hand. False when the point is behind the camera or this is not a root canvas.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-CanvasScaler")
+	bool ProjectWorldToAnchoredPosition(APlayerController* Player, const FVector& InWorldLocation, FVector2D& OutAnchoredPosition)const;
+	/**
 	 * Where a world point lands in the shipped image, given back as a world point lying ON this
 	 * canvas's own plane. Projecting through the canvas's view-projection and then placing the
 	 * result back on the plane turns "where will this appear" into an ordinary scene point, which
@@ -906,6 +914,8 @@ public:
 	bool bWarnedGroupsNotApart = false;
 	/** ...and that its elements of a mode that reads what is behind are drawn Normal. */
 	bool bWarnedBackdropNotRead = false;
+	/** A canvas was told once that a post-process visual inside a group drawn apart reads the group, not the scene. */
+	bool bWarnedPostProcessInGroup = false;
 	/**
 	 * FinishDrawCallBatchData's render layers, for a caller finishing many canvases at once. First, on the game thread: the
 	 * layers that held still long enough taken back, and whether the rest are to be placed, which FinishDrawCallBatchData

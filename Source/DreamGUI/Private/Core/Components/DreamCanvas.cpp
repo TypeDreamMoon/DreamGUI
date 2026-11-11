@@ -5194,6 +5194,35 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 		}
 	}
 
+	// A blur, a pixelate or any other post process that works on what is drawn behind it sees, inside a group drawn apart,
+	// only what the group has drawn so far -- not the scene -- and comes out a flat grey. Nothing in the picture says why, so
+	// it is said once per canvas. The group's own effect on its subtree (a stylize on its children) is what a group is for.
+	if (!bWarnedPostProcessInGroup)
+	{
+		for (const FComposite& Composite : Composites)
+		{
+			for (int32 Index = Composite.First; Index <= Composite.Last && Index < WidgetList.Num() && !bWarnedPostProcessInGroup; ++Index)
+			{
+				const UDreamWidget* Inner = WidgetList[Index];
+				const UDreamVisual* InnerVisual = IsValid(Inner) ? Inner->GetVisual() : nullptr;
+				if (InnerVisual == nullptr || !InnerVisual->IsA<UDreamVisualPostProcess>() || InnerVisual->DrawsChildrenThroughEffect()
+					|| Composite.EffectVisual.Get() == InnerVisual || !Inner->IsVisible())
+				{
+					continue;
+				}
+				const UDreamWidget* GroupWidget = Composite.Widget.ResolveObjectPtr();
+				bWarnedPostProcessInGroup = true;
+				UE_LOG(DreamGUI, Warning, TEXT("'%s' has a %s, which works on what is drawn behind it, inside '%s', which is drawn apart as a group (a layer group with an opacity, a blend mode, a mask or isolation, a layer style, or a clip to the layer below). Inside the group it sees only what the group has drawn so far, not the scene, and shows flat. Put the effect outside the group -- a BackgroundBlur stretched over the screen can take its shape from a mask with StrengthMap.Kind = Texture -- or fade and mask its siblings instead of their container."),
+					*Inner->GetDisplayName(), *InnerVisual->GetClass()->GetName(),
+					GroupWidget != nullptr ? *GroupWidget->GetDisplayName() : TEXT("an element drawn as a group"));
+			}
+			if (bWarnedPostProcessInGroup)
+			{
+				break;
+			}
+		}
+	}
+
 	// Each entry's place in the list, which the composites are measured in: an entry of a widget no longer in the list keeps
 	// the place of the one before it.
 	TArray<int32> Places;
@@ -6226,6 +6255,30 @@ bool UDreamCanvas::Project3DToScreen(const FVector& Position3D, FVector2D& OutPo
 		return true;
 	}
 	return false;
+}
+
+bool UDreamCanvas::ProjectWorldToAnchoredPosition(APlayerController* Player, const FVector& InWorldLocation, FVector2D& OutAnchoredPosition)const
+{
+	OutAnchoredPosition = FVector2D::ZeroVector;
+	const UDreamWidget* Root = GetWidget();
+	if (RootCanvas != this || Player == nullptr || Root == nullptr)
+	{
+		return false;
+	}
+	FVector2D OnViewport;
+	if (!Player->ProjectWorldLocationToScreen(InWorldLocation, OnViewport, /*bPlayerViewportRelative*/ false))
+	{
+		return false;
+	}
+	FVector2D OnCanvas;
+	if (!ConvertPositionFromViewportToCanvas(OnViewport, OnCanvas))
+	{
+		return false;
+	}
+	// The canvas space has its zero at the bottom-left corner; a widget anchored to the middle of the root places its
+	// pivot from the root's centre.
+	OutAnchoredPosition = OnCanvas - FVector2D(Root->GetWidth(), Root->GetHeight()) * 0.5;
+	return true;
 }
 
 bool UDreamCanvas::ProjectWorldToScreenWithPlayerCamera(APlayerController* Player, UCameraComponent* PlayerCamera, const FVector& InPosition, FVector2D& OutPosition2D)
