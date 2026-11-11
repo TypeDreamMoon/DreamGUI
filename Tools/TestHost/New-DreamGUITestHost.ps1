@@ -67,7 +67,7 @@
     pwsh -NoProfile -File .\New-DreamGUITestHost.ps1 -WhatIf
 
 .EXAMPLE
-    pwsh -NoProfile -File .\New-DreamGUITestHost.ps1 -Root G:\DreamGUITestHost -Branch main
+    pwsh -NoProfile -File .\New-DreamGUITestHost.ps1 -Root <HostDir> -Branch main
 
 .NOTES
     Exit codes:
