@@ -119,6 +119,7 @@ and `RaycastType` (`Rect`, `Mesh`, `VisiblePixel`, `Custom`).
 | `Sprite` / `Texture` | `UDreamSprite` / `UDreamTexture` | `DreamGUI` | An atlas sprite / a whole texture |
 | `Empty` | `UDreamVisualEmpty` | `DreamGUI` | Nothing, but takes raycasts |
 | `Ring` / `Polygon` / `PolygonLine` | `UDreamRing` / `UDreamPolygon` / `UDreamPolygonLine` | `DreamGUIExtensions` | A ring, a polygon, a polygon outline |
+| `Shape` | `UDreamShape` | `DreamGUIExtensions` | A filled outline through any points -- a triangle, a slanted bar, an arrow: `Points = [(0, 0), (1, 0.4), (0.2, 1)]` in 0..1 of the rect (bottom left is 0, 0; `PointUnit = Pixels` for pixels), convex or concave, either winding; `PointsTo` morphs it into another outline with as many points. Polygon draws regular N-gons only |
 | `Line2DRaw` / `Line2DChildren` | `UDream2DLineRaw` / `UDream2DLineChildrenAsPoints` | `DreamGUIExtensions` | 2D lines: through given points / through the children |
 | `StaticMesh` | `UDreamStaticMesh` | `DreamGUIExtensions` | A static mesh, a draw call of its own |
 | `BackgroundBlur` / `BackgroundPixelate` / `PixelSort` | `UDreamBackgroundBlur` / `UDreamBackgroundPixelate` / `UDreamPixelSort` | `DreamGUIExtensions` | Screen effects; see [Rendering](rendering.md) |

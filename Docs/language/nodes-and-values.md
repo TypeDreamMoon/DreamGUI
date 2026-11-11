@@ -65,7 +65,7 @@ property whose `=` went missing.
 What a node's type means is decided in this order:
 
 1. **A built-in tag**: `Widget` (a rect with no visual, the ordinary container), or the tag of a visual -- `Text`,
-   `Image`, `RectBlock`, `Sprite`, `Texture`, `Ring`, `Polygon`, `PolygonLine`, `Line2DRaw`, `Line2DChildren`,
+   `Image`, `RectBlock`, `Sprite`, `Texture`, `Ring`, `Polygon`, `PolygonLine`, `Shape`, `Line2DRaw`, `Line2DChildren`,
    `Empty`, `StaticMesh`, `BackgroundBlur`, `BackgroundPixelate`, `PixelSort`, `PostProcessRenderElement`,
    `PostProcessRenderElementText`, `CanvasRenderTargetPreviewer`, `UMGWidget`. A plugin adds a visual with
    `DECLARE_DREAM_GUI_VISUAL`.
