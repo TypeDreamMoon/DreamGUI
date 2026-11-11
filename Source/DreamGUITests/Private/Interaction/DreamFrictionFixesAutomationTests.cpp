@@ -41,7 +41,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTapNavigationTest,
 	"DreamGUI.Navigation.ATapFromCodeTakesOneStepWherePressAndReleaseOnOneFrameTookNone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTapNavigationTest, "DreamGUI.Navigation.ATapFromCodeTakesOneStepWherePressAndReleaseOnOneFrameTookNone", "[Nav]")
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTapNavigationTest, "DreamGUI.Navigation.ATapFromCodeTakesOneStepWherePressAndReleaseOnOneFrameTookNone", "[Nav][Animated]")
 
 bool FDreamTapNavigationTest::RunTest(const FString& Parameters)
 {
@@ -85,7 +85,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamFocusOnTheNextFrameTest,
 	"DreamGUI.Focus.FocusAskedForBeforeAWidgetCanTakeItArrivesOnTheNextFrame",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamFocusOnTheNextFrameTest, "DreamGUI.Focus.FocusAskedForBeforeAWidgetCanTakeItArrivesOnTheNextFrame", "[Nav]")
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamFocusOnTheNextFrameTest, "DreamGUI.Focus.FocusAskedForBeforeAWidgetCanTakeItArrivesOnTheNextFrame", "[Nav][Animated]")
 
 bool FDreamFocusOnTheNextFrameTest::RunTest(const FString& Parameters)
 {
