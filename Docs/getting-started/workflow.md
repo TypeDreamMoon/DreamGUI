@@ -29,6 +29,22 @@ once per save, so changes are collected for a moment (0.75 seconds) before anyth
 - A source file deleted or renamed gets a notification naming the classes now built from nothing.
 - *Tools ▸ Rebuild DUI* recompiles every text-backed widget Blueprint in the project, loading the ones that are not, and
   asks first.
+- Without the editor -- a build script, CI -- the `DreamUICompileWidgets` commandlet does the same. With a manifest it
+  also creates what is missing: each entry names the Blueprint, its parent class and its `.dui`, components first.
+
+  ```text
+  UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Tools/widgets.json [-Only=WBP_A,WBP_B]
+  UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]
+  ```
+
+  ```json
+  { "widgets": [
+      { "asset": "/Game/UI/WBP_Row",    "parent": "/Script/MyGame.MyRow", "source": "UI/Row.dui" },
+      { "asset": "/Game/UI/WBP_Screen", "parent": "/Script/MyGame.MyScreen", "source": "UI/Screen.dui" } ] }
+  ```
+
+  A missing Blueprint is created with that parent, an existing one reparented if its parent differs; each is pointed at
+  its file, compiled and saved. Every compiler message is logged, and the exit code is non-zero when anything failed.
 
 A diagnostic reads `File.dui(line,col): error DUI3001: …`, and its first digit says which stage refused: 1 lexer,
 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compiling into the Blueprint, 7 writing back. Every one is in
