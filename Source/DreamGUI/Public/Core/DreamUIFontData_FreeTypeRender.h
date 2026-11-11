@@ -597,6 +597,14 @@ protected:
 	TSet<FAsyncGlyphRequest> PendingAsyncGlyphs;
 	/** One warning per font when the worker cannot rasterize, rather than one per glyph per frame. */
 	bool bLoggedAsyncGlyphFailure = false;
+	/**
+	 * A field glyph of face FaceIndex came out of its outline with overlapping contours, OverlapPixels square pixels of them
+	 * at the sample size: counted on the font that owns the face, which warns once -- naming the glyph, its file, and how
+	 * to take the overlaps out of the file (fontTools' removeOverlaps). A face the engine ships only says so in the log.
+	 */
+	void NoteOverlappingContours(int32 FaceIndex, uint32 GlyphIndex, float OverlapPixels);
+	int32 OverlappingContourGlyphs = 0;
+	bool bLoggedOverlappingContours = false;
 	TSharedPtr<FDreamGlyphRasterizer, ESPMode::ThreadSafe> Rasterizer;
 	/** The worker over this font's faces, created on first use. Null when no face has bytes to share. */
 	FDreamGlyphRasterizer* GetOrCreateRasterizer();
@@ -775,6 +783,11 @@ protected:
 	 */
 	bool ReleaseRetiredCoverageCells();
 public:
+	/**
+	 * Field glyphs of this font's own face whose outline came with overlapping contours (FDreamGlyphSdfResult::
+	 * HasOverlappingContours), counted as they are made; a fallback's or a style face's are counted on that font.
+	 */
+	int32 GetOverlappingContourGlyphCount() const { return OverlappingContourGlyphs; }
 	/** Block until the worker has finished every queued glyph and put them in the atlas. Tests and teardown. */
 	void WaitForAsyncGlyphs();
 	/** Glyphs of this font on the worker: field, colour and coverage glyphs together. */

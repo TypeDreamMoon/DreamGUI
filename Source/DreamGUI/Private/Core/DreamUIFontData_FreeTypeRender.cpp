@@ -2382,6 +2382,10 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 		{
 			continue;//a synchronous request beat the worker to it
 		}
+		if (Result.Sdf.HasOverlappingContours())
+		{
+			NoteOverlappingContours(Job.Key.FaceIndex, Job.Key.GlyphIndex, Result.Sdf.OverlapPixels);
+		}
 		FGlyphBitmap Bitmap;
 		Bitmap.width = Result.Sdf.Width;
 		Bitmap.height = Result.Sdf.Height;
@@ -2409,6 +2413,51 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 	{
 		bCoverageGlyphsChanged = true;
 		DreamFreeTypeRenderLocal::FontsWithCoverageWork.Add(this);
+	}
+}
+
+void UDreamUIFontData_FreeTypeRender::NoteOverlappingContours(int32 FaceIndex, uint32 GlyphIndex, float OverlapPixels)
+{
+	UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
+	if (Owner == nullptr)
+	{
+		Owner = this;
+	}
+	Owner->OverlappingContourGlyphs++;
+	if (Owner->bLoggedOverlappingContours)
+	{
+		return;
+	}
+	Owner->bLoggedOverlappingContours = true;
+	FString GlyphName;
+#if WITH_FREETYPE
+	FT_FaceRec_* GlyphFace = GetFreeTypeFace(FaceIndex);
+	if (GlyphFace != nullptr && FT_HAS_GLYPH_NAMES(GlyphFace))
+	{
+		char Buffer[64] = {};
+		if (FT_Get_Glyph_Name(GlyphFace, GlyphIndex, Buffer, sizeof(Buffer)) == 0 && Buffer[0] != 0)
+		{
+			GlyphName = FString::Printf(TEXT(" '%s'"), UTF8_TO_TCHAR(Buffer));
+		}
+	}
+#endif
+	const bool bFontFace = Owner->FontType == EDreamUIDynamicFontDataType::EngineFont;
+	const FString File = bFontFace ? GetNameSafe(Owner->EngineFont) : FPaths::GetCleanFilename(Owner->FontFilePath);
+	// A face the engine ships -- the default font's CJK fallback has a few such glyphs -- is not the project's to fix: said
+	// in the log, without a warning.
+	const FString FilePath = Owner->bUseRelativeFilePath ? FPaths::ProjectDir() + Owner->FontFilePath : Owner->FontFilePath;
+	const bool bShippedWithEngine = bFontFace
+		? (Owner->EngineFont != nullptr && Owner->EngineFont->GetPathName().StartsWith(TEXT("/Engine/")))
+		: FPaths::IsUnderDirectory(FPaths::ConvertRelativePathToFull(FilePath), FPaths::ConvertRelativePathToFull(FPaths::EngineContentDir()));
+	const FString Message = FString::Printf(TEXT("Font:%s (%s): glyph %u%s has overlapping contours (%.0f px2 at the sample size) -- strokes drawn as separate contours that run into each other, as a static instance cut from a variable font keeps them. Its distance field can show a gap or a seam where they cross. Take the overlaps out of the font file and use that file instead: pip install fonttools skia-pathops, then run fontTools.ttLib.removeOverlaps.removeOverlaps on the font and save it (or cut the instance with fonttools varLib.instancer --remove-overlaps). (reported once per font)"),
+		*Owner->GetName(), *File, GlyphIndex, *GlyphName, OverlapPixels);
+	if (bShippedWithEngine)
+	{
+		UE_LOG(DreamGUI, Log, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message);
+	}
+	else
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message);
 	}
 }
 

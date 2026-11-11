@@ -98,6 +98,10 @@ bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, 
 		{
 			return false;
 		}
+		if (Sdf.HasOverlappingContours())
+		{
+			NoteOverlappingContours(Glyph.FaceIndex, Glyph.GlyphIndex, Sdf.OverlapPixels);
+		}
 		OutResult.width = Sdf.Width;
 		OutResult.height = Sdf.Height;
 		OutResult.hOffset = Sdf.Left;
