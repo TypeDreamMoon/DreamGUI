@@ -250,6 +250,16 @@ namespace DreamTests
 		});
 	}
 
+	TSharedPtr<SWidget> DreamSlatePanel::FindTextBlockAsWritten(const TSharedRef<SWidget>& InRoot, const FString& InText)
+	{
+		static const FName TextBlockType(TEXT("STextBlock"));
+		return FindDescendant(InRoot, [&InText](const TSharedRef<SWidget>& InWidget)
+		{
+			return InWidget->GetType() == TextBlockType
+				&& StaticCastSharedRef<STextBlock>(InWidget)->GetText().BuildSourceString().Equals(InText, ESearchCase::CaseSensitive);
+		});
+	}
+
 	TSharedPtr<SWidget> DreamSlatePanel::FindAncestorOfType(const TSharedRef<SWidget>& InFrom, const TCHAR* InTypeNamePart)
 	{
 		for (TSharedPtr<SWidget> Walk = InFrom; Walk.IsValid(); Walk = Walk->GetParentWidget())

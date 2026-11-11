@@ -35,9 +35,10 @@ namespace DreamTests
 		TSharedPtr<SWidget> DetailsSearchBox(const FDreamDesignerDriver& InDriver);
 		/**
 		 * The widget of type InTypeNamePart ("SSpinBox", "SCheckBox") on the details panel's property row labelled
-		 * InLabel, or null while there is none painted. A details view row is an SDetailSingleItemRow holding the name and
-		 * the value; the details tree is virtualised, so a row that is out of view is not there to find -- filter the
-		 * panel through its search box first.
+		 * InLabel, or null while there is none painted. InLabel is the label as written, in English: the panel shows it
+		 * in the editor's language. A details view row is an SDetailSingleItemRow holding the name and the value; the
+		 * details tree is virtualised, so a row that is out of view is not there to find -- filter the panel through its
+		 * search box first, which in any language also matches a row by its property's own name.
 		 */
 		TSharedPtr<SWidget> DetailsValueWidget(const FDreamDesignerDriver& InDriver, const FString& InLabel, const TCHAR* InTypeNamePart);
 
