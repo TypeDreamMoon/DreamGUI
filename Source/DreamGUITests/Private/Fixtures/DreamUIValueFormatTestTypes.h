@@ -16,11 +16,12 @@
  * works too, but then a rename somewhere else breaks this file with a message about the wrong thing.
  *
  * The near misses carry as much weight as the hits, and each one is a specific wrong implementation:
- * FVector4 is what a name-prefix match lets through (every FVector* shares the first seven
- * characters), FIntPoint is what a "N numeric fields, must be a tuple" match lets through, and
- * Scalar/Label are there because the caller asks HasShortForm about every property it meets, not
- * only struct ones. FVector used to be the prefix near-miss; it graduated to a real entry when
- * RelativeScale needed a spelling, and FVector4 inherited the role.
+ * FIntVector is what a name-prefix match lets through (it shares "Vector" with every float vector),
+ * FIntPoint is what a "N numeric fields, must be a tuple" match lets through, and Scalar/Label are
+ * there because the caller asks HasShortForm about every property it meets, not only struct ones.
+ * FVector used to be the prefix near-miss; it graduated to a real entry when RelativeScale needed a
+ * spelling, and FVector4 inherited the role -- until an image brush's UVRegion (an FVector4f) needed
+ * one too, and the float vectors became entries all the way to four. FIntVector holds the role now.
  */
 USTRUCT()
 struct FDreamUIValueFormatFixture
@@ -49,9 +50,19 @@ struct FDreamUIValueFormatFixture
 	UPROPERTY()
 	FRotator Rotator = FRotator::ZeroRotator;
 
-	/** The near miss FVector used to be: shares the name prefix, has no short form. */
+	UPROPERTY()
+	FVector3f Vector3f = FVector3f::ZeroVector;
+
 	UPROPERTY()
 	FVector4 Vector4 = FVector4(0, 0, 0, 0);
+
+	/** The type an image brush's UVRegion is: (min x, min y, max x, max y). */
+	UPROPERTY()
+	FVector4f Vector4f = FVector4f(0, 0, 0, 0);
+
+	/** The near miss FVector4 used to be: shares the name, holds integers, has no short form. */
+	UPROPERTY()
+	FIntVector IntVector = FIntVector::ZeroValue;
 
 	UPROPERTY()
 	FIntPoint IntPoint = FIntPoint::ZeroValue;
