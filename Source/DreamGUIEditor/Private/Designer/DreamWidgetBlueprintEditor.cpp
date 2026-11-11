@@ -3536,10 +3536,18 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 	//
 	// Which is also UMG's shape: a UWidget inside a UHorizontalBox has no Canvas slot to drag, and
 	// the designer offers it no position handles at all.
+	//
+	// The location FIRST and the anchor block LAST, because each recomputes the other on the template (UDreamWidget::
+	// PostEditChangeProperty) and the anchor block is the one that is authored. The location is there for what the anchors
+	// do not say -- the depth the 3D view's gizmo moves along -- and its in-plane part is the anchors' result in the
+	// PREVIEW's parent rect; copied last, the template re-derived its anchors from it against its own parent, which is
+	// not laid out (a group a .dui fills into its overlay is 100 x 100 there), and a row at -58 under its group's top
+	// edge was written at 112. Copied first, the anchor block then puts the in-plane part back from itself and keeps
+	// the depth.
 	static const FName AnchorProperties[] =
 	{
-		UDreamWidget::GetPropertyName_AnchorData(),
 		UDreamWidget::GetPropertyName_RelativeLocation(),
+		UDreamWidget::GetPropertyName_AnchorData(),
 	};
 	// The Euler rotation too: it is the rotation's authored face, the one the .dui writes, and the quaternion alone is
 	// DuiHidden -- a turn mirrored without it reached the asset and never the file.
