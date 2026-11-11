@@ -23,7 +23,7 @@ and the text smoke test's assets (below).
 ## Layout
 
 ```
-DreamGUITestHost/                       (default I:\UnrealProject_Moon\DEV_58\DreamGUITestHost)
+DreamGUITestHost/                       (-Root, or DREAMGUI_TEST_HOST)
   DreamGUITestHost.uproject             from Template/
   Config/DefaultEngine.ini              from Template/
   Config/DefaultInput.ini               from Template/
@@ -214,17 +214,21 @@ The packaged run needs the game target built, which against a source engine comp
 
 ## Creating it
 
+The script has no machine-specific defaults. Say where the host goes, once per shell or in your profile,
+or pass `-Root` every time:
+
 ```powershell
+$env:DREAMGUI_TEST_HOST = '<HostDir>'     # the host directory; not on drive C
 pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1 -WhatIf   # see what it would do
 pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1
 ```
 
 | Parameter | Default | |
 | --- | --- | --- |
-| `-Root` | `I:\UnrealProject_Moon\DEV_58\DreamGUITestHost` | The host directory. Refused on drive C unless `-AllowSystemDrive`. |
-| `-RepoPath` | `I:\UnrealProject_Moon\DEV_58\DevTest\Plugins\DreamGUI` | Any working tree of the repository. |
-| `-Branch` | `feat/tests-completion` | What the worktree must have (or is created with). |
-| `-EngineRoot` | looked up from the `.uproject`'s engine association | |
+| `-Root` | `$env:DREAMGUI_TEST_HOST`; required when that is not set | The host directory. Refused on drive C unless `-AllowSystemDrive`. |
+| `-RepoPath` | `$env:DREAMGUI_TEST_REPO`, else the working tree holding the script | Any working tree of the repository. |
+| `-Branch` | `main` | What the worktree must have (or is created with). |
+| `-EngineRoot` | `$env:DREAMGUI_ENGINE`, else looked up from the `.uproject`'s engine association | Without either, the script stops and asks for it. |
 | `-Force` | off | Replace files that differ from the template; each old one is kept as `<name>.bak-<timestamp>`. |
 | `-KeepCurrentHead` | off | Accept an existing worktree on another branch or a detached commit. |
 | `-Detach` | off | Follow `-Branch` with a detached HEAD. Needed when the branch is checked out in the repository's own working tree, since a branch can be checked out in one worktree at a time. A clean detached worktree is moved to the branch's tip on every run, so the host tests what has been committed. |
