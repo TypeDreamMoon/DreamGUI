@@ -7,7 +7,7 @@ description: 每个控件的 F…Style 结构体、StyleSource 与外观的来�
 
 分工是固定的：**外观在样式里，行为在控件上**。按钮的颜色、圆角和内边距是 `FDreamButtonStyle` 的字段；它什么时候算点击（`ClickMethod`）、接受哪些鼠标键（`AcceptedMouseButtons`）是 `UDreamButton` 自己的属性。这就是为什么有几个 UMG 属性在这里低了一层：列表条目之间的间距是外观，于是 UMG 的 `EntrySpacing` 是 `Style.RowSpacing`（见[从 UMG 过来](umg-parity.md)）。
 
-**提示：**
+**注意：**
 
   这里说的是控件的样式结构体。`.dui` 里的 `style Name { … }` 块是另一回事—— 一组按名字套到节点上的属性行，见[样式与资源](../language/styles-and-resources.md)。
 
@@ -75,7 +75,7 @@ description: 每个控件的 F…Style 结构体、StyleSource 与外观的来�
 - **变体**：这一族的默认值，再写上变体勾选了的字段。一个字段不勾，就是"跟这一族的默认值走"——没有 Parent 指针、也没有环要检查的继承。
 - **`ProjectStyleSheetOverride`**：样式表解析出的样式，再写上这个实例勾选了的字段。
 
-**提示：**
+**注意：**
 
   所有位**默认都是勾上的**，这样既有的东西一个字节都不变：每个位都勾着的变体就是它一直以来那份完整的 fork。反过来，切到 `ProjectStyleSheetOverride` 却什么都没取消勾选，效果和 `Inline` 一样。要跟随样式表的字段，得把它的勾去掉。
 

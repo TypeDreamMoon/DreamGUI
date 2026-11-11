@@ -308,7 +308,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints -Assets=/G
 
 路由名的是**用户控件**（层级编译成的那个类）上的函数，UMG 也把事件处理放在那里。编译器把每条路由解析进 `UDreamWidgetBlueprint::EventBindings`，`UDreamUserWidget::BindEventBindings` 在初始化时接上它们。它能接到本插件的两种事件：控件声明的 `BlueprintAssignable` 动态多播委托，和较老的 `Interaction/` 行为声明的 `FDreamUIEventDelegate` 属性。
 
-**提示：**
+**注意：**
 
   `FDreamUIEventDelegate` 自己的逐实例事件列表是遗留的、只读的。存在里面的绑定照常触发，也能从面板删掉，但不能再在那里新建：那种绑定是用字面量参数调用任意对象上的函数，UMG 没有对应物，`.dui` 也没有语法。打开含有这种绑定的面板会打一条警告点名它。不会自动改写——把"带这个值调用那个行为上的 `Foo`" 改成"调用用户控件上的处理函数"会改变游戏的行为——所以碰到时请重新写成路由。
 
