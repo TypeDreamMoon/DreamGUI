@@ -1026,9 +1026,12 @@ namespace DreamUIText
 				return;
 			}
 			InOutStyle.Name = Prefixed(InOutStyle.Name);
-			if (!InOutStyle.BaseName.IsEmpty() && StyleNames.Contains(InOutStyle.BaseName))
+			for (FDreamUIStyleRef& Base : InOutStyle.BaseRefs)
 			{
-				InOutStyle.BaseName = Prefixed(InOutStyle.BaseName);
+				if (StyleNames.Contains(Base.Name))
+				{
+					Base.Name = Prefixed(Base.Name);
+				}
 			}
 			PrefixReferences(InOutStyle.Properties);
 			for (FDreamUIComponent& Component : InOutStyle.Components)
@@ -1987,19 +1990,13 @@ namespace DreamUIText
 			Style.Name = Current().Text;
 			Advance();
 
-			if (Check(ETokenKind::Colon))
+			// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is the same relationship:
+			// properties from over there, then mine on top. `: nier.Button` takes a library's, the same way a node's
+			// clause does, and `: Button : Loud` takes both, in the order FDreamUIAst::CollectStyleChain says.
+			if (!ParseStyleRefs(Style.BaseRefs, FString::Printf(TEXT("expected a base style name after 'style %s :'"), *Style.Name)))
 			{
-				// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is
-				// the same relationship: properties from over there, then mine on top. `: nier.Button`
-				// takes a library's, the same way a node's clause does.
-				Advance();
-				if (!Check(ETokenKind::Identifier))
-				{
-					RaiseUnexpectedToken(FString::Printf(TEXT("expected a base style name after 'style %s :'"), *Style.Name));
-					RecoverToStatementBoundary();
-					return;
-				}
-				Style.BaseName = ParseQualifiedName(nullptr);
+				RecoverToStatementBoundary();
+				return;
 			}
 
 			if (!Check(ETokenKind::OpenBrace))
@@ -2068,6 +2065,16 @@ namespace DreamUIText
 				else if (IsFillShorthand())
 				{
 					ParseFillShorthand(OutStyle.SlotProperties);
+				}
+				else if (IsTagLine())
+				{
+					// A tag names WIDGETS for the code that looks them up, and a style is not worn by a fixed set of them:
+					// it would tag whatever happened to wear it, which is a lookup nobody can read off the file.
+					const FDreamUISourceLocation AtLocation = Current().Location;
+					TArray<FDreamUITag> Ignored;
+					ParseTagLine(Ignored);
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, AtLocation,
+						FString::Printf(TEXT("style '%s' cannot carry '@tag': tag the widgets themselves"), *OutStyle.Name));
 				}
 				else if (Check(ETokenKind::At) && Peek(1).Kind == ETokenKind::Identifier
 					&& Peek(1).Text.Equals(TEXT("slot"), ESearchCase::CaseSensitive))
@@ -3024,14 +3031,31 @@ namespace DreamUIText
 
 		void ParseStyleClause(FDreamUINode& OutNode)
 		{
-			Advance(); // ':'
-			if (!Check(ETokenKind::Identifier))
+			// `: Card`, or `: nier.Card` -- a style a namespace brought in, under the name it was entered as -- or several,
+			// `: Card : Loud`, applied in the order FDreamUIAst::CollectStyleChain says.
+			ParseStyleRefs(OutNode.StyleRefs, TEXT("expected a style name after ':'"));
+		}
+
+		/**
+		 * `: Card` or `: Card : Loud` -- a style clause, the cursor on its first ':', each name appended to OutRefs at its
+		 * own location. False when a ':' has no name after it, reported with InMissingNameMessage; the names before it are
+		 * kept.
+		 */
+		bool ParseStyleRefs(TArray<FDreamUIStyleRef>& OutRefs, const FString& InMissingNameMessage)
+		{
+			while (Check(ETokenKind::Colon))
 			{
-				RaiseUnexpectedToken(TEXT("expected a style name after ':'"));
-				return;
+				Advance(); // ':'
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(InMissingNameMessage);
+					return false;
+				}
+				FDreamUIStyleRef& Ref = OutRefs.AddDefaulted_GetRef();
+				Ref.Location = Current().Location;
+				Ref.Name = ParseQualifiedName(nullptr);
 			}
-			// `: Card`, or `: nier.Card` -- a style a namespace brought in, under the name it was entered as.
-			OutNode.StyleName = ParseQualifiedName(nullptr);
+			return true;
 		}
 
 		/**
@@ -3117,7 +3141,13 @@ namespace DreamUIText
 				// the two lines of it written most; `@Row Row1 { }` is a child whose type an Asset entry of a resources
 				// block names (ParseNode). `slot` is a keyword, so no resource it could name is ever meant. `fill` is
 				// one only where a resource node cannot stand -- alone, or before a number -- so a resource that
-				// happens to be called fill still names a node type.
+				// happens to be called fill still names a node type. `tag` likewise, wherever a node's header could not
+				// go on as one (IsTagLine).
+				if (IsTagLine())
+				{
+					ParseTagLine(OutNode.Tags);
+					return;
+				}
 				if (IsFillShorthand())
 				{
 					ParseFillShorthand(OutNode.SlotProperties);
@@ -3250,7 +3280,8 @@ namespace DreamUIText
 			{
 				Ahead += 2;
 			}
-			if (Peek(Ahead).Kind == ETokenKind::Colon)
+			// `: Style`, as many as written (`: ListRow : Dense`).
+			while (Peek(Ahead).Kind == ETokenKind::Colon)
 			{
 				++Ahead;
 				if (Peek(Ahead).Kind != ETokenKind::Identifier)
@@ -3300,12 +3331,9 @@ namespace DreamUIText
 			{
 				NoteNamespaceReference(TypeName.Mid(1), TypeLocation);
 			}
-			FString StyleName;
-			if (Check(ETokenKind::Colon))
-			{
-				Advance();
-				StyleName = ParseQualifiedName(nullptr);
-			}
+			// IsRowsHeader has seen a name after every ':', so this cannot fail.
+			TArray<FDreamUIStyleRef> StyleRefs;
+			ParseStyleRefs(StyleRefs, TEXT("expected a style name after ':'"));
 
 			// The columns: property names, dotted or not, each once.
 			TArray<FString> Columns;
@@ -3391,7 +3419,7 @@ namespace DreamUIText
 					return;
 				}
 				const int32 IndexBefore = Index;
-				ParseRow(OutParent, TypeName, TypeLocation, StyleName, Columns);
+				ParseRow(OutParent, TypeName, TypeLocation, StyleRefs, Columns);
 				if (Index == IndexBefore)
 				{
 					Advance();
@@ -3401,12 +3429,12 @@ namespace DreamUIText
 
 		/** One line of a `rows` table: its values, in column order, and the block it may end in. */
 		void ParseRow(FDreamUINode& OutParent, const FString& InTypeName, const FDreamUISourceLocation& InTypeLocation,
-			const FString& InStyleName, const TArray<FString>& InColumns)
+			const TArray<FDreamUIStyleRef>& InStyleRefs, const TArray<FString>& InColumns)
 		{
 			FDreamUINode Row;
 			Row.Kind = EDreamUINodeKind::Widget;
 			Row.TypeName = InTypeName;
-			Row.StyleName = InStyleName;
+			Row.StyleRefs = InStyleRefs;
 			Row.Location = Current().Location;
 			Row.bAnonymous = true;
 			(void)InTypeLocation;
@@ -3615,11 +3643,12 @@ namespace DreamUIText
 				// mixes the two rather than whatever the block happened to open with.
 				ParseNodeBody(Slot, OpenLocation);
 
-				const bool bDeclares = Slot.Components.Num() > 0 || Slot.Properties.Num() > 0 || Slot.SlotProperties.Num() > 0;
+				const bool bDeclares = Slot.Components.Num() > 0 || Slot.Properties.Num() > 0 || Slot.SlotProperties.Num() > 0
+					|| Slot.Tags.Num() > 0;
 				if (Slot.Children.Num() > 0 && bDeclares)
 				{
 					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, Slot.Children[0].Location,
-						FString::Printf(TEXT("slot '%s' both declares (components, properties, '@slot' lines) and fills (widgets); a declaration holds no widgets and a fill holds nothing else"),
+						FString::Printf(TEXT("slot '%s' both declares (components, properties, '@slot' and '@tag' lines) and fills (widgets); a declaration holds no widgets and a fill holds nothing else"),
 							*Slot.Id));
 				}
 				else if (Slot.Children.Num() > 0)
@@ -3742,6 +3771,14 @@ namespace DreamUIText
 			ActiveLoopVariables.Add(Loop.LoopVariable);
 			ParseNodeBody(Loop, OpenLocation);
 			ActiveLoopVariables.RemoveAt(ActiveLoopVariables.Num() - 1);
+
+			// A loop makes no widget of its own to carry a tag; the widget it repeats does, and every copy keeps it.
+			for (const FDreamUITag& Tag : Loop.Tags)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, Tag.LineLocation,
+					FString::Printf(TEXT("'@tag %s' tags a widget, and a loop is not one: put it on the widget the loop repeats"), *Tag.Name));
+			}
+			Loop.Tags.Reset();
 
 			OutNode.Children.Add(MoveTemp(Loop));
 		}
@@ -3942,6 +3979,11 @@ namespace DreamUIText
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Component.Location,
 					FString::Printf(TEXT("'+ %s' attaches to a widget, and an 'if' block holds widgets: put it on a widget inside the block"), *Component.ClassName));
 			}
+			for (const FDreamUITag& Tag : InBranch.Tags)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Tag.LineLocation,
+					FString::Printf(TEXT("'@tag %s' tags a widget, and an 'if' block holds widgets: put it on a widget inside the block"), *Tag.Name));
+			}
 
 			for (FDreamUINode& Child : InBranch.Children)
 			{
@@ -4084,6 +4126,7 @@ namespace DreamUIText
 			}
 			Advance();
 
+			const int32 FirstNew = OutSlotProperties.Num();
 			if (Check(ETokenKind::OpenBrace))
 			{
 				// Each line of the block is located at its own name, not at the '@': it is a line of its own, and that
@@ -4091,15 +4134,43 @@ namespace DreamUIText
 				const FDreamUISourceLocation OpenLocation = Current().Location;
 				Advance();
 				ParsePropertyOnlyBlock(OutSlotProperties, OpenLocation, TEXT("a '@slot' block"));
-				return;
 			}
-
-			FDreamUIProperty Property;
-			// Stamped with the '@', not the name after it: the statement starts at the '@', and the
-			// patcher replacing this line has to know where the line begins.
-			if (ParseProperty(Property, &AtLocation))
+			else
 			{
-				OutSlotProperties.Add(MoveTemp(Property));
+				FDreamUIProperty Property;
+				// Stamped with the '@', not the name after it: the statement starts at the '@', and the
+				// patcher replacing this line has to know where the line begins.
+				if (ParseProperty(Property, &AtLocation))
+				{
+					OutSlotProperties.Add(MoveTemp(Property));
+				}
+			}
+			ExpandSizeShorthand(OutSlotProperties, FirstNew);
+		}
+
+		/**
+		 * `@slot Size = (w, h)` is `MinDesiredSize` and `MaxDesiredSize` both set to (w, h): a fixed size for one child of a
+		 * box, which measures its children and leaves SizeDelta to a canvas. Replaced here, from InFirst on, by the two
+		 * properties it stands for, each marked as made (bSynthesized) and located where the Size line was -- the patcher
+		 * finds the shorthand there and rewrites it rather than inventing a line. No slot class has a property of that
+		 * name; a Size BOUND (`<-`) is left as written, for the builder to refuse with the two names to bind instead.
+		 */
+		void ExpandSizeShorthand(TArray<FDreamUIProperty>& InOutSlotProperties, int32 InFirst)
+		{
+			for (int32 LineIndex = InFirst; LineIndex < InOutSlotProperties.Num(); ++LineIndex)
+			{
+				FDreamUIProperty& Line = InOutSlotProperties[LineIndex];
+				if (!Line.Name.Equals(TEXT("Size"), ESearchCase::IgnoreCase) || Line.IsBinding() || Line.IsEventBinding())
+				{
+					continue;
+				}
+				FDreamUIProperty Max = Line;
+				Line.Name = TEXT("MinDesiredSize");
+				Line.bSynthesized = true;
+				Max.Name = TEXT("MaxDesiredSize");
+				Max.bSynthesized = true;
+				InOutSlotProperties.Insert(MoveTemp(Max), LineIndex + 1);
+				++LineIndex;
 			}
 		}
 
@@ -4156,6 +4227,87 @@ namespace DreamUIText
 			{
 				RaiseUnexpectedToken(TEXT("'@fill' takes at most a weight, as in '@fill 2'"));
 				RecoverToStatementBoundary();
+			}
+		}
+
+		/**
+		 * `@tag …`: a tag line, rather than a node whose type is a resource called tag. Lowercase, after an '@', and NOT
+		 * followed by what would carry on a node's header: a '.' (`@tag.Row`, a namespaced resource), a '{' or a ':' (an
+		 * anonymous node), or an id followed by a '{', a ':' or a '(' (`@tag Trim { }`). Everything else that follows -- a
+		 * name and the end of the line, a list of names, or nothing a tag line can hold -- is the tag line's, and
+		 * ParseTagLine says when it is malformed. The one reading this takes away, a block-less resource node `@tag Trim`,
+		 * is a type called tag with nothing in it.
+		 */
+		bool IsTagLine() const
+		{
+			if (!Check(ETokenKind::At) || Peek(1).Kind != ETokenKind::Identifier
+				|| !Peek(1).Text.Equals(TEXT("tag"), ESearchCase::CaseSensitive))
+			{
+				return false;
+			}
+			const ETokenKind After = Peek(2).Kind;
+			if (After == ETokenKind::Dot || After == ETokenKind::OpenBrace || After == ETokenKind::Colon)
+			{
+				return false;
+			}
+			if (After == ETokenKind::Identifier)
+			{
+				const ETokenKind AfterName = Peek(3).Kind;
+				return AfterName != ETokenKind::OpenBrace && AfterName != ETokenKind::Colon && AfterName != ETokenKind::OpenParen;
+			}
+			return true;
+		}
+
+		/**
+		 * `@tag Trim` or `@tag Trim, UI.Glow`: names for the code that finds widgets by them (UDreamUserWidget::GetWidgetsByTag),
+		 * each an identifier with as many `.word`s after it as written. The cursor is on the '@'. A line that is not that is
+		 * MalformedTag, reported at the '@', and the names read before the mistake are kept.
+		 */
+		void ParseTagLine(TArray<FDreamUITag>& OutTags)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
+			Advance(); // '@'
+			Advance(); // 'tag'
+
+			auto Refuse = [this, &AtLocation](const FString& InMessage)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, AtLocation, InMessage);
+				RecoverToStatementBoundary();
+			};
+			if (AtStatementEnd())
+			{
+				Refuse(TEXT("'@tag' takes one or more names separated by commas, as in '@tag Trim, Glow'"));
+				return;
+			}
+			for (;;)
+			{
+				if (!Check(ETokenKind::Identifier))
+				{
+					Refuse(FString::Printf(TEXT("expected a tag name, found '%s': a tag is a name, as in '@tag Trim'"), *DescribeCurrent()));
+					return;
+				}
+				FDreamUITag& Tag = OutTags.AddDefaulted_GetRef();
+				Tag.Location = Current().Location;
+				Tag.LineLocation = AtLocation;
+				Tag.Name = Current().Text;
+				Advance();
+				while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+				{
+					Advance();
+					Tag.Name += TEXT(".");
+					Tag.Name += Current().Text;
+					Advance();
+				}
+				if (AtStatementEnd())
+				{
+					return;
+				}
+				if (!Check(ETokenKind::Comma))
+				{
+					Refuse(FString::Printf(TEXT("expected ',' or the end of the line after tag '%s', found '%s'"), *Tag.Name, *DescribeCurrent()));
+					return;
+				}
+				Advance(); // ','
 			}
 		}
 
@@ -4988,6 +5140,23 @@ namespace DreamUIText
 						return false;
 					}
 					SkipSeparators();
+					if (OutValue.Items.Num() == 0 && (Check(ETokenKind::Comma) || Check(CloseKind)))
+					{
+						// `{ "Lamp", Tag: Lamp }` -- the first entry alone, with no key: a struct's primary field
+						// (FDreamUIValue::IsPositionalKey). Only the first, so the entries after it stay `key: value`
+						// and a missing ':' further on is still the mistake it always was. Whether the destination
+						// takes one is the builder's to say.
+						FDreamUIValue Positional;
+						Positional.Kind = EDreamUIValueKind::Identifier;
+						Positional.Location = Key.Location;
+						OutValue.Keys.Add(MoveTemp(Positional));
+						OutValue.Items.Add(MoveTemp(Key));
+						if (Check(ETokenKind::Comma))
+						{
+							Advance();
+						}
+						continue;
+					}
 					if (!Check(ETokenKind::Colon))
 					{
 						Refuse(FString::Printf(TEXT("a map entry is written 'key: value', and '%s' has no ':' after it"), *Ellipsize(Key.Raw)));
@@ -5445,15 +5614,55 @@ namespace DreamUIText
 
 				// A style qualified by a namespace nothing declared is reported once, as that (CheckNamespaceReferences):
 				// "no such style" on top would send the reader looking for a misspelt style that is not the mistake.
-				int32 Dot = INDEX_NONE;
-				const bool bUnknownNamespace = InNode.StyleName.FindChar(TEXT('.'), Dot)
-					&& !IsKnownNamespace(InAst, InNode.StyleName.Left(Dot));
-				if (!InNode.StyleName.IsEmpty() && !bUnknownNamespace && InAst.FindStyle(InNode.StyleName) == nullptr)
+				for (const FDreamUIStyleRef& Ref : InNode.StyleRefs)
 				{
-					Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
-						FString::Printf(TEXT("'%s' names a style this file does not declare"), *InNode.StyleName));
+					int32 Dot = INDEX_NONE;
+					const bool bUnknownNamespace = Ref.Name.FindChar(TEXT('.'), Dot) && !IsKnownNamespace(InAst, Ref.Name.Left(Dot));
+					if (!bUnknownNamespace && InAst.FindStyle(Ref.Name) == nullptr)
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownStyle, Ref.Location,
+							FString::Printf(TEXT("'%s' names a style this file does not declare"), *Ref.Name));
+					}
+				}
+				if (InNode.StyleRefs.Num() > 1)
+				{
+					CheckStylesAppliedTwice(InAst, InNode.StyleRefs);
 				}
 			});
+
+			// A style's own clause the same way, once per declaration rather than once per node that wears it. This
+			// file's declarations only: an imported library's are the library's to hear about, when it is compiled.
+			for (const FDreamUIStyle& Style : InAst.Styles)
+			{
+				if (Style.BaseRefs.Num() > 1)
+				{
+					CheckStylesAppliedTwice(InAst, Style.BaseRefs);
+				}
+			}
+		}
+
+		/**
+		 * StyleAlreadyApplied, a warning, for each name of InClause that an earlier name of the same clause has already
+		 * applied -- it changes nothing, and is most often a base the author forgot the other style already has. The
+		 * unknown names and the cycles are not reported here: the builder reports those, where it applies the chain.
+		 */
+		void CheckStylesAppliedTwice(const FDreamUIAst& InAst, TConstArrayView<FDreamUIStyleRef> InClause)
+		{
+			TArray<const FDreamUIStyle*> Chain;
+			TArray<FDreamUIStyleChainProblem> Problems;
+			InAst.CollectStyleChain(InClause, Chain, &Problems);
+			for (const FDreamUIStyleChainProblem& Problem : Problems)
+			{
+				if (Problem.Kind != FDreamUIStyleChainProblem::EKind::AlreadyApplied || Problem.Owner != nullptr)
+				{
+					continue;
+				}
+				Diagnostics.AddWarning(EDreamUIDiagnosticCode::StyleAlreadyApplied, Problem.Ref.Location,
+					Problem.Through.Equals(Problem.Ref.Name)
+						? FString::Printf(TEXT("style '%s' is named twice in this clause, so the second changes nothing"), *Problem.Ref.Name)
+						: FString::Printf(TEXT("style '%s' is already applied through '%s', so naming it again changes nothing"),
+							*Problem.Ref.Name, *Problem.Through));
+			}
 		}
 	};
 }

@@ -396,6 +396,69 @@ namespace DreamUIWriteBackLocal
 	 * differ from the struct's defaults, so two equal values print alike and an untouched field is not spelled. Anything
 	 * else prints as a leaf does.
 	 */
+	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable);
+
+	/**
+	 * A struct as the map of its fields the builder reads -- `{ "Lamp", Tag: Lamp, bEnabled: false }`: the fields that
+	 * differ from the struct's defaults, in declaration order, the primary field (DreamGUI_PrimaryField) first and with no
+	 * key. False when a field has no spelling of its own; the caller then keeps the engine's quoted form.
+	 *
+	 * Only for a struct that names a primary field, which is the struct saying it was made to be written this way. The
+	 * rest keep the quoted form they always had: a colour field would be quantised through a hex code here, where the
+	 * engine's text keeps every bit of it.
+	 */
+	bool PrintStructAsMap(const FStructProperty* InStruct, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
+	{
+		const UScriptStruct* Struct = InStruct->Struct;
+		FString PrimaryField;
+#if WITH_METADATA
+		PrimaryField = Struct->GetMetaData(TEXT("DreamGUI_PrimaryField"));
+#endif
+		if (PrimaryField.IsEmpty())
+		{
+			return false;
+		}
+		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
+		Struct->InitializeStruct(Defaults);
+		ON_SCOPE_EXIT
+		{
+			Struct->DestroyStruct(Defaults);
+			FMemory::Free(Defaults);
+		};
+		FString Primary;
+		TArray<FString> Entries;
+		for (TFieldIterator<FProperty> It(Struct); It; ++It)
+		{
+			const FProperty* Field = *It;
+			if (Field->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated)
+				|| Field->Identical_InContainer(InValuePtr, Defaults))
+			{
+				continue;
+			}
+			FString FieldText;
+			if (!PrintContainerElement(Field, Field->ContainerPtrToValuePtr<void>(InValuePtr), FieldText, OutValueIsUnrepresentable))
+			{
+				return false;
+			}
+			if (CastField<FNameProperty>(Field) != nullptr)
+			{
+				FieldText = BareNameKey(FieldText);
+			}
+			if (Field->GetName() == PrimaryField)
+			{
+				Primary = MoveTemp(FieldText);
+				continue;
+			}
+			Entries.Add(FString::Printf(TEXT("%s: %s"), *Field->GetName(), *FieldText));
+		}
+		if (!Primary.IsEmpty())
+		{
+			Entries.Insert(MoveTemp(Primary), 0);
+		}
+		OutText = Entries.IsEmpty() ? FString(TEXT("{}")) : FString::Printf(TEXT("{ %s }"), *FString::Join(Entries, TEXT(", ")));
+		return true;
+	}
+
 	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
 	{
 		if (PrintLiteral(InElement, InValuePtr, OutText, OutValueIsUnrepresentable))
@@ -407,6 +470,10 @@ namespace DreamUIWriteBackLocal
 			|| (OutValueIsUnrepresentable != nullptr && *OutValueIsUnrepresentable))
 		{
 			return false;
+		}
+		if (PrintStructAsMap(AsStruct, InValuePtr, OutText, OutValueIsUnrepresentable))
+		{
+			return true;
 		}
 		const UScriptStruct* Struct = AsStruct->Struct;
 		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
@@ -853,41 +920,6 @@ namespace DreamUIWriteBackLocal
 				Claimed.Add(Found);
 			}
 			OutObjects.Add(Found);
-		}
-	}
-
-	/**
-	 * The style a node wears and every base it inherits, BASE FIRST -- the order the builder applies them in. Empty on a
-	 * cycle, where the builder applies nothing either.
-	 *
-	 * A style that came in under a namespace (`: nier.Card`) was written inside its library, where `: Label` meant the
-	 * library's Label; here that one is `nier.Label`, so a base is looked for under the derived style's namespace first.
-	 */
-	void CollectStyleChain(const FDreamUIAst& InAst, const FString& InStyleName, TArray<const FDreamUIStyle*>& OutChain)
-	{
-		OutChain.Reset();
-		TSet<const FDreamUIStyle*> Visited;
-		const FDreamUIStyle* Link = InStyleName.IsEmpty() ? nullptr : InAst.FindStyle(InStyleName);
-		while (Link != nullptr)
-		{
-			if (Visited.Contains(Link))
-			{
-				OutChain.Reset();
-				return;
-			}
-			Visited.Add(Link);
-			OutChain.Insert(Link, 0);
-			if (Link->BaseName.IsEmpty())
-			{
-				break;
-			}
-			const FDreamUIStyle* Base = nullptr;
-			int32 Dot = INDEX_NONE;
-			if (Link->Name.FindLastChar(TEXT('.'), Dot) && !Link->BaseName.Contains(TEXT(".")))
-			{
-				Base = InAst.FindStyle(Link->Name.Left(Dot + 1) + Link->BaseName);
-			}
-			Link = Base != nullptr ? Base : InAst.FindStyle(Link->BaseName);
 		}
 	}
 
@@ -1914,7 +1946,8 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 		}
 
 		TArray<const FDreamUIStyle*> StyleChain;
-		CollectStyleChain(InAst, InNode.StyleName, StyleChain);
+		// The builder's order (FDreamUIAst::CollectStyleChain); empty on a cycle, where the builder applies nothing either.
+		InAst.CollectStyleChain(InNode.StyleRefs, StyleChain);
 
 		// ---- bare `Name = Value`: the widget, its visual, the container its type names ----------
 		{

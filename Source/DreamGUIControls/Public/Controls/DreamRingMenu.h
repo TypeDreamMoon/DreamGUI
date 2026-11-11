@@ -18,8 +18,11 @@ class UUIButton;
  * A struct rather than an FText the way the dropdown's options are, because a ring menu's item is
  * not a line of text -- it is a command. The tag is what a handler switches on; an index is a
  * terrible name for "Reload", and it stops being the right one the moment somebody inserts an item.
+ *
+ * In a .dui, `Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]`: a map of fields per item, the
+ * label first and without a key (DreamGUI_PrimaryField).
  */
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (DreamGUI_PrimaryField = "Label"))
 struct DREAMGUICONTROLS_API FDreamRingMenuItem
 {
 	GENERATED_BODY()
@@ -147,11 +150,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamRingMenuWedgeEvent, int32, In
  *         HitArea            = Slice
  *         bSelectOnHighlight = true
  *         Style.SweepAngle   = 360
+ *         Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]
  *         OnItemActivated -> HandleWheelPick
  *     }
  *
- * Items have no .dui text form yet -- an array of structs is the same language gap the dropdown's
- * Options hit -- so a .dui consumer fills them from its host class, with SetItems.
+ * Each item is a map of its fields, the label first and with no key (FDreamRingMenuItem names Label its
+ * primary field); a host class can still fill them with SetItems.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream Ring Menu")
 class DREAMGUICONTROLS_API UDreamRingMenu : public UDreamUIControl
@@ -298,8 +302,12 @@ public:
 
 	/**
 	 * A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every
-	 * wedge widget, filling it, and the built-in label steps aside. The wedge's shape, its hit
-	 * sector, its highlight and its click stay the control's, so a template only has to draw an item.
+	 * wedge widget and the built-in icon and label step aside. The instance is centred where the
+	 * built-in box would be -- on the slice's middle, at the style's ContentRadius (midway between
+	 * the ring's edges when that is 0) -- at the size its class's root is authored at (the style's
+	 * ContentWidth, square, when the root stretches), and turned as LabelFacing says. The wedge's
+	 * shape, its hit sector, its highlight and its click stay the control's, so a template only has
+	 * to draw an item.
 	 *
 	 * Created once per POOL wedge rather than per bind, which is what makes it survive a rebuild of
 	 * the item list; OnWedgeGenerated fires on every bind, and that is where a consumer updates it.

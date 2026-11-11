@@ -153,6 +153,11 @@ enum class EDreamUIDiagnosticCode : int32
 	 * with no comma between them, or a map entry that is not `key: value`.
 	 */
 	MalformedContainer = 2023,
+	/**
+	 * An `@tag` line that is not one or more names separated by commas: nothing after `@tag`, a number or a string where
+	 * a name belongs, two names with no comma between them, or a comma with no name after it.
+	 */
+	MalformedTag = 2024,
 
 	// --- 3xxx semantic ---
 	/**
@@ -255,6 +260,12 @@ enum class EDreamUIDiagnosticCode : int32
 	DuplicateRowKey = 3023,
 	/** Two `viewmodels` entries of one name. The first is kept. */
 	DuplicateViewModel = 3024,
+	/**
+	 * A WARNING. A name in a style clause (`: A : B` on a node, a rows line or a style) that an earlier name of the same
+	 * clause has already applied -- `: Card : Base` where Card is `: Base`, or `: A : A`. A style applies once, at its first
+	 * appearance, so the later name changes nothing; most often it is a base the author did not know the other style had.
+	 */
+	StyleAlreadyApplied = 3025,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */

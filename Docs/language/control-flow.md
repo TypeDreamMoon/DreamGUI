@@ -20,7 +20,8 @@ enclosing node, in order, with a `Shown` bound to "this branch is the one taken"
 `!HasSave() && IsLoading()` for the second, `!HasSave() && !IsLoading()` for the last. Switching is a change of
 visibility: a hidden branch is collapsed, not destroyed, and keeps its state.
 
-- A branch holds widgets only: a property, a slot line or a `+` block in one is DUI2018, and so is a slot or a loop.
+- A branch holds widgets only: a property, a slot line, a `@tag` line or a `+` block in one is DUI2018, and so is a slot
+  or a loop. Tag the widgets in the branch.
 - A widget in a branch that writes a `Shown` of its own is shown when its branch is taken and its own condition holds.
 - `if` belongs inside a node; at the top of a file, or an `else` with no `if` before it, is DUI2018.
 - `else` may stand on the line the `}` closed or on the next one.
@@ -82,7 +83,8 @@ for long lists.
 
 ### The rules both keep
 
-- The body is exactly one widget, the template (DUI5021, DUI5012). Wrap several in a container.
+- The body is exactly one widget, the template (DUI5021, DUI5012). Wrap several in a container. A `@tag` line goes on
+  that widget, not in the body beside it (DUI2024); every copy carries the widget's tags.
 - A loop is not the root, and does not nest in another loop (DUI5021, DUI5012). The way to nest is a component whose own
   file has the inner loop, given its list through a `props` entry.
 - A `for` needs a host that takes any number of children; an `each` needs a `+ UIListView` (or a recyclable scroll

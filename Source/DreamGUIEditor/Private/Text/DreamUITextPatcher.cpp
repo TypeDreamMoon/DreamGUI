@@ -1837,6 +1837,186 @@ namespace DreamUIPatchLocal
 	}
 
 	// --------------------------------------------------------------------------------------------
+	// `@tag` lines
+	//
+	// A node's Tags are written `@tag Trim, Glow` -- lines of names, not a property line -- so an edit of Tags on a node
+	// that writes them that way is an edit of those lines: the names it drops are taken off the lines they stand on (a
+	// line left with none goes), and the names it adds join the last line that keeps any, or a new `@tag` line when the
+	// node has none. A node that writes `Tags = [...]` instead keeps that line, edited like any other.
+	// --------------------------------------------------------------------------------------------
+
+	int32 ExtendBackOverLineBreak(const FString& InText, int32 InStart);
+	void RefuseNotWritable(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUISourceLocation& InLocation, FString InMessage);
+
+	/** The names a Tags value text lists (`[Trim, "Glow"]`), read by the parser; false when it is not a list of names. */
+	bool ReadTagList(const FString& InValueText, TArray<FString>& OutNames)
+	{
+		const FString Probe = FString::Printf(TEXT("Widget DreamUIPatchProbe {\n\tTags = %s\n}"), *InValueText);
+		FDreamUIAst ProbeAst;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		if (!FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics))
+		{
+			return false;
+		}
+		const FDreamUIProperty* Tags = FindProperty(ProbeAst.Root.Properties, TEXT("Tags"));
+		if (Tags == nullptr || Tags->Value.Kind != EDreamUIValueKind::List)
+		{
+			return false;
+		}
+		for (const FDreamUIValue& Item : Tags->Value.Items)
+		{
+			if (Item.Kind != EDreamUIValueKind::Identifier && Item.Kind != EDreamUIValueKind::String)
+			{
+				return false;
+			}
+			// FString's comparison, case insensitive -- the FName rule a tag is matched by.
+			OutNames.AddUnique(Item.Raw);
+		}
+		return true;
+	}
+
+	/** Whether `@tag <InName>` reads back as exactly that one name -- asked of the parser, the judge of what a line holds. */
+	bool TagLineTakes(const FString& InName)
+	{
+		const FString Probe = FString::Printf(TEXT("Widget DreamUIPatchProbe {\n\t@tag %s\n}"), *InName);
+		FDreamUIAst ProbeAst;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		return FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics) && ProbeDiagnostics.Diagnostics.IsEmpty()
+			&& ProbeAst.Root.Tags.Num() == 1 && ProbeAst.Root.Tags[0].Name.Equals(InName, ESearchCase::CaseSensitive);
+	}
+
+	bool PlanTagsEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FDreamUINode& Node = *InTarget.Node;
+		TArray<FString> Wanted;
+		if (!ReadTagList(InEdit.NewValueText.TrimStartAndEnd(), Wanted))
+		{
+			RefuseNotWritable(OutDiagnostics, InTarget.Location,
+				FString::Printf(TEXT("'%s' is not a list of names, and '@tag' lines hold names"), *Ellipsize(InEdit.NewValueText)));
+			return false;
+		}
+		TArray<FString> Current;
+		for (const FDreamUITag& Tag : Node.Tags)
+		{
+			Current.AddUnique(Tag.Name);
+		}
+		TArray<FString> Added;
+		for (const FString& Name : Wanted)
+		{
+			if (!Current.Contains(Name))
+			{
+				Added.Add(Name);
+			}
+		}
+		const bool bRemoves = Current.ContainsByPredicate([&Wanted](const FString& InName) { return !Wanted.Contains(InName); });
+		if (Added.IsEmpty() && !bRemoves)
+		{
+			return true;
+		}
+		for (const FString& Name : Added)
+		{
+			if (!TagLineTakes(Name))
+			{
+				if (Node.Tags.IsEmpty())
+				{
+					// Not a name a tag line can hold (a space in it, a leading digit): the list spelling holds anything.
+					return PlanInsert(InText, InEdit, InTarget, OutSplices, InOutOrder, OutDiagnostics);
+				}
+				RefuseNotWritable(OutDiagnostics, Node.Tags[0].LineLocation,
+					FString::Printf(TEXT("'%s' is not a name an '@tag' line can hold; write the tags as 'Tags = [...]' instead of '@tag' lines to give it one"),
+						*Ellipsize(Name)));
+				return false;
+			}
+		}
+		if (Node.Tags.IsEmpty())
+		{
+			const FString Body = TEXT("@tag ") + FString::Join(Added, TEXT(", "));
+			return PlanInsert(InText, InEdit, InTarget, OutSplices, InOutOrder, OutDiagnostics, &Body);
+		}
+
+		// The lines, in order, each with its names where the text has them.
+		struct FTagLine
+		{
+			int32 AtOffset = INDEX_NONE;
+			int32 FirstName = INDEX_NONE;
+			int32 LastNameEnd = INDEX_NONE;
+			TArray<FString> Names;
+			TArray<FString> Kept;
+		};
+		TArray<FTagLine> Lines;
+		for (const FDreamUITag& Tag : Node.Tags)
+		{
+			const int32 AtOffset = OffsetOf(InText, Tag.LineLocation);
+			const int32 NameOffset = OffsetOf(InText, Tag.Location);
+			if (!TextAtIs(InText, AtOffset, TEXT("@")) || !TextAtIs(InText, NameOffset, Tag.Name))
+			{
+				RefuseStale(OutDiagnostics, Tag.Location, FString::Printf(TEXT("line %d does not tag '%s'"), Tag.Location.Line, *Tag.Name));
+				return false;
+			}
+			if (Lines.IsEmpty() || Lines.Last().AtOffset != AtOffset)
+			{
+				FTagLine& Line = Lines.AddDefaulted_GetRef();
+				Line.AtOffset = AtOffset;
+				Line.FirstName = NameOffset;
+			}
+			FTagLine& Line = Lines.Last();
+			Line.LastNameEnd = NameOffset + Tag.Name.Len();
+			Line.Names.Add(Tag.Name);
+			if (Wanted.Contains(Tag.Name))
+			{
+				Line.Kept.Add(Tag.Name);
+			}
+		}
+		// The added names join the last line that keeps any, or the first when none does, so a node's tags stay on as few
+		// lines as the author had.
+		int32 Receiver = 0;
+		for (int32 Index = Lines.Num() - 1; Index >= 0; --Index)
+		{
+			if (Lines[Index].Kept.Num() > 0)
+			{
+				Receiver = Index;
+				break;
+			}
+		}
+		Lines[Receiver].Kept.Append(Added);
+
+		for (const FTagLine& Line : Lines)
+		{
+			if (Line.Kept == Line.Names)
+			{
+				continue;
+			}
+			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+			Splice.Order = InOutOrder++;
+			if (Line.Kept.Num() > 0)
+			{
+				// The names rewritten, joined the way a new line joins them; the '@tag' and whatever follows stay.
+				Splice.Offset = Line.FirstName;
+				Splice.Length = Line.LastNameEnd - Line.FirstName;
+				Splice.Text = FString::Join(Line.Kept, TEXT(", "));
+				continue;
+			}
+			if (LineBeforeIsBlank(InText, Line.AtOffset) && RestOfLineIsBlank(InText, Line.LastNameEnd, /*bInAllowTerminators*/ true))
+			{
+				// Its own line: taken out whole, line break and all.
+				Splice.Offset = ExtendBackOverLineBreak(InText, FindLineStart(InText, Line.AtOffset));
+				Splice.Length = FindLineEnd(InText, Line.LastNameEnd) - Splice.Offset;
+				continue;
+			}
+			// Sharing its line: the statement alone, with the space after it.
+			int32 End = Line.LastNameEnd;
+			while (End < InText.Len() && (IsInlineWhitespace(InText[End]) || InText[End] == TEXT(';')))
+			{
+				++End;
+			}
+			Splice.Offset = Line.AtOffset;
+			Splice.Length = End - Line.AtOffset;
+		}
+		return true;
+	}
+
+	// --------------------------------------------------------------------------------------------
 	// Properties the front end made
 	//
 	// Two constructs put properties into the tree that no line spells: an `if` gives every node of its branches a
@@ -1957,12 +2137,133 @@ namespace DreamUIPatchLocal
 				*InEditedName, *InNodeId, InShown.Location.Line));
 	}
 
+	/** Where an `@slot Size = (w, h)` statement stands: its name, its value, and whether it is a line of its own (`@slot Size`) or one of a block's. */
+	struct FSizeShorthand
+	{
+		int32 NameStart = INDEX_NONE;
+		int32 ValueStart = INDEX_NONE;
+		int32 ValueEnd = INDEX_NONE;
+		/** `@slot Size = …` on a line of its own, rather than `Size = …` inside an `@slot { … }` block. */
+		bool bOwnSlotLine = false;
+	};
+
+	/**
+	 * The `Size` a made-up MinDesiredSize or MaxDesiredSize came from, measured in the text, or false when its location is
+	 * not one. A line's location is its '@' (the statement starts there); a block line's is its name.
+	 */
+	bool MeasureSizeShorthand(const FString& InText, const FDreamUIProperty& InProperty, FSizeShorthand& OutSize)
+	{
+		if (InProperty.Name != TEXT("MinDesiredSize") && InProperty.Name != TEXT("MaxDesiredSize"))
+		{
+			return false;
+		}
+		int32 Cursor = OffsetOf(InText, InProperty.Location);
+		if (Cursor == INDEX_NONE || Cursor >= InText.Len())
+		{
+			return false;
+		}
+		if (InText[Cursor] == TEXT('@'))
+		{
+			++Cursor;
+			while (Cursor < InText.Len() && IsInlineWhitespace(InText[Cursor]))
+			{
+				++Cursor;
+			}
+			if (!KeywordAt(InText, Cursor, TEXT("slot")))
+			{
+				return false;
+			}
+			Cursor += 4;
+			while (Cursor < InText.Len() && IsInlineWhitespace(InText[Cursor]))
+			{
+				++Cursor;
+			}
+			OutSize.bOwnSlotLine = true;
+		}
+		// The parser takes the name case insensitively, as every property name; KeywordAt is the word-boundary half.
+		if (Cursor + 4 > InText.Len() || !InText.Mid(Cursor, 4).Equals(TEXT("Size"), ESearchCase::IgnoreCase)
+			|| (Cursor + 4 < InText.Len() && IsIdentifierChar(InText[Cursor + 4])))
+		{
+			return false;
+		}
+		OutSize.NameStart = Cursor;
+		OutSize.ValueStart = OffsetOf(InText, InProperty.Value.Location);
+		OutSize.ValueEnd = OutSize.ValueStart == INDEX_NONE ? INDEX_NONE : MeasureValue(InText, OutSize.ValueStart);
+		return OutSize.ValueEnd != INDEX_NONE && OutSize.ValueStart > OutSize.NameStart;
+	}
+
+	/**
+	 * `@slot Size = (w, h)` given a new MinDesiredSize or MaxDesiredSize (and, in InPartnerValue, a new value for the other
+	 * half when the same write gave one). Both the same: the shorthand still says it, with the new value. Different: it
+	 * no longer can, and is written as the two lines it stood for, each with its value -- a block line as two lines of
+	 * the block, side by side when the block is on one line.
+	 */
+	bool PlanSizeShorthandEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FDreamUIProperty& InProperty,
+		const FSizeShorthand& InSize, const FString* InPartnerValue, TArray<FSplice>& OutSplices, int32& InOutOrder,
+		FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FString Current = InText.Mid(InSize.ValueStart, InSize.ValueEnd - InSize.ValueStart);
+		const FString Expected = InProperty.Value.Kind == EDreamUIValueKind::ResourceRef ? TEXT("@") + InProperty.Value.Raw
+			: InProperty.Value.Kind == EDreamUIValueKind::HexColor ? TEXT("#") + InProperty.Value.Raw
+			: InProperty.Value.Raw;
+		if (InProperty.Value.Kind != EDreamUIValueKind::String && !Current.Equals(Expected, ESearchCase::CaseSensitive))
+		{
+			RefuseStale(OutDiagnostics, InProperty.Location,
+				FString::Printf(TEXT("the '@slot Size' on line %d reads '%s' where the tree says '%s'"),
+					InProperty.Location.Line, *Ellipsize(Current), *Ellipsize(Expected)));
+			return false;
+		}
+		if (InPartnerValue != nullptr && !ValidateValueText(*InPartnerValue, InProperty.Location, OutDiagnostics))
+		{
+			return false;
+		}
+		const FString NewValue = InEdit.NewValueText.TrimStartAndEnd();
+		const FString Partner = InPartnerValue != nullptr ? InPartnerValue->TrimStartAndEnd() : Current;
+		const bool bEditsMin = InProperty.Name == TEXT("MinDesiredSize");
+		const FString& NewMin = bEditsMin ? NewValue : Partner;
+		const FString& NewMax = bEditsMin ? Partner : NewValue;
+		if (NewMin.Equals(Current, ESearchCase::CaseSensitive) && NewMax.Equals(Current, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+		Splice.Order = InOutOrder++;
+		if (NewMin.Equals(NewMax, ESearchCase::CaseSensitive))
+		{
+			Splice.Offset = InSize.ValueStart;
+			Splice.Length = InSize.ValueEnd - InSize.ValueStart;
+			Splice.Text = NewMin;
+			return true;
+		}
+		FString Between;
+		if (InSize.bOwnSlotLine)
+		{
+			Between = DetectLineEnding(InText) + IndentAt(InText, InSize.NameStart) + TEXT("@slot ");
+		}
+		else
+		{
+			Between = LineBeforeIsBlank(InText, InSize.NameStart)
+				? DetectLineEnding(InText) + IndentAt(InText, InSize.NameStart)
+				: FString(TEXT("  "));
+		}
+		Splice.Offset = InSize.NameStart;
+		Splice.Length = InSize.ValueEnd - InSize.NameStart;
+		Splice.Text = FString::Printf(TEXT("MinDesiredSize = %s%sMaxDesiredSize = %s"), *NewMin, *Between, *NewMax);
+		return true;
+	}
+
 	bool PlanSynthesizedEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
 		const FDreamUIProperty& InProperty, TArray<FSplice>& OutSplices, int32& InOutOrder,
-		FDreamUIDiagnosticBag& OutDiagnostics)
+		FDreamUIDiagnosticBag& OutDiagnostics, const FString* InSizePartnerValue)
 	{
 		const FString NewValue = InEdit.NewValueText.TrimStartAndEnd();
 		const FString NodeId = InTarget.Node != nullptr ? InTarget.Node->Id : InEdit.NodeId;
+
+		FSizeShorthand Size;
+		if (InEdit.Target == EDreamUIPatchTarget::Slot && MeasureSizeShorthand(InText, InProperty, Size))
+		{
+			return PlanSizeShorthandEdit(InText, InEdit, InProperty, Size, InSizePartnerValue, OutSplices, InOutOrder, OutDiagnostics);
+		}
 
 		FFillShorthand Fill;
 		if (InEdit.Target == EDreamUIPatchTarget::Slot && MeasureFillShorthand(InText, InProperty, Fill))
@@ -2045,8 +2346,14 @@ namespace DreamUIPatchLocal
 		return false;
 	}
 
+	/**
+	 * InSizePartnerValue: the new value of the other half of an `@slot Size` this edit's property was made from, when the
+	 * same write gave that half one too (SetProperties pairs the two and plans them as one). bInWriteAsSize: this edit
+	 * and the other half's, both new lines with one value, are written as the one `@slot Size` line.
+	 */
 	bool PlanEdit(const FString& InText, const FDreamUIAst& InAst, const FDreamUIPropertyEdit& InEdit,
-		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics,
+		const FString* InSizePartnerValue = nullptr, bool bInWriteAsSize = false)
 	{
 		if (InEdit.PropertyName.TrimStartAndEnd().IsEmpty())
 		{
@@ -2143,14 +2450,37 @@ namespace DreamUIPatchLocal
 			return false;
 		}
 
+		// A node's Tags, written as `@tag` lines rather than a `Tags = [...]` line of its own.
+		if (InEdit.Target == EDreamUIPatchTarget::Node && Target.Node != nullptr && InEdit.PropertyName == TEXT("Tags"))
+		{
+			if (Existing == nullptr)
+			{
+				return PlanTagsEdit(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics);
+			}
+			if (!Target.Node->Tags.IsEmpty())
+			{
+				// The two spellings add up, so neither line alone says what the widget has, and an edit could only guess
+				// which of them to change.
+				RefuseNotWritable(OutDiagnostics, Existing->Location,
+					FString::Printf(TEXT("'%s' writes its tags both as 'Tags = …' (line %d) and as '@tag' (line %d); keep one of the two for its tags to be written back"),
+						*Target.Node->Id, Existing->Location.Line, Target.Node->Tags[0].LineLocation.Line));
+				return false;
+			}
+		}
+
 		if (Existing != nullptr && Existing->bSynthesized)
 		{
-			return PlanSynthesizedEdit(InText, InEdit, Target, *Existing, OutSplices, InOutOrder, OutDiagnostics);
+			return PlanSynthesizedEdit(InText, InEdit, Target, *Existing, OutSplices, InOutOrder, OutDiagnostics, InSizePartnerValue);
 		}
 		if (Existing != nullptr)
 		{
 			return PlanReplace(InText, InEdit, *Existing, InEdit.Target == EDreamUIPatchTarget::Slot,
 				OutSplices, InOutOrder, OutDiagnostics);
+		}
+		if (bInWriteAsSize)
+		{
+			const FString Body = TEXT("Size = ") + InEdit.NewValueText.TrimStartAndEnd();
+			return PlanInsert(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics, &Body);
 		}
 		return PlanInsert(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics);
 	}
@@ -2216,6 +2546,45 @@ bool FDreamUITextPatcher::SetProperties(FString& InOutText, const FDreamUIAst& I
 		}
 	}
 
+	// `@slot Size = (w, h)` is MinDesiredSize and MaxDesiredSize on ONE line: edits of both halves would each rewrite it,
+	// over each other, so the pair is planned as one -- by the first of the two, told the other's value. And the other way
+	// round: two new lines, for a node that writes neither, with one value, are written as that one line.
+	TMap<int32, int32> SizePartnerOf;
+	TSet<int32> SizeInserts;
+	TSet<int32> PlannedByPartner;
+	auto IsSizeHalf = [](const FString& InName)
+	{
+		return InName == TEXT("MinDesiredSize") || InName == TEXT("MaxDesiredSize");
+	};
+	for (int32 Left = 0; Left < InEdits.Num(); ++Left)
+	{
+		for (int32 Right = Left + 1; Right < InEdits.Num(); ++Right)
+		{
+			const FDreamUIPropertyEdit& A = InEdits[Left];
+			const FDreamUIPropertyEdit& B = InEdits[Right];
+			if (A.Target != EDreamUIPatchTarget::Slot || B.Target != EDreamUIPatchTarget::Slot || A.NodeId != B.NodeId
+				|| !IsSizeHalf(A.PropertyName) || !IsSizeHalf(B.PropertyName) || A.PropertyName == B.PropertyName)
+			{
+				continue;
+			}
+			const FDreamUINode* Node = FindNodeById(InAst, A.NodeId);
+			const FDreamUIProperty* Min = Node != nullptr ? FindProperty(Node->SlotProperties, TEXT("MinDesiredSize")) : nullptr;
+			const FDreamUIProperty* Max = Node != nullptr ? FindProperty(Node->SlotProperties, TEXT("MaxDesiredSize")) : nullptr;
+			if (Min != nullptr && Max != nullptr && Min->bSynthesized && Max->bSynthesized
+				&& Min->Location.Line == Max->Location.Line && Min->Location.Column == Max->Location.Column)
+			{
+				SizePartnerOf.Add(Left, Right);
+				PlannedByPartner.Add(Right);
+			}
+			else if (Node != nullptr && Min == nullptr && Max == nullptr
+				&& A.NewValueText.TrimStartAndEnd().Equals(B.NewValueText.TrimStartAndEnd(), ESearchCase::CaseSensitive))
+			{
+				SizeInserts.Add(Left);
+				PlannedByPartner.Add(Right);
+			}
+		}
+	}
+
 	bool bAllPlanned = true;
 	int32 Order = 0;
 	TArray<FSplice> Splices;
@@ -2233,7 +2602,13 @@ bool FDreamUITextPatcher::SetProperties(FString& InOutText, const FDreamUIAst& I
 				bAllPlanned = false;
 				continue;
 			}
-			if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics))
+			if (PlannedByPartner.Contains(Index))
+			{
+				continue;
+			}
+			const int32* Partner = SizePartnerOf.Find(Index);
+			if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics,
+				Partner != nullptr ? &InEdits[*Partner].NewValueText : nullptr, SizeInserts.Contains(Index)))
 			{
 				// The rest of the batch is still planned and still applied. A designer flushing ten
 				// dirty properties is better served by nine writes and one complaint than by losing all
@@ -2746,6 +3121,23 @@ namespace DreamUIPatchLocal
 		return true;
 	}
 
+	/** Two style clauses name the same styles in the same order (names compare as FNames do, case insensitively). */
+	bool SameStyleClause(TConstArrayView<FDreamUIStyleRef> InA, TConstArrayView<FDreamUIStyleRef> InB)
+	{
+		if (InA.Num() != InB.Num())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < InA.Num(); ++Index)
+		{
+			if (InA[Index].Name != InB[Index].Name)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/** The rows of InRow's table: its siblings that are rows of the same type, the run of them InRow stands in. */
 	void CollectTableRows(const FDreamUINode& InParent, const FDreamUINode& InRow, TArray<const FDreamUINode*>& OutRows)
 	{
@@ -2754,7 +3146,8 @@ namespace DreamUIPatchLocal
 		bool bFound = false;
 		for (const FDreamUINode& Child : InParent.Children)
 		{
-			const bool bSameTable = !Child.RowKey.IsEmpty() && Child.TypeName == InRow.TypeName && Child.StyleName == InRow.StyleName;
+			const bool bSameTable = !Child.RowKey.IsEmpty() && Child.TypeName == InRow.TypeName
+				&& SameStyleClause(Child.StyleRefs, InRow.StyleRefs);
 			if (bSameTable)
 			{
 				Run.Add(&Child);

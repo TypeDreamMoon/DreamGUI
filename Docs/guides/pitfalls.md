@@ -43,8 +43,21 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 - **`Style.X = v` changes nothing.** The instance's `Style` is used only when `StyleSource` is `Inline` (or there is no
   style sheet), or `ProjectStyleSheetOverride` with the field's `bOverride_X` ticked. A `.dui` never touches the bits, and
   they start ticked. [In .dui and at run time](../controls/styles.md#in-dui-and-at-run-time).
-- **`Text Note : A : B` is a syntax error.** A node wears one style, a style inherits one.
-  [Styles](../language/styles-and-resources.md#styles).
+- **`: A : B` applies `B` over `A`, and a name twice is a warning.** Styles apply left to right, bases first, each once, at
+  its first appearance; the node's own lines come last. Naming a style that an earlier one already applied changes
+  nothing and is DUI3025. [Several styles](../language/styles-and-resources.md#several-styles).
+- **`@slot Size <- F()` is an error.** `Size` is a shorthand for `MinDesiredSize` and `MaxDesiredSize` with one value, so it
+  takes `=` only; bind the two properties separately (DUI4001).
+  [`@slot Size`](../language/slots-and-components.md#slot-size).
+- **`@tag Trim` is a tag, `@tag Trim { }` is a node.** A name after `@tag` is a tag line unless a block, a `:` or a
+  `(was: …)` follows it, which makes it the old `@Name` form of a node typed by a resource called `tag`. A tag line in a
+  `style` or directly in a `for` body is DUI2024. [Tags](../language/nodes-and-values.md#tags-tag).
+- **A ring menu's items are written in the `.dui`.** `Items = [{ "Lamp", Tag: Lamp }, …]`: a map per item, the label
+  first and without its key. A map written without a key anywhere else, or on a struct that has no primary field, is
+  DUI4009. [Structs as field maps](../language/nodes-and-values.md#structs-as-field-maps).
+- **A ring menu's template content is centred on its slice, not stretched over it.** It takes the size its class's root
+  is authored at, or the style's `ContentWidth` square when the root stretches, at `ContentRadius`. Give the root fixed
+  anchors for a size of its own. [Ring menu](../Reference/DreamRingMenu.md).
 - **`#8C8C94` is darker than it looks.** Colour literals are sRGB-encoded, and a tint is multiplied in linear space.
   [Values](../language/nodes-and-values.md#values).
 

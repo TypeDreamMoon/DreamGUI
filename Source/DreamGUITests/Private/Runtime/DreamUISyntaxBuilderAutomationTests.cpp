@@ -752,7 +752,7 @@ bool FDreamUISyntaxSlotFillErrorsTest::RunTest(const FString& Parameters)
 		FDreamUINode Exp = MakeNode(TEXT("/Script/DreamGUIControls.DreamExpandableArea"), TEXT("Exp"), 2);
 		FDreamUINode Fill = MakeSlot(TEXT("Header"), 3);
 		Fill.bFillsSlot = true;
-		Fill.StyleName = TEXT("Anything");
+		Fill.StyleRefs.Add({ TEXT("Anything"), FDreamUISourceLocation() });
 		Fill.Children.Add(MakeNode(TEXT("Text"), TEXT("One"), 4));
 		Exp.Children.Add(Fill);
 		Root.Children.Add(Exp);

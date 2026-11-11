@@ -2002,40 +2002,38 @@ namespace DreamUIExpressionThunksLocal
 	void LowerWornStyles(UDreamWidgetBlueprint* InBlueprint, FDreamUIAst& InAst,
 		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
 	{
-		TArray<FString> Worn;
-		InAst.ForEachNode([&Worn](const FDreamUINode& InNode)
+		// Every style a worn clause applies, each once: the builder's chain (FDreamUIAst::CollectStyleChain), which is
+		// also what stops at the cycle the builder reports at the wearing node.
+		TArray<const FDreamUIStyle*> Applied;
+		InAst.ForEachNode([&InAst, &Applied](const FDreamUINode& InNode)
 		{
-			if (!InNode.StyleName.IsEmpty())
+			TArray<const FDreamUIStyle*> Chain;
+			InAst.CollectStyleChain(InNode.StyleRefs, Chain);
+			for (const FDreamUIStyle* Style : Chain)
 			{
-				Worn.AddUnique(InNode.StyleName);
+				Applied.AddUnique(Style);
 			}
 		});
 
-		TSet<const FDreamUIStyle*> Lowered;
-		for (const FString& WornName : Worn)
+		for (const FDreamUIStyle* AppliedStyle : Applied)
 		{
-			FString Link = WornName;
-			while (!Link.IsEmpty())
+			// The AST's own entry, found again by name to write the lowered names into it.
+			FDreamUIStyle* Style = FindMutableStyle(InAst, AppliedStyle->Name);
+			if (Style == nullptr)
 			{
-				FDreamUIStyle* Style = FindMutableStyle(InAst, Link);
-				if (Style == nullptr || Lowered.Contains(Style))
-				{
-					break;
-				}
-				Lowered.Add(Style);
-				const FString OwnerName = FString(TEXT("Style_")) + Style->Name;
-				LowerPropertyList(InBlueprint, OwnerName, Style->Properties, InDiagnostics, InOutClaimedNames);
-				// A style carries components and `@slot` lines too, and a line in either is a line like any other: an
-				// expression there left un-lowered is the silent binding this pass was extended to styles to end. One
-				// owner name for all three lists; a component's `Spacing` meeting the style's own `Spacing` is exactly
-				// the collision MakeThunkName disambiguates.
-				for (FDreamUIComponent& Component : Style->Components)
-				{
-					LowerPropertyList(InBlueprint, OwnerName, Component.Properties, InDiagnostics, InOutClaimedNames);
-				}
-				LowerPropertyList(InBlueprint, OwnerName, Style->SlotProperties, InDiagnostics, InOutClaimedNames);
-				Link = Style->BaseName;
+				continue;
 			}
+			const FString OwnerName = FString(TEXT("Style_")) + Style->Name;
+			LowerPropertyList(InBlueprint, OwnerName, Style->Properties, InDiagnostics, InOutClaimedNames);
+			// A style carries components and `@slot` lines too, and a line in either is a line like any other: an
+			// expression there left un-lowered is the silent binding this pass was extended to styles to end. One
+			// owner name for all three lists; a component's `Spacing` meeting the style's own `Spacing` is exactly
+			// the collision MakeThunkName disambiguates.
+			for (FDreamUIComponent& Component : Style->Components)
+			{
+				LowerPropertyList(InBlueprint, OwnerName, Component.Properties, InDiagnostics, InOutClaimedNames);
+			}
+			LowerPropertyList(InBlueprint, OwnerName, Style->SlotProperties, InDiagnostics, InOutClaimedNames);
 		}
 	}
 }

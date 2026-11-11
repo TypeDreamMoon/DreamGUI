@@ -18,6 +18,14 @@ The language reference is organized by topic. These links preserve the section n
 
 [Read this section](nodes-and-values.md#nodes-with-no-id).
 
+## Tags: `@tag`
+
+[Read this section](nodes-and-values.md#tags-tag).
+
+### Finding widgets by tag
+
+[Read this section](nodes-and-values.md#finding-widgets-by-tag).
+
 ## Node types
 
 [Read this section](nodes-and-values.md#node-types).
@@ -30,9 +38,17 @@ The language reference is organized by topic. These links preserve the section n
 
 [Read this section](nodes-and-values.md#values).
 
+### Structs as field maps
+
+[Read this section](nodes-and-values.md#structs-as-field-maps).
+
 ## Slot lines: `@slot` and `@fill`
 
 [Read this section](slots-and-components.md#slot-lines-slot-and-fill).
+
+### `@slot Size`
+
+[Read this section](slots-and-components.md#slot-size).
 
 ## Components: `+ Class`
 
@@ -41,6 +57,10 @@ The language reference is organized by topic. These links preserve the section n
 ## Styles
 
 [Read this section](styles-and-resources.md#styles).
+
+### Several styles
+
+[Read this section](styles-and-resources.md#several-styles).
 
 ## Resources
 

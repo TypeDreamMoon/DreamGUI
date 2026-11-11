@@ -11,9 +11,14 @@ holds the value -- or a new line after the node's others -- with everything else
 **Values.** Numbers, strings, tuples, colours, enums and asset references are written as the literals the language
 reads. A list or a set is written as `[a, b]` and a map as `{ key: value }`, the whole container replacing its line;
 a set or a map that only came back in another order is no change, and a changed one keeps the file's order with new
-entries after it. An element that is a struct with no short form -- a layer style's drop shadow, an
-adjustment -- is the quoted text of its fields that differ from the struct's defaults, as the builder reads it:
-`Style.DropShadows = ["(Angle=45.000000,Distance=8.000000)"]`. A reference to another widget of the hierarchy (an
+entries after it. An element that is a struct with no short form is written one of two ways. A struct that names a primary field
+(`DreamGUI_PrimaryField`; today a ring menu's item) is a [field map](nodes-and-values.md#structs-as-field-maps):
+`Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]`, the primary field first and without its key,
+only the fields that differ from the struct's defaults after it, and its text fields given localization keys of their
+own (`Items.Label`). Any other struct -- a layer style's drop shadow, an adjustment -- is the quoted text of its fields
+that differ from the struct's defaults, as the builder reads it: `Style.DropShadows = ["(Angle=45.000000,Distance=8.000000)"]`.
+It stays in that form because a field such as a linear colour would be quantized through a hex code in a map.
+A reference to another widget of the hierarchy (an
 explicit navigation target, a toggle's group) is written as that node's bare id; one into another file's component has
 no id here and is refused.
 
@@ -27,6 +32,21 @@ A value a node takes from its **style's** `+ Component` line is written as an ov
 `@fill N` given a new weight has the number replaced; a bare `@fill` given another `SizeRule` becomes
 `@slot SizeRule = …`; and `@fill 2` given another rule becomes its two lines, `@slot SizeRule = …` and
 `@slot FillWeight = 2`.
+
+**Tags.** `Tags` is written as the node's `@tag` lines. A name the designer removes comes out of its line, and a line
+left empty is taken out; names it adds join the last line that keeps names, or a new `@tag` line goes after the node's others
+when there is none. A node that writes `Tags = [...]` keeps that line and has it rewritten. A node that writes tags both
+ways is refused (DUI7004), and so is a name an `@tag` line cannot
+hold (one with a space, or a leading digit) on a node that has tag lines. On a node with none, such a name is written as
+a `Tags = [...]` line.
+
+**`@slot Size`.** An edit that leaves the slot's minimum and maximum desired size equal rewrites the shorthand's value.
+One that makes them differ rewrites the line into `@slot MinDesiredSize = …` and `@slot MaxDesiredSize = …` -- inside a
+`@slot { }` block two lines of the block, side by side when the block is on one line. A node that writes neither and is
+given both with one value gets one `@slot Size` line, which is what the Blueprint converter writes for such a slot.
+
+**Several styles.** A node's `: A : B` is never rewritten by an edit to its values. The values the styles give the node
+are taken in the order the builder applies them, and a changed one is written as the node's own line, which comes last.
 
 **Structure.** A widget added in the designer is written with the type this file would use: its `use … as` alias when
 the class has one here, a container type for a plain widget that lays out children (`VerticalBox Column`). One dropped
@@ -59,6 +79,8 @@ designer says so (DUI7004) instead of inventing one:
 - the template of a `for` or an `each` removed or moved out of its loop: a loop with nothing to repeat does not build;
 - on a `rows` table: renaming a row, giving it a `+` block, moving it out of its table, or placing a node beside the
   table (the place would be inside it);
+- a change to `Tags` on a node that writes it both as `@tag` lines and as a `Tags = [...]` line, or one that adds a name
+  an `@tag` line cannot hold to a node that has tag lines;
 - a value whose type or content has no spelling (DUI7003, today only non-finite floats among values that have one);
 - in the animation editor, a key with tangents of its own or stepped interpolation -- write `timeline Name external` to
   hand the animation to Sequencer for good.

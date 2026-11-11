@@ -114,7 +114,7 @@ bool FDreamUIRowsExpandTest::RunTest(const FString& Parameters)
 		const FDreamUINode& Row = Children[Index + 1];
 		const FString What = FString::Printf(TEXT("row %d"), Index);
 		TestEqual(What + TEXT(" is a widget of the table's type"), Row.TypeName, FString(TEXT("Text")));
-		TestEqual(What + TEXT(" wears the table's style"), Row.StyleName, FString(TEXT("Caption")));
+		TestEqual(What + TEXT(" wears the table's style"), Row.GetFirstStyleName(), FString(TEXT("Caption")));
 		TestTrue(What + TEXT(" is unnamed"), Row.bAnonymous);
 		TestEqual(What + TEXT(" carries its key"), Row.RowKey, FString(Keys[Index]));
 		TestEqual(What + TEXT(" is named from its key, not counted"), Row.Id, FString(Ids[Index]));

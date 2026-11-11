@@ -30,6 +30,123 @@ namespace DreamUIAstLocal
 			VisitDepthFirst(Child, InPredicate, InDepth + 1);
 		}
 	}
+
+	/** One CollectStyleChain: the output, the styles still being expanded, and whether a cycle stopped it. */
+	struct FStyleChainWalk
+	{
+		const FDreamUIAst& Ast;
+		TArray<const FDreamUIStyle*>& Out;
+		TArray<FDreamUIStyleChainProblem>* Problems;
+		TArray<const FDreamUIStyle*> Expanding;
+		bool bCycle = false;
+
+		/**
+		 * A base named in InOwner's clause. Its own namespace first when the owner came in under one and the base is
+		 * written bare: the parser renames a library style's bases along with it, so this is the fallback for an AST
+		 * assembled some other way, never a second meaning.
+		 */
+		const FDreamUIStyle* Resolve(const FDreamUIStyle* InOwner, const FString& InName) const
+		{
+			int32 Dot = INDEX_NONE;
+			if (InOwner != nullptr && InOwner->Name.FindLastChar(TEXT('.'), Dot) && !InName.Contains(TEXT(".")))
+			{
+				if (const FDreamUIStyle* Prefixed = Ast.FindStyle(InOwner->Name.Left(Dot + 1) + InName))
+				{
+					return Prefixed;
+				}
+			}
+			return Ast.FindStyle(InName);
+		}
+
+		void Note(FDreamUIStyleChainProblem::EKind InKind, const FDreamUIStyleRef& InRef, const FDreamUIStyle* InOwner, FString InThrough)
+		{
+			if (Problems != nullptr)
+			{
+				FDreamUIStyleChainProblem& Problem = Problems->AddDefaulted_GetRef();
+				Problem.Kind = InKind;
+				Problem.Ref = InRef;
+				Problem.Owner = InOwner;
+				Problem.Through = MoveTemp(InThrough);
+			}
+		}
+
+		void ExpandClause(const FDreamUIStyle* InOwner, TConstArrayView<FDreamUIStyleRef> InClause, int32 InDepth)
+		{
+			// What THIS clause applied, entry by entry, so a later name already applied by an earlier one can say which.
+			// A style applied before the clause began (by a sibling branch of an outer clause) is not this clause's
+			// doing, and goes unremarked.
+			const int32 ClauseStart = Out.Num();
+			TArray<TPair<int32, FString>> EntryEnds;
+			for (const FDreamUIStyleRef& Ref : InClause)
+			{
+				if (bCycle)
+				{
+					return;
+				}
+				const FDreamUIStyle* Style = Resolve(InOwner, Ref.Name);
+				if (Style == nullptr)
+				{
+					Note(FDreamUIStyleChainProblem::EKind::Unknown, Ref, InOwner, FString());
+					continue;
+				}
+				const int32 AppliedAt = Out.Find(Style);
+				if (AppliedAt != INDEX_NONE)
+				{
+					if (AppliedAt >= ClauseStart)
+					{
+						FString Through = Ref.Name;
+						for (const TPair<int32, FString>& Entry : EntryEnds)
+						{
+							if (AppliedAt < Entry.Key)
+							{
+								Through = Entry.Value;
+								break;
+							}
+						}
+						Note(FDreamUIStyleChainProblem::EKind::AlreadyApplied, Ref, InOwner, MoveTemp(Through));
+					}
+					continue;
+				}
+				// Past the nesting budget is treated as the cycle it almost certainly is: a hand-built AST can hold a
+				// chain no file could, and recursing on it is the stack overflow the budget exists to rule out.
+				if (Expanding.Contains(Style) || InDepth >= DreamUIAst::MaxNestingDepth)
+				{
+					bCycle = true;
+					Note(FDreamUIStyleChainProblem::EKind::Cycle, Ref, InOwner, Style->Name);
+					return;
+				}
+				Expanding.Push(Style);
+				ExpandClause(Style, Style->BaseRefs, InDepth + 1);
+				Expanding.Pop(EAllowShrinking::No);
+				if (bCycle)
+				{
+					return;
+				}
+				Out.Add(Style);
+				EntryEnds.Emplace(Out.Num(), Ref.Name);
+			}
+		}
+	};
+}
+
+const FString& FDreamUINode::GetFirstStyleName() const
+{
+	static const FString None;
+	return StyleRefs.Num() > 0 ? StyleRefs[0].Name : None;
+}
+
+bool FDreamUIAst::CollectStyleChain(TConstArrayView<FDreamUIStyleRef> InClause, TArray<const FDreamUIStyle*>& OutBaseFirst,
+	TArray<FDreamUIStyleChainProblem>* OutProblems) const
+{
+	OutBaseFirst.Reset();
+	DreamUIAstLocal::FStyleChainWalk Walk{ *this, OutBaseFirst, OutProblems };
+	Walk.ExpandClause(nullptr, InClause, /*InDepth*/0);
+	if (Walk.bCycle)
+	{
+		OutBaseFirst.Reset();
+		return false;
+	}
+	return true;
 }
 
 const FDreamUIStyle* FDreamUIAst::FindStyle(const FString& InName) const

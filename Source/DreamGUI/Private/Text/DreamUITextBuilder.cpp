@@ -837,6 +837,13 @@ namespace DreamUITextBuilderLocal
 		}
 		FScriptMapHelper Helper(AsMap, ValuePtr);
 		Helper.EmptyValues();
+		if (InValue.IsPositionalKey(0))
+		{
+			// The keyless first entry is a struct's primary field; a map has no entry without a key.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Items[0].Location,
+				FString::Printf(TEXT("'%s' is a map, and every entry of one is written 'key: value'"), *InProperty.Name));
+			return false;
+		}
 		for (int32 Index = 0; Index < InValue.Items.Num() && Index < InValue.Keys.Num(); ++Index)
 		{
 			FScratch Key(AsMap->KeyProp);
@@ -848,6 +855,69 @@ namespace DreamUITextBuilderLocal
 				return false;
 			}
 			Helper.AddPair(Key.Memory, Item.Memory);
+		}
+		return true;
+	}
+
+	/**
+	 * `{ Label: "Lamp", Tag: Lamp }` into a struct with no short form: each key names a field, and each value is written
+	 * by WriteValue against that field, so a field takes exactly the spellings a property of its type takes -- a text
+	 * gets its localization key (the field joins the property's name, as `Items.Label`, the key a dotted line would
+	 * make), a nested struct takes a map of its own. Fields the map does not name keep the value they had: a fresh
+	 * array element's defaults, or the class's, the same rule a dotted `Style.Field = …` line follows.
+	 *
+	 * The first entry may have no key -- `{ "Lamp", Tag: Lamp }` -- when the struct names a primary field (USTRUCT meta
+	 * DreamGUI_PrimaryField): the one field nearly every value sets, so a list of them reads as a list of labels.
+	 */
+	bool WriteStructFields(const FResolvedDestination& InDestination, const FDreamUINode& InNode, const FDreamUIProperty& InProperty,
+		const FDreamUIValue& InValue, const FStructProperty& InStruct, FBuildContext& InContext)
+	{
+		const UScriptStruct* Struct = InStruct.Struct;
+		FString PrimaryField;
+#if WITH_METADATA
+		PrimaryField = Struct->GetMetaData(TEXT("DreamGUI_PrimaryField"));
+#endif
+		for (int32 Index = 0; Index < InValue.Items.Num() && Index < InValue.Keys.Num(); ++Index)
+		{
+			const FDreamUIValue& Key = InValue.Keys[Index];
+			FString FieldName = Key.Raw;
+			if (InValue.IsPositionalKey(Index))
+			{
+				if (PrimaryField.IsEmpty())
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Items[Index].Location,
+						FString::Printf(TEXT("'%s' is a %s, whose fields are written by name, as in { Field: value }; it names no primary field, so its first entry needs a key too"),
+							*InProperty.Name, *Struct->GetName()));
+					return false;
+				}
+				FieldName = PrimaryField;
+			}
+			else if (Key.Kind != EDreamUIValueKind::Identifier)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownPropertyPathSegment, Key.Location,
+					FString::Printf(TEXT("'%s' is a %s, and its map is keyed by field names: '%s' is not one"),
+						*InProperty.Name, *Struct->GetName(), *Key.Raw));
+				return false;
+			}
+			FProperty* Field = FindFProperty<FProperty>(Struct, *FieldName);
+			if (Field == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownPropertyPathSegment, Key.Location,
+					FString::Printf(TEXT("%s has no field named '%s'%s"), *Struct->GetName(), *FieldName,
+						*FormatSuggestion(SuggestNearestProperty(FieldName, { Struct }))));
+				return false;
+			}
+			FResolvedDestination Element = InDestination;
+			Element.LeafProperty = Field;
+			Element.LeafValuePtr = Field->ContainerPtrToValuePtr<void>(InDestination.LeafValuePtr);
+			Element.bNested = true;
+			FDreamUIProperty ElementProperty = InProperty;
+			ElementProperty.Name = InProperty.Name + TEXT(".") + Field->GetName();
+			ElementProperty.Value = InValue.Items[Index];
+			if (!WriteValue(Element, InNode, ElementProperty, InContext))
+			{
+				return false;
+			}
 		}
 		return true;
 	}
@@ -1014,6 +1084,16 @@ namespace DreamUITextBuilderLocal
 		// literal on anything else is said here, before a branch below reads its slice as something it is not.
 		const bool bIsContainer = CastField<FArrayProperty>(Leaf) != nullptr || CastField<FSetProperty>(Leaf) != nullptr
 			|| CastField<FMapProperty>(Leaf) != nullptr;
+		// `{ Field: value, … }` on a struct that has no short form: the struct's fields, by name. Ahead of the container
+		// branch, which would otherwise read the braces as a TMap the property is not.
+		if (!bIsContainer && Value.Kind == EDreamUIValueKind::Map)
+		{
+			const FStructProperty* AsStruct = CastField<FStructProperty>(Leaf);
+			if (AsStruct != nullptr && AsStruct->Struct != nullptr && !DreamUIValueFormat::HasShortForm(Leaf))
+			{
+				return WriteStructFields(InDestination, InNode, InProperty, Value, *AsStruct, InContext);
+			}
+		}
 		if (bIsContainer || Value.Kind == EDreamUIValueKind::List || Value.Kind == EDreamUIValueKind::Map)
 		{
 			return WriteContainer(InDestination, InNode, InProperty, Value, InContext);
@@ -1946,60 +2026,45 @@ namespace DreamUITextBuilderLocal
 	void ResolveStyleChain(const FDreamUINode& InNode, FBuildContext& InContext, TArray<const FDreamUIStyle*>& OutBaseFirst)
 	{
 		OutBaseFirst.Reset();
-		if (InNode.StyleName.IsEmpty())
+		if (InNode.StyleRefs.IsEmpty())
 		{
 			return;
 		}
-		const FDreamUIStyle* Style = InContext.Ast->FindStyle(InNode.StyleName);
-		if (Style == nullptr)
+		// The order every reader of a clause shares (FDreamUIAst::CollectStyleChain): left to right, bases first, each
+		// style once. A repeated name is the parser's warning (StyleAlreadyApplied), said once per clause; what is
+		// reported here is what changes the build.
+		TArray<FDreamUIStyleChainProblem> Problems;
+		InContext.Ast->CollectStyleChain(InNode.StyleRefs, OutBaseFirst, &Problems);
+		for (const FDreamUIStyleChainProblem& Problem : Problems)
 		{
-			// Deliberately the second place this is checked -- FDreamUISourceFile catches it too,
-			// and in the normal pipeline the parse fails first so this never fires. It stays
-			// because the builder's other caller is an AST built by hand (the designer, a test),
-			// and there the alternative is applying no style and saying nothing.
-			//
-			// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this
-			// defensible rather than a habit: duplicate ids are a property of the whole FILE, so
-			// checking them here would mean the builder keeping its own id set to answer a
-			// question it is not the authority on. "Is this style declared" is one lookup in the
-			// AST the builder was handed.
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
-				FString::Printf(TEXT("no style named '%s' is declared in this file"), *InNode.StyleName));
-			return;
-		}
-		TArray<const FDreamUIStyle*> Chain;
-		TSet<const FDreamUIStyle*> Visited;
-		for (const FDreamUIStyle* Link = Style; Link != nullptr;)
-		{
-			if (Visited.Contains(Link))
+			if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Unknown && Problem.Owner == nullptr)
 			{
-				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
-					FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Style->Name));
-				return;
+				// Deliberately the second place this is checked -- FDreamUISourceFile catches it too, and in the normal
+				// pipeline the parse fails first so this never fires. It stays because the builder's other caller is an
+				// AST built by hand (the designer, a test), and there the alternative is applying no style and saying
+				// nothing.
+				//
+				// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this defensible rather
+				// than a habit: duplicate ids are a property of the whole FILE, so checking them here would mean the
+				// builder keeping its own id set to answer a question it is not the authority on. "Is this style
+				// declared" is one lookup in the AST the builder was handed.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
+					FString::Printf(TEXT("no style named '%s' is declared in this file"), *Problem.Ref.Name));
 			}
-			Visited.Add(Link);
-			Chain.Add(Link);
-			if (Link->BaseName.IsEmpty())
+			else if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Unknown)
 			{
-				break;
-			}
-			// Already the library's own when the style came in under a namespace: the parser renames a library style's
-			// base along with the style (`nier.Danger : nier.Label`), so the plain lookup is the right one here too.
-			const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
-			if (Base == nullptr)
-			{
-				// Link->Location is a line in the file that DECLARES the style, which an
-				// import chain makes a different file from the one being compiled.
-				AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+				// The owner's Location is a line in the file that DECLARES the style, which an import chain makes a
+				// different file from the one being compiled. The rest of the chain still applies.
+				AddErrorIn(*InContext.Diagnostics, Problem.Owner->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Problem.Owner->Location,
 					FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
-						*Link->Name, *Link->BaseName));
-				break;
+						*Problem.Owner->Name, *Problem.Ref.Name));
 			}
-			Link = Base;
-		}
-		for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
-		{
-			OutBaseFirst.Add(Chain[Index]);
+			else if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Cycle)
+			{
+				// Reported against the node so every node wearing the broken style says so; nothing of it applies.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
+					FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Problem.Through));
+			}
 		}
 	}
 
@@ -2260,16 +2325,29 @@ namespace DreamUITextBuilderLocal
 		Candidate.bBindable = false;
 		// Unnumbered, unlike a behaviour's: a widget has exactly one panel slot, ever.
 		Candidate.LocalizationDiscriminator = TEXT("Slot");
+		auto Apply = [&](const FDreamUIProperty& InProperty, const FDreamUIStyle* InStyle)
+		{
+			// `@slot Size = (w, h)` arrives as the two lines it stands for (the parser expands it); one still called Size
+			// is a Size bound or routed, which the shorthand has no meaning for -- and "no property named Size" would
+			// send the reader looking for one.
+			if (!InProperty.bSynthesized && InProperty.Name.Equals(TEXT("Size"), ESearchCase::IgnoreCase))
+			{
+				AddErrorAtLine(InContext, InStyle, EDreamUIDiagnosticCode::UnknownProperty, InProperty.Location,
+					TEXT("'@slot Size' stands for MinDesiredSize and MaxDesiredSize set to one value, and is written 'Size = (w, h)'; a slot line is not bound"));
+				return;
+			}
+			ApplyProperty(InNode, InProperty, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+		};
 		for (const FDreamUIStyle* Style : InStyles)
 		{
 			for (const FDreamUIProperty& Property : Style->SlotProperties)
 			{
-				ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+				Apply(Property, Style);
 			}
 		}
 		for (const FDreamUIProperty& Property : InNode.SlotProperties)
 		{
-			ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+			Apply(Property, nullptr);
 		}
 	}
 
@@ -2720,7 +2798,8 @@ namespace DreamUITextBuilderLocal
 						*InNode.Id, *InParent->GetDisplayName(), *InParent->GetClass()->GetName(), *InNode.Id));
 			return nullptr;
 		}
-		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleName.IsEmpty())
+		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleRefs.IsEmpty()
+			|| !InNode.Tags.IsEmpty())
 		{
 			// The parser refuses this shape; an AST built by hand reaches here with it, and there is nothing these
 			// lines could be written on -- the slot widget is the component's, in another file.
@@ -3004,6 +3083,12 @@ namespace DreamUITextBuilderLocal
 		}
 		BuildProperties(InNode, Styles, TypeContainerClass != nullptr, Widget, InContext);
 		BuildSlotProperties(InNode, Styles, Widget, InContext);
+		// `@tag` lines after the node's own, so a `Tags = [...]` line written there is added to rather than replaced. A
+		// name twice is one tag (AddTag keeps it once): the lookup answers "has it", not "how many times was it said".
+		for (const FDreamUITag& Tag : InNode.Tags)
+		{
+			Widget->AddTag(FName(*Tag.Name));
+		}
 
 		// Every `AnchorData.X = ...` line above wrote its field in place -- a field inside a struct has no setter
 		// (see AddBinding) -- and TrySetParent had already worked the widget's size, edge offsets and placement out

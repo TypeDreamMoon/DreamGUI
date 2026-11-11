@@ -31,6 +31,20 @@ And the two lines a box layout is mostly made of have a shorthand:
 `@fill` stands alone on its line, or with its weight and nothing else. A slot line on a node whose parent lays out no
 panel is DUI5003.
 
+### `@slot Size`
+
+A box that is exactly one size is the other common slot line, and it has a shorthand too:
+
+```
+@slot Size = (120, 48)
+@slot { Size = (120, 48)  Padding = (4, 0, 4, 0) }
+```
+
+`Size` stands for `@slot MinDesiredSize` and `@slot MaxDesiredSize` given the same value, so the slot is held at that
+size on both axes. It reads in a `@slot { … }` block and in a style's slot lines as it does on its own line. Only `=`
+gives it a value: `@slot Size <- Function()` is DUI4001, whose message names the two properties to bind separately,
+`MinDesiredSize` and `MaxDesiredSize`.
+
 
 ## Components: `+ Class`
 

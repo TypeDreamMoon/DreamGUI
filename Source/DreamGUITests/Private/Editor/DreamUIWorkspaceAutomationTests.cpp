@@ -8,6 +8,8 @@
 #include "Text/DreamUIWorkspaceService.h"
 
 #include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -67,8 +69,38 @@ bool FDreamUIWorkspaceJsonTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestEqual(TEXT("it is the DreamUI extension"),
-		Recommendations[0]->AsString(), FString(TEXT("typedreammoon.dreamui-language-support")));
+	TestEqual(TEXT("it is the extension under its current id"),
+		Recommendations[0]->AsString(), FString(TEXT("typedreammoon.dreamgui-language-support")));
+	const TArray<TSharedPtr<FJsonValue>>& Unwanted =
+		Root->GetObjectField(TEXT("extensions"))->GetArrayField(TEXT("unwantedRecommendations"));
+	TestTrue(TEXT("and the old id is unwanted"), Unwanted.Num() == 1
+		&& Unwanted[0]->AsString() == TEXT("typedreammoon.dreamui-language-support"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWorkspaceOldExtensionTest,
+	"DreamGUI.Text.AnExtensionCopyUnderTheOldIdIsFoundWhateverItsPublisher",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIWorkspaceOldExtensionTest::RunTest(const FString& Parameters)
+{
+	// A stand-in for ~/.vscode/extensions: VSCode unpacks each extension into `<publisher>.<name>-<version>`.
+	const FString Directory = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("DreamGUITests") / TEXT("VSCodeExtensions"));
+	IFileManager::Get().DeleteDirectory(*Directory, /*RequireExists*/false, /*Tree*/true);
+	for (const TCHAR* Name : { TEXT("typedreammoon.dreamui-language-support-0.7.0"), TEXT("undefined_publisher.dreamui-language-support-0.6.1"),
+		TEXT("typedreammoon.dreamgui-language-support-0.11.0"), TEXT("typedreammoon.dreamshader-language-support-2.2.0") })
+	{
+		IFileManager::Get().MakeDirectory(*(Directory / Name), /*Tree*/true);
+	}
+
+	const TArray<FString> Found = FDreamUIWorkspaceService::FindOldExtensionCopies(Directory);
+	IFileManager::Get().DeleteDirectory(*Directory, /*RequireExists*/false, /*Tree*/true);
+
+	TestEqual(TEXT("both old copies, and only those"), Found.Num(), 2);
+	TestTrue(TEXT("the Marketplace publisher's"), Found.Contains(TEXT("typedreammoon.dreamui-language-support-0.7.0")));
+	TestTrue(TEXT("a local build's"), Found.Contains(TEXT("undefined_publisher.dreamui-language-support-0.6.1")));
+	TestTrue(TEXT("a folder that is not there has none"), FDreamUIWorkspaceService::FindOldExtensionCopies(Directory).IsEmpty());
 	return true;
 }
 
