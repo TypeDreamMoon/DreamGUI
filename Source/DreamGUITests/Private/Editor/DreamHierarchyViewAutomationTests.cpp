@@ -202,9 +202,11 @@ bool FDreamHierarchyRowShowsTheNameTest::RunTest(const FString& Parameters)
 		Texts.Contains(TEXT("PlayButton")));
 
 	// And what it is made of, because every row is a UDreamWidget: without the type label a picture and
-	// a horizontal box are told apart by the icon alone.
+	// a horizontal box are told apart by the icon alone. The label is the visual's class name as the Palette shows it,
+	// in the editor's language: "Dream Image" in English.
+	const FString ImageLabel = UDreamImage::StaticClass()->GetDisplayNameText().ToString();
 	TestTrue(FString::Printf(TEXT("the row shows what the widget is, saw [%s]"), *FString::Join(Texts, TEXT(" | "))),
-		Texts.ContainsByPredicate([](const FString& Text) { return Text.Contains(TEXT("Image")); }));
+		Texts.ContainsByPredicate([&ImageLabel](const FString& Text) { return Text.Contains(ImageLabel); }));
 
 	return true;
 }

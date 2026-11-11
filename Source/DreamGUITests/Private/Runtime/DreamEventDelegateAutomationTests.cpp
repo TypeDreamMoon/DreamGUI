@@ -9,6 +9,7 @@
 #include "Event/DreamUIEventDelegate.h"
 #include "DreamPointerEventTestTypes.h"
 #include "DreamScopedWorld.h"
+#include "DreamTestCulture.h"
 
 /*
  * What an authored event binding actually hands the function it calls.
@@ -63,7 +64,9 @@ bool FDreamEventDelegateWidthConversionTest::RunTest(const FString& Parameters)
 	}
 
 	// Converting logs an error every time, on purpose -- a mismatch is something the author should fix
-	// rather than rely on -- and this test's whole subject is that path, so both messages are expected.
+	// rather than rely on -- and this test's whole subject is that path, so both messages are expected, in the English
+	// they are written in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedError(TEXT("automatic convert it from double to float"), EAutomationExpectedErrorFlags::Contains, 0);
 	AddExpectedError(TEXT("automatic convert it from float to double"), EAutomationExpectedErrorFlags::Contains, 0);
 

@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamTestCulture.h"
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetReference.h"
@@ -1135,7 +1136,8 @@ bool FDreamNamedSlotUndeclaredIsAnErrorTest::RunTest(const FString&)
 	// content silently is how a screen loses a piece with nothing in the log to say why.
 	// The compiler routes its errors through the log as well, and this test is asserting that one is
 	// raised -- so it has to say it expects it, or the framework counts the very thing under test as
-	// a failure. Occurrences 0: skeleton and full compiles each report it.
+	// a failure. Occurrences 0: skeleton and full compiles each report it. In English, which is what it is matched in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedError(TEXT("declares no such slot"), EAutomationExpectedErrorFlags::Contains, 0);
 	FCompilerResultsLog Results;
 	FKismetEditorUtilities::CompileBlueprint(Host.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);

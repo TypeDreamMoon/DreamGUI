@@ -56,7 +56,8 @@ bool FDreamAddMenuEntriesTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		const FString Label = DreamFactory->GetDisplayName().ToString();
+		// The label as written: a translated one reads in the editor's language, and the rule is about the English.
+		const FString Label = DreamFactory->GetDisplayName().BuildSourceString();
 		TestFalse(*FString::Printf(TEXT("%s has a label"), *Class->GetName()), Label.IsEmpty());
 		TestFalse(*FString::Printf(TEXT("%s's label does not repeat the type name (%s)"), *Class->GetName(), *Label),
 			Label.StartsWith(TEXT("DreamUI ")));
@@ -71,7 +72,7 @@ bool FDreamAddMenuEntriesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the widget Blueprint is offered at the top of the Add menu"),
 		(WidgetFactory->GetMenuCategories() & EAssetTypeCategories::Basic) != 0);
 	TestTrue(TEXT("...and in the DreamGUI submenu"), (WidgetFactory->GetMenuCategories() & DreamCategory) != 0);
-	TestEqual(TEXT("...as the DreamGUI Widget"), WidgetFactory->GetDisplayName().ToString(), FString(TEXT("DreamGUI Widget")));
+	TestEqual(TEXT("...as the DreamGUI Widget"), WidgetFactory->GetDisplayName().BuildSourceString(), FString(TEXT("DreamGUI Widget")));
 	// The category alone, with no section under it, is what the menu files under its own Basic section.
 	bool bInBasicSection = true;
 	for (const FAssetCategoryPath& Path : WidgetFactory->GetAssetMenuPathsForCategory(FName(TEXT("DreamGUI"))))

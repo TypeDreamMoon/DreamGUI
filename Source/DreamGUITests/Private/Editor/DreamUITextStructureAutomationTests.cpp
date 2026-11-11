@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamTestCulture.h"
 #include "DreamUITextStructureTestFixtures.h"
 
 #include "Designer/DreamUITextAuthoringGate.h"
@@ -149,8 +150,12 @@ bool FDreamUITextStructureRefusalsTest::RunTest(const FString&)
 	if (!TestEqual(TEXT("and its .dui compiled clean"), Scoped.CompileErrors, 0)) return false;
 	const FString Before = Source.Read();
 
-	TestFalse(TEXT("deleting the root is refused"),
-		DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Scoped.FindTemplate(TEXT("Root"))));
+	{
+		// The refusal is logged, and matched by the expected error above in the English it is written in.
+		const DreamTests::FScopedEnglish English;
+		TestFalse(TEXT("deleting the root is refused"),
+			DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Scoped.FindTemplate(TEXT("Root"))));
+	}
 
 	TestEqual(TEXT("the file is untouched"), Source.Read(), Before);
 	TestNotNull(TEXT("and so is the tree"), Scoped.FindTemplate(TEXT("Child")));

@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamTestCulture.h"
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintCompiler.h"
 #include "DataFactory/DreamWidgetBlueprintFactory.h"
@@ -231,6 +232,8 @@ bool FDreamWidgetBlueprintMissingBindingIsACompileErrorTest::RunTest(const FStri
 	// Under prefabs the same mistake surfaced at run time as a null, long after a save had silently
 	// dropped the binding.
 	{
+		// The compiler's messages, in the English they are matched in below.
+		const DreamTests::FScopedEnglish English;
 		FScopedBlueprint Fixture(TEXT("BP_MissingBinding"), UDreamWidgetBlueprintBindingBase::StaticClass());
 		Fixture.AddWidget(TEXT("SomethingElse"));
 
@@ -416,7 +419,8 @@ bool FDreamWidgetPropertyBindingWithoutASetterIsRefusedTest::RunTest(const FStri
 	using namespace DreamWidgetBlueprintCompilerTestLocal;
 
 	// The compiler error IS the assertion here, so it has to be declared expected -- the framework
-	// counts anything logged at Error against the test otherwise.
+	// counts anything logged at Error against the test otherwise. In English, which is what it is matched in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedError(TEXT("has no property named"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedBlueprint Fixture(TEXT("BP_PropertyBindingNoSetter"));
@@ -665,7 +669,8 @@ bool FDreamWidgetRenamedWidgetBreaksAnimationBindingTest::RunTest(const FString&
 	{
 		// The compiler error IS the assertion, so it has to be declared or automation counts it
 		// against the test. Occurrences 0 because the compiler logs it and the results log replays
-		// it, and what is being claimed is that it exists.
+		// it, and what is being claimed is that it exists. In English, which is what it is matched in.
+		const DreamTests::FScopedEnglish English;
 		AddExpectedError(TEXT("through the path"), EAutomationExpectedErrorFlags::Contains, 0);
 
 		FScopedBlueprint Fixture(TEXT("BP_AnimationBindingRenamed"));
@@ -895,7 +900,9 @@ bool FDreamWidgetBlueprintAnimationBindingTest::RunTest(const FString& Parameter
 		// Blueprint compiles it, and an expected error only covers what is logged after it is
 		// registered. The failure is the point either way -- the compiler logs through LogBlueprint
 		// and automation counts any logged error as a failed test. Occurrences 0 because the message
-		// is emitted once by the compiler and replayed once by the results log.
+		// is emitted once by the compiler and replayed once by the results log. In English, which is
+		// what it is matched in.
+		const DreamTests::FScopedEnglish English;
 		AddExpectedError(TEXT("must contain an animation named"), EAutomationExpectedErrorFlags::Contains, 0);
 
 		FScopedBlueprint Fixture(TEXT("BP_MissingAnimBinding"), UDreamWidgetBlueprintAnimBindingBase::StaticClass());

@@ -95,7 +95,9 @@ bool FDreamHierarchyTypeIsSearchableTest::RunTest(const FString& Parameters)
 	TArray<FString> PicturedTerms;
 	DreamWidgetHierarchyType::CollectSearchTerms(Pictured.Get(), PicturedTerms);
 	TestTrue(TEXT("the visual's class is searchable"), PicturedTerms.Contains(TEXT("DreamImage")));
-	TestTrue(TEXT("a widget with a visual is labelled by it"), DreamWidgetHierarchyType::GetTypeLabel(Pictured.Get()).Contains(TEXT("Image")));
+	// Labelled with the class's name as the Palette shows it, in the editor's language: "Dream Image" in English.
+	TestEqual(TEXT("a widget with a visual is labelled by it"), DreamWidgetHierarchyType::GetTypeLabel(Pictured.Get()),
+		UDreamImage::StaticClass()->GetDisplayNameText().ToString());
 
 	// The layout container is what "vertical box" means, and it is the label when nothing is drawn.
 	TStrongObjectPtr<UDreamWidget> Column(MakeWidget(TestWorld.World, TEXT("Column")));
@@ -103,7 +105,8 @@ bool FDreamHierarchyTypeIsSearchableTest::RunTest(const FString& Parameters)
 	TArray<FString> ColumnTerms;
 	DreamWidgetHierarchyType::CollectSearchTerms(Column.Get(), ColumnTerms);
 	TestTrue(TEXT("the layout container's class is searchable"), ColumnTerms.Contains(TEXT("DreamLayoutContainerVerticalBox")));
-	TestTrue(TEXT("a layout-only widget is labelled by its container"), DreamWidgetHierarchyType::GetTypeLabel(Column.Get()).Contains(TEXT("Vertical")));
+	TestEqual(TEXT("a layout-only widget is labelled by its container"), DreamWidgetHierarchyType::GetTypeLabel(Column.Get()),
+		UDreamLayoutContainerVerticalBox::StaticClass()->GetDisplayNameText().ToString());
 
 	// Behaviours carry the interactive types, which is most of what a control IS.
 	TStrongObjectPtr<UDreamWidget> Behaving(MakeWidget(TestWorld.World, TEXT("Slot")));

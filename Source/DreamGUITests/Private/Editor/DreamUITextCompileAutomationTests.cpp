@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamTestCulture.h"
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintTestTypes.h"
 #include "Designer/DreamWidgetPreviewHost.h"
@@ -963,6 +964,8 @@ bool FDreamUITextGeneratedNameTakenTest::RunTest(const FString& Parameters)
 		FBlueprintEditorUtils::AddMemberVariable(Fixture.Blueprint, FName(TEXT("Title")), FloatType))) return false;
 	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(Source.FilePath))) return false;
 
+	// The compiler's messages, in the English they are matched in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedError(TEXT("gets no variable"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FCompilerResultsLog Results;
@@ -1045,7 +1048,9 @@ bool FDreamUITextUnparsedKeepsResourcesTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	AddExpectedError(Code(EDreamUIDiagnosticCode::UnterminatedString), EAutomationExpectedErrorFlags::Contains, 0);
-	// The warning goes to the log as well when the compile logs; counted or not, it is the results that are asserted.
+	// The warning goes to the log as well when the compile logs; counted or not, it is the results that are asserted,
+	// in the English they are matched in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedMessagePlain(TEXT("keeps the resource variables"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, -1);
 
 	FCompilerResultsLog BrokenResults;

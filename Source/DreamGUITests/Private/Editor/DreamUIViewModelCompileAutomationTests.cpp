@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "DreamScopedWorld.h"
+#include "DreamTestCulture.h"
 #include "DreamViewModelCompileTestTypes.h"
 #include "DreamViewModelTestTypes.h"
 #include "DreamWidgetBlueprint.h"
@@ -1367,7 +1368,8 @@ bool FDreamUIViewModelSingleCastTest::RunTest(const FString& Parameters)
 		Instance->DestroyWidget();
 	}
 
-	// A handler of another shape: refused as it would be on a multicast event.
+	// A handler of another shape: refused as it would be on a multicast event, in the English it is matched in.
+	const DreamTests::FScopedEnglish English;
 	AddExpectedError(TEXT("its parameters do not match the event's"), EAutomationExpectedErrorFlags::Contains, 0);
 	FScopedDuiFile WrongFile(TEXT("ViewModelSingleCastWrong.dui"));
 	FScopedBlueprint WrongFixture(TEXT("BP_ViewModelSingleCastWrong"), UDreamVMCompileTestWidget::StaticClass());
