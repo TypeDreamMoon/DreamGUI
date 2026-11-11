@@ -1,6 +1,6 @@
-#dreamdocs-align 1	source=Docs/concepts/animation.md	rev=aa0301eb152c	model=deepseek-flash	page=fdf02a9a5cbe
+#dreamdocs-align 1	source=Docs/concepts/animation.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=428395707606
 meta:title	76d7918f9383	ce239859	m
-meta:description	bc9453b5cfb1	6d003108	m
+meta:description	a8580353590c	c4232109	m
 p	3485c945fc1c	7dfac2c7	m
 row3	a91362d9c739	0bcbfe24	m
 row3	77c94e94d64c	3c3770c0	m
@@ -11,7 +11,7 @@ p	1fefa88f4e96	f1dfb793	m
 p	0cbab8c870de	999ad64d	m
 row2	f712df1bbb06	781f807c	m
 row2	c73b907d87bd	d1e6fdb1	m
-row2	779d12f17233	327d23bf	s
+row2	ce3d713c66df	ada030a0	s
 row2	0a63249da708	8cc400e0	m
 row2	175d1e00cc49	55fae2ab	m
 p	d94243ee8156	6875c394	m
@@ -19,6 +19,15 @@ p	16cf25d7138d	5e0dde39	m
 li	d8524a60f034	30e115d5	m
 li	bbaba3f61e8d	9895029d	m
 li	8462e4d250f3	272405fd	m
+li	1cdc51f83617	48b12a60	m
+h3	67ca7146fa92	177f6155	m
+p	eedc58f865e1	5db95da5	m
+li	af29b7c424aa	67d9509c	m
+li	9619476af290	c5414f4e	m
+li	89c90737d399	9202887a	m
+li	efc7b7c3856d	a6ebd4e7	m
+li	4f6b6e103048	67bfc401	m
+p	fcf6fe1f1e6b	76d00d82	m
 h3	3fb4e5c3d3be	2ef9c1f5	m
 p	6aed91ab9424	717eb8e0	m
 p	6e10156db924	45a06811	m
@@ -29,7 +38,11 @@ row2	55ed490ec6a4	0a9f2c74	m
 row2	c3bf52f35c13	02888dd5	m
 row2	2b59cabfa48f	49ca4fd1	m
 row2	4c9bc7cd43ba	a100ba3e	m
+row2	da6d03659965	e1302c22	m
+row2	41b92d7fa3e9	1d83e335	m
 p	fb2c662d06db	85f0c9eb	m
+p	3de763b673f7	ef62d975	m
+p	f0a5bd21d919	b10ac1b6	m
 p	3f1175b8a2f9	e9a527c2	m
 h2	43fee8206278	c1e467e1	m
 p	7d7cce43d204	95f6a85c	m

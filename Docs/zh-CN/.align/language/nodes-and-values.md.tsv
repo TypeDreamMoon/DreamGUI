@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/language/nodes-and-values.md	rev=7e0e17822ac5	page=8adc95c9b123
+#dreamdocs-align 1	source=Docs/language/nodes-and-values.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=197578ff76cf
 meta:title	8864904f460c	95733814	h
 meta:description	82d470ae014a	2345c29e	h
 h2	92b7aee1b18a	263a9c57	h
@@ -18,7 +18,7 @@ p	2f9e16bfc16b	e98a870f	h
 p	8b9406dbb7aa	5c5f8a9d	h
 h2	092734ce2b8e	f809e367	h
 p	db5e8e85d74b	6c3c97d3	h
-li	a47f012c931a	e1c2046e	h
+li	efd0183130b3	61679674	m
 li	cbeca3d36fcd	db7088bb	h
 li	cd62e9126a52	81ae2461	h
 li	4d01a9b6c7c5	d15859a7	h
@@ -31,6 +31,7 @@ p	977c8ef10873	81f018de	h
 h2	9d78bcfaad9d	695abdff	h
 p	ac055b203c03	f577c254	h
 p	d71303d9c8c9	99fb67d9	h
+p	59017494be13	445f9436	m
 h3	4bf26a7a8b28	e792de3a	h
 row3	a9ddba24b229	675cc689	h
 row3	cf773c7dcedc	b0a71b7b	h
@@ -44,6 +45,7 @@ row3	0925931c547d	970b41bd	h
 row3	de085c4aa239	2c0c104d	h
 row3	8b728515b62c	3e2ef0a3	h
 row3	749db9d8d68a	ca8155ca	h
+p	ed368212393e	98093285	m
 p	57791c752399	21d0f6e9	h
 p	70ef16d863a4	0595b18f	h
 p	d3e584eaa165	7509441e	h

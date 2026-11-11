@@ -103,6 +103,32 @@ description: 调整图层、渐进模糊、折射玻璃与风格化效果——�
 
 像素排序仍是原来那个独立的视觉元素。
 
+<a id="inside-a-layer-group"></a>
+
+## 在图层组内部
+
+`UDreamBackgroundBlur` 或任何其他后处理视觉效果，如果位于一个被分开绘制的容器内——`UDreamLayerGroup` 的 `GroupOpacity` 低于 1、`GroupBlendMode` 不是 Normal、`GroupMask` 或 `Isolation = Isolated`，以及被裁剪到下方某个图层的控件（该图层不是图像或矩形块）——读取的是**该组的纹理**，其中只包含该组到目前为止绘制的内容。它看不到组后面的场景，因此那里的模糊没有可模糊的内容，只会输出一片平坦的灰色。
+
+把效果放到组外：一个位于它后面的同级元素，覆盖该区域（对于全屏面板就是整个屏幕），并在原本由组的遮罩发挥作用的位置为其塑形：`Kind = Texture` 的 `StrengthMap`，以遮罩的纹理作为强度。容器自身裁剪上的 `ClipMask` 则是另一回事：它在绘制容器时逐像素应用，而不是靠将容器分开绘制，且其内部的效果仍能看到背景，并由遮罩裁剪。容器的 `RenderOpacity` 也不是组（每个子项各自淡出）；只有组自身的 `GroupOpacity` 才是。
+
+位于此类裁剪内部或遮罩过渡之下的视觉元素上，你自己的材质只有在通过 `MF_DreamUI_Shade` 进行着色（将其返回的 alpha 作为材质的透明度）或调用 `DreamUI_CalculateClipData` 时才会被裁剪；两者都不做的材质会完整绘制，就像没有裁剪一样。参见 [裁剪遮罩](clip-masks.md)。
+
+<a id="pixelate-strength"></a>
+
+## 像素化强度
+
+`UDreamBackgroundPixelate::PixelateStrength` 的取值从 0 到 100，并不是块大小。它绘制的块为
+
+```text
+block = (strength / 100)^2 * 100 + 1      pixels, a strength of 0 or less draws nothing
+```
+
+| 强度 | 10 | 20 | 30 | 50 | 70 | 100 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 块大小（像素） | 2 | 5 | 10 | 26 | 50 | 101 |
+
+平方关系使低端保持细腻，并且**让强度的线性淡变看起来先快后慢**：区间的前十分之一使块从 1 翻倍到 2，最后 30% 又使它从 50 翻倍到 101，而眼睛感知到的是比值。若要让淡变均匀，可将你自己的值 `t` 从 0 补间到 1，并在补间的更新回调中把强度设为 `10 * sqrt(101^t - 1)`，这样块会按几何级数增长。开启 `ApplyAlphaToStrength` 时（默认开启），强度还会乘以视觉元素的 alpha，因此淡出 alpha 也会同时淡出强度。
+
 <a id="what-it-costs-and-where-it-works"></a>
 
 ## 开销与适用范围

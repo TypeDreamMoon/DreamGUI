@@ -1,6 +1,6 @@
 ---
 title: 脚本与代码入口
-description: 用于创建、显示和将 UI 放入世界的 Blueprint 与 C++ 入口（UDreamUIBPLibrary）、K2 节点模块，以及创建 Dream Widget Blueprint、将其指向 .dui 并编译的编辑器 Python。
+description: 用于创建、显示和将 UI 放入世界的蓝图与 C++ 入口（UDreamUIBPLibrary）、K2 节点模块、从命令行编译每个 .dui 类，以及创建 Dream Widget Blueprint、将其指向 .dui 并编译它的编辑器 Python。
 ---
 
 <a id="blueprint-and-c-entry-points"></a>
@@ -106,6 +106,19 @@ UDreamUIBPLibrary::RemoveFromViewport(this, Page);
 | Play Animation with Finished event | `PlayAnimation` 的异步形式，带一个 Finished 执行引脚 |
 | Play Animation Time Range with Finished event | `PlayAnimationTimeRange` 的异步形式 |
 | Get Component for DreamGUIComponentReference | `FDreamUIComponentReference` 所指定的组件，其输出被转换到所引用的组件类型 |
+
+<a id="compiling-from-the-command-line"></a>
+
+## 从命令行编译
+
+如果构建脚本或 CI 需要在没有编辑器窗口、没有 Python 的情况下编译并保存每个 `.dui` 类，则运行 `DreamUICompileWidgets` commandlet：
+
+```powershell
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Tools/widgets.json [-Only=WBP_A,WBP_B]
+```
+
+`-All` 会重新编译已存在的基于文本的控件蓝图；清单还会创建缺失的那些，每个都带有父类及其指定的 `.dui`。每条编译器消息都会写入日志，只要有失败，退出码就为非零。清单的格式及其他内容见 [工作流](../getting-started/workflow.md#one-file-two-ways-in)。
 
 <a id="editor-python-a-widget-blueprint-from-a-dui"></a>
 

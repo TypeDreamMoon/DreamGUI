@@ -13,6 +13,7 @@ DreamGUI 文本要在打包游戏里看起来和编辑器里一样，需要哪�
 - 在烹饪时，`BeginCacheForCookedPlatformData` 会把每个字面的字节复制到它的资产中。在编辑器之外，字体只读取这些字节，因此不需要额外暂存任何内容。
 - `/DreamGUI` 总会被烹饪：插件的 `Config/Game.ini` 会把它放入 `DirectoriesToAlwaysCook`，因此即使是显式包列表（`-map=`、块）的烹饪也能得到它。
 - DroidSansFallback 会给包增加约 3.9 MB。
+- 字体本身及其回退字体都没有的字符，会针对该字体记录一次并附上其码点，然后绘制为方框。你自己提供的字体如果没有中文、日文或韩文的回退字体，则每段此类文本都会产生该警告（参见 [Text](../concepts/text.md#fonts)）。
 
 **按语言区分的字面。** 字体的 `Fallbacks` 条目可以指定它们所针对的文化（`Cultures`、`"zh-Hans"`、 `"ja"`）：该语言的文本（它的 `Language`，或富文本的 `<lang=xx>`）会先尝试该字面，再尝试字体的其他回退，并且当条目带有 `bPreferOverPrimary` 时，也会先于字体自身的字面。优先使用这些条目，而不是 `bCultureFont` 及其 `CultureFontMap`。该开关会在游戏文化变化时替换字体自身的字面，并且只对使用 Inline 加载策略的引擎字体字面有效：已烹饪的 Lazy Load 或 Stream 字面没有可供替换的字面数据，因此字体会记录一条警告并保留烹饪时所用的字面。
 

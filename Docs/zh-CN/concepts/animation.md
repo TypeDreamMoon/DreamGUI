@@ -1,6 +1,6 @@
 ---
 title: 动
-description: 让物体运动的三种方式——DreamTween 模块提供的补间（针对面板内控件的 RenderOffsetTo、RenderScaleTo、RenderAngleTo 和 RenderTranslationTo，EDreamTweenEase，DreamTween.MaxStepSeconds），控件动画（UDreamWidgetAnimation 和 Sequencer），以及 .dui 时间轴。
+description: 让物体运动的三种方式——DreamTween 模块提供的补间（针对面板内控件的 RenderOffsetTo、RenderScaleTo、RenderAngleTo、RenderRotationTo、RenderPoseTo 和 RenderTranslationTo，同一时间每个属性只能有一个补间，EDreamTweenEase，DreamTween.MaxStepSeconds），控件动画（UDreamWidgetAnimation 和 Sequencer），以及 .dui 时间轴。
 ---
 
 在 DreamGUI 中让物体运动有三种方式，每种适用于不同类型的任务：
@@ -22,7 +22,7 @@ description: 让物体运动的三种方式——DreamTween 模块提供的补�
 | 对象 | 补间 |
 | --- | --- |
 | `UDreamWidget` | `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo`、`RenderOpacityTo`、`LocalPositionTo`、`LocalScaleTo`、`LocalRotatorTo`、`WorldPositionTo`……以及下一节的渲染变换补间 |
-| `UDreamVisual` | `ColorTo`, `AlphaTo` |
+| `UDreamVisual` | `ColorTo`, `AlphaTo`, `ColorFrom`, `AlphaFrom` |
 | `UDreamTextPaintLibrary` | `PaintPhaseTo`、`PaintAngleTo`、`PlayShimmer`（参见[文本](text.md)） |
 | `UDreamTweenBPLibrary` | 通用的 `FloatTo`、`Vector3To`、`ColorTo`、`MaterialScalarParameterTo`、`DelayCall`、`SpringFloat`……以及用于 UMG 控件的 `UMG_*` 补间 |
 
@@ -33,6 +33,35 @@ description: 让物体运动的三种方式——DreamTween 模块提供的补�
 - **已完成和已终止的补间会退役。** 句柄会变为无效，持有它的 UPROPERTY 会在下一次垃圾回收时被置空；`Kill`、`ForceComplete` 和 `Goto` 对已退役的补间不起作用，而 `Restart` 只会发出警告。要在补间结束后再次播放，请在它开始前 `SetAutoKill(false)`，或者从它自己的 `OnComplete` 中 `Restart` 它，这样能让它继续运行。
 - 弹簧（`SpringFloat`）默认保持在静止状态；`SetTarget` 可以唤醒它。
 - 拥有者已不存在的补间会被丢弃，且不会触发回调。
+- **同一属性上的两个补间不会同时运行。** 参见下一节。
+
+<a id="one-tween-per-property"></a>
+
+### 每个属性一个补间
+
+在某个属性上开始的补间会接管该属性：它会停止已经在同一对象的同一属性上运行的补间，因此 `RenderOpacityTo(1)` 之后的 `RenderOpacityTo(0)` 会从淡入进行到的位置开始淡出。在此之前，两者都会运行，由最后结束的那个决定结果——通过悬停快速显示又隐藏的工具提示可能会一直亮着。
+
+```cpp
+Tip->RenderOpacityTo(1.0f, 0.15f);   // the pointer enters
+Tip->RenderOpacityTo(0.0f, 0.15f);   // and leaves before that ends: this one stops the fade in and fades out from there
+
+Panel->RenderOpacityTo(1.0f, 0.2f);
+Panel->RenderOpacityTo(0.0f, 0.2f, 1.5f);   // a fade out queued for later is left alone until it starts
+```
+
+- **哪些动词。** 控件的属性动词（`RenderOpacityTo`、`RenderTranslationTo`、`RenderOffsetTo`、`RenderScaleTo`、`RenderAngleTo`、`RenderRotationTo`、`RenderPoseTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo`、`AnchoredPositionTo`、`LocalPositionTo`、`LocalScaleTo`、`LocalRotatorTo`、`WorldPositionTo` 以及其他），可视元素的属性动词（`ColorTo`、`AlphaTo`、`ColorFrom`、`AlphaFrom`），矩形块的属性动词（`BodyColorTo`、`BorderWidthTo`、渐变和阴影补间等），圆环和多边形的 `StartAngleTo` 和 `EndAngleTo`，以及线条渲染器的 `LineWidthTo`。用 `UDreamTweenManager::To` 或 `UDreamTweenBPLibrary` 函数创建的补间不指定任何属性，也不会接管任何属性。
+- **是同一属性，而不是同一动词。** 写入同一内容的动词会互相替换，其他动词则并行运行。`RenderOffsetTo` 和 `RenderTranslationTo` 都会移动画布平面上的渲染平移，因此它们互相替换；`RenderOffsetTo` 和 `RenderScaleTo` 则不会。`ColorTo` 涵盖颜色的 alpha，因此它会替换 `AlphaTo`；`BorderAlphaTo` 替换 `BorderColorTo`，而两者都不影响 `BorderWidthTo`。`RenderAngleTo`（平面内角度）和 `RenderRotationTo`（整体旋转）在角度上重叠。
+- **哪个补间会被停止。** 该对象该属性上早于它创建、或者已经开始运行的补间。之后创建但尚未开始的补间——淡入之后排队的延迟淡出——不会受影响，并且轮到它时会停止较早的那个。被停止的补间会被杀死（它的 `OnKill` 会运行，`OnComplete` 不会）；用 `SetAutoKill(false)` 保留的补间则会在当前位置暂停。
+- **序列。** `UDreamTweenerSequence` 中的补间永远不会被停止，也永远不会停止其他补间；序列自己调度其子项。
+- **退出接管。** 在补间上调用 `SetReplacesEarlierTweens(false)` 可以让它与该属性上的其他补间并行运行：它既不停止它们，也不会被它们停止。对于本就要共享某个属性的补间——比如在悬停缩放图标时让图标保持呼吸效果的循环——请使用它，否则悬停会停止呼吸效果。
+
+```cpp
+Icon->RenderScaleTo(FVector(1.15, 1.15, 1.0), 0.6f, 0.0f, EDreamTweenEase::InOutSine)
+    ->SetLoop(EDreamTweenLoop::Yoyo, -1)
+    ->SetReplacesEarlierTweens(false);
+```
+
+对于自己实现的属性动词，`UDreamTweener::SetExclusive(Target, ChannelBits)`（C++）会让该补间成为 `Target` 的属性之一：为你的类中的每个属性分配一个位，与同一目标上的另一个补间有任何共同位的补间就会替换它。在创建补间之后、启动之前立即调用它。
 
 <a id="pause-and-time-dilation"></a>
 
@@ -54,13 +83,19 @@ description: 让物体运动的三种方式——DreamTween 模块提供的补�
 | `RenderOffsetTo(FVector2D)` | 在画布平面上的同样移动（x 向右，y 向上），深度保持不变 |
 | `RenderScaleTo(FVector)` | 围绕 `RenderTransformPivot` 缩放 |
 | `RenderAngleTo(float)` | 平面内角度（`SetRenderTransformAngle`） |
+| `RenderRotationTo(FRotator)` | 整个渲染旋转，包括平面外和平面内的旋转：面板绕铰链打开、卡片翻转。俯仰、偏航和翻滚各自从当前位置运行到指定位置，因此偏航从 0 到 180 就是半圈 |
+| `RenderPoseTo(FVector, FRotator)` | 渲染平移和旋转同时进行，使用同一个时钟和同一条缓动曲线 |
 
 它们移动、缩放和旋转的是被绘制的内容，而绝不会影响布局，因此相邻元素不会为其让出空间。渲染变换持续变化的控件会被其画布设为渲染层，并在 GPU 上移动（参见[渲染](rendering.md)）。
+
+`SetRenderOffset(FVector2D)` 和 `GetRenderOffset()` 是同一移动的普通 setter 和 getter：画布平面上的平移，深度（X）保持不变，而 `SetRenderTranslation(FVector(0, x, y))` 还会把深度设为 0。
+
+正的 `RenderRotation.Roll`（以及正的 `SetRenderTransformAngle`、`RenderAngleTo`）会让控件**在屏幕上顺时针**旋转，其右边缘向下，与 UMG 的角度一致。
 
 ```cpp
 // Card sits in a VerticalBox: move what is drawn, not its slot
 Card->SetRenderOpacity(0.0f);
-Card->SetRenderTranslation(FVector(0.0, 0.0, -40.0));   // 40 below where layout put it
+Card->SetRenderOffset(FVector2D(0.0, -40.0));           // 40 below where layout put it
 Card->RenderOpacityTo(1.0f, 0.25f);
 Card->RenderOffsetTo(FVector2D::ZeroVector, 0.35f, 0.0f, EDreamTweenEase::OutCubic)
     ->OnComplete([]() { /* landed */ });

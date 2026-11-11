@@ -34,6 +34,19 @@ description: 把同一个控件蓝图放进关卡：ADreamWorldWidgetActor 与 U
 
 运行时：`SetWidgetClass`、`SetBackend`、`SetUseDesignSize`、`SetDrawSize`（一个显式尺寸，会关闭设计尺寸）、 `SetPivot`、`SetSortOrder`、`SetTraceChannel`。`GetDrawSize` 返回根组件**实际**得到的尺寸。
 
+**为世界控件创建的类会让其根节点获得整个面板。** `Pivot` 和上面的尺寸应用于该类创建的用户控件，而不是应用于其 `.dui` 根部的节点。如果该根节点自身还带有固定的 `SizeDelta` 和 `Pivot`，它就会被第二次放入用户控件内部，面板最终会以这一差值偏离 Actor。请按填满父节点的方式编写根节点，锚点从 `(0, 0)` 到 `(1, 1)`，且 `SizeDelta` 为零（通常的做法是使用一个包含这些行的样式，并将其作为 `Widget Root : Fill` 应用）：
+
+```dui
+Widget Root {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+    // ... the panel
+}
+```
+
+这样，`Pivot` 和 `DrawSize`（或设计尺寸）就是唯一决定其位置和大小的因素。
+
 为什么默认用设计尺寸：屏幕会拉伸到视口，而世界里的面板没有视口可以拉伸。设计时所用的尺寸是唯一有人真正为它选择过的尺寸，按这个尺寸落地的面板，在关卡里看起来就和设计器里一样。所以设计尺寸跟着类走，并保留到烹饪后的版本中（`UDreamWidgetGeneratedClass::GetDesignSize`）。
 
 <a id="the-two-backends"></a>

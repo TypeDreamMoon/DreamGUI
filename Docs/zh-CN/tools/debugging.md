@@ -1,6 +1,6 @@
 ---
 title: 调试与测量
-description: 不开调试器看 DreamGUI 画了什么、花了多少：DreamUI.Capture、DreamUI.Stats 与 Insights 作用域、stat DreamGUI、DreamGUI.Memory、两个校验开关、诊断命令、可供 A/B 的控制台变量和日志分类。
+description: 不开调试器就能看到 DreamGUI 画了什么、代价是多少：DreamUI.Capture、DreamUI.Stats 与 Insights 作用域、stat DreamGUI、DreamGUI.Memory、离屏录制、两个校验开关、诊断命令、用于 A/B 的控制台变量，以及日志分类。
 ---
 
 两个问题——"它画了什么"和"它花了多少"——都能不用调试器回答。
@@ -90,6 +90,15 @@ r.DreamUI.VerifyKeptPointers=1
 ```
 
 基准测试（`Tools/Bench`）在测量的会话里会把它们关掉。文字的增量布局有自己的对应开关： `DreamGUI.Text.VerifyIncremental 1` 让每次基于保留状态的布局都再从头布一次并比较，第一处差异写进日志，用新的那份。
+
+<a id="recording-the-ui-off-screen"></a>
+
+## 离屏录制 UI
+
+不开窗口对屏幕进行截图和录像——`-RenderOffScreen`，配合引擎的影片捕获（`dumpmovie` 风格的捕获）——有两个陷阱：
+
+- **同时传入 `-ForceRes` 和分辨率**（`-ResX=1920 -ResY=1080 -ForceRes`）。否则窗口会采用桌面的缩放，视口会比要求的更小（在缩放桌面上为 888 × 500），而为这个更小视口布局的 UI 会被绘制成设计尺寸的两倍大。
+- **一次只录制一个。**捕获会写入同一个共享输出文件夹，因此同时进行的两个录制会互相覆盖对方的帧。等第一个结束后再开始下一个，或者在它开始之前把第一个的文件从文件夹中取出。
 
 <a id="diagnostic-commands"></a>
 

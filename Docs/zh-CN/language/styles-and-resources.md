@@ -36,6 +36,8 @@ Text Note : Warning { Text = "Unsaved changes" }
 
   样式的组件先挂。节点自己也写了同一个类的组件时，它们是同一个对象：先套样式的值，再套节点的。节点自己的 `@slot` 行赢过样式的。
 - 本地样式会遮住导入的同名样式。两个同名的本地样式是 DUI3005。
+- **一次只能使用一个样式。** 一个节点应用一个样式，而一个样式继承另一个样式：不支持 `Text Note : Warning : Caption` 和 `style Warning : Caption : Base`，第二个 `:` 是语法错误（DUI2001）。要得到两个样式的行，请将它们串联起来——`style Warning : Caption`——并应用最后一个。
+- **控件的 `Style` 不属于这些。** `Native.Button` 及其同类拥有一个名为 `Style` 的属性，它是控件自身的一个结构体，写作 `Style.TickChecked = #FF3355`，并由 `StyleSource` 选择。这样的行是否生效，以及字段旁的 `bOverride_` 位有什么作用，见[样式和样式表](../controls/styles.md#in-dui-and-at-run-time)。
 
 
 <a id="resources"></a>

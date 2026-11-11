@@ -47,6 +47,7 @@ description: 每个控件的 F…Style 结构体、StyleSource 与外观的来�
 几条贯穿所有样式的约定：
 
 - **颜色是 `FColor`**，整个样式家族都是。
+- **字体是 `Font`**，即位于 `FontSize` 旁边的字体数据资产，用于自行绘制文本的控件样式：文本输入、微调框、富文本、可展开区域（其标题）和环形菜单（其条目与中心标题）。为 Null 时文本沿用项目的默认字体。
 - **按钮没有文字样式**。按钮自己不画字；标签是宿主放进洞里的东西，所以 `FDreamButtonStyle` 没有 `LabelColor` 或 `FontSize`——一个无处可写的旋钮比没有旋钮更糟。需要由控件提供标签的地方，由那个控件自己的样式说（`FDreamDialogStyle::ButtonLabelColor`）。
 - **禁用色和聚焦色也是样式状态**。推一个聚焦色就是打开 selectable 的聚焦视觉，所以手柄用户的导航总会落在有反应的东西上。
 
@@ -99,6 +100,12 @@ HorizontalBox Root {
     }
 }
 ```
+
+`Style.TickChecked = #FF3355` 只写入实例自身 `Style` 的那一个字段，别的什么都不改。`.dui` 从不改变 `bOverride_` 位，因此 `Style.X = v` 不会打开 `bOverride_X`，也不需要打开：每个位初始都是勾选状态。决定该值是否被使用的是 `StyleSource`：
+
+- **`Inline`**，或项目中没有样式表：实例的 `Style` 整体就是外观，不会读取那些位。这就是上面的示例要写 `StyleSource = Inline` 的原因。
+- **`ProjectStyleSheet`**（默认值）且项目中存在样式表：实例的 `Style` 会被**忽略**，因此文件中的 `Style.X` 行能通过编译，却不改变任何东西。请写 `StyleSource = Inline`，或用 `StyleVariant` 挑选样式表条目。
+- **`ProjectStyleSheetOverride`**：以样式表的样式为基础，再覆盖写入实例中*已勾选*的字段。每个字段初始都是勾选的，所以你没有写的字段也会覆盖，用的是结构体的默认值。应跟随样式表的字段要逐个取消勾选，每行一个：`Style.bOverride_Y = false`。位处于关闭状态的字段（`Style.bOverride_X = false`，或在资产中未勾选）不会因为写入 `Style.X` 而打开；还要写入该位。
 
 运行时：`SetStyle`、`SetStyleSource` 和 `SetStyleVariant` 都会**立刻重推**，因为一个改了来源却不重新解析的样式，效果在别的东西碰巧触发推送之前完全不可见。如果你在原地改了一个样式结构体，自己调一次 `ApplyStyle`。
 

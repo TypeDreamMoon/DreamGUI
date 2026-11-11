@@ -72,6 +72,7 @@ Widget Panel {
 - **距离场。** `SdfSource` 默认 `OutlineMultiChannel`（MTSDF：拐角更锐利，BGRA 图集）。描边、下衬（投影）、发光和歌词式填充（`TextStyle`，即 `FDreamTextStyle`）由内置着色器画，所以需要距离场字体并且开着 *Use Built-in UI Shader*；它们的长度以 em 计，所以同一个样式在任何字号下看起来一样。样式按控件存进画布的控件属性纹理，所以样式不同的文本仍然合进同一个 draw call。
 - **粗体和斜体。** `BoldFont`、`ItalicFont` 和 `BoldItalicFont` 指向真正的字面；没有时才用合成的。
 - **回退字面。** `Fallbacks` 中的每一项（`FDreamUIFontFallback`）都有 `Font`、`Ranges`（码点）、`Cultures`（适用的语言）、一个 `Scale` 和 `bPreferOverPrimary`。旧的 `FallbackFontArray` 在加载时会转成使用默认设置的 `Fallbacks` 项。中文文化名会被补回书写体系（`zh-Hans`、`zh-Hant`），因此针对它们编写的回退在打包后的游戏中也能匹配。
+- **没有任何字型包含的字符。** 当某个字符既不在字体自身的字型中，也不在其任何回退项中时，DreamGUI 会针对该字体记录一次警告，并指出码点（`has no glyph for U+4E2D`），文本会在对应位置显示一个方框或不显示任何内容。请为文本指定一个覆盖该字符的字体，或为该字体添加一个回退项。默认字体通过 `/DreamGUI/DefaultFont_DistanceField_CJK` 覆盖中文、日文和韩文；而你自己仅覆盖拉丁字符的字体则不会，这通常是该警告的常见原因。
 - **彩色 emoji**：CBDT/CBLC、sbix 和 COLRv0；`bPreferColorEmoji` 默认开。阴影、描边和长阴影修改器给彩色 emoji 做的拷贝是剪影。
 
 怎么随游戏发出字体文件、彩色 emoji 字体和 ICU 数据，见[字体与打包](../guides/fonts-and-packaging.md)。

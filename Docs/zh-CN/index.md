@@ -1,25 +1,17 @@
 ---
-title: "概览"
-description: "DreamGUI 是 Unreal Engine 5.8 的 3D UI 插件：控件是挂在树上、带矩形、轴心和锚点的 UObject，由画布合批绘制，可以铺在屏幕上，也可以立在关卡里。"
+title: 概览
+description: DreamGUI 是 Unreal Engine 5.8 的 3D UI 插件：控件是挂在树上、带矩形、轴心和锚点的 UObject，由画布合批绘制，可以铺在屏幕上，也可以立在关卡里。
 ---
 
-DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个 `UObject`：有一个矩形、一个轴心（pivot）
-和一组锚点，挂在一棵树上；整棵树由一块画布（`UDreamCanvas`）合批，尽量少地变成 draw call。
-这是 Unity uGUI 的形状，而不是 Slate 的。
+DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个 `UObject`：有一个矩形、一个轴心（pivot）和一组锚点，挂在一棵树上；整棵树由一块画布（`UDreamCanvas`）合批，尽量少地变成 draw call。这是 Unity uGUI 的形状，而不是 Slate 的。
 
 这个形状换来三件 UMG 做不直接的事：
 
-- **UI 在世界里。** 画布可以画在屏幕空间，也可以贴在关卡里任意角度的面上，受光或不受光，
-  两种情况下命中测试都是对的。
-- **一棵树就是一个类。** UI 树写在控件蓝图（`UDreamWidgetBlueprint`）里，靠子类化、以及把一个控件类
-  嵌进另一棵树来复用 —— 和 UMG 的控件蓝图是同一种做法。树也可以写成文本：一个 `.dui` 文件就是
-  一个控件蓝图的源码，设计器的改动写回这个文件。
-- **逐控件的透视。** 一个控件可以建立一个透视，它的子树按这个透视缩短，就像 CSS 的
-  `perspective`。
+- **UI 在世界里。** 画布可以画在屏幕空间，也可以贴在关卡里任意角度的面上，受光或不受光，两种情况下命中测试都是对的。
+- **一棵树就是一个类。** UI 树写在控件蓝图（`UDreamWidgetBlueprint`）里，靠子类化、以及把一个控件类嵌进另一棵树来复用 —— 和 UMG 的控件蓝图是同一种做法。树也可以写成文本：一个 `.dui` 文件就是一个控件蓝图的源码，设计器的改动写回这个文件。
+- **逐控件的透视。** 一个控件可以建立一个透视，它的子树按这个透视缩短，就像 CSS 的 `perspective`。
 
-代价是 Slate 的生态用不上：UMG 的控件、样式和绑定在这里都不适用。DreamGUI 有自己的一整套控件，
-名字刻意沿用 UMG 的叫法，叫不了同名的地方都写明了原因（见
-[它和 UMG、和上游有什么不同](getting-started/about.md)）。
+代价是 Slate 的生态用不上：UMG 的控件、样式和绑定在这里都不适用。DreamGUI 有自己的一整套控件，名字刻意沿用 UMG 的叫法，叫不了同名的地方都写明了原因（见[它和 UMG、和上游有什么不同](getting-started/about.md)）。
 
 | | |
 | --- | --- |
@@ -58,10 +50,7 @@ Widget Root {
 }
 ```
 
-`Root` 锚定在四个角上、不留边，所以它铺满它被加进去的东西；`+ Overlay` 让它把子节点
-叠在一起排布；`Greeting` 是一段 600 × 60 的文本，`@slot` 两行是它对上层 Overlay 提的要求：
-水平、垂直都居中。把一个控件蓝图的 *Source File* 指向这个文件、编译，它就是一个能加到视口、也能拖进关卡
-的类 —— 完整的一步一步在[第一个界面](getting-started/first-screen.md)。
+`Root` 锚定在四个角上、不留边，所以它铺满它被加进去的东西；`+ Overlay` 让它把子节点叠在一起排布；`Greeting` 是一段 600 × 60 的文本，`@slot` 两行是它对上层 Overlay 提的要求：水平、垂直都居中。把一个控件蓝图的 *Source File* 指向这个文件、编译，它就是一个能加到视口、也能拖进关卡的类 —— 完整的一步一步在[第一个界面](getting-started/first-screen.md)。
 
 <a id="where-to-start"></a>
 
@@ -75,6 +64,7 @@ Widget Root {
   - [迁移与升级](guides/migration.md) — 从 LGUI、LexUI 或早期构建迁过来，以及开发版之间的升级。
   - [打包与平台](guides/fonts-and-packaging.md) — 字体、彩色 emoji、ICU 数据怎么随游戏发出去；哪些平台真的跑过。
   - [导入分层文档](guides/layered-document-import.md) — 把 .psd 或 .psb 导成 DreamUI 控件：每种图层变成什么、命名约定、字体、再次导入。
+  - [常见陷阱](guides/pitfalls.md) —— 看起来像 bug 但其实不是的情况：对单个属性使用补间、角度约定、射线检测目标、样式覆盖、字体、组内的效果，以及 UMG 名称不同之处。
   - [属性的 meta 标签](guides/property-meta.md) — 决定属性在细节面板里放在哪、是否隐藏、用什么控件的 `DreamGUI_` 标签；扩展的类怎么用。
   - [诊断码](diagnostics/index.md) — 每条 .dui 诊断都是一个 DUInnnn 代码，按编译阶段分成七族。
   - [API 参考](Reference/index.md) — 从反射生成的逐类属性与函数参考，每页末尾附与 UMG 的对照。

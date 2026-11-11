@@ -67,6 +67,19 @@ DreamGUI 每个版本改了什么，按它对一个项目带来的变化来分�
 
 - **编辑控件。** 混合模式在行里和菜单里都是图片——按各自公式画出，27 种按图像编辑软件的顺序和分组排列——悬停在某种模式上，控件就临时按它绘制，点下去之前不记撤销、不保存。标了 `DreamGUI_Editor = "AngleWheel"` 的角度（图层样式的、渐变叠加的、玻璃光照的、遮罩转场旋转的、路径文字起点的）在数字旁边多一个圆盘；开着 Use Global Light 的效果在自己的行里改样式的全局光。等高线是曲线，可选命名形状也可直接编辑；缓动显示曲线。`.dui` 里等高线写命名形状的名字或 `"custom(0 0, 0.5 1 corner, 1 0)"`。见[控件设计器](../tools/designer.md)。
 
+- **渲染偏移、旋转和可补间的姿态。** `UDreamWidget::SetRenderOffset` 和 `GetRenderOffset` 是画布平面上的渲染平移，其深度保持原位。`RenderRotationTo` 逐个分量地补间整个渲染旋转——侧边面板绕铰链打开、卡片翻转——而 `RenderPoseTo` 在同一个时钟和同一条缓动上补间平移与旋转。见[动画](../concepts/animation.md)。
+- **可展开区域和环形菜单的字体。** `FDreamExpandableAreaStyle` 和 `FDreamRingMenuStyle` 有一个 `Font`（不设置则沿用项目的默认字体），正如文本输入框、数值调节框和富文本样式那样。
+- **字符没有字形时给出警告。** 既不在字体自身的字面中、也不在其任何回退字体中的字符，会针对该字体记录一次日志并带上其码点，而不是显示一个方框而毫无说明。默认字体通过 `/DreamGUI/DefaultFont_DistanceField_CJK` 覆盖中文、日文和韩文。见[文本](../concepts/text.md#fonts)。
+- **`.dui` 类可以从命令行编译。** `DreamUICompileWidgets` commandlet 会编译并保存所有以文本为后端的控件蓝图，或清单中指定的那些，并创建缺失的那些，无需编辑器窗口，也无需 Python。见[从命令行编译](../tools/scripting.md#compiling-from-the-command-line)和[工作流程](../getting-started/workflow.md)。
+- **一页常见陷阱**，每条都给出其原因和讲解它的页面。见[常见陷阱](../guides/pitfalls.md)。
+- **每个控件都有 C++ 事件。** 每个控件的蓝图事件都有一个对应的 C++ 版本——`GetOn<Event>Event()`，一个参数相同的 `TMulticastDelegate`，与之一同触发——因此 `AddLambda`、`AddWeakLambda` 和 `AddUObject` 可以绑定可展开区域的展开、列表的选中或环形菜单的激活，而无需 `UFUNCTION`。
+- **从代码走一步导航。** `UDreamStandaloneInputModule::TapNavigation` 在下一帧走一步，每次点击一步：在同一帧给出按下和释放则一步都不走。`UDreamEventSystem` 的 *Navigation Repeat In Game Time* 按游戏时钟计时按住方向的重复，适用于逐帧录制的记录。
+- **拖拽视觉和工具提示的上下文。** 实现 `IDreamUIDragVisual` 的拖拽视觉类会得知其操作（`OnDragVisualCreated`），实现 `IDreamUITooltipContent` 的工具提示类会得知其来源控件（`SetTooltipSource`），两者都在创建时立即获得——早于其第一次布局。
+- **把世界坐标点表示为锚点位置。** `UDreamCanvas::ProjectWorldToAnchoredPosition` 给出世界坐标点落在屏幕空间根上的位置，即锚定到根中心的控件的锚点位置：角色头顶的标记。
+- **按名称设置单个风格化层的数值。** `UDreamStylizeEffect::SetLayerParameter` 和 `GetLayerParameter` 修改某一层的数值（`AberrationAmount`、`ScanlineStrength`……），而无需为 `SetLayers` 重新构建整个列表。
+- **鼠标不动就不参与。** `UDreamStandaloneInputModule::bIgnoreMouseUntilItMoves` 使停在菜单上不动的鼠标在菜单打开的第一帧不会悬停到某一行。
+- **从脚本获取设计器的画布尺寸。** `UDreamWidgetBlueprint::GetDesignerCanvasSize` 和 `SetDesignerCanvasSize`。
+
 <a id="changed"></a>
 
 ### 变更
@@ -81,6 +94,16 @@ DreamGUI 每个版本改了什么，按它对一个项目带来的变化来分�
 - **径向渐变的椭圆随 `Angle` 旋转**，和菱形一样。径向渐变的角度不是 0 或 180 的文字涂色（从线性切过来时留下的）现在会画成旋转后的椭圆；圆形不变。
 - **RectBlock 的两色渐变属性**不再显示在细节面板里，它们的 setter 标为 deprecated：渐变已有色标时，它们改第一个色标的颜色、中心、半径和角度。按单位写的中心和半径只在渐变还是两色时按单位固定。半透明的主体纹理现在像被主体颜色那样被渐变染色。
 - **渐变行的行头多了类型下拉**，在色带和预设旁边。
+
+- **补间会取代同一属性上更早的补间。** 在 `RenderOpacityTo(1)` 仍在运行时启动 `RenderOpacityTo(0)` 会让两者都继续运行，最后结束的那个决定结果：由悬停快速显示又隐藏的工具提示可能一直亮着。现在启动的补间会停止该对象属性上已有的补间——在它之前创建的，以及已经启动的——将其终止，或用 `SetAutoKill(false)` 保留的那些暂停；稍后才来、尚未启动的补间（带延迟排队的淡出）则留待轮到自己时启动。这适用于控件的属性动词、视觉的 `ColorTo` 和 `AlphaTo`、矩形块的、环形和多边形的角度以及线条渲染器的宽度。`UDreamTweenerSequence` 中的补间既不会停止别的补间，也不会被停止。`UDreamTweener::SetReplacesEarlierTweens(false)` 让补间退出这一行为，`SetExclusive` 是你自己编写的动词的 C++ 钩子。见[每个属性一个补间](../concepts/animation.md#one-tween-per-property)。
+- **文本默认不是射线检测目标**，正如 UMG 的 TextBlock 也不是：文本多半是别的东西上的标签，而叠在按钮上的标签会抢走按钮的悬停和点击。自身会被按下的文本则设置 `bRaycastTarget = true`。此前保存的文本保留其保存时的 `true`。见[控件](../concepts/widgets.md#visuals-what-a-widget-draws)。
+- **过早请求的焦点会在下一帧到达。** 对该帧显示、尚未布局的控件调用 `SetFocus` 和 `SetKeyboardFocus` 会返回否，并且就此作罢；现在焦点会在下一帧给予，除非该玩家的焦点先移到别处。
+- **倾斜卡片在卡片自身旋转和缩放的基础上倾斜**，而不是将其覆盖：每张都略微转动的扇形卡牌仍保持其扇形。
+- **`RenderOpacity` 可以打关键帧**，在 `.dui` 时间轴上以及在动画编辑器中（DUI5016 会拒绝它）。
+- **小型 `.dui` 控件按自身尺寸打开。** 根具有自身尺寸、且无人挑选其设计器画布的类，其画布会跟随根尺寸；类的设计尺寸也随之改变，即世界控件在开启 *Use Design Size* 时所取的绘制尺寸。
+- **自动的 `.dui` 重新编译会在设计器中报告。** 其错误会进入已打开设计器的 Compiler Results 面板，并为其打开该面板；其通知显示在该窗口中，而不是屏幕角落。
+- **设计器点击会穿透静默的全屏层。** 不是射线检测目标且当前不绘制任何内容的控件——强度为 0 的全屏像素排序——在光标下有其他东西时会被跳过。
+- **为两件画错了却毫无提示的事情给出警告。** 在分离绘制的组内部的后处理视觉（背景模糊）读取的是组而非场景，结果变得平淡；不通过 `MF_DreamUI_Shade` 着色的覆盖材质不会被 DreamGUI 裁剪、遮罩或淡化。现在两者都会记录一次日志。
 
 <a id="fixed"></a>
 
@@ -102,6 +125,10 @@ DreamGUI 每个版本改了什么，按它对一个项目带来的变化来分�
 - **细节面板里缺的行补上了。** 用户控件的 *Wants Tick*、*Allow Event Bubble Up* 和 *Can Navigate Here*；控件的提示框控件类；图片画刷的填充（数量、方式、起点、方向）和圆角框的圆角；矩形块九宫格的绘制方式和边距，以及它的形状融合方式；精灵在还没有贴图时的内边距和边框。这些以前只能在 `.dui` 里写。
 - **打开序列帧播放器的细节面板不再让编辑器崩溃。** `UUISpriteSequencePlayer` 和 `UUISpriteSheetTexturePlayer` 的错误提示行在控件的组件里找它们需要的视觉，再从空指针上读名字。
 - **子分类里的高级属性有行了。** 引擎画子分类（`DreamGUI|Pointer Light`）时不画它的高级行，开着「显示全部高级项」也一样，所以全息箔、指针光、倾斜卡的 *User Index* 和 *Pointer Id* 在哪个面板里都看不到。DreamGUI 的面板把这类属性作为子分类里的普通行，排在其它行后面。
+
+- **构建器错误之后不再跟着 DUI6002。** 表示文件未产生层级结构的代码以前会伴随构建器给出的每个错误一起报告，并被定位到根行，而那里并没有出错。现在只有在没有其他错误说明原因时才会报告它。
+- **垂直框或滚动框中的可展开区域会随其行程收缩和增长。** 其外围的面板按标题和全部内容来测量它，因此正在收起的区域会一直显示整个主体直到收起结束，然后突然消失；正在展开的区域则一下子就完整显示。现在它的 `MaxHeight` 也会传递到面板。
+- **诊断信箱会忘记不再有任何类构建自它的文件。** 从其 `.dui` 上取下的蓝图，或被删除或重命名的 `.dui`，会在 `DUI/.dui-diagnostics.json` 中留下条目供编辑器扩展显示。
 
 <a id="100"></a>
 
