@@ -297,6 +297,20 @@ private:
 	float GetShownFraction() const;
 
 	/**
+	 * The control's height, and the cap on the content column's slot that makes it so for whoever lays this control out:
+	 * a panel measures the control by its own column -- header plus the whole content -- and SizeControlHeight's number
+	 * alone was laid over on the panel's next pass, so a section in a vertical box showed its whole body all the way
+	 * shut and vanished at the end. Mid-travel the cap is what shows of the content; settled it is MaxHeight, or none.
+	 */
+	void PushShownHeight();
+
+	/**
+	 * What the content measured the last time its slot's cap did not hold the measure down: the column is measured
+	 * through that slot, so a measure that reaches the cap says only that the content is at least that tall.
+	 */
+	float UncappedContentExtent = 0.0f;
+
+	/**
 	 * Where a running open or close currently stands, 0 collapsed to 1 expanded. Kept at the flag's end
 	 * while nothing travels, so an open starts from where the section actually is.
 	 */
