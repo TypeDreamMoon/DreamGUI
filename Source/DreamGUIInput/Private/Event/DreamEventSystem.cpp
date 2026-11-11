@@ -179,6 +179,7 @@ void UDreamEventSystem::WriteSettingsToUser(UDreamUIInputUser* InUser) const
 	Config.PinchMinDistanceChange = FMath::Max(PinchMinDistanceChange, 0.0f);
 	Config.bScrollNavigationTargetIntoView = bScrollNavigationTargetIntoView;
 	Config.bAnimateNavigationScroll = bAnimateNavigationScroll;
+	Config.bNavigationRepeatInGameTime = bNavigationRepeatInGameTime;
 #if WITH_EDITORONLY_DATA
 	Config.bOutputLog = bOutputLog;
 #endif
@@ -206,6 +207,7 @@ void UDreamEventSystem::InitializeImplicit(UDreamUIInputSubsystem* InSubsystem, 
 		PinchMinDistanceChange = Config.PinchMinDistanceChange;
 		bScrollNavigationTargetIntoView = Config.bScrollNavigationTargetIntoView;
 		bAnimateNavigationScroll = Config.bAnimateNavigationScroll;
+		bNavigationRepeatInGameTime = Config.bNavigationRepeatInGameTime;
 	}
 }
 
@@ -357,6 +359,7 @@ DREAMUI_FACADE_SETTING(float, SwipeMaxDuration, SwipeMaxDuration, FMath::Max(Val
 DREAMUI_FACADE_SETTING(float, PinchMinDistanceChange, PinchMinDistanceChange, FMath::Max(Value, 0.0f))
 DREAMUI_FACADE_SETTING(bool, ScrollNavigationTargetIntoView, bScrollNavigationTargetIntoView, Value)
 DREAMUI_FACADE_SETTING(bool, AnimateNavigationScroll, bAnimateNavigationScroll, Value)
+DREAMUI_FACADE_SETTING(bool, NavigationRepeatInGameTime, bNavigationRepeatInGameTime, Value)
 #undef DREAMUI_FACADE_SETTING
 
 void UDreamEventSystem::SetInputModule(UDreamBaseInputModule* InputModule)

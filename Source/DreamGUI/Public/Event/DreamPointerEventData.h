@@ -244,6 +244,8 @@ public:
 	 * changes nothing (UDreamUIInputUser::InputNavigation).
 	 */
 	TArray<EDreamUINavigationDirection> HeldNavigateDirections;
+	/** Steps asked for with UDreamUIInputUser::TapNavigation and not taken yet, oldest first: one a frame. */
+	TArray<EDreamUINavigationDirection> PendingNavigationTaps;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void SetHighlightedWidgetForNavigation(UDreamWidget* InWidget);
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)

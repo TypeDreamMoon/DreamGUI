@@ -134,6 +134,8 @@ struct FDreamUIInputUserConfig
 	float PinchMinDistanceChange = 12.0f;
 	bool bScrollNavigationTargetIntoView = true;
 	bool bAnimateNavigationScroll = true;
+	/** Navigation repeat on the game clock rather than real time. UDreamEventSystem::SetNavigationRepeatInGameTime. */
+	bool bNavigationRepeatInGameTime = false;
 	/** Log every dispatched event. Read in editor builds only. */
 	bool bOutputLog = false;
 };

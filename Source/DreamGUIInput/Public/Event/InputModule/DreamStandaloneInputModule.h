@@ -74,10 +74,33 @@ public:
 	/** input for gamepad or keyboard press and release */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputTriggerForNavigation(bool InTriggerPress, int InPointerID);
+	/**
+	 * One navigation step, as a key pressed and let go: taken on the next frame, one per tap. For code driving the focus
+	 * -- a recording, a test, a tutorial -- where InputNavigation pressed and released on one frame takes no step.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void TapNavigation(EDreamUINavigationDirection InDirection, int InPointerID = 0);
 protected:
 	void CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress, int InPointerID, EDreamUIMouseButtonType InMouseButtonType = EDreamUIMouseButtonType::Left, bool bInIsTouch = false);
 
 	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
 	bool bOverrideMousePosition = false;
 	FVector2D OverridePointerPosition = FVector2D::ZeroVector;
+
+public:
+	/**
+	 * Leave the mouse out until it has moved, or pressed, since the game began: a mouse that happens to rest over a list
+	 * when a menu opens otherwise hovers its row on the very first frame and takes the focus a pad or a script was about
+	 * to set -- in a recording made off screen too, where the OS mouse rests wherever it was left. A substituted pointer
+	 * (SetOverrideMousePosition) is never left out.
+	 */
+	UPROPERTY(EditAnywhere, Category = DreamGUI, AdvancedDisplay)
+	bool bIgnoreMouseUntilItMoves = false;
+private:
+	/** Where the mouse was first reported, and whether it has moved off that place or pressed since. */
+	FVector FirstMousePosition = FVector::ZeroVector;
+	bool bHasFirstMousePosition = false;
+	bool bMouseHasMoved = false;
+	/** Whether the mouse is to be left out now (see bIgnoreMouseUntilItMoves). */
+	bool IsMouseStillIgnored(const FVector& InPosition);
 };

@@ -306,6 +306,12 @@ public:
 	bool HasPointerMovedSinceTrace(int32 InPointerID) const { return PointersMovedSinceTrace.Contains(InPointerID); }
 	/** A navigation direction pressed -- the pointer goes into navigation mode, stepping that way -- or released. */
 	void InputNavigation(EDreamUINavigationDirection InDirection, bool bInPressed, int32 InPointerID);
+	/**
+	 * One navigation step InDirection, as a press and its release would take: on the next frame, once no direction is
+	 * held, and one tap per step however many are asked for in a frame. What code that drives the focus wants -- a
+	 * recording, a test, a tutorial -- where a press and a release on one frame took no step at all.
+	 */
+	void TapNavigation(EDreamUINavigationDirection InDirection, int32 InPointerID);
 	/** The navigation confirm pressed or released, for the navigation cursor on InPointerID. */
 	void InputTriggerForNavigation(bool bInPressed, int32 InPointerID);
 	/** A press or release to be dispatched on this player's next frame, at InPosition. */
