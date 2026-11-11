@@ -72,13 +72,16 @@ namespace DreamStyleDialogPixelTestLocal
 		return bRead && Size == InSize;
 	}
 
-	/** The type of every widget under InRoot, and the text of every text block. */
+	/**
+	 * The type of every widget under InRoot, and the text of every text block as written (FText::BuildSourceString): the
+	 * English, whatever language the editor shows it in.
+	 */
 	void CollectWidgets(const TSharedRef<SWidget>& InRoot, TArray<FString>& OutTypes, TArray<FString>& OutTexts)
 	{
 		OutTypes.Add(InRoot->GetTypeAsString());
 		if (InRoot->GetType() == TEXT("STextBlock"))
 		{
-			OutTexts.Add(StaticCastSharedRef<STextBlock>(InRoot)->GetText().ToString());
+			OutTexts.Add(StaticCastSharedRef<STextBlock>(InRoot)->GetText().BuildSourceString());
 		}
 		FChildren* Children = InRoot->GetChildren();
 		for (int32 Index = 0; Children != nullptr && Index < Children->Num(); ++Index)
