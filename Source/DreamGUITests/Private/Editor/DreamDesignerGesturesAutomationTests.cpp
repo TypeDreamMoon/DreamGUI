@@ -344,11 +344,13 @@ bool FDreamDesignerEdgeSnapTest::RunTest(const FString&)
 	// And through the drag resolver: a sibling edge beats the gridline that would otherwise win.
 	{
 		FDreamWidgetDesignerViewportClient::FMoveDragTarget Target;
-		Target.StartPosition = FVector2D(129.0, 0.0);
+		Target.StartPosition = FVector2D(128.0, 0.0);
 		Target.Size = FVector2D(50.0, 50.0);
 		Target.Pivot = FVector2D(0.5, 0.5);
-		// No travel: the drag is asked where it would land if the mouse had not moved, so the answer
-		// is entirely the snapping.
+		// One unit of travel, to 129: the answer past that is entirely the snapping. (With none at all
+		// nothing is asked of the axis -- see the assertion at the end.)
+		Target.StartPlanePoint = FVector::ZeroVector;
+		Target.CurrentPlanePoint = FVector(0.0, 1.0, 0.0);
 		TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
 		FDreamWidgetDesignerViewportClient::FSiblingSnapLines SnapLines;
 		SnapLines.Horizontal = Lines;
@@ -369,6 +371,15 @@ bool FDreamDesignerEdgeSnapTest::RunTest(const FString&)
 		Results.Reset();
 		FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 		TestEqual(TEXT("without siblings the gridline still decides"), Results[0].Position.X, 128.0);
+
+		// An axis the pointer did not travel along is not asked about: the widget stays at 129, off the grid and four
+		// from the sibling's line, and Y -- which nothing moved -- stays where it was too.
+		Targets[0].StartPosition = FVector2D(129.0, -58.0);
+		Targets[0].CurrentPlanePoint = FVector::ZeroVector;
+		Results.Reset();
+		FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results, SnapLines);
+		TestTrue(TEXT("with no travel, neither the grid nor an edge moves the widget"), Results[0].Position.Equals(FVector2D(129.0, -58.0), 0.0));
+		TestFalse(TEXT("and no guide is claimed"), Results[0].bSnappedHorizontal || Results[0].bSnappedVertical);
 	}
 	return true;
 }

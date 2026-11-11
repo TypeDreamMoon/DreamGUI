@@ -43,13 +43,28 @@ namespace DreamUIWidgetPicking
 	DREAMGUIEDITOR_API UDreamWidget* PickTopmostWidget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, int32& InOutCycleIndex);
 
 	/**
-	 * The widget a drop on InHitWidget should parent to: the nearest ancestor-or-self owning a layout
-	 * container that still has room. Null when there is none -- callers fall back to the prefab root,
-	 * which is what a container-less prefab wants anyway.
+	 * The crossed rect a drop on the ray resolves from (ResolveDropContainer): the front-most that can hold what is
+	 * dropped -- one with a layout container, one already holding children, a placed control -- looking through every
+	 * rect in front of it that holds nothing. A widget that holds nothing gives what is dropped on it to whatever holds
+	 * it, and the front-most of those is in another branch whenever the empty rect is a layer over the whole page: a
+	 * panel's effect (a pixel sort, a light) filling its root's overlay. Resolved from that layer, a row dragged a few
+	 * pixels inside its group went to the overlay, and so did a Text dropped on the group. A Text in a box still gives
+	 * the box, which is the next rect behind it. Null when nothing is crossed; the front-most rect when nothing crossed
+	 * can hold anything.
+	 */
+	DREAMGUIEDITOR_API UDreamWidget* PickDropTarget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd);
+
+	/**
+	 * The widget a drop on InHitWidget should parent to: the nearest ancestor-or-self that places
+	 * children and still has room -- one owning a layout container, or a group: a widget with no panel
+	 * that holds children, which stand where their anchors put them as on a Canvas Panel. Null when
+	 * there is none -- callers fall back to the prefab root, which is what a container-less prefab
+	 * wants anyway.
 	 *
 	 * Resolving to a container rather than to the hit widget is what makes a drop land somewhere that
 	 * will arrange it. Dropping onto a Text inside a VerticalBox means the VerticalBox; nesting into
-	 * the Text itself is a deliberate act and stays available from the hierarchy tree.
+	 * the Text itself -- or into any widget that holds nothing yet -- is a deliberate act and stays
+	 * available from the hierarchy tree.
 	 *
 	 * InTreeRoot is where the walk stops, and a designer has to pass it. The widget being authored is
 	 * not the top of the preview world: the designer stands it inside a wrapper of its own, and that

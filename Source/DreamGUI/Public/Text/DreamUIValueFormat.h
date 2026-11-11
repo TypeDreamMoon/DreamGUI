@@ -125,6 +125,18 @@ namespace DreamUIValueFormat
 	 */
 	DREAMGUI_API FString PrintScalar(double InValue, bool bSinglePrecision);
 
+	/**
+	 * InValue to the fewest decimals -- at least InMinDecimals -- that keep it within InTolerance of itself: the text, with
+	 * as many decimals as were needed (trailing zeros included), and in OutRounded the number that text reads as.
+	 *
+	 * For a number a hand placed, whose precision is the hand's rather than the arithmetic's: a pointer's pixel, a
+	 * sequencer's frame. A drag of sixty pixels measures 59.9999999 through a ray and a plane, and a key let go on frame
+	 * 28 of 60 sits at 0.4666666666666667 seconds; spelled exactly, each is a run of digits describing nothing the author
+	 * did, and spelled to half a pixel or half a frame they are 60 and 0.47 -- which a compile puts back where the hand
+	 * left them. A tolerance of zero or less is no such precision, and spells the number exactly (PrintScalar).
+	 */
+	DREAMGUI_API FString PrintWithin(double InValue, double InTolerance, int32 InMinDecimals = 0, double* OutRounded = nullptr);
+
 	DREAMGUI_API FString PrintColorHex(const FLinearColor& InColor);
 	DREAMGUI_API bool ParseColorHex(const FString& InHexDigits, FLinearColor& OutColor);
 }

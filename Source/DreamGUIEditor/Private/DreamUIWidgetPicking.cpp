@@ -93,6 +93,22 @@ namespace DreamUIWidgetPicking
 		return Hits[InOutCycleIndex].Widget;
 	}
 
+	UDreamWidget* PickDropTarget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd)
+	{
+		TArray<FDreamUIWidgetPickHit> Hits;
+		RaycastWidgetRects(InWorld, InWidgets, InLineStart, InLineEnd, Hits);
+		for (const FDreamUIWidgetPickHit& Hit : Hits)
+		{
+			const UDreamWidget* Widget = Hit.Widget;
+			if (Widget->GetLayoutContainer() != nullptr || Cast<UDreamUserWidget>(Widget) != nullptr
+				|| Widget->GetChildren().ContainsByPredicate([](const UDreamWidget* InChild) { return IsValid(InChild); }))
+			{
+				return Hit.Widget;
+			}
+		}
+		return Hits.IsEmpty() ? nullptr : Hits[0].Widget;
+	}
+
 	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget, const UDreamWidget* InTreeRoot)
 	{
 		const bool bBounded = IsValid(InTreeRoot);
@@ -109,7 +125,8 @@ namespace DreamUIWidgetPicking
 			// asked directly it either refuses (a size box already holding its face) or accepts into
 			// the furniture, which the next rebuild throws away. The hole is what the hierarchy shows
 			// under the control, and the one place under it this asset can author.
-			if (const UDreamUserWidget* Nested = Cast<UDreamUserWidget>(Candidate))
+			const UDreamUserWidget* Nested = Cast<UDreamUserWidget>(Candidate);
+			if (Nested != nullptr)
 			{
 				UDreamWidget* Hole = Nested->FindSlotWidget(Nested->GetDefaultSlotName());
 				if (IsValid(Hole) && Hole->CanAcceptAdditionalChildren())
@@ -118,6 +135,18 @@ namespace DreamUIWidgetPicking
 				}
 			}
 			if (Candidate->GetLayoutContainer() != nullptr && Candidate->CanAcceptAdditionalChildren())
+			{
+				return Candidate;
+			}
+			// A group: a widget with no panel that holds children, each standing where its own anchors put it -- this
+			// plugin's Canvas Panel, and the place a widget dragged about inside it stays and a widget dropped on its
+			// empty middle lands. Walked past, the nearest panel above answers instead: a row dragged a few pixels
+			// sideways inside its group was moved out of it into the root's overlay, and a Text dropped on the group
+			// stood in that overlay's corner. Holding children is what makes it a group rather than content: an empty
+			// widget is a leaf like a Text (a spacer in a row, a label stand-in), and a group gets its first child
+			// from the hierarchy. A placed control's children are its furniture, so only its hole counts, above.
+			if (Nested == nullptr && Candidate->CanAcceptAdditionalChildren()
+				&& Candidate->GetChildren().ContainsByPredicate([](const UDreamWidget* InChild) { return IsValid(InChild); }))
 			{
 				return Candidate;
 			}

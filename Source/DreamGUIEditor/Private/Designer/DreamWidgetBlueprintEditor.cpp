@@ -3536,10 +3536,18 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 	//
 	// Which is also UMG's shape: a UWidget inside a UHorizontalBox has no Canvas slot to drag, and
 	// the designer offers it no position handles at all.
+	//
+	// The location FIRST and the anchor block LAST, because each recomputes the other on the template (UDreamWidget::
+	// PostEditChangeProperty) and the anchor block is the one that is authored. The location is there for what the anchors
+	// do not say -- the depth the 3D view's gizmo moves along -- and its in-plane part is the anchors' result in the
+	// PREVIEW's parent rect; copied last, the template re-derived its anchors from it against its own parent, which is
+	// not laid out (a group a .dui fills into its overlay is 100 x 100 there), and a row at -58 under its group's top
+	// edge was written at 112. Copied first, the anchor block then puts the in-plane part back from itself and keeps
+	// the depth.
 	static const FName AnchorProperties[] =
 	{
-		UDreamWidget::GetPropertyName_AnchorData(),
 		UDreamWidget::GetPropertyName_RelativeLocation(),
+		UDreamWidget::GetPropertyName_AnchorData(),
 	};
 	// The Euler rotation too: it is the rotation's authored face, the one the .dui writes, and the quaternion alone is
 	// DuiHidden -- a turn mirrored without it reached the asset and never the file.
@@ -4478,6 +4486,12 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 		return -1;
 	};
 
+	// The geometry the preview just resolved against its new parent, onto the templates BEFORE they move: a template
+	// moves without keeping its world position, so the values travel with it unchanged, and a `.dui`-backed class
+	// writes the move -- and the values reported dirty with it -- when the batch below closes, then compiles and
+	// rebuilds the preview from the file. Committed after that, it was the rebuilt preview's values, read from the
+	// file, that were copied back: the widget landed in its new group at the place it had held in the old one.
+	CommitWidgetGeometryToTemplate(InPreviewWidgets);
 	bool bMoved = false;
 	{
 		// A drop of several widgets is one skeleton compile.
@@ -4495,12 +4509,6 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 				: IsValid(PreviewWidget->GetParent()) ? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
 			bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex, SlotName);
 		}
-	}
-	if (bMoved)
-	{
-		// The geometry the preview just resolved against its new parent. Ordered after the reparent
-		// so the values land on templates that are already in the right place.
-		CommitWidgetGeometryToTemplate(InPreviewWidgets);
 	}
 	return bMoved;
 }
