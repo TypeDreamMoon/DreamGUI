@@ -84,8 +84,8 @@ slot Detail : DetailPanel {
 ```
 
 - `default` marks the slot that content goes to when the host names none. One per file (DUI3022).
-- A block, or a style, lays the hole out: components, properties and slot lines -- never children, since what goes in
-  it is the host's (DUI2019). A slot with a layout container takes several widgets; one without takes one.
+- A block, or a style, lays the hole out: components, properties, slot lines and `@tag` lines -- never children, since
+  what goes in it is the host's (DUI2019). A slot with a layout container takes several widgets; one without takes one.
 - `(was: OldName)` renames a slot, as it does a node.
 
 A host fills the **default** slot by nesting, and a **named** one with a `slot` block of its own inside the instance:
@@ -99,5 +99,6 @@ ListPage Page_2 {
 }
 ```
 
-A fill holds widgets and nothing else. A named slot holds one widget -- put several in a container. A fill outside a
+A fill holds widgets and nothing else: a `@tag` line next to them is DUI2019 -- tag the widgets, or the slot's own
+declaration. A named slot holds one widget -- put several in a container. A fill outside a
 component instance is DUI5019; one naming a slot the component does not declare is DUI5020.

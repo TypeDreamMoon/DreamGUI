@@ -15,9 +15,9 @@ Base class for almost all UI related things.
 | `RelativeLocation` | `FVector` | Transform | yes | read only | Local space position. DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a reflective sweep that also wrote this would author one position twice. |
 | `RelativeRotation` | `FQuat` | Transform | - | read only | Local space rotation. Not marked Interp: Sequencer has no property track for FQuat, so this cannot be keyed directly. Animate RelativeRotationEuler instead, which mirrors this value.         // DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no // spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would // recurse it and write X/Y/Z/W component lines beside the euler it already wrote. |
 | `RelativeRotationEuler` | `FRotator` | Transform | yes | read only | Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be animated: Sequencer has an FRotator property track but none for FQuat. |
-| `RelativeScale` | `FVector` | Transform | yes | read only | Local space scale |
+| `RelativeScale` | `FVector` | Transform | yes | read only | Local space scale // DreamGUI_Hidden on this and RelativeLocation: the Layout section's position and scale rows edit them (Interp makes them editable). |
 | `RenderTranslation` | `FVector` | Render Transform | yes | read only | RENDER TRANSFORM. |
-| `RenderRotation` | `FRotator` | Render Transform | yes | read only | Render-only rotation about RenderTransformPivot, in degrees. FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a property track for one and not the other. No transient mirror is needed here because this is itself the serialized source of truth. |
+| `RenderRotation` | `FRotator` | Render Transform | yes | read only | Render-only rotation about RenderTransformPivot, in degrees. Roll is the in-plane angle, and a positive Roll turns the widget clockwise on the screen (its right edge down), as UMG's angle does; Pitch and Yaw turn it out of the plane, about its horizontal and vertical axes. FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a property track for one and not the other. No transient mirror is needed here because this is itself the serialized source of truth. |
 | `RenderScale` | `FVector` | Render Transform | yes | read only | Render-only scale about RenderTransformPivot. |
 | `RenderTransformPivot` | `FVector2D` | Render Transform | yes | read only | What RenderRotation and RenderScale turn about, normalized within the widget's own rect. (0,0) is bottom-left and (1,1) top-right, matching AnchorData.Pivot rather than UMG's top-left origin -- consistency inside this fork beats consistency with the other engine. Two-dimensional because the rect is: it resolves to a point on the widget's own plane. Independent of AnchorData.Pivot, which belongs to layout. |
 | `RenderShear` | `FVector2D` | Render Transform | yes | read only | Render-only slant about this widget's own pivot, in DEGREES, applied to this widget and its whole subtree. See GetRenderShear for what it does and does not affect. |
@@ -25,20 +25,20 @@ Base class for almost all UI related things.
 | `bPerspective` | `bool` | Perspective | yes | read only | PERSPECTIVE, in the shape CSS uses. |
 | `PerspectiveFieldOfView` | `float` | Perspective | yes | read only | The angle the subtree is viewed through, in degrees. Wider is a stronger effect, and it means exactly what UDreamCanvas::FieldOfView means -- the eye distance is derived from it with the same formula, against this widget's own width. |
 | `PerspectiveOrigin` | `FVector2D` | Perspective | yes | read only | Where the eye stands over this widget's own rect, normalized: (0,0) bottom-left, (1,1) top-right, matching RenderTransformPivot. The CSS `perspective-origin`, and the vanishing point a subtree converges toward. |
-| `AnchorData` | `FDreamUIAnchorData` | DreamGUI-AnchorData | yes | - | AnchorData contains rect transform and color |
-| `AnimatableWidth` | `float` | DreamGUI-AnchorData | yes | read only | Animatable mirrors of the resolved geometry, one per channel Sequencer can key. Sequencer reads property memory directly while writing through the setter (the RelativeRotationEuler story), so each must be a real stored field; SyncAnimatableGeometryMirrors keeps them equal to the caches below. A stale cache and its mirror go stale together, which is exactly what the details panel shows too.         // DuiHidden on all six: they are Interp mirrors of AnchorData for Sequencer, and their setters // write through to it -- which is exactly what exempts them from the transient refusal and // exactly why a reflective sweep must not spell them: AnchorData already carries the value. |
+| `AnchorData` | `FDreamUIAnchorData` | DreamGUI-AnchorData | yes | - | AnchorData contains rect transform and color // DreamGUI_Hidden: the Layout section's anchor, position and size rows edit it. |
+| `AnimatableWidth` | `float` | DreamGUI-AnchorData | yes | read only | Animatable mirrors of the resolved geometry, one per channel Sequencer can key. Sequencer reads property memory directly while writing through the setter (the RelativeRotationEuler story), so each must be a real stored field; SyncAnimatableGeometryMirrors keeps them equal to the caches below. A stale cache and its mirror go stale together, which is exactly what the details panel shows too.         // DuiHidden on all six: they are Interp mirrors of AnchorData for Sequencer, and their setters // write through to it -- which is exactly what exempts them from the transient refusal and // exactly why a reflective sweep must not spell them: AnchorData already carries the value. DreamGUI_Hidden for the // same reason: the Layout section's rows edit the value. |
 | `AnimatableHeight` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorLeft` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorRight` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorTop` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorBottom` | `float` | DreamGUI-AnchorData | yes | read only |  |
-| `RenderOpacity` | `float` | DreamGUI | yes | read only |  |
+| `RenderOpacity` | `float` | DreamGUI | yes | read only | Interp, so a .dui timeline and the animation editor can key a fade as they key a move. |
 | `Clipping` | `EDreamWidgetClipping` | DreamGUI | yes | read only |  |
 | `ClippingCornerRadius` | `FVector4f` | DreamGUI | yes | read only | X- RightBottom, Y- RightTop, Z- LeftTop, W- LeftBottom |
 | `ClippingMargin` | `FMargin` | DreamGUI | yes | read only | Expand clip area outward. |
 | `ClipMask` | `FDreamClipMask` | DreamGUI | yes | read only | A mask on this widget's clip, when it clips to its bounds: a shape, a feathered edge, a texture or a procedural pattern, inverted if asked. It clips the whole subtree, as the clip rect does. At its defaults it is no mask. |
 | `bClipToBelow` | `bool` | DreamGUI | yes | read only | Shows this widget and everything under it only where the layer below it is drawn, and through that layer's opacity: a clipping mask. The layer below is the sibling drawn before this one that does not clip to the layer below itself, so siblings that clip to the layer below in a row share one. It can be a simple or nine-sliced image or texture, or a rect block; anything else is not clipped to, with a warning. A hidden layer below hides this too. |
-| `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - |  |
+| `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - | DreamGUI_Hidden: the lock on the Corner Radius row of the Clipping group. |
 | `bWidgetActive` | `bool` | DreamGUI | yes | read only | If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable |
 | `Visibility` | `EDreamWidgetVisibility` | DreamGUI | yes | read only | Controls layout, painting and hit testing independently from WidgetActive. |
 | `Shown` | `bool` | DreamGUI | - | read only | Visibility as a yes or no: true is Visible, false is Collapsed. What `Shown <- HasSave()` binds in a .dui, and what an `if` block binds on each widget of its branches. Nothing of its own is kept -- reading it reads Visibility (anything but Collapsed is shown), writing it writes Visibility -- so the field below is only the slot reflection needs for a property with a getter and a setter. DuiHidden: Visibility is what the write-back spells, so a sweep must not author the same value twice. |
@@ -52,7 +52,7 @@ Base class for almost all UI related things.
 | `Visual` | `TObjectPtr<UDreamVisual>` | Visual | yes | read only |  |
 | `LayoutContainer` | `TObjectPtr<UDreamLayoutContainer>` | LayoutContainer | yes | read only |  |
 | `LayoutSelf` | `TObjectPtr<UDreamLayoutSelf>` | LayoutSelf | yes | read only |  |
-| `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | yes | read only | Parent-panel-owned layout data. This is separate from LayoutSelf so legacy Flex/Grid assets remain valid. |
+| `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | yes | read only | Parent-panel-owned layout data. This is separate from LayoutSelf so legacy Flex/Grid assets remain valid. // DreamGUI_Hidden: the slot's own properties are the Slot section's, for the panel the widget is in. |
 | `bIsFocusable` | `bool` | Interaction|Focus | yes | read only |  |
 | `bIsTabStop` | `bool` | Interaction|Focus | yes | read only | Tab and Shift+Tab stop here, when it is focusable and can be navigated to. Off leaves it to the arrows, the pad, a pointer and code -- a browser's tabindex="-1". |
 | `TabIndex` | `int32` | Interaction|Focus | yes | read only | Its place in Tab order among its siblings: lower first, siblings with the same index in the hierarchy's order. Only siblings are compared. |
@@ -67,6 +67,7 @@ Base class for almost all UI related things.
 | `SiblingIndex` | `int32` | DreamGUI | yes | - | hierarchy index, hierarchy order, render order |
 | `FlattenHierarchyIndex` | `int32` | DreamGUI | - | - | Flatten depth/hierarchyIndex, relative to root DreamWidget. -1 means not set yet. RootWidget - 0       Widget - 1       Widget - 2         Widget - 3         Widget - 4           Widget - 5       Widget - 6 |
 | `DisplayName` | `FString` | DreamGUI | - | - | This is useful when you need to find child UI element by name, use function "FindChildByDisplayName" or "FindChildArrayByDisplayName" to do it. Mostly the displayName is the same as Actor's ActorLabel. If you want to change it, just change the actor label( Actor's name in world outliner). If Actor's ActorLabel start with "//", then the "//" will be ignored. ActorLabel is only valid in editor, but this is also valid on runtime. |
+| `Tags` | `TArray<FName>` | DreamGUI | yes | read / write | Names for the code that finds widgets by what they ARE rather than by their id -- every trim, every sigil -- as AActor::Tags does for actors. A `.dui` writes them `@tag Trim, Glow`; UDreamUserWidget::GetWidgetsByTag finds them in a user widget's own tree. Nothing in the library reads them. |
 
 ## Functions
 
@@ -74,6 +75,7 @@ Base class for almost all UI related things.
 |---|---|---|
 | `UDreamPanelSlot* AddChild(UDreamWidget* InChild, int32 InSiblingIndex)` | callable | UMG's UPanelWidget::AddChild, adapted. UMG needs eight typed variants because each panel has its own slot class; here there is one UDreamPanelSlot, so one verb returns it and you can set padding straight off the result. |
 | `UDreamUIBehaviour* AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | callable | Add Component |
+| `void AddTag(FName InTag)` | callable | Adds InTag unless it is already there (or None). |
 | `UDreamTweener* AnchoredPositionTo(FVector2D endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Anchored Position To |
 | `void AnnounceAccessibleText(FText Announcement)` | callable | Sends text through Slate's platform accessibility announcement channel. |
 | `bool CanAcceptAdditionalChildren(int32 AdditionalChildCount)` | pure | Can Accept Additional Children |
@@ -174,6 +176,7 @@ Base class for almost all UI related things.
 | `FVector GetRelativeScale()` | pure | Get Relative Scale |
 | `UDreamCanvas* GetRenderCanvas()` | pure | Get the canvas that render and update this UI element |
 | `EDreamWidgetRenderLayer GetRenderLayerMode()` | pure | Whether this widget may be a render layer of its canvas, and when. IsRenderLayer says whether it is one now. |
+| `FVector2D GetRenderOffset()` | pure | Get Render Offset |
 | `float GetRenderOpacity()` | pure | Get Render Opacity |
 | `FRotator GetRenderRotation()` | pure | Get Render Rotation |
 | `FVector GetRenderScale()` | pure | Get Render Scale |
@@ -222,6 +225,7 @@ Base class for almost all UI related things.
 | `bool HasPerspectiveInHierarchy()` | pure | True when this widget or any ancestor declares a perspective. One bit, kept up to date with the transform. |
 | `bool HasRenderTransform()` | pure | True while any render channel is off its default, i.e. while drawing differs from layout. |
 | `bool HasShearApplied()` | pure | True when this widget or any ancestor is sheared -- the bit that chooses the matrix path. |
+| `bool HasTag(FName InTag)` | pure | Whether Tags holds InTag. None is never a tag. |
 | `bool HasUserFocus(APlayerController* InPlayerController)` | pure | Has User Focus |
 | `bool HasUserFocusedDescendants(APlayerController* InPlayerController)` | pure | Has User Focused Descendants |
 | `UDreamTweener* HeightTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Height To |
@@ -254,10 +258,13 @@ Base class for almost all UI related things.
 | `void RemoveLayoutContainer()` | callable | Remove Layout Container |
 | `void RemoveLayoutSelf()` | callable | Remove Layout Self |
 | `void RemovePanelSlot()` | callable | Remove Panel Slot |
+| `bool RemoveTag(FName InTag)` | callable | Takes InTag out; false when it was not there. |
 | `void RemoveVisual()` | callable | Remove Visual |
 | `UDreamTweener* RenderAngleTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Angle To |
 | `UDreamTweener* RenderOffsetTo(FVector2D endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Offset To |
 | `UDreamTweener* RenderOpacityTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Opacity To |
+| `UDreamTweener* RenderPoseTo(FVector endTranslation, FRotator endRotation, float duration, float delay, EDreamTweenEase ease)` | callable | The render translation and rotation together, on one clock and one ease: a pose the widget moves into. |
+| `UDreamTweener* RenderRotationTo(FRotator endValue, float duration, float delay, EDreamTweenEase ease)` | callable | The whole render rotation, out of the plane as well as in it: a side panel swinging open on its hinge, a card turning over. Each of Pitch, Yaw and Roll runs from where it is to where it is told, so 0 to 180 of yaw is half a turn rather than none. |
 | `UDreamTweener* RenderScaleTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Scale To |
 | `UDreamTweener* RenderTranslationTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | The render transform's tweens: they move, scale and turn what is drawn and hit and never the layout, so they are the ones for a widget a panel places -- a row of a vertical box sliding in, a tab nudged aside, a line growing from its left. The anchored-position and size tweens above write the widget's layout instead, which its panel overrides on its next pass. RenderTranslationTo is in local space (X depth, Y right, Z up); RenderOffsetTo is the same move on the canvas plane (x right, y up), depth kept; RenderAngleTo is the in-plane angle (SetRenderTransformAngle). |
 | `void ResetCursor()` | callable | Back to having no opinion, so an ancestor's cursor shows through again. UMG's ResetCursor. |
@@ -295,7 +302,7 @@ Base class for almost all UI related things.
 | `void SetIsEnabled(bool bInIsEnabled)` | callable | Disable (or re-enable) this widget and everything under it: the subtree stops taking input and every control in it takes on its disabled look, because both read GetInteractableInHierarchy and this is AND-ed into it. |
 | `void SetIsFocusable(bool Value)` | callable | Turning this off also gives up any focus the widget currently holds. |
 | `void SetIsTabStop(bool Value)` | callable | Set Is Tab Stop |
-| `bool SetKeyboardFocus()` | callable | Take focus on the owning player's event system. Returns false when it could not be given. |
+| `bool SetKeyboardFocus()` | callable | Take focus on the owning player's event system. Returns false when it could not be given now; a widget asked before it was first laid out (shown this frame) takes it on the next frame, unless that player's focus moves first. |
 | `void SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value)` | callable | Set Navigation Boundary Rule |
 | `void SetParent(UDreamWidget* InParent, bool InKeepWorldPosition, int32 InSiblingIndex)` | callable | Set parent of this widget, could use null to detach it from origin parent. @InKeepWorldPosition true - keep world position & rotation & scale after change parent, false - keep relative position & rotation & scale. @InSiblingIndex if InParent is a valid widget, then put the widget at specific index in parent's children list, -1 or other out of range value means the widget will be put at tail. |
 | `void SetPerspective(bool Value)` | callable | Set Perspective |
@@ -312,6 +319,7 @@ Base class for almost all UI related things.
 | `void SetRelativeRotationEuler(FRotator Value)` | callable | Set rotation from euler angles. This is the rotation entry point Sequencer drives. |
 | `void SetRelativeScale(FVector Value)` | callable | Set Relative Scale |
 | `void SetRenderLayerMode(EDreamWidgetRenderLayer Value)` | callable | Whether this widget may be a render layer of its canvas, and when; its canvas makes it one, or takes it back, at its next update. |
+| `void SetRenderOffset(FVector2D InOffset)` | callable | The render translation's move on the canvas plane -- x right, y up -- with its depth (RenderTranslation.X) left where it is: SetRenderTranslation(FVector(0, x, y)) would set the depth to 0 as well. The setter RenderOffsetTo tweens. |
 | `void SetRenderOpacity(float Value)` | callable | Set Render Opacity |
 | `void SetRenderRotation(FRotator Value)` | callable | Set Render Rotation |
 | `void SetRenderScale(FVector Value)` | callable | Set Render Scale |
@@ -333,7 +341,7 @@ Base class for almost all UI related things.
 | `void SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)` | callable | Set Vertical Anchor Min Max |
 | `void SetVisibility(EDreamWidgetVisibility Value)` | callable | Set Visibility |
 | `void SetWidgetActive(bool Value)` | callable | Set WidgetActive self property @param Value |
-| `void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener)` | callable | Set Widget Tweener Affect by Game Pause and Time Dilation |
+| `void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener)` | callable | Every tween verb above -- and the visuals' ColorTo, AlphaTo and their siblings -- replaces the earlier ones on the same property when it starts: RenderOpacityTo(0) started after RenderOpacityTo(1) stops the fade in, rather than both running and the last to end winning. A verb's tween run by a sequence is left to the sequence, and a tween kept with SetAutoKill(false) is paused instead of killed. SetReplacesEarlierTweens(false) on a tween lets it run alongside the others (UDreamTweener::SetExclusive). |
 | `void SetWidth(float Value)` | callable | Set Width |
 | `void SetWorldLocation(FVector Value)` | callable | Set World Location |
 | `void SetWorldLocationAndRotation(FVector InLocation, FQuat InRotation)` | callable | Set World Location and Rotation |

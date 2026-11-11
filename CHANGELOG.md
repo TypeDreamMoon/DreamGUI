@@ -305,6 +305,30 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **Leave the mouse out until it moves.** `UDreamStandaloneInputModule::bIgnoreMouseUntilItMoves` keeps a mouse that rests
   over a menu as it opens from hovering a row on the first frame.
 - **The designer's canvas size from scripts.** `UDreamWidgetBlueprint::GetDesignerCanvasSize` and `SetDesignerCanvasSize`.
+- **`@tag`: find widgets by what they are.** A node carries names with `@tag Trim` or `@tag Glow, UI.Accent` (dotted and
+  Chinese names allowed, on any widget node, in a slot declaration or a `rows` line's block, in a loop's template --
+  every copy keeps them), and they land in the new `UDreamWidget::Tags` (`HasTag`, `AddTag`, `RemoveTag`; a `Tags = [...]`
+  line on the same node adds to them). `UDreamUserWidget::GetWidgetsByTag` (Blueprint) and `ForEachWidgetWithTag` (C++) find
+  the tagged widgets of a widget's own contents, parents before children, without going inside nested components --
+  code no longer needs to match a decoration widget by a prefix of its id. A line that does not read, or sits in a `style`
+  or directly in a `for` / `each` body, is the new DUI2024. The designer writes edits of `Tags` back into the `@tag`
+  lines. See [Tags](Docs/language/nodes-and-values.md#tags-tag).
+- **`@slot Size = (w, h)`** stands for `@slot MinDesiredSize` and `@slot MaxDesiredSize` given the same value, in a
+  `@slot { }` block and in a style too. The designer keeps the shorthand while the two stay equal and splits it into the two
+  lines when an edit makes them differ; the Blueprint converter writes it for a slot whose two values are one. Bound with
+  `<-` it is DUI4001, naming the two properties to bind. See [`@slot Size`](Docs/language/slots-and-components.md#slot-size).
+- **A struct is a map of its fields.** Any struct property, or struct inside an array, set or map, that has no short form
+  reads `{ Distance: 12, Angle: 45 }` -- the field named as a property is, the rest left at the struct's defaults, text
+  fields localized under their own keys -- where only the engine's own text in a quoted string was possible. A struct can
+  name a primary field (`DreamGUI_PrimaryField`) that the map's first entry may give without its key. `FDreamRingMenuItem`
+  does, with `Label`, so a ring menu is written `Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]`
+  instead of being set from C++. The quoted form still reads; the designer and the Blueprint converter write the map for
+  structs with a primary field and keep the quoted form for the rest. See
+  [Structs as field maps](Docs/language/nodes-and-values.md#structs-as-field-maps).
+- **Several styles.** A style, a node and a `rows` header take `: A : B` (`Text Title : Heading : Glow`), applied left to
+  right, bases first, each style once at its first appearance, a later one over an earlier one, the node's own lines last.
+  `: A : B` used to be a syntax error (DUI2001). Naming a style that is already applied changes nothing and is the new
+  DUI3025, a warning. See [Several styles](Docs/language/styles-and-resources.md#several-styles).
 
 ### Changed
 
@@ -463,6 +487,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **Two warnings for things that drew wrong with no word.** A post-process visual (a background blur) inside a group drawn
   apart reads the group, not the scene, and comes out flat; an override material that does not shade through
   `MF_DreamUI_Shade` is not clipped, masked or faded by DreamGUI. Each is now logged once.
+- **A ring menu's `WedgeTemplateClass` content is centred on its slice.** Each wedge's instance of the template used to fill
+  the wedge's whole ring-sized square, so a template had to draw itself in the right corner of that square. It is now
+  placed as the built-in icon and label box is: centred on the slice's middle line at the style's `ContentRadius` (midway
+  between the inner and outer radius when that is 0), at the size its class's root is authored at when the root has fixed
+  anchors, or `ContentWidth` square when the root stretches, and turned as `LabelFacing` says. The built-in box steps
+  aside, inactive, while a template is set, and changing `WedgeTemplateClass` rebuilds the wedges. A template written
+  against the old placement needs its root's anchors and size looking at. See
+  [DreamRingMenu](Docs/Reference/DreamRingMenu.md).
 
 ### Fixed
 
@@ -693,6 +725,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   vanished; an opening one was whole at once. Its `MaxHeight` reaches the panel too now.
 - **The diagnostics mailbox forgets a file no class is built from.** A Blueprint taken off its `.dui`, or a `.dui` deleted
   or renamed, left its entries in `DUI/.dui-diagnostics.json` for the editor extension to show.
+- **The workspace file the editor writes recommends the extension under its current id.** `DUI/DreamUI.code-workspace`
+  still recommended `typedreammoon.dreamui-language-support`, the id the 0.9.2 rename left behind, so VS Code offered the
+  old extension. It recommends `typedreammoon.dreamgui-language-support` and lists the old id under
+  `unwantedRecommendations`; and when the editor opens the workspace in VS Code it warns, in a notification and the log,
+  if `~/.vscode/extensions` holds a copy under the old id. The extension's next release reads the new syntax above.
 
 ## 1.0.0
 

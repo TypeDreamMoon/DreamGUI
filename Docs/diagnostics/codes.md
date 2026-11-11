@@ -30,15 +30,16 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI2016 | MalformedPropsBlock | A `props` line that is not `Type Name` or `Type Name = value`, or `props` inside a node. |
 | DUI2017 | MalformedEventsBlock | An `events` entry that is not `Name` or `Name(Type Param, …)`, or `events` inside a node. |
 | DUI2018 | MalformedConditional | An `if` without its condition or block, an `else` with no `if`, or a branch holding something other than widgets. |
-| DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills. |
+| DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills: a declaration holds components, properties, slot lines and `@tag` lines, and a fill holds widgets only (a `@tag` line beside them included). |
 | DUI2020 | MalformedRows | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
 | DUI2021 | MalformedViewModelsBlock | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
 | DUI2022 | MalformedTextAnnotation | `@note(…)` not holding one string, `@max(…)` not one whole number of at least 1, either after a value that is not a string, an annotation written twice, or `@noloc` with `@key`, `@note` or `@max`. |
-| DUI2023 | MalformedContainer | A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. |
+| DUI2023 | MalformedContainer | A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. A struct's first entry may go without a key. |
+| DUI2024 | MalformedTag | A `@tag` line that does not read: nothing after `@tag`, a number or a string, two names with no comma between them, a trailing comma. Also a `@tag` line in a `style`, or directly in a `for` / `each` body. |
 | DUI3001 | DuplicateNodeId | Two nodes share an id. |
 | DUI3002 | InvalidNodeId | An id that is not an identifier, starts with a digit, or is a keyword. |
 | DUI3003 | UnknownNodeType | A type that is no tag, container, alias, registered widget or path. |
-| DUI3004 | UnknownStyle | `: Name` naming no style this file sees. |
+| DUI3004 | UnknownStyle | `: Name` naming no style this file sees; each unknown name in a clause is reported. |
 | DUI3005 | DuplicateStyle | Two styles of one name in one file. |
 | DUI3006 | UnknownBehaviourClass | `+ Name` naming nothing a widget can carry. |
 | DUI3007 | DuplicateSlotName_Retired | Retired; two slots of one name are DUI3001. |
@@ -59,15 +60,16 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI3022 | MultipleDefaultSlots | More than one `slot … default` in one file. |
 | DUI3023 | DuplicateRowKey | Warning. Two rows of a `rows` table whose first values make the same id; the second's id then moves with the order. |
 | DUI3024 | DuplicateViewModel | Two `viewmodels` entries of one name. |
-| DUI4001 | UnknownProperty | No property of that name; the nearest one is suggested. |
-| DUI4002 | UnknownPropertyPathSegment | A dotted path whose head resolves and whose tail does not. |
+| DUI3025 | StyleAlreadyApplied | Warning. A style named in a clause that an earlier name of the clause has already applied, as itself or as a base: naming it again changes nothing. |
+| DUI4001 | UnknownProperty | No property of that name; the nearest one is suggested. `@slot Size <- …` is one: `Size` is a shorthand for two properties, and a binding names `MinDesiredSize` and `MaxDesiredSize` separately. |
+| DUI4002 | UnknownPropertyPathSegment | A dotted path whose head resolves and whose tail does not, or a struct's field map naming a field the struct does not have. |
 | DUI4003 | ValueTypeMismatch | A value whose shape cannot be the property's type. |
 | DUI4004 | TupleArityMismatch | A tuple with the wrong number of elements. |
 | DUI4005 | UnknownEnumValue | A word the property's enum does not declare. |
 | DUI4006 | PropertyNotWritable | A property text cannot write: transient, deprecated, part of the object graph, a delegate. |
 | DUI4007 | UnknownResource | `@Name` naming no resource entry. |
 | DUI4008 | ResourceTypeMismatch | A resource whose value is not its declared type, or a non-`Asset` resource used as a node type. |
-| DUI4009 | ContainerTypeMismatch | A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids). |
+| DUI4009 | ContainerTypeMismatch | A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids). A map entry with no key, on a real map or on a struct with no primary field, is one too. |
 | DUI5001 | AssetNotFound | An asset or class path that does not load. |
 | DUI5002 | NoVisualForProperty | A property of a visual the node's type does not create. |
 | DUI5003 | NoPanelSlotForProperty | A slot line on a node whose parent lays out no panel. |
@@ -121,5 +123,5 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI7001 | PatchTargetNotFound | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
 | DUI7002 | SourceFileChangedUnderEdit | The file changed under a pending edit; nothing was written. |
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |
-| DUI7004 | PatchSyntaxNotWritable | An edit to something no line spells: a visibility an `if` decides, a shorthand that cannot be rewritten. |
+| DUI7004 | PatchSyntaxNotWritable | An edit to something no line spells: a visibility an `if` decides, a shorthand that cannot be rewritten, a change to `Tags` that no line can take (written both ways, or a name an `@tag` line cannot hold). |
 | DUI7005 | PatchStyleComponentNotWritable | An edit to a value a style's `+` line gives the node, from a caller that writes no override. The designer writes it as a `+` line on the node instead; a script can add that line, or change the style. |

@@ -23,14 +23,15 @@ is the same tree as three unnamed `Row : ListRow { Label = "…"  Description = 
 Nothing runs at run time: the table is read into those widgets, so a row is a widget like any other -- it builds,
 binds and lays out exactly as the line it stands for would.
 
-- **The header** is `rows`, a node type (a tag, a container, an alias, `@Name`, a path), an optional `: Style`, and the
+- **The header** is `rows`, a node type (a tag, a container, an alias, `@Name`, a path), optional `: Style` clauses (one or
+  several, `: ListRow : Dense`), and the
   columns: property names, dotted or not, in parentheses. Each is written once (DUI2020).
 - **A row** is its values, in column order, separated by commas -- any value a property takes: a string, a number, a
   tuple, a colour, a word, `@Resource`. One row per line, or several on a line separated by `;`. A row has exactly as
   many values as there are columns (DUI2020), and a row that does not read makes no widget. Values are written, not
   bound: a column is `=`, never `<-`.
 - **A block at the end of a row** (`{ Kind = Count }`) holds what that one row needs beyond the columns: more
-  properties, `@slot` lines, `+` components, children. A line in it that names a column wins over the cell.
+  properties, `@slot` lines, `@tag` lines, `+` components, children. A line in it that names a column wins over the cell.
 - **Ids come from the first value**, the row's key: `<id of the enclosing node>__<type>_<key>`, the key with every run
   of characters an id cannot hold made one `_` and cut to 32 characters -- `Page_0__Row_City_Ruins`. A row inserted or
   moved therefore leaves every other row's id, and the localization keys made from it (`Page_0__Row_City_Ruins.Label`),

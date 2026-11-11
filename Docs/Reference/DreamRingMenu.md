@@ -52,6 +52,7 @@ OnItemActivated fires on every commit even when the same item is chosen twice, b
         HitArea            = Slice
         bSelectOnHighlight = true
         Style.SweepAngle   = 360
+        Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]
         OnItemActivated -> HandleWheelPick
 
 ## Properties
@@ -71,7 +72,7 @@ OnItemActivated fires on every commit even when the same item is chosen twice, b
 | `bShowLabels` | `bool` | Ring Menu | yes | `GetShowLabels` / `SetShowLabels` | Off leaves the wedges to their icons. A wheel of glyphs is an ordinary thing to want. |
 | `bHubFollowsHighlight` | `bool` | Ring Menu | yes | `SetHubFollowsHighlight` | The hub shows the highlighted item's label (falling back to the selected one's, then to HubText). Off leaves HubText alone, which is how the hub becomes a static title. |
 | `HubText` | `FText` | Ring Menu | yes | `SetHubText` | What the hub says with nothing highlighted. Empty is an empty hub. |
-| `WedgeTemplateClass` | `TSubclassOf<UDreamUserWidget>` | Ring Menu | yes | `SetWedgeTemplateClass` | A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every wedge widget, filling it, and the built-in label steps aside. The wedge's shape, its hit sector, its highlight and its click stay the control's, so a template only has to draw an item. |
+| `WedgeTemplateClass` | `TSubclassOf<UDreamUserWidget>` | Ring Menu | yes | `SetWedgeTemplateClass` | A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every wedge widget and the built-in icon and label step aside. The instance is centred where the built-in box would be -- on the slice's middle, at the style's ContentRadius (midway between the ring's edges when that is 0) -- at the size its class's root is authored at (the style's ContentWidth, square, when the root stretches), and turned as LabelFacing says. The wedge's shape, its hit sector, its highlight and its click stay the control's, so a template only has to draw an item. |
 | `RingNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | read only | The node everything hangs under, and what Open and Close scale and fade. |
 | `BackdropNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | read only | The unbroken ring behind the wedges, filling the gaps between them. |
 | `WedgeRootNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | read only | What the wedges are children of -- the template among them. |

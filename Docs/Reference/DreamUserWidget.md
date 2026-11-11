@@ -60,6 +60,7 @@ Initialize, from the class, every time.
 | `UObject* GetViewModel(FName Name)` | pure | What the `viewmodels` entry Name holds right now; null when it is empty or there is no such entry. |
 | `bool GetWantsTick()` | pure | Get Wants Tick |
 | `UDreamWidget* GetWidgetFromName(FName InVariableName)` | pure | The widget of that variable name inside this instance -- UMG's GetWidgetFromName. |
+| `TArray<UDreamWidget*> GetWidgetsByTag(FName InTag)` | pure | Every widget of THIS widget's own contents that carries InTag (UDreamWidget::Tags, `@tag` in a .dui), parents before children, siblings in order. |
 | `UDreamWidgetTree* GetWidgetTree()` | pure | Get Widget Tree |
 | `bool HasPlayingAnimation(UMovieSceneSequence* Animation)` | pure | True if any instance of the animation is currently playing. |
 | `bool IsAnimationPaused(FDreamUIAnimationHandle Handle)` | pure | Is Animation Paused |

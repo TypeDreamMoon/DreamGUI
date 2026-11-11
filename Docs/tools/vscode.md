@@ -32,9 +32,16 @@ same thing):
 
 1. refreshes the symbol export, so the completion data is fresh the moment VS Code opens;
 2. rewrites `DUI/DreamUI.code-workspace` — the project's `DUI/` and every enabled plugin's `DUI/` root, the `*.dui`
-   association pinned, and the extension recommended; when the project has no `DUI/` directory yet, this button is
+   association pinned, and the extension recommended (`typedreammoon.dreamgui-language-support`, with the old
+   `typedreammoon.dreamui-language-support` listed under `unwantedRecommendations`, so VS Code does not suggest it);
+   when the project has no `DUI/` directory yet, this button is
    allowed to be the first thing that makes one;
 3. opens it in VS Code, falling back to the system's default editor and then to Notepad.
+
+Older builds of the editor recommended the extension under its old id, left over from the 0.9.2 rename, so a workspace
+file written before this fix points at the wrong one: opening the workspace from the editor rewrites it. When the
+editor opens the workspace it also looks in `~/.vscode/extensions` for a copy of the extension under the old id and, if
+there is one, warns about it in a notification and in the log: uninstall that copy, as above.
 
 Opening through this workspace rather than a bare folder is what lights up the extension's workspace features (the
 cross-file index, resolving `use`). *Rebuild DUI* in the same menu recompiles every text-backed widget Blueprint in the
@@ -54,6 +61,9 @@ project, loading the ones that are not loaded, after asking first.
 | Explanations | A diagnostic's code, in Problems and in the hover, links to its entry under [Diagnostics](../diagnostics/index.md) (since 0.9.1); offline, every diagnostic offers an "解释 DUInnnn" (explain) action that opens the bundled code-table entry: what it means, why it fired, how to fix it |
 | Quickfixes | Declare an unknown resource (DUI4007), create an unknown style (DUI3004), add the `use` for a style or resource that lives in exactly one other file |
 | Also | Colour chips and a picker on every `#hex` literal; snippets for the component syntax; *DreamUI: New .dui File*, which writes the same starter as the editor's *Create Source File...* |
+
+The extension follows the language: `@tag` lines, `@slot Size`, struct field maps and several styles per clause are
+read by its next release, which also reports DUI2024 and DUI3025 as the compiler does.
 
 What the language **deliberately does not have** (compile-time conditions, macros, variables, pseudo-states, flag enums
 written as `A | B`, a ternary, array literals, …) the extension will not complete either; the reasons are in the

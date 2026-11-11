@@ -139,7 +139,7 @@ UMG has a slot class per panel; here there is one, `UDreamPanelSlot`, owned by t
 | `Row` / `Column` / `RowSpan` / `ColumnSpan` | Coordinates and spans in a grid |
 | `ZOrder` | Paint order among siblings, as a stable reorder. Overlay and GridPanel always read it, CanvasPanel with `bSortChildrenByZOrder` on; every other panel arranges strictly by sibling order. UMG's grid-slot `Layer` is this |
 | `bAutoSize` | Size to content, UMG's canvas-slot property of the same name |
-| `MinDesiredSize` / `MaxDesiredSize` | A floor and ceiling on whatever the child measures, per axis; zero means no opinion |
+| `MinDesiredSize` / `MaxDesiredSize` | A floor and ceiling on whatever the child measures, per axis; zero means no opinion. `@slot Size = (w, h)` in a `.dui` is the shorthand for both at one value |
 | `bFillEmptySpace` / `FillSpanWhenLessThan` / `bForceNewLine` | WrapBox only: the last child on a line takes the room left; a line of its own once the wrap width drops below this; begin a line here |
 | `Nudge` | A fixed offset added to wherever the panel put the child, in the panel's content space (x right, y down, the same sense as `Padding`) |
 
