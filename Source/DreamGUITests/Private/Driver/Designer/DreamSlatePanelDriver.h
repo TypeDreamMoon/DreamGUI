@@ -63,6 +63,11 @@ namespace DreamTests
 		bool IsOfType(const SWidget& InWidget, const TCHAR* InTypeNamePart);
 		/** The first STextBlock under InRoot showing exactly InText. */
 		TSharedPtr<SWidget> FindTextBlock(const TSharedRef<SWidget>& InRoot, const FString& InText);
+		/**
+		 * The first STextBlock under InRoot whose text was written exactly InText (FText::BuildSourceString): a label the
+		 * editor translates, known by its English whatever language the editor shows it in.
+		 */
+		TSharedPtr<SWidget> FindTextBlockAsWritten(const TSharedRef<SWidget>& InRoot, const FString& InText);
 		/** InFrom or the nearest of its parents whose type contains InTypeNamePart. */
 		TSharedPtr<SWidget> FindAncestorOfType(const TSharedRef<SWidget>& InFrom, const TCHAR* InTypeNamePart);
 

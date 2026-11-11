@@ -63,7 +63,7 @@ namespace DreamTests
 		{
 			return nullptr;
 		}
-		const TSharedPtr<SWidget> Label = DreamSlatePanel::FindTextBlock(Details.ToSharedRef(), InLabel);
+		const TSharedPtr<SWidget> Label = DreamSlatePanel::FindTextBlockAsWritten(Details.ToSharedRef(), InLabel);
 		const TSharedPtr<SWidget> Row = Label.IsValid() ? DreamSlatePanel::FindAncestorOfType(Label.ToSharedRef(), TEXT("SDetailSingleItemRow")) : nullptr;
 		return Row.IsValid() ? DreamDesignerPanelsLocal::FindPaintedOfType(Row.ToSharedRef(), InTypeNamePart) : nullptr;
 	}

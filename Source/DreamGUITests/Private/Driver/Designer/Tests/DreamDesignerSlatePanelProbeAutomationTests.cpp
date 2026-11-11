@@ -179,7 +179,10 @@ namespace DreamDesignerSlatePanelProbeLocal
 		return Row.IsValid() && DreamSlatePanel::CentreOf(Row.ToSharedRef()).IsSet() ? Row : nullptr;
 	}
 
-	/** The details panel's spin box on the row labelled InLabel, or null while there is none painted. */
+	/**
+	 * The details panel's spin box on the row labelled InLabel, or null while there is none painted. InLabel is the label
+	 * as written, in English: the panel shows it in the editor's language.
+	 */
 	TSharedPtr<SWidget> DetailsSpinBoxFor(const FProbeState& InState, const FString& InLabel)
 	{
 		FDreamWidgetBlueprintEditor* Toolkit = InState.Driver.IsValid() ? InState.Driver->Toolkit() : nullptr;
@@ -188,7 +191,7 @@ namespace DreamDesignerSlatePanelProbeLocal
 		{
 			return nullptr;
 		}
-		const TSharedPtr<SWidget> Label = DreamSlatePanel::FindTextBlock(Details.ToSharedRef(), InLabel);
+		const TSharedPtr<SWidget> Label = DreamSlatePanel::FindTextBlockAsWritten(Details.ToSharedRef(), InLabel);
 		// The property row the label is the name of: a details view row is an SDetailSingleItemRow holding name and value.
 		const TSharedPtr<SWidget> Row = Label.IsValid() ? DreamSlatePanel::FindAncestorOfType(Label.ToSharedRef(), TEXT("SDetailSingleItemRow")) : nullptr;
 		const TSharedPtr<SWidget> SpinBox = Row.IsValid()

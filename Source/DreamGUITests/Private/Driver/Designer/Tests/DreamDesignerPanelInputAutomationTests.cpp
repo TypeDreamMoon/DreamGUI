@@ -103,7 +103,11 @@ namespace DreamDesignerPanelInputTestLocal
 		return FString::Join(Names, TEXT(", "));
 	}
 
-	/** Whether InWidget's tooltip says InNeedle anywhere: its own text, or a text block of the content it shows. */
+	/**
+	 * Whether InWidget's tooltip says InNeedle anywhere: its own text, or a text block of the content it shows. InNeedle
+	 * is English, matched against the tooltip as written (FText::BuildSourceString), which the editor shows in its own
+	 * language.
+	 */
 	bool ToolTipSays(const TSharedRef<SWidget>& InWidget, const TCHAR* InNeedle)
 	{
 		const TSharedPtr<IToolTip> ToolTip = InWidget->GetToolTip();
@@ -113,7 +117,7 @@ namespace DreamDesignerPanelInputTestLocal
 		}
 		const TSharedRef<SWidget> Shown = ToolTip->AsWidget();
 		if (DreamSlatePanel::IsOfType(*Shown, TEXT("SToolTip"))
-			&& StaticCastSharedRef<SToolTip>(Shown)->GetTextTooltip().ToString().Contains(InNeedle))
+			&& StaticCastSharedRef<SToolTip>(Shown)->GetTextTooltip().BuildSourceString().Contains(InNeedle))
 		{
 			return true;
 		}
@@ -122,7 +126,7 @@ namespace DreamDesignerPanelInputTestLocal
 		return DreamSlatePanel::FindDescendant(Shown, [InNeedle](const TSharedRef<SWidget>& InCandidate)
 		{
 			return InCandidate->GetType() == TextBlockType
-				&& StaticCastSharedRef<STextBlock>(InCandidate)->GetText().ToString().Contains(InNeedle);
+				&& StaticCastSharedRef<STextBlock>(InCandidate)->GetText().BuildSourceString().Contains(InNeedle);
 		}).IsValid();
 	}
 
