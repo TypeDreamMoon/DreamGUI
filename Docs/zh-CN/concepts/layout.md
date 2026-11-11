@@ -64,6 +64,8 @@ description: 布局引擎如何工作——测量是 const 的并与布置分离
 | `Border` | [`UDreamLayoutContainerBorder`](../Reference/DreamLayoutContainerBorder.md) | `Padding`、`HorizontalAlignment`、`VerticalAlignment`、`BrushColor`、`ContentColorAndOpacity` | 与 UMG 一样，对齐属于边框，而不是槽 |
 | `MenuAnchor` | [`UDreamLayoutContainerMenuAnchor`](../Reference/DreamLayoutContainerMenuAnchor.md) | `Placement`、`MenuClass`、`bIsOpen`、`bFitInWindow` | 打开的菜单会经过弹出层；见[输入](input.md) |
 
+**面板只排列其框内的内容；它既不裁剪，也不阻止内容增长。** 高于其所在框的内容——例如在控件高度固定的 `VerticalBox` 中打开的 `Native.ExpandableArea`，或行数不断增加的列表——会被绘制到面板边缘之外，覆盖在其外的任何内容之上。可增长的列表应放入 `ScrollBox`（或自带一个的列表视图）中，也可放入 `Clipping` 为 `ClipToBounds` 的控件中。
+
 一个控件只有一个布局容器：容器类型节点上的 `+ HorizontalBox` 就是 DUI5022。有些容器需要控件上带有某种行为，才能与它们所镜像的 UMG 面板匹配（例如 SizeBox 需要 ContentWidget），缺少的那些会在分配容器时被添加。容器还可以为其布局添加动画：`bUseAnimation` 配合 `AnimationHandler` 会让子项**补间**到新位置，而不是跳变。这三个类一起位于 `Core/Components/DreamLayout.h` 中：`UDreamLayoutAnimation`（`UObject` 基类，带有 `GetLayoutContainer()` 和蓝图事件 `OnApplyLayoutResults`）、`UDreamLayoutAnimation_CommonTween`（通用补间；`Duration` 默认为 **0.3**，可以换成曲线）以及 `UDreamLayoutAnimation_SlideIn`（滑入）。 ⚠️ 它们是 **`UObject` 而非组件**——你不会在添加到控件的组件中找到它们。
 
 ```dui

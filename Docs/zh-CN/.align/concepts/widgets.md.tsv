@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/concepts/widgets.md	rev=a25dbbe64733	page=e5452d3dd3fa
+#dreamdocs-align 1	source=Docs/concepts/widgets.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=fd529704f1be
 meta:title	67d008a77234	3d845171	h
 meta:description	bb789ac86212	765d717e	h
 p	e1d6ab9332a0	153e9ac5	h
@@ -36,6 +36,7 @@ p	7370b6d3c6e7	dd4fa1db	h
 p	2378991422ae	7ce9a3f6	h
 h2	381ab3f5bef0	688867b4	h
 p	bb108e2c1bc9	3100dc43	h
+p	daec279bba1c	06f7896e	m
 row4	14f8aa253b6f	4170c106	h
 row4	492925f8e56c	73b1a052	h
 row4	605782c5c5af	8450bf94	h
@@ -43,6 +44,7 @@ row4	ed85ca6668cb	ace30c7e	h
 row4	7796ef12f061	56415435	h
 row4	9e6ed504d66d	7c6addce	h
 row4	9bbb62f3fc78	3433b7f4	h
+row4	b75d4521bec2	2cb2dec0	m
 row4	05b46146890f	90b1a154	h
 row4	84784f89dbaa	cfe5ed5f	h
 row4	66617de0dba2	22233d55	h
@@ -51,6 +53,13 @@ row4	e5a1d0021e3d	9bfdb445	h
 row4	642a0c2f5d28	726b0464	h
 row4	e1c3f721b2b3	b69cbe5f	h
 p	cb8bbd17dcc6	bafae154	h
+p	86f377a83cd4	ca2431c9	m
+row3	d83d5d97d998	b15daa5d	m
+row3	3b381b49f33d	643a5765	m
+row3	caddda66ebce	a1b8e9b3	m
+row3	19254c524185	07489276	m
+row3	a2c40d9e6dc5	d1382379	m
+p	270cd32a05fc	7bbb4ca2	m
 p	fd4bf4551c29	43c4af95	h
 h2	ce939b1d1869	8ae12c3c	h
 p	b9f8f5531d3f	0e344071	h
@@ -70,7 +79,7 @@ h2	fdd78f69d0eb	72205da7	h
 p	d7fb9348900a	8189fa24	h
 row3	09614a81b832	504a5e5e	h
 row3	4cdccaf1b3b2	83513559	h
-row3	0f1139300686	2276a265	h
+row3	ea8c2d911ee5	20c13b08	m
 row3	add838af5e89	6851cc8c	h
 row3	e6d157cd31f7	7d4e148b	h
 row3	d8e67bec7918	9f75eee7	h

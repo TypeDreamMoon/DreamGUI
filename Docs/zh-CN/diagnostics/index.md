@@ -116,7 +116,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI5024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5024) | `MemberPathThroughNonObject` | 错误 | 一条越过非对象的值继续往下走的成员路径。 |
 | [DUI5025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5025) | `RouteOperatorMismatch` | 错误 | 单播委托上的 `+=`，或者多播事件上的 `=`。 |
 | [DUI6001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6001) | `SourceFileUnreadable` | 错误 | Blueprint 的 Source File 指向的文件不存在或读不出来。 |
-| [DUI6002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6002) | `EmptyTree` | 错误 | 文件解析通过，却没有产生任何树。 |
+| [DUI6002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6002) | `EmptyTree` | 错误 | 文件解析完成却没有产生任何树，且没有其他错误说明原因。它不会与另一个错误一同报告：命名了无法解析的类型的节点会以自己的代码失败，这就是报告的全部内容。 |
 | [DUI6003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6003) | `ClassPathMismatch` | 警告 | `class` 行指向的是另一个蓝图，而不是正在编译的那个（警告）。 |
 | [DUI6004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6004) | `EventHandlerNotFound` | 错误 | `-> Handler` 指向一个类上没有的函数。 |
 | [DUI6005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6005) | `EventHandlerSignatureMismatch` | 错误 | 一个参数不是事件参数的处理函数。 |

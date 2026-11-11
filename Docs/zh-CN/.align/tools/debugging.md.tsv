@@ -1,6 +1,6 @@
-#dreamdocs-align 1	source=Docs/tools/debugging.md	rev=aa0301eb152c	model=deepseek-flash	page=f9293a0cbe88
+#dreamdocs-align 1	source=Docs/tools/debugging.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=31b75fedfbfd
 meta:title	92c17d31f452	e4ff27e0	m
-meta:description	89ccbe8f65e3	daa87d13	m
+meta:description	a7f1c6bd25fd	e72dcfdb	m
 p	896f0b6261a5	ab3d58cd	m
 h2	e135a2b347a1	3a761537	m
 p	f4fc8f6a008e	763f031a	m
@@ -33,6 +33,10 @@ row2	cddb42b245b9	49c3a754	m
 row2	284461caea06	1efcadcf	m
 p	9e714e280e1c	68fe4fa6	m
 p	c09dad0d0924	a301a79e	m
+h2	c697fadce98b	b4e387f7	m
+p	e25383bf19ee	debb4dde	m
+li	e04d79653b10	1ffaa75d	m
+li	12b0ee2aa05d	aa812fe7	m
 h2	da4901490feb	874d443f	m
 row2	266f3b23b649	af02bdbf	m
 row2	ef310ffe480d	0b1da12b	m

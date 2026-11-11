@@ -35,7 +35,38 @@ DreamGUI 中的 UI 树是一个**类**，而不是你实例化的资产。编写
 | `OnDestruct` | 在拆除时 |
 | `OnTick` | 仅在开启 `bWantsTick` 时每帧执行，而默认情况下并未开启——从未使用的 tick 仍需付出管理器列表条目、虚函数调用和 ProcessEvent 的代价 |
 
+**在 `NativeOnInitialized` 中无法保证 world 一定存在。** 它会在控件正在创建、尚未被赋予父级或注册时运行，而 `GetWorld()` 沿控件的外层链向上查找：控件的树尚未到达某个层级或 world（嵌套实例、为预览而创建的实例或作为副本创建的实例）时，在那里可能返回 null。任何需要 world 的操作——通过子系统隐藏自身、查找玩家、启动需要 tween 管理器的 tween——都应放在 `NativeOnConstruct` 中，此时树已注册且管理器已启动；或者交给创建该控件的代码，在创建调用返回之后执行。
+
 指针、拖拽、按键、焦点和导航事件（`OnPointerClick`、`OnDrop`、`OnKeyDown`、`OnFocusReceived`、 `OnNavigate`……）也在这里。`bAllowEventBubbleUp` 默认开启：用户控件是一个容器，而一个静默吞掉内部每次点击的容器会破坏它所放置的每个屏幕；将其关闭以在此边界处消费事件。 `bCanNavigateHere` 默认关闭，因此导航搜索会像以往一样越过该控件；当你想要 `OnNavigate` 时将其开启。
+
+<a id="c-names-against-umgs"></a>
+
+### C++ 命名与 UMG 的命名对比
+
+这些虚函数沿用 UMG 的函数结构而非其名称，并以 DreamGUI 的事件数据取代几何信息与 Slate 事件。返回 bool 的虚函数回答事件是否可以继续向父级冒泡（`bAllowEventBubbleUp` 是默认答案），而 UMG 的对应函数返回 `FReply`。重写者调用 `Super` 并返回它的返回值。
+
+| UMG `UUserWidget` | `UDreamUserWidget` |
+| --- | --- |
+| `NativeOnInitialized()` | `NativeOnInitialized()` |
+| `NativePreConstruct()` | C++ 中没有；对应的蓝图事件为 `PreConstruct(bIsDesignTime)` |
+| `NativeConstruct()` | `NativeOnConstruct()` |
+| `NativeDestruct()` | `NativeOnDestruct()` |
+| `NativeTick(Geometry, DeltaTime)` | `NativeOnTick(DeltaTime)`，仅在 `bWantsTick` 开启时 |
+| 无 | `NativeOnEnable()`, `NativeOnDisable()` |
+| `NativeOnMouseEnter` / `NativeOnMouseLeave` | `NativeOnPointerEnter` / `NativeOnPointerExit` |
+| `NativeOnMouseButtonDown` / `NativeOnMouseButtonUp` | `NativeOnPointerDown` / `NativeOnPointerUp`（以及 `NativeOnPointerClick`，UMG 没有对应事件） |
+| `NativeOnMouseMove` | `NativeOnPointerMove`（返回 void） |
+| `NativeOnMouseWheel` | `NativeOnPointerScroll` |
+| `NativeOnMouseButtonDoubleClick` | `NativeOnPointerDoubleClick` |
+| `NativeOnDragDetected` | `NativeOnBeginDrag`，然后是 `NativeOnDrag` 和 `NativeOnEndDrag` |
+| `NativeOnDragEnter` / `NativeOnDragOver` / `NativeOnDragLeave` | 名称相同，参数为事件数据与操作（返回 void） |
+| `NativeOnDrop` / `NativeOnDragCancelled` | 名称相同 |
+| `NativeOnTouchGesture` | `NativeOnPointerPinch` 和 `NativeOnPointerSwipe` |
+| `NativeOnKeyDown` / `NativeOnKeyUp` / `NativeOnKeyChar` / `NativeOnAnalogValueChanged` | 名称相同，参数为一个 `UDreamKeyEventData` |
+| `NativeOnFocusReceived` / `NativeOnFocusLost` | 名称相同，参数为用户与指针索引（返回 void） |
+| `NativeOnNavigation` | `NativeOnNavigate(Direction, OutNextWidget)` |
+
+蓝图事件在有对应 UMG 事件时沿用其名称（`On Mouse Wheel`、`On Mouse Move`、`On Double Click`），但不带 `Native` 前缀。在蓝图中实现的 `On Tick` 或 `On Mouse Move` 会自动开启 `bWantsTick`。
 
 <a id="subclassing-and-nesting"></a>
 

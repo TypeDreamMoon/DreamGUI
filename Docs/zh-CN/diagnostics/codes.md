@@ -1,8 +1,3 @@
----
-title: "诊断"
-description: "诊断"
----
-
 <a id="diagnostics"></a>
 
 ## 诊断
@@ -100,7 +95,7 @@ description: "诊断"
 | DUI5024 | MemberPathThroughNonObject | 一条越过非对象的值继续往下走的成员路径。 |
 | DUI5025 | RouteOperatorMismatch | 单播委托上的 `+=`，或者多播事件上的 `=`。 |
 | DUI6001 | SourceFileUnreadable | Blueprint 的 Source File 不存在或读不出来。 |
-| DUI6002 | EmptyTree | 文件解析通过、却没有产生任何树。 |
+| DUI6002 | EmptyTree | 文件解析成功但没有产生任何树，且没有其他错误说明原因。它不会与其他错误一并报告：命名了无法解析的类型的节点会以自身的代码失败，而这便是报告的全部内容。 |
 | DUI6003 | ClassPathMismatch | `class` 行指向的是另一个 Blueprint、而不是正在编译的这个（一条警告）。 |
 | DUI6004 | EventHandlerNotFound | `-> Handler` 指向一个类里没有的函数。 |
 | DUI6005 | EventHandlerSignatureMismatch | 一个参数与事件不一致的处理函数。 |

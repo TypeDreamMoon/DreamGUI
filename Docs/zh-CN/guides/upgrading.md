@@ -23,6 +23,8 @@ description: 项目在 2.1 或 2.0 开发版上时，升到 1.0.0 要知道什�
 - **调色板的分类改了名。** 扩展代码里拿 `FDreamUIControlDescriptor::Category` 和 "Controls"、"Post Process"、"Extensions" 或旧分类名比较的，改用 `DreamUIPaletteCategory` 里的名字。注册键没变，收藏不受影响。
 - **Add Component 会拒绝放不上去的组件。** 以前加得上、但什么都不做的组件，现在选择器里看不到，粘贴和拖放也会被拒绝。项目自己的组件有要求时，在编辑器模块里用 `FDreamUIComponentSupport` 注册规则（见[组件](../tools/designer.md#components)）。
 - **缩略图。** 资产里已经存着的线框缩略图，要等资产下次修改并保存才会换成界面本身。
+- **一个补间会替换同一属性上先前的补间。** `RenderOpacityTo`、`RenderOffsetTo`、`ColorTo` 以及其他属性动词在启动时会停止已在该对象属性上运行的补间；在此之前，两者都会运行，最后完成的获胜。依赖两个补间同时运行的代码（悬停下的循环呼吸）应让本应共享 `SetReplacesEarlierTweens(false)` 的那个来共享。`UDreamTweenerSequence` 中的补间不受影响。参见 [每个属性一个补间](../concepts/animation.md#one-tween-per-property)。
+- **文本默认不是射线检测目标**，正如 UMG 的 TextBlock 也不是。叠在按钮上的标签不再接收按钮的悬停和点击。此前保存的文本会保留保存时所用的 `true`，但 `.dui` 在编译时会重新构建其文本，因此其中本身就被按下的文本（链接、行的标题）现在会写入 `bRaycastTarget = true`。
 
 <a id="from-21-to-100"></a>
 

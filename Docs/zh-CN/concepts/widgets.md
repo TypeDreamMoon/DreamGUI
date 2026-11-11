@@ -1,10 +1,9 @@
 ---
-title: "控件模型"
-description: "UDreamWidget 是什么 —— 一个携带矩形、锚点和轴心的 UObject，挂着视觉、布局、槽和行为，排列成一棵树 —— 外加渲染变换、不透明度与可见性，以及它与 UMG 在尺寸上的差异。"
+title: 控件模型
+description: UDreamWidget 是什么 —— 一个携带矩形、锚点和轴心的 UObject，挂着视觉、布局、槽和行为，排列成一棵树 —— 外加渲染变换、不透明度与可见性，以及它与 UMG 在尺寸上的差异。
 ---
 
-DreamGUI 中的控件是一个 `UDreamWidget`：一个带矩形、轴心和锚点的 `UObject`，排列成一棵树，由 [画布](canvas.md) 绘制，后者会把整棵树尽可能合批成最少的绘制调用。这是 Unity 的
-uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件；其背后没有 `SWidget`，因此 UMG 的任何控件、样式或绑定都不适用。
+DreamGUI 中的控件是一个 `UDreamWidget`：一个带矩形、轴心和锚点的 `UObject`，排列成一棵树，由 [画布](canvas.md) 绘制，后者会把整棵树尽可能合批成最少的绘制调用。这是 Unity 的 uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件；其背后没有 `SWidget`，因此 UMG 的任何控件、样式或绑定都不适用。
 
 控件本身不绘制任何东西，也不排列任何东西。它绘制什么、如何排列子级、父级把它放在哪里、它运行什么逻辑，都由它携带的子对象决定 —— 用 `ConstructWidget` 的注释里的话说，"panel" 在这里是一个子对象，而不是一个单独的类。
 
@@ -22,8 +21,7 @@ uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件�
 | 行为 | 组件数组：`AddComponent`、`GetComponent`、`GetComponents` | 逻辑：按钮、画布、导航作用域…… |
 | 子级 | `GetChildren`、`AddChild`、`SetParent` | 树 |
 
-在 `.dui` 中，各部分很容易区分：节点类型是视觉（`Text`、`Image`）或布局容器
-（`VerticalBox`），`+ Class { }` 挂载行为或容器，`@slot` 行则是父级面板对该节点的处理方式。
+在 `.dui` 中，各部分很容易区分：节点类型是视觉（`Text`、`Image`）或布局容器（`VerticalBox`），`+ Class { }` 挂载行为或容器，`@slot` 行则是父级面板对该节点的处理方式。
 
 ```dui
 Widget Root {
@@ -72,9 +70,7 @@ Widget Root {
 
 坐标 y 轴向上：`Pivot`、`RenderTransformPivot` 和 `PerspectiveOrigin` 都把原点放在左下角，与 UMG 的左上角原点不同 —— 这是有意为之，因为插件内部的一致比与其他引擎的一致更重要。
 
-运行时每个字段都有对应的 setter：`SetAnchorMin`、`SetAnchorMax`、`SetAnchoredPosition`、`SetSizeDelta`、
-`SetPivot`，以及面向结果的 `SetWidth`、`SetHeight` 和 `SetAnchorOffset`（拉伸控件的四条边距离）。每个也有对应的补间 —— `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo` —— 返回一个 `UDreamTweener`
-（见[动画](animation.md)）。
+运行时每个字段都有对应的 setter：`SetAnchorMin`、`SetAnchorMax`、`SetAnchoredPosition`、`SetSizeDelta`、 `SetPivot`，以及面向结果的 `SetWidth`、`SetHeight` 和 `SetAnchorOffset`（拉伸控件的四条边距离）。每个也有对应的补间 —— `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo` —— 返回一个 `UDreamTweener` （见[动画](animation.md)）。
 
 `RelativeLocation` 也可以设置，但它的 setter 会重新计算锚点并请求父级重新布局；而 `.dui` 只写 `AnchorData`，因此同一位置永远不会被写两次。
 
@@ -93,20 +89,17 @@ Widget Root {
 | 复用 | Widget Blueprint 子类化 | Widget Blueprint 子类化，外加用于内容的命名槽位 |
 | 世界中 | `WidgetComponent`，一个渲染的四边形 | 一种一等的渲染模式 |
 
-文本那一行最让人意外。UMG 的 `TextBlock` 不会溢出，因为它的盒子由文本推导而来。而这里盒子是编写的，因此文本可以溢出盒子，也就有了 UMG 不需要的控件 —— `Margin`、
-`LineHeightPercentage`、`WrapTextAt` 和 Best Fit；见[文本](text.md)。
+文本那一行最让人意外。UMG 的 `TextBlock` 不会溢出，因为它的盒子由文本推导而来。而这里盒子是编写的，因此文本可以溢出盒子，也就有了 UMG 不需要的控件 —— `Margin`、 `LineHeightPercentage`、`WrapTextAt` 和 Best Fit；见[文本](text.md)。
 
-盒子优先并不意味着没有内容尺寸。一旦控件位于面板中，面板会询问它想要多大
-（`GetDesiredSize`），并把排列后的矩形写回它的 `AnchorData`。视觉以负数回答该问题时表示弃权，此时使用编写的矩形；`0` 是一个真实的回答。完整规则见
-[布局](layout.md)。
+盒子优先并不意味着没有内容尺寸。一旦控件位于面板中，面板会询问它想要多大（`GetDesiredSize`），并把排列后的矩形写回它的 `AnchorData`。视觉以负数回答该问题时表示弃权，此时使用编写的矩形；`0` 是一个真实的回答。完整规则见[布局](layout.md)。
 
 <a id="visuals-what-a-widget-draws"></a>
 
 ## 视觉：控件绘制什么
 
-视觉（`UDreamVisual`）是其控件的子对象，每个控件至多一个。没有视觉的控件就是一个矩形 —— `Widget`
-中的 `.dui` —— 这正是纯容器的形态。每个视觉都有 `Color`（sRGB，可在 Sequencer 中打关键帧）、`bRaycastTarget`
-和 `RaycastType`（`Rect`、`Mesh`、`VisiblePixel`、`Custom`）。
+视觉（`UDreamVisual`）是其控件的子对象，每个控件至多一个。没有视觉的控件就是一个矩形 —— `Widget` 中的 `.dui` —— 这正是纯容器的形态。每个视觉都有 `Color`（sRGB，可在 Sequencer 中打关键帧）、`bRaycastTarget` 和 `RaycastType`（`Rect`、`Mesh`、`VisiblePixel`、`Custom`）。
+
+除非另行说明，否则视觉上会开启 `bRaycastTarget`，但有一个例外：`UDreamText` 默认**不是**射线检测目标，因为 UMG 的 TextBlock 不可命中测试。文本大多只是覆盖在其他内容之上的标签，而如果标签本身是目标，它就会抢走其下方控件的悬停和点击。如果文本本身就是需要按下的对象，请写 `bRaycastTarget = true`。在默认值更改之前保存的文本会保留保存时所用的 `true`。`bRaycastTarget` 属于视觉，因此普通的 `Widget` 节点没有它（在那里写它是错误：DUI5002、指明一个具有它的节点类型，或 DUI4001）；要让控件退出命中测试，请在其上写 `Raycastable = Disabled`，其子级会通过 `Inherit` 遵循这一点。
 
 | `.dui` 标签 | 类 | 模块 | 绘制 |
 | --- | --- | --- | --- |
@@ -116,6 +109,7 @@ Widget Root {
 | `Sprite` / `Texture` | `UDreamSprite` / `UDreamTexture` | `DreamGUI` | 一个图集精灵 / 整张纹理 |
 | `Empty` | `UDreamVisualEmpty` | `DreamGUI` | 不绘制任何东西，但接收射线检测 |
 | `Ring` / `Polygon` / `PolygonLine` | `UDreamRing` / `UDreamPolygon` / `UDreamPolygonLine` | `DreamGUIExtensions` | 一个环、一个多边形、一个多边形描边 |
+| `Shape` | `UDreamShape` | `DreamGUIExtensions` | 通过任意点的填充轮廓——三角形、斜条、箭头：`Points = [(0, 0), (1, 0.4), (0.2, 1)]` 以矩形的 0..1 坐标表示（左下为 0, 0；以像素表示则用 `PointUnit = Pixels`），可为凸或凹，绕向任意；`PointsTo` 将其变形为点数相同的另一个轮廓。Polygon 只绘制正 N 边形 |
 | `Line2DRaw` / `Line2DChildren` | `UDream2DLineRaw` / `UDream2DLineChildrenAsPoints` | `DreamGUIExtensions` | 2D 线：经过给定点 / 经过子级 |
 | `StaticMesh` | `UDreamStaticMesh` | `DreamGUIExtensions` | 一个静态网格，自成一个绘制调用 |
 | `BackgroundBlur` / `BackgroundPixelate` / `PixelSort` | `UDreamBackgroundBlur` / `UDreamBackgroundPixelate` / `UDreamPixelSort` | `DreamGUIExtensions` | 屏幕效果；见[渲染](rendering.md) |
@@ -125,6 +119,17 @@ Widget Root {
 | `PostProcessRenderElementText` | `UDreamPostProcessRenderElement_Text` | `DreamGUIExtensions` | 同上，但以文本视觉作为宿主 |
 
 视觉分三类（`EDreamVisualType`）：`BatchMesh` 由画布合批，几乎所有的视觉都是这一类；`DirectMesh` 自己写网格段，每一个都是一个 draw call，用于顶点量大、变化频繁的内容（静态网格）；以及 `PostProcess`，一种读写屏幕的效果。插件也可以添加自己的视觉，用 `DECLARE_DREAM_GUI_VISUAL` 为它注册一个 `.dui` 标签。
+
+**角度并不共用同一套约定。** 在写数字之前，请先确认某个属性使用的是哪一套：
+
+| 位置 | 零度是 | 正方向旋转 |
+| --- | --- | --- |
+| `Ring` (`StartAngle`, `EndAngle`) | 三点钟方向 | 逆时针 |
+| `Native.RingMenu`（`StartAngle`、`SweepAngle`）、`Native.ProgressBar`（`RadialStartAngle`）、路径上的文本（`StartAngle`） | 十二点钟方向 | 顺时针 |
+| 矩形块的 `RadialFillRotation` | 三点钟方向 | 顺时针 |
+| `RenderRotation.Roll` | 正立 | 顺时针 |
+
+因此，用 `Ring` 绘制的进度环以 `StartAngle = 90` 从十二点钟方向开始，并顺时针运行到 `EndAngle = 90 - 360 * progress`。
 
 程序化形状——环、多边形、多边形描边——没有"想要多大"的答案：它们的顶点是从给定的矩形推出来的。它们在测量里弃权，跟着写出来的矩形走。
 
@@ -170,7 +175,7 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | 属性 | 类型 | 说明 |
 | --- | --- | --- |
 | `RenderTranslation` | `FVector` | 本地空间。X 是深度，**朝远离观察者**的方向，所以负 X 把控件拉向屏幕 |
-| `RenderRotation` | `FRotator` | 绕 `RenderTransformPivot` 旋转，单位度；`SetRenderTransformAngle` 只写其中贴着画布平面的那个分量 |
+| `RenderRotation` | `FRotator` | 绕 `RenderTransformPivot` 旋转，单位为度；`SetRenderTransformAngle` 只写入面内通道。正的 `Roll` 会让控件在屏幕上顺时针旋转，与 UMG 的角度一致 |
 | `RenderScale` | `FVector` | 绕 `RenderTransformPivot` 缩放 |
 | `RenderTransformPivot` | `FVector2D` | 控件自己矩形里的归一化点，`(0, 0)` 左下；和属于布局的 `AnchorData.Pivot` 互不相干 |
 | `RenderShear` | `FVector2D` | 斜切，单位度，作用于控件和整棵子树 |
@@ -203,22 +208,13 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | `RenderOpacity` | 透明度，沿树向下相乘；`GetFinalRenderOpacity` 是乘完的值 |
 | `SetContentTint` | 给**后代**的视觉染色（不含自己），像 UMG 的 content colour |
 
-`Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是
-`Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius`、
-`ClippingMargin` 和遮罩 `ClipMask`；`bClipToBelow` 让控件只在下方图层画出的地方显示（见
-[裁剪遮罩与剪贴到下方图层](clip-masks.md)）。视觉元素的 `BlendMode` 和容器上的 `UDreamLayerGroup` 决定画出的内容如何合成
-（见[混合模式与图层组](blend-modes-and-groups.md)）；调整图层、渐进模糊、玻璃与风格化效果作用于背后的画面
-（见[作用于背后画面的效果](backdrop-effects.md)）。`UDreamLayerStyle` 给控件加图像编辑器式的图层样式，`UDreamShapeBlendGroup` 把容器子项里的 RectBlock 融成一个形状（见[图层样式、形状融合与光](layer-styles.md)）。网格修改器可以弯曲它画出的内容（[网格变形、果冻与路径文字](warp-and-text-on-path.md)），
-`UDreamMaskTransition` 透过移动的遮罩显示控件（[遮罩转场](mask-transitions.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
+`Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是 `Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius`、 `ClippingMargin` 和遮罩 `ClipMask`；`bClipToBelow` 让控件只在下方图层画出的地方显示（见[裁剪遮罩与剪贴到下方图层](clip-masks.md)）。视觉元素的 `BlendMode` 和容器上的 `UDreamLayerGroup` 决定画出的内容如何合成（见[混合模式与图层组](blend-modes-and-groups.md)）；调整图层、渐进模糊、玻璃与风格化效果作用于背后的画面（见[作用于背后画面的效果](backdrop-effects.md)）。`UDreamLayerStyle` 给控件加图像编辑器式的图层样式，`UDreamShapeBlendGroup` 把容器子项里的 RectBlock 融成一个形状（见[图层样式、形状融合与光](layer-styles.md)）。网格修改器可以弯曲它画出的内容（[网格变形、果冻与路径文字](warp-and-text-on-path.md)）， `UDreamMaskTransition` 透过移动的遮罩显示控件（[遮罩转场](mask-transitions.md)）。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
 
 <a id="making-widgets-in-code"></a>
 
 ## 在代码里建控件
 
-`UDreamUIBPLibrary::ConstructWidget(WorldContext, DisplayName, VisualClass)` 是 UMG 的
-`WidgetTree::ConstructWidget<T>()` 的对应物：控件存在但不在屏幕上。它不画任何东西，行为也不会
-运行，直到你把它交给 `AddChild` 或 `AddToViewport`；在此之前 DreamUI 的管理器持有它，所以你在配置它时它不会被回收。纯容器就把 `VisualClass` 留空，然后给它一个布局容器，就成
-面板了。
+`UDreamUIBPLibrary::ConstructWidget(WorldContext, DisplayName, VisualClass)` 是 UMG 的 `WidgetTree::ConstructWidget<T>()` 的对应物：控件存在但不在屏幕上。它不画任何东西，行为也不会运行，直到你把它交给 `AddChild` 或 `AddToViewport`；在此之前 DreamUI 的管理器持有它，所以你在配置它时它不会被回收。纯容器就把 `VisualClass` 留空，然后给它一个布局容器，就成面板了。
 
 | 调用 | 结果 |
 | --- | --- |
@@ -227,7 +223,4 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | `DestroyChild` / `DestroyWidget` | 拆掉整棵子树；之后 `IsValid` 返回假 |
 | `FindChildByDisplayName` | 按显示名找孩子，支持路径，如 `"Content/ListItem/NameLabel"` |
 
-一个 Widget Blueprint 的实例在蓝图里用 **Create Dream Widget** 节点建，C++ 里用
-`UDreamUIBPLibrary::CreateDreamWidgetOfClass` 或 `AddWidgetOfClassToViewport` 建；见
-[Widget Blueprint](widget-blueprints.md)。每个属性和函数都列在
-[`UDreamWidget` 参考](../Reference/DreamWidget.md)里，末尾有与 UMG `UWidget` 的逐项对照。
+一个 Widget Blueprint 的实例在蓝图里用 **Create Dream Widget** 节点建，C++ 里用 `UDreamUIBPLibrary::CreateDreamWidgetOfClass` 或 `AddWidgetOfClassToViewport` 建；见 [Widget Blueprint](widget-blueprints.md)。每个属性和函数都列在 [`UDreamWidget` 参考](../Reference/DreamWidget.md)里，末尾有与 UMG `UWidget` 的逐项对照。

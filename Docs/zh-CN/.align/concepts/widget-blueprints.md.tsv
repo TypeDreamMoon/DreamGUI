@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/concepts/widget-blueprints.md	rev=aa0301eb152c	model=deepseek-flash	page=b765acfc0a4d
+#dreamdocs-align 1	source=Docs/concepts/widget-blueprints.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=6d2d4c272b3e
 meta:title	f16661ddabb9	71a47c8e	m
 meta:description	9401becb3482	aaf2de47	m
 p	da2987e33eb3	400bd4d5	m
@@ -18,7 +18,30 @@ row2	30043a79c628	3ee99df0	m
 row2	38a328842746	c675846c	m
 row2	f10e6ad479c3	1f298137	m
 row2	940475226604	9ebb5d07	m
+p	470d033d09d2	e99d77fc	m
 p	a71c1d21b62d	aba33067	m
+h3	c6ee1e7a7295	1a45237d	m
+p	c5e99ea75b19	24507f8e	m
+row2	ba79920e5938	2ca46bbe	m
+row2	030478925f22	03047892	s
+row2	6b96ac9dc916	ac6f44c7	m
+row2	ab822630b7d7	ab822630	s
+row2	6dcc9d8da22d	6dcc9d8d	s
+row2	3cd0c5299d35	18f5b3cd	m
+row2	1799868165aa	8e057cd1	m
+row2	e9c74f91c9b0	a68baa60	s
+row2	6a8a1ef0742c	77ba1811	m
+row2	95dd6dbbafb2	6c2fa0fc	m
+row2	5826b0279c77	5826b027	s
+row2	20c5ab59294f	20c5ab59	s
+row2	f9992392041a	f8eb4b6a	m
+row2	edc5d57199e2	023b2fdf	m
+row2	759b63b39682	3e7acbf0	m
+row2	995ecceb5e90	89c466e2	m
+row2	5a3bb7b086fc	ebadbeb0	m
+row2	9994c8e2b565	ca57e7fa	m
+row2	66a6623b3136	2ed31868	s
+p	ecd6b977faac	13102f7b	m
 h2	292954306614	b953f53f	m
 li	10f1b1562c9d	1f60d04d	m
 li	66e3f2d6b250	e5055337	m

@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/concepts/backdrop-effects.md	rev=8f976bed5d73	model=deepseek-v4.1-flash	page=c92bb1d92b5e
+#dreamdocs-align 1	source=Docs/concepts/backdrop-effects.md	rev=67cb48788215	model=deepseek-v4.1-flash	page=75324846d69b
 meta:title	c621ab647766	3c2b05bc	h
 meta:description	21e44550df1b	2d87f4ac	h
 p	4b7644c28f54	2937405e	h
@@ -63,6 +63,15 @@ row2	9415767ae9ad	f14fa292	s
 row2	ca9d701a25e9	ca9d701a	s
 p	f8bfb0b26b2b	22ea35fa	h
 p	0905cd61b4f1	ca26a034	h
+h2	56c7117cedef	51f7d7cf	m
+p	f323333d71c7	ffae555a	m
+p	040219f43a66	604559a6	m
+p	092d9383c8e8	80ee8d7c	m
+h2	7e906e4b9cf7	550d38b1	m
+p	68abdcb4d4f2	3f269336	m
+row7	3ca4da94a645	e6b2f790	m
+row7	509b5f154293	95000022	m
+p	98a6d426cb29	b65a2052	m
 h2	3327976226f1	a27c1ebc	h
 li	797737f9e216	fad8f763	h
 li	3a829ea926df	ef201b48	h

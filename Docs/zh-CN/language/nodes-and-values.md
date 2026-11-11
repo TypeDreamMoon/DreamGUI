@@ -55,7 +55,7 @@ HorizontalBox {
 
 节点类型的含义按以下顺序判定：
 
-1. **内置标签**：`Widget`（一个没有视觉的矩形，最常用的容器），或者某个视觉的标签——`Text`、`Image`、`RectBlock`、`Sprite`、`Texture`、`Ring`、`Polygon`、`PolygonLine`、`Line2DRaw`、`Line2DChildren`、`Empty`、`StaticMesh`、`BackgroundBlur`、`BackgroundPixelate`、`PixelSort`、`PostProcessRenderElement`、`PostProcessRenderElementText`、`CanvasRenderTargetPreviewer`、`UMGWidget`。插件可以用 `DECLARE_DREAM_GUI_VISUAL` 添加一个视觉。
+1. **内置标签**：`Widget`（一个没有视觉的矩形，最常用的容器），或者某个视觉的标签——`Text`、`Image`、`RectBlock`、`Sprite`、`Texture`、`Ring`、`Polygon`、`PolygonLine`、`Shape`、`Line2DRaw`、`Line2DChildren`、`Empty`、`StaticMesh`、`BackgroundBlur`、`BackgroundPixelate`、`PixelSort`、`PostProcessRenderElement`、`PostProcessRenderElementText`、`CanvasRenderTargetPreviewer`、`UMGWidget`。插件可以用 `DECLARE_DREAM_GUI_VISUAL` 添加一个视觉。
 2. **布局容器**：`VerticalBox`、`HorizontalBox`、`StackBox`、`Overlay`、`CanvasPanel`、`GridPanel`、`UniformGridPanel`、`WrapBox`、`SizeBox`、`ScaleBox`、`SafeZone`、`ScrollBox`、`WidgetSwitcher`、`Border`、`MenuAnchor`。这样的节点是一个挂着该容器的普通控件，它自己的行既能设容器的属性，也能设控件的属性：
 
    ```
@@ -91,6 +91,8 @@ AnchorData.SizeDelta = (400, 240)
 
 同一个块里把一个属性写两次，后写的行赢。节点自己的行赢过它样式里的行。
 
+属性在拥有它的对象上查找，而一个普通的 `Widget` 节点只有控件：`bRaycastTarget` 属于某个视觉（`Image`、`RectBlock`、`Empty`），因此在 `Widget` 节点上它是错误（DUI5002 指明了拥有它的节点类型）。控件本身拥有的是 `Raycastable`——`Inherit`、`Enabled` 或 `Disabled`——而 `Raycastable = Disabled` 是用来把控件以及继承自它的东西排除在命中测试之外的方法。
+
 <a id="values"></a>
 
 ### 值
@@ -109,19 +111,18 @@ AnchorData.SizeDelta = (400, 240)
 | Map | `{ Hover: #FFCC00, Pressed: #AA8800 }`、`{}` | Map：`键: 值` 条目，两边各是对应类型的值。只有一个词的名字键可以不加引号。 |
 | 等高线 | `Gaussian`、`"custom(0 0, 0.5 1 corner, 1 0)"` | 图层样式的等高线：命名形状写它的名字；自定义曲线写它的点——每个点是输入和输出，曲线在某点处折角就在该点后写 `corner`。 |
 
+颜色字面量按 sRGB 编码，与 CSS 中一样：`#8C8C94` 是字节 140、140、148。在 `FColor` 属性上（视觉的 `Color`、画刷的 `TintColor`），它按书写原样存储。在 `FLinearColor` 上它会先被解码为线性值，因此同一个字面量的前两个通道约为 0.26，而不是 0.55。在涉及颜色相乘的地方，运算方式并不处处相同：控件的内容着色和颜色乘数在线性空间中作用于视觉的 `Color`（解码、相乘、再编码），而图像的 `Brush.TintColor` 则是在编码后的字节上逐通道乘入其颜色。线性空间中的中灰着色会比它看起来的样子更暗：`#808080` 在线性空间中是 0.22，而使光量减半的着色是 `#BCBCBC`。
+
 标志位枚举没有 `|`；组合写成各个标志相加得到的数字。
 
 列表写在不是数组或 Set 的属性上、Map 写在不是 Map 的属性上，或者节点的 Set/Map，报 DUI4009；读不通的列表或 Map（括号没闭合、Map 条目缺 `:`）报 DUI2023。
 
-字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为
-`<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于
-`class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在所属 `DUI/` 目录下的路径
-（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。
+字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于 `class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在所属 `DUI/` 目录下的路径（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。
 
 另外三个注解写给译者，跟在字符串后面，顺序随意：
 
 ```
-Text = "应用 {Count} 项更改" @note("底部按钮，点了立刻生效") @max(16)
+Text = "应用 {Count} 项更改" @note("Footer button; applies at once") @max(16)
 Text = "v1.0.3" @noloc
 ```
 

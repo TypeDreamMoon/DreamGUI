@@ -22,6 +22,20 @@ description: 创作一个界面的完整循环——文本与设计器互相写�
 - 同时有超过 8 个文件发生变化（切换分支、批量重写）时**不会**在未经询问的情况下编译；通知会提供 **Rebuild them now**。这些文件会被保留，而不是丢弃——丢弃会让那些类变成过期的却毫无提示。
 - 源文件被删除或重命名时，通知会列出如今已无从构建的类。
 - *Tools ▸ Rebuild DUI* 会重新编译项目中所有以文本为后端的控件蓝图，并加载尚未加载的那些，且会先询问。
+- 在没有编辑器的情况下——构建脚本、CI——`DreamUICompileWidgets` commandlet 也会做同样的事。如果提供清单，它还会创建缺失的内容：每个条目都会指明蓝图、其父类及其 `.dui`，组件在前。
+
+  ```text
+  UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Tools/widgets.json [-Only=WBP_A,WBP_B]
+  UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]
+  ```
+
+  ```json
+  { "widgets": [
+      { "asset": "/Game/UI/WBP_Row",    "parent": "/Script/MyGame.MyRow", "source": "UI/Row.dui" },
+      { "asset": "/Game/UI/WBP_Screen", "parent": "/Script/MyGame.MyScreen", "source": "UI/Screen.dui" } ] }
+  ```
+
+  缺失的蓝图会使用该父类创建；如果现有蓝图的父类不同，则会重新指定其父类；每个蓝图都会指向其文件，然后编译并保存。每条编译器消息都会记录到日志中，只要有操作失败，退出码即为非零。
 
 诊断信息读取 `File.dui(line,col): error DUI3001: …`，其首位数字表明是哪个阶段拒绝了它：1 词法分析器、2 解析器、3 语义、4 值、5 构建树、6 编译进蓝图、7 写回。每一条都在 [Diagnostics](../diagnostics/index.md) 中附有原因和修复方法。
 
