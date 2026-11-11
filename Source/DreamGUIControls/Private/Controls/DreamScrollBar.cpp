@@ -537,6 +537,7 @@ void UDreamScrollBar::HandleValueChanged(float InValue)
 		}
 		View->SetScrollProgress(Progress);
 	}
+	OnValueChangedNative.Broadcast(Value);
 	OnValueChanged.Broadcast(Value);
 	OnValueChangedBP.Broadcast(Value);
 }

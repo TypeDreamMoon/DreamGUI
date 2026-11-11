@@ -7,7 +7,9 @@
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Text/DreamUIBridgeService.h"
+#include "Text/DreamUIDiagnosticsMailbox.h"
 #include "Text/DreamUIDocument.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUITextBuilder.h"
@@ -33,6 +35,7 @@
 #include "Misc/Paths.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Modules/ModuleManager.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/ObjectSaveContext.h"
 #include "UObject/SoftObjectPath.h"
 #include "UObject/UObjectGlobals.h"
@@ -108,9 +111,57 @@ namespace DreamUISourceWatcherLocal
 		 * runs that rather than guessing a position from the text: the compiler knows which file the error is in.
 		 */
 		TSharedPtr<IMessageToken> FirstErrorToken;
+		/**
+		 * The window of the designer open on the Blueprint that gave the first error, if there is one. A verdict about
+		 * a class belongs in the window the author is looking at it in, not in a corner of whichever window is the root.
+		 */
+		TWeakPtr<SWindow> FirstErrorWindow;
+		/** The window of the first designer open on a class that rebuilt cleanly, for the toast that says so. */
+		TWeakPtr<SWindow> AppliedWindow;
 
 		bool HasFirstError() const { return !FirstErrorFile.IsEmpty(); }
 	};
+
+	/** The designer open on InBlueprint, or null when the Blueprint is not being edited in one. */
+	FDreamWidgetBlueprintEditor* FindOpenDesigner(UDreamWidgetBlueprint* InBlueprint)
+	{
+		if (GEditor == nullptr || !IsValid(InBlueprint))
+		{
+			return nullptr;
+		}
+		UAssetEditorSubsystem* Editors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+		IAssetEditorInstance* Instance = Editors != nullptr
+			? Editors->FindEditorForAsset(InBlueprint, /*bFocusIfOpen*/false) : nullptr;
+		// The toolkit name is the type check: FindEditorForAsset hands back an interface, and casting some other
+		// asset editor to ours would be a crash wearing a feature's name.
+		if (Instance == nullptr || Instance->GetEditorName() != TEXT("DreamWidgetBlueprintEditor"))
+		{
+			return nullptr;
+		}
+		return static_cast<FDreamWidgetBlueprintEditor*>(Instance);
+	}
+
+	/**
+	 * Hand a compile's messages to the designer open on its Blueprint, which did not run the compile and would
+	 * otherwise show nothing but a red toolbar button.
+	 *
+	 * Called for every rebuild, clean ones included, so the panel is emptied of errors that have been fixed. A clean
+	 * rebuild also notes the designer's window as the place for the batch's toast; a failed one is noted by
+	 * RecordFirstError, which knows whether this is the error the toast is about.
+	 */
+	void ShowResultsInDesigner(UDreamWidgetBlueprint* InBlueprint, const FCompilerResultsLog& InResults, FBatchResult& OutBatch)
+	{
+		FDreamWidgetBlueprintEditor* Designer = FindOpenDesigner(InBlueprint);
+		if (Designer == nullptr)
+		{
+			return;
+		}
+		Designer->ShowExternalCompileResults(InResults);
+		if (InResults.NumErrors == 0 && !OutBatch.AppliedWindow.IsValid())
+		{
+			OutBatch.AppliedWindow = Designer->GetEditorWindow();
+		}
+	}
 
 	/**
 	 * The file a Blueprint is built from, as the one spelling every comparison here uses; empty when it names none.
@@ -649,8 +700,11 @@ namespace DreamUISourceWatcherLocal
 	 *
 	 * Stacked, a run of saves would draw a column of them; folded, the author sees one line that says the
 	 * newest file was applied and goes away on its own. Not for explicit commands, which have their own summary.
+	 *
+	 * InWindow is the window of a designer open on one of the rebuilt classes, when there is one; the toast goes
+	 * there, and is only folded into a toast that is already in that same window.
 	 */
-	void ShowAppliedToast(const TArray<FString>& InFiles)
+	void ShowAppliedToast(const TArray<FString>& InFiles, const TSharedPtr<SWindow>& InWindow)
 	{
 		if (InFiles.IsEmpty() || !CanShowNotifications())
 		{
@@ -662,16 +716,19 @@ namespace DreamUISourceWatcherLocal
 				FText::FromString(InFiles[0]), FText::AsNumber(InFiles.Num() - 1));
 
 		static TWeakPtr<SNotificationItem> GToast;
+		static TWeakPtr<SWindow> GToastWindow;
 		static double GToastCreatedAt = 0.0;
 		const double Now = FPlatformTime::Seconds();
 		if (const TSharedPtr<SNotificationItem> Existing = GToast.Pin();
-			Existing.IsValid() && Now - GToastCreatedAt < AppliedToastFadeInSeconds + AppliedToastSeconds)
+			Existing.IsValid() && Now - GToastCreatedAt < AppliedToastFadeInSeconds + AppliedToastSeconds
+			&& GToastWindow.Pin() == InWindow)
 		{
 			Existing->SetText(Text);
 			return;
 		}
 
 		FNotificationInfo Info(Text);
+		Info.ForWindow = InWindow;
 		Info.FadeInDuration = AppliedToastFadeInSeconds;
 		Info.ExpireDuration = AppliedToastSeconds;
 		Info.FadeOutDuration = AppliedToastFadeOutSeconds;
@@ -683,6 +740,7 @@ namespace DreamUISourceWatcherLocal
 			Item->SetCompletionState(SNotificationItem::CS_Success);
 		}
 		GToast = Item;
+		GToastWindow = InWindow;
 		GToastCreatedAt = Now;
 	}
 
@@ -691,7 +749,7 @@ namespace DreamUISourceWatcherLocal
 	 * line, that -- unless the batch already has one. The first error, not the first message: a warning that happens to
 	 * come first says nothing about why the compile failed.
 	 */
-	void RecordFirstError(FBatchResult& OutBatch, const FString& InFile, const UDreamWidgetBlueprint* InBlueprint,
+	void RecordFirstError(FBatchResult& OutBatch, const FString& InFile, UDreamWidgetBlueprint* InBlueprint,
 		const FCompilerResultsLog& InResults)
 	{
 		if (OutBatch.HasFirstError())
@@ -699,6 +757,10 @@ namespace DreamUISourceWatcherLocal
 			return;
 		}
 		OutBatch.FirstErrorFile = InFile;
+		if (FDreamWidgetBlueprintEditor* Designer = FindOpenDesigner(InBlueprint))
+		{
+			OutBatch.FirstErrorWindow = Designer->GetEditorWindow();
+		}
 		// The compiler's own first error, which already carries the DUInnnn code and the line and column.
 		// Rewording it here would give the author two different sentences for one problem depending on
 		// where they read it.
@@ -730,13 +792,16 @@ namespace DreamUISourceWatcherLocal
 		{
 			// A save that worked stays out of the way: the designer redrawing is the feedback, and this line only
 			// says which file it was.
-			ShowAppliedToast(InBatch.AppliedFiles);
+			ShowAppliedToast(InBatch.AppliedFiles, InBatch.AppliedWindow.Pin());
 			return;
 		}
 
 		FNotificationInfo Info(FText::GetEmpty());
 		Info.ExpireDuration = InBatch.Failed > 0 ? 10.0f : 5.0f;
 		Info.bFireAndForget = true;
+		// Inside the window of the designer the verdict is about, when one is open; the root window's corner is where
+		// nobody looking at the designer, or recording it, will see it. Without one the default placement stands.
+		Info.ForWindow = (InBatch.Failed > 0 ? InBatch.FirstErrorWindow : InBatch.AppliedWindow).Pin();
 
 		if (InBatch.Failed > 0)
 		{
@@ -900,6 +965,8 @@ namespace DreamUISourceWatcherLocal
 			{
 				++OutBatch.Compiled;
 			}
+			// The designer, if one is open on this class, gets the messages the Compile button would have given it.
+			ShowResultsInDesigner(Blueprint, Results, OutBatch);
 		}
 
 		// Remembered only when every class built, and only for text that could be read: a failure must be
@@ -1127,6 +1194,10 @@ namespace DreamUISourceWatcherLocal
 				// debounce window. The change event for the new contents is in PendingFiles.
 				continue;
 			}
+			// A file that does not exist has no problems to show in another editor either; its last verdict would
+			// otherwise stay in the mailbox for the rest of the session. A class that still names the path writes a
+			// fresh entry (DUI6001) with its next compile.
+			FDreamUIDiagnosticsMailbox::Remove(File);
 			TArray<UDreamWidgetBlueprint*> Blueprints;
 			FindBlueprints(File, Blueprints);
 			if (Blueprints.Num() == 0)
@@ -1808,6 +1879,7 @@ int32 FDreamUISourceWatcher::RebuildAll()
 		{
 			++Batch.Compiled;
 		}
+		ShowResultsInDesigner(Blueprint, Results, Batch);
 	}
 
 	// The one summary of the whole sweep. A caller must not add a second.

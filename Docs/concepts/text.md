@@ -94,6 +94,11 @@ implemented for it. The project's default font is `UDreamGUISettings::DefaultFon
   (the languages it is for), a `Scale` and `bPreferOverPrimary`. The old `FallbackFontArray` turns into `Fallbacks` entries
   with the default settings as it loads. Chinese culture names get their script put back (`zh-Hans`, `zh-Hant`), so
   fallbacks written against those match in a packaged game too.
+- **A character no face has.** When a character is in neither a font's own face nor any of its fallbacks, DreamGUI logs a
+  warning once for that font, naming the code point (`has no glyph for U+4E2D`), and the text shows a box or nothing in its
+  place. Give the text a font that covers the character, or add a fallback to the font. The default font reaches Chinese,
+  Japanese and Korean through `/DreamGUI/DefaultFont_DistanceField_CJK`; a font of your own that covers only Latin does not,
+  which is the usual cause of the warning.
 - **Colour emoji**: CBDT/CBLC, sbix and COLRv0; `bPreferColorEmoji` is on by default. The shadow, outline and long-shadow
   modifiers draw a colour emoji's copies as silhouettes.
 

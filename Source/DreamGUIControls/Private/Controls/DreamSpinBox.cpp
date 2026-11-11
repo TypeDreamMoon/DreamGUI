@@ -402,6 +402,7 @@ void UDreamSpinBox::SetEnableSlider(bool bInEnableSlider)
 		// A scrub in flight when the feature is switched off has to end, or the control stays in a
 		// gesture nothing will ever finish -- and the end of a scrub is a commit, so it is reported.
 		bSliderMoving = false;
+		OnEndSliderMovementNative.Broadcast(Value);
 		OnEndSliderMovement.Broadcast(Value);
 		CommitValue(Value);
 	}
@@ -623,6 +624,7 @@ bool UDreamSpinBox::NativeOnBeginDrag(UDreamPointerEventData* EventData)
 	// the scrub counts from this point and the number does not leap by the drag threshold as it starts.
 	ScrubStartTravel = static_cast<float>(EventData->PressWorldToLocalTransform.TransformVector(
 		EventData->GetWorldPointInPlane() - EventData->PressWorldPoint).Y);
+	OnBeginSliderMovementNative.Broadcast(Value);
 	OnBeginSliderMovement.Broadcast(Value);
 	return bBubble;
 }
@@ -661,6 +663,7 @@ bool UDreamSpinBox::NativeOnEndDrag(UDreamPointerEventData* EventData)
 		return bBubble;
 	}
 	bSliderMoving = false;
+	OnEndSliderMovementNative.Broadcast(Value);
 	OnEndSliderMovement.Broadcast(Value);
 	// Letting go is the COMMIT. Everything the drag passed through was OnValueChanged; this is the
 	// one moment a consumer writing to a setting or a server should act on.
@@ -748,6 +751,7 @@ void UDreamSpinBox::ApplyValueChange(float InValue)
 void UDreamSpinBox::CommitValue(float InValue)
 {
 	ApplyValueChange(InValue);
+	OnValueCommittedNative.Broadcast(Value);
 	OnValueCommitted.Broadcast(Value);
 	if (InputBehaviour == nullptr)
 	{

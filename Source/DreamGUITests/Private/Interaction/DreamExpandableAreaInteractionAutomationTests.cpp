@@ -254,4 +254,88 @@ bool FDreamPressExpandableAreaTurnRoundTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressExpandableAreaInAColumnTest,
+	"DreamGUI.ExpandableArea.InAColumnTheBodyShrinksWithTheCloseAndGrowsWithTheOpen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressExpandableAreaInAColumnTest, "DreamGUI.ExpandableArea.InAColumnTheBodyShrinksWithTheCloseAndGrowsWithTheOpen", "[Animated]")
+
+/*
+ * An accordion of areas in a vertical box, one closed from code while another opens: the header turned to "+" at once,
+ * but the body went on showing at its whole height until the close had run, and then vanished; an open showed the whole
+ * body at once. The area's own height travelled, and the panel it is in laid it out at the size it had last measured.
+ *
+ * Checked here: an area in a vertical box with a body sixty tall, closed over half a second. A quarter of the way in, the
+ * box has the area shorter than it was and taller than its header, the body's column is no taller than what the area
+ * shows of it, and the next area in the box has moved up with it; then the same on the way open.
+ */
+bool FDreamPressExpandableAreaInAColumnTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressExpandableAreaTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamWidget* Column = Rig.MakeWidget(TEXT("Column"), nullptr, FVector2D(300.0, 600.0));
+	if (!TestNotNull(TEXT("A column can be made"), Column))
+	{
+		return false;
+	}
+	Column->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
+	UDreamExpandableArea* Area = Rig.MakeControl<UDreamExpandableArea>(TEXT("First"), Column, FVector2D(300.0, 200.0));
+	UDreamExpandableArea* Next = Rig.MakeControl<UDreamExpandableArea>(TEXT("Second"), Column, FVector2D(300.0, 200.0));
+	if (!TestNotNull(TEXT("Two areas can be put in it"), Area) || !TestNotNull(TEXT("the second too"), Next)
+		|| !TestNotNull(TEXT("with a content column"), Area->ContentNode.Get()))
+	{
+		return false;
+	}
+	UDreamWidget* Body = Rig.MakeWidget(TEXT("Body"), Area->ContentNode.Get(), FVector2D(200.0, 60.0));
+	Area->SetExpansionDuration(0.0f);
+	Area->SetIsExpanded(false);
+	Rig.PumpFrames(2);
+	const float HeaderHeight = Area->GetHeight();
+	const float NextTopCollapsed = static_cast<float>(Next->GetRelativeLocation().Z);
+	Area->SetIsExpanded(true);
+	Rig.PumpFrames(2);
+	const float ExpandedHeight = Area->GetHeight();
+	const float NextTopExpanded = static_cast<float>(Next->GetRelativeLocation().Z);
+	if (!TestNotNull(TEXT("The body is there"), Body)
+		|| !TestTrue(FString::Printf(TEXT("Expanded, the area is its header and its body (%.1f over %.1f)"), ExpandedHeight, HeaderHeight),
+			ExpandedHeight > HeaderHeight + 50.0f))
+	{
+		return false;
+	}
+
+	auto CheckPartway = [&](const TCHAR* InWay)
+	{
+		const float Height = Area->GetHeight();
+		TestTrue(FString::Printf(TEXT("%s, partway the box lays the area out between its header and its whole (%.1f in %.1f..%.1f)"),
+			InWay, Height, HeaderHeight, ExpandedHeight), Height > HeaderHeight + 1.0f && Height < ExpandedHeight - 1.0f);
+		const float Shown = Height - HeaderHeight;
+		TestTrue(FString::Printf(TEXT("%s, the body's column is no taller than what the area shows of it (%.1f against %.1f)"),
+			InWay, Area->ContentNode->GetHeight(), Shown), Area->ContentNode->GetHeight() <= Shown + 1.0f);
+		const float NextTop = static_cast<float>(Next->GetRelativeLocation().Z);
+		TestTrue(FString::Printf(TEXT("%s, the area after it is partway too (%.1f between %.1f and %.1f)"),
+			InWay, NextTop, NextTopExpanded, NextTopCollapsed),
+			FMath::Abs(NextTop - NextTopExpanded) > 1.0f && FMath::Abs(NextTop - NextTopCollapsed) > 1.0f);
+	};
+
+	Area->SetExpansionDuration(0.5f);
+	Area->SetIsExpanded(false);
+	// A quarter of a second of frames: the rig's frames are a sixtieth each.
+	Rig.PumpFrames(15);
+	CheckPartway(TEXT("Closing"));
+	Rig.PumpFrames(40);
+	TestNearlyEqual(TEXT("Closed, it is its header"), Area->GetHeight(), HeaderHeight, 1.0f);
+
+	Area->SetIsExpanded(true);
+	Rig.PumpFrames(15);
+	CheckPartway(TEXT("Opening"));
+	Rig.PumpFrames(40);
+	TestNearlyEqual(TEXT("Open, it is the whole of it"), Area->GetHeight(), ExpandedHeight, 1.0f);
+	return true;
+}
+
 #endif

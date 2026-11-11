@@ -532,6 +532,7 @@ UDreamTweener* UDream2DLineRendererBase::LineWidthTo(float endValue, float durat
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDream2DLineRendererBase::GetLineWidth), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDream2DLineRendererBase::SetLineWidth), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, 1ull << 0);
 		Tweener->SetEase(easeType)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}

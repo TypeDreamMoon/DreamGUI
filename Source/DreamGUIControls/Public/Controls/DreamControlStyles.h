@@ -1583,6 +1583,12 @@ struct DREAMGUICONTROLS_API FDreamExpandableAreaStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_FontSize"))
 	float FontSize = 15.0f;
 
+	/** The header's typeface, as a font data asset. Null leaves it on the project's default font (DreamGUI settings). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
 	bool bOverride_HeaderPadding = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_HeaderPadding"))
@@ -1958,14 +1964,17 @@ struct DREAMGUICONTROLS_API FDreamRingMenuStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (EditCondition = "bOverride_InnerRadius", ClampMin = "0.0"))
 	float InnerRadius = 80.0f;
 
-	/** Where the first item begins, in degrees clockwise from twelve o'clock. */
+	/**
+	 * Where the first item begins, in degrees clockwise from twelve o'clock. (UDreamRing, the Ring visual, measures its
+	 * angles the other way: from three o'clock, counter-clockwise.)
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (InlineEditConditionToggle))
 	bool bOverride_StartAngle = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (EditCondition = "bOverride_StartAngle"))
 	float StartAngle = 0.0f;
 
 	/**
-	 * How far round the items are spread from there. 360 is a full wheel; 180 is the half-ring a
+	 * How far round the items are spread from there, clockwise. 360 is a full wheel; 180 is the half-ring a
 	 * menu hanging off a screen edge wants, and it is why this is a knob at all.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (InlineEditConditionToggle))
@@ -2097,6 +2106,12 @@ struct DREAMGUICONTROLS_API FDreamRingMenuStyle
 	bool bOverride_HubFontSize = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (EditCondition = "bOverride_HubFontSize"))
 	float HubFontSize = 18.0f;
+
+	/** The typeface of the items' labels and the hub's caption, as a font data asset. Null leaves them on the project's default font. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
 
 	/** An item's icon, when it has one. A brush stating its own ImageSize wins over this. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (InlineEditConditionToggle))

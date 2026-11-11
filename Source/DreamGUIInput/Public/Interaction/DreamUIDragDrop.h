@@ -9,6 +9,7 @@
 #include "Interaction/DreamDragDropOperation.h" // FDreamUIDragDropOperationEvent
 #include "Subsystems/WorldSubsystem.h"
 #include "Core/DreamUIWorldService.h"
+#include "UObject/Interface.h"
 #include "DreamUIDragDrop.generated.h"
 
 class UDreamDragDropOperation;
@@ -18,6 +19,27 @@ class UDreamUIInputSubsystem;
 class UDreamBaseEventData;
 class UDreamWidget;
 class UDreamUserWidget;
+
+/**
+ * Implemented by a drag visual class -- an operation's DragVisualClass -- that wants to know what is being dragged: told
+ * the operation (its payload, tag, source) once it is made, before it is first laid out, so the ghost under the pointer can
+ * show the item on its first frame. Without it a drag visual had to look the operation up for the pointer, and wait a frame
+ * to.
+ */
+UINTERFACE(MinimalAPI, Blueprintable, Category = DreamGUI)
+class UDreamUIDragVisual : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class DREAMGUIINPUT_API IDreamUIDragVisual
+{
+	GENERATED_BODY()
+public:
+	/** The drag this visual stands for, as the drop targets will see it. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = DreamGUI)
+	void OnDragVisualCreated(UDreamDragDropOperation* Operation);
+};
 
 /**
  * Makes its widget a drag SOURCE with meaning: when the pointer pipeline starts a drag here, this

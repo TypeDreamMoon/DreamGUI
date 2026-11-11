@@ -347,11 +347,11 @@ bool FDreamUITimelineRefusalsTest::RunTest(const FString& Parameters)
 			HasCode(Built.Diagnostics, EDreamUIDiagnosticCode::TimelineTargetNotFound));
 	}
 	{
-		// RenderOpacity is real, writable from text, and NOT marked Interp -- so the animation editor
+		// TabIndex is real, writable from text, and NOT marked Interp -- so the animation editor
 		// does not offer it either, and a track on it would exist and never write.
 		const FBuiltTree Built = BuildFromText({
 			TEXT("timeline T {"),
-			TEXT("    RenderOpacity : 0.0 = 0, 0.5 = 1"),
+			TEXT("    TabIndex : 0.0 = 0, 0.5 = 1"),
 			TEXT("}"),
 			TEXT("Widget Root { }")
 		});

@@ -36,6 +36,12 @@ Text Note : Warning { Text = "Unsaved changes" }
   The style's components come first. A component of the same class the node also writes is one object, the style's
   values first and the node's after; the node's own `@slot` lines win over the style's.
 - A local style shadows an imported one of the same name. Two local styles of one name are DUI3005.
+- **One style at a time.** A node wears one style and a style inherits one other: `Text Note : Warning : Caption` and
+  `style Warning : Caption : Base` are not supported, and the second `:` is a syntax error (DUI2001). To get the lines of
+  two styles, chain them -- `style Warning : Caption` -- and wear the last.
+- **A control's `Style` is not one of these.** A `Native.Button` and its kin have a property called `Style`, a struct of
+  the control's own, written `Style.TickChecked = #FF3355` and chosen by `StyleSource`. Whether such a line takes effect,
+  and what the `bOverride_` bits beside the fields do, is on [Styles and style sheets](../controls/styles.md#in-dui-and-at-run-time).
 
 
 ## Resources

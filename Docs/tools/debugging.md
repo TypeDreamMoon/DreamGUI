@@ -1,6 +1,6 @@
 ---
 title: Debugging and measuring
-description: Seeing what DreamGUI drew and what it cost without a debugger — DreamUI.Capture, DreamUI.Stats and the Insights scopes, stat DreamGUI, DreamGUI.Memory, the two verification switches, the diagnostic commands, the console variables for A/B runs, and the log categories.
+description: Seeing what DreamGUI drew and what it cost without a debugger — DreamUI.Capture, DreamUI.Stats and the Insights scopes, stat DreamGUI, DreamGUI.Memory, recording off-screen, the two verification switches, the diagnostic commands, the console variables for A/B runs, and the log categories.
 ---
 
 Both questions — "what did it draw" and "what did it cost" — can be answered without a debugger.
@@ -105,6 +105,18 @@ r.DreamUI.VerifyKeptPointers=1
 The benchmarks (`Tools/Bench`) switch them off for the sessions they measure. Text's incremental layout has a switch of
 the same kind: `DreamGUI.Text.VerifyIncremental 1` lays out again from nothing every layout that built on a kept one,
 compares the two, logs the first difference and uses the fresh layout.
+
+## Recording the UI off-screen
+
+Screenshots and videos of a screen taken without a window -- `-RenderOffScreen`, with the engine's movie
+capture (a `dumpmovie`-style capture) -- have two traps:
+
+- **Pass `-ForceRes` with the resolution** (`-ResX=1920 -ResY=1080 -ForceRes`). Without it the window takes the desktop's
+  scale, the viewport comes out smaller than asked (888 by 500 on a scaled desktop), and the UI, laid out for that smaller
+  viewport, is drawn twice as large as it was designed.
+- **One recording at a time.** A capture writes into one shared output folder, so two recordings that run at once write
+  over each other's frames. Start the next after the first has finished, or take the first one's files out of the folder
+  before it starts.
 
 ## Diagnostic commands
 

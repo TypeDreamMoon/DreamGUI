@@ -249,6 +249,9 @@ public:
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
 	FDreamTextInputChangedEvent OnTextChanged;
+	/** OnTextChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(const FString&)>& GetOnTextChangedEvent() { return OnTextChangedNative; }
+	TMulticastDelegate<void(const FString&)> OnTextChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -264,6 +267,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
 	FDreamTextInputChangedEvent OnSubmitted;
+	/** OnSubmitted for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(const FString&)>& GetOnSubmittedEvent() { return OnSubmittedNative; }
+	TMulticastDelegate<void(const FString&)> OnSubmittedNative;
 
 	/**
 	 * UMG's spelling of the same moment (its editable text pairs OnTextChanged with
@@ -272,6 +278,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
 	FDreamTextInputChangedEvent OnTextCommitted;
+	/** OnTextCommitted for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(const FString&)>& GetOnTextCommittedEvent() { return OnTextCommittedNative; }
+	TMulticastDelegate<void(const FString&)> OnTextCommittedNative;
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	FString GetText() const;

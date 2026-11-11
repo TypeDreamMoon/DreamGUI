@@ -114,6 +114,8 @@ protected:
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
 private:
+	/** The text with the links is the thing pressed: a raycast target, whatever a text's default is. */
+	void MakeTextATarget()const;
 	/**
 	 * The pointer over the text, while there is one. Moving from one link to the next, or onto a link from the
 	 * text around it, raises no event -- the pointer never leaves the widget -- so its hit point is followed

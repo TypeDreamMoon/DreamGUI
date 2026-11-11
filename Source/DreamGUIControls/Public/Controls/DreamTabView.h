@@ -229,6 +229,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewTabEvent OnTabGenerated;
+	/** OnTabGenerated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*)>& GetOnTabGeneratedEvent() { return OnTabGeneratedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*)> OnTabGeneratedNative;
 
 	/**
 	 * Fired when the open tab changes, whoever changed it -- a click, SetActiveTabIndex, or a close or a
@@ -236,6 +239,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewChangedEvent OnTabChanged;
+	/** OnTabChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnTabChangedEvent() { return OnTabChangedNative; }
+	TMulticastDelegate<void(int32)> OnTabChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -251,10 +257,16 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewChangedEvent OnTabClosed;
+	/** OnTabClosed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnTabClosedEvent() { return OnTabClosedNative; }
+	TMulticastDelegate<void(int32)> OnTabClosedNative;
 
 	/** A tab was dragged to a new place. Both indices are into the strip as it was before the move. */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewReorderEvent OnTabReordered;
+	/** OnTabReordered for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, int32)>& GetOnTabReorderedEvent() { return OnTabReorderedNative; }
+	TMulticastDelegate<void(int32, int32)> OnTabReorderedNative;
 
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	int32 GetActiveTabIndex() const { return ActiveTabIndex; }

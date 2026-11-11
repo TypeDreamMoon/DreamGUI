@@ -213,10 +213,16 @@ public:
 	/** The dialog closed, however it closed. Fires exactly once, BEFORE the modal host tears it down. */
 	UPROPERTY(BlueprintAssignable, Category = "Dialog")
 	FDreamDialogResultEvent OnDialogClosed;
+	/** OnDialogClosed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(FName)>& GetOnDialogClosedEvent() { return OnDialogClosedNative; }
+	TMulticastDelegate<void(FName)> OnDialogClosedNative;
 
 	/** What the buttons speak, re-broadcast at the control: a consumer binds here, not to a button. */
 	UPROPERTY(BlueprintAssignable, Category = "Dialog")
 	FDreamDialogResultEvent OnButtonClicked;
+	/** OnButtonClicked for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(FName)>& GetOnButtonClickedEvent() { return OnButtonClickedNative; }
+	TMulticastDelegate<void(FName)> OnButtonClickedNative;
 
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	FText GetTitle() const { return Title; }

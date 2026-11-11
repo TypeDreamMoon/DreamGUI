@@ -1253,12 +1253,15 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		&Localization);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
-		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
-		// node names a type nothing resolves); this reports the OUTCOME (there is nothing to compile
-		// into the class), and they are different facts that a reader acts on differently. It also
-		// means this branch can never fail silently, whatever a future builder decides to return.
-		OutDiagnostics.AddError(EDreamUIDiagnosticCode::EmptyTree, Ast.Root.Location,
-			TEXT("the file parsed but produced no hierarchy, so there is nothing to compile into this class"));
+		// The outcome, said only when nothing has said why: a builder that reported a cause (this node names a type
+		// nothing resolves) has failed the compile already, and a second message pinned to the root line -- a line with
+		// nothing wrong on it -- was one more entry in the problems panel for every real one. Never silent, whatever a
+		// future builder decides to return.
+		if (!OutDiagnostics.HasErrors())
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::EmptyTree, Ast.Root.Location,
+				TEXT("the file parsed but produced no hierarchy, so there is nothing to compile into this class"));
+		}
 		return;
 	}
 
@@ -1522,6 +1525,10 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		}
 	}
 	TextSourceOutcome = ETextSourceOutcome::Built;
+	// The designer's canvas, when nobody has picked one, follows the size of the root the file just built. Here rather
+	// than when the designer opens so that a class made and compiled by a script already has it before any window does,
+	// and ahead of UpdateGeneratedClassWidgetTree, which copies the canvas size onto the class.
+	DreamBlueprint->AdoptRootSizeAsDefaultCanvas();
 	// The widgets the author did not name, whose variables the declarations further down hide: read off the AST, which
 	// is the only place that knows a node's id was made up rather than written, and only now that the tree built from
 	// it is the one the class keeps.
@@ -2290,8 +2297,10 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 	BuildWidgetTreeFromTextSource(TextDiagnostics);
 	ReportTextDiagnostics(TextDiagnostics);
 	// The same bag, delivered to editors that are not this one. A clean compile deposits an empty
-	// entry on purpose: over there, that is what clears the file's squiggles.
-	FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
+	// entry on purpose: over there, that is what clears the file's squiggles. The Blueprint goes along as the
+	// owner, so a compile that no longer names the file (the path was cleared, or points elsewhere) retires
+	// the entry this Blueprint left behind -- including from a Blueprint that names no file at all now.
+	FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics, Blueprint->GetPathName());
 
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	if (DreamBlueprint != nullptr)
@@ -3480,7 +3489,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		// by file and replaces it outright, so a second deposit of only these would erase the parse's
 		// and the builder's. A no-op for a Blueprint that names no .dui -- that bag has no source
 		// name, and Deposit takes that as "none of the mailbox's business".
-		FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
+		FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics, Blueprint->GetPathName());
 	}
 }
 

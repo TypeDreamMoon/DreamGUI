@@ -47,6 +47,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void TriggerBurst(float InDuration = 0.4f, float InIntensity = 1.5f);
 
+	/**
+	 * One number of one layer, by the name of its property on FDreamStylizeLayer (AberrationAmount, ScanlineStrength,
+	 * GlitchIntensity...): what a chromatic aberration that follows the camera's speed, or a scanline that rolls for a
+	 * transition, changes every frame -- without building the whole list again for SetLayers. A whole-number or on/off
+	 * property takes the value rounded, or non-zero as on. False, and nothing changed, for a layer that is not there or a
+	 * name that is not a number of a layer.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool SetLayerParameter(int32 LayerIndex, FName ParameterName, float Value);
+	/** One number of one layer, as SetLayerParameter names it; false when there is no such layer or number. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI")
+	bool GetLayerParameter(int32 LayerIndex, FName ParameterName, float& OutValue)const;
+
 	/** What the layers pack to, as the shader takes them. */
 	void PackLayers(FDreamUIStylizePacked& OutPacked)const;
 

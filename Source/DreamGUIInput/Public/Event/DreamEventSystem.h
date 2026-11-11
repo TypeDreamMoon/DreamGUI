@@ -248,6 +248,13 @@ private:
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float NavigateInputInterval = 0.2f;
 	/**
+	 * Time the two navigation intervals on the game clock -- paused by a pause, stretched by time dilation -- instead of
+	 * real time. Off by default: a pause menu has to go on stepping. On for a recording made frame by frame or a replay in
+	 * slow motion, where real time runs far ahead of the frames and a held direction would repeat many steps at once.
+	 */
+	UPROPERTY(EditAnywhere, Getter = "GetNavigationRepeatInGameTime", Setter = "SetNavigationRepeatInGameTime", Category = DreamGUI)
+	bool bNavigationRepeatInGameTime = false;
+	/**
 	 * How long after a click a second press on the same widget still counts as a double click -- and a double
 	 * click is delivered at that press, in place of its down, as Slate delivers one. The press also has to land
 	 * within the pointer's drag threshold of the first (see UDreamBaseRaycaster::IsWithinDoubleClickDistance).
@@ -306,6 +313,8 @@ public:
 	bool GetScrollNavigationTargetIntoView()const;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool GetAnimateNavigationScroll()const;
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool GetNavigationRepeatInGameTime()const;
 
 	/**
 	 * The clock every timed pointer gesture is measured on: the PressTime, ReleaseTime and ClickTime stamps on
@@ -352,6 +361,8 @@ public:
 	void SetScrollNavigationTargetIntoView(bool Value);
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetAnimateNavigationScroll(bool Value);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetNavigationRepeatInGameTime(bool Value);
 
 #pragma region InputDevice
 	/** What the player last used. Key prompts and cursor visibility both hang off this. */

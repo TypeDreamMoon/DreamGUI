@@ -59,6 +59,23 @@ namespace DreamOldAssetTestLocal
 		return Objects;
 	}
 
+	/**
+	 * A value the snapshot did not write down because it was the default then, which loads as it was saved while the
+	 * default has moved: it now describes as a non-default property, and is the old asset kept as it was, not data a move
+	 * changed. A text's raycast target is one (FDreamGUIObjectVersion::TextNotRaycastTargetByDefault).
+	 */
+	bool IsKeptOldDefault(const FDescribedObject& InObject, const FString& InProperty)
+	{
+		if (InProperty.TrimStart() != TEXT("bRaycastTarget=True"))
+		{
+			return false;
+		}
+		const UClass* Class = InObject.Class.Contains(TEXT("."))
+			? FindObject<UClass>(nullptr, *InObject.Class)
+			: FindFirstObject<UClass>(*InObject.Class, EFindFirstObjectOptions::None);
+		return Class != nullptr && Class->IsChildOf(UDreamText::StaticClass());
+	}
+
 	/** What differs between two descriptions, object by object, as sentences. */
 	TArray<FString> Differences(const FString& InExpected, const FString& InActual)
 	{
@@ -86,7 +103,7 @@ namespace DreamOldAssetTestLocal
 			}
 			for (const FString& Property : Found->Properties)
 			{
-				if (!Pair.Value.Properties.Contains(Property))
+				if (!Pair.Value.Properties.Contains(Property) && !IsKeptOldDefault(*Found, Property))
 				{
 					Out.Add(FString::Printf(TEXT("%s now has %s"), *Pair.Key, *Property.TrimStart()));
 				}
@@ -219,6 +236,11 @@ bool FDreamOldAssetsMatchSnapshotTest::RunTest(const FString& Parameters)
 			continue;
 		}
 		const TArray<FString> Found = Differences(Expected, Actual);
+		// Every difference was an old default the asset keeps (IsKeptOldDefault).
+		if (Found.Num() == 0)
+		{
+			continue;
+		}
 		AddError(FString::Printf(TEXT("%s does not hold what the snapshot records (%d differences)"), *PackageName, Found.Num()));
 		for (int32 Index = 0; Index < FMath::Min(Found.Num(), 40); ++Index)
 		{

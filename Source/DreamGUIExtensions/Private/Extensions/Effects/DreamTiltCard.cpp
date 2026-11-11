@@ -38,14 +38,22 @@ void UDreamTiltCard::OnRegister()
 	Tilt = TiltVelocity = FVector2D::ZeroVector;
 	Scale = 1.0f;
 	ScaleVelocity = 0.0f;
+	AppliedTilt = FRotator::ZeroRotator;
+	AppliedScale = 1.0f;
 }
 
 void UDreamTiltCard::OnUnregister()
 {
 	if (UDreamWidget* Widget = GetWidget())
 	{
-		Widget->SetRenderRotation(FRotator::ZeroRotator);
-		Widget->SetRenderScale(FVector::OneVector);
+		// Only its own share comes off: the rotation and scale the card has of its own stay.
+		const FRotator Current = Widget->GetRenderRotation();
+		Widget->SetRenderRotation(FRotator(Current.Pitch - AppliedTilt.Pitch, Current.Yaw - AppliedTilt.Yaw, Current.Roll));
+		const FVector CurrentScale = Widget->GetRenderScale();
+		const double Undo = AppliedScale > UE_KINDA_SMALL_NUMBER ? 1.0 / AppliedScale : 1.0;
+		Widget->SetRenderScale(FVector(CurrentScale.X, CurrentScale.Y * Undo, CurrentScale.Z * Undo));
+		AppliedTilt = FRotator::ZeroRotator;
+		AppliedScale = 1.0f;
 	}
 	Super::OnUnregister();
 }
@@ -118,8 +126,16 @@ void UDreamTiltCard::Step(float InDeltaTime)
 	}
 	// The card turns to face the pointer: the edge under it dips away from the viewer, the same way on either axis. A positive
 	// yaw brings the right edge towards -X, the viewer's side, and a positive pitch the top edge, so both are the tilt negated.
-	Widget->SetRenderRotation(FRotator(static_cast<float>(-Tilt.Y * MaxAngle), static_cast<float>(-Tilt.X * MaxAngle), 0.0f));
-	Widget->SetRenderScale(FVector(1.0, Scale, Scale));
+	// On top of the card's own rotation and scale: last step's share is taken off what the widget has now, which also keeps
+	// whatever else has turned or scaled it since, and this step's put on.
+	const FRotator NewTilt(static_cast<float>(-Tilt.Y * MaxAngle), static_cast<float>(-Tilt.X * MaxAngle), 0.0f);
+	const FRotator Current = Widget->GetRenderRotation();
+	Widget->SetRenderRotation(FRotator(Current.Pitch - AppliedTilt.Pitch + NewTilt.Pitch, Current.Yaw - AppliedTilt.Yaw + NewTilt.Yaw, Current.Roll));
+	AppliedTilt = NewTilt;
+	const FVector CurrentScale = Widget->GetRenderScale();
+	const double ScaleChange = (AppliedScale > UE_KINDA_SMALL_NUMBER ? 1.0 / AppliedScale : 1.0) * Scale;
+	Widget->SetRenderScale(FVector(CurrentScale.X, CurrentScale.Y * ScaleChange, CurrentScale.Z * ScaleChange));
+	AppliedScale = Scale;
 	if (!bWarnedNoPerspective && !Widget->HasInheritedPerspective() && !Tilt.IsNearlyZero(0.01))
 	{
 		bWarnedNoPerspective = true;

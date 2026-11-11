@@ -12,6 +12,7 @@
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamCanvas.h"
+#include "UObject/DreamGUIObjectVersion.h"
 #include "Core/Components/DreamLayoutFragment.h"
 #include "Core/Components/DreamWidget.h"
 #include "Utils/DreamUIUtils.h"
@@ -806,6 +807,23 @@ UDreamText::UDreamText(const FObjectInitializer& ObjectInitializer):Super(Object
 	// preview's -- which made what a new text looks like depend on what somebody had clicked earlier.
 	Font = UDreamUIFontData_BaseObject::GetDefaultFont();
 	UIGeometry->bIsFont = true;
+	// A label, not a target, as UMG's TextBlock is: what a press on it means belongs to the widget it labels, which
+	// has a face of its own to be hit. A text that is the thing to press says bRaycastTarget = true.
+	bRaycastTarget = false;
+}
+
+void UDreamText::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	// Saved while a text was a raycast target by default, its true was the default and went unwritten: the value it
+	// was saved with is put back before the properties load, and one written as false still loads as false. Only from a
+	// package: a duplicate or an undo record carries what the text has now.
+	if (Ar.IsLoading() && Ar.IsPersistent() && !Ar.HasAnyPortFlags(PPF_Duplicate)
+		&& Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::TextNotRaycastTargetByDefault)
+	{
+		bRaycastTarget = true;
+	}
+	Super::Serialize(Ar);
 }
 
 void UDreamText::ApplyFontTextureChange()

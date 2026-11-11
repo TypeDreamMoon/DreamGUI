@@ -587,10 +587,9 @@ bool FDreamUIEachMisplacedTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUIExpressionThunkTestLocal;
 
+	// The fixture's only content IS the broken block, so the refusal leaves nothing to build; the refusal is the one
+	// message, with no empty-tree error after it.
 	AddExpectedError(TEXT("DUI5012"), EAutomationExpectedErrorFlags::Contains, 0);
-	// The fixture's only content IS the broken block, so the refusal leaves nothing to build and
-	// the empty-tree error legitimately follows it.
-	AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedDuiFile File(TEXT("EachMisplacedFixture.dui"));
 	if (!TestTrue(TEXT("Fixture written"), File.Write({
@@ -643,9 +642,8 @@ bool FDreamUIEachWithoutAHandlerTest::RunTest(const FString& Parameters)
 		DreamUI::SetEachBindingHandler(Registered);
 	};
 
+	// A build with an error in it produces no hierarchy at all; the refusal says why, and nothing follows it.
 	AddExpectedError(TEXT("DUI5012"), EAutomationExpectedErrorFlags::Contains, 0);
-	// A build with an error in it produces no hierarchy at all, so the empty-tree error follows the refusal.
-	AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
 	FScopedDuiFile File(TEXT("EachWithoutAHandlerFixture.dui"));
 	if (!TestTrue(TEXT("Fixture written"), File.Write({
 		TEXT("class /Temp/DreamGUITests/BP_EachWithoutAHandler"),

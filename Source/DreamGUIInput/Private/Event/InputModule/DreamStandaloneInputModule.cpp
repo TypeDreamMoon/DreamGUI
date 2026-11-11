@@ -35,6 +35,11 @@ void UDreamStandaloneInputModule::InputScroll(const FVector2D& InAxisValue, int 
 
 void UDreamStandaloneInputModule::InputTrigger(const FVector& InMousePosition, bool InTriggerPress, EDreamUIMouseButtonType InMouseButtonType)
 {
+	// A press is the player using the mouse, wherever it rests.
+	if (InTriggerPress)
+	{
+		bMouseHasMoved = true;
+	}
 	CommonInputTrigger(InMousePosition, InTriggerPress, DreamUIPointerIds::Mouse, InMouseButtonType);
 }
 
@@ -116,8 +121,30 @@ void UDreamStandaloneInputModule::InputMouseMove(const FVector& InMousePosition)
 	// This runs from a bound axis delegate that keeps firing while the world tears down; no player, no move.
 	UDreamUIInputUser* User = GetInputUser();
 	if (User == nullptr)return;
+	if (IsMouseStillIgnored(InMousePosition))return;
 
 	User->MovePointer(DreamUIPointerIds::Mouse, InMousePosition);
+}
+
+bool UDreamStandaloneInputModule::IsMouseStillIgnored(const FVector& InPosition)
+{
+	// A substituted pointer is somebody's on purpose, and once the mouse has moved it is the player's.
+	if (bMouseHasMoved || bOverrideMousePosition || !bIgnoreMouseUntilItMoves)
+	{
+		return false;
+	}
+	if (!bHasFirstMousePosition)
+	{
+		FirstMousePosition = InPosition;
+		bHasFirstMousePosition = true;
+		return true;
+	}
+	if (InPosition.Equals(FirstMousePosition, 0.5))
+	{
+		return true;
+	}
+	bMouseHasMoved = true;
+	return false;
 }
 
 void UDreamStandaloneInputModule::InputTouchTrigger(bool InTouchPress, int InTouchID, const FVector& InTouchPointPosition)
@@ -143,6 +170,14 @@ void UDreamStandaloneInputModule::InputNavigation(EDreamUINavigationDirection In
 	if (UDreamUIInputUser* User = GetInputUser())
 	{
 		User->InputNavigation(InDirection, InPressOrRelease, InPointerID);
+	}
+}
+
+void UDreamStandaloneInputModule::TapNavigation(EDreamUINavigationDirection InDirection, int InPointerID)
+{
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->TapNavigation(InDirection, InPointerID);
 	}
 }
 

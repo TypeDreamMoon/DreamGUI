@@ -255,10 +255,16 @@ public:
 	/** Where the pointer is. Fires with both routes -- the wedges' hover and HighlightByAngle. */
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuIndexEvent OnHighlightChanged;
+	/** OnHighlightChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnHighlightChangedEvent() { return OnHighlightChangedNative; }
+	TMulticastDelegate<void(int32)> OnHighlightChangedNative;
 
 	/** The committed item moved. */
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuIndexEvent OnSelectionChanged;
+	/** OnSelectionChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnSelectionChangedEvent() { return OnSelectionChangedNative; }
+	TMulticastDelegate<void(int32)> OnSelectionChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact name,
@@ -274,6 +280,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuActivatedEvent OnItemActivated;
+	/** OnItemActivated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, FName)>& GetOnItemActivatedEvent() { return OnItemActivatedNative; }
+	TMulticastDelegate<void(int32, FName)> OnItemActivatedNative;
 
 	/**
 	 * One per wedge, every time it is BOUND to an item. The hook for a consumer whose wedges are
@@ -283,6 +292,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuWedgeEvent OnWedgeGenerated;
+	/** OnWedgeGenerated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*)>& GetOnWedgeGeneratedEvent() { return OnWedgeGeneratedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*)> OnWedgeGeneratedNative;
 
 	/**
 	 * A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every
@@ -305,9 +317,15 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuIndexEvent OnOpened;
+	/** OnOpened for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnOpenedEvent() { return OnOpenedNative; }
+	TMulticastDelegate<void(int32)> OnOpenedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Ring Menu")
 	FDreamRingMenuIndexEvent OnClosed;
+	/** OnClosed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnClosedEvent() { return OnClosedNative; }
+	TMulticastDelegate<void(int32)> OnClosedNative;
 
 	/** The node everything hangs under, and what Open and Close scale and fade. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Ring Menu")

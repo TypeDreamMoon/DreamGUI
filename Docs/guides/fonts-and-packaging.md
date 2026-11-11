@@ -16,6 +16,9 @@ italic) with DroidSansFallback behind it for Chinese, Japanese and Korean, every
 - `/DreamGUI` is always cooked: the plugin's `Config/Game.ini` puts it into `DirectoriesToAlwaysCook`, so even a cook
   of an explicit package list (`-map=`, chunks) gets it.
 - DroidSansFallback adds about 3.9 MB to the package.
+- A character that neither the face nor its fallbacks have is logged once for that font, with its code point, and drawn as
+  a box. A font of your own with no fallback for Chinese, Japanese or Korean produces that warning for every such text
+  (see [Text](../concepts/text.md#fonts)).
 
 **Faces per language.** A font's `Fallbacks` entries can name the cultures they are for (`Cultures`, `"zh-Hans"`,
 `"ja"`): a text in that language (its `Language`, or a rich text's `<lang=xx>`) tries that face before the font's other

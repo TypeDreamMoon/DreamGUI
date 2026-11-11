@@ -148,14 +148,23 @@ public:
 	/** Fired when a key is bound, from a listen or from SetSelectedKey. Carries the chord's KEY. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
 	FDreamInputKeySelectorKeyEvent OnKeySelected;
+	/** OnKeySelected for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(FKey)>& GetOnKeySelectedEvent() { return OnKeySelectedNative; }
+	TMulticastDelegate<void(FKey)> OnKeySelectedNative;
 
 	/** The same moment, carrying the whole chord. Fires alongside OnKeySelected. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
 	FDreamInputKeySelectorChordEvent OnChordSelected;
+	/** OnChordSelected for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(FInputChord)>& GetOnChordSelectedEvent() { return OnChordSelectedNative; }
+	TMulticastDelegate<void(FInputChord)> OnChordSelectedNative;
 
 	/** Fired when the armed state moves, so a screen can dim the rest of itself while one is armed. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
 	FDreamInputKeySelectorListeningEvent OnIsListeningChanged;
+	/** OnIsListeningChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnIsListeningChangedEvent() { return OnIsListeningChangedNative; }
+	TMulticastDelegate<void(bool)> OnIsListeningChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact

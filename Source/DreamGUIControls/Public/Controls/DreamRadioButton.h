@@ -124,6 +124,9 @@ public:
 	/** Fired by the toggle underneath, re-broadcast here so a consumer never reaches into the parts. */
 	UPROPERTY(BlueprintAssignable, Category = "Radio Button")
 	FDreamRadioButtonChangedEvent OnToggleChanged;
+	/** OnToggleChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnToggleChangedEvent() { return OnToggleChangedNative; }
+	TMulticastDelegate<void(bool)> OnToggleChangedNative;
 
 	/**
 	 * UMG's spelling of the same moment, carrying the full state. Fires whenever CheckedState changes
@@ -131,6 +134,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Radio Button")
 	FDreamRadioCheckStateChangedEvent OnCheckStateChanged;
+	/** OnCheckStateChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(EDreamCheckState)>& GetOnCheckStateChangedEvent() { return OnCheckStateChangedNative; }
+	TMulticastDelegate<void(EDreamCheckState)> OnCheckStateChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact

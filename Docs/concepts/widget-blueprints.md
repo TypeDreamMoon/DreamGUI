@@ -43,11 +43,48 @@ The moments a `UDreamUserWidget` can override, as UMG has them:
 | `OnDestruct` | On tear-down |
 | `OnTick` | Every frame only with `bWantsTick` on, which it is not by default — a tick never used still costs a manager list entry, a virtual call and a ProcessEvent |
 
+**The world is not guaranteed in `NativeOnInitialized`.** It runs while the widget is being made, before it is given a
+parent or registered, and `GetWorld()` follows the widget's outer chain: a widget whose tree does not yet reach a level or a
+world (a nested instance, one made for a preview or as a duplicate) can answer null there. Anything that needs the world --
+hiding itself through a subsystem, finding the player, starting a tween that needs the tween manager -- belongs in
+`NativeOnConstruct`, where the tree is registered and the manager has begun, or with whoever created the widget, after the
+create call returns.
+
 The pointer, drag, key, focus and navigation events (`OnPointerClick`, `OnDrop`, `OnKeyDown`, `OnFocusReceived`,
 `OnNavigate`, …) are here as well. `bAllowEventBubbleUp` is on by default: a user widget is a container, and a container
 that silently swallowed every click inside it would break each screen it was placed on; turn it off to consume events at
 this boundary. `bCanNavigateHere` is off by default, so the navigation search walks past the widget as it always has;
 turn it on when you want `OnNavigate`.
+
+### C++ names against UMG's
+
+The virtuals follow the shape of UMG's, not its names, and take DreamGUI's event data in place of a geometry and a Slate
+event. Those that return a bool answer whether the event may keep bubbling to the parent (`bAllowEventBubbleUp` is the
+default answer), where UMG's return an `FReply`. Overriders call `Super` and return what it returns.
+
+| UMG `UUserWidget` | `UDreamUserWidget` |
+| --- | --- |
+| `NativeOnInitialized()` | `NativeOnInitialized()` |
+| `NativePreConstruct()` | none in C++; the Blueprint event `PreConstruct(bIsDesignTime)` |
+| `NativeConstruct()` | `NativeOnConstruct()` |
+| `NativeDestruct()` | `NativeOnDestruct()` |
+| `NativeTick(Geometry, DeltaTime)` | `NativeOnTick(DeltaTime)`, only while `bWantsTick` is on |
+| none | `NativeOnEnable()`, `NativeOnDisable()` |
+| `NativeOnMouseEnter` / `NativeOnMouseLeave` | `NativeOnPointerEnter` / `NativeOnPointerExit` |
+| `NativeOnMouseButtonDown` / `NativeOnMouseButtonUp` | `NativeOnPointerDown` / `NativeOnPointerUp` (and `NativeOnPointerClick`, which UMG has no event for) |
+| `NativeOnMouseMove` | `NativeOnPointerMove` (returns void) |
+| `NativeOnMouseWheel` | `NativeOnPointerScroll` |
+| `NativeOnMouseButtonDoubleClick` | `NativeOnPointerDoubleClick` |
+| `NativeOnDragDetected` | `NativeOnBeginDrag`, then `NativeOnDrag` and `NativeOnEndDrag` |
+| `NativeOnDragEnter` / `NativeOnDragOver` / `NativeOnDragLeave` | the same names, with the event data and the operation (return void) |
+| `NativeOnDrop` / `NativeOnDragCancelled` | the same names |
+| `NativeOnTouchGesture` | `NativeOnPointerPinch` and `NativeOnPointerSwipe` |
+| `NativeOnKeyDown` / `NativeOnKeyUp` / `NativeOnKeyChar` / `NativeOnAnalogValueChanged` | the same names, with a `UDreamKeyEventData` |
+| `NativeOnFocusReceived` / `NativeOnFocusLost` | the same names, with the user and pointer index (return void) |
+| `NativeOnNavigation` | `NativeOnNavigate(Direction, OutNextWidget)` |
+
+The Blueprint events carry UMG's names where there is one (`On Mouse Wheel`, `On Mouse Move`, `On Double Click`), without
+the `Native` prefix. A Blueprint-implemented `On Tick` or `On Mouse Move` turns `bWantsTick` on by itself.
 
 ## Subclassing and nesting
 

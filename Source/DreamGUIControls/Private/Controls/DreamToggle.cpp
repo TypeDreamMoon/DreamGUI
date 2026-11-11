@@ -221,11 +221,13 @@ void UDreamToggle::SetCheckedState(EDreamCheckState InCheckedState)
 		// once while the value is off). Either way the bar is never seen in TickUnchecked.
 		PushCheckStateVisuals();
 		ToggleBehaviour->SetIsOnWithoutNotify(false);
+		OnCheckStateChangedNative.Broadcast(EDreamCheckState::Undetermined);
 		OnCheckStateChanged.Broadcast(EDreamCheckState::Undetermined);
 		if (bWasOn)
 		{
 			// The bool projection moved too (true -> false); Unchecked -> Undetermined stays silent
 			// on this spelling because false -> false is not a change.
+			OnToggleChangedNative.Broadcast(false);
 			OnToggleChanged.Broadcast(false);
 		}
 		return;
@@ -250,6 +252,7 @@ void UDreamToggle::SetCheckedState(EDreamCheckState InCheckedState)
 		CheckedState = InCheckedState;
 		bIsOn = bTargetOn;
 		PushCheckStateVisuals();
+		OnCheckStateChangedNative.Broadcast(CheckedState);
 		OnCheckStateChanged.Broadcast(CheckedState);
 	}
 }
@@ -277,6 +280,7 @@ void UDreamToggle::HandleValueChanged(bool bInIsOn)
 		{
 			ToggleBehaviour->SetIsOnWithoutNotify(false);
 		}
+		OnCheckStateChangedNative.Broadcast(CheckedState);
 		OnCheckStateChanged.Broadcast(CheckedState);
 		return;
 	}
@@ -289,8 +293,10 @@ void UDreamToggle::HandleValueChanged(bool bInIsOn)
 	PushCheckStateVisuals();
 	if (CheckedState != OldState)
 	{
+		OnCheckStateChangedNative.Broadcast(CheckedState);
 		OnCheckStateChanged.Broadcast(CheckedState);
 	}
+	OnToggleChangedNative.Broadcast(bInIsOn);
 	OnToggleChanged.Broadcast(bInIsOn);
 	OnValueChangedBP.Broadcast(bInIsOn);
 }
@@ -334,21 +340,25 @@ void UDreamToggle::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
 
 void UDreamToggle::HandlePressed()
 {
+	OnPressedNative.Broadcast();
 	OnPressed.Broadcast();
 }
 
 void UDreamToggle::HandleReleased()
 {
+	OnReleasedNative.Broadcast();
 	OnReleased.Broadcast();
 }
 
 void UDreamToggle::HandleHovered()
 {
+	OnHoveredNative.Broadcast();
 	OnHovered.Broadcast();
 }
 
 void UDreamToggle::HandleUnhovered()
 {
+	OnUnhoveredNative.Broadcast();
 	OnUnhovered.Broadcast();
 }
 

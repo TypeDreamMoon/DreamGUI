@@ -6,6 +6,7 @@
 #include "Core/DreamUIWidgetRegistry.h"
 #include "DreamUIRender/DreamUIBackdropEffects.h"
 #include "Engine/World.h"
+#include "UObject/UnrealType.h"
 
 namespace DreamStylizeEffectLocal
 {
@@ -96,6 +97,87 @@ void UDreamStylizeEffect::TriggerBurst(float InDuration, float InIntensity)
 	BurstDuration = FMath::Max(InDuration, 0.0f);
 	BurstIntensity = FMath::Max(InIntensity, 0.0f);
 	RefreshEffect();
+}
+
+bool UDreamStylizeEffect::SetLayerParameter(int32 LayerIndex, FName ParameterName, float Value)
+{
+	if (!Layers.IsValidIndex(LayerIndex) || !FMath::IsFinite(Value))
+	{
+		return false;
+	}
+	const FProperty* Property = FDreamStylizeLayer::StaticStruct()->FindPropertyByName(ParameterName);
+	void* Address = Property != nullptr ? Property->ContainerPtrToValuePtr<void>(&Layers[LayerIndex]) : nullptr;
+	if (Address == nullptr)
+	{
+		return false;
+	}
+	if (const FFloatProperty* Float = CastField<FFloatProperty>(Property))
+	{
+		// The details panel's limits, as it would apply them, where they are known (editor builds): a strength of 2 on a
+		// 0..1 number is a mistake, not a look. The shader takes any number either way.
+		float Clamped = Value;
+#if WITH_METADATA
+		if (Property->HasMetaData(TEXT("ClampMin")))
+		{
+			Clamped = FMath::Max(Clamped, Property->GetFloatMetaData(TEXT("ClampMin")));
+		}
+		if (Property->HasMetaData(TEXT("ClampMax")))
+		{
+			Clamped = FMath::Min(Clamped, Property->GetFloatMetaData(TEXT("ClampMax")));
+		}
+#endif
+		Float->SetPropertyValue(Address, Clamped);
+	}
+	else if (const FIntProperty* Int = CastField<FIntProperty>(Property))
+	{
+		Int->SetPropertyValue(Address, FMath::RoundToInt32(Value));
+	}
+	else if (const FBoolProperty* Bool = CastField<FBoolProperty>(Property))
+	{
+		Bool->SetPropertyValue(Address, Value != 0.0f);
+	}
+	else
+	{
+		return false;
+	}
+	// What SetLayers does with a new list, for one number of it.
+	RefreshEffect();
+	if (UDreamWidget* Widget = GetWidget())
+	{
+		Widget->MarkCanvasUpdate(false);
+	}
+	return true;
+}
+
+bool UDreamStylizeEffect::GetLayerParameter(int32 LayerIndex, FName ParameterName, float& OutValue) const
+{
+	OutValue = 0.0f;
+	if (!Layers.IsValidIndex(LayerIndex))
+	{
+		return false;
+	}
+	const FProperty* Property = FDreamStylizeLayer::StaticStruct()->FindPropertyByName(ParameterName);
+	const void* Address = Property != nullptr ? Property->ContainerPtrToValuePtr<void>(&Layers[LayerIndex]) : nullptr;
+	if (Address == nullptr)
+	{
+		return false;
+	}
+	if (const FFloatProperty* Float = CastField<FFloatProperty>(Property))
+	{
+		OutValue = Float->GetPropertyValue(Address);
+		return true;
+	}
+	if (const FIntProperty* Int = CastField<FIntProperty>(Property))
+	{
+		OutValue = static_cast<float>(Int->GetPropertyValue(Address));
+		return true;
+	}
+	if (const FBoolProperty* Bool = CastField<FBoolProperty>(Property))
+	{
+		OutValue = Bool->GetPropertyValue(Address) ? 1.0f : 0.0f;
+		return true;
+	}
+	return false;
 }
 
 void UDreamStylizeEffect::PackLayers(FDreamUIStylizePacked& OutPacked) const

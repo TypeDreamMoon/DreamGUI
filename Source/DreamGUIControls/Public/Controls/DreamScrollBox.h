@@ -210,6 +210,9 @@ public:
 	/** Re-broadcast from the scroll behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
 	FDreamScrollBoxScrolledEvent OnScrolled;
+	/** OnScrolled for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnScrolledEvent() { return OnScrolledNative; }
+	TMulticastDelegate<void(float)> OnScrolledNative;
 
 	/**
 	 * The USER moved it -- UMG's OnUserScrolled, and its unit, which is an OFFSET rather than a
@@ -222,6 +225,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
 	FDreamScrollBoxUserScrolledOffsetEvent OnUserScrolled;
+	/** OnUserScrolled for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnUserScrolledEvent() { return OnUserScrolledNative; }
+	TMulticastDelegate<void(float)> OnUserScrolledNative;
 
 	/**
 	 * The bar appeared or went away -- UMG's OnScrollBarVisibilityChanged. Fired from the style push,
@@ -229,6 +235,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
 	FDreamScrollBoxBarVisibilityChangedEvent OnScrollBarVisibilityChanged;
+	/** OnScrollBarVisibilityChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnScrollBarVisibilityChangedEvent() { return OnScrollBarVisibilityChangedNative; }
+	TMulticastDelegate<void(bool)> OnScrollBarVisibilityChangedNative;
 
 	/*
 	 * The box ITSELF taking and giving up user focus -- UMG's OnFocusReceived and OnFocusLost -- are
@@ -253,6 +262,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
 	FDreamScrollBoxFocusUpdatedEvent OnFocusUpdated;
+	/** OnFocusUpdated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(UDreamWidget*)>& GetOnFocusUpdatedEvent() { return OnFocusUpdatedNative; }
+	TMulticastDelegate<void(UDreamWidget*)> OnFocusUpdatedNative;
 
 	/**
 	 * The `<->` convention: a two-way binding synthesizes its reverse route against this exact name.

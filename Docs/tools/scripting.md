@@ -1,6 +1,6 @@
 ---
 title: Scripting and code entry points
-description: The Blueprint and C++ entry points for creating, showing and placing UI in the world (UDreamUIBPLibrary), the K2 nodes module, and editor Python that creates a Dream Widget Blueprint, points it at a .dui and compiles it.
+description: The Blueprint and C++ entry points for creating, showing and placing UI in the world (UDreamUIBPLibrary), the K2 nodes module, compiling every .dui class from the command line, and editor Python that creates a Dream Widget Blueprint, points it at a .dui and compiles it.
 ---
 
 ## Blueprint and C++ entry points
@@ -124,6 +124,20 @@ a DreamGUI widget.
 | Play Animation with Finished event | The async form of `PlayAnimation`, with a Finished exec pin |
 | Play Animation Time Range with Finished event | The async form of `PlayAnimationTimeRange` |
 | Get Component for DreamGUIComponentReference | The component an `FDreamUIComponentReference` names, its output cast to the referenced component type |
+
+## Compiling from the command line
+
+A build script or CI that needs every `.dui` class compiled and saved, with no editor window and no Python, runs the
+`DreamUICompileWidgets` commandlet:
+
+```powershell
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Tools/widgets.json [-Only=WBP_A,WBP_B]
+```
+
+`-All` recompiles the text-backed widget Blueprints that exist; a manifest also creates the ones that are missing, each with
+the parent class and the `.dui` it names. Every compiler message is logged and the exit code is non-zero when anything
+failed. The manifest's format and the rest are in [Workflow](../getting-started/workflow.md#one-file-two-ways-in).
 
 ## Editor Python: a Widget Blueprint from a .dui
 

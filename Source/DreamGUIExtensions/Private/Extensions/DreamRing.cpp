@@ -86,6 +86,7 @@ UDreamTweener* UDreamRing::StartAngleTo(float endValue, float duration, float de
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamRing::GetStartAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamRing::SetStartAngle), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, 1ull << 0);
 		Tweener->SetEase(easeType)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -96,6 +97,7 @@ UDreamTweener* UDreamRing::EndAngleTo(float endValue, float duration, float dela
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamRing::GetEndAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamRing::SetEndAngle), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, 1ull << 1);
 		Tweener->SetEase(easeType)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}

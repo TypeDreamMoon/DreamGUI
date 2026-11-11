@@ -1833,6 +1833,51 @@ namespace DreamRectBlockAlphaTweenLocal
 	 * reaches 1.1), and the plain cast of 280 into a byte wrapped it to 24: a fade-in that flashed nearly
 	 * transparent just before it settled.
 	 */
+	/**
+	 * One bit for each property the rect block's tween verbs write, for UDreamTweener::SetExclusive. A colour's alpha
+	 * is a bit of its own, so BorderAlphaTo and BorderColorTo replace each other and BorderWidthTo neither. The top two
+	 * bits are UDreamVisual's own colour and alpha.
+	 */
+	namespace Channel
+	{
+		constexpr uint64 BodyColorRGB = 1ull << 0;
+		constexpr uint64 BodyColorA = 1ull << 1;
+		constexpr uint64 BodyColor = BodyColorRGB | BodyColorA;
+		constexpr uint64 CornerRadius = 1ull << 2;
+		constexpr uint64 BodyGradientColorRGB = 1ull << 3;
+		constexpr uint64 BodyGradientColorA = 1ull << 4;
+		constexpr uint64 BodyGradientColor = BodyGradientColorRGB | BodyGradientColorA;
+		constexpr uint64 BodyGradientCenter = 1ull << 5;
+		constexpr uint64 BodyGradientRadius = 1ull << 6;
+		constexpr uint64 BodyGradientRotation = 1ull << 7;
+		constexpr uint64 BorderWidth = 1ull << 8;
+		constexpr uint64 BorderColorRGB = 1ull << 9;
+		constexpr uint64 BorderColorA = 1ull << 10;
+		constexpr uint64 BorderColor = BorderColorRGB | BorderColorA;
+		constexpr uint64 BorderGradientColorRGB = 1ull << 11;
+		constexpr uint64 BorderGradientColorA = 1ull << 12;
+		constexpr uint64 BorderGradientColor = BorderGradientColorRGB | BorderGradientColorA;
+		constexpr uint64 BorderGradientCenter = 1ull << 13;
+		constexpr uint64 BorderGradientRadius = 1ull << 14;
+		constexpr uint64 BorderGradientRotation = 1ull << 15;
+		constexpr uint64 InnerShadowColorRGB = 1ull << 16;
+		constexpr uint64 InnerShadowColorA = 1ull << 17;
+		constexpr uint64 InnerShadowColor = InnerShadowColorRGB | InnerShadowColorA;
+		constexpr uint64 InnerShadowSize = 1ull << 18;
+		constexpr uint64 InnerShadowBlur = 1ull << 19;
+		constexpr uint64 InnerShadowAngle = 1ull << 20;
+		constexpr uint64 InnerShadowDistance = 1ull << 21;
+		constexpr uint64 RadialFillCenter = 1ull << 22;
+		constexpr uint64 RadialFillRotation = 1ull << 23;
+		constexpr uint64 RadialFillAngle = 1ull << 24;
+		constexpr uint64 OuterShadowColorRGB = 1ull << 25;
+		constexpr uint64 OuterShadowColorA = 1ull << 26;
+		constexpr uint64 OuterShadowColor = OuterShadowColorRGB | OuterShadowColorA;
+		constexpr uint64 OuterShadowSize = 1ull << 27;
+		constexpr uint64 OuterShadowBlur = 1ull << 28;
+		constexpr uint64 OuterShadowAngle = 1ull << 29;
+		constexpr uint64 OuterShadowDistance = 1ull << 30;
+	}
 	uint8 AlphaToByte(float InAlpha)
 	{
 		return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(InAlpha * 255.0f), 0, 255));
@@ -1847,6 +1892,7 @@ UDreamTweener* UDreamRectBlock::BodyColorTo(FColor endValue, float duration, flo
 			}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamRectBlockAlphaTweenLocal::Channel::BodyColor);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -1863,13 +1909,14 @@ UDreamTweener* UDreamRectBlock::BodyAlphaTo(float endValue, float duration, floa
 			}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamRectBlockAlphaTweenLocal::Channel::BodyColorA);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }
 
-#define FunctionPropertyAnimation(Property, EndValueType, GetterAndSetterType)\
+#define FunctionPropertyAnimation(Property, EndValueType, GetterAndSetterType, Channels)\
 UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float duration, float delay, EDreamTweenEase ease)\
 {\
 	auto Tweener =  UDreamTweenManager::To(this, FDreamTween##GetterAndSetterType##GetterFunction::CreateWeakLambda(this, [this] {\
@@ -1879,6 +1926,7 @@ UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float durati
 			}), endValue, duration);\
 	if (Tweener)\
 	{\
+		Tweener->SetExclusive(this, Channels);\
 		Tweener->SetEase(ease)->SetDelay(delay);\
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
 	}\
@@ -1889,7 +1937,7 @@ UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float durati
 // a copy of BodyAlphaTo's line, so every one of these faded its own colour starting from the body's
 // alpha: a transparent border told to fade in over an opaque body jumped to opaque on the first step
 // and stayed there. The tween takes its start from this getter on that first step.
-#define FunctionAlphaAnimation(Property, Function)\
+#define FunctionAlphaAnimation(Property, Function, Channels)\
 UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration, float delay, EDreamTweenEase ease)\
 {\
 	auto Tweener =  UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this, [this] {\
@@ -1901,6 +1949,7 @@ UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration
 			}), endValue, duration);\
 	if (Tweener)\
 	{\
+		Tweener->SetExclusive(this, Channels);\
 		Tweener->SetEase(ease)->SetDelay(delay);\
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
 	}\
@@ -1909,7 +1958,7 @@ UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration
 
 // The gradients' tweens read and write through the two-colour getters and setters: the first stop's colour, the centre,
 // the radius and the angle of a gradient that has stops.
-#define FunctionGradientAnimation(Property, EndValueType, GetterAndSetterType)\
+#define FunctionGradientAnimation(Property, EndValueType, GetterAndSetterType, Channels)\
 UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float duration, float delay, EDreamTweenEase ease)\
 {\
 	auto Tweener =  UDreamTweenManager::To(this, FDreamTween##GetterAndSetterType##GetterFunction::CreateWeakLambda(this, [this] {\
@@ -1919,13 +1968,14 @@ UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float durati
 			}), endValue, duration);\
 	if (Tweener)\
 	{\
+		Tweener->SetExclusive(this, Channels);\
 		Tweener->SetEase(ease)->SetDelay(delay);\
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
 	}\
 	return Tweener;\
 }
 
-#define FunctionGradientAlphaAnimation(Property, Function)\
+#define FunctionGradientAlphaAnimation(Property, Function, Channels)\
 UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration, float delay, EDreamTweenEase ease)\
 {\
 	auto Tweener =  UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this, [this] {\
@@ -1937,50 +1987,51 @@ UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration
 			}), endValue, duration);\
 	if (Tweener)\
 	{\
+		Tweener->SetExclusive(this, Channels);\
 		Tweener->SetEase(ease)->SetDelay(delay);\
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);\
 	}\
 	return Tweener;\
 }
 
-FunctionPropertyAnimation(CornerRadius, FVector4, Vector4);
+FunctionPropertyAnimation(CornerRadius, FVector4, Vector4, DreamRectBlockAlphaTweenLocal::Channel::CornerRadius);
 
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
-FunctionGradientAnimation(BodyGradientColor, FColor, Color);
-FunctionGradientAlphaAnimation(BodyGradientColor, BodyGradient);
-FunctionGradientAnimation(BodyGradientCenter, FVector2D, Vector2D);
-FunctionGradientAnimation(BodyGradientRadius, FVector2D, Vector2D);
-FunctionGradientAnimation(BodyGradientRotation, float, Float);
+FunctionGradientAnimation(BodyGradientColor, FColor, Color, DreamRectBlockAlphaTweenLocal::Channel::BodyGradientColor);
+FunctionGradientAlphaAnimation(BodyGradientColor, BodyGradient, DreamRectBlockAlphaTweenLocal::Channel::BodyGradientColorA);
+FunctionGradientAnimation(BodyGradientCenter, FVector2D, Vector2D, DreamRectBlockAlphaTweenLocal::Channel::BodyGradientCenter);
+FunctionGradientAnimation(BodyGradientRadius, FVector2D, Vector2D, DreamRectBlockAlphaTweenLocal::Channel::BodyGradientRadius);
+FunctionGradientAnimation(BodyGradientRotation, float, Float, DreamRectBlockAlphaTweenLocal::Channel::BodyGradientRotation);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
-FunctionPropertyAnimation(BorderWidth, float, Float);
-FunctionPropertyAnimation(BorderColor, FColor, Color);
-FunctionAlphaAnimation(BorderColor, Border);
+FunctionPropertyAnimation(BorderWidth, float, Float, DreamRectBlockAlphaTweenLocal::Channel::BorderWidth);
+FunctionPropertyAnimation(BorderColor, FColor, Color, DreamRectBlockAlphaTweenLocal::Channel::BorderColor);
+FunctionAlphaAnimation(BorderColor, Border, DreamRectBlockAlphaTweenLocal::Channel::BorderColorA);
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
-FunctionGradientAnimation(BorderGradientColor, FColor, Color);
-FunctionGradientAlphaAnimation(BorderGradientColor, BorderGradient);
-FunctionGradientAnimation(BorderGradientCenter, FVector2D, Vector2D);
-FunctionGradientAnimation(BorderGradientRadius, FVector2D, Vector2D);
-FunctionGradientAnimation(BorderGradientRotation, float, Float);
+FunctionGradientAnimation(BorderGradientColor, FColor, Color, DreamRectBlockAlphaTweenLocal::Channel::BorderGradientColor);
+FunctionGradientAlphaAnimation(BorderGradientColor, BorderGradient, DreamRectBlockAlphaTweenLocal::Channel::BorderGradientColorA);
+FunctionGradientAnimation(BorderGradientCenter, FVector2D, Vector2D, DreamRectBlockAlphaTweenLocal::Channel::BorderGradientCenter);
+FunctionGradientAnimation(BorderGradientRadius, FVector2D, Vector2D, DreamRectBlockAlphaTweenLocal::Channel::BorderGradientRadius);
+FunctionGradientAnimation(BorderGradientRotation, float, Float, DreamRectBlockAlphaTweenLocal::Channel::BorderGradientRotation);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
-FunctionPropertyAnimation(InnerShadowColor, FColor, Color);
-FunctionAlphaAnimation(InnerShadowColor, InnerShadow);
-FunctionPropertyAnimation(InnerShadowSize, float, Float);
-FunctionPropertyAnimation(InnerShadowBlur, float, Float);
-FunctionPropertyAnimation(InnerShadowAngle, float, Float);
-FunctionPropertyAnimation(InnerShadowDistance, float, Float);
+FunctionPropertyAnimation(InnerShadowColor, FColor, Color, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowColor);
+FunctionAlphaAnimation(InnerShadowColor, InnerShadow, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowColorA);
+FunctionPropertyAnimation(InnerShadowSize, float, Float, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowSize);
+FunctionPropertyAnimation(InnerShadowBlur, float, Float, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowBlur);
+FunctionPropertyAnimation(InnerShadowAngle, float, Float, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowAngle);
+FunctionPropertyAnimation(InnerShadowDistance, float, Float, DreamRectBlockAlphaTweenLocal::Channel::InnerShadowDistance);
 
-FunctionPropertyAnimation(RadialFillCenter, FVector2D, Vector2D);
-FunctionPropertyAnimation(RadialFillRotation, float, Float);
-FunctionPropertyAnimation(RadialFillAngle, float, Float);
+FunctionPropertyAnimation(RadialFillCenter, FVector2D, Vector2D, DreamRectBlockAlphaTweenLocal::Channel::RadialFillCenter);
+FunctionPropertyAnimation(RadialFillRotation, float, Float, DreamRectBlockAlphaTweenLocal::Channel::RadialFillRotation);
+FunctionPropertyAnimation(RadialFillAngle, float, Float, DreamRectBlockAlphaTweenLocal::Channel::RadialFillAngle);
 
-FunctionPropertyAnimation(OuterShadowColor, FColor, Color);
-FunctionAlphaAnimation(OuterShadowColor, OuterShadow);
-FunctionPropertyAnimation(OuterShadowSize, float, Float);
-FunctionPropertyAnimation(OuterShadowBlur, float, Float);
-FunctionPropertyAnimation(OuterShadowAngle, float, Float);
-FunctionPropertyAnimation(OuterShadowDistance, float, Float);
+FunctionPropertyAnimation(OuterShadowColor, FColor, Color, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowColor);
+FunctionAlphaAnimation(OuterShadowColor, OuterShadow, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowColorA);
+FunctionPropertyAnimation(OuterShadowSize, float, Float, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowSize);
+FunctionPropertyAnimation(OuterShadowBlur, float, Float, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowBlur);
+FunctionPropertyAnimation(OuterShadowAngle, float, Float, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowAngle);
+FunctionPropertyAnimation(OuterShadowDistance, float, Float, DreamRectBlockAlphaTweenLocal::Channel::OuterShadowDistance);
 
 #pragma endregion
 

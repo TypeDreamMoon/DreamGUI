@@ -12,7 +12,7 @@ these files; Chinese translations are maintained under `zh-CN/` in this plugin a
 | Concepts | [Widgets](concepts/widgets.md), [widget tree](concepts/widget-tree.md), [rendering](concepts/rendering.md), [input](concepts/input.md) |
 | Language | [.dui reference](language/index.md), [bindings](language/bindings.md), [designer write-back](language/write-back.md) |
 | Controls | [Control catalogue](controls/index.md), [styles](controls/styles.md), [UMG comparison](controls/umg-parity.md) |
-| Guides | [Fonts and packaging](guides/fonts-and-packaging.md), [migration](guides/migration.md), [upgrading](guides/upgrading.md), [platforms](guides/platforms.md) |
+| Guides | [Fonts and packaging](guides/fonts-and-packaging.md), [migration](guides/migration.md), [upgrading](guides/upgrading.md), [platforms](guides/platforms.md), [common pitfalls](guides/pitfalls.md) |
 | Tools | [Designer](tools/designer.md), [debugging](tools/debugging.md), [tests](tools/tests.md), [scripting](tools/scripting.md) |
 | Reference | [Generated class reference](Reference/index.md) |
 | Diagnostics | [Overview](diagnostics/index.md), [diagnostic catalogue](diagnostics/codes.md) |

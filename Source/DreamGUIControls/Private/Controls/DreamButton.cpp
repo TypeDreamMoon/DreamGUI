@@ -259,26 +259,31 @@ void UDreamButton::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
 
 void UDreamButton::HandleClicked()
 {
+	OnClickedNative.Broadcast();
 	OnClicked.Broadcast();
 }
 
 void UDreamButton::HandlePressed()
 {
+	OnPressedNative.Broadcast();
 	OnPressed.Broadcast();
 }
 
 void UDreamButton::HandleReleased()
 {
+	OnReleasedNative.Broadcast();
 	OnReleased.Broadcast();
 }
 
 void UDreamButton::HandleHovered()
 {
+	OnHoveredNative.Broadcast();
 	OnHovered.Broadcast();
 }
 
 void UDreamButton::HandleUnhovered()
 {
+	OnUnhoveredNative.Broadcast();
 	OnUnhovered.Broadcast();
 }
 

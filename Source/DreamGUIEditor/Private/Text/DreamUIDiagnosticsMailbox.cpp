@@ -30,21 +30,102 @@ namespace DreamUIMailboxLocal
 	TMap<FString, FEntry> GEntries;
 	FTSTicker::FDelegateHandle GPendingFlush;
 
+	/**
+	 * Which file each Blueprint last deposited for, so a compile that names a different file or none can
+	 * retire the entry the Blueprint leaves behind. Keyed by the owner the compiler passed in.
+	 */
+	TMap<FString, FString> GOwnerSources;
+
 	FString DefaultDirectory()
 	{
 		return FPaths::ConvertRelativePathToFull(
 			FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
 	}
+
+	void ScheduleFlush()
+	{
+		if (!GPendingFlush.IsValid())
+		{
+			GPendingFlush = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
+			{
+				GPendingFlush.Reset();
+				FDreamUIDiagnosticsMailbox::FlushNow();
+				return false; // one shot; the next deposit re-arms
+			}));
+		}
+	}
+
+	/** Whether two spellings name the same file; the compiler and the watcher do not always agree on slashes or case. */
+	bool IsSameSource(const FString& InA, const FString& InB)
+	{
+		return FPaths::IsSamePath(InA, InB);
+	}
+
+	/** Whether some owner other than InExcept still builds from InSource. */
+	bool IsClaimedByAnotherOwner(const FString& InSource, const FString& InExcept)
+	{
+		for (const TPair<FString, FString>& Pair : GOwnerSources)
+		{
+			if (Pair.Key != InExcept && IsSameSource(Pair.Value, InSource))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Drops every entry whose key names InSource; true when there was one. */
+	bool RemoveEntries(const FString& InSource)
+	{
+		bool bRemoved = false;
+		for (auto It = GEntries.CreateIterator(); It; ++It)
+		{
+			if (IsSameSource(It.Key(), InSource))
+			{
+				It.RemoveCurrent();
+				bRemoved = true;
+			}
+		}
+		return bRemoved;
+	}
 }
 
-void FDreamUIDiagnosticsMailbox::Deposit(const FDreamUIDiagnosticBag& InDiagnostics)
+void FDreamUIDiagnosticsMailbox::Deposit(const FDreamUIDiagnosticBag& InDiagnostics, const FString& InOwner)
 {
 	using namespace DreamUIMailboxLocal;
+
+	bool bRetiredEntry = false;
+	if (!InOwner.IsEmpty())
+	{
+		// The owner's previous file stops being the owner's, whatever this compile turns out to name. Its entry goes
+		// with it unless a second class is built from the same file, in which case that class's compiles keep it current.
+		const FString* Previous = GOwnerSources.Find(InOwner);
+		if (Previous != nullptr && !IsSameSource(*Previous, InDiagnostics.SourceName))
+		{
+			const FString Retired = *Previous;
+			if (!IsClaimedByAnotherOwner(Retired, InOwner))
+			{
+				bRetiredEntry = RemoveEntries(Retired);
+			}
+		}
+		if (InDiagnostics.SourceName.IsEmpty())
+		{
+			GOwnerSources.Remove(InOwner);
+		}
+		else
+		{
+			GOwnerSources.Add(InOwner, InDiagnostics.SourceName);
+		}
+	}
 
 	// No source name = the blueprint is not text-backed; that compile is none of the mailbox's
 	// business. This is the negative control the whole pipeline keeps.
 	if (InDiagnostics.SourceName.IsEmpty())
 	{
+		if (bRetiredEntry)
+		{
+			ScheduleFlush();
+		}
 		return;
 	}
 
@@ -52,14 +133,28 @@ void FDreamUIDiagnosticsMailbox::Deposit(const FDreamUIDiagnosticBag& InDiagnost
 	Entry.CompiledAt = FDateTime::UtcNow().ToIso8601();
 	Entry.Diagnostics = InDiagnostics.Diagnostics;
 
-	if (!GPendingFlush.IsValid())
+	ScheduleFlush();
+}
+
+void FDreamUIDiagnosticsMailbox::Remove(const FString& InSourceName)
+{
+	using namespace DreamUIMailboxLocal;
+
+	if (InSourceName.IsEmpty())
 	{
-		GPendingFlush = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
+		return;
+	}
+	// An owner that was building from this file has nothing left to retire later.
+	for (auto It = GOwnerSources.CreateIterator(); It; ++It)
+	{
+		if (IsSameSource(It.Value(), InSourceName))
 		{
-			GPendingFlush.Reset();
-			FlushNow();
-			return false; // one shot; the next deposit re-arms
-		}));
+			It.RemoveCurrent();
+		}
+	}
+	if (RemoveEntries(InSourceName))
+	{
+		ScheduleFlush();
 	}
 }
 
@@ -147,6 +242,7 @@ void FDreamUIDiagnosticsMailbox::Reset()
 {
 	using namespace DreamUIMailboxLocal;
 	GEntries.Reset();
+	GOwnerSources.Reset();
 	if (GPendingFlush.IsValid())
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(GPendingFlush);

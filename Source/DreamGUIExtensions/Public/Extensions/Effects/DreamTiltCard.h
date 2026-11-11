@@ -70,5 +70,12 @@ private:
 	FVector2D TiltVelocity = FVector2D::ZeroVector;
 	float Scale = 1.0f;
 	float ScaleVelocity = 0.0f;
+	/**
+	 * The tilt and the scale this put on the widget's render transform last, taken back off before the next are put on:
+	 * the card's own rotation -- a fan of cards each turned a little, a roll a tween is running -- stays under the tilt
+	 * instead of being written over by it.
+	 */
+	FRotator AppliedTilt = FRotator::ZeroRotator;
+	float AppliedScale = 1.0f;
 	bool bWarnedNoPerspective = false;
 };

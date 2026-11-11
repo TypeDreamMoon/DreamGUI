@@ -276,6 +276,36 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   edit, and eases show their curves. In a `.dui` a contour is a named shape's word or `"custom(0 0, 0.5 1 corner, 1 0)"`.
   See [The widget designer](Docs/tools/designer.md).
 
+- **A render offset, a rotation and a pose to tween.** `UDreamWidget::SetRenderOffset` and `GetRenderOffset` are the render
+  translation on the canvas plane, with its depth left where it is. `RenderRotationTo` tweens the whole render rotation
+  component by component -- a side panel swinging open on its hinge, a card turning over -- and `RenderPoseTo` tweens the
+  translation and the rotation on one clock and one ease. See [Animation](Docs/concepts/animation.md).
+- **Fonts for the expandable area and the ring menu.** `FDreamExpandableAreaStyle` and `FDreamRingMenuStyle` have a `Font`
+  (none leaves the project's default font), as the text input, spin box and rich text styles do.
+- **A warning when a character has no glyph.** A character in neither a font's own face nor any of its fallbacks is logged
+  once for that font, with its code point, instead of showing a box with no word anywhere. The default font reaches
+  Chinese, Japanese and Korean through `/DreamGUI/DefaultFont_DistanceField_CJK`. See [Text](Docs/concepts/text.md#fonts).
+- **`.dui` classes compile from the command line.** The `DreamUICompileWidgets` commandlet compiles and saves every
+  text-backed widget Blueprint, or the ones a manifest names, creating the missing ones, with no editor window and no
+  Python. See [Compiling from the command line](Docs/tools/scripting.md#compiling-from-the-command-line) and [Workflow](Docs/getting-started/workflow.md).
+- **A page of common pitfalls**, each with its cause and the page that explains it. See [Common pitfalls](Docs/guides/pitfalls.md).
+- **C++ events on every control.** Each control's Blueprint event has a twin for C++ -- `GetOn<Event>Event()`, a
+  `TMulticastDelegate` with the same arguments, raised with it -- so `AddLambda`, `AddWeakLambda` and `AddUObject` bind an
+  expandable area's expansion, a list's selection or a ring menu's activation without a `UFUNCTION`.
+- **A tap of navigation from code.** `UDreamStandaloneInputModule::TapNavigation` takes one step on the next frame, one per
+  tap: a press and its release given on one frame took none. `UDreamEventSystem`'s *Navigation Repeat In Game Time* times a
+  held direction's repeat on the game clock, for a recording made frame by frame.
+- **Context for drag visuals and tooltips.** A drag visual class that implements `IDreamUIDragVisual` is told its operation
+  (`OnDragVisualCreated`), and a tooltip class that implements `IDreamUITooltipContent` its source widget
+  (`SetTooltipSource`), as soon as each is made -- before its first layout.
+- **A world point as an anchored position.** `UDreamCanvas::ProjectWorldToAnchoredPosition` gives where a world point lands
+  on a screen-space root, as the anchored position of a widget anchored to the root's middle: a marker over an actor.
+- **One stylize layer's number by name.** `UDreamStylizeEffect::SetLayerParameter` and `GetLayerParameter` change a number
+  of one layer (`AberrationAmount`, `ScanlineStrength`...) without building the whole list again for `SetLayers`.
+- **Leave the mouse out until it moves.** `UDreamStandaloneInputModule::bIgnoreMouseUntilItMoves` keeps a mouse that rests
+  over a menu as it opens from hovering a row on the first frame.
+- **The designer's canvas size from scripts.** `UDreamWidgetBlueprint::GetDesignerCanvasSize` and `SetDesignerCanvasSize`.
+
 ### Changed
 
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
@@ -405,6 +435,34 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   is tinted by the gradient as by the body colour; it used to have the gradient colour laid over its alpha a second time.
 - **The gradient row's header has a type picker** beside its strip and presets, for every `FDreamGradient` (text paints,
   gradient assets, rect blocks).
+
+- **A tween replaces the earlier tweens of the same property.** Starting `RenderOpacityTo(0)` while `RenderOpacityTo(1)` is
+  still running left both running, and whichever finished last decided the result: a tooltip shown and hidden quickly by
+  hover could stay lit. Now a tween that starts stops the tweens already on that object's property -- those made before it,
+  and those that have started -- killing them, or pausing the ones kept with `SetAutoKill(false)`; a later one that has not
+  started (a fade out queued with a delay) is left to start in its turn. It holds for the widget's property verbs, the
+  visuals' `ColorTo` and `AlphaTo`, the rect block's, the ring's and polygon's angles and the line renderer's width. A tween
+  in a `UDreamTweenerSequence` neither stops nor is stopped. `UDreamTweener::SetReplacesEarlierTweens(false)` opts a tween
+  out, and `SetExclusive` is the C++ hook for a verb of your own. See [One tween per property](Docs/concepts/animation.md#one-tween-per-property).
+- **A text is no raycast target by default**, as UMG's TextBlock is not: text is mostly a label on something else, and a
+  label laid over a button took the button's hover and clicks. A text that is itself pressed sets `bRaycastTarget = true`.
+  Texts saved before keep the `true` they were saved with. See [Widgets](Docs/concepts/widgets.md#visuals-what-a-widget-draws).
+- **Focus asked for too early arrives on the next frame.** `SetFocus` and `SetKeyboardFocus` on a widget shown that frame,
+  not laid out yet, answered no and that was the end of it; the focus is now given on the next frame, unless that player's
+  focus moves elsewhere first.
+- **A tilt card tilts on top of the card's own rotation and scale** instead of writing over them: a fan of cards each turned
+  a little keeps its fan.
+- **`RenderOpacity` can be keyed** on a `.dui` timeline and in the animation editor (DUI5016 refused it).
+- **A small `.dui` widget opens on its own size.** A class whose root has a size of its own, and whose designer canvas nobody
+  picked, has its canvas follow the root's size; the class's design size goes with it, which is the draw size a world
+  widget takes with *Use Design Size* on.
+- **An automatic `.dui` recompile reports in the designer.** Its errors go into the open designer's Compiler Results panel,
+  which opens for them, and its notification shows in that window rather than in the corner of the screen.
+- **Designer clicks look through silent full-screen layers.** A widget that is no raycast target and draws nothing now -- a
+  full-screen pixel sort at strength 0 -- is skipped when something else is under the cursor.
+- **Two warnings for things that drew wrong with no word.** A post-process visual (a background blur) inside a group drawn
+  apart reads the group, not the scene, and comes out flat; an override material that does not shade through
+  `MF_DreamUI_Shade` is not clipped, masked or faded by DreamGUI. Each is now logged once.
 
 ### Fixed
 
@@ -626,6 +684,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   without its advanced rows, with "show all advanced" on as well, so a holo foil's, a pointer light's and a tilt card's
   *User Index* and *Pointer Id* were in no panel. DreamGUI's panels give such a property an ordinary row of its
   sub-category, after the others.
+
+- **A builder error is no longer followed by DUI6002.** The code that says a file produced no hierarchy was reported with
+  every error the builder gave, pinned to the root line, where nothing is wrong. It is now reported only when no other
+  error says why.
+- **An expandable area in a vertical box or a scroll box shrinks and grows with its travel.** The panel around it measured
+  it by its header and its whole content, so a closing area showed its whole body until the close ended, and then
+  vanished; an opening one was whole at once. Its `MaxHeight` reaches the panel too now.
+- **The diagnostics mailbox forgets a file no class is built from.** A Blueprint taken off its `.dui`, or a `.dui` deleted
+  or renamed, left its entries in `DUI/.dui-diagnostics.json` for the editor extension to show.
 
 ## 1.0.0
 

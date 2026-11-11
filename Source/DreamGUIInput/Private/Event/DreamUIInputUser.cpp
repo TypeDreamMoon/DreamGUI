@@ -1166,6 +1166,17 @@ void UDreamUIInputUser::InputNavigation(EDreamUINavigationDirection InDirection,
 	}
 }
 
+void UDreamUIInputUser::TapNavigation(EDreamUINavigationDirection InDirection, int32 InPointerID)
+{
+	UDreamPointerEventData* EventData = GetPointerEventData(InPointerID, true);
+	if (EventData == nullptr || InDirection == EDreamUINavigationDirection::None)
+	{
+		return;
+	}
+	SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+	EventData->PendingNavigationTaps.Add(InDirection);
+}
+
 void UDreamUIInputUser::InputTriggerForNavigation(bool bInPressed, int32 InPointerID)
 {
 	UDreamPointerEventData* EventData = GetPointerEventData(InPointerID, true);
@@ -1802,6 +1813,15 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 	// Something has to be happening: a direction held, a confirm edge, or a confirm held down. A pointer parked in
 	// navigation mode with nothing held takes no steps -- it used to re-run a step every interval forever,
 	// reveal-scrolling its highlighted widget back into view under a player scrolling the list with the wheel.
+	// A tap (TapNavigation) is one step, taken here on the frame after it was asked for, once no direction is held: a
+	// press and its release made on one frame by code never reached a frame with the direction down.
+	if (EventData->NavigateDirection == EDreamUINavigationDirection::None && EventData->PendingNavigationTaps.Num() > 0)
+	{
+		const EDreamUINavigationDirection Tap = EventData->PendingNavigationTaps[0];
+		EventData->PendingNavigationTaps.RemoveAt(0);
+		RunNavigationFrame(EventData, Tap, true);
+		return;
+	}
 	const bool bHasNavigateDirection = EventData->NavigateDirection != EDreamUINavigationDirection::None;
 	const bool bTriggerStateChanged = EventData->bNowIsTriggerPressed != EventData->bPrevIsTriggerPressed;
 	// A held confirm is a press under way, and a press is looked at on every frame it is held: that is where a held mouse
@@ -1813,8 +1833,11 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 		return;
 	}
 
-	// Real time, as Slate's key repeat is: holding a direction in a paused game's menu has to go on stepping.
-	const double TimeSeconds = UDreamEventSystem::GetPointerClockSeconds(World);
+	// Real time, as Slate's key repeat is: holding a direction in a paused game's menu has to go on stepping. The game
+	// clock when the player's event system says so -- a recording made frame by frame runs far behind real time.
+	const double TimeSeconds = Config.bNavigationRepeatInGameTime
+		? static_cast<double>(World->GetTimeSeconds())
+		: UDreamEventSystem::GetPointerClockSeconds(World);
 	const bool bRepeatIsDue = TimeSeconds > EventData->NavigateTickTime;
 	const bool bTakeNavigateStep = bHasNavigateDirection && bRepeatIsDue;
 	if (!bTakeNavigateStep && !bTriggerStateChanged && !bConfirmHeld)

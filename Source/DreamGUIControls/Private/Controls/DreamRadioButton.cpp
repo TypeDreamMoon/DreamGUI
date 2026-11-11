@@ -174,11 +174,13 @@ void UDreamRadioButton::SetCheckedState(EDreamCheckState InCheckedState)
 			Group->ReleaseSelection(ToggleBehaviour);
 		}
 		ToggleBehaviour->SetIsOnWithoutNotify(false);
+		OnCheckStateChangedNative.Broadcast(EDreamCheckState::Undetermined);
 		OnCheckStateChanged.Broadcast(EDreamCheckState::Undetermined);
 		if (bWasOn)
 		{
 			// The bool projection moved too (true -> false); Unchecked -> Undetermined stays silent on
 			// this spelling because false -> false is not a change.
+			OnToggleChangedNative.Broadcast(false);
 			OnToggleChanged.Broadcast(false);
 			OnValueChangedBP.Broadcast(false);
 		}
@@ -202,6 +204,7 @@ void UDreamRadioButton::SetCheckedState(EDreamCheckState InCheckedState)
 		CheckedState = InCheckedState;
 		bIsOn = bTargetOn;
 		PushCheckStateVisuals();
+		OnCheckStateChangedNative.Broadcast(CheckedState);
 		OnCheckStateChanged.Broadcast(CheckedState);
 	}
 }
@@ -308,6 +311,7 @@ void UDreamRadioButton::HandleValueChanged(bool bInIsOn)
 	PushCheckStateVisuals();
 	if (CheckedState != OldState)
 	{
+		OnCheckStateChangedNative.Broadcast(CheckedState);
 		OnCheckStateChanged.Broadcast(CheckedState);
 	}
 	OnValueChangedBP.Broadcast(bInIsOn), OnToggleChanged.Broadcast(bInIsOn);

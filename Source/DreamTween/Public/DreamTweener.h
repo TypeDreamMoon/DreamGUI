@@ -7,6 +7,7 @@
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/HitResult.h"
 #include "Curves/CurveFloat.h"
+#include "UObject/ObjectKey.h"
 #include "DreamTweener.generated.h"
 
 DECLARE_DELEGATE_RetVal_FourParams(float, FDreamTweenFunction, float, float, float, float);
@@ -188,6 +189,20 @@ protected:
 	 * wants instead of being rebuilt each time.
 	 */
 	bool bAutoKill = true;
+	/**
+	 * Does this tween, when it starts, stop the earlier tweens of the same properties (see SetExclusive)? On unless
+	 * SetReplacesEarlierTweens turned it off; it means nothing for a tween SetExclusive was never called on.
+	 */
+	bool bReplacesEarlierTweens = true;
+	/**
+	 * Which of ExclusiveTarget's properties this tween writes, one bit for each; 0 for a tween made by hand, which takes
+	 * nothing over from anybody. Set by SetExclusive, which property verbs such as UDreamWidget::RenderOpacityTo call.
+	 */
+	uint64 ExclusiveChannels = 0;
+	/** The object whose properties ExclusiveChannels names. */
+	FObjectKey ExclusiveTarget;
+	/** When SetExclusive was called on this tween, counted across the manager, so the earlier of two tweens is known. */
+	uint64 ExclusiveOrder = 0;
 	/**
 	 * Does this tween run from the target value back to the current one? DOTween's From(). Read once,
 	 * at the moment the start value is taken, because "the current value" only means anything then.
@@ -538,6 +553,28 @@ public:
 		UDreamTweener* SetAutoKill(bool value = true);
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		bool GetAutoKill()const { return bAutoKill; }
+	/**
+	 * Make this the tween of some of InTarget's properties: InChannels has one bit for each property it writes, in a
+	 * numbering of InTarget's class's own. When it starts, it stops the tweens SetExclusive was called on earlier with
+	 * the same target and any of the same bits, and any that have started already -- killed if they would be retired
+	 * when they finish, paused if they were kept with SetAutoKill(false). A later one that has not started yet is left
+	 * to start in its turn. Two "fade to 1" and "fade to 0" tweens no longer both run, the last to finish winning.
+	 *
+	 * Only between tweens the manager steps: a tween a sequence has taken over neither stops nor is stopped, since a
+	 * sequence schedules its children itself. The property verbs (UDreamWidget::RenderOpacityTo, the visuals' ColorTo
+	 * and the rest) call this; SetReplacesEarlierTweens(false) keeps one of them from stopping anything.
+	 * Has no effect if the Tween has already started.
+	 */
+	UDreamTweener* SetExclusive(const UObject* InTarget, uint64 InChannels);
+	/**
+	 * Does this tween stop the earlier tweens of the same properties when it starts? On for the tweens the property
+	 * verbs make (UDreamWidget::RenderOpacityTo, RenderOffsetTo, a visual's ColorTo and the rest); off lets two of them
+	 * run on one property at once, as before. Means nothing for a tween made with UDreamTweenManager::To directly.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetReplacesEarlierTweens(bool value = true);
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		bool GetReplacesEarlierTweens()const { return bReplacesEarlierTweens && ExclusiveChannels != 0; }
 	/**
 	 * Run backwards from the target to wherever the value is now, instead of towards the target.
 	 *

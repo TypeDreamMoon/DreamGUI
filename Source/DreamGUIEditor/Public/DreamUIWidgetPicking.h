@@ -35,10 +35,20 @@ namespace DreamUIWidgetPicking
 	DREAMGUIEDITOR_API void RaycastWidgetRects(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, TArray<FDreamUIWidgetPickHit>& OutHits);
 
 	/**
-	 * Front-most crossed rect. InOutCycleIndex advances one step deeper into the stack on each call,
-	 * so clicking the same pixel repeatedly walks down through overlapping widgets; reset it to
-	 * INDEX_NONE whenever the pick ray moves, or the walk continues from wherever the last stack
-	 * happened to leave it.
+	 * Whether a click should be able to select InWidget when something else is under the cursor too.
+	 *
+	 * Not a widget that has a visual which no ray can hit at run time (it is not a raycast target, or the widget is hit-test
+	 * invisible) and which puts nothing on the screen now (an effect that is off or at zero strength, a mesh at zero alpha),
+	 * unless it holds children. That is a full-screen effect layer at the end of a root: the front-most rect of the page,
+	 * and the one a click would otherwise always pick. Widgets with no visual -- panels, groups -- always count.
+	 */
+	DREAMGUIEDITOR_API bool IsWorthPicking(const UDreamWidget* InWidget);
+
+	/**
+	 * Front-most crossed rect that IsWorthPicking, or the front-most of all when none is. InOutCycleIndex advances one
+	 * step deeper into the stack on each call, so clicking the same pixel repeatedly walks down through overlapping
+	 * widgets (those that are worth picking); reset it to INDEX_NONE whenever the pick ray moves, or the walk continues
+	 * from wherever the last stack happened to leave it.
 	 */
 	DREAMGUIEDITOR_API UDreamWidget* PickTopmostWidget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, int32& InOutCycleIndex);
 

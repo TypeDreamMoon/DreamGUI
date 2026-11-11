@@ -316,6 +316,7 @@ void UDreamScrollBox::ApplyStyle()
 	if (bScrollBarWasVisible != bBarVisible)
 	{
 		bScrollBarWasVisible = bBarVisible;
+		OnScrollBarVisibilityChangedNative.Broadcast(bBarVisible);
 		OnScrollBarVisibilityChanged.Broadcast(bBarVisible);
 	}
 }
@@ -397,6 +398,7 @@ void UDreamScrollBox::HandleContentFocusMoved(UDreamWidget* InFocusedWidget)
 	// focus, which OnFocusReceived already said. Everything else under it is content.
 	if (InFocusedWidget != nullptr && InFocusedWidget != FaceNode && InFocusedWidget != this)
 	{
+		OnFocusUpdatedNative.Broadcast(InFocusedWidget);
 		OnFocusUpdated.Broadcast(InFocusedWidget);
 	}
 }
@@ -1040,12 +1042,14 @@ void UDreamScrollBox::HandleScrollViewChanged(FVector2D InProgress)
 	}
 	// The bar follows the view through its own subscription, so there is nothing to push here -- only
 	// the control-level re-broadcast a consumer binds to.
+	OnScrolledNative.Broadcast(Axis);
 	OnScrolled.Broadcast(Axis);
 	OnValueChangedBP.Broadcast(Axis);
 	// UMG's OnUserScrolled, and the reason the guard exists: everything this control pushed itself
 	// arrives here too, and after the fact the value cannot say which road it came down.
 	if (!bPushingScroll)
 	{
+		OnUserScrolledNative.Broadcast(GetScrollOffset());
 		OnUserScrolled.Broadcast(GetScrollOffset());
 	}
 }

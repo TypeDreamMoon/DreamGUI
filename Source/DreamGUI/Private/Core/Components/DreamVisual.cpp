@@ -661,11 +661,19 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_InitialMark(UDreamUIDataAsT
 
 #pragma region TweenAnimation
 #include "DreamTweenManager.h"
+namespace DreamVisualTweenChannels
+{
+	/** The visual's own colour and its alpha, for UDreamTweener::SetExclusive: the top two bits, so a subclass numbering
+	 * its properties from 0 never shares one with them. */
+	constexpr uint64 Alpha = 1ull << 63;
+	constexpr uint64 Color = (1ull << 62) | Alpha;
+}
 UDreamTweener* UDreamVisual::ColorTo(FColor endValue, float duration, float delay, EDreamTweenEase ease)
 {
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenColorGetterFunction::CreateUObject(this, &UDreamVisual::GetColor), FDreamTweenColorSetterFunction::CreateUObject(this, &UDreamVisual::SetColor), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamVisualTweenChannels::Color);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -683,6 +691,7 @@ UDreamTweener* UDreamVisual::ColorFrom(FColor startValue, float duration, float 
 		// colour it had, which is where the tween was going. Writing it after asking changes nothing
 		// when there is a tween: its start is read from the getter on its first step, not here.
 		this->SetColor(startValue);
+		Tweener->SetExclusive(this, DreamVisualTweenChannels::Color);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -694,6 +703,7 @@ UDreamTweener* UDreamVisual::AlphaTo(float endValue, float duration, float delay
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamVisual::GetAlpha), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamVisual::SetAlpha), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamVisualTweenChannels::Alpha);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -708,6 +718,7 @@ UDreamTweener* UDreamVisual::AlphaFrom(float startValue, float duration, float d
 		// As in ColorFrom: the start only goes in once a tween exists to fade back from it, so with no
 		// tween manager the visual keeps the alpha it had instead of being left at the start value.
 		this->SetAlpha(startValue);
+		Tweener->SetExclusive(this, DreamVisualTweenChannels::Alpha);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}

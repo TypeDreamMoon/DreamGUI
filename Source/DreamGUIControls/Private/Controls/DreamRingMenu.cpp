@@ -259,6 +259,10 @@ void UDreamRingMenu::ApplyStyle()
 		{
 			Text->SetColor(Active.HubTextColor);
 			Text->SetFontSize(Active.HubFontSize);
+			if (Active.Font != nullptr)
+			{
+				Text->SetFont(Active.Font);
+			}
 		}
 		// Inside the hub's own square, inset so a caption does not run out over the ring.
 		const float Span = FMath::Max(0.0f, Inner * 2.0f - Active.HubFontSize);
@@ -382,6 +386,7 @@ void UDreamRingMenu::RebuildItems()
 	// Last of all, so a decorator hooked here sees a finished wedge -- geometry, content and colour.
 	for (int32 Index = 0; Index < WedgeNodes.Num(); ++Index)
 	{
+		OnWedgeGeneratedNative.Broadcast(Index, WedgeNodes[Index].Get());
 		OnWedgeGenerated.Broadcast(Index, WedgeNodes[Index].Get());
 	}
 }
@@ -622,6 +627,10 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 			{
 				Text->SetText(Item.Label);
 				Text->SetFontSize(InStyle.FontSize);
+				if (InStyle.Font != nullptr)
+				{
+					Text->SetFont(InStyle.Font);
+				}
 			}
 			PlaceCentred(Label,
 				FVector2D(0.0, Top - IconSpan - Spacing - LabelSpan * 0.5),
@@ -776,6 +785,7 @@ void UDreamRingMenu::SetHighlightedIndex(int32 InIndex)
 
 	RefreshWedgeColors();
 	RefreshHubText();
+	OnHighlightChangedNative.Broadcast(HighlightedIndex);
 	OnHighlightChanged.Broadcast(HighlightedIndex);
 
 	if (bSelectOnHighlight && HighlightedIndex != INDEX_NONE)
@@ -867,6 +877,7 @@ void UDreamRingMenu::SetSelectedIndex(int32 InIndex)
 		return;
 	}
 	SetSelectedIndexWithoutNotify(Resolved);
+	OnSelectionChangedNative.Broadcast(SelectedIndex);
 	OnSelectionChanged.Broadcast(SelectedIndex);
 	OnValueChangedBP.Broadcast(SelectedIndex);
 }
@@ -939,6 +950,7 @@ void UDreamRingMenu::ActivateItem(int32 InIndex)
 	}
 	// AFTER the selection moved, and unconditionally: a menu entry is a command, and choosing the
 	// same one twice has to be sayable even though the selection did not change.
+	OnItemActivatedNative.Broadcast(InIndex, ActivatedTag);
 	OnItemActivated.Broadcast(InIndex, ActivatedTag);
 }
 
@@ -991,6 +1003,7 @@ void UDreamRingMenu::Open()
 		RingNode->SetRenderOpacity(1.0f);
 		RingNode->SetRelativeScale(FVector::OneVector);
 	}
+	OnOpenedNative.Broadcast(SelectedIndex);
 	OnOpened.Broadcast(SelectedIndex);
 }
 
@@ -1058,6 +1071,7 @@ void UDreamRingMenu::Close()
 	{
 		RingNode->SetWidgetActive(false);
 	}
+	OnClosedNative.Broadcast(SelectedIndex);
 	OnClosed.Broadcast(SelectedIndex);
 }
 

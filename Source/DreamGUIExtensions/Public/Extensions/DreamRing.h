@@ -16,8 +16,14 @@ public:
 	UDreamRing(const FObjectInitializer& ObjectInitializer);
 
 protected:
+	/**
+	 * Degrees from three o'clock, counter-clockwise: 0 is the right, 90 the top. Native.RingMenu and a text on a path measure
+	 * from twelve o'clock, clockwise instead. A progress ring running clockwise from the top is
+	 * StartAngle = 90, EndAngle = 90 - 360 * progress.
+	 */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		float StartAngle = 0.0f;
+	/** Degrees, in the same convention as StartAngle: from three o'clock, counter-clockwise. The arc runs counter-clockwise from StartAngle when this is the greater, clockwise when it is the smaller. */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		float EndAngle = 90.0f;
 	//line segment

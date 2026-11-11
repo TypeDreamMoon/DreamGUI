@@ -405,6 +405,7 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 			if (!IsCurrentBuild() || !WeakTab.IsValid())return;
 		}
 
+		OnTabGeneratedNative.Broadcast(Index, WeakTab.Get());
 		OnTabGenerated.Broadcast(Index, WeakTab.Get());
 		if (!IsCurrentBuild() || !WeakTab.IsValid())return;
 	}
@@ -922,6 +923,7 @@ void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 	if (!IsCurrentSelection())return;
 	if (bChanged)
 	{
+		OnTabChangedNative.Broadcast(Sanitized);
 		OnTabChanged.Broadcast(Sanitized);
 		if (!IsCurrentSelection())return;
 		OnValueChangedBP.Broadcast(Sanitized);
@@ -1163,6 +1165,7 @@ void UDreamTabView::CloseTab(int32 InIndex)
 		}
 		return INDEX_NONE;
 	};
+	OnTabClosedNative.Broadcast(InIndex);
 	OnTabClosed.Broadcast(InIndex);
 	int32 ClosingIndex = FindClosingIndex();
 	if (ClosingIndex == INDEX_NONE)return;
@@ -1293,6 +1296,7 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	// arrays it is read from saying the same thing.
 	ApplyStyle();
 	if (!IsCurrentMove())return;
+	OnTabReorderedNative.Broadcast(InFromIndex, InToIndex);
 	OnTabReordered.Broadcast(InFromIndex, InToIndex);
 	if (!IsCurrentMove())return;
 	BroadcastActiveTabMoved(ActiveBefore, /*bInOpenTabReplaced*/false);
@@ -1315,6 +1319,7 @@ void UDreamTabView::BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTab
 		const uint64 SelectionSerial = TabSelectionSerial;
 		const uint64 RebuildSerial = TabRebuildSerial;
 		const int32 MovedIndex = ActiveTabIndex;
+		OnTabChangedNative.Broadcast(MovedIndex);
 		OnTabChanged.Broadcast(MovedIndex);
 		if (!WeakThis.IsValid() || TabSelectionSerial != SelectionSerial || TabRebuildSerial != RebuildSerial)return;
 		OnValueChangedBP.Broadcast(MovedIndex);

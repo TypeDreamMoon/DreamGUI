@@ -50,6 +50,12 @@ struct FDreamWidgetDesignerData
 	 */
 	UPROPERTY()
 	FIntPoint DesignViewportSize = FIntPoint::ZeroValue;
+	/**
+	 * CanvasSize was taken from the size of the .dui root, nobody having picked one, and follows it: a root resized in
+	 * the file resizes the canvas on the next compile. Cleared by picking a resolution.
+	 */
+	UPROPERTY()
+	bool bCanvasFollowsRoot = false;
 	/** Preview render mode (an EDreamRenderMode). ScreenSpaceOverlay by default, as in the designer. */
 	UPROPERTY()
 	uint8 CanvasRenderMode = 0;
@@ -190,6 +196,40 @@ public:
 
 	/** Every widget in the authored hierarchy, root first. Empty when nothing has been authored. */
 	void GetAllSourceWidgets(TArray<UDreamWidget*>& OutWidgets) const;
+
+	/**
+	 * Give a .dui-backed Blueprint whose designer size nobody has chosen the size of its own root, so a 560x236 card
+	 * opens on a 560x236 canvas instead of a speck in the middle of 1920x1080.
+	 *
+	 * Only while the size really is unchosen: no device resolution was ever picked (DesignViewportSize is zero) and the
+	 * canvas is still the struct's default. Only for a root that has a size of its own -- neither axis stretched -- so
+	 * a screen that fills its host keeps the default canvas it is laid out against. A root that still has a
+	 * freshly constructed widget's 100x100 is taken as having declared nothing, and is left alone too: that size is
+	 * what an unsized root comes out as, and a canvas of it would shrink every such screen to a postage stamp.
+	 * Not recorded in DesignViewportSize, so it stays a default and a later choice replaces it. Called by the
+	 * compile that builds the hierarchy from the file and by the designer as it opens, which together cover a class
+	 * made by a script and one compiled before this existed. Returns whether the canvas size changed.
+	 */
+	bool AdoptRootSizeAsDefaultCanvas();
+
+	/**
+	 * The design canvas the hierarchy is authored against, as stored on the asset. What the designer opens with.
+	 *
+	 * Exposed so a script can read it without exporting the designer data as property text.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamUI|Designer")
+	FIntPoint GetDesignerCanvasSize() const;
+
+	/**
+	 * Choose the design canvas, as picking a custom screen size in the designer does: the asset records it as the
+	 * resolution the author picked, an open designer is resized with it, and compiles no longer replace it with the
+	 * root's own size. The canvas is taken as the device resolution, so a hierarchy whose root canvas scales
+	 * (anything but Constant Pixel Size) may lay out on a different canvas than the one asked for.
+	 *
+	 * Returns false, and changes nothing, when either axis is below one.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamUI|Designer")
+	bool SetDesignerCanvasSize(FIntPoint InSize);
 
 	virtual UClass* GetBlueprintClass() const override;
 	virtual bool SupportedByDefaultBlueprintFactory() const override { return false; }

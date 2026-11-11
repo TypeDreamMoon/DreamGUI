@@ -1,6 +1,6 @@
 ---
 title: Animation
-description: The three ways to animate — tweens from the DreamTween module (RenderOffsetTo, RenderScaleTo, RenderAngleTo and RenderTranslationTo for widgets inside panels, EDreamTweenEase, DreamTween.MaxStepSeconds), widget animations (UDreamWidgetAnimation and Sequencer), and .dui timelines.
+description: The three ways to animate — tweens from the DreamTween module (RenderOffsetTo, RenderScaleTo, RenderAngleTo, RenderRotationTo, RenderPoseTo and RenderTranslationTo for widgets inside panels, one tween per property at a time, EDreamTweenEase, DreamTween.MaxStepSeconds), widget animations (UDreamWidgetAnimation and Sequencer), and .dui timelines.
 ---
 
 There are three ways to make things move in DreamGUI, each for its own kind of job:
@@ -23,7 +23,7 @@ Widgets, visuals and behaviours carry tweens of their own:
 | On | Tweens |
 | --- | --- |
 | `UDreamWidget` | `AnchoredPositionTo`, `SizeDeltaTo`, `WidthTo`, `HeightTo`, `RenderOpacityTo`, `LocalPositionTo`, `LocalScaleTo`, `LocalRotatorTo`, `WorldPositionTo`, … and the render-transform tweens of the next section |
-| `UDreamVisual` | `ColorTo`, `AlphaTo` |
+| `UDreamVisual` | `ColorTo`, `AlphaTo`, `ColorFrom`, `AlphaFrom` |
 | `UDreamTextPaintLibrary` | `PaintPhaseTo`, `PaintAngleTo`, `PlayShimmer` (see [Text](text.md)) |
 | `UDreamTweenBPLibrary` | The general `FloatTo`, `Vector3To`, `ColorTo`, `MaterialScalarParameterTo`, `DelayCall`, `SpringFloat`, …, and `UMG_*` tweens for UMG widgets |
 
@@ -38,6 +38,52 @@ A few rules that catch people:
   after it finishes, `SetAutoKill(false)` before it starts, or `Restart` it from its own `OnComplete`, which keeps it running.
 - Springs (`SpringFloat`) are held at rest by default; `SetTarget` wakes one.
 - A tween whose owner is gone is dropped without callbacks.
+- **Two tweens on one property do not both run.** See the next section.
+
+### One tween per property
+
+A tween that starts on a property takes it over: it stops the tweens already working on the same object's same property,
+so `RenderOpacityTo(0)` after `RenderOpacityTo(1)` fades out from wherever the fade in had got to. Before this, both
+ran, and whichever finished last decided the result -- a tooltip shown and hidden quickly by hover could be left lit.
+
+```cpp
+Tip->RenderOpacityTo(1.0f, 0.15f);   // the pointer enters
+Tip->RenderOpacityTo(0.0f, 0.15f);   // and leaves before that ends: this one stops the fade in and fades out from there
+
+Panel->RenderOpacityTo(1.0f, 0.2f);
+Panel->RenderOpacityTo(0.0f, 0.2f, 1.5f);   // a fade out queued for later is left alone until it starts
+```
+
+- **Which verbs.** The property verbs of the widgets (`RenderOpacityTo`, `RenderTranslationTo`, `RenderOffsetTo`,
+  `RenderScaleTo`, `RenderAngleTo`, `RenderRotationTo`, `RenderPoseTo`, `SizeDeltaTo`, `WidthTo`, `HeightTo`,
+  `AnchoredPositionTo`, `LocalPositionTo`, `LocalScaleTo`, `LocalRotatorTo`, `WorldPositionTo` and the rest), of the visuals
+  (`ColorTo`, `AlphaTo`, `ColorFrom`, `AlphaFrom`), of the rect block (`BodyColorTo`, `BorderWidthTo`, the gradient and
+  shadow tweens, ...), the `StartAngleTo` and `EndAngleTo` of a ring and a polygon, and a line renderer's `LineWidthTo`.
+  A tween made with `UDreamTweenManager::To` or a `UDreamTweenBPLibrary` function names no property and takes nothing over.
+- **Same property, not same verb.** The verbs that write the same thing replace each other, and the others run side by
+  side. `RenderOffsetTo` and `RenderTranslationTo` both move the render translation on the canvas plane, so they replace
+  each other; `RenderOffsetTo` and `RenderScaleTo` do not. `ColorTo` covers the colour's alpha, so it replaces `AlphaTo`;
+  `BorderAlphaTo` replaces `BorderColorTo` and neither touches `BorderWidthTo`. `RenderAngleTo` (the in-plane angle) and
+  `RenderRotationTo` (the whole rotation) overlap in the angle.
+- **Which tween is stopped.** The ones on that object and property that were made before it, or that have started
+  already. A tween made later that has not started yet -- a delayed fade out queued after a fade in -- is not touched, and
+  stops the earlier one when its own turn comes. A stopped tween is killed (its `OnKill` runs, its `OnComplete` does not);
+  one kept with `SetAutoKill(false)` is paused where it is instead.
+- **Sequences.** A tween inside a `UDreamTweenerSequence` is never stopped and never stops another; a sequence schedules
+  its children itself.
+- **Opting out.** `SetReplacesEarlierTweens(false)` on a tween lets it run beside the others on its property: it neither
+  stops them nor is stopped by them. Use it for a tween that is meant to share a property -- a loop that keeps an icon
+  breathing while a hover scales it -- or the hover will stop the breathing.
+
+```cpp
+Icon->RenderScaleTo(FVector(1.15, 1.15, 1.0), 0.6f, 0.0f, EDreamTweenEase::InOutSine)
+    ->SetLoop(EDreamTweenLoop::Yoyo, -1)
+    ->SetReplacesEarlierTweens(false);
+```
+
+For a property verb of your own, `UDreamTweener::SetExclusive(Target, ChannelBits)` (C++) makes the tween one of
+`Target`'s properties: give each of your class's properties one bit, and a tween with any bit in common with another on
+the same target replaces it. Call it right after making the tween, before it starts.
 
 ### Pause and time dilation
 
@@ -62,14 +108,23 @@ the layout:
 | `RenderOffsetTo(FVector2D)` | The same move on the canvas plane (x right, y up), depth kept |
 | `RenderScaleTo(FVector)` | Scale about `RenderTransformPivot` |
 | `RenderAngleTo(float)` | The in-plane angle (`SetRenderTransformAngle`) |
+| `RenderRotationTo(FRotator)` | The whole render rotation, out of the plane as well as in it: a panel swinging open on its hinge, a card turning over. Pitch, yaw and roll each run from where they are to where they are told, so a yaw from 0 to 180 is half a turn |
+| `RenderPoseTo(FVector, FRotator)` | The render translation and rotation together, on one clock and one ease |
 
 They move, scale and turn what is drawn and never the layout, so siblings do not make room. A widget whose render transform
 keeps changing is made a render layer by its canvas and moved on the GPU (see [Rendering](rendering.md)).
 
+`SetRenderOffset(FVector2D)` and `GetRenderOffset()` are the plain setter and getter of the same move: the translation on
+the canvas plane, with the depth (X) left where it is, where `SetRenderTranslation(FVector(0, x, y))` would set the depth to
+0 as well.
+
+A positive `RenderRotation.Roll` (and a positive `SetRenderTransformAngle`, `RenderAngleTo`) turns the widget **clockwise on
+the screen**, its right edge going down, as UMG's angle does.
+
 ```cpp
 // Card sits in a VerticalBox: move what is drawn, not its slot
 Card->SetRenderOpacity(0.0f);
-Card->SetRenderTranslation(FVector(0.0, 0.0, -40.0));   // 40 below where layout put it
+Card->SetRenderOffset(FVector2D(0.0, -40.0));           // 40 below where layout put it
 Card->RenderOpacityTo(1.0f, 0.25f);
 Card->RenderOffsetTo(FVector2D::ZeroVector, 0.35f, 0.0f, EDreamTweenEase::OutCubic)
     ->OnComplete([]() { /* landed */ });

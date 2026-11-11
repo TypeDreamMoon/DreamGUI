@@ -147,6 +147,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleChangedEvent OnToggleChanged;
+	/** OnToggleChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnToggleChangedEvent() { return OnToggleChangedNative; }
+	TMulticastDelegate<void(bool)> OnToggleChangedNative;
 
 	/**
 	 * UMG's spelling of the same moment, carrying the full state. Fires whenever CheckedState
@@ -154,6 +157,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamCheckStateChangedEvent OnCheckStateChanged;
+	/** OnCheckStateChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(EDreamCheckState)>& GetOnCheckStateChangedEvent() { return OnCheckStateChangedNative; }
+	TMulticastDelegate<void(EDreamCheckState)> OnCheckStateChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -173,15 +179,27 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleSimpleEvent OnPressed;
+	/** OnPressed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnPressedEvent() { return OnPressedNative; }
+	TMulticastDelegate<void()> OnPressedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleSimpleEvent OnReleased;
+	/** OnReleased for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnReleasedEvent() { return OnReleasedNative; }
+	TMulticastDelegate<void()> OnReleasedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleSimpleEvent OnHovered;
+	/** OnHovered for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnHoveredEvent() { return OnHoveredNative; }
+	TMulticastDelegate<void()> OnHoveredNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleSimpleEvent OnUnhovered;
+	/** OnUnhovered for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnUnhoveredEvent() { return OnUnhoveredNative; }
+	TMulticastDelegate<void()> OnUnhoveredNative;
 
 
 	/** The compatibility spelling of IsChecked(): the behaviour's bool once it exists, bIsOn before. */

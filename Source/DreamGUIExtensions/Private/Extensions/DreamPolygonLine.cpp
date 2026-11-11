@@ -137,6 +137,7 @@ UDreamTweener* UDreamPolygonLine::StartAngleTo(float endValue, float duration /*
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamPolygonLine::GetStartAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamPolygonLine::SetStartAngle), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, 1ull << 0);
 		Tweener->SetEase(easeType)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -147,6 +148,7 @@ UDreamTweener* UDreamPolygonLine::EndAngleTo(float endValue, float duration /* =
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamPolygonLine::GetEndAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamPolygonLine::SetEndAngle), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, 1ull << 1);
 		Tweener->SetEase(easeType)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}

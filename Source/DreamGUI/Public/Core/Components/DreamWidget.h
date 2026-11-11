@@ -449,7 +449,9 @@ private:
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Translation"))
 	FVector RenderTranslation = FVector::ZeroVector;
 	/**
-	 * Render-only rotation about RenderTransformPivot, in degrees.
+	 * Render-only rotation about RenderTransformPivot, in degrees. Roll is the in-plane angle, and a positive Roll turns
+	 * the widget clockwise on the screen (its right edge down), as UMG's angle does; Pitch and Yaw turn it out of the
+	 * plane, about its horizontal and vertical axes.
 	 * FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a
 	 * property track for one and not the other. No transient mirror is needed here because this is
 	 * itself the serialized source of truth.
@@ -1562,7 +1564,8 @@ private:
 	uint8 bIsAttaching : 1 = false;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1", DreamGUI_Section = "Layer", DreamGUI_Order = 10))
+	/** Interp, so a .dui timeline and the animation editor can key a fade as they key a move. */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1", DreamGUI_Section = "Layer", DreamGUI_Order = 10))
 	float RenderOpacity = 1.0f;
 	/** See SetContentTint. Runtime state, not saved: what exposes a content colour (a border) sets it from its own property. */
 	FLinearColor ContentTint = FLinearColor::White;
@@ -1942,7 +1945,10 @@ public:
 	 * here: the owning player is now a question any widget can answer, the wrappers' bodies are
 	 * unchanged, and a Blueprint reaching them on a user widget still finds them by inheritance.
 	 */
-	/** Take focus on the owning player's event system. Returns false when it could not be given. */
+	/**
+	 * Take focus on the owning player's event system. Returns false when it could not be given now; a widget asked before
+	 * it was first laid out (shown this frame) takes it on the next frame, unless that player's focus moves first.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
 	bool SetKeyboardFocus();
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
@@ -2050,11 +2056,22 @@ public:
 	 * X here, so turning about X is the rotation that keeps a widget flat against the canvas, and it
 	 * is the one UMG's single angle means. Pitch and yaw are left alone, so a card that is mid-flip
 	 * does not snap back when a graph sets its angle.
+	 *
+	 * A positive angle turns the widget clockwise on the screen, as UMG's does: its right edge goes down.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void SetRenderTransformAngle(float InAngle);
 	UFUNCTION(BlueprintPure, Category = "Render Transform")
 	float GetRenderTransformAngle()const { return static_cast<float>(RenderRotation.Roll); }
+	/**
+	 * The render translation's move on the canvas plane -- x right, y up -- with its depth (RenderTranslation.X) left
+	 * where it is: SetRenderTranslation(FVector(0, x, y)) would set the depth to 0 as well. The setter RenderOffsetTo
+	 * tweens.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderOffset(const FVector2D& InOffset);
+	UFUNCTION(BlueprintPure, Category = "Render Transform")
+	FVector2D GetRenderOffset()const { return FVector2D(RenderTranslation.Y, RenderTranslation.Z); }
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
 	EMouseCursor::Type GetCursor()const { return Cursor.GetValue(); }
 	/**
@@ -2531,6 +2548,21 @@ public:
 	UDreamTweener* RenderScaleTo(const FVector& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
 	UDreamTweener* RenderAngleTo(float endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	/**
+	 * The whole render rotation, out of the plane as well as in it: a side panel swinging open on its hinge, a card
+	 * turning over. Each of Pitch, Yaw and Roll runs from where it is to where it is told, so 0 to 180 of yaw is half a
+	 * turn rather than none.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderRotationTo(const FRotator& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	/** The render translation and rotation together, on one clock and one ease: a pose the widget moves into. */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderPoseTo(const FVector& endTranslation, const FRotator& endRotation, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	// Every tween verb above -- and the visuals' ColorTo, AlphaTo and their siblings -- replaces the earlier ones on the
+	// same property when it starts: RenderOpacityTo(0) started after RenderOpacityTo(1) stops the fade in, rather than
+	// both running and the last to end winning. A verb's tween run by a sequence is left to the sequence, and a tween
+	// kept with SetAutoKill(false) is paused instead of killed. SetReplacesEarlierTweens(false) on a tween lets it run
+	// alongside the others (UDreamTweener::SetExclusive).
 
 	UFUNCTION(BlueprintCallable, Category = "DreamTweenGUI")
 	static void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener);

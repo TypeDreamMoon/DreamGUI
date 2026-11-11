@@ -191,7 +191,6 @@ void UDreamExpandableArea::HandleContentDimensionsChanged(UDreamWidget* Child, b
 		// is still travelling shut shows part of its content, so that is news until it arrives.
 		return;
 	}
-	const FDreamExpandableAreaStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ExpandableAreaStyle);
 	// The height alone, not the whole of PushExpansionVisuals: the indicator and the column's
 	// activity are decided by the FLAG, which has not moved, and re-pushing them would restate the
 	// style on every keystroke into a text field down there.
@@ -205,7 +204,33 @@ void UDreamExpandableArea::HandleContentDimensionsChanged(UDreamWidget* Child, b
 	// descendants, which can bring the news back here -- and MeasureContentExtent asks the LAYOUT
 	// (GetDesiredSize walks the fitter and the authored snapshots, never a rect a panel pass wrote),
 	// so the second answer is the first answer and SetHeight's equality gate ends it there.
-	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent() * GetShownFraction());
+	PushShownHeight();
+}
+
+void UDreamExpandableArea::PushShownHeight()
+{
+	const FDreamExpandableAreaStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ExpandableAreaStyle);
+	UDreamPanelSlot* ContentSlot = ContentNode != nullptr ? ContentNode->GetPanelSlot() : nullptr;
+	auto SetContentCap = [ContentSlot](float InCap)
+	{
+		if (ContentSlot != nullptr && !FMath::IsNearlyEqual(static_cast<float>(ContentSlot->MaxDesiredSize.Y), InCap))
+		{
+			// Through the setter: a new cap is a new measure, and the panel above has to be told to take it.
+			ContentSlot->SetMaxDesiredSize(FVector2D(ContentSlot->MaxDesiredSize.X, InCap));
+		}
+	};
+	// Settled, the cap is the ceiling (none without one) before anything is measured, so the measure is the content's.
+	if (!bExpansionAnimating)
+	{
+		SetContentCap(MaxHeight > 0.0f ? MaxHeight : 0.0f);
+	}
+	const float ShownExtent = ResolveContentExtent() * GetShownFraction();
+	if (bExpansionAnimating)
+	{
+		// Never 0 mid-travel: 0 on the slot means no cap at all, which is the whole body on the frame it arrives shut.
+		SetContentCap(FMath::Max(ShownExtent, KINDA_SMALL_NUMBER));
+	}
+	SizeControlHeight(Active.HeaderHeight + ShownExtent);
 }
 
 float UDreamExpandableArea::GetShownFraction() const
@@ -262,6 +287,10 @@ void UDreamExpandableArea::ApplyStyle()
 		LabelVisual->SetText(Label);
 		LabelVisual->SetColor(Active.LabelColor);
 		LabelVisual->SetFontSize(Active.FontSize);
+		if (Active.Font != nullptr)
+		{
+			LabelVisual->SetFont(Active.Font);
+		}
 	}
 	if (UDreamText* ArrowVisual = ArrowNode != nullptr ? Cast<UDreamText>(ArrowNode->GetVisual()) : nullptr)
 	{
@@ -323,6 +352,7 @@ void UDreamExpandableArea::SetIsExpanded(bool bInIsExpanded)
 		ExpansionAlpha = bIsExpanded ? 1.0f : 0.0f;
 	}
 	PushExpansionVisuals();
+	OnExpansionChangedNative.Broadcast(bIsExpanded);
 	OnExpansionChanged.Broadcast(bIsExpanded);
 	OnValueChangedBP.Broadcast(bIsExpanded);
 }
@@ -500,7 +530,7 @@ void UDreamExpandableArea::PushExpansionVisuals()
 		// collapsed, whose alpha still holds the class default of fully open.
 		ExpansionAlpha = bIsExpanded ? 1.0f : 0.0f;
 	}
-	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent() * GetShownFraction());
+	PushShownHeight();
 }
 
 void UDreamExpandableArea::MoveIntoContent(UDreamWidget* InWidget)
@@ -528,7 +558,20 @@ void UDreamExpandableArea::MoveIntoContent(UDreamWidget* InWidget)
 
 float UDreamExpandableArea::ResolveContentExtent()
 {
-	const float Measured = MeasureContentExtent();
+	float Measured = MeasureContentExtent();
+	// Measured through the column's slot, which holds the cap PushShownHeight set: a measure at the cap says the content
+	// is at least that tall, and the last measure the cap did not hold down says how tall. Content that grows while a
+	// travel runs is taken in when it settles and the cap comes off.
+	const UDreamPanelSlot* ContentSlot = ContentNode != nullptr ? ContentNode->GetPanelSlot() : nullptr;
+	const float Cap = ContentSlot != nullptr ? static_cast<float>(ContentSlot->MaxDesiredSize.Y) : 0.0f;
+	if (Cap > 0.0f && Measured >= Cap - KINDA_SMALL_NUMBER)
+	{
+		Measured = FMath::Max(Measured, UncappedContentExtent);
+	}
+	else
+	{
+		UncappedContentExtent = Measured;
+	}
 	// Zero is NO ceiling rather than a ceiling of zero -- the same reading MinHandleLength and every
 	// other optional number in this family gets, and the one that keeps an unconfigured control
 	// behaving as it always has.

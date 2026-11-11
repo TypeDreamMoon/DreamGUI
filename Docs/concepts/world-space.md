@@ -38,6 +38,23 @@ loaded; only a change of class rebuilds it.
 At run time: `SetWidgetClass`, `SetBackend`, `SetUseDesignSize`, `SetDrawSize` (an explicit size, which turns the
 design size off), `SetPivot`, `SetSortOrder`, `SetTraceChannel`. `GetDrawSize` answers the size the root **actually** gets.
 
+**A class made for a world widget gives its root the whole panel.** `Pivot` and the size above are applied to the user
+widget the class makes, not to the node at the root of its `.dui`. If that root node also has a fixed `SizeDelta` and a
+`Pivot` of its own, it is placed inside the user widget a second time and the panel ends up off the actor by the
+difference. Write the root so that it fills its parent, with anchors from `(0, 0)` to
+`(1, 1)` and a zero `SizeDelta` (a style that holds those lines, applied as `Widget Root : Fill`, is the usual way):
+
+```dui
+Widget Root {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+    // ... the panel
+}
+```
+
+Then `Pivot` and `DrawSize` (or the design size) are the only things that place and size it.
+
 Why the design size is the default: a screen stretches to its viewport, and a world panel has no viewport to stretch to.
 The size it was designed at is the only size anyone actually chose for it, and a host that lands at that size looks in
 the level the way it looked in the designer. So the design size rides the class and survives into a cooked build
