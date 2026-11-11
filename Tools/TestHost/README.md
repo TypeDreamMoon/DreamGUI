@@ -227,7 +227,7 @@ pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1
 | --- | --- | --- |
 | `-Root` | `$env:DREAMGUI_TEST_HOST`; required when that is not set | The host directory. Refused on drive C unless `-AllowSystemDrive`. |
 | `-RepoPath` | `$env:DREAMGUI_TEST_REPO`, else the working tree holding the script | Any working tree of the repository. |
-| `-Branch` | `feat/tests-completion` | What the worktree must have (or is created with). |
+| `-Branch` | `main` | What the worktree must have (or is created with). |
 | `-EngineRoot` | `$env:DREAMGUI_ENGINE`, else looked up from the `.uproject`'s engine association | Without either, the script stops and asks for it. |
 | `-Force` | off | Replace files that differ from the template; each old one is kept as `<name>.bak-<timestamp>`. |
 | `-KeepCurrentHead` | off | Accept an existing worktree on another branch or a detached commit. |

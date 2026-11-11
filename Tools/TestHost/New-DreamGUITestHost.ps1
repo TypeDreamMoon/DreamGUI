@@ -83,7 +83,7 @@
 param(
     [string] $Root = $env:DREAMGUI_TEST_HOST,
     [string] $RepoPath = $env:DREAMGUI_TEST_REPO,
-    [string] $Branch = 'feat/tests-completion',
+    [string] $Branch = 'main',
     [string] $EngineRoot = '',
     [switch] $Force,
     [switch] $KeepCurrentHead,
