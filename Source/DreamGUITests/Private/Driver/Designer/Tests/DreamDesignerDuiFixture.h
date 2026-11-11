@@ -94,6 +94,10 @@ namespace DreamTests
 				Failure = TEXT("the Widget Blueprint could not be created");
 				return;
 			}
+			// The default canvas, picked rather than left to default: a root with a size of its own would otherwise bring
+			// the canvas down to that size once the file is read, and these tests place and drag against the full one.
+			// Set before the path, which compiles.
+			Blueprint->DesignerData.DesignViewportSize = FDreamWidgetDesignerData().CanvasSize;
 			if (!DreamUITextAuthoring::SetAuthoredSourcePath(Blueprint, FilePath))
 			{
 				Failure = TEXT("the Widget Blueprint would not take the .dui as its source");

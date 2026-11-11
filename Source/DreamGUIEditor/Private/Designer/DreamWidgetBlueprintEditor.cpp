@@ -481,6 +481,13 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// asset would otherwise open onto nothing and every panel would have to guard against it.
 	BlueprintBeingEdited->GetOrCreateWidgetTree();
 
+	// A .dui-backed asset whose canvas nobody chose opens on the size of its root, not on a default that a small card
+	// would be lost in. The compile does the same; this is for the asset compiled before it did.
+	if (DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+	{
+		BlueprintBeingEdited->AdoptRootSizeAsDefaultCanvas();
+	}
+
 	// The preview world, the design canvas and the live instance. Built before the panels, because
 	// every one of them asks for the world in its constructor.
 	PreviewHost = MakeShared<FDreamWidgetPreviewHost>();

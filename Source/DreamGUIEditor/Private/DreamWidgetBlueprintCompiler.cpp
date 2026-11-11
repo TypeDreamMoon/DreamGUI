@@ -1525,6 +1525,10 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		}
 	}
 	TextSourceOutcome = ETextSourceOutcome::Built;
+	// The designer's canvas, when nobody has picked one, follows the size of the root the file just built. Here rather
+	// than when the designer opens so that a class made and compiled by a script already has it before any window does,
+	// and ahead of UpdateGeneratedClassWidgetTree, which copies the canvas size onto the class.
+	DreamBlueprint->AdoptRootSizeAsDefaultCanvas();
 	// The widgets the author did not name, whose variables the declarations further down hide: read off the AST, which
 	// is the only place that knows a node's id was made up rather than written, and only now that the tree built from
 	// it is the one the class keeps.
