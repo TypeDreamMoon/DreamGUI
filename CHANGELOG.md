@@ -329,6 +329,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   right, bases first, each style once at its first appearance, a later one over an earlier one, the node's own lines last.
   `: A : B` used to be a syntax error (DUI2001). Naming a style that is already applied changes nothing and is the new
   DUI3025, a warning. See [Several styles](Docs/language/styles-and-resources.md#several-styles).
+- **`Tools/Get-DreamGUIEnvironment.ps1` prints what a bug report needs.** The plugin's version and commit, the engine's
+  version and whether it is a launcher install or a source build, the operating system, its UI language and the shell,
+  as plain text to paste into an issue. It starts nothing, needs no git, and prints no paths; what it cannot find is
+  `unknown`. The issue forms ask for its output.
 
 ### Changed
 

@@ -192,6 +192,7 @@ submodule and the committed single-file copy (see [Installation](installation.md
 | `Tools/TextParity` | DreamGUI, Slate and Chrome on one text corpus |
 | `Tools/ModuleSplit` | The scripts a runtime module is split off the core with |
 | `Tools/UpdateMsdfgen.ps1` | Regenerates the single-file msdfgen copy from the submodule |
+| `Tools/Get-DreamGUIEnvironment.ps1` | Prints the plugin, engine and system facts a bug report needs, without starting the engine |
 
 ## Log categories
 
