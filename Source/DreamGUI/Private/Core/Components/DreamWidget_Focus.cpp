@@ -11,6 +11,7 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 #include "DreamTweenManager.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/Components/DreamLayout.h"
@@ -73,14 +74,47 @@ void UDreamWidget::SetTabNavigation(EDreamWidgetTabNavigation Value)
 
 bool UDreamWidget::SetFocus(int32 UserIndex, int32 PointerId)
 {
-	if (!bIsFocusable || !GetRenderVisibleInHierarchy() || !GetInteractableInHierarchy())
+	if (!bIsFocusable)
 	{
 		return false;
 	}
-	// The input system moves the navigation cursor with the focus, so the next directional press starts
-	// from here rather than from wherever focus used to be.
 	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
-	return Services != nullptr && Services->SetFocus(this, UserIndex, PointerId);
+	if (GetRenderVisibleInHierarchy() && GetInteractableInHierarchy() && Services != nullptr)
+	{
+		// The input system moves the navigation cursor with the focus, so the next directional press starts
+		// from here rather than from wherever focus used to be.
+		if (Services->SetFocus(this, UserIndex, PointerId))
+		{
+			return true;
+		}
+	}
+	// Asked too early: a widget shown this frame -- by its owner's construct, a screen pushed a moment ago -- is visible
+	// and interactable in its hierarchy only once the canvas has updated it, and its player's input may not be up yet.
+	// Answering no and leaving it there made every caller ask again on the next frame by hand. It is asked once more on
+	// the next frame instead, as long as nothing has moved that player's focus in between: a later request, a click or a
+	// step of the pad wins over this one.
+	UWorld* World = GetWorld();
+	if (World != nullptr && !World->bIsTearingDown && IsValid(this))
+	{
+		const FDreamUIFocusRevision Revision = Services != nullptr ? Services->GetFocusRevision(UserIndex) : FDreamUIFocusRevision();
+		World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, UserIndex, PointerId, Revision]()
+		{
+			UDreamUIInputServices* NextServices = UDreamUIInputServices::Get(this);
+			if (NextServices == nullptr || !bIsFocusable || !GetRenderVisibleInHierarchy() || !GetInteractableInHierarchy())
+			{
+				return;
+			}
+			// No player then is no focus then: still nobody's focus now means nothing has moved it.
+			const bool bUnmoved = Revision.User.IsValid()
+				? NextServices->GetFocusRevision(UserIndex) == Revision
+				: NextServices->GetFocusedWidget(UserIndex) == nullptr;
+			if (bUnmoved)
+			{
+				NextServices->SetFocus(this, UserIndex, PointerId);
+			}
+		}));
+	}
+	return false;
 }
 
 bool UDreamWidget::HasFocus(int32 UserIndex, int32 PointerId) const

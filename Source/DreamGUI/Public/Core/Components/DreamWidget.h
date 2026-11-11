@@ -1942,7 +1942,10 @@ public:
 	 * here: the owning player is now a question any widget can answer, the wrappers' bodies are
 	 * unchanged, and a Blueprint reaching them on a user widget still finds them by inheritance.
 	 */
-	/** Take focus on the owning player's event system. Returns false when it could not be given. */
+	/**
+	 * Take focus on the owning player's event system. Returns false when it could not be given now; a widget asked before
+	 * it was first laid out (shown this frame) takes it on the next frame, unless that player's focus moves first.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
 	bool SetKeyboardFocus();
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
