@@ -108,6 +108,25 @@ namespace DreamRingMenuLocal
 		const float Radians = FMath::DegreesToRadians(InAngleDegrees);
 		return FVector2D(InRadius * FMath::Sin(Radians), InRadius * FMath::Cos(Radians));
 	}
+
+	/** The display name of a wedge's WedgeTemplateClass instance. */
+	static const TCHAR* const TemplateContentName = TEXT("WedgeContent");
+
+	/**
+	 * The size a template instance's class authors its root at -- a root with fixed anchors says it outright -- or
+	 * InFallback for a root that stretches to whatever it is given, which says nothing.
+	 */
+	static FVector2D AuthoredSizeOr(const UDreamUserWidget* InContent, const FVector2D& InFallback)
+	{
+		const UDreamWidget* Root = InContent != nullptr ? InContent->GetContentRoot() : nullptr;
+		if (Root == nullptr)
+		{
+			return InFallback;
+		}
+		const FDreamUIAnchorData& Anchors = Root->GetAnchorData();
+		const bool bFixed = !Anchors.IsHorizontalStretched() && !Anchors.IsVerticalStretched();
+		return bFixed && Anchors.SizeDelta.X > 0.0 && Anchors.SizeDelta.Y > 0.0 ? Anchors.SizeDelta : InFallback;
+	}
 }
 
 void UDreamRingMenu::CollectParts(TArray<FDreamControlPart>& OutParts)
@@ -470,7 +489,7 @@ UDreamWidget* UDreamRingMenu::CreatePoolWedge(int32 InIndex)
 	{
 		if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), WedgeTemplateClass, Wedge))
 		{
-			Content->SetDisplayName(TEXT("WedgeContent"));
+			Content->SetDisplayName(DreamRingMenuLocal::TemplateContentName);
 		}
 	}
 
@@ -576,33 +595,44 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 	const float Spacing = (bHasIcon && bHasLabel) ? FMath::Max(InStyle.IconSpacing, 0.0f) : 0.0f;
 	const float StackHeight = IconSpan + Spacing + LabelSpan;
 
+	const float ContentRadius = InStyle.ContentRadius > 0.0f
+		? InStyle.ContentRadius
+		// Midway between the two edges, which stays right when the radii change. Against the
+		// AUTHORED outer radius, not the grown one: content that slid outward every time the
+		// pointer arrived would read as a wobble, not as a highlight.
+		: (Inner + Outer) * 0.5f;
+	const FVector2D ContentCentre = PolarToLocal(ContentRadius, GetItemMidAngle(InIndex));
+
+	// Render-only, and a ROLL, which is the one rotation that stays on the batched 2D path.
+	// UE's roll about +X maps a local "up" of (0,0,1) to (0, sin R, cos R) -- toward the RIGHT as
+	// R grows -- so a positive roll turns clockwise on screen, which is already this family's
+	// convention. Tangential is therefore the item's own angle (the box turns with the ring, so
+	// text runs along the tangent with its top facing outward) and Radial is a further quarter
+	// back, which puts the baseline along the radius pointing outward.
+	float Facing = 0.0f;
+	if (LabelFacing == EDreamRingLabelFacing::Tangential)
+	{
+		Facing = GetItemMidAngle(InIndex);
+	}
+	else if (LabelFacing == EDreamRingLabelFacing::Radial)
+	{
+		Facing = GetItemMidAngle(InIndex) - 90.0f;
+	}
+
+	// A template's content (WedgeTemplateClass) stands where the built-in box would, and the box steps aside for it.
+	// Left filling the wedge -- a square twice the ring's radius around the ring's centre -- a template had to work out
+	// the slice's position from GetItemMidAngle itself to put anything on it.
+	UDreamUserWidget* Authored = Cast<UDreamUserWidget>(Wedge->FindChildByDisplayName(TemplateContentName));
+	if (Authored != nullptr)
+	{
+		PlaceCentred(Authored, ContentCentre, AuthoredSizeOr(Authored, FVector2D(InStyle.ContentWidth, InStyle.ContentWidth)));
+		Authored->SetRenderRotation(FRotator(0.0, 0.0, Facing));
+	}
+
 	if (Content != nullptr)
 	{
-		const float ContentRadius = InStyle.ContentRadius > 0.0f
-			? InStyle.ContentRadius
-			// Midway between the two edges, which stays right when the radii change. Against the
-			// AUTHORED outer radius, not the grown one: content that slid outward every time the
-			// pointer arrived would read as a wobble, not as a highlight.
-			: (Inner + Outer) * 0.5f;
-		PlaceCentred(Content,
-			PolarToLocal(ContentRadius, GetItemMidAngle(InIndex)),
-			FVector2D(InStyle.ContentWidth, StackHeight));
-
-		// Render-only, and a ROLL, which is the one rotation that stays on the batched 2D path.
-		// UE's roll about +X maps a local "up" of (0,0,1) to (0, sin R, cos R) -- toward the RIGHT as
-		// R grows -- so a positive roll turns clockwise on screen, which is already this family's
-		// convention. Tangential is therefore the item's own angle (the box turns with the ring, so
-		// text runs along the tangent with its top facing outward) and Radial is a further quarter
-		// back, which puts the baseline along the radius pointing outward.
-		float Facing = 0.0f;
-		if (LabelFacing == EDreamRingLabelFacing::Tangential)
-		{
-			Facing = GetItemMidAngle(InIndex);
-		}
-		else if (LabelFacing == EDreamRingLabelFacing::Radial)
-		{
-			Facing = GetItemMidAngle(InIndex) - 90.0f;
-		}
+		Content->SetWidgetActive(Authored == nullptr);
+		PlaceCentred(Content, ContentCentre, FVector2D(InStyle.ContentWidth, StackHeight));
 		Content->SetRenderRotation(FRotator(0.0, 0.0, Facing));
 	}
 
@@ -1143,6 +1173,9 @@ void UDreamRingMenu::SetWedgeTemplateClass(TSubclassOf<UDreamUserWidget> InWedge
 		return;
 	}
 	WedgeTemplateClass = InWedgeTemplateClass;
+	// The content is made once per POOL wedge (CreatePoolWedge), so wedges made for the old class would keep its
+	// instances -- or keep none, going from no class to one. The pool is let go and made again around the new class.
+	ResizePool(0);
 	RebuildItems();
 }
 
