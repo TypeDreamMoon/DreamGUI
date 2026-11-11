@@ -7,6 +7,10 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamVisualDirectMesh.h"
+#include "Core/Components/DreamVisualPostProcess.h"
+#include "Extensions/Effects/DreamPixelSort.h"
 
 namespace DreamUIWidgetPicking
 {
@@ -79,10 +83,84 @@ namespace DreamUIWidgetPicking
 		});
 	}
 
+	namespace
+	{
+		/** Whether the run time would let a ray hit InWidget: the three tests a raycaster asks, in the order it asks them. */
+		bool IsRaycastTarget(const UDreamWidget* InWidget)
+		{
+			const UDreamVisual* Visual = InWidget->GetVisual();
+			return Visual != nullptr && InWidget->GetRaycastableInHierarchy() && InWidget->GetHitTestVisibleInHierarchy()
+				&& Visual->GetRaycastTarget();
+		}
+
+		/**
+		 * Whether InWidget's own visual puts anything on the screen at the moment.
+		 *
+		 * Answered from what each kind of visual is known to do rather than from one rule, because "nothing" means
+		 * different things: a mesh visual draws nothing at zero alpha, an effect draws nothing while it is switched off
+		 * or its strength is zero. An effect not listed here is taken to draw, which only ever errs towards being
+		 * selectable.
+		 */
+		bool IsDrawing(const UDreamWidget* InWidget)
+		{
+			const UDreamVisual* Visual = InWidget->GetVisual();
+			if (Visual == nullptr)
+			{
+				return false;
+			}
+			switch (Visual->GetVisualType())
+			{
+			case EDreamVisualType::BatchMesh:
+				return Visual->GetFinalAlpha() > 0;
+			case EDreamVisualType::DirectMesh:
+				{
+					const UDreamVisualDirectMesh* Mesh = Cast<UDreamVisualDirectMesh>(Visual);
+					return Mesh == nullptr || Mesh->HaveValidData();
+				}
+			case EDreamVisualType::PostProcess:
+				{
+					const UDreamVisualPostProcess* Effect = Cast<UDreamVisualPostProcess>(Visual);
+					if (Effect != nullptr && !Effect->IsEnabled())
+					{
+						return false;
+					}
+					// Documented on the property: zero disables the whole visual, so the widget shows nothing.
+					const UDreamPixelSort* PixelSort = Cast<UDreamPixelSort>(Visual);
+					return PixelSort == nullptr || PixelSort->GetSortStrength() > 0.0f;
+				}
+			default:
+				return false;
+			}
+		}
+	}
+
+	bool IsWorthPicking(const UDreamWidget* InWidget)
+	{
+		if (!IsValid(InWidget) || InWidget->GetVisual() == nullptr)
+		{
+			// Panels and groups have no visual and are how a layout is selected, rect and all.
+			return true;
+		}
+		if (IsRaycastTarget(InWidget) || IsDrawing(InWidget))
+		{
+			return true;
+		}
+		// Holding children is what makes a widget with a silent visual a group the author still has to be able to reach.
+		return InWidget->GetChildren().ContainsByPredicate([](const UDreamWidget* InChild) { return IsValid(InChild); });
+	}
+
 	UDreamWidget* PickTopmostWidget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, int32& InOutCycleIndex)
 	{
 		TArray<FDreamUIWidgetPickHit> Hits;
 		RaycastWidgetRects(InWorld, InWidgets, InLineStart, InLineEnd, Hits);
+		// A full-screen effect that nothing can click and nothing shows is the front-most rect of the whole page, and
+		// left in the stack every click selects it. Looked through, the way a drop looks through a layer that holds
+		// nothing (PickDropTarget) -- but only while something else is under the cursor, so a page made of nothing else
+		// still selects its front-most widget.
+		if (Hits.ContainsByPredicate([](const FDreamUIWidgetPickHit& InHit) { return IsWorthPicking(InHit.Widget); }))
+		{
+			Hits.RemoveAll([](const FDreamUIWidgetPickHit& InHit) { return !IsWorthPicking(InHit.Widget); });
+		}
 		if (Hits.IsEmpty())
 		{
 			InOutCycleIndex = INDEX_NONE;
