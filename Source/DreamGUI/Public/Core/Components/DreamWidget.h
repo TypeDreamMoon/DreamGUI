@@ -449,7 +449,9 @@ private:
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Translation"))
 	FVector RenderTranslation = FVector::ZeroVector;
 	/**
-	 * Render-only rotation about RenderTransformPivot, in degrees.
+	 * Render-only rotation about RenderTransformPivot, in degrees. Roll is the in-plane angle, and a positive Roll turns
+	 * the widget clockwise on the screen (its right edge down), as UMG's angle does; Pitch and Yaw turn it out of the
+	 * plane, about its horizontal and vertical axes.
 	 * FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a
 	 * property track for one and not the other. No transient mirror is needed here because this is
 	 * itself the serialized source of truth.
@@ -2054,6 +2056,8 @@ public:
 	 * X here, so turning about X is the rotation that keeps a widget flat against the canvas, and it
 	 * is the one UMG's single angle means. Pitch and yaw are left alone, so a card that is mid-flip
 	 * does not snap back when a graph sets its angle.
+	 *
+	 * A positive angle turns the widget clockwise on the screen, as UMG's does: its right edge goes down.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void SetRenderTransformAngle(float InAngle);

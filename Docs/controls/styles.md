@@ -54,6 +54,9 @@ about one hosted widget, and a project sheet has nothing useful to say about it.
 A few conventions hold across all of them:
 
 - **Colours are `FColor`**, throughout the style family.
+- **A typeface is a `Font`**, a font data asset beside `FontSize`, on the styles of the controls that draw text of their
+  own: text input, spin box, rich text, expandable area (its header) and ring menu (its items and hub caption). Null leaves
+  the text on the project's default font.
 - **A button has no text style.** A button draws no text; the label is whatever the host puts in the hole,
   so `FDreamButtonStyle` has no `LabelColor` or `FontSize` — a knob with nowhere to write is worse than no
   knob. Where a control does supply a label, its own style says so (`FDreamDialogStyle::ButtonLabelColor`).
@@ -112,6 +115,19 @@ HorizontalBox Root {
     }
 }
 ```
+
+`Style.TickChecked = #FF3355` writes that one field of the instance's own `Style` and nothing else. A `.dui` never
+changes a `bOverride_` bit, so `Style.X = v` does not switch `bOverride_X` on, and does not need to: every bit starts
+ticked. What decides whether the value is used is `StyleSource`:
+
+- **`Inline`**, or no sheet in the project: the instance's `Style` is the look, whole, and the bits are not read. This is
+  why the example above says `StyleSource = Inline`.
+- **`ProjectStyleSheet`** (the default) with a sheet in the project: the instance's `Style` is **ignored**, so a `Style.X`
+  line in the file compiles and changes nothing. Write `StyleSource = Inline`, or `StyleVariant` to pick a sheet entry.
+- **`ProjectStyleSheetOverride`**: the sheet's style with the instance's *ticked* fields written over it. Every field
+  starts ticked, so every field you did not write also overrides, with the struct's default. Untick those that should
+  follow the sheet, one line each: `Style.bOverride_Y = false`. A field whose bit is off (`Style.bOverride_X = false`, or
+  unticked in an asset) is not turned on by writing `Style.X`; write the bit too.
 
 At run time, `SetStyle`, `SetStyleSource` and `SetStyleVariant` **push again at once**: a style that changed
 source without re-resolving would have no visible effect until something else happened to push. After

@@ -37,6 +37,14 @@ files compile as they did — `viewmodels`, member paths, `+=` and `=` are new s
   longer offered, and a paste or drop of it is refused. A project whose own components have requirements registers
   them with `FDreamUIComponentSupport` from its editor module (see [Components](../tools/designer.md#components)).
 - **Thumbnails.** A wireframe thumbnail already saved in an asset stays until the asset is next changed and saved.
+- **A tween replaces the earlier tweens of the same property.** `RenderOpacityTo`, `RenderOffsetTo`, `ColorTo` and the other
+  property verbs stop the tweens already working on that object's property when they start; before, both ran and the last
+  to finish won. Code that relied on two running at once (a looping breath under a hover) gives the one that should share
+  `SetReplacesEarlierTweens(false)`. A tween in a `UDreamTweenerSequence` is not affected. See
+  [One tween per property](../concepts/animation.md#one-tween-per-property).
+- **A text is no raycast target by default**, as UMG's TextBlock is not. A label laid over a button no longer takes the
+  button's hover and clicks. A text saved before keeps the `true` it was saved with, but a `.dui` builds its texts afresh when
+  it compiles, so a text there that is itself pressed (a link, a row's caption) now writes `bRaycastTarget = true`.
 
 ## From 2.1 to 1.0.0
 

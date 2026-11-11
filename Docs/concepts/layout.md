@@ -80,6 +80,11 @@ container's name is itself a node type (`VerticalBox Column { Spacing = 29 }` is
 | `Border` | [`UDreamLayoutContainerBorder`](../Reference/DreamLayoutContainerBorder.md) | `Padding`, `HorizontalAlignment`, `VerticalAlignment`, `BrushColor`, `ContentColorAndOpacity` | As in UMG, the alignment belongs to the border, not the slot |
 | `MenuAnchor` | [`UDreamLayoutContainerMenuAnchor`](../Reference/DreamLayoutContainerMenuAnchor.md) | `Placement`, `MenuClass`, `bIsOpen`, `bFitInWindow` | An open menu goes through the popup layer; see [Input](input.md) |
 
+**A panel arranges what is in its box; it neither clips nor stops what grows.** Content that gets taller than the box it
+sits in -- a `Native.ExpandableArea` opening inside a `VerticalBox` whose widget has a fixed height, a list gaining rows --
+is drawn past the panel's edge, over whatever lies beyond it. A list that can grow goes in a `ScrollBox` (or a list view,
+which has one), or in a widget whose `Clipping` is `ClipToBounds`.
+
 A widget has one layout container: `+ HorizontalBox` on a container-typed node is DUI5022. Some containers need a
 behaviour on the widget to match the UMG panel they mirror (a size box needs the ContentWidget, for example), and the
 missing ones are added when the container is assigned. A container can also animate its layout: `bUseAnimation` with an

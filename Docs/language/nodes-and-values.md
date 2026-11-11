@@ -119,6 +119,11 @@ that has it takes it. A name nothing has is DUI4001, with the nearest match sugg
 
 When a block names a property twice, the later line wins. A node's own lines win over its style's.
 
+A property is found on the object that has it, and a plain `Widget` node has only the widget: `bRaycastTarget` belongs to a
+visual (an `Image`, a `RectBlock`, an `Empty`), so on a `Widget` node it is an error (DUI5002 names a node type that has it).
+What a widget itself has is `Raycastable` -- `Inherit`, `Enabled` or `Disabled` -- and `Raycastable = Disabled` is how to
+take a widget, and what inherits from it, out of hit testing.
+
 ### Values
 
 | Kind | Examples | Notes |
@@ -134,6 +139,14 @@ When a block names a property twice, the later line wins. A node's own lines win
 | List | `[1, 2, 3]`, `["A", "B"]`, `[(0, 0), (8, 8)]`, `[]` | An array or a set: each element a value of the element type, node ids included in an array. A set keeps no order. May span lines; a trailing comma is allowed. |
 | Map | `{ Hover: #FFCC00, Pressed: #AA8800 }`, `{}` | A map: `key: value` entries, each side a value of its type. A name key that is one word may be written bare. |
 | Contour | `Gaussian`, `"custom(0 0, 0.5 1 corner, 1 0)"` | A layer style's contour: a named shape's word, or a custom curve's points -- each its input and output, `corner` after a point the curve bends at. |
+
+A colour literal is sRGB-encoded, as in CSS: `#8C8C94` is the bytes 140, 140, 148. On an `FColor` property (a visual's
+`Color`, a brush's `TintColor`) it is stored as written. On an `FLinearColor` it is decoded to linear first, so the same
+literal comes out at about 0.26 in its first two channels, not 0.55. Where colours are multiplied the arithmetic is not the
+same everywhere: a widget's content tint and colour multiplier are applied to a visual's `Color` in linear space (decode,
+multiply, encode again), while an image's `Brush.TintColor` is multiplied into its colour channel by channel on the encoded
+bytes. A mid-grey tint in linear space darkens more than its look suggests: `#808080` is 0.22 linear, and the tint that
+halves the light is `#BCBCBC`.
 
 A flags enum has no `|`; write a combination as the number its flags add up to.
 

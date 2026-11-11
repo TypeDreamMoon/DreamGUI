@@ -94,7 +94,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI5024 | MemberPathThroughNonObject | A member path that goes on past a value that is not an object. |
 | DUI5025 | RouteOperatorMismatch | `+=` on a single-cast delegate, or `=` on a multicast event. |
 | DUI6001 | SourceFileUnreadable | The Blueprint's Source File does not exist or cannot be read. |
-| DUI6002 | EmptyTree | The file parsed and produced no tree. |
+| DUI6002 | EmptyTree | The file parsed and produced no tree, and no other error says why. It is not reported beside another error: a node naming a type nothing resolves fails with its own code, and that is the whole report. |
 | DUI6003 | ClassPathMismatch | The `class` line names another Blueprint than the one compiling (a warning). |
 | DUI6004 | EventHandlerNotFound | `-> Handler` naming a function the class does not have. |
 | DUI6005 | EventHandlerSignatureMismatch | A handler whose parameters are not the event's. |

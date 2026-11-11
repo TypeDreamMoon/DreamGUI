@@ -123,6 +123,41 @@ and `Target` work as the adjustment layer's.
 
 The pixel sort stays the visual of its own it always was.
 
+## Inside a layer group
+
+A `UDreamBackgroundBlur` or any other post-process visual inside a container that is drawn apart -- a `UDreamLayerGroup`
+with a `GroupOpacity` below 1, a `GroupBlendMode` other than Normal, a `GroupMask` or `Isolation = Isolated`, and a widget
+clipped to a layer below that is not an image or a rect block -- reads the **group's texture**, which holds only what the group has drawn so
+far. It cannot see the scene behind the group, so a blur there has nothing to blur and comes out flat grey.
+
+Put the effect outside the group: a sibling behind it, covering the area (the whole screen, for a full-screen panel), and
+shape it where the group's mask would have: a `StrengthMap` of `Kind = Texture`, with the mask's texture as the strength.
+A `ClipMask` on a container's own clip is another matter: it is applied per pixel while the container is drawn, not by
+drawing it apart, and an effect inside it still sees the backdrop, clipped by the mask. A container's `RenderOpacity` is not
+a group either (each child fades by itself); only a group's own `GroupOpacity` is.
+
+A material of your own on a visual inside such a clip, or under a mask transition, is clipped only if it shades through
+`MF_DreamUI_Shade` (take the alpha it returns as the material's opacity) or calls `DreamUI_CalculateClipData`; one that
+does neither draws whole, as if there were no clip. See [Clip masks](clip-masks.md).
+
+## Pixelate strength
+
+`UDreamBackgroundPixelate::PixelateStrength` runs from 0 to 100 and is not a block size. The block it draws is
+
+```text
+block = (strength / 100)^2 * 100 + 1      pixels, a strength of 0 or less draws nothing
+```
+
+| Strength | 10 | 20 | 30 | 50 | 70 | 100 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Block, pixels | 2 | 5 | 10 | 26 | 50 | 101 |
+
+The square keeps the low end fine, and it makes a **linear fade of the strength look fast and then slow**: the first tenth
+of the range doubles the block from 1 to 2 and the last 30% doubles it again from 50 to 101, and the eye reads the ratio.
+For an even fade tween your own value `t` from 0 to 1 and set the strength to `10 * sqrt(101^t - 1)` from the tween's update
+callback, which grows the block geometrically. With `ApplyAlphaToStrength` on (the default) the strength is also multiplied
+by the visual's alpha, so fading the alpha fades the strength as well.
+
 ## What it costs, and where it works
 
 - Each of these copies the rect it covers on the target, plus what its effect reads round it (a blur's reach, a glass's

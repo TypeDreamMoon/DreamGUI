@@ -68,10 +68,10 @@ protected:
 	/** The circle's centre, from the widget's centre, in local units (y up). */
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
 	FVector2D CircleCentre = FVector2D(0.0, -100.0);
-	/** Degrees clockwise from twelve o'clock the arc starts at. */
+	/** Degrees clockwise from twelve o'clock the arc starts at. (UDreamRing measures from three o'clock, counter-clockwise; Native.RingMenu is clockwise from twelve like this.) */
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (UIMin = "-360.0", UIMax = "360.0", DreamGUI_Editor = "AngleWheel:TopCW", EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
 	float StartAngle = -90.0f;
-	/** Degrees the arc runs; 360 is the whole circle, which the text then wraps around. */
+	/** Degrees the arc runs, in the direction bClockwise says; 360 is the whole circle, which the text then wraps around. */
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (ClampMin = "0.0", ClampMax = "360.0", EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))
 	float SweepAngle = 180.0f;
 	UPROPERTY(EditAnywhere, Category = "Text On Path", meta = (EditCondition = "Source==EDreamTextPathSource::Circle", EditConditionHides))

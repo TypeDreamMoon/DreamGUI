@@ -1964,14 +1964,17 @@ struct DREAMGUICONTROLS_API FDreamRingMenuStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (EditCondition = "bOverride_InnerRadius", ClampMin = "0.0"))
 	float InnerRadius = 80.0f;
 
-	/** Where the first item begins, in degrees clockwise from twelve o'clock. */
+	/**
+	 * Where the first item begins, in degrees clockwise from twelve o'clock. (UDreamRing, the Ring visual, measures its
+	 * angles the other way: from three o'clock, counter-clockwise.)
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (InlineEditConditionToggle))
 	bool bOverride_StartAngle = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (EditCondition = "bOverride_StartAngle"))
 	float StartAngle = 0.0f;
 
 	/**
-	 * How far round the items are spread from there. 360 is a full wheel; 180 is the half-ring a
+	 * How far round the items are spread from there, clockwise. 360 is a full wheel; 180 is the half-ring a
 	 * menu hanging off a screen edge wants, and it is why this is a knob at all.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (InlineEditConditionToggle))

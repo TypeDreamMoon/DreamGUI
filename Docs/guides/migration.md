@@ -122,6 +122,15 @@ outside them through, and a screen built around the old way will feel different:
 - **A radial gradient's ellipse turns with its `Angle`.** A text paint whose radial gradient was left with an angle
   other than 0 or 180 draws its ellipse turned; an angle of 180 puts the old look back.
 
+- **A tween replaces the earlier tweens of the same property.** `RenderOpacityTo`, `RenderOffsetTo`, `ColorTo` and the other
+  property verbs stop the tweens already working on that object's property when they start; before, both ran and the last
+  to finish won. Code that relied on two running at once (a looping breath under a hover) gives the one that should share
+  `SetReplacesEarlierTweens(false)`. A tween in a `UDreamTweenerSequence` is not affected. See
+  [One tween per property](../concepts/animation.md#one-tween-per-property).
+- **A text is no raycast target by default**, as UMG's TextBlock is not. A label laid over a button no longer takes the
+  button's hover and clicks. A text saved before keeps the `true` it was saved with, but a `.dui` builds its texts afresh when
+  it compiles, so a text there that is itself pressed (a link, a row's caption) now writes `bRaycastTarget = true`.
+
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.
 

@@ -79,3 +79,7 @@ UI material (`MF_DreamUI_Shade`, `MF_DreamUI_Clip`); a custom material that call
 `DreamUI_ShadePixel` with the arguments it always passed still compiles, its texture masks taking every texel as white.
 A background effect (`UDreamBackgroundBlur` and the other post-process visuals, and the [effects on what is
 behind](backdrop-effects.md)) inside a masked clip is clipped by the mask's shape, feather, pattern and texture.
+
+**A material of your own has to take part.** The mask is read by the materials that shade through `MF_DreamUI_Shade` (or call
+`DreamUI_CalculateClipData`); take the alpha it returns as the material's opacity. A material that does neither does not read
+the clip: a mask, a mask transition or a rounded clip leaves it whole.

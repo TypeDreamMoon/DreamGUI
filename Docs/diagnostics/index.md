@@ -112,7 +112,7 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI5024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5024) | `MemberPathThroughNonObject` | error | A member path that goes on past a value that is not an object. |
 | [DUI5025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5025) | `RouteOperatorMismatch` | error | `+=` on a single-cast delegate, or `=` on a multicast event. |
 | [DUI6001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6001) | `SourceFileUnreadable` | error | The Blueprint's Source File does not exist or cannot be read. |
-| [DUI6002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6002) | `EmptyTree` | error | The file parsed and produced no tree. |
+| [DUI6002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6002) | `EmptyTree` | error | The file parsed and produced no tree, and no other error says why. It is not reported beside another error: a node naming a type nothing resolves fails with its own code, and that is the whole report. |
 | [DUI6003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6003) | `ClassPathMismatch` | warning | The `class` line names another Blueprint than the one compiling (a warning). |
 | [DUI6004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6004) | `EventHandlerNotFound` | error | `-> Handler` naming a function the class does not have. |
 | [DUI6005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6005) | `EventHandlerSignatureMismatch` | error | A handler whose parameters are not the event's. |

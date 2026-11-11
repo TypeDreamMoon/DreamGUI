@@ -111,6 +111,13 @@ A visual (`UDreamVisual`) is a sub-object of its widget, at most one per widget.
 in a `.dui` — which is what a pure container is. Every visual has `Color` (sRGB, keyable in Sequencer), `bRaycastTarget`
 and `RaycastType` (`Rect`, `Mesh`, `VisiblePixel`, `Custom`).
 
+`bRaycastTarget` is on for a visual unless it says otherwise, with one exception: a `UDreamText` is **not** a raycast target
+by default, as UMG's TextBlock is not hit-testable. Text is mostly a label laid over something else, and a label that was a
+target took the hover and the clicks of the widgets under it. A text that is itself the thing to press says
+`bRaycastTarget = true`. Texts saved before the default changed keep the `true` they were saved with. `bRaycastTarget`
+belongs to a visual, so a plain `Widget` node has none (writing it there is an error: DUI5002, naming a node type that has it, or DUI4001); to take a widget out of hit testing
+write `Raycastable = Disabled` on it, which its children follow through `Inherit`.
+
 | `.dui` tag | Class | Module | Draws |
 | --- | --- | --- | --- |
 | `Text` | `UDreamText` | `DreamGUI` | Text; see [Text](text.md) |
@@ -132,6 +139,18 @@ Visuals come in three kinds (`EDreamVisualType`): `BatchMesh`, which the canvas 
 is; `DirectMesh`, which writes its own mesh section and is a draw call each, for content with many vertices that change
 often (the static mesh); and `PostProcess`, an effect that reads and writes the screen. A plugin can add a visual of its
 own, registering a `.dui` tag for it with `DECLARE_DREAM_GUI_VISUAL`.
+
+**Angles do not share one convention.** Check which one a property uses before writing a number:
+
+| Where | Zero is | Positive turns |
+| --- | --- | --- |
+| `Ring` (`StartAngle`, `EndAngle`) | Three o'clock | Counter-clockwise |
+| `Native.RingMenu` (`StartAngle`, `SweepAngle`), `Native.ProgressBar` (`RadialStartAngle`), text on a path (`StartAngle`) | Twelve o'clock | Clockwise |
+| A rect block's `RadialFillRotation` | Three o'clock | Clockwise |
+| `RenderRotation.Roll` | Upright | Clockwise |
+
+A progress ring drawn with `Ring` therefore starts at 12 o'clock with `StartAngle = 90` and runs clockwise to
+`EndAngle = 90 - 360 * progress`.
 
 Procedural shapes — the ring, the polygon, the polygon line — have no answer to "how big do you want to be": their
 vertices are derived from the rect they are given. They abstain from measurement and follow the authored rect.
@@ -193,7 +212,7 @@ why animating that inside a panel never works: the animation and the layout just
 | Property | Type | Notes |
 | --- | --- | --- |
 | `RenderTranslation` | `FVector` | Local space. X is depth and points **away** from the viewer, so a negative X brings the widget toward the screen |
-| `RenderRotation` | `FRotator` | About `RenderTransformPivot`, in degrees; `SetRenderTransformAngle` writes only the in-plane channel |
+| `RenderRotation` | `FRotator` | About `RenderTransformPivot`, in degrees; `SetRenderTransformAngle` writes only the in-plane channel. A positive `Roll` turns the widget clockwise on the screen, as UMG's angle does |
 | `RenderScale` | `FVector` | About `RenderTransformPivot` |
 | `RenderTransformPivot` | `FVector2D` | Normalized in the widget's own rect, `(0, 0)` bottom-left; independent of `AnchorData.Pivot`, which belongs to layout |
 | `RenderShear` | `FVector2D` | A slant in degrees, applied to the widget and its whole subtree |

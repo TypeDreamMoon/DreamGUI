@@ -71,7 +71,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "World Widget", meta = (EditCondition = "!bUseDesignSize"))
 	FVector2D DrawSize = FVector2D(1920.0, 1080.0);
 
-	/** Where on the root this component sits: (0.5, 0.5) centres the panel on the actor. */
+	/**
+	 * Where on the root this component sits: (0.5, 0.5) centres the panel on the actor. It is the pivot of the user
+	 * widget the class makes; a root node in the class with a fixed size and a pivot of its own is placed inside that
+	 * again, and the panel ends up off the actor by the difference. A class meant for a world widget gives its root
+	 * `: Fill`.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "World Widget")
 	FVector2D Pivot = FVector2D(0.5, 0.5);
 
