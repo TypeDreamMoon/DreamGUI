@@ -40,6 +40,17 @@ void UUITextHyperlink::SetTextVisual(UDreamText* Value)
 	PressedLinkIndex = INDEX_NONE;
 	RefreshLinkColor();
 	TextVisual = Value;
+	MakeTextATarget();
+}
+
+void UUITextHyperlink::MakeTextATarget()const
+{
+	// A text is no raycast target by default -- it is mostly a label -- but a text with links is the thing pressed, and
+	// a link no ray reaches is a link nobody can click.
+	if (UDreamText* Text = GetTextVisual())
+	{
+		Text->SetRaycastTarget(true);
+	}
 }
 
 void UUITextHyperlink::SetUseHoverColor(bool Value)
@@ -254,6 +265,7 @@ void UUITextHyperlink::DestroyLinkStops()
 void UUITextHyperlink::OnEnable()
 {
 	Super::OnEnable();
+	MakeTextATarget();
 	UpdateTickEnabled();
 }
 

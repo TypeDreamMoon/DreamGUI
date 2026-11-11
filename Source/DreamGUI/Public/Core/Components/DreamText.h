@@ -221,8 +221,10 @@ class DREAMGUI_API UDreamText : public UDreamVisualBatchMesh, public IDreamUICul
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	UDreamText(const FObjectInitializer& ObjectInitializer);
+	/** A text saved before FDreamGUIObjectVersion::TextNotRaycastTargetByDefault loads as the raycast target it was then. */
+	virtual void Serialize(FArchive& Ar) override;
 
 protected:
 	virtual void BeginPlay() override;

@@ -31,6 +31,12 @@ struct DREAMGUI_API FDreamGUIObjectVersion
 		 * filled with {EmojiCode} on load; it hashes and compares the same either way.
 		 */
 		EmojiKeyBySequence,
+		/**
+		 * A text is no raycast target unless it says so (UMG's TextBlock is not hit-testable either): text is mostly a
+		 * label on something else, and a label over a sibling took that sibling's hover and clicks. A text saved before
+		 * keeps the true it was saved with as the old default.
+		 */
+		TextNotRaycastTargetByDefault,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
