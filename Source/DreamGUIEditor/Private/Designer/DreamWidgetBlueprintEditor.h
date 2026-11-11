@@ -22,6 +22,8 @@ class FDreamWidgetDesignerScene;
 class FDreamWidgetPreviewHost;
 class UToolMenu;
 class FObjectPreSaveContext;
+class FCompilerResultsLog;
+class SWindow;
 struct FDreamUIControlDescriptor;
 
 /** UMG-toolbar-style alignment target for a multi-widget selection (DreamGUI UI plane is YZ: horizontal=Y, vertical=Z). */
@@ -204,6 +206,17 @@ public:
 	 * in one readable in the other, and only one mode is active at a time.
 	 */
 	TSharedPtr<SWidget> GetCompilerResultsWidget() const { return CompilerResults; }
+	/**
+	 * Show the outcome of a compile this editor did not start -- the source watcher's rebuild after a .dui was saved.
+	 *
+	 * The Compile button fills the Compiler Results listing itself; a rebuild from outside only changed the
+	 * Blueprint's status, so the toolbar went red and nothing said why. This puts the messages, with their
+	 * jump-to-line links, where a manual compile would have, replaces whatever the last compile left there, and
+	 * brings the panel up when something failed.
+	 */
+	void ShowExternalCompileResults(const FCompilerResultsLog& InResults);
+	/** The window this editor's tabs are in, or null when it has none (not shown yet, or already closing). Where the editor's notifications belong. */
+	TSharedPtr<SWindow> GetEditorWindow();
 	TSharedPtr<SDreamWidgetEditorHierarchyView> GetHierarchyWidget() const { return OutlinerPtr; }
 	TSharedPtr<class SDreamWidgetPalette> GetPaletteWidget() const { return PalettePtr; }
 	TSharedPtr<SDreamWidgetDesignerDetails> GetDesignerDetailsWidget() const { return DetailsPtr; }

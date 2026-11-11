@@ -54,6 +54,9 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/CompilerResultsLog.h"
+#include "Framework/Docking/TabManager.h"
+#include "Widgets/Docking/SDockTab.h"
 #include "BlueprintEditor.h"//SummonSearchUI (Find References)
 #include "EdGraph/EdGraph.h"
 #include "K2Node_CustomEvent.h"
@@ -3379,6 +3382,34 @@ FName FDreamWidgetBlueprintEditor::GetToolkitFName() const
 {
 	return FName("DreamWidgetBlueprintEditor");
 }
+void FDreamWidgetBlueprintEditor::ShowExternalCompileResults(const FCompilerResultsLog& InResults)
+{
+	// The listing is built together with the widget that shows it; before that there is nowhere to put the messages.
+	if (!CompilerResults.IsValid() || IsEditorClosing())
+	{
+		return;
+	}
+	// Replaces the previous compile's messages, a clean compile's empty list included: an error that has been fixed
+	// must leave the panel too. The base class opens the panel only in the Graph mode, and the Designer mode keeps
+	// it closed, so the failure case opens it here -- the point is that a failed rebuild is seen without the author
+	// having to ask why the toolbar button turned red.
+	DumpMessagesToCompilerLog(InResults.Messages, /*bForceMessageDisplay*/false);
+	if (InResults.NumErrors > 0)
+	{
+		if (const TSharedPtr<FTabManager> Manager = GetTabManager())
+		{
+			Manager->TryInvokeTab(FBlueprintEditorTabs::CompilerResultsID);
+		}
+	}
+}
+
+TSharedPtr<SWindow> FDreamWidgetBlueprintEditor::GetEditorWindow()
+{
+	const TSharedPtr<FTabManager> Manager = GetTabManager();
+	const TSharedPtr<SDockTab> OwnerTab = Manager.IsValid() ? Manager->GetOwnerTab() : nullptr;
+	return OwnerTab.IsValid() ? OwnerTab->GetParentWindow() : nullptr;
+}
+
 FText FDreamWidgetBlueprintEditor::GetBaseToolkitName() const
 {
 	return LOCTEXT("DreamWidgetDesignerAppLabel", "DreamUI Designer");
