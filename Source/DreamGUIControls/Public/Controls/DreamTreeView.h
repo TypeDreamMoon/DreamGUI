@@ -147,6 +147,9 @@ public:
 	/** Per depth level, in whichever direction the twisty was clicked. */
 	UPROPERTY(BlueprintAssignable, Category = "Tree View")
 	FDreamTreeExpansionChangedEvent OnItemExpansionChanged;
+	/** OnItemExpansionChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, bool)>& GetOnItemExpansionChangedEvent() { return OnItemExpansionChangedNative; }
+	TMulticastDelegate<void(int32, bool)> OnItemExpansionChangedNative;
 
 	/** The template's twisty. Every row has a copy of it, found by display name. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Tree View")

@@ -154,6 +154,9 @@ public:
 	/** Fired whenever the expanded flag moves, from a click or from code. */
 	UPROPERTY(BlueprintAssignable, Category = "Expandable Area")
 	FDreamExpandableAreaExpansionChangedEvent OnExpansionChanged;
+	/** OnExpansionChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnExpansionChangedEvent() { return OnExpansionChangedNative; }
+	TMulticastDelegate<void(bool)> OnExpansionChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact

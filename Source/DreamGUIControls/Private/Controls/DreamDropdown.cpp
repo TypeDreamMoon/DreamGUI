@@ -266,6 +266,7 @@ void UDreamDropdown::WireParts()
 					SizeFace(IconNode, FVector2D(IconStyle.ItemHeight * 0.6, IconStyle.ItemHeight * 0.6));
 				}
 			}
+			OnItemGeneratedNative.Broadcast(InIndex, InItem);
 			OnItemGenerated.Broadcast(InIndex, InItem);
 		});
 	DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
@@ -651,10 +652,12 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 	// rows are placed.
 	if (bInVisible)
 	{
+		OnOpeningNative.Broadcast();
 		OnOpening.Broadcast();
 	}
 	else
 	{
+		OnClosedNative.Broadcast();
 		OnClosed.Broadcast();
 	}
 
@@ -790,6 +793,7 @@ void UDreamDropdown::ApplyListRestingGeometry(const FDreamDropdownStyle& InActiv
 void UDreamDropdown::HandleValueChanged(int32 InIndex)
 {
 	SelectedIndex = InIndex;
+	OnSelectionChangedNative.Broadcast(InIndex);
 	OnSelectionChanged.Broadcast(InIndex);
 	OnValueChangedBP.Broadcast(InIndex);
 }

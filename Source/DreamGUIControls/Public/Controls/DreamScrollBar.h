@@ -143,6 +143,9 @@ public:
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Bar")
 	FDreamScrollBarValueChangedEvent OnValueChanged;
+	/** OnValueChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnValueChangedEvent() { return OnValueChangedNative; }
+	TMulticastDelegate<void(float)> OnValueChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact name,

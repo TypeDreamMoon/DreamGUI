@@ -124,13 +124,22 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Border")
 	FDreamBorderPointerEvent OnMouseButtonDownEvent;
+	/** OnMouseButtonDownEvent for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(UDreamPointerEventData*)>& GetOnMouseButtonDownEventEvent() { return OnMouseButtonDownEventNative; }
+	TMulticastDelegate<void(UDreamPointerEventData*)> OnMouseButtonDownEventNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Border")
 	FDreamBorderPointerEvent OnMouseButtonUpEvent;
+	/** OnMouseButtonUpEvent for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(UDreamPointerEventData*)>& GetOnMouseButtonUpEventEvent() { return OnMouseButtonUpEventNative; }
+	TMulticastDelegate<void(UDreamPointerEventData*)> OnMouseButtonUpEventNative;
 
 	/** Pointer MOTION over the border, which this system reports as the drag it is part of. */
 	UPROPERTY(BlueprintAssignable, Category = "Border")
 	FDreamBorderPointerEvent OnMouseMoveEvent;
+	/** OnMouseMoveEvent for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(UDreamPointerEventData*)>& GetOnMouseMoveEventEvent() { return OnMouseMoveEventNative; }
+	TMulticastDelegate<void(UDreamPointerEventData*)> OnMouseMoveEventNative;
 
 	/**
 	 * The second press of a double click, and the fourth, and the sixth -- said at that PRESS, and in
@@ -144,6 +153,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Border")
 	FDreamBorderPointerEvent OnMouseDoubleClickEvent;
+	/** OnMouseDoubleClickEvent for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(UDreamPointerEventData*)>& GetOnMouseDoubleClickEventEvent() { return OnMouseDoubleClickEventNative; }
+	TMulticastDelegate<void(UDreamPointerEventData*)> OnMouseDoubleClickEventNative;
 
 	/** The face: what draws the brush, the tint and the outline, and what clips to the rounding. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Border")

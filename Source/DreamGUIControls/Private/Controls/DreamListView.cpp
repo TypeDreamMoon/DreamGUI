@@ -532,6 +532,7 @@ void UDreamListViewBase::RebuildRows()
 	FinishDragFromDestroyedRow();
 	// The batch boundary, and it IS the return of this function: this control rebuilds synchronously,
 	// so there is no pending request for a later frame to complete and nothing else to wait for.
+	OnRowsGeneratedNative.Broadcast(RowNodes.Num());
 	OnRowsGenerated.Broadcast(RowNodes.Num());
 	// A selection asked for before its items arrived landed in this rebuild (ReconcileSelection). Said
 	// once, and after the rows it selects exist, the way a source edit that takes a selection away is:
@@ -734,6 +735,7 @@ void UDreamListViewBase::RefreshVisibleWindow(bool bInRebindKeptRows)
 		// Asked again before each one: an earlier handler may have moved the window past it.
 		if (RealizedItemIndices.Contains(ItemIndex))
 		{
+			OnItemScrolledIntoViewNative.Broadcast(ItemIndex, GetRowWidget(ItemIndex), GetItemObject(ItemIndex));
 			OnItemScrolledIntoView.Broadcast(ItemIndex, GetRowWidget(ItemIndex), GetItemObject(ItemIndex));
 		}
 	}
@@ -753,6 +755,7 @@ void UDreamListViewBase::HandleScrollViewMoved(FVector2D InProgress)
 		// changes with every move, so it is re-asked here and nowhere else.
 		RefreshShadowBrushes(ResolveListStyle());
 	}
+	OnListViewScrolledNative.Broadcast(Offset, GetViewFraction());
 	OnListViewScrolled.Broadcast(Offset, GetViewFraction());
 	// "Finished" is a move that lands with nothing left to carry it -- one call per gesture rather
 	// than one per frame of a flick, which is what a consumer loading thumbnails for what is now on
@@ -765,6 +768,7 @@ void UDreamListViewBase::HandleScrollViewMoved(FVector2D InProgress)
 	{
 		// A reveal's glide that has landed, or been stopped, is no longer where the list is heading.
 		bRevealGlideActive = false;
+		OnListViewFinishedScrollingNative.Broadcast(Offset, GetViewFraction());
 		OnListViewFinishedScrolling.Broadcast(Offset, GetViewFraction());
 	}
 }
@@ -1101,7 +1105,9 @@ void UDreamListViewBase::HandleRowDragDetected(int32 InPoolIndex, UDreamDragDrop
 	ActiveDragOperation = InOperation;
 	// The item index goes out with it, because the payload alone cannot answer "which row" for a
 	// text-only source -- which has no objects at all.
+	OnItemDragDetectedNative.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 	OnItemDragDetected.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
+	OnDraggingStateChangedNative.Broadcast(true);
 	OnDraggingStateChanged.Broadcast(true);
 }
 
@@ -1131,8 +1137,10 @@ void UDreamListViewBase::HandleRowDragEnded(UDreamDragDropOperation* InOperation
 	ActiveDragOperation = nullptr;
 	if (!bHandled)
 	{
+		OnItemDragCancelledNative.Broadcast(ItemIndex, Item, InOperation);
 		OnItemDragCancelled.Broadcast(ItemIndex, Item, InOperation);
 	}
+	OnDraggingStateChangedNative.Broadcast(false);
 	OnDraggingStateChanged.Broadcast(false);
 }
 
@@ -1156,6 +1164,7 @@ void UDreamListViewBase::HandleRowDragEnter(int32 InPoolIndex, UDreamDragDropOpe
 	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
 	if (ItemIndex != INDEX_NONE)
 	{
+		OnItemDragEnterNative.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 		OnItemDragEnter.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 	}
 }
@@ -1165,6 +1174,7 @@ void UDreamListViewBase::HandleRowDragLeave(int32 InPoolIndex, UDreamDragDropOpe
 	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
 	if (ItemIndex != INDEX_NONE)
 	{
+		OnItemDragLeaveNative.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 		OnItemDragLeave.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 	}
 	if (bDragEdgeScrollActive)
@@ -1233,6 +1243,7 @@ void UDreamListViewBase::StopDragEdgeScroll()
 	}
 	bDragEdgeScrollActive = false;
 	// The one "finished" the scroll owes, now that it has one: every step was a move, none an end.
+	OnListViewFinishedScrollingNative.Broadcast(GetScrollOffset(), GetViewFraction());
 	OnListViewFinishedScrolling.Broadcast(GetScrollOffset(), GetViewFraction());
 }
 
@@ -1338,6 +1349,7 @@ bool UDreamListViewBase::HandleRowDrop(int32 InPoolIndex, UDreamDragDropOperatio
 	{
 		InOperation->bDropWasHandled = true;
 	}
+	OnItemAcceptDropNative.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation, InZone);
 	OnItemAcceptDrop.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation, InZone);
 	return true;
 }
@@ -1519,6 +1531,7 @@ void UDreamListViewBase::HandleScrollGesture(EDreamScrollDragPhase InPhase, bool
 	if (InPhase == EDreamScrollDragPhase::End && (ScrollBehaviour == nullptr || !ScrollBehaviour->IsScrolling()))
 	{
 		// Let go with no momentum: no further move is coming to announce the end, so this is it.
+		OnListViewFinishedScrollingNative.Broadcast(Offset, Fraction);
 		OnListViewFinishedScrolling.Broadcast(Offset, Fraction);
 	}
 	// TOUCH only from here, which is what UMG's three events are about: a mouse drag on the same rows
@@ -1530,9 +1543,9 @@ void UDreamListViewBase::HandleScrollGesture(EDreamScrollDragPhase InPhase, bool
 	}
 	switch (InPhase)
 	{
-	case EDreamScrollDragPhase::Begin: OnListViewTouchStart.Broadcast(Offset, Fraction); break;
-	case EDreamScrollDragPhase::Move:  OnListViewTouchMove.Broadcast(Offset, Fraction); break;
-	case EDreamScrollDragPhase::End:   OnListViewTouchEnd.Broadcast(Offset, Fraction); break;
+	case EDreamScrollDragPhase::Begin: OnListViewTouchStartNative.Broadcast(Offset, Fraction); OnListViewTouchStart.Broadcast(Offset, Fraction); break;
+	case EDreamScrollDragPhase::Move:  OnListViewTouchMoveNative.Broadcast(Offset, Fraction); OnListViewTouchMove.Broadcast(Offset, Fraction); break;
+	case EDreamScrollDragPhase::End:   OnListViewTouchEndNative.Broadcast(Offset, Fraction); OnListViewTouchEnd.Broadcast(Offset, Fraction); break;
 	}
 }
 
@@ -1587,6 +1600,7 @@ void UDreamListViewBase::HandleRowSelectionStateChanged(int32 InPoolIndex, EUISe
 	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
 	if (ItemIndex != INDEX_NONE)
 	{
+		OnItemIsHoveredChangedNative.Broadcast(ItemIndex, GetItemObject(ItemIndex), bInHovered);
 		OnItemIsHoveredChanged.Broadcast(ItemIndex, GetItemObject(ItemIndex), bInHovered);
 	}
 }
@@ -1811,6 +1825,7 @@ UDreamWidget* UDreamListViewBase::CreatePoolRow(int32 InPoolIndex)
 	DecorateNewRow(*Row, InPoolIndex);
 	// Once in this widget's life -- UMG's OnEntryInitialized. Announced after the subclass has had
 	// its own one-time hook, so a consumer sees a row that is already wired.
+	OnRowInitializedNative.Broadcast(INDEX_NONE, Row, nullptr);
 	OnRowInitialized.Broadcast(INDEX_NONE, Row, nullptr);
 	return Row;
 }
@@ -1914,8 +1929,10 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	{
 		// The pointer is still on this widget and it shows another item now, so that item is the one
 		// hovered -- ReleaseRow has already said the old one no longer is.
+		OnItemIsHoveredChangedNative.Broadcast(InItemIndex, Item, true);
 		OnItemIsHoveredChanged.Broadcast(InItemIndex, Item, true);
 	}
+	OnRowGeneratedNative.Broadcast(InItemIndex, Row, Item);
 	OnRowGenerated.Broadcast(InItemIndex, Row, Item);
 }
 
@@ -1935,6 +1952,7 @@ void UDreamListViewBase::ReleaseRow(int32 InPoolIndex, bool bInItemChanges)
 		// The hover belonged to the item, and the item is leaving this widget.
 		if (HoveredPoolIndices.Contains(InPoolIndex))
 		{
+			OnItemIsHoveredChangedNative.Broadcast(ReleasedItemIndex, ReleasedItem, false);
 			OnItemIsHoveredChanged.Broadcast(ReleasedItemIndex, ReleasedItem, false);
 		}
 		// So does focus, and focus cannot follow it: a row whose item left the window has nowhere for it
@@ -1949,6 +1967,7 @@ void UDreamListViewBase::ReleaseRow(int32 InPoolIndex, bool bInItemChanges)
 			FocusAnchorItem = ReleasedItem;
 		}
 	}
+	OnRowReleasedNative.Broadcast(ReleasedItemIndex, Row, ReleasedItem);
 	OnRowReleased.Broadcast(ReleasedItemIndex, Row, ReleasedItem);
 }
 
@@ -2137,6 +2156,7 @@ void UDreamListViewBase::HandleRowClicked(int32 InPoolIndex)
 	}
 
 	// After the selection, so a handler asking GetSelectedIndex sees the answer the user just gave.
+	OnItemClickedNative.Broadcast(ItemIndex, GetItemObject(ItemIndex));
 	OnItemClicked.Broadcast(ItemIndex, GetItemObject(ItemIndex));
 }
 
@@ -2242,6 +2262,7 @@ void UDreamListViewBase::SelectRangeToItem(int32 InItemIndex, bool bInClearFirst
 	if (SelectedIndices != PreviousSelection || SelectedIndex != PreviousAnchor)
 	{
 		RefreshRowColors();
+		OnSelectionChangedNative.Broadcast(SelectedIndex);
 		OnSelectionChanged.Broadcast(SelectedIndex);
 		OnValueChangedBP.Broadcast(SelectedIndex);
 	}
@@ -2271,6 +2292,7 @@ void UDreamListViewBase::SelectAllItems()
 	if (SelectedIndices != PreviousSelection || SelectedIndex != PreviousAnchor)
 	{
 		RefreshRowColors();
+		OnSelectionChangedNative.Broadcast(SelectedIndex);
 		OnSelectionChanged.Broadcast(SelectedIndex);
 		OnValueChangedBP.Broadcast(SelectedIndex);
 	}
@@ -2441,6 +2463,7 @@ void UDreamListViewBase::HandleRowDoubleClicked(int32 InPoolIndex)
 	// No selection work here: the single click that came with this pair already did it. The event
 	// system delivers the click first and the double click after (see IDreamPointerDoubleClickInterface),
 	// which is what lets a row select on the way to opening.
+	OnItemDoubleClickedNative.Broadcast(ItemIndex, GetItemObject(ItemIndex));
 	OnItemDoubleClicked.Broadcast(ItemIndex, GetItemObject(ItemIndex));
 }
 
@@ -2483,6 +2506,7 @@ void UDreamListViewBase::AnnounceSelectionLostToSource()
 		return;
 	}
 	// Both names, as every other selection change says them: the `<->` desugar listens on the second.
+	OnSelectionChangedNative.Broadcast(SelectedIndex);
 	OnSelectionChanged.Broadcast(SelectedIndex);
 	OnValueChangedBP.Broadcast(SelectedIndex);
 }
@@ -3130,6 +3154,7 @@ void UDreamListViewBase::SetSelectedIndex(int32 InIndex)
 	SetSelectedIndexWithoutNotify(InIndex);
 	if (SelectedIndex != Previous)
 	{
+		OnSelectionChangedNative.Broadcast(SelectedIndex);
 		OnSelectionChanged.Broadcast(SelectedIndex);
 		OnValueChangedBP.Broadcast(SelectedIndex);
 	}
@@ -3201,6 +3226,7 @@ void UDreamListViewBase::SetSelectionMode(EUIListSelectionMode InMode)
 void UDreamListViewBase::AnnounceSelection()
 {
 	// Both names, as every other selection change says them: the `<->` desugar listens on the second.
+	OnSelectionChangedNative.Broadcast(SelectedIndex);
 	OnSelectionChanged.Broadcast(SelectedIndex);
 	OnValueChangedBP.Broadcast(SelectedIndex);
 }
@@ -3354,6 +3380,7 @@ void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, b
 	if (bSelectionMoved || SelectedIndex != PreviousAnchor)
 	{
 		RefreshRowColors();
+		OnSelectionChangedNative.Broadcast(SelectedIndex);
 		OnSelectionChanged.Broadcast(SelectedIndex);
 		OnValueChangedBP.Broadcast(SelectedIndex);
 	}
@@ -3372,6 +3399,7 @@ void UDreamListViewBase::ClearSelection()
 	SelectedIndices.Reset();
 	SelectedIndex = INDEX_NONE;
 	RefreshRowColors();
+	OnSelectionChangedNative.Broadcast(INDEX_NONE);
 	OnSelectionChanged.Broadcast(INDEX_NONE);
 	OnValueChangedBP.Broadcast(INDEX_NONE);
 }

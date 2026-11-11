@@ -364,27 +364,32 @@ float UDreamSlider::GetNormalizedValue() const
 
 void UDreamSlider::HandleMouseCaptureBegin()
 {
+	OnMouseCaptureBeginNative.Broadcast();
 	OnMouseCaptureBegin.Broadcast();
 }
 
 void UDreamSlider::HandleMouseCaptureEnd()
 {
+	OnMouseCaptureEndNative.Broadcast();
 	OnMouseCaptureEnd.Broadcast();
 }
 
 void UDreamSlider::HandleControllerCaptureBegin()
 {
+	OnControllerCaptureBeginNative.Broadcast();
 	OnControllerCaptureBegin.Broadcast();
 }
 
 void UDreamSlider::HandleControllerCaptureEnd()
 {
+	OnControllerCaptureEndNative.Broadcast();
 	OnControllerCaptureEnd.Broadcast();
 }
 
 void UDreamSlider::HandleValueChanged(float InValue)
 {
 	Value = InValue;
+	OnValueChangedNative.Broadcast(InValue);
 	OnValueChanged.Broadcast(InValue);
 	OnValueChangedBP.Broadcast(InValue);
 }

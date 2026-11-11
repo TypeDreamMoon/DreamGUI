@@ -642,6 +642,7 @@ bool UDreamTextInput::IsAnyTextSelected() const
 void UDreamTextInput::HandleTextChanged(const FString& InText)
 {
 	Text = InText;
+	OnTextChangedNative.Broadcast(InText);
 	OnTextChanged.Broadcast(InText);
 	OnValueChangedBP.Broadcast(InText);
 }
@@ -651,7 +652,9 @@ void UDreamTextInput::HandleSubmitted(const FString& InText)
 	// Both spellings of the same moment, same payload: OnSubmitted is the compatibility name,
 	// OnTextCommitted the UMG one. Wherever one fires the other must, so they broadcast from the
 	// one place the behaviour reports a submit.
+	OnSubmittedNative.Broadcast(InText);
 	OnSubmitted.Broadcast(InText);
+	OnTextCommittedNative.Broadcast(InText);
 	OnTextCommitted.Broadcast(InText);
 }
 

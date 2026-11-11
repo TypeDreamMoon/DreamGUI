@@ -723,6 +723,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListSelectionChangedEvent OnSelectionChanged;
+	/** OnSelectionChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnSelectionChangedEvent() { return OnSelectionChangedNative; }
+	TMulticastDelegate<void(int32)> OnSelectionChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact name,
@@ -742,6 +745,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowGenerated;
+	/** OnRowGenerated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)>& GetOnRowGeneratedEvent() { return OnRowGeneratedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)> OnRowGeneratedNative;
 
 	/**
 	 * The counterpart of OnRowGenerated: a pool row is about to stop standing for this item, because
@@ -751,6 +757,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowReleased;
+	/** OnRowReleased for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)>& GetOnRowReleasedEvent() { return OnRowReleasedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)> OnRowReleasedNative;
 
 	/**
 	 * A row was clicked -- every click, whatever the selection mode did with it. Separate from
@@ -762,6 +771,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListItemEvent OnItemClicked;
+	/** OnItemClicked for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*)>& GetOnItemClickedEvent() { return OnItemClickedNative; }
+	TMulticastDelegate<void(int32, UObject*)> OnItemClickedNative;
 
 	/**
 	 * Two clicks on the same row inside the event system's DoubleClickTime.
@@ -774,6 +786,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListItemEvent OnItemDoubleClicked;
+	/** OnItemDoubleClicked for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*)>& GetOnItemDoubleClickedEvent() { return OnItemDoubleClickedNative; }
+	TMulticastDelegate<void(int32, UObject*)> OnItemDoubleClickedNative;
 
 	/**
 	 * The pointer entered or left a row -- UMG's OnItemIsHoveredChanged.
@@ -783,6 +798,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListItemHoverEvent OnItemIsHoveredChanged;
+	/** OnItemIsHoveredChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, bool)>& GetOnItemIsHoveredChangedEvent() { return OnItemIsHoveredChangedNative; }
+	TMulticastDelegate<void(int32, UObject*, bool)> OnItemIsHoveredChangedNative;
 
 	/**
 	 * The list moved -- UMG's OnListViewScrolled. Carries the offset and the visible fraction, which
@@ -790,6 +808,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListScrolledEvent OnListViewScrolled;
+	/** OnListViewScrolled for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float, float)>& GetOnListViewScrolledEvent() { return OnListViewScrolledNative; }
+	TMulticastDelegate<void(float, float)> OnListViewScrolledNative;
 
 	/**
 	 * The list stopped moving -- UMG's OnListViewFinishedScrolling.
@@ -799,6 +820,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListScrolledEvent OnListViewFinishedScrolling;
+	/** OnListViewFinishedScrolling for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float, float)>& GetOnListViewFinishedScrollingEvent() { return OnListViewFinishedScrollingNative; }
+	TMulticastDelegate<void(float, float)> OnListViewFinishedScrollingNative;
 
 	/**
 	 * A row widget was just created -- UMG's OnEntryInitialized, and ONCE in that widget's life.
@@ -809,6 +833,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowInitialized;
+	/** OnRowInitialized for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)>& GetOnRowInitializedEvent() { return OnRowInitializedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)> OnRowInitializedNative;
 
 	/**
 	 * A whole rebuild finished -- UMG's BP_OnEntriesGenerated.
@@ -818,6 +845,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListEntriesGeneratedEvent OnRowsGenerated;
+	/** OnRowsGenerated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnRowsGeneratedEvent() { return OnRowsGeneratedNative; }
+	TMulticastDelegate<void(int32)> OnRowsGeneratedNative;
 
 	/**
 	 * An item came into the realized window -- UMG's BP_OnItemScrolledIntoView.
@@ -827,16 +857,28 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnItemScrolledIntoView;
+	/** OnItemScrolledIntoView for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)>& GetOnItemScrolledIntoViewEvent() { return OnItemScrolledIntoViewNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*, UObject*)> OnItemScrolledIntoViewNative;
 
 	/** A touch drag began on the rows -- UMG's BP_OnListViewTouchStart. Offset and visible fraction. */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListScrolledEvent OnListViewTouchStart;
+	/** OnListViewTouchStart for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float, float)>& GetOnListViewTouchStartEvent() { return OnListViewTouchStartNative; }
+	TMulticastDelegate<void(float, float)> OnListViewTouchStartNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListScrolledEvent OnListViewTouchMove;
+	/** OnListViewTouchMove for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float, float)>& GetOnListViewTouchMoveEvent() { return OnListViewTouchMoveNative; }
+	TMulticastDelegate<void(float, float)> OnListViewTouchMoveNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListScrolledEvent OnListViewTouchEnd;
+	/** OnListViewTouchEnd for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float, float)>& GetOnListViewTouchEndEvent() { return OnListViewTouchEndNative; }
+	TMulticastDelegate<void(float, float)> OnListViewTouchEndNative;
 
 	/**
 	 * Whether one item may be chosen or navigated to -- UMG's BP_OnIsItemSelectableOrNavigable.
@@ -851,13 +893,22 @@ public:
 	/** A row was picked up -- UMG's BP_OnItemDragDetected. The operation is still editable here. */
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListItemDragEvent OnItemDragDetected;
+	/** OnItemDragDetected for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)>& GetOnItemDragDetectedEvent() { return OnItemDragDetectedNative; }
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)> OnItemDragDetectedNative;
 
 	/** A drag entered a row -- UMG's BP_OnItemDragEnter. Any drag, not only this list's own. */
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListItemDragEvent OnItemDragEnter;
+	/** OnItemDragEnter for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)>& GetOnItemDragEnterEvent() { return OnItemDragEnterNative; }
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)> OnItemDragEnterNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListItemDragEvent OnItemDragLeave;
+	/** OnItemDragLeave for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)>& GetOnItemDragLeaveEvent() { return OnItemDragLeaveNative; }
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)> OnItemDragLeaveNative;
 
 	/**
 	 * A drop landed on a row -- UMG's BP_OnItemAcceptDrop, with the zone it landed in.
@@ -868,14 +919,23 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListItemDropEvent OnItemAcceptDrop;
+	/** OnItemAcceptDrop for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*, EDreamItemDropZone)>& GetOnItemAcceptDropEvent() { return OnItemAcceptDropNative; }
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*, EDreamItemDropZone)> OnItemAcceptDropNative;
 
 	/** A drag from this list ended with nobody accepting -- UMG's BP_OnItemDragCancelled. */
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListItemDragEvent OnItemDragCancelled;
+	/** OnItemDragCancelled for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)>& GetOnItemDragCancelledEvent() { return OnItemDragCancelledNative; }
+	TMulticastDelegate<void(int32, UObject*, UDreamDragDropOperation*)> OnItemDragCancelledNative;
 
 	/** This list started or stopped dragging one of its rows -- UMG's BP_OnListViewDraggingStateChanged. */
 	UPROPERTY(BlueprintAssignable, Category = "List|Drag")
 	FDreamListDraggingStateEvent OnDraggingStateChanged;
+	/** OnDraggingStateChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnDraggingStateChangedEvent() { return OnDraggingStateChangedNative; }
+	TMulticastDelegate<void(bool)> OnDraggingStateChangedNative;
 
 	/** The face: the list's own look, and what cuts everything off at its rounded edge. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "List")

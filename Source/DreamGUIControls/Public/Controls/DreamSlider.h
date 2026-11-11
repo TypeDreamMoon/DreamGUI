@@ -148,19 +148,34 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderCaptureEvent OnMouseCaptureBegin;
+	/** OnMouseCaptureBegin for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnMouseCaptureBeginEvent() { return OnMouseCaptureBeginNative; }
+	TMulticastDelegate<void()> OnMouseCaptureBeginNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderCaptureEvent OnMouseCaptureEnd;
+	/** OnMouseCaptureEnd for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnMouseCaptureEndEvent() { return OnMouseCaptureEndNative; }
+	TMulticastDelegate<void()> OnMouseCaptureEndNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderCaptureEvent OnControllerCaptureBegin;
+	/** OnControllerCaptureBegin for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnControllerCaptureBeginEvent() { return OnControllerCaptureBeginNative; }
+	TMulticastDelegate<void()> OnControllerCaptureBeginNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderCaptureEvent OnControllerCaptureEnd;
+	/** OnControllerCaptureEnd for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnControllerCaptureEndEvent() { return OnControllerCaptureEndNative; }
+	TMulticastDelegate<void()> OnControllerCaptureEndNative;
 
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderValueChangedEvent OnValueChanged;
+	/** OnValueChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnValueChangedEvent() { return OnValueChangedNative; }
+	TMulticastDelegate<void(float)> OnValueChangedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact

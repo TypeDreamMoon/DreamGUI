@@ -352,6 +352,7 @@ void UDreamExpandableArea::SetIsExpanded(bool bInIsExpanded)
 		ExpansionAlpha = bIsExpanded ? 1.0f : 0.0f;
 	}
 	PushExpansionVisuals();
+	OnExpansionChangedNative.Broadcast(bIsExpanded);
 	OnExpansionChanged.Broadcast(bIsExpanded);
 	OnValueChangedBP.Broadcast(bIsExpanded);
 }

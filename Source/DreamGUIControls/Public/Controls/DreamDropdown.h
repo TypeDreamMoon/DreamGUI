@@ -104,6 +104,9 @@ public:
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownChangedEvent OnSelectionChanged;
+	/** OnSelectionChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32)>& GetOnSelectionChangedEvent() { return OnSelectionChangedNative; }
+	TMulticastDelegate<void(int32)> OnSelectionChangedNative;
 
 	/**
 	 * The list is opening -- UMG's OnOpening, and the moment to refresh the options from.
@@ -114,10 +117,16 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownSimpleEvent OnOpening;
+	/** OnOpening for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnOpeningEvent() { return OnOpeningNative; }
+	TMulticastDelegate<void()> OnOpeningNative;
 
 	/** The list closed, whether by a choice or by a click elsewhere. */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownSimpleEvent OnClosed;
+	/** OnClosed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnClosedEvent() { return OnClosedNative; }
+	TMulticastDelegate<void()> OnClosedNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -253,6 +262,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownItemEvent OnItemGenerated;
+	/** OnItemGenerated for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(int32, UDreamWidget*)>& GetOnItemGeneratedEvent() { return OnItemGeneratedNative; }
+	TMulticastDelegate<void(int32, UDreamWidget*)> OnItemGeneratedNative;
 
 	virtual void ApplyStyle() override;
 

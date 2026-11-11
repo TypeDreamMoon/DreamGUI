@@ -587,6 +587,7 @@ void UDreamDialog::Close(FName InResult)
 
 	// Announce before the modal host tears the widget down, but only once. A listener can also
 	// destroy it, or show a new question on the same instance, while this notification runs.
+	OnDialogClosedNative.Broadcast(InResult);
 	OnDialogClosed.Broadcast(InResult);
 	if (!WeakThis.IsValid() || DialogTransitionSerial != CloseSerial)return;
 
@@ -738,6 +739,7 @@ void UDreamDialog::HandleButtonClicked(FName InResult)
 	const TWeakObjectPtr<UDreamDialog> WeakThis(this);
 	const uint64 ClickSerial = ++DialogTransitionSerial;
 	// A consumer may handle the result itself, including closing and reopening this same instance.
+	OnButtonClickedNative.Broadcast(InResult);
 	OnButtonClicked.Broadcast(InResult);
 	if (!WeakThis.IsValid() || DialogTransitionSerial != ClickSerial)return;
 	Close(InResult);

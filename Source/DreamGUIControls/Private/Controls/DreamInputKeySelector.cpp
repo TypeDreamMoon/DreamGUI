@@ -169,8 +169,10 @@ void UDreamInputKeySelector::SetSelectedChord(const FInputChord& InChord)
 	SelectedKey = Chord.Key;
 	PushLabel();
 	if (!IsCurrentValue())return;
+	OnChordSelectedNative.Broadcast(Chord);
 	OnChordSelected.Broadcast(Chord);
 	if (!IsCurrentValue())return;
+	OnKeySelectedNative.Broadcast(Chord.Key);
 	OnKeySelected.Broadcast(Chord.Key);
 	if (!IsCurrentValue())return;
 	OnValueChangedBP.Broadcast(Chord.Key);
@@ -402,6 +404,7 @@ void UDreamInputKeySelector::SetIsListening(bool bInIsListening)
 	if (!WeakThis.IsValid())return;
 	PushFaceColours();
 	if (!WeakThis.IsValid())return;
+	OnIsListeningChangedNative.Broadcast(bIsListening);
 	OnIsListeningChanged.Broadcast(bIsListening);
 }
 

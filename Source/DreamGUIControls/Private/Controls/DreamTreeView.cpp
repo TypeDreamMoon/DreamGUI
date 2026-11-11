@@ -292,6 +292,7 @@ void UDreamTreeView::SetItemExpanded(int32 InItemIndex, bool bInExpanded)
 	// Rows first, event second: a handler that asks which rows exist should be told about the tree
 	// it is being notified of, not the one before it.
 	RebuildRows();
+	OnItemExpansionChangedNative.Broadcast(InItemIndex, bInExpanded);
 	OnItemExpansionChanged.Broadcast(InItemIndex, bInExpanded);
 }
 
@@ -386,6 +387,7 @@ void UDreamTreeView::ExpandAll()
 	RebuildRows();
 	for (int32 Index : Changed)
 	{
+		OnItemExpansionChangedNative.Broadcast(Index, true);
 		OnItemExpansionChanged.Broadcast(Index, true);
 	}
 }
@@ -416,6 +418,7 @@ void UDreamTreeView::CollapseAll()
 	RebuildRows();
 	for (int32 Index : Changed)
 	{
+		OnItemExpansionChangedNative.Broadcast(Index, false);
 		OnItemExpansionChanged.Broadcast(Index, false);
 	}
 }

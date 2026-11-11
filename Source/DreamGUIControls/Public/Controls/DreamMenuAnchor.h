@@ -198,6 +198,9 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Menu Anchor")
 	FDreamMenuAnchorOpenChangedEvent OnMenuOpenChanged;
+	/** OnMenuOpenChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(bool)>& GetOnMenuOpenChangedEvent() { return OnMenuOpenChangedNative; }
+	TMulticastDelegate<void(bool)> OnMenuOpenChangedNative;
 
 	/** The popup root: what gets lifted to the screen, positioned and faded. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Menu Anchor")

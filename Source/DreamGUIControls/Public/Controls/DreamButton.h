@@ -158,6 +158,9 @@ public:
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnClicked;
+	/** OnClicked for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnClickedEvent() { return OnClickedNative; }
+	TMulticastDelegate<void()> OnClickedNative;
 
 	/**
 	 * The other four moments UMG's button speaks, re-broadcast from the same behaviour and for the
@@ -171,15 +174,27 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnPressed;
+	/** OnPressed for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnPressedEvent() { return OnPressedNative; }
+	TMulticastDelegate<void()> OnPressedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnReleased;
+	/** OnReleased for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnReleasedEvent() { return OnReleasedNative; }
+	TMulticastDelegate<void()> OnReleasedNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnHovered;
+	/** OnHovered for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnHoveredEvent() { return OnHoveredNative; }
+	TMulticastDelegate<void()> OnHoveredNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnUnhovered;
+	/** OnUnhovered for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void()>& GetOnUnhoveredEvent() { return OnUnhoveredNative; }
+	TMulticastDelegate<void()> OnUnhoveredNative;
 
 	UFUNCTION(BlueprintPure, Category = "Button")
 	FDreamButtonStyle GetStyle() const { return Style; }

@@ -494,6 +494,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		// A close interrupted by reopening never completed its closed announcement.
 		// The menu stayed announced as open; there is no second change to publish.
 		bOpenAnnounced = true;
+		OnMenuOpenChangedNative.Broadcast(true);
 		OnMenuOpenChanged.Broadcast(true);
 	}
 }
@@ -644,6 +645,7 @@ void UDreamMenuAnchor::FinishClose(uint64 InCloseSerial)
 	if (bOpenAnnounced)
 	{
 		bOpenAnnounced = false;
+		OnMenuOpenChangedNative.Broadcast(false);
 		OnMenuOpenChanged.Broadcast(false);
 	}
 }

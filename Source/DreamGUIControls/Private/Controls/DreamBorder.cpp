@@ -260,21 +260,25 @@ void UDreamBorder::ApplyMouseEventReporting()
 
 void UDreamBorder::HandlePointerDown(UDreamPointerEventData* InEventData)
 {
+	OnMouseButtonDownEventNative.Broadcast(InEventData);
 	OnMouseButtonDownEvent.Broadcast(InEventData);
 }
 
 void UDreamBorder::HandlePointerUp(UDreamPointerEventData* InEventData)
 {
+	OnMouseButtonUpEventNative.Broadcast(InEventData);
 	OnMouseButtonUpEvent.Broadcast(InEventData);
 }
 
 void UDreamBorder::HandlePointerDrag(UDreamPointerEventData* InEventData)
 {
+	OnMouseMoveEventNative.Broadcast(InEventData);
 	OnMouseMoveEvent.Broadcast(InEventData);
 }
 
 void UDreamBorder::HandlePointerDoubleClick(UDreamPointerEventData* InEventData)
 {
+	OnMouseDoubleClickEventNative.Broadcast(InEventData);
 	OnMouseDoubleClickEvent.Broadcast(InEventData);
 }
 

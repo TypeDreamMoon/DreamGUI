@@ -200,6 +200,9 @@ public:
 	/** Fired when the clamped value actually changes, whichever road changed it. */
 	UPROPERTY(BlueprintAssignable, Category = "Spin Box")
 	FDreamSpinBoxValueChangedEvent OnValueChanged;
+	/** OnValueChanged for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnValueChangedEvent() { return OnValueChangedNative; }
+	TMulticastDelegate<void(float)> OnValueChangedNative;
 
 	/**
 	 * Fired when the value is COMMITTED -- a typed entry submitted, a step face clicked, a scrub let
@@ -210,13 +213,22 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Spin Box")
 	FDreamSpinBoxValueChangedEvent OnValueCommitted;
+	/** OnValueCommitted for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnValueCommittedEvent() { return OnValueCommittedNative; }
+	TMulticastDelegate<void(float)> OnValueCommittedNative;
 
 	/** The scrub began. Pairs with OnEndSliderMovement around a run of OnValueChanged. */
 	UPROPERTY(BlueprintAssignable, Category = "Spin Box")
 	FDreamSpinBoxValueChangedEvent OnBeginSliderMovement;
+	/** OnBeginSliderMovement for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnBeginSliderMovementEvent() { return OnBeginSliderMovementNative; }
+	TMulticastDelegate<void(float)> OnBeginSliderMovementNative;
 
 	UPROPERTY(BlueprintAssignable, Category = "Spin Box")
 	FDreamSpinBoxValueChangedEvent OnEndSliderMovement;
+	/** OnEndSliderMovement for C++ (AddLambda, AddWeakLambda, AddUObject): raised with it, with the same arguments. */
+	TMulticastDelegate<void(float)>& GetOnEndSliderMovementEvent() { return OnEndSliderMovementNative; }
+	TMulticastDelegate<void(float)> OnEndSliderMovementNative;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
