@@ -93,6 +93,22 @@ namespace DreamUIWidgetPicking
 		return Hits[InOutCycleIndex].Widget;
 	}
 
+	UDreamWidget* PickDropTarget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd)
+	{
+		TArray<FDreamUIWidgetPickHit> Hits;
+		RaycastWidgetRects(InWorld, InWidgets, InLineStart, InLineEnd, Hits);
+		for (const FDreamUIWidgetPickHit& Hit : Hits)
+		{
+			const UDreamWidget* Widget = Hit.Widget;
+			if (Widget->GetLayoutContainer() != nullptr || Cast<UDreamUserWidget>(Widget) != nullptr
+				|| Widget->GetChildren().ContainsByPredicate([](const UDreamWidget* InChild) { return IsValid(InChild); }))
+			{
+				return Hit.Widget;
+			}
+		}
+		return Hits.IsEmpty() ? nullptr : Hits[0].Widget;
+	}
+
 	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget, const UDreamWidget* InTreeRoot)
 	{
 		const bool bBounded = IsValid(InTreeRoot);

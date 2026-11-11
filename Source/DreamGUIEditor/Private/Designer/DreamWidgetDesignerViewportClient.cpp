@@ -2325,8 +2325,8 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerReparentTarget(const FVec
 			}
 			return false;
 		});
-		int32 CycleIndex = INDEX_NONE;
-		UDreamWidget* Hit = DreamUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
+		// Through whatever in front holds nothing: see PickDropTarget for the layer over the page that would answer otherwise.
+		UDreamWidget* Hit = DreamUIWidgetPicking::PickDropTarget(GetWorld(), Widgets, LineStart, LineEnd);
 		TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
 		Container = ResolveDragDropContainer(Hit, DesignerEditor.IsValid() ? DesignerEditor->GetPreviewRootWidget() : nullptr, Dragged,
 			[&DesignerEditor](const UDreamWidget* InWidget){ return DesignerEditor.IsValid() && DesignerEditor->IsWidgetLockedForInteraction(InWidget); });
@@ -4040,7 +4040,21 @@ UDreamWidget* FDreamWidgetDesignerViewportClient::GetDropContainerUnderCursor(in
 	// The widget under the cursor is rarely the widget a drop belongs in: point at a Text and you
 	// mean the box holding it. Resolve up to the nearest container that will actually arrange the
 	// new child, and fall back to the prefab root, which is the container-less prefab's answer.
-	UDreamWidget* Hit = GetWidgetUnderCursor(PixelX, PixelY);
+	// Resolved from the front-most rect that can hold anything (PickDropTarget), not the front-most
+	// rect: an effect layer over the whole page holds nothing and would send every drop to its parent.
+	UDreamWidget* Hit = nullptr;
+	FVector LineStart, LineEnd;
+	if (ComputePickRay(PixelX, PixelY, LineStart, LineEnd))
+	{
+		TArray<UDreamWidget*> Widgets;
+		DreamUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+		Hit = DreamUIWidgetPicking::PickDropTarget(GetWorld(), Widgets, LineStart, LineEnd);
+		// A locked widget refuses being dropped on, as before: the drop falls to the root below.
+		if (Hit != nullptr && DesignerPtr.IsValid() && DesignerPtr.Pin()->IsWidgetLockedForInteraction(Hit))
+		{
+			Hit = nullptr;
+		}
+	}
 	UDreamWidget* Root = DesignerPtr.IsValid() ? DesignerPtr.Pin()->GetPreviewRootWidget() : nullptr;
 	// Bounded by the authored root, so a root with no container answers "the root" below rather than
 	// the designer's own wrapper above it.

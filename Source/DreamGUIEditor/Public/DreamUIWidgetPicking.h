@@ -43,6 +43,18 @@ namespace DreamUIWidgetPicking
 	DREAMGUIEDITOR_API UDreamWidget* PickTopmostWidget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd, int32& InOutCycleIndex);
 
 	/**
+	 * The crossed rect a drop on the ray resolves from (ResolveDropContainer): the front-most that can hold what is
+	 * dropped -- one with a layout container, one already holding children, a placed control -- looking through every
+	 * rect in front of it that holds nothing. A widget that holds nothing gives what is dropped on it to whatever holds
+	 * it, and the front-most of those is in another branch whenever the empty rect is a layer over the whole page: a
+	 * panel's effect (a pixel sort, a light) filling its root's overlay. Resolved from that layer, a row dragged a few
+	 * pixels inside its group went to the overlay, and so did a Text dropped on the group. A Text in a box still gives
+	 * the box, which is the next rect behind it. Null when nothing is crossed; the front-most rect when nothing crossed
+	 * can hold anything.
+	 */
+	DREAMGUIEDITOR_API UDreamWidget* PickDropTarget(const UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, const FVector& InLineStart, const FVector& InLineEnd);
+
+	/**
 	 * The widget a drop on InHitWidget should parent to: the nearest ancestor-or-self that places
 	 * children and still has room -- one owning a layout container, or a group: a widget with no panel
 	 * that holds children, which stand where their anchors put them as on a Canvas Panel. Null when
