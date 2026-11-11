@@ -220,6 +220,12 @@ Unreal Engine **5.8**，源码引擎和 Launcher 安装版都行。"声称支持
 | 上游 | Lex Liu 的 [LGUI / LexUI](https://github.com/liufei2008/LGUI) |
 | 许可证 | [MIT](LICENSE) |
 
+## 参与贡献
+
+欢迎问题反馈、提案和 pull request：从 [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) 开始，提问请去
+[Discussions](https://github.com/TypeDreamMoon/DreamGUI/discussions)。AI agent 要写 `.dui` 或改插件，先读
+[AGENTS.md](AGENTS.md)；其余见 [Working with AI agents](Docs/tools/ai-agents.md)。
+
 ## 许可证
 
 MIT——见 [LICENSE](LICENSE)。

@@ -233,6 +233,12 @@ and what was checked for a dedicated server are on
 | Upstream | [LGUI / LexUI](https://github.com/liufei2008/LGUI) by Lex Liu |
 | License | [MIT](LICENSE) |
 
+## Contributing
+
+Bug reports, proposals and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md), and take
+questions to [Discussions](https://github.com/TypeDreamMoon/DreamGUI/discussions). An AI agent that writes `.dui` or
+changes the plugin starts at [AGENTS.md](AGENTS.md); [Working with AI agents](Docs/tools/ai-agents.md) has the rest.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
