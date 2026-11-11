@@ -114,7 +114,7 @@ UMG 为每种面板有一个槽类；这里只有一个 `UDreamPanelSlot`，由*
 | `Row` / `Column` / `RowSpan` / `ColumnSpan` | 网格中的坐标和跨度 |
 | `ZOrder` | 兄弟之间的绘制顺序，作为稳定重排。Overlay 和 GridPanel 总是读取它，CanvasPanel 在 `bSortChildrenByZOrder` 开启时读取；其他所有面板严格按兄弟顺序排列。UMG 网格槽的 `Layer` 就是它 |
 | `bAutoSize` | 按内容确定尺寸，UMG 画布槽同名属性 |
-| `MinDesiredSize` / `MaxDesiredSize` | 对子项测量结果按每个轴设置的下限和上限；零表示没有意见 |
+| `MinDesiredSize` / `MaxDesiredSize` | 对子项测量结果按每个轴设置的下限和上限；零表示没有意见。在 `.dui` 中，`@slot Size = (w, h)` 是用一个值同时设置这两者的简写 |
 | `bFillEmptySpace` / `FillSpanWhenLessThan` / `bForceNewLine` | 仅 WrapBox：行上的最后一个子项占据剩余空间；当换行宽度低于此值时独占一行；从此处开始新的一行 |
 | `Nudge` | 在面板放置子项的位置上添加的固定偏移，位于面板的内容空间（x 向右，y 向下，与 `Padding` 方向相同） |
 

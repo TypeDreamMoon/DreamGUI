@@ -5,7 +5,7 @@ description: "每一条 DUInnnn 诊断码：它意味着什么、如何产生、
 
 DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DUInnnn`，并以 `File.dui(line,col): error DUI3001: …` 的形式输出：文件、行和列（均从 1 开始计数）、严重级别、编码，以及一句指出问题文本的说明——例如 `Settings.dui(12,5): error DUI3001: 'Title' is already the id of the node on line 4`。当 Blueprint 编译时，它们会出现在其编译器结果中。编码是稳定的那一半：一个原因对应一个编码，同一个原因从两处到达仍保留同一个编码，测试断言的是编码而非措辞，因此措辞可以自由改进；已退役的编码保持退役，绝不会分配给其他任何事物。第一位数字说明是哪个阶段拒绝了它：1 词法分析器（不是标记的字符），2 解析器（无法组成语法的标记），3 含义（语法正确，但树不成立——重复的 id、未知的类型），4 值（值与它所写入的属性不匹配），5 构建树（反射拒绝了写入，或要写入的对象不存在），6 编译进 Blueprint（`.dui` 无法附加到其 Blueprint），7 写回（设计器无法将编辑写入文本）。
 
-严重级别在诊断被引发的地方决定，而不是由其范围决定。大多数编码是错误，错误会导致编译失败——一个无法解析的文件会保留 Blueprint 之前的层级结构，而不是将其清空。少数是警告——DUI3008、DUI3013、DUI3023、DUI5007、DUI6003——此时文件可以编译，但仍有值得一看之处。VS Code 扩展报告相同的编码和相同的措辞：单个文件能自行确定的内容（词法分析器、括号、重复名称等）会在你输入时检查，其余内容在 Unreal 编辑器编译后通过 `DUI/.dui-diagnostics.json` 进入其 Problems 面板；编译器始终是权威。
+严重级别在诊断被引发的地方决定，而不是由其范围决定。大多数编码是错误，错误会导致编译失败——一个无法解析的文件会保留 Blueprint 之前的层级结构，而不是将其清空。少数是警告——DUI3008、DUI3013、DUI3023、DUI3025、DUI5007、DUI6003——此时文件可以编译，但仍有值得一看之处。VS Code 扩展报告相同的编码和相同的措辞：单个文件能自行确定的内容（词法分析器、括号、重复名称等）会在你输入时检查，其余内容在 Unreal 编辑器编译后通过 `DUI/.dui-diagnostics.json` 进入其 Problems 面板；编译器始终是权威。
 
 <a id="the-seven-families"></a>
 
@@ -14,11 +14,11 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | | 阶段 | 含义 | 编码 |
 | --- | --- | --- | --- |
 | [DUI1xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx) | 词法分析器 | 不是标记的字符序列。 | 7 |
-| [DUI2xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx) | 解析器 | 无法组成语法的标记。 | 21 |
-| [DUI3xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx) | 含义 | 语法正确，但树不成立：重复的 id、未知的类型。 | 24 |
-| [DUI4xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx) | 值 | 值与它所写入的属性不匹配。 | 8 |
+| [DUI2xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx) | 解析器 | 无法组成语法的标记。 | 24 |
+| [DUI3xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx) | 含义 | 语法正确，但树不成立：重复的 id、未知的类型。 | 25 |
+| [DUI4xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx) | 值 | 值与它所写入的属性不匹配。 | 9 |
 | [DUI5xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx) | 构建树 | 反射拒绝了写入，或目标对象不存在。 | 25 |
-| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | 编译 | .dui 无法附加到其 Blueprint。 | 22 |
+| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | 编译 | .dui 无法附加到其 Blueprint。 | 24 |
 | [DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx) | 写回 | 设计器的编辑无法写入文本。 | 5 |
 
 <a id="every-code"></a>
@@ -52,15 +52,16 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI2016](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2016) | `MalformedPropsBlock` | error | 不是 `Type Name` 或 `Type Name = value` 的 `props` 行，或位于节点内部的 `props`。 |
 | [DUI2017](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2017) | `MalformedEventsBlock` | error | 不是 `Name` 或 `Name(Type Param, …)` 的 `events` 条目，或位于节点内部的 `events`。 |
 | [DUI2018](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2018) | `MalformedConditional` | error | 没有条件或块的 `if`、没有 `if` 的 `else`，或包含不是控件内容的分支。 |
-| [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | error | 出现两次 `default` 的 slot，或既声明又填充的块。 |
+| [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | 错误 | 同一个 slot 中出现两次 `default`，或既声明又填充的块：声明可包含组件、属性、slot 行和 `@tag` 行，而填充只包含控件（包括与其并列的 `@tag` 行）。 |
 | [DUI2020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020) | `MalformedRows` | error | 无法读取的 `rows` 表：列清单不是名称、某一列出现两次、某行的值数量不对。 |
 | [DUI2021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021) | `MalformedViewModelsBlock` | error | 不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels` 行（包括为空的 `""` 名称），或位于节点内部的 `viewmodels` 块。 |
 | [DUI2022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2022) | `MalformedTextAnnotation` | error | `@note(…)` 里不是一个字符串、`@max(…)` 里不是一个不小于 1 的整数、它们跟在不是字符串的值后面、同一个注解写了两次，或者 `@noloc` 和 `@key`、`@note`、`@max` 写在一起。 |
-| [DUI2023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023) | `MalformedContainer` | 错误 | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
+| [DUI2023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023) | `MalformedContainer` | 错误 | 读不通的列表（`[a, b]`）或 Map（`{ key: value }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `key: value`。结构体的第一项可以不带键。 |
+| [DUI2024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2024) | `MalformedTag` | 错误 | 无法解析的 `@tag` 行：`@tag` 后没有任何内容、一个数字或一个字符串、两个名称之间没有逗号、末尾逗号。还有 `style` 中或直接在 `for` / `each` 主体中的 `@tag` 行。 |
 | [DUI3001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001) | `DuplicateNodeId` | error | 两个节点共享同一个 id。 |
 | [DUI3002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002) | `InvalidNodeId` | error | 不是标识符、以数字开头或是关键字的 id。 |
 | [DUI3003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3003) | `UnknownNodeType` | error | 不是标签、容器、别名、已注册控件或路径的类型。 |
-| [DUI3004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3004) | `UnknownStyle` | 错误 | 这个文件看不到的、名为 `: Name` 的样式。 |
+| [DUI3004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3004) | `UnknownStyle` | 错误 | `: Name` 指定了此文件看不到的样式；子句中每个未知的名称都会被报告。 |
 | [DUI3005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3005) | `DuplicateStyle` | 错误 | 同一个文件里的两个同名样式。 |
 | [DUI3006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3006) | `UnknownBehaviourClass` | 错误 | 一个指向控件无法携带的东西的 `+ Name`。 |
 | [DUI3007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3007) | `DuplicateSlotName_Retired` | 错误 | 已退役；两个同名 slot 现在报 DUI3001。 |
@@ -81,15 +82,16 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI3022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3022) | `MultipleDefaultSlots` | 错误 | 一个文件里不止一个 `slot … default`。 |
 | [DUI3023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3023) | `DuplicateRowKey` | 警告 | 警告。一个 `rows` 表里有两行，其第一个值生成同一个 id；第二行的 id 随之跟着顺序走。 |
 | [DUI3024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3024) | `DuplicateViewModel` | 错误 | 两个同名的 `viewmodels` 条目。 |
-| [DUI4001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4001) | `UnknownProperty` | 错误 | 没有这个名字的属性；消息会给出最接近的那个。 |
-| [DUI4002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4002) | `UnknownPropertyPathSegment` | 错误 | 一条开头能解析、后面解析不了的带点路径。 |
+| [DUI3025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3025) | `StyleAlreadyApplied` | 警告 | 警告。子句中指定的样式已由该子句中较早的名称应用过（无论是其本身还是作为基样式）：再次指定它不会带来任何变化。 |
+| [DUI4001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4001) | `UnknownProperty` | 错误 | 没有该名称的属性；会提示最接近的属性。`@slot Size <- …` 就是其中之一：`Size` 是两个属性的简写，而绑定需要分别指定 `MinDesiredSize` 和 `MaxDesiredSize`。 |
+| [DUI4002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4002) | `UnknownPropertyPathSegment` | 错误 | 一条开头能解析、后面解析不了的带点路径，或结构体的字段映射中指定了该结构体并不存在的字段。 |
 | [DUI4003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4003) | `ValueTypeMismatch` | 错误 | 一个形状不可能成为该属性类型的值。 |
 | [DUI4004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4004) | `TupleArityMismatch` | 错误 | 一个元素个数不对的元组。 |
 | [DUI4005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4005) | `UnknownEnumValue` | 错误 | 一个属性的枚举没有声明的词。 |
 | [DUI4006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4006) | `PropertyNotWritable` | 错误 | 一个文本写不了的属性：瞬态的、已弃用的、属于对象图的，或者是委托。 |
 | [DUI4007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4007) | `UnknownResource` | 错误 | 一个没有指向任何资源条目的 `@Name`。 |
 | [DUI4008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4008) | `ResourceTypeMismatch` | 错误 | 一个值与声明的类型不符的资源，或者一个被当作节点类型、却不是 `Asset` 的资源。 |
-| [DUI4009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4009) | `ContainerTypeMismatch` | 错误 | 列表写在了不是数组或 Set 的属性上、Map 写在了不是 Map 的属性上、单个值写在了容器属性上，或者节点的 Set/Map（只有数组能存节点 id）。 |
+| [DUI4009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4009) | `ContainerTypeMismatch` | 错误 | 列表写在了不是数组或 Set 的属性上、Map 写在了不是 Map 的属性上、单个值写在了容器属性上，或者节点的 Set/Map（只有数组能存节点 id）。在真正的 Map 上，或者在没有主字段的结构体上，没有键的 Map 条目也算一种。 |
 | [DUI5001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5001) | `AssetNotFound` | 错误 | 一个加载不出来的资产或类路径。 |
 | [DUI5002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5002) | `NoVisualForProperty` | 错误 | 一个属于视觉对象、而节点的类型并不创建那个视觉对象的属性。 |
 | [DUI5003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5003) | `NoPanelSlotForProperty` | 错误 | 一个父节点不布局面板、却写了 slot 行的节点。 |
@@ -142,5 +144,5 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI7001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001) | `PatchTargetNotFound` | 错误 | 设计器的一次编辑在文件里找不到落脚处：未知的节点、被绑定的属性、没有块的 slot。 |
 | [DUI7002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002) | `SourceFileChangedUnderEdit` | 错误 | 文件在一次待写入的编辑底下被改动了，于是什么都没有写入。 |
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | 错误 | 一个这门语言写不出来的值（非有限的数），它所在的那一行保持原样。 |
-| [DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004) | `PatchSyntaxNotWritable` | 错误 | 对没有哪一行写着它的东西的一次编辑：由 `if` 决定的可见性，或者无法改写的简写。 |
+| [DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004) | `PatchSyntaxNotWritable` | 错误 | 对没有哪一行写着它的东西的一次编辑：由 `if` 决定的可见性、无法改写的简写、对 `Tags` 做出的任何行都无法接受的改动（写成两种方式，或者 `@tag` 行无法容纳的名字）。 |
 | [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |

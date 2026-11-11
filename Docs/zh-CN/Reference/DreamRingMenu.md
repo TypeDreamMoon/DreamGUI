@@ -38,6 +38,7 @@
         HitArea            = Slice
         bSelectOnHighlight = true
         Style.SweepAngle   = 360
+        Items = [{ "Lamp", Tag: Lamp }, { "Door", Tag: Door, bEnabled: false }]
         OnItemActivated -> HandleWheelPick
 
 <a id="properties"></a>
@@ -59,7 +60,7 @@
 | `bShowLabels` | `bool` | Ring Menu | 是 | `GetShowLabels` / `SetShowLabels` | 关闭后楔块只保留其图标。一个只含符号的轮盘是再普通不过的需求。 |
 | `bHubFollowsHighlight` | `bool` | Ring Menu | 是 | `SetHubFollowsHighlight` | 中心枢纽显示高亮项目的标签（回退到选中项目的标签，再回退到 HubText）。关闭后保持 HubText 不变，这样中心枢纽就成了一个静态标题。 |
 | `HubText` | `FText` | Ring Menu | 是 | `SetHubText` | 没有任何高亮时中心枢纽显示的内容。空即为空的中心枢纽。 |
-| `WedgeTemplateClass` | `TSubclassOf<UDreamUserWidget>` | Ring Menu | 是 | `SetWedgeTemplateClass` | 楔块的内容，在别处创作：会在每个楔块控件内创建一个此类的实例，将其填满，内置标签则让位。楔块的形状、命中扇区、高亮和点击仍归控件所有，因此模板只需绘制一个项目。 |
+| `WedgeTemplateClass` | `TSubclassOf<UDreamUserWidget>` | Ring Menu | 是 | `SetWedgeTemplateClass` | 楔块的内容，在别处创作：每个楔块控件内都会创建一个此类的实例，内置图标和标签则让位。该实例以内置框原本所在的位置为中心——位于切片的中线上、样式的 ContentRadius 处（该值为 0 时，即圆环两边之间的中点）——尺寸为其类的根控件创作时的尺寸（根控件拉伸时，为样式的 ContentWidth，呈正方形），并按 LabelFacing 的指示旋转。楔块的形状、命中扇区、高亮和点击仍归控件所有，因此模板只需绘制一个项目。 |
 | `RingNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | 只读 | 所有内容所依附的节点，也是 Open 和 Close 缩放与淡入淡出的对象。 |
 | `BackdropNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | 只读 | 楔块背后的完整圆环，填充它们之间的间隙。 |
 | `WedgeRootNode` | `TObjectPtr<UDreamWidget>` | Ring Menu | - | 只读 | 楔块的父节点——其中也包括模板。 |

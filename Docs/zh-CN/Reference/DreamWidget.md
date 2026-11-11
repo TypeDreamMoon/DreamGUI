@@ -19,9 +19,9 @@
 | `RelativeLocation` | `FVector` | Transform | yes | read only | 局部空间位置。DuiHidden：setter 会重新计算锚点，而 .dui 所书写的是 AnchorData——如果反射扫描也写入此属性，同一个位置就会被编写两次。 |
 | `RelativeRotation` | `FQuat` | Transform | - | read only | 局部空间旋转。未标记 Interp：Sequencer 没有针对 FQuat 的属性轨道，因此无法直接为其打关键帧。请改为对 RelativeRotationEuler 做动画，它镜像了此值。         // DuiHidden：RelativeRotationEuler 是此值面向作者的一面，而四元数没有 // 书写形式——但 FQuat 是普通结构体，所以如果没有此标记，反射扫描会 // 递归它，并在已经写入的欧拉角旁边再写入 X/Y/Z/W 分量行。 |
 | `RelativeRotationEuler` | `FRotator` | Transform | yes | read only | 局部空间旋转的欧拉角表示，镜像 RelativeRotation，以便旋转可以被动画化：Sequencer 有 FRotator 属性轨道，但没有针对 FQuat 的。 |
-| `RelativeScale` | `FVector` | Transform | yes | read only | 局部空间缩放 |
+| `RelativeScale` | `FVector` | Transform | 是 | 只读 | 局部空间缩放 // 此属性和 RelativeLocation 上标记 DreamGUI_Hidden：Layout 分区的 position 与 scale 行会编辑它们（Interp 使其可编辑）。 |
 | `RenderTranslation` | `FVector` | Render Transform | yes | read only | 渲染变换。 |
-| `RenderRotation` | `FRotator` | Render Transform | yes | read only | 围绕 RenderTransformPivot 的仅渲染旋转，单位为度。使用 FRotator 而非 FQuat 的原因与 RelativeRotationEuler 存在的原因相同：Sequencer 对其中一种有属性轨道，对另一种没有。此处不需要临时镜像，因为它本身就是序列化的真实来源。 |
+| `RenderRotation` | `FRotator` | Render Transform | 是 | 只读 | 围绕 RenderTransformPivot 的仅渲染旋转，单位为度。Roll 是平面内角度，正的 Roll 会让控件在屏幕上顺时针旋转（其右边缘向下），与 UMG 的角度一致；Pitch 和 Yaw 则绕其水平轴和垂直轴把控件转出平面。使用 FRotator 而非 FQuat 的原因与 RelativeRotationEuler 存在的原因相同：Sequencer 对其中一个有属性轨道，对另一个没有。此处不需要临时镜像，因为它本身就是序列化的真实来源。 |
 | `RenderScale` | `FVector` | Render Transform | yes | read only | 围绕 RenderTransformPivot 的仅渲染缩放。 |
 | `RenderTransformPivot` | `FVector2D` | Render Transform | yes | read only | RenderRotation 和 RenderScale 围绕其旋转的中心，在控件自身矩形内归一化。(0,0) 为左下角，(1,1) 为右上角，与 AnchorData.Pivot 一致，而非 UMG 的左上角原点——此分支内部的一致性优先于与另一个引擎的一致性。使用二维是因为矩形本身就是二维的：它解析为控件自身平面上的一个点。独立于属于布局的 AnchorData.Pivot。 |
 | `RenderShear` | `FVector2D` | Render Transform | yes | read only | 围绕此控件自身轴心的仅渲染斜切，单位为度，应用于此控件及其整个子树。关于它影响和不影响什么，请参见 GetRenderShear。 |
@@ -29,20 +29,20 @@
 | `bPerspective` | `bool` | Perspective | yes | read only | 透视，采用 CSS 使用的形式。 |
 | `PerspectiveFieldOfView` | `float` | Perspective | yes | read only | 观察子树的角度，单位为度。角度越大效果越强，其含义与 UDreamCanvas::FieldOfView 完全一致——眼睛距离由同一公式针对此控件自身宽度推导而来。 |
 | `PerspectiveOrigin` | `FVector2D` | Perspective | yes | read only | 眼睛在此控件自身矩形上方所处的位置，已归一化：(0,0) 左下角，(1,1) 右上角，与 RenderTransformPivot 一致。即 CSS 的 `perspective-origin`，也是子树汇聚的消失点。 |
-| `AnchorData` | `FDreamUIAnchorData` | DreamGUI-AnchorData | yes | - | AnchorData 包含矩形变换和颜色 |
-| `AnimatableWidth` | `float` | DreamGUI-AnchorData | yes | read only | 已解析几何体的可动画镜像，每个可由 Sequencer 打关键帧的通道各一个。Sequencer 直接读取属性内存，而写入则通过 setter（即 RelativeRotationEuler 的故事），因此每个都必须是真实存储的字段；SyncAnimatableGeometryMirrors 使它们与下面的缓存保持相等。过期的缓存及其镜像会一起过期，这也正是细节面板所显示的内容。         // 六个属性都标记 DuiHidden：它们是供 Sequencer 使用的 AnchorData 的 Interp 镜像，其 setter // 会写回 AnchorData——这正是它们免于临时拒绝的原因，// 也正是反射扫描不得书写它们的原因：AnchorData 已经携带了该值。 |
+| `AnchorData` | `FDreamUIAnchorData` | DreamGUI-AnchorData | 是 | - | AnchorData 包含矩形变换和颜色 // DreamGUI_Hidden：Layout 分区的 anchor、position 和 size 行会编辑它。 |
+| `AnimatableWidth` | `float` | DreamGUI-AnchorData | 是 | 只读 | 已解析几何体的可动画镜像，每个可由 Sequencer 打关键帧的通道各一个。Sequencer 直接读取属性内存，而写入则通过 setter（即 RelativeRotationEuler 的故事），因此每个都必须是真实存储的字段；SyncAnimatableGeometryMirrors 使它们与下面的缓存保持相等。过期的缓存及其镜像会一起过期，这也正是细节面板所显示的内容。         // 六个属性都标记 DuiHidden：它们是供 Sequencer 使用的 AnchorData 的 Interp 镜像，其 setter // 会写回 AnchorData——这正是它们免于临时拒绝的原因，// 也正是反射扫描不得书写它们的原因：AnchorData 已经携带了该值。出于同样的原因标记 DreamGUI_Hidden：Layout 分区的行会编辑该值。 |
 | `AnimatableHeight` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorLeft` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorRight` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorTop` | `float` | DreamGUI-AnchorData | yes | read only |  |
 | `AnimatableAnchorBottom` | `float` | DreamGUI-AnchorData | yes | read only |  |
-| `RenderOpacity` | `float` | DreamGUI | yes | read only |  |
+| `RenderOpacity` | `float` | DreamGUI | 是 | 只读 | Interp，因此 .dui 时间轴和动画编辑器可以像为移动打关键帧那样为淡入淡出打关键帧。 |
 | `Clipping` | `EDreamWidgetClipping` | DreamGUI | yes | read only |  |
 | `ClippingCornerRadius` | `FVector4f` | DreamGUI | yes | read only | X- 右下，Y- 右上，Z- 左上，W- 左下 |
 | `ClippingMargin` | `FMargin` | DreamGUI | yes | read only | 向外扩展裁剪区域。 |
 | `ClipMask` | `FDreamClipMask` | DreamGUI | 是 | 只读 | 当此控件裁剪到自身边界时，作用于其裁剪的遮罩：可以是形状、羽化边缘、纹理或程序化图案，并可按需反转。它像裁剪矩形一样裁剪整个子树。在其默认值下不产生任何遮罩。 |
 | `bClipToBelow` | `bool` | DreamGUI | 是 | 只读 | 仅在其下一层被绘制的位置、并按该层的不透明度显示此控件及其下所有内容：一种裁剪遮罩。下一层是在此控件之前绘制、且自身不裁剪到其下一层的同级控件，因此连续裁剪到下一层的同级控件会共用同一个。它可以是普通图像或纹理，也可以是九宫格图像或纹理，或矩形块；其他任何内容都不会被裁剪到，并给出警告。隐藏的下一层也会隐藏此控件。 |
-| `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - |  |
+| `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | 是 | - | DreamGUI_Hidden：Clipping 组中 Corner Radius 行上的锁。 |
 | `bWidgetActive` | `bool` | DreamGUI | yes | read only | 如果不是 WidgetActive，则不可见、不占用布局空间、不可交互、不可命中测试 |
 | `Visibility` | `EDreamWidgetVisibility` | DreamGUI | yes | read only | 独立于 WidgetActive 控制布局、绘制和命中测试。 |
 | `Shown` | `bool` | DreamGUI | - | read only | 以是或否表示的可见性：true 为 Visible，false 为 Collapsed。这就是 `Shown <- HasSave()` 在 .dui 中绑定的内容，也是 `if` 块在其各分支的每个控件上绑定的内容。它不保留自身的任何内容——读取它即读取 Visibility（除 Collapsed 外的任何值都表示显示），写入它即写入 Visibility——因此下面的字段只是反射为具有 getter 和 setter 的属性所需的槽位。DuiHidden：写入回写所书写的是 Visibility，因此反射扫描不得将同一个值编写两次。 |
@@ -56,7 +56,7 @@
 | `Visual` | `TObjectPtr<UDreamVisual>` | Visual | yes | read only |  |
 | `LayoutContainer` | `TObjectPtr<UDreamLayoutContainer>` | LayoutContainer | yes | read only |  |
 | `LayoutSelf` | `TObjectPtr<UDreamLayoutSelf>` | LayoutSelf | yes | read only |  |
-| `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | 是 | 只读 | 由父面板拥有的布局数据。它与 LayoutSelf 分开，以便旧版 Flex/Grid 资源仍然有效。 |
+| `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | 是 | 只读 | 由父面板拥有的布局数据。它与 LayoutSelf 分开，以便旧版 Flex/Grid 资源仍然有效。 // DreamGUI_Hidden：槽自身的属性属于 Slot 分区，针对控件所在的面板。 |
 | `bIsFocusable` | `bool` | Interaction|Focus | 是 | 只读 |  |
 | `bIsTabStop` | `bool` | Interaction|Focus | 是 | 只读 | Tab and Shift+Tab stop here, when it is focusable and can be navigated to. Off leaves it to the arrows, the pad, a pointer and code -- a browser's tabindex="-1". |
 | `TabIndex` | `int32` | Interaction|Focus | 是 | 只读 | Its place in Tab order among its siblings: lower first, siblings with the same index in the hierarchy's order. Only siblings are compared. |
@@ -71,6 +71,7 @@
 | `SiblingIndex` | `int32` | DreamGUI | 是 | - | 层级索引、层级顺序、渲染顺序 |
 | `FlattenHierarchyIndex` | `int32` | DreamGUI | - | - | 相对于根 DreamWidget 的扁平化深度/层级索引。-1 表示尚未设置。RootWidget - 0       Widget - 1       Widget - 2         Widget - 3         Widget - 4           Widget - 5       Widget - 6 |
 | `DisplayName` | `FString` | DreamGUI | - | - | 当你需要按名称查找子 UI 元素时这很有用，可使用函数 "FindChildByDisplayName" 或 "FindChildArrayByDisplayName" 来完成。displayName 通常与 Actor 的 ActorLabel 相同。如果你想更改它，只需更改 Actor 标签（Actor 在世界大纲中的名称）。如果 Actor 的 ActorLabel 以 "//" 开头，则 "//" 会被忽略。ActorLabel 仅在编辑器中有效，但此属性在运行时也有效。 |
+| `Tags` | `TArray<FName>` | DreamGUI | 是 | read / write | 为按控件的本质（而非其 id）查找控件的代码提供名称——每一个 trim、每一个 sigil——正如 AActor::Tags 之于 Actor。`.dui` 会写入它们 `@tag Trim, Glow`；UDreamUserWidget::GetWidgetsByTag 会在用户控件自身的树中查找它们。库中没有任何代码读取它们。 |
 
 <a id="functions"></a>
 
@@ -80,6 +81,7 @@
 |---|---|---|
 | `UDreamPanelSlot* AddChild(UDreamWidget* InChild, int32 InSiblingIndex)` | callable | UMG 的 UPanelWidget::AddChild 的改编版。UMG 需要八个带类型的变体，因为每个面板都有自己的插槽类；这里只有一个 UDreamPanelSlot，因此一个动词即可返回它，你可以直接从结果上设置内边距。 |
 | `UDreamUIBehaviour* AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | callable | 添加组件 |
+| `void AddTag(FName InTag)` | callable | 若 InTag 尚不存在（或为 None）则添加它。 |
 | `UDreamTweener* AnchoredPositionTo(FVector2D endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 锚定位置到 |
 | `void AnnounceAccessibleText(FText Announcement)` | callable | 通过 Slate 的平台无障碍公告通道发送文本。 |
 | `bool CanAcceptAdditionalChildren(int32 AdditionalChildCount)` | pure | 可接受额外子级 |
@@ -180,6 +182,7 @@
 | `FVector GetRelativeScale()` | pure | 获取相对缩放 |
 | `UDreamCanvas* GetRenderCanvas()` | pure | 获取渲染和更新此 UI 元素的画布 |
 | `EDreamWidgetRenderLayer GetRenderLayerMode()` | pure | 此控件何时可以成为其画布的渲染层。IsRenderLayer 表示它现在是否是。 |
+| `FVector2D GetRenderOffset()` | pure | Get Render Offset |
 | `float GetRenderOpacity()` | pure | 获取渲染不透明度 |
 | `FRotator GetRenderRotation()` | pure | 获取渲染旋转 |
 | `FVector GetRenderScale()` | pure | 获取渲染缩放 |
@@ -228,6 +231,7 @@
 | `bool HasPerspectiveInHierarchy()` | pure | 当此控件或任何祖先声明了透视时为 true。一个位，与变换保持同步。 |
 | `bool HasRenderTransform()` | pure | 当任何渲染通道偏离其默认值时为 true，即绘制与布局不同之时。 |
 | `bool HasShearApplied()` | pure | 当此控件或任何祖先被倾斜时为 true——决定矩阵路径的位。 |
+| `bool HasTag(FName InTag)` | pure | Tags 是否包含 InTag。None 永远不是标签。 |
 | `bool HasUserFocus(APlayerController* InPlayerController)` | pure | 是否有用户焦点 |
 | `bool HasUserFocusedDescendants(APlayerController* InPlayerController)` | pure | 是否有用户聚焦的后代 |
 | `UDreamTweener* HeightTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 高度到 |
@@ -260,10 +264,13 @@
 | `void RemoveLayoutContainer()` | callable | 移除布局容器 |
 | `void RemoveLayoutSelf()` | callable | 移除自身布局 |
 | `void RemovePanelSlot()` | callable | 移除面板槽位 |
+| `bool RemoveTag(FName InTag)` | callable | 移除 InTag；若它原本不存在则返回 false。 |
 | `void RemoveVisual()` | callable | 移除视觉 |
 | `UDreamTweener* RenderAngleTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染角度到 |
 | `UDreamTweener* RenderOffsetTo(FVector2D endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染偏移到 |
 | `UDreamTweener* RenderOpacityTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染不透明度到 |
+| `UDreamTweener* RenderPoseTo(FVector endTranslation, FRotator endRotation, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染平移与旋转合在一起，共用同一个时钟和同一条缓动曲线：控件移动到的某个姿态。 |
+| `UDreamTweener* RenderRotationTo(FRotator endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 完整的渲染旋转，既包括平面内也包括平面外：侧面板绕铰链打开、卡片翻转。Pitch、Yaw 和 Roll 各自从当前位置运行到指定位置，因此 yaw 从 0 到 180 是转半圈，而不是不转。 |
 | `UDreamTweener* RenderScaleTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染缩放至 |
 | `UDreamTweener* RenderTranslationTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | 渲染变换的补间：它们移动、缩放和旋转被绘制和被命中的内容，而从不作用于布局，因此它们适用于由面板放置的控件——垂直框中的一行滑入、一个标签被推向一旁、一条线从其左侧生长出来。上方的锚定位置和尺寸补间则改为写入控件的布局，而其面板会在下一次遍历时覆盖它。RenderTranslationTo 处于本地空间（X 为深度，Y 为右，Z 为上）；RenderOffsetTo 是在画布平面上的同一种移动（x 为右，y 为上），深度保持不变；RenderAngleTo 是平面内角度（SetRenderTransformAngle）。 |
 | `void ResetCursor()` | callable | 回到不发表意见的状态，从而使祖先的光标再次显现。即 UMG 的 ResetCursor。 |
@@ -301,7 +308,7 @@
 | `void SetIsEnabled(bool bInIsEnabled)` | callable | 禁用（或重新启用）此控件及其下方的所有内容：该子树停止接收输入，其中的每个控件都会呈现其禁用外观，因为两者都会读取 GetInteractableInHierarchy，而此项会与之进行 AND 运算。 |
 | `void SetIsFocusable(bool Value)` | callable | 关闭此项也会放弃控件当前持有的任何焦点。 |
 | `void SetIsTabStop(bool Value)` | callable | 设置是否为 Tab 停靠点 |
-| `bool SetKeyboardFocus()` | callable | 在所属玩家的事件系统上获取焦点。无法获得时返回 false。 |
+| `bool SetKeyboardFocus()` | callable | 在所属玩家的事件系统上获取焦点。当前无法获得时返回 false；在首次布局之前（本帧才显示）被请求的控件会在下一帧获取焦点，除非该玩家的焦点先移动。 |
 | `void SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value)` | callable | 设置导航边界规则 |
 | `void SetParent(UDreamWidget* InParent, bool InKeepWorldPosition, int32 InSiblingIndex)` | callable | 设置此控件的父级，可使用 null 将其从原父级分离。@InKeepWorldPosition true - 更改父级后保持世界位置、旋转和缩放，false - 保持相对位置、旋转和缩放。@InSiblingIndex 如果 InParent 是有效控件，则将控件放在父级子级列表中的指定索引处，-1 或其他超出范围的值表示控件将被放在末尾。 |
 | `void SetPerspective(bool Value)` | callable | 设置透视 |
@@ -318,6 +325,7 @@
 | `void SetRelativeRotationEuler(FRotator Value)` | callable | 从欧拉角设置旋转。这是 Sequencer 驱动的旋转入口点。 |
 | `void SetRelativeScale(FVector Value)` | callable | 设置相对缩放 |
 | `void SetRenderLayerMode(EDreamWidgetRenderLayer Value)` | callable | 此控件是否可以成为其画布的渲染层，以及何时成为；其画布在下次更新时使其成为渲染层，或将其收回。 |
+| `void SetRenderOffset(FVector2D InOffset)` | callable | 渲染平移在画布平面上的位移——x 向右、y 向上——同时其深度（RenderTranslation.X）保持不变：SetRenderTranslation(FVector(0, x, y)) 也会将深度设为 0。设置器 RenderOffsetTo 会进行补间。 |
 | `void SetRenderOpacity(float Value)` | callable | 设置渲染不透明度 |
 | `void SetRenderRotation(FRotator Value)` | callable | 设置渲染旋转 |
 | `void SetRenderScale(FVector Value)` | callable | 设置渲染缩放 |
@@ -339,7 +347,7 @@
 | `void SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)` | callable | 设置垂直锚点最小最大值 |
 | `void SetVisibility(EDreamWidgetVisibility Value)` | callable | 设置可见性 |
 | `void SetWidgetActive(bool Value)` | callable | 设置 WidgetActive 自身属性 @param Value |
-| `void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener)` | callable | 设置控件补间器受游戏暂停和时间膨胀影响 |
+| `void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener)` | callable | 上述每个补间动词——以及视觉元素的 ColorTo、AlphaTo 及其同类方法——在启动时会替换同一属性上较早的补间：在 RenderOpacityTo(1) 之后启动的 RenderOpacityTo(0) 会停止淡入，而不是两者同时运行并让后结束者胜出。由序列运行的动词补间会交由序列处理，而通过 SetAutoKill(false) 保留的补间会被暂停而不是终止。对补间调用 SetReplacesEarlierTweens(false) 可让其与其他补间一同运行（UDreamTweener::SetExclusive）。 |
 | `void SetWidth(float Value)` | callable | 设置宽度 |
 | `void SetWorldLocation(FVector Value)` | callable | 设置世界位置 |
 | `void SetWorldLocationAndRotation(FVector InLocation, FQuat InRotation)` | callable | 设置世界位置和旋转 |

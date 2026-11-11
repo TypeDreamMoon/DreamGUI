@@ -70,9 +70,11 @@ Widget Panel {
 
 - **默认字体就是 Slate 的**：Roboto，带真正的常规、粗体、斜体、粗斜体字面，CJK 用 DroidSansFallback，画在轮廓多通道距离场上（`/DreamGUI/DefaultFont_DistanceField`）。
 - **距离场。** `SdfSource` 默认 `OutlineMultiChannel`（MTSDF：拐角更锐利，BGRA 图集）。描边、下衬（投影）、发光和歌词式填充（`TextStyle`，即 `FDreamTextStyle`）由内置着色器画，所以需要距离场字体并且开着 *Use Built-in UI Shader*；它们的长度以 em 计，所以同一个样式在任何字号下看起来一样。样式按控件存进画布的控件属性纹理，所以样式不同的文本仍然合进同一个 draw call。
+- **特效绘制在整个文本下方。** 文本先绘制每个字形的底衬，再绘制每个字形的辉光和描边，最后绘制每个字形本体——就像阴影位于整段文字的下方，描边等一并如此。当字母重叠时（字距过紧或为负、斜体、粗重的窄体字形），后一个字母的阴影仍位于当前字母的描边和本体下方，其描边位于当前字母的本体下方。同时带底衬和描边或辉光的文本，每个字形绘制三个四边形而不是两个。
 - **粗体和斜体。** `BoldFont`、`ItalicFont` 和 `BoldItalicFont` 指向真正的字面；没有时才用合成的。
 - **回退字面。** `Fallbacks` 中的每一项（`FDreamUIFontFallback`）都有 `Font`、`Ranges`（码点）、`Cultures`（适用的语言）、一个 `Scale` 和 `bPreferOverPrimary`。旧的 `FallbackFontArray` 在加载时会转成使用默认设置的 `Fallbacks` 项。中文文化名会被补回书写体系（`zh-Hans`、`zh-Hant`），因此针对它们编写的回退在打包后的游戏中也能匹配。
 - **没有任何字型包含的字符。** 当某个字符既不在字体自身的字型中，也不在其任何回退项中时，DreamGUI 会针对该字体记录一次警告，并指出码点（`has no glyph for U+4E2D`），文本会在对应位置显示一个方框或不显示任何内容。请为文本指定一个覆盖该字符的字体，或为该字体添加一个回退项。默认字体通过 `/DreamGUI/DefaultFont_DistanceField_CJK` 覆盖中文、日文和韩文；而你自己仅覆盖拉丁字符的字体则不会，这通常是该警告的常见原因。
+- **轮廓重叠。** 一个字形若由相互交叠的独立笔画绘制而成——可变字体绘制其字形的方式，以及从可变字体切出的静态实例在未移除重叠时保留这些笔画的方式——在笔画交叉处的距离场中可能出现缺口或接缝；一条自身回绕的轮廓可能整块丢失。它的轮廓是正确的，FreeType 填充它也是正确的；无法跟随它的是场生成器。DreamGUI 会测量它光栅化的每个字形的重叠，并对每个字体警告一次，指出第一个这样的字形及其文件（引擎自带的字体，例如默认 CJK 回退字体，只在日志中说明）。从文件中移除重叠并改用该文件：先 `pip install fonttools skia-pathops`，再 `python -c "from fontTools.ttLib import TTFont; from fontTools.ttLib.removeOverlaps import removeOverlaps; f = TTFont('in.ttf'); removeOverlaps(f); f.save('out.ttf')"`，或用 `fonttools varLib.instancer --remove-overlaps` 切出实例。
 - **彩色 emoji**：CBDT/CBLC、sbix 和 COLRv0；`bPreferColorEmoji` 默认开。阴影、描边和长阴影修改器给彩色 emoji 做的拷贝是剪影。
 
 怎么随游戏发出字体文件、彩色 emoji 字体和 ICU 数据，见[字体与打包](../guides/fonts-and-packaging.md)。

@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/Reference/DreamWidget.md	rev=8f976bed5d73	model=deepseek-v4.1-flash	page=56477e057970
+#dreamdocs-align 1	source=Docs/Reference/DreamWidget.md	rev=821d72037ead	model=deepseek-v4.1-flash	page=0933e2c619ef
 h1	53df60980406	53df6098	m
 p	cf4ac027f3c9	7989fb5d	m
 p	ba88e3497c35	65b46204	m
@@ -8,9 +8,9 @@ row6	22fa6c0eb311	354f4636	m
 row6	b73c23324fab	d31d2339	m
 row6	cba33fc25316	c7393182	m
 row6	02ac900eb3fa	b95738a5	m
-row6	59641d79e2d1	8c10e6e6	m
+row6	cbf82d4cd3b9	964a880a	m
 row6	d7b3e9a2e302	35e25e87	m
-row6	41c89c6ec5ef	e48a6af8	m
+row6	ef978dd3f664	8d9a73dd	m
 row6	3f3db62cfac6	5ddfa253	m
 row6	e161d725ccbd	65be56b1	m
 row6	8a775950d234	53fe472f	m
@@ -18,20 +18,20 @@ row6	c3a17e540e63	f86f933c	m
 row6	eb71e5bb0ce5	23a793f9	m
 row6	2cac2a49cbad	e7f9d843	m
 row6	bc3a8323601f	3635adfc	m
-row6	c1575f908842	31d43776	m
-row6	d3865b5cab3d	0068c66c	m
+row6	3830618642b4	10f3b541	m
+row6	f5b50e72125d	f6e074a7	m
 row6	ebb510918b6d	babb272b	m
 row6	80bfc08b564e	220f2520	m
 row6	c6fdf57f3e45	eead7082	m
 row6	8f16b557a210	327c760d	m
 row6	7360399987b8	0f8924c2	m
-row6	3211a799740f	f0b08f9f	m
+row6	272e0800bd98	b7e284e9	m
 row6	c5994b8d6f51	910d0ebd	m
 row6	20bb1202d94f	08155ab4	m
 row6	7333b0954b80	d0f976ec	m
 row6	8d99337a9261	0f681370	m
 row6	7c3e93780e69	67f8bb65	m
-row6	e44703babd8f	e44703ba	m
+row6	c199cd847703	fb832963	m
 row6	398f4711322d	5488ee1b	m
 row6	5d848d5680cd	e862713f	m
 row6	20a19f6395f9	711ff6a3	m
@@ -45,7 +45,7 @@ row6	64c6cc5f5a1b	95aa55b6	m
 row6	97085ef4ca21	72cd9658	m
 row6	b068efff00f3	5ce25d80	m
 row6	aadcacd48010	1f8f761e	m
-row6	babeb4c4578c	3e29630d	m
+row6	10c60eb66e80	d5a8fa89	m
 row6	9e70f142b08a	f71a3fde	m
 row6	99f7d59b6851	a72314c6	m
 row6	14aae322c608	8b6b3380	m
@@ -60,10 +60,12 @@ row6	43ebbfde37cb	def8333a	m
 row6	5aab38a7f02e	853914ff	m
 row6	9632b30c9a73	f2ad55c1	m
 row6	809572591f01	0c329434	m
+row6	1c3017d71dca	43609654	m
 h2	85e4b28841ff	c1b23804	m
 row3	2503f07dbf79	34b54d72	m
 row3	c9db5ae1b1a2	e9ecd8b9	m
 row3	5065aaccc60f	aa959ef3	m
+row3	91934592237f	60af368a	m
 row3	28652054aaed	baded078	m
 row3	3a07d014b2a3	2e16d5ba	m
 row3	82ba27da730e	e4a4b539	m
@@ -164,6 +166,7 @@ row3	ad57b6b7bd2f	356df261	m
 row3	653c457277a7	424e48b8	m
 row3	f3d354160141	29bc3e4d	m
 row3	6b2d93fa0fb3	bf2655b4	m
+row3	39904f04d6fe	3fde449e	m
 row3	fa0cf32b6ec2	4b4836a8	m
 row3	dd98e4e53c8c	f807bcac	m
 row3	7646db3486a3	46d3524c	m
@@ -212,6 +215,7 @@ row3	a7db691a2c13	3f3a678d	m
 row3	23a4c58c58dc	a0895ce2	m
 row3	e4158783a0fa	fc3c56eb	m
 row3	dc7285466cc7	33ab385e	m
+row3	93f44ccd94fb	560829b8	m
 row3	2acd94608720	a5040bc3	m
 row3	da479128e6c2	1219962e	m
 row3	56be24affdb7	61184673	m
@@ -244,10 +248,13 @@ row3	5a54c4dc4131	aef10bb0	m
 row3	e889a0e1de81	f0cdecd1	m
 row3	ce4564c6cdbc	6f84993e	m
 row3	1caddaf2e13f	a18b6e23	m
+row3	ba55e5937888	64f85e1b	m
 row3	6799bdf5a321	bbf8e70f	m
 row3	7f8fff8b09b3	50f265c3	m
 row3	3b0544f968a2	b1f969c0	m
 row3	9fd2e6d93490	eed269a2	m
+row3	15910907192b	7d4377aa	m
+row3	baca0e20ffde	d4572bbd	m
 row3	55ba928d41f6	150ca876	m
 row3	b498e72b81e9	b4f4815e	m
 row3	f17dfac3b181	ab598a26	m
@@ -285,7 +292,7 @@ row3	b2a061e5c999	170abb2d	m
 row3	07d06d7aea0f	fb7c39e3	m
 row3	34f4ab679285	e2537624	m
 row3	270e3c9d5c3e	49f5c34d	m
-row3	57ab45cf7aa9	558cbe70	m
+row3	0271aca55da3	350e3c3b	m
 row3	c02ef13b8466	add5f5b0	m
 row3	0a393f2b5fbb	8f0f0db2	m
 row3	9ab8b7ea78db	e4c13290	m
@@ -302,6 +309,7 @@ row3	51fbb1283f6b	c039038c	m
 row3	f51ed5f51ed7	f8ef54e2	m
 row3	4d1b5ab8bab4	b9a53c84	m
 row3	8ba30b485bd1	cde4b504	m
+row3	e79ce623ace3	1e603063	m
 row3	dd794bd01977	adc5c29b	m
 row3	a1383c286a1b	9874697b	m
 row3	0988d33388b8	70a47d45	m
@@ -323,7 +331,7 @@ row3	8b9b5e264b15	8975850d	m
 row3	6f145618454f	1652dd0e	m
 row3	030a88aafbd6	14d7c1ab	m
 row3	8fee2f0b4100	65ee1bad	m
-row3	1cb46e36c894	3d0d2cf1	m
+row3	92cbe8ca10ea	1740bad8	m
 row3	cc25e0fe9b9f	f17952ca	m
 row3	c48092f53b24	dee4520f	m
 row3	71448b9d30a2	b10cebe3	m

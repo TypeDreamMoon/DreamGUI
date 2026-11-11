@@ -57,6 +57,7 @@ WidgetTree 是 Transient 的：类模板绝不能携带已展开的子树，否�
 | `UObject* GetViewModel(FName Name)` | pure | `viewmodels` 条目 Name 当前所持有的内容；当它为空或不存在该条目时为 null。 |
 | `bool GetWantsTick()` | pure | Get Wants Tick |
 | `UDreamWidget* GetWidgetFromName(FName InVariableName)` | pure | 此实例内该变量名称的控件——UMG 的 GetWidgetFromName。 |
+| `TArray<UDreamWidget*> GetWidgetsByTag(FName InTag)` | pure | 此控件自身内容中所有带有 InTag 的控件（UDreamWidget::Tags，在 .dui 中为 `@tag`），父级先于子级，同级按顺序。 |
 | `UDreamWidgetTree* GetWidgetTree()` | pure | Get Widget Tree |
 | `bool HasPlayingAnimation(UMovieSceneSequence* Animation)` | pure | 如果该动画的任何实例当前正在播放，则为 True。 |
 | `bool IsAnimationPaused(FDreamUIAnimationHandle Handle)` | pure | Is Animation Paused |

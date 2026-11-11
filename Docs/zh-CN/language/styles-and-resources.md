@@ -22,7 +22,7 @@ style Warning : Caption {
 Text Note : Warning { Text = "Unsaved changes" }
 ```
 
-- 样式可以继承另一个样式（`style Warning : Caption`）：先套基样式的行，再套派生样式的，最后是节点自己的。兜回自己的基样式是 DUI3015。
+- 样式可以继承另一个样式（`style Warning : Caption`）：先套基样式的行，再套派生样式的，最后是节点自己的。兜回自己的基样式是 DUI3015。样式可以命名多个基样式，节点也可以；参见[多个样式](#several-styles)。
 - 样式可以带 `+ Component` 块和槽位行，这样一种栏目就是一个名字：
 
   ```
@@ -36,9 +36,24 @@ Text Note : Warning { Text = "Unsaved changes" }
 
   样式的组件先挂。节点自己也写了同一个类的组件时，它们是同一个对象：先套样式的值，再套节点的。节点自己的 `@slot` 行赢过样式的。
 - 本地样式会遮住导入的同名样式。两个同名的本地样式是 DUI3005。
-- **一次只能使用一个样式。** 一个节点应用一个样式，而一个样式继承另一个样式：不支持 `Text Note : Warning : Caption` 和 `style Warning : Caption : Base`，第二个 `:` 是语法错误（DUI2001）。要得到两个样式的行，请将它们串联起来——`style Warning : Caption`——并应用最后一个。
 - **控件的 `Style` 不属于这些。** `Native.Button` 及其同类拥有一个名为 `Style` 的属性，它是控件自身的一个结构体，写作 `Style.TickChecked = #FF3355`，并由 `StyleSource` 选择。这样的行是否生效，以及字段旁的 `bOverride_` 位有什么作用，见[样式和样式表](../controls/styles.md#in-dui-and-at-run-time)。
 
+
+<a id="several-styles"></a>
+
+### 多个样式
+
+样式、节点和 `rows` 头各自接受任意数量的样式，每一个都跟在各自的冒号之后：
+
+```
+style Danger : Button : Loud { Color = #FF4040 }
+Text Title : Heading : Glow { }
+rows Row : ListRow : Dense (Label, Value) { … }
+```
+
+- **顺序。**名称从左到右依次应用，每个名称先递归应用它自己的基样式，因此基样式先于继承它的样式。一个样式只在其首次出现的位置应用一次。靠后的样式覆盖靠前的样式，节点自身的行最后应用。对于 `style A : Base` 和 `style B : Base`，写成 `: A : B` 的节点会得到 Base、A、B。
+- 未知的名称是 DUI3004，每个未知的名称报一次。通过其基样式绕回自身的样式是 DUI3015。
+- **命名一个已经应用的样式**不会改变任何内容，并会触发 DUI3025，即一个警告。它会在靠后的名称上触发，无论较早的名称是把它作为基样式应用（`: A : Base`，其中 `A` 继承 `Base`），还是这个名字只是被写了两次（`: A : A`）。每个子句只检查一次——节点的或 `rows` 头的子句，以及样式声明的子句，无论有多少节点使用它——其中每个多余的名称都会被报告。从其他文件导入的样式在这里永远不会被警告；它来源的文件在编译时会收到警告。消息会说明属于哪种情况：`style 'X' is already applied through 'Y', so naming it again changes nothing`，以及 `style 'A' is named twice in this clause, so the second changes nothing`。
 
 <a id="resources"></a>
 
