@@ -183,4 +183,99 @@ bool FDreamUIMailboxIgnoresNonTextCompilesTest::RunTest(const FString& Parameter
 	return true;
 }
 
+namespace DreamUIMailboxTestLocal
+{
+	/** The number of files the mailbox on disk holds an entry for, or -1 when it could not be read. */
+	int32 CountWrittenEntries(const FString& InDirectory)
+	{
+		const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(InDirectory);
+		const TSharedPtr<FJsonObject> Root = ReadMailbox(Written);
+		return Root.IsValid() ? Root->GetObjectField(TEXT("files"))->Values.Num() : -1;
+	}
+
+	FDreamUIDiagnosticBag MakeBrokenBag(const TCHAR* InSource)
+	{
+		FDreamUIDiagnosticBag Bag;
+		Bag.SourceName = InSource;
+		Bag.AddError(EDreamUIDiagnosticCode::EmptyTree, FDreamUISourceLocation(1, 1), TEXT("nothing to build"));
+		return Bag;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIMailboxRetiresAFileItsOwnerLeftTest,
+	"DreamGUI.Text.AClassThatStopsUsingAFileRetiresItsMailboxEntry",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIMailboxRetiresAFileItsOwnerLeftTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIMailboxTestLocal;
+	FScopedMailboxDirectory Scoped;
+
+	const FString Owner = TEXT("/Game/UI/WBP_Login.WBP_Login");
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Login.dui")), Owner);
+	TestEqual(TEXT("the file has an entry while its class is built from it"), CountWrittenEntries(Scoped.Directory), 1);
+
+	// The same Blueprint compiles again, now naming nothing: it was converted back to a plain Blueprint.
+	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), Owner);
+	TestEqual(TEXT("the entry is gone once nothing is built from the file"), CountWrittenEntries(Scoped.Directory), 0);
+
+	// Pointing the same Blueprint at another file moves the entry rather than leaving two.
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Login.dui")), Owner);
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Title.dui")), Owner);
+	TestEqual(TEXT("only the file the class names now has an entry"), CountWrittenEntries(Scoped.Directory), 1);
+	const TSharedPtr<FJsonObject> Root = ReadMailbox(FPaths::Combine(Scoped.Directory, TEXT(".dui-diagnostics.json")));
+	if (TestTrue(TEXT("the mailbox parses"), Root.IsValid()))
+	{
+		TestTrue(TEXT("and it is the new one"), Root->GetObjectField(TEXT("files"))->HasField(TEXT("X:/Proj/DUI/Title.dui")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIMailboxKeepsAFileAnotherClassStillUsesTest,
+	"DreamGUI.Text.AMailboxEntryStaysWhileAnyClassIsStillBuiltFromTheFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIMailboxKeepsAFileAnotherClassStillUsesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIMailboxTestLocal;
+	FScopedMailboxDirectory Scoped;
+
+	const FString First = TEXT("/Game/UI/WBP_A.WBP_A");
+	const FString Second = TEXT("/Game/UI/WBP_B.WBP_B");
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Shared.dui")), First);
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Shared.dui")), Second);
+
+	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), First);
+	TestEqual(TEXT("one class leaving does not take the entry of a file another class is built from"),
+		CountWrittenEntries(Scoped.Directory), 1);
+
+	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), Second);
+	TestEqual(TEXT("the last class leaving does"), CountWrittenEntries(Scoped.Directory), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIMailboxRemoveDropsADeletedFileTest,
+	"DreamGUI.Text.ADeletedFileLeavesTheMailbox",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIMailboxRemoveDropsADeletedFileTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIMailboxTestLocal;
+	FScopedMailboxDirectory Scoped;
+
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Login.dui")), TEXT("/Game/UI/WBP_Login.WBP_Login"));
+	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Title.dui")));
+
+	FDreamUIDiagnosticsMailbox::Remove(TEXT("X:/Proj/DUI/Login.dui"));
+	TestEqual(TEXT("only the deleted file's entry is gone"), CountWrittenEntries(Scoped.Directory), 1);
+
+	// Asking about a file the mailbox holds nothing for changes nothing.
+	FDreamUIDiagnosticsMailbox::Remove(TEXT("X:/Proj/DUI/Never.dui"));
+	TestEqual(TEXT("an unknown file is ignored"), CountWrittenEntries(Scoped.Directory), 1);
+	return true;
+}
+
 #endif

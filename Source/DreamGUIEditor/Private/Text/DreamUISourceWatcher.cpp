@@ -1194,6 +1194,10 @@ namespace DreamUISourceWatcherLocal
 				// debounce window. The change event for the new contents is in PendingFiles.
 				continue;
 			}
+			// A file that does not exist has no problems to show in another editor either; its last verdict would
+			// otherwise stay in the mailbox for the rest of the session. A class that still names the path writes a
+			// fresh entry (DUI6001) with its next compile.
+			FDreamUIDiagnosticsMailbox::Remove(File);
 			TArray<UDreamWidgetBlueprint*> Blueprints;
 			FindBlueprints(File, Blueprints);
 			if (Blueprints.Num() == 0)

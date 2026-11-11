@@ -31,9 +31,22 @@ struct DREAMGUIEDITOR_API FDreamUIDiagnosticsMailbox
 {
 	/**
 	 * Records one file's compile outcome and schedules the debounced write. A bag with no source
-	 * name (the blueprint is not text-backed) is a no-op.
+	 * name (the blueprint is not text-backed) adds nothing.
+	 *
+	 * InOwner names the Blueprint that compiled, and is what lets the mailbox notice a class that has
+	 * stopped being built from a file: the next compile of the same owner either names another file
+	 * or none, and the entry of the one it used to name is dropped -- unless another owner still
+	 * builds from it. Without an owner an entry can only ever be replaced, never retired, which is
+	 * how a Blueprint converted back to a plain one left its last errors in the file for good.
 	 */
-	static void Deposit(const FDreamUIDiagnosticBag& InDiagnostics);
+	static void Deposit(const FDreamUIDiagnosticBag& InDiagnostics, const FString& InOwner = FString());
+
+	/**
+	 * Drops the entry of a file that no class is built from any more, and schedules the write. A
+	 * path the mailbox holds nothing for is left alone. Compared as paths, so the spelling the
+	 * entry was deposited under does not have to be the spelling asked about.
+	 */
+	static void Remove(const FString& InSourceName);
 
 	/**
 	 * Writes the mailbox now. InOverrideDirectory is the test seam; empty means the project's

@@ -2293,8 +2293,10 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 	BuildWidgetTreeFromTextSource(TextDiagnostics);
 	ReportTextDiagnostics(TextDiagnostics);
 	// The same bag, delivered to editors that are not this one. A clean compile deposits an empty
-	// entry on purpose: over there, that is what clears the file's squiggles.
-	FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
+	// entry on purpose: over there, that is what clears the file's squiggles. The Blueprint goes along as the
+	// owner, so a compile that no longer names the file (the path was cleared, or points elsewhere) retires
+	// the entry this Blueprint left behind -- including from a Blueprint that names no file at all now.
+	FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics, Blueprint->GetPathName());
 
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	if (DreamBlueprint != nullptr)
@@ -3483,7 +3485,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		// by file and replaces it outright, so a second deposit of only these would erase the parse's
 		// and the builder's. A no-op for a Blueprint that names no .dui -- that bag has no source
 		// name, and Deposit takes that as "none of the mailbox's business".
-		FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
+		FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics, Blueprint->GetPathName());
 	}
 }
 
