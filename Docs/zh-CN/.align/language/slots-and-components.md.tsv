@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/language/slots-and-components.md	rev=aa0301eb152c	model=deepseek-flash	page=f345a1afa281
+#dreamdocs-align 1	source=Docs/language/slots-and-components.md	rev=821d72037ead	model=deepseek-v4.1-flash	page=fa0e88db355a
 meta:title	3e73d92f8c9e	edaa0a81	m
 meta:description	3802e3e856d1	ac0121b9	m
 h2	63f7a8f61487	e24aed6b	m
@@ -9,6 +9,9 @@ row2	340947c156a0	b21ccddd	m
 row2	68a88265ab68	a355879a	s
 row2	8070042d79ac	8f4192c0	m
 p	8421adca1ea4	493c2db8	m
+h3	51993066c115	6502d39e	s
+p	30823f698016	22f2480b	m
+p	d22e3dd8c509	1c0de3b1	m
 h2	68bd7588cd88	31b05462	m
 p	c4832255788b	a1e8c059	m
 p	8008e72260c3	9c32dcdd	m

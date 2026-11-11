@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/tools/vscode.md	rev=aa0301eb152c	model=deepseek-flash	page=cc0fc74a1e19
+#dreamdocs-align 1	source=Docs/tools/vscode.md	rev=821d72037ead	model=deepseek-v4.1-flash	page=acab70820e6c
 meta:title	46a400e09aa5	6de44cf8	m
 meta:description	79a76abd6268	94ad5c89	m
 p	b1f1b8781616	fbf826db	m
@@ -9,8 +9,9 @@ p	1cab02f6958e	7e73cd49	m
 h3	54cf1b6f11a3	df907e15	m
 p	70c1dccbeb46	ef22bfd4	m
 li	ee7890adcfd9	544803aa	m
-li	23ab913dfbd5	febba558	m
+li	1d5c544a1373	217da403	m
 li	3f5293c49d57	36c14d3b	m
+p	17d1b181d40b	fca307ba	m
 p	a814739385e6	9772ed6c	m
 h2	44622bfefe1b	9f2aeb28	m
 row2	220610e221e7	cc00dda6	m
@@ -24,6 +25,7 @@ row2	cb1ec773d6f2	ebb4943f	m
 row2	e52c1f18dfb5	2ec7ac3e	m
 row2	c08446f89ad0	a62ccf56	m
 row2	eac564c6bcba	c01cddd9	m
+p	e4af5e87cafd	869f9aa4	m
 p	cf6ca58eabe1	2bf00665	m
 h2	8d8df622fc72	5a782028	m
 p	880f1f7511c1	83724040	m

@@ -31,15 +31,16 @@
 | DUI2016 | MalformedPropsBlock | 一行不是 `Type Name` 或 `Type Name = value` 的 `props`，或者写在节点里的 `props`。 |
 | DUI2017 | MalformedEventsBlock | 一个不是 `Name` 或 `Name(Type Param, …)` 的 `events` 条目，或者写在节点里的 `events`。 |
 | DUI2018 | MalformedConditional | 一个缺少条件或块的 `if`、一个没有 `if` 的 `else`，或者一个装了控件以外东西的分支。 |
-| DUI2019 | MalformedSlotDeclaration | 一个写了两次 `default` 的 slot，或者一个既声明又填充的块。 |
+| DUI2019 | MalformedSlotDeclaration | 一个 slot 写了两次 `default`，或者一个既声明又填充的块：声明包含组件、属性、slot 行和 `@tag` 行，而填充只包含 widget（连同旁边的一行 `@tag` 也算）。 |
 | DUI2020 | MalformedRows | 一个读不通的 `rows` 表：列清单不是名称、某一列写了两次、某一行的值个数不对。 |
 | DUI2021 | MalformedViewModelsBlock | 一行不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels`（包括空的 `""` 名称），或者写在节点里的 `viewmodels` 块。 |
 | DUI2022 | MalformedTextAnnotation | `@note(…)` 里不是一个字符串、`@max(…)` 里不是一个不小于 1 的整数、它们跟在不是字符串的值后面、同一个注解写了两次，或者 `@noloc` 和 `@key`、`@note`、`@max` 写在一起。 |
-| DUI2023 | MalformedContainer | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
+| DUI2023 | MalformedContainer | 读不通的列表（`[a, b]`）或 Map（`{ key: value }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `key: value`。struct 的第一项可以不带键。 |
+| DUI2024 | MalformedTag | 无法解析的 `@tag` 行：`@tag` 之后没有任何内容，或是一个数字或一个字符串，两个名称之间没有逗号，或末尾有逗号。还包括位于 `style` 中的 `@tag` 行，或直接位于 `for` / `each` 主体中。 |
 | DUI3001 | DuplicateNodeId | 两个节点共用一个 id。 |
 | DUI3002 | InvalidNodeId | 一个不是标识符、以数字开头，或者是关键字的 id。 |
 | DUI3003 | UnknownNodeType | 一个不是标签、容器、别名、已注册控件或路径的类型。 |
-| DUI3004 | UnknownStyle | `: Name` 指向这个文件看不到的样式。 |
+| DUI3004 | UnknownStyle | `: Name` 指向这个文件看不到的样式；子句中每个未知名称都会被报告。 |
 | DUI3005 | DuplicateStyle | 同一个文件里的两个同名样式。 |
 | DUI3006 | UnknownBehaviourClass | `+ Name` 指向控件无法携带的东西。 |
 | DUI3007 | DuplicateSlotName_Retired | 已退役；两个同名 slot 现在报 DUI3001。 |
@@ -60,15 +61,16 @@
 | DUI3022 | MultipleDefaultSlots | 一个文件里有不止一个 `slot … default`。 |
 | DUI3023 | DuplicateRowKey | 警告。一个 `rows` 表的两行，其第一个值构成了相同的 id；第二行的 id 随后会随顺序移动。 |
 | DUI3024 | DuplicateViewModel | 两个同名的 `viewmodels` 条目。 |
-| DUI4001 | UnknownProperty | 没有这个名称的属性；会给出最接近的一个作为建议。 |
-| DUI4002 | UnknownPropertyPathSegment | 一个点路径，其头部能解析而尾部不能。 |
+| DUI3025 | StyleAlreadyApplied | 警告。子句中指名的某个样式已被该子句中较早的名称以自身或基类的形式应用过：再写一次不会改变任何东西。 |
+| DUI4001 | UnknownProperty | 没有该名称的属性；会给出最接近的一个作为建议。`@slot Size <- …` 就是其中之一：`Size` 是两个属性的简写，而绑定会分别指名 `MinDesiredSize` 和 `MaxDesiredSize`。 |
+| DUI4002 | UnknownPropertyPathSegment | 一个点路径，其头部能解析而尾部不能；或者 struct 的字段 Map 指名了该 struct 没有的字段。 |
 | DUI4003 | ValueTypeMismatch | 一个形状不可能是该属性类型的值。 |
 | DUI4004 | TupleArityMismatch | 一个元素个数不对的元组。 |
 | DUI4005 | UnknownEnumValue | 一个该属性的枚举没有声明的词。 |
 | DUI4006 | PropertyNotWritable | 一个文本无法写入的属性：瞬态、已弃用、属于对象图的一部分、一个委托。 |
 | DUI4007 | UnknownResource | `@Name` 指向不存在的资源条目。 |
 | DUI4008 | ResourceTypeMismatch | 一个其值不是所声明类型的资源，或者一个非 `Asset` 的资源被当作节点类型使用。 |
-| DUI4009 | ContainerTypeMismatch | 列表写在了不是数组或 Set 的属性上、Map 写在了不是 Map 的属性上、单个值写在了容器属性上，或者节点的 Set/Map（只有数组能存节点 id）。 |
+| DUI4009 | ContainerTypeMismatch | 列表写在了不是数组或 Set 的属性上、Map 写在了不是 Map 的属性上、单个值写在了容器属性上，或者节点的 Set/Map（只有数组能存节点 id）。在真正的 Map 上或在没有主字段的 struct 上，没有键的 Map 条目也算。 |
 | DUI5001 | AssetNotFound | 一个无法加载的资产或类路径。 |
 | DUI5002 | NoVisualForProperty | 一个属于该节点类型不会创建的视觉元素的属性。 |
 | DUI5003 | NoPanelSlotForProperty | 一行 slot 写在了一个其父节点不布局任何面板的节点上。 |
@@ -122,5 +124,5 @@
 | DUI7001 | PatchTargetNotFound | 一个在文件里没有归属的设计器修改：未知的节点、一个绑定的属性、一个没有块的槽。 |
 | DUI7002 | SourceFileChangedUnderEdit | 文件在一个待处理的修改之下发生了变化；没有写入任何内容。 |
 | DUI7003 | PatchValueNotRepresentable | 一个这门语言无法拼写的值（一个非有限数字）；它所在的行保持不变。 |
-| DUI7004 | PatchSyntaxNotWritable | 一个对任何一行都无法拼写的东西的修改：由 `if` 决定的可见性、无法重写的简写。 |
+| DUI7004 | PatchSyntaxNotWritable | 一个对任何行都无法拼写的东西的修改：由 `if` 决定的可见性、无法重写的简写、对 `Tags` 的、任何行都无法承载的修改（两种写法皆是，或者 `@tag` 行无法容纳的名称）。 |
 | DUI7005 | PatchStyleComponentNotWritable | 一个对节点值的修改，而这个值来自样式的 `+` 行，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |

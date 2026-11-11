@@ -26,8 +26,10 @@ code --install-extension typedreammoon.dreamgui-language-support
 *Tools ▸ Open DreamUI Workspace (VSCode)*（或关卡工具栏 *Dream* 下拉菜单里的 *DreamUI Workspace*，这两者是同一个）：
 
 1. 刷新符号导出，让补全数据在 VS Code 打开的那一刻就是最新的；
-2. 重写 `DUI/DreamUI.code-workspace`——即项目的 `DUI/` 和每个已启用插件的 `DUI/` 根、固定 `*.dui` 关联，并推荐该扩展；当项目还没有 `DUI/` 目录时，这个按钮可以是第一个创建它的操作；
+2. 重写`DUI/DreamUI.code-workspace`——即项目的`DUI/`和每个已启用插件的`DUI/`根、固定`*.dui`关联，并推荐该扩展（`typedreammoon.dreamgui-language-support`，旧的`typedreammoon.dreamui-language-support`列在`unwantedRecommendations`下，因此 VS Code 不会建议它）；当项目还没有`DUI/`目录时，这个按钮可以是第一个创建它的操作；
 3. 用 VS Code 打开它，找不到则回退到系统默认编辑器，再回退到 Notepad。
+
+编辑器较旧的版本会以扩展的旧 id 推荐该扩展，这是 0.9.2 重命名时遗留下来的，因此在此修复之前写出的工作区文件会指向错误的那一个：从编辑器打开工作区会重写它。编辑器打开工作区时，还会在`~/.vscode/extensions`中查找旧 id 下的扩展副本，如果找到，会在通知和日志中对其发出警告：请如上所述卸载该副本。
 
 通过这个工作区打开而不是直接打开一个文件夹，才能点亮扩展的工作区功能（跨文件索引、解析 `use`）。同一菜单下的 *Rebuild DUI* 会在询问之后重新编译项目中每一个由文本支撑的 widget Blueprint，未加载的会先加载。
 
@@ -47,6 +49,8 @@ code --install-extension typedreammoon.dreamgui-language-support
 | 解释 | Problems 和悬停中的诊断代码会链接到 [Diagnostics](../diagnostics/index.md) 下它的条目（自 0.9.1 起）；离线时每条诊断都提供“解释 DUInnnn”操作，打开内置的代码表条目：它是什么意思、为什么触发、如何修复 |
 | 快速修复 | 声明未知资源（DUI4007）、创建未知样式（DUI3004）、为只存在于另一个文件中的样式或资源添加 `use` |
 | 其他 | 每个 `#hex` 字面量上的颜色块和取色器；组件语法的代码片段；*DreamUI: New .dui File*，写出与编辑器 *Create Source File...* 相同的起步内容 |
+
+该扩展会跟随语言演进：其下一个版本会读取`@tag`行、`@slot Size`、结构体字段映射以及每个子句的多种样式，并且会像编译器一样报告DUI2024和DUI3025。
 
 语言**刻意没有**的东西（编译期条件、宏、变量、伪状态、以 `A | B` 写出的标志枚举、三元表达式、数组字面量……）扩展也不会补全；原因见扩展的 README 和 [.dui 概览](../language/overview.md)。
 

@@ -31,6 +31,19 @@ Text Label {
 
 `@fill` 独占一行，或者后面只跟它的权重。父节点不排布面板的节点写了槽位行，是 DUI5003。
 
+<a id="slot-size"></a>
+
+### `@slot Size`
+
+尺寸恰好为单一值的盒子是另一种常见的槽位行，它也有简写：
+
+```
+@slot Size = (120, 48)
+@slot { Size = (120, 48)  Padding = (4, 0, 4, 0) }
+```
+
+在给定相同值时，`Size` 代表 `@slot MinDesiredSize` 和 `@slot MaxDesiredSize`，因此槽位在两个轴向上都保持该尺寸。它在 `@slot { … }` 块中以及样式的槽位行中的解析方式与单独一行时相同。只有 `=` 能为它赋值：`@slot Size <- Function()` 是 DUI4001，其消息指出了需要分别绑定的两个属性：`MinDesiredSize` 和 `MaxDesiredSize`。
+
 
 <a id="components--class"></a>
 

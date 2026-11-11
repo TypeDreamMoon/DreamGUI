@@ -34,7 +34,11 @@ description: 那些看起来像 bug 其实并不是、或者能白白耗掉一�
 ## `.dui` 语言
 
 - **`Style.X = v` 不起任何作用。** 只有当 `StyleSource` 为 `Inline`（或没有样式表）时，才会使用实例的 `Style`，或者在使用 `ProjectStyleSheetOverride` 且勾选了该字段的 `bOverride_X` 时。`.dui` 从不改动这些位，而它们初始就是勾选状态。[在 .dui 中与运行时](../controls/styles.md#in-dui-and-at-run-time)。
-- **`Text Note : A : B` 是语法错误。** 一个节点只能使用一个样式，一个样式只能继承一个样式。[样式](../language/styles-and-resources.md#styles)。
+- **`: A : B` 会在 `A` 之上应用 `B`，同一个名称出现两次是一条警告。** 样式从左到右应用，先应用基样式，每个样式只在其首次出现时应用一次；节点自身的行最后应用。命名一个更早的样式已经应用过的样式不会有任何改变，只会产生 DUI3025。[多个样式](../language/styles-and-resources.md#several-styles)。
+- **`@slot Size <- F()` 是错误。** `Size` 是 `MinDesiredSize` 与 `MaxDesiredSize` 取同一个值时的简写，因此它只接受 `=`；请分别绑定这两个属性（DUI4001）。[`@slot Size`](../language/slots-and-components.md#slot-size)。
+- **`@tag Trim` 是标签，`@tag Trim { }` 是节点。** `@tag` 之后的名称是标签行，除非其后跟着一个块、一个 `:` 或一个 `(was: …)`，此时它就成为旧式 `@Name` 形式的节点，其类型由名为 `tag` 的资源指定。在 `style` 中或直接位于 `for` 主体中的标签行是 DUI2024。[标签](../language/nodes-and-values.md#tags-tag)。
+- **环形菜单的项写在 `.dui` 中。** `Items = [{ "Lamp", Tag: Lamp }, …]`：每个项一个映射，标签放在最前面且不带其键。在其他任何地方、或在不带主字段的结构体上书写不带键的映射，都是 DUI4009。[作为字段映射的结构体](../language/nodes-and-values.md#structs-as-field-maps)。
+- **环形菜单的模板内容居中于其扇区，而不是拉伸铺满它。** 它采用其类的根节点在创作时设定的大小，或者当根节点拉伸时，采用样式在 `ContentRadius` 处的 `ContentWidth` 方形大小。要让根节点拥有自己的大小，请为其设置固定锚点。[环形菜单](../Reference/DreamRingMenu.md)。
 - **`#8C8C94` 比看起来更暗。** 颜色字面量采用 sRGB 编码，而着色是在线性空间中相乘的。[值](../language/nodes-and-values.md#values)。
 
 <a id="text-and-fonts"></a>
@@ -42,6 +46,7 @@ description: 那些看起来像 bug 其实并不是、或者能白白耗掉一�
 ## 文本与字体
 
 - **本应显示中文、日文或韩文的地方出现方框，或者什么都不显示。** 字体没有该字符的字形，DreamGUI 会记录一次警告来指出它。默认字体通过 `/DreamGUI/DefaultFont_DistanceField_CJK` 覆盖这些字符；自己的字体需要提供回退字体。[字体](../concepts/text.md#fonts)。
+- **字形笔画交叉处出现缺口或接缝。** 字体文件会将这些笔画保留为相互重叠的轮廓——从可变字体裁剪出的静态实例也是如此，除非已移除其重叠部分——而 DreamGUI 曾记录过一次警告并指出了该字形。用 fontTools 的 `removeOverlaps` 处理该文件并使用处理后的结果。[Fonts](../concepts/text.md#fonts)。
 - **控件的文本字体不对。** 带有 `Font` 字段的样式：文本输入框、数值微调框、富文本、可展开区域、环形菜单。[样式](../controls/styles.md)。
 
 <a id="layout-and-world-space"></a>

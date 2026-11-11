@@ -28,6 +28,18 @@
 
 [阅读本节](nodes-and-values.md#nodes-with-no-id)。
 
+<a id="tags-tag"></a>
+
+## 标签：`@tag`
+
+[阅读本节](nodes-and-values.md#tags-tag)。
+
+<a id="finding-widgets-by-tag"></a>
+
+### 按标签查找控件
+
+[阅读本节](nodes-and-values.md#finding-widgets-by-tag)。
+
 <a id="node-types"></a>
 
 ## 节点类型
@@ -46,11 +58,23 @@
 
 [阅读本节](nodes-and-values.md#values)。
 
+<a id="structs-as-field-maps"></a>
+
+### 结构体作为字段映射
+
+[阅读本节](nodes-and-values.md#structs-as-field-maps)。
+
 <a id="slot-lines-slot-and-fill"></a>
 
 ## 插槽行：`@slot` 与 `@fill`
 
 [阅读本节](slots-and-components.md#slot-lines-slot-and-fill)。
+
+<a id="slot-size"></a>
+
+### `@slot Size`
+
+[阅读本节](slots-and-components.md#slot-size)。
 
 <a id="components--class"></a>
 
@@ -63,6 +87,12 @@
 ## 样式
 
 [阅读本节](styles-and-resources.md#styles)。
+
+<a id="several-styles"></a>
+
+### 多个样式
+
+[阅读本节](styles-and-resources.md#several-styles)。
 
 <a id="resources"></a>
 
