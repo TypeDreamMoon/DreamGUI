@@ -1562,7 +1562,8 @@ private:
 	uint8 bIsAttaching : 1 = false;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1", DreamGUI_Section = "Layer", DreamGUI_Order = 10))
+	/** Interp, so a .dui timeline and the animation editor can key a fade as they key a move. */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1", DreamGUI_Section = "Layer", DreamGUI_Order = 10))
 	float RenderOpacity = 1.0f;
 	/** See SetContentTint. Runtime state, not saved: what exposes a content colour (a border) sets it from its own property. */
 	FLinearColor ContentTint = FLinearColor::White;
