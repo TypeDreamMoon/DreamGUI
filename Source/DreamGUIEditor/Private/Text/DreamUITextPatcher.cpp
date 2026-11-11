@@ -2137,12 +2137,133 @@ namespace DreamUIPatchLocal
 				*InEditedName, *InNodeId, InShown.Location.Line));
 	}
 
+	/** Where an `@slot Size = (w, h)` statement stands: its name, its value, and whether it is a line of its own (`@slot Size`) or one of a block's. */
+	struct FSizeShorthand
+	{
+		int32 NameStart = INDEX_NONE;
+		int32 ValueStart = INDEX_NONE;
+		int32 ValueEnd = INDEX_NONE;
+		/** `@slot Size = …` on a line of its own, rather than `Size = …` inside an `@slot { … }` block. */
+		bool bOwnSlotLine = false;
+	};
+
+	/**
+	 * The `Size` a made-up MinDesiredSize or MaxDesiredSize came from, measured in the text, or false when its location is
+	 * not one. A line's location is its '@' (the statement starts there); a block line's is its name.
+	 */
+	bool MeasureSizeShorthand(const FString& InText, const FDreamUIProperty& InProperty, FSizeShorthand& OutSize)
+	{
+		if (InProperty.Name != TEXT("MinDesiredSize") && InProperty.Name != TEXT("MaxDesiredSize"))
+		{
+			return false;
+		}
+		int32 Cursor = OffsetOf(InText, InProperty.Location);
+		if (Cursor == INDEX_NONE || Cursor >= InText.Len())
+		{
+			return false;
+		}
+		if (InText[Cursor] == TEXT('@'))
+		{
+			++Cursor;
+			while (Cursor < InText.Len() && IsInlineWhitespace(InText[Cursor]))
+			{
+				++Cursor;
+			}
+			if (!KeywordAt(InText, Cursor, TEXT("slot")))
+			{
+				return false;
+			}
+			Cursor += 4;
+			while (Cursor < InText.Len() && IsInlineWhitespace(InText[Cursor]))
+			{
+				++Cursor;
+			}
+			OutSize.bOwnSlotLine = true;
+		}
+		// The parser takes the name case insensitively, as every property name; KeywordAt is the word-boundary half.
+		if (Cursor + 4 > InText.Len() || !InText.Mid(Cursor, 4).Equals(TEXT("Size"), ESearchCase::IgnoreCase)
+			|| (Cursor + 4 < InText.Len() && IsIdentifierChar(InText[Cursor + 4])))
+		{
+			return false;
+		}
+		OutSize.NameStart = Cursor;
+		OutSize.ValueStart = OffsetOf(InText, InProperty.Value.Location);
+		OutSize.ValueEnd = OutSize.ValueStart == INDEX_NONE ? INDEX_NONE : MeasureValue(InText, OutSize.ValueStart);
+		return OutSize.ValueEnd != INDEX_NONE && OutSize.ValueStart > OutSize.NameStart;
+	}
+
+	/**
+	 * `@slot Size = (w, h)` given a new MinDesiredSize or MaxDesiredSize (and, in InPartnerValue, a new value for the other
+	 * half when the same write gave one). Both the same: the shorthand still says it, with the new value. Different: it
+	 * no longer can, and is written as the two lines it stood for, each with its value -- a block line as two lines of
+	 * the block, side by side when the block is on one line.
+	 */
+	bool PlanSizeShorthandEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FDreamUIProperty& InProperty,
+		const FSizeShorthand& InSize, const FString* InPartnerValue, TArray<FSplice>& OutSplices, int32& InOutOrder,
+		FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FString Current = InText.Mid(InSize.ValueStart, InSize.ValueEnd - InSize.ValueStart);
+		const FString Expected = InProperty.Value.Kind == EDreamUIValueKind::ResourceRef ? TEXT("@") + InProperty.Value.Raw
+			: InProperty.Value.Kind == EDreamUIValueKind::HexColor ? TEXT("#") + InProperty.Value.Raw
+			: InProperty.Value.Raw;
+		if (InProperty.Value.Kind != EDreamUIValueKind::String && !Current.Equals(Expected, ESearchCase::CaseSensitive))
+		{
+			RefuseStale(OutDiagnostics, InProperty.Location,
+				FString::Printf(TEXT("the '@slot Size' on line %d reads '%s' where the tree says '%s'"),
+					InProperty.Location.Line, *Ellipsize(Current), *Ellipsize(Expected)));
+			return false;
+		}
+		if (InPartnerValue != nullptr && !ValidateValueText(*InPartnerValue, InProperty.Location, OutDiagnostics))
+		{
+			return false;
+		}
+		const FString NewValue = InEdit.NewValueText.TrimStartAndEnd();
+		const FString Partner = InPartnerValue != nullptr ? InPartnerValue->TrimStartAndEnd() : Current;
+		const bool bEditsMin = InProperty.Name == TEXT("MinDesiredSize");
+		const FString& NewMin = bEditsMin ? NewValue : Partner;
+		const FString& NewMax = bEditsMin ? Partner : NewValue;
+		if (NewMin.Equals(Current, ESearchCase::CaseSensitive) && NewMax.Equals(Current, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+		Splice.Order = InOutOrder++;
+		if (NewMin.Equals(NewMax, ESearchCase::CaseSensitive))
+		{
+			Splice.Offset = InSize.ValueStart;
+			Splice.Length = InSize.ValueEnd - InSize.ValueStart;
+			Splice.Text = NewMin;
+			return true;
+		}
+		FString Between;
+		if (InSize.bOwnSlotLine)
+		{
+			Between = DetectLineEnding(InText) + IndentAt(InText, InSize.NameStart) + TEXT("@slot ");
+		}
+		else
+		{
+			Between = LineBeforeIsBlank(InText, InSize.NameStart)
+				? DetectLineEnding(InText) + IndentAt(InText, InSize.NameStart)
+				: FString(TEXT("  "));
+		}
+		Splice.Offset = InSize.NameStart;
+		Splice.Length = InSize.ValueEnd - InSize.NameStart;
+		Splice.Text = FString::Printf(TEXT("MinDesiredSize = %s%sMaxDesiredSize = %s"), *NewMin, *Between, *NewMax);
+		return true;
+	}
+
 	bool PlanSynthesizedEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
 		const FDreamUIProperty& InProperty, TArray<FSplice>& OutSplices, int32& InOutOrder,
-		FDreamUIDiagnosticBag& OutDiagnostics)
+		FDreamUIDiagnosticBag& OutDiagnostics, const FString* InSizePartnerValue)
 	{
 		const FString NewValue = InEdit.NewValueText.TrimStartAndEnd();
 		const FString NodeId = InTarget.Node != nullptr ? InTarget.Node->Id : InEdit.NodeId;
+
+		FSizeShorthand Size;
+		if (InEdit.Target == EDreamUIPatchTarget::Slot && MeasureSizeShorthand(InText, InProperty, Size))
+		{
+			return PlanSizeShorthandEdit(InText, InEdit, InProperty, Size, InSizePartnerValue, OutSplices, InOutOrder, OutDiagnostics);
+		}
 
 		FFillShorthand Fill;
 		if (InEdit.Target == EDreamUIPatchTarget::Slot && MeasureFillShorthand(InText, InProperty, Fill))
@@ -2225,8 +2346,14 @@ namespace DreamUIPatchLocal
 		return false;
 	}
 
+	/**
+	 * InSizePartnerValue: the new value of the other half of an `@slot Size` this edit's property was made from, when the
+	 * same write gave that half one too (SetProperties pairs the two and plans them as one). bInWriteAsSize: this edit
+	 * and the other half's, both new lines with one value, are written as the one `@slot Size` line.
+	 */
 	bool PlanEdit(const FString& InText, const FDreamUIAst& InAst, const FDreamUIPropertyEdit& InEdit,
-		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics,
+		const FString* InSizePartnerValue = nullptr, bool bInWriteAsSize = false)
 	{
 		if (InEdit.PropertyName.TrimStartAndEnd().IsEmpty())
 		{
@@ -2343,12 +2470,17 @@ namespace DreamUIPatchLocal
 
 		if (Existing != nullptr && Existing->bSynthesized)
 		{
-			return PlanSynthesizedEdit(InText, InEdit, Target, *Existing, OutSplices, InOutOrder, OutDiagnostics);
+			return PlanSynthesizedEdit(InText, InEdit, Target, *Existing, OutSplices, InOutOrder, OutDiagnostics, InSizePartnerValue);
 		}
 		if (Existing != nullptr)
 		{
 			return PlanReplace(InText, InEdit, *Existing, InEdit.Target == EDreamUIPatchTarget::Slot,
 				OutSplices, InOutOrder, OutDiagnostics);
+		}
+		if (bInWriteAsSize)
+		{
+			const FString Body = TEXT("Size = ") + InEdit.NewValueText.TrimStartAndEnd();
+			return PlanInsert(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics, &Body);
 		}
 		return PlanInsert(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics);
 	}
@@ -2414,6 +2546,45 @@ bool FDreamUITextPatcher::SetProperties(FString& InOutText, const FDreamUIAst& I
 		}
 	}
 
+	// `@slot Size = (w, h)` is MinDesiredSize and MaxDesiredSize on ONE line: edits of both halves would each rewrite it,
+	// over each other, so the pair is planned as one -- by the first of the two, told the other's value. And the other way
+	// round: two new lines, for a node that writes neither, with one value, are written as that one line.
+	TMap<int32, int32> SizePartnerOf;
+	TSet<int32> SizeInserts;
+	TSet<int32> PlannedByPartner;
+	auto IsSizeHalf = [](const FString& InName)
+	{
+		return InName == TEXT("MinDesiredSize") || InName == TEXT("MaxDesiredSize");
+	};
+	for (int32 Left = 0; Left < InEdits.Num(); ++Left)
+	{
+		for (int32 Right = Left + 1; Right < InEdits.Num(); ++Right)
+		{
+			const FDreamUIPropertyEdit& A = InEdits[Left];
+			const FDreamUIPropertyEdit& B = InEdits[Right];
+			if (A.Target != EDreamUIPatchTarget::Slot || B.Target != EDreamUIPatchTarget::Slot || A.NodeId != B.NodeId
+				|| !IsSizeHalf(A.PropertyName) || !IsSizeHalf(B.PropertyName) || A.PropertyName == B.PropertyName)
+			{
+				continue;
+			}
+			const FDreamUINode* Node = FindNodeById(InAst, A.NodeId);
+			const FDreamUIProperty* Min = Node != nullptr ? FindProperty(Node->SlotProperties, TEXT("MinDesiredSize")) : nullptr;
+			const FDreamUIProperty* Max = Node != nullptr ? FindProperty(Node->SlotProperties, TEXT("MaxDesiredSize")) : nullptr;
+			if (Min != nullptr && Max != nullptr && Min->bSynthesized && Max->bSynthesized
+				&& Min->Location.Line == Max->Location.Line && Min->Location.Column == Max->Location.Column)
+			{
+				SizePartnerOf.Add(Left, Right);
+				PlannedByPartner.Add(Right);
+			}
+			else if (Node != nullptr && Min == nullptr && Max == nullptr
+				&& A.NewValueText.TrimStartAndEnd().Equals(B.NewValueText.TrimStartAndEnd(), ESearchCase::CaseSensitive))
+			{
+				SizeInserts.Add(Left);
+				PlannedByPartner.Add(Right);
+			}
+		}
+	}
+
 	bool bAllPlanned = true;
 	int32 Order = 0;
 	TArray<FSplice> Splices;
@@ -2431,7 +2602,13 @@ bool FDreamUITextPatcher::SetProperties(FString& InOutText, const FDreamUIAst& I
 				bAllPlanned = false;
 				continue;
 			}
-			if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics))
+			if (PlannedByPartner.Contains(Index))
+			{
+				continue;
+			}
+			const int32* Partner = SizePartnerOf.Find(Index);
+			if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics,
+				Partner != nullptr ? &InEdits[*Partner].NewValueText : nullptr, SizeInserts.Contains(Index)))
 			{
 				// The rest of the batch is still planned and still applied. A designer flushing ten
 				// dirty properties is better served by nine writes and one complaint than by losing all

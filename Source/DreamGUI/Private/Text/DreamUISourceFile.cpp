@@ -4126,6 +4126,7 @@ namespace DreamUIText
 			}
 			Advance();
 
+			const int32 FirstNew = OutSlotProperties.Num();
 			if (Check(ETokenKind::OpenBrace))
 			{
 				// Each line of the block is located at its own name, not at the '@': it is a line of its own, and that
@@ -4133,15 +4134,43 @@ namespace DreamUIText
 				const FDreamUISourceLocation OpenLocation = Current().Location;
 				Advance();
 				ParsePropertyOnlyBlock(OutSlotProperties, OpenLocation, TEXT("a '@slot' block"));
-				return;
 			}
-
-			FDreamUIProperty Property;
-			// Stamped with the '@', not the name after it: the statement starts at the '@', and the
-			// patcher replacing this line has to know where the line begins.
-			if (ParseProperty(Property, &AtLocation))
+			else
 			{
-				OutSlotProperties.Add(MoveTemp(Property));
+				FDreamUIProperty Property;
+				// Stamped with the '@', not the name after it: the statement starts at the '@', and the
+				// patcher replacing this line has to know where the line begins.
+				if (ParseProperty(Property, &AtLocation))
+				{
+					OutSlotProperties.Add(MoveTemp(Property));
+				}
+			}
+			ExpandSizeShorthand(OutSlotProperties, FirstNew);
+		}
+
+		/**
+		 * `@slot Size = (w, h)` is `MinDesiredSize` and `MaxDesiredSize` both set to (w, h): a fixed size for one child of a
+		 * box, which measures its children and leaves SizeDelta to a canvas. Replaced here, from InFirst on, by the two
+		 * properties it stands for, each marked as made (bSynthesized) and located where the Size line was -- the patcher
+		 * finds the shorthand there and rewrites it rather than inventing a line. No slot class has a property of that
+		 * name; a Size BOUND (`<-`) is left as written, for the builder to refuse with the two names to bind instead.
+		 */
+		void ExpandSizeShorthand(TArray<FDreamUIProperty>& InOutSlotProperties, int32 InFirst)
+		{
+			for (int32 LineIndex = InFirst; LineIndex < InOutSlotProperties.Num(); ++LineIndex)
+			{
+				FDreamUIProperty& Line = InOutSlotProperties[LineIndex];
+				if (!Line.Name.Equals(TEXT("Size"), ESearchCase::IgnoreCase) || Line.IsBinding() || Line.IsEventBinding())
+				{
+					continue;
+				}
+				FDreamUIProperty Max = Line;
+				Line.Name = TEXT("MinDesiredSize");
+				Line.bSynthesized = true;
+				Max.Name = TEXT("MaxDesiredSize");
+				Max.bSynthesized = true;
+				InOutSlotProperties.Insert(MoveTemp(Max), LineIndex + 1);
+				++LineIndex;
 			}
 		}
 

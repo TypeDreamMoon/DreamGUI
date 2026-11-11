@@ -2245,16 +2245,29 @@ namespace DreamUITextBuilderLocal
 		Candidate.bBindable = false;
 		// Unnumbered, unlike a behaviour's: a widget has exactly one panel slot, ever.
 		Candidate.LocalizationDiscriminator = TEXT("Slot");
+		auto Apply = [&](const FDreamUIProperty& InProperty, const FDreamUIStyle* InStyle)
+		{
+			// `@slot Size = (w, h)` arrives as the two lines it stands for (the parser expands it); one still called Size
+			// is a Size bound or routed, which the shorthand has no meaning for -- and "no property named Size" would
+			// send the reader looking for one.
+			if (!InProperty.bSynthesized && InProperty.Name.Equals(TEXT("Size"), ESearchCase::IgnoreCase))
+			{
+				AddErrorAtLine(InContext, InStyle, EDreamUIDiagnosticCode::UnknownProperty, InProperty.Location,
+					TEXT("'@slot Size' stands for MinDesiredSize and MaxDesiredSize set to one value, and is written 'Size = (w, h)'; a slot line is not bound"));
+				return;
+			}
+			ApplyProperty(InNode, InProperty, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+		};
 		for (const FDreamUIStyle* Style : InStyles)
 		{
 			for (const FDreamUIProperty& Property : Style->SlotProperties)
 			{
-				ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+				Apply(Property, Style);
 			}
 		}
 		for (const FDreamUIProperty& Property : InNode.SlotProperties)
 		{
-			ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+			Apply(Property, nullptr);
 		}
 	}
 
