@@ -162,6 +162,56 @@ bool FDreamUIConverterRoundTripTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIConverterShorthandsTest,
+	"DreamGUI.Designer.Text.AConvertedBlueprintWritesItsTagsSizesAndItemsInTheShortSpellings",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIConverterShorthandsTest::RunTest(const FString&)
+{
+	using namespace DreamUIConverterTestLocal;
+
+	FScopedDuiFile Source(TEXT("ConverterShorthands.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    + VerticalBox { }"),
+		TEXT("    Widget Trim {"),
+		TEXT("        @tag Trim, UI.Glow"),
+		TEXT("        @slot Size = (120, 48)"),
+		TEXT("    }"),
+		TEXT("    Native.RingMenu Wheel {"),
+		TEXT("        Items = [{ \"Lamp\", Tag: Lamp }, { \"Door\", Tag: Door, bEnabled: false }]"),
+		TEXT("    }"),
+		TEXT("}")
+	})))
+	{
+		return false;
+	}
+	FScopedTextBlueprint Scoped(TEXT("BP_ConverterShorthands"), Source.FilePath, /*bInOpenDesigner*/false,
+		UDreamTextUserWidgetBindingBase::StaticClass());
+	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
+	if (!TestEqual(TEXT("and its .dui compiled clean"), Scoped.CompileErrors, 0)) return false;
+	if (!TestTrue(TEXT("detached, the Blueprint authors its own tree"), Detach(Scoped.Blueprint))) return false;
+
+	const FString Target = TargetPath(TEXT("ConverterShorthands.dui"));
+	FScopedFileCleanup Cleanup{ Target };
+	FDreamUIConversionReport Report;
+	if (!TestTrue(*FString::Printf(TEXT("the Blueprint converts:\n%s"), *Report.ToString()),
+		FDreamUIBlueprintConverter::Convert(Scoped.Blueprint, Target, /*bInAllowLoss*/false, Report)))
+	{
+		return false;
+	}
+	TestTrue(*FString::Printf(TEXT("with nothing left out:\n%s"), *Report.ToString()), Report.Residue.IsEmpty());
+	TestTrue(*FString::Printf(TEXT("and the rebuilt tree equal to the one it came from:\n%s"), *Report.ToString()), Report.Mismatches.IsEmpty());
+
+	FString Text;
+	FFileHelper::LoadFileToString(Text, *Target);
+	TestTrue(*FString::Printf(TEXT("the tags as a tag line:\n%s"), *Text), Text.Contains(TEXT("@tag Trim, UI.Glow")) && !Text.Contains(TEXT("Tags =")));
+	TestTrue(TEXT("the fixed size as '@slot Size'"), Text.Contains(TEXT("@slot Size = (120, 48)")) && !Text.Contains(TEXT("DesiredSize")));
+	TestTrue(TEXT("the items as maps"), Text.Contains(TEXT("Items = [{ \"Lamp\", Tag: Lamp }, { \"Door\", Tag: Door, bEnabled: false }]")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIConverterRefusalTest,
 	"DreamGUI.Designer.Text.AConversionIsRefusedOrReparentsAndSaysWhatItLoses",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
