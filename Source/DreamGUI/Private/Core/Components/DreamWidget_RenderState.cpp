@@ -913,10 +913,11 @@ void UDreamWidget::MarkClipDirty(bool InClipTypeChanged) const
 	if (InClipTypeChanged)bNeedRecreateClip = true;
 	// Waking the canvas is required, not optional. UDreamCanvas::UpdateCanvasDrawCall gates everything that
 	// reconciles clipping behind bCanTickUpdate: UpdateClip (creates/destroys the FDreamUIClipData),
-	// UDreamVisual::CheckClipDataStartPosition (refreshes the slot index baked into vertex data) and
-	// MarkFinishUpdateCanvasDrawCall (uploads the clip blocks). Marking bClipDirty without waking the canvas
-	// leaves a widget sitting on Clipping == ClipToBounds with no ClipData, while its visual still points at a
-	// recycled clip slot — the shader then clips against a stale rectangle and the subtree renders nothing.
+	// UDreamVisual::CheckClipDataStartPosition (refreshes the slot index baked into vertex data) and, once the root's
+	// update is done, UDreamCanvas::UploadNewClipData (uploads the rows of the clips just made). Marking bClipDirty
+	// without waking the canvas leaves a widget sitting on Clipping == ClipToBounds with no ClipData, while its
+	// visual still points at a recycled clip slot — the shader then clips against a stale rectangle and the subtree
+	// renders nothing.
 	MarkCanvasUpdate(true);
 	struct LOCAL
 	{

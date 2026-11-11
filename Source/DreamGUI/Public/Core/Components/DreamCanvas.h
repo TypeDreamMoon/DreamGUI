@@ -1020,6 +1020,12 @@ public:
 	 */
 	void RefreshAllClipData();
 	/**
+	 * Upload the rows of the clips that have never been uploaded: the ones the update of the canvas hierarchy just made
+	 * (UDreamWidget::UpdateClip). Their slots are in this frame's vertices, so their rows go up with this frame rather than
+	 * with the next RefreshAllClipData. No-op on non-root canvases. Called by UpdateRootCanvas.
+	 */
+	void UploadNewClipData();
+	/**
 	 * The canvas whose SortDrawCall covers this canvas's sections: the nearest override-sorting
 	 * ancestor, or the root. Sort requests must land here — a plain child canvas never sorts.
 	 */
