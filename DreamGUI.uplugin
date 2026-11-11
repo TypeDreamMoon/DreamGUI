@@ -69,13 +69,13 @@
 		{
 			"Name": "DreamGUIEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PreDefault",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{
 			"Name": "DreamGUIK2Nodes",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PreDefault",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{

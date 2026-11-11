@@ -3,6 +3,7 @@
 #include "DataFactory/DreamWidgetBlueprintFactory.h"
 
 #include "DreamWidgetBlueprint.h"
+#include "DreamGUIEditorModule.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -140,6 +141,21 @@ UObject* UDreamWidgetBlueprintFactory::FactoryCreateNew(UClass* Class, UObject* 
 		FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
 			LOCTEXT("CannotCreate", "Cannot create a DreamUI Widget Blueprint based on the class '{0}'."),
 			FText::FromString(GetNameSafe(CurrentParentClass))));
+		return nullptr;
+	}
+
+	// A package whose Blueprint failed to load still holds the class generated from it, owned by
+	// nothing: the asset's class (UDreamWidgetBlueprint) was not registered when something loaded the
+	// package -- a game module's constructor running before this module, typically. The registry still
+	// lists the asset and load_asset finds nothing, so a script "creates" it again, and compiling the
+	// new Blueprint into that name reinstances the orphan: a fatal error on its null ClassGeneratedBy,
+	// not a failed create. Refuse, and say why. The fix for the package is a restart, not this asset.
+	const FString GeneratedClassName = Name.ToString() + TEXT("_C");
+	if (const UClass* Orphan = FindObject<UClass>(InParent, *GeneratedClassName);
+		Orphan != nullptr && Orphan->ClassGeneratedBy == nullptr)
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Refused to create '%s': '%s' already holds the class of a Blueprint that failed to load. Restart the editor and open the existing asset instead of creating it again.")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Name.ToString(), *GetPathNameSafe(InParent));
 		return nullptr;
 	}
 
