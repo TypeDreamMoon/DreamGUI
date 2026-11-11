@@ -32,7 +32,7 @@ DreamGUI 的装法和别的项目插件一样：克隆进项目的 `Plugins/`，
 
 现在插件自己带着生成好的那一对，放在 `ThirdParty/msdfgen-single-file/`，已经提交进仓库。所以普通的 `git clone`、甚至 GitHub 的 zip 下载（不带子模块内容）都能直接编译，构建时不需要 Python。 `ThirdParty/msdfgen` 子模块只是 `Tools/UpdateMsdfgen.ps1` 重新生成这对文件时的来源，平时不编译、不包含； `Tools/UpdateMsdfgen.ps1 -Check` 在提交的那对文件和子模块对不上时以退出码 1 结束。
 
-**提示：**
+**注意：**
 
   这份拷贝被包在 `DreamMsdfgen` 命名空间里（`MSDFGEN_PARENT_NAMESPACE`）。SlateCore 也编译了一份自己的 msdfgen，单体构建里两份符号会冲突 —— 两份"看起来差不多"的库比一个链接错误更糟，所以这层命名空间不是可选的。
 
@@ -109,7 +109,7 @@ bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId,
 
 `DreamUITextInputRouter::RouteViewportCharacter` 就是全部契约：它把字符交给打字的那个玩家（`ControllerId` 对应的玩家）正在编辑的文本框；没有文本框要，就作为一个按键字符交给这个玩家当前聚焦的东西；返回两者中是否有一个收下了。从第一个这样到达的字符起，`FKey` 对照表在这个世界里就不再合成可打印字符，两条路不会重复打字。项目里需要的模块依赖是 `DreamGUIInput`。
 
-**提示：**
+**注意：**
 
   `UDreamGameViewportClient` 还做两件事：在 DreamGUI 自己的 UI-only 输入模式（`UDreamUIInputModeLibrary::SetInputModeUIOnly`）下把引擎会忽略的输入照常送给 DreamGUI；在 DreamGUI 有焦点时，不让 Slate 自己的导航（Tab、方向键）把键盘焦点从视口带进 UMG。自己写视口客户端时，后一件由世界的输入子系统通过基类的 `OnNavigationOverride` 兜着。
 
@@ -145,7 +145,7 @@ Slate 输入源目前默认关闭，会在以后的某个版本里变成默认�
 
 两个运行时设置类都是在被使用的地方读取，因此在运行时更改的值会从下一帧起生效。
 
-**提示：**
+**注意：**
 
   插件的 `Config/Game.ini` 会把 `/DreamGUI` 放入 `DirectoriesToAlwaysCook`，因此由显式包列表（`-map=`、chunk）驱动的烹饪仍会包含插件的默认资产。
 
