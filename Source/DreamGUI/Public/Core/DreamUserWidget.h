@@ -469,6 +469,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidget* GetContentRoot() const;
 
+	/**
+	 * Every widget of THIS widget's own contents that carries InTag (UDreamWidget::Tags, `@tag` in a .dui), parents
+	 * before children, siblings in order.
+	 *
+	 * Own contents: what this class authored. A nested component's insides are its own class's and are not searched --
+	 * its widgets answer to its GetWidgetsByTag -- but the component instance itself is, and so is whatever this widget
+	 * put into the component's slots, which is this widget's content wherever it ends up hanging. What a host put into
+	 * THIS widget's slots is the host's, and is not. Empty before Initialize, and for None.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	TArray<UDreamWidget*> GetWidgetsByTag(FName InTag) const;
+
+	/** GetWidgetsByTag for C++, without the array: InVisitor sees each widget in the same order. */
+	void ForEachWidgetWithTag(FName InTag, TFunctionRef<void(UDreamWidget*)> InVisitor) const;
+
 	// ---------------------------------------------------------------------------- animation
 
 	/**

@@ -153,6 +153,11 @@ enum class EDreamUIDiagnosticCode : int32
 	 * with no comma between them, or a map entry that is not `key: value`.
 	 */
 	MalformedContainer = 2023,
+	/**
+	 * An `@tag` line that is not one or more names separated by commas: nothing after `@tag`, a number or a string where
+	 * a name belongs, two names with no comma between them, or a comma with no name after it.
+	 */
+	MalformedTag = 2024,
 
 	// --- 3xxx semantic ---
 	/**

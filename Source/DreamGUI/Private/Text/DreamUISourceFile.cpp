@@ -2066,6 +2066,16 @@ namespace DreamUIText
 				{
 					ParseFillShorthand(OutStyle.SlotProperties);
 				}
+				else if (IsTagLine())
+				{
+					// A tag names WIDGETS for the code that looks them up, and a style is not worn by a fixed set of them:
+					// it would tag whatever happened to wear it, which is a lookup nobody can read off the file.
+					const FDreamUISourceLocation AtLocation = Current().Location;
+					TArray<FDreamUITag> Ignored;
+					ParseTagLine(Ignored);
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, AtLocation,
+						FString::Printf(TEXT("style '%s' cannot carry '@tag': tag the widgets themselves"), *OutStyle.Name));
+				}
 				else if (Check(ETokenKind::At) && Peek(1).Kind == ETokenKind::Identifier
 					&& Peek(1).Text.Equals(TEXT("slot"), ESearchCase::CaseSensitive))
 				{
@@ -3131,7 +3141,13 @@ namespace DreamUIText
 				// the two lines of it written most; `@Row Row1 { }` is a child whose type an Asset entry of a resources
 				// block names (ParseNode). `slot` is a keyword, so no resource it could name is ever meant. `fill` is
 				// one only where a resource node cannot stand -- alone, or before a number -- so a resource that
-				// happens to be called fill still names a node type.
+				// happens to be called fill still names a node type. `tag` likewise, wherever a node's header could not
+				// go on as one (IsTagLine).
+				if (IsTagLine())
+				{
+					ParseTagLine(OutNode.Tags);
+					return;
+				}
 				if (IsFillShorthand())
 				{
 					ParseFillShorthand(OutNode.SlotProperties);
@@ -3627,11 +3643,12 @@ namespace DreamUIText
 				// mixes the two rather than whatever the block happened to open with.
 				ParseNodeBody(Slot, OpenLocation);
 
-				const bool bDeclares = Slot.Components.Num() > 0 || Slot.Properties.Num() > 0 || Slot.SlotProperties.Num() > 0;
+				const bool bDeclares = Slot.Components.Num() > 0 || Slot.Properties.Num() > 0 || Slot.SlotProperties.Num() > 0
+					|| Slot.Tags.Num() > 0;
 				if (Slot.Children.Num() > 0 && bDeclares)
 				{
 					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, Slot.Children[0].Location,
-						FString::Printf(TEXT("slot '%s' both declares (components, properties, '@slot' lines) and fills (widgets); a declaration holds no widgets and a fill holds nothing else"),
+						FString::Printf(TEXT("slot '%s' both declares (components, properties, '@slot' and '@tag' lines) and fills (widgets); a declaration holds no widgets and a fill holds nothing else"),
 							*Slot.Id));
 				}
 				else if (Slot.Children.Num() > 0)
@@ -3754,6 +3771,14 @@ namespace DreamUIText
 			ActiveLoopVariables.Add(Loop.LoopVariable);
 			ParseNodeBody(Loop, OpenLocation);
 			ActiveLoopVariables.RemoveAt(ActiveLoopVariables.Num() - 1);
+
+			// A loop makes no widget of its own to carry a tag; the widget it repeats does, and every copy keeps it.
+			for (const FDreamUITag& Tag : Loop.Tags)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, Tag.LineLocation,
+					FString::Printf(TEXT("'@tag %s' tags a widget, and a loop is not one: put it on the widget the loop repeats"), *Tag.Name));
+			}
+			Loop.Tags.Reset();
 
 			OutNode.Children.Add(MoveTemp(Loop));
 		}
@@ -3953,6 +3978,11 @@ namespace DreamUIText
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Component.Location,
 					FString::Printf(TEXT("'+ %s' attaches to a widget, and an 'if' block holds widgets: put it on a widget inside the block"), *Component.ClassName));
+			}
+			for (const FDreamUITag& Tag : InBranch.Tags)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Tag.LineLocation,
+					FString::Printf(TEXT("'@tag %s' tags a widget, and an 'if' block holds widgets: put it on a widget inside the block"), *Tag.Name));
 			}
 
 			for (FDreamUINode& Child : InBranch.Children)
@@ -4168,6 +4198,87 @@ namespace DreamUIText
 			{
 				RaiseUnexpectedToken(TEXT("'@fill' takes at most a weight, as in '@fill 2'"));
 				RecoverToStatementBoundary();
+			}
+		}
+
+		/**
+		 * `@tag …`: a tag line, rather than a node whose type is a resource called tag. Lowercase, after an '@', and NOT
+		 * followed by what would carry on a node's header: a '.' (`@tag.Row`, a namespaced resource), a '{' or a ':' (an
+		 * anonymous node), or an id followed by a '{', a ':' or a '(' (`@tag Trim { }`). Everything else that follows -- a
+		 * name and the end of the line, a list of names, or nothing a tag line can hold -- is the tag line's, and
+		 * ParseTagLine says when it is malformed. The one reading this takes away, a block-less resource node `@tag Trim`,
+		 * is a type called tag with nothing in it.
+		 */
+		bool IsTagLine() const
+		{
+			if (!Check(ETokenKind::At) || Peek(1).Kind != ETokenKind::Identifier
+				|| !Peek(1).Text.Equals(TEXT("tag"), ESearchCase::CaseSensitive))
+			{
+				return false;
+			}
+			const ETokenKind After = Peek(2).Kind;
+			if (After == ETokenKind::Dot || After == ETokenKind::OpenBrace || After == ETokenKind::Colon)
+			{
+				return false;
+			}
+			if (After == ETokenKind::Identifier)
+			{
+				const ETokenKind AfterName = Peek(3).Kind;
+				return AfterName != ETokenKind::OpenBrace && AfterName != ETokenKind::Colon && AfterName != ETokenKind::OpenParen;
+			}
+			return true;
+		}
+
+		/**
+		 * `@tag Trim` or `@tag Trim, UI.Glow`: names for the code that finds widgets by them (UDreamUserWidget::GetWidgetsByTag),
+		 * each an identifier with as many `.word`s after it as written. The cursor is on the '@'. A line that is not that is
+		 * MalformedTag, reported at the '@', and the names read before the mistake are kept.
+		 */
+		void ParseTagLine(TArray<FDreamUITag>& OutTags)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
+			Advance(); // '@'
+			Advance(); // 'tag'
+
+			auto Refuse = [this, &AtLocation](const FString& InMessage)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTag, AtLocation, InMessage);
+				RecoverToStatementBoundary();
+			};
+			if (AtStatementEnd())
+			{
+				Refuse(TEXT("'@tag' takes one or more names separated by commas, as in '@tag Trim, Glow'"));
+				return;
+			}
+			for (;;)
+			{
+				if (!Check(ETokenKind::Identifier))
+				{
+					Refuse(FString::Printf(TEXT("expected a tag name, found '%s': a tag is a name, as in '@tag Trim'"), *DescribeCurrent()));
+					return;
+				}
+				FDreamUITag& Tag = OutTags.AddDefaulted_GetRef();
+				Tag.Location = Current().Location;
+				Tag.LineLocation = AtLocation;
+				Tag.Name = Current().Text;
+				Advance();
+				while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+				{
+					Advance();
+					Tag.Name += TEXT(".");
+					Tag.Name += Current().Text;
+					Advance();
+				}
+				if (AtStatementEnd())
+				{
+					return;
+				}
+				if (!Check(ETokenKind::Comma))
+				{
+					Refuse(FString::Printf(TEXT("expected ',' or the end of the line after tag '%s', found '%s'"), *Tag.Name, *DescribeCurrent()));
+					return;
+				}
+				Advance(); // ','
 			}
 		}
 

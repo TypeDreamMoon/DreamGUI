@@ -2705,7 +2705,8 @@ namespace DreamUITextBuilderLocal
 						*InNode.Id, *InParent->GetDisplayName(), *InParent->GetClass()->GetName(), *InNode.Id));
 			return nullptr;
 		}
-		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleRefs.IsEmpty())
+		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleRefs.IsEmpty()
+			|| !InNode.Tags.IsEmpty())
 		{
 			// The parser refuses this shape; an AST built by hand reaches here with it, and there is nothing these
 			// lines could be written on -- the slot widget is the component's, in another file.
@@ -2989,6 +2990,12 @@ namespace DreamUITextBuilderLocal
 		}
 		BuildProperties(InNode, Styles, TypeContainerClass != nullptr, Widget, InContext);
 		BuildSlotProperties(InNode, Styles, Widget, InContext);
+		// `@tag` lines after the node's own, so a `Tags = [...]` line written there is added to rather than replaced. A
+		// name twice is one tag (AddTag keeps it once): the lookup answers "has it", not "how many times was it said".
+		for (const FDreamUITag& Tag : InNode.Tags)
+		{
+			Widget->AddTag(FName(*Tag.Name));
+		}
 
 		// Every `AnchorData.X = ...` line above wrote its field in place -- a field inside a struct has no setter
 		// (see AddBinding) -- and TrySetParent had already worked the widget's size, edge offsets and placement out

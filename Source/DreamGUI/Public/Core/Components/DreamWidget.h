@@ -2337,6 +2337,40 @@ private:
 	void FindChildArrayByDisplayNameWithChildren_Internal(const FString& InName, TArray<UDreamWidget*>& OutResultArray)const;
 #pragma endregion Name
 
+#pragma region Tags
+public:
+	/**
+	 * Names for the code that finds widgets by what they ARE rather than by their id -- every trim, every sigil -- as
+	 * AActor::Tags does for actors. A `.dui` writes them `@tag Trim, Glow`; UDreamUserWidget::GetWidgetsByTag finds them
+	 * in a user widget's own tree. Nothing in the library reads them.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = DreamGUI)
+	TArray<FName> Tags;
+
+	/** Whether Tags holds InTag. None is never a tag. */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	bool HasTag(FName InTag) const { return !InTag.IsNone() && Tags.Contains(InTag); }
+
+	/** Adds InTag unless it is already there (or None). */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void AddTag(FName InTag)
+	{
+		if (!InTag.IsNone())
+		{
+			Tags.AddUnique(InTag);
+		}
+	}
+
+	/** Takes InTag out; false when it was not there. */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool RemoveTag(FName InTag) { return Tags.Remove(InTag) > 0; }
+
+	static FName GetPropertyName_Tags()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Tags);
+	}
+#pragma endregion Tags
+
 public:
 	/** Get the canvas that render and update this UI element */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

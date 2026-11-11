@@ -2668,6 +2668,103 @@ UDreamWidget* UDreamUserWidget::GetContentRoot() const
 	return IsValid(WidgetTree) ? WidgetTree->RootWidget : nullptr;
 }
 
+TArray<UDreamWidget*> UDreamUserWidget::GetWidgetsByTag(FName InTag) const
+{
+	TArray<UDreamWidget*> Found;
+	ForEachWidgetWithTag(InTag, [&Found](UDreamWidget* InWidget) { Found.Add(InWidget); });
+	return Found;
+}
+
+void UDreamUserWidget::ForEachWidgetWithTag(FName InTag, TFunctionRef<void(UDreamWidget*)> InVisitor) const
+{
+	if (InTag.IsNone())
+	{
+		return;
+	}
+	// Whose content each widget is, as a depth: 0 is this widget's own, 1 is the insides of a component it holds, 2 a
+	// component inside that one, and so on. Entering a component's contents goes one deeper; the children of a named
+	// slot go one back up, because a slot is filled by the host of the class that opens it. Ownership is decided by
+	// SHAPE rather than by outer: a list cell is a duplicate whose widgets all share one outer, and the run time hangs a
+	// component's contents and its host's slot content in one Children chain.
+	struct FEntry
+	{
+		UDreamWidget* Widget = nullptr;
+		int32 Depth = 0;
+	};
+	TArray<FEntry> Pending;
+	TSet<const UDreamWidget*> Visited;
+	auto PushInOrder = [&Pending](TConstArrayView<UDreamWidget*> InWidgets, TFunctionRef<int32(const UDreamWidget*)> InDepthOf)
+	{
+		// Reversed onto the stack, so siblings come off it in their own order.
+		for (int32 Index = InWidgets.Num() - 1; Index >= 0; --Index)
+		{
+			Pending.Push({ InWidgets[Index], InDepthOf(InWidgets[Index]) });
+		}
+	};
+
+	if (UDreamWidget* Root = GetContentRoot())
+	{
+		Pending.Push({ Root, 0 });
+	}
+	else
+	{
+		// A native control has no tree: its contents are the children it built, which are its own.
+		PushInOrder(GetChildren(), [](const UDreamWidget*) { return 0; });
+	}
+
+	while (Pending.Num() > 0)
+	{
+		const FEntry Entry = Pending.Pop(EAllowShrinking::No);
+		UDreamWidget* Widget = Entry.Widget;
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		bool bAlreadyVisited = false;
+		Visited.Add(Widget, &bAlreadyVisited);
+		if (bAlreadyVisited)
+		{
+			continue;
+		}
+		if (Entry.Depth == 0 && Widget->HasTag(InTag))
+		{
+			InVisitor(Widget);
+		}
+
+		const int32 ChildDepth = Widget->GetComponent<UDreamNamedSlot>() != nullptr ? Entry.Depth - 1 : Entry.Depth;
+		if (ChildDepth < 0)
+		{
+			// What a host put into one of THIS widget's slots. Nothing under it can be this widget's again: from there,
+			// slots only lead further out.
+			continue;
+		}
+		const UDreamUserWidget* Nested = Widget != this ? Cast<UDreamUserWidget>(Widget) : nullptr;
+		if (Nested == nullptr)
+		{
+			PushInOrder(Widget->GetChildren(), [ChildDepth](const UDreamWidget*) { return ChildDepth; });
+			continue;
+		}
+		if (!Nested->IsInitialized())
+		{
+			// Nothing of the component's own exists yet: its children, and its slot content (which hangs off the map until
+			// Initialize places it), are all what this widget's tree put there.
+			PushInOrder(Widget->GetChildren(), [ChildDepth](const UDreamWidget*) { return ChildDepth; });
+			for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : Nested->NamedSlotContent)
+			{
+				Pending.Push({ Binding.Value.Get(), ChildDepth });
+			}
+			continue;
+		}
+		// Built: its content root is its own (a native control's built children are all its own), and a child no slot
+		// adopted is still what this widget hung on it.
+		const UDreamWidget* NestedRoot = Nested->GetContentRoot();
+		PushInOrder(Widget->GetChildren(), [ChildDepth, NestedRoot](const UDreamWidget* InChild)
+		{
+			return NestedRoot == nullptr || InChild == NestedRoot ? ChildDepth + 1 : ChildDepth;
+		});
+	}
+}
+
 void UDreamUserWidget::CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, TArray<FName>& OutNames)
 {
 	if (!IsValid(InTree))

@@ -1837,6 +1837,186 @@ namespace DreamUIPatchLocal
 	}
 
 	// --------------------------------------------------------------------------------------------
+	// `@tag` lines
+	//
+	// A node's Tags are written `@tag Trim, Glow` -- lines of names, not a property line -- so an edit of Tags on a node
+	// that writes them that way is an edit of those lines: the names it drops are taken off the lines they stand on (a
+	// line left with none goes), and the names it adds join the last line that keeps any, or a new `@tag` line when the
+	// node has none. A node that writes `Tags = [...]` instead keeps that line, edited like any other.
+	// --------------------------------------------------------------------------------------------
+
+	int32 ExtendBackOverLineBreak(const FString& InText, int32 InStart);
+	void RefuseNotWritable(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUISourceLocation& InLocation, FString InMessage);
+
+	/** The names a Tags value text lists (`[Trim, "Glow"]`), read by the parser; false when it is not a list of names. */
+	bool ReadTagList(const FString& InValueText, TArray<FString>& OutNames)
+	{
+		const FString Probe = FString::Printf(TEXT("Widget DreamUIPatchProbe {\n\tTags = %s\n}"), *InValueText);
+		FDreamUIAst ProbeAst;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		if (!FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics))
+		{
+			return false;
+		}
+		const FDreamUIProperty* Tags = FindProperty(ProbeAst.Root.Properties, TEXT("Tags"));
+		if (Tags == nullptr || Tags->Value.Kind != EDreamUIValueKind::List)
+		{
+			return false;
+		}
+		for (const FDreamUIValue& Item : Tags->Value.Items)
+		{
+			if (Item.Kind != EDreamUIValueKind::Identifier && Item.Kind != EDreamUIValueKind::String)
+			{
+				return false;
+			}
+			// FString's comparison, case insensitive -- the FName rule a tag is matched by.
+			OutNames.AddUnique(Item.Raw);
+		}
+		return true;
+	}
+
+	/** Whether `@tag <InName>` reads back as exactly that one name -- asked of the parser, the judge of what a line holds. */
+	bool TagLineTakes(const FString& InName)
+	{
+		const FString Probe = FString::Printf(TEXT("Widget DreamUIPatchProbe {\n\t@tag %s\n}"), *InName);
+		FDreamUIAst ProbeAst;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		return FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics) && ProbeDiagnostics.Diagnostics.IsEmpty()
+			&& ProbeAst.Root.Tags.Num() == 1 && ProbeAst.Root.Tags[0].Name.Equals(InName, ESearchCase::CaseSensitive);
+	}
+
+	bool PlanTagsEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FDreamUINode& Node = *InTarget.Node;
+		TArray<FString> Wanted;
+		if (!ReadTagList(InEdit.NewValueText.TrimStartAndEnd(), Wanted))
+		{
+			RefuseNotWritable(OutDiagnostics, InTarget.Location,
+				FString::Printf(TEXT("'%s' is not a list of names, and '@tag' lines hold names"), *Ellipsize(InEdit.NewValueText)));
+			return false;
+		}
+		TArray<FString> Current;
+		for (const FDreamUITag& Tag : Node.Tags)
+		{
+			Current.AddUnique(Tag.Name);
+		}
+		TArray<FString> Added;
+		for (const FString& Name : Wanted)
+		{
+			if (!Current.Contains(Name))
+			{
+				Added.Add(Name);
+			}
+		}
+		const bool bRemoves = Current.ContainsByPredicate([&Wanted](const FString& InName) { return !Wanted.Contains(InName); });
+		if (Added.IsEmpty() && !bRemoves)
+		{
+			return true;
+		}
+		for (const FString& Name : Added)
+		{
+			if (!TagLineTakes(Name))
+			{
+				if (Node.Tags.IsEmpty())
+				{
+					// Not a name a tag line can hold (a space in it, a leading digit): the list spelling holds anything.
+					return PlanInsert(InText, InEdit, InTarget, OutSplices, InOutOrder, OutDiagnostics);
+				}
+				RefuseNotWritable(OutDiagnostics, Node.Tags[0].LineLocation,
+					FString::Printf(TEXT("'%s' is not a name an '@tag' line can hold; write the tags as 'Tags = [...]' instead of '@tag' lines to give it one"),
+						*Ellipsize(Name)));
+				return false;
+			}
+		}
+		if (Node.Tags.IsEmpty())
+		{
+			const FString Body = TEXT("@tag ") + FString::Join(Added, TEXT(", "));
+			return PlanInsert(InText, InEdit, InTarget, OutSplices, InOutOrder, OutDiagnostics, &Body);
+		}
+
+		// The lines, in order, each with its names where the text has them.
+		struct FTagLine
+		{
+			int32 AtOffset = INDEX_NONE;
+			int32 FirstName = INDEX_NONE;
+			int32 LastNameEnd = INDEX_NONE;
+			TArray<FString> Names;
+			TArray<FString> Kept;
+		};
+		TArray<FTagLine> Lines;
+		for (const FDreamUITag& Tag : Node.Tags)
+		{
+			const int32 AtOffset = OffsetOf(InText, Tag.LineLocation);
+			const int32 NameOffset = OffsetOf(InText, Tag.Location);
+			if (!TextAtIs(InText, AtOffset, TEXT("@")) || !TextAtIs(InText, NameOffset, Tag.Name))
+			{
+				RefuseStale(OutDiagnostics, Tag.Location, FString::Printf(TEXT("line %d does not tag '%s'"), Tag.Location.Line, *Tag.Name));
+				return false;
+			}
+			if (Lines.IsEmpty() || Lines.Last().AtOffset != AtOffset)
+			{
+				FTagLine& Line = Lines.AddDefaulted_GetRef();
+				Line.AtOffset = AtOffset;
+				Line.FirstName = NameOffset;
+			}
+			FTagLine& Line = Lines.Last();
+			Line.LastNameEnd = NameOffset + Tag.Name.Len();
+			Line.Names.Add(Tag.Name);
+			if (Wanted.Contains(Tag.Name))
+			{
+				Line.Kept.Add(Tag.Name);
+			}
+		}
+		// The added names join the last line that keeps any, or the first when none does, so a node's tags stay on as few
+		// lines as the author had.
+		int32 Receiver = 0;
+		for (int32 Index = Lines.Num() - 1; Index >= 0; --Index)
+		{
+			if (Lines[Index].Kept.Num() > 0)
+			{
+				Receiver = Index;
+				break;
+			}
+		}
+		Lines[Receiver].Kept.Append(Added);
+
+		for (const FTagLine& Line : Lines)
+		{
+			if (Line.Kept == Line.Names)
+			{
+				continue;
+			}
+			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+			Splice.Order = InOutOrder++;
+			if (Line.Kept.Num() > 0)
+			{
+				// The names rewritten, joined the way a new line joins them; the '@tag' and whatever follows stay.
+				Splice.Offset = Line.FirstName;
+				Splice.Length = Line.LastNameEnd - Line.FirstName;
+				Splice.Text = FString::Join(Line.Kept, TEXT(", "));
+				continue;
+			}
+			if (LineBeforeIsBlank(InText, Line.AtOffset) && RestOfLineIsBlank(InText, Line.LastNameEnd, /*bInAllowTerminators*/ true))
+			{
+				// Its own line: taken out whole, line break and all.
+				Splice.Offset = ExtendBackOverLineBreak(InText, FindLineStart(InText, Line.AtOffset));
+				Splice.Length = FindLineEnd(InText, Line.LastNameEnd) - Splice.Offset;
+				continue;
+			}
+			// Sharing its line: the statement alone, with the space after it.
+			int32 End = Line.LastNameEnd;
+			while (End < InText.Len() && (IsInlineWhitespace(InText[End]) || InText[End] == TEXT(';')))
+			{
+				++End;
+			}
+			Splice.Offset = Line.AtOffset;
+			Splice.Length = End - Line.AtOffset;
+		}
+		return true;
+	}
+
+	// --------------------------------------------------------------------------------------------
 	// Properties the front end made
 	//
 	// Two constructs put properties into the tree that no line spells: an `if` gives every node of its branches a
@@ -2141,6 +2321,24 @@ namespace DreamUIPatchLocal
 		if (!ValidateValueText(InEdit.NewValueText, ValueLocation, OutDiagnostics))
 		{
 			return false;
+		}
+
+		// A node's Tags, written as `@tag` lines rather than a `Tags = [...]` line of its own.
+		if (InEdit.Target == EDreamUIPatchTarget::Node && Target.Node != nullptr && InEdit.PropertyName == TEXT("Tags"))
+		{
+			if (Existing == nullptr)
+			{
+				return PlanTagsEdit(InText, InEdit, Target, OutSplices, InOutOrder, OutDiagnostics);
+			}
+			if (!Target.Node->Tags.IsEmpty())
+			{
+				// The two spellings add up, so neither line alone says what the widget has, and an edit could only guess
+				// which of them to change.
+				RefuseNotWritable(OutDiagnostics, Existing->Location,
+					FString::Printf(TEXT("'%s' writes its tags both as 'Tags = …' (line %d) and as '@tag' (line %d); keep one of the two for its tags to be written back"),
+						*Target.Node->Id, Existing->Location.Line, Target.Node->Tags[0].LineLocation.Line));
+				return false;
+			}
 		}
 
 		if (Existing != nullptr && Existing->bSynthesized)

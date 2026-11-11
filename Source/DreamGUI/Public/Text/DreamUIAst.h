@@ -303,6 +303,17 @@ struct DREAMGUI_API FDreamUIStyleRef
 	FDreamUISourceLocation Location;
 };
 
+/**
+ * One name of an `@tag` line: `@tag Trim, Glow` is two. Location is the name; LineLocation is the line's '@', where the
+ * statement begins.
+ */
+struct DREAMGUI_API FDreamUITag
+{
+	FString Name;
+	FDreamUISourceLocation Location;
+	FDreamUISourceLocation LineLocation;
+};
+
 /** `+ UIButton { … }` -- a UDreamUIBehaviour attached to the enclosing node. */
 struct DREAMGUI_API FDreamUIComponent
 {
@@ -395,6 +406,9 @@ struct DREAMGUI_API FDreamUINode
 	 * FDreamUIAst::CollectStyleChain for the order), then the node's own override them. Empty when it wears none.
 	 */
 	TArray<FDreamUIStyleRef> StyleRefs;
+
+	/** `@tag Trim, Glow` lines, in order, every name as written (duplicates included). */
+	TArray<FDreamUITag> Tags;
 
 	/** The first style the node wears, or empty: what a caller that only ever met one style reads. */
 	const FString& GetFirstStyleName() const;
