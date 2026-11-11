@@ -14,7 +14,8 @@
 | 语言 | [.dui 参考](language/index.md)、[绑定](language/bindings.md)、[设计器写回](language/write-back.md) |
 | 控件 | [控件目录](controls/index.md)、[样式](controls/styles.md)、[与 UMG 对照](controls/umg-parity.md) |
 | 指南 | [字体与打包](guides/fonts-and-packaging.md)、[迁移](guides/migration.md)、[升级](guides/upgrading.md)、[平台](guides/platforms.md)、[常见陷阱](guides/pitfalls.md) |
-| 工具 | [设计器](tools/designer.md)、[调试](tools/debugging.md)、[测试](tools/tests.md)、[脚本](tools/scripting.md) |
+| 工具 | [设计器](tools/designer.md)、[调试](tools/debugging.md)、[测试](tools/tests.md)、[脚本](tools/scripting.md)、[AI 代理](tools/ai-agents.md) |
+| 贡献 | [报告问题、构建、测试门禁](contributing/index.md) |
 | 参考 | [生成的类参考](Reference/index.md) |
 | 诊断 | [概览](diagnostics/index.md)、[诊断目录](diagnostics/codes.md) |
 | 变更 | [版本历史](changelog/index.md) |

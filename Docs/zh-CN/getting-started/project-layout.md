@@ -183,6 +183,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 | `Tools/TextParity` | DreamGUI、Slate 和 Chrome 在同一文本语料上的对比 |
 | `Tools/ModuleSplit` | 将运行时模块从核心中拆分出来的脚本 |
 | `Tools/UpdateMsdfgen.ps1` | 从子模块重新生成单文件 msdfgen 副本 |
+| `Tools/Get-DreamGUIEnvironment.ps1` | 打印缺陷报告所需的插件、引擎和系统信息，而无需启动引擎 |
 
 <a id="log-categories"></a>
 
