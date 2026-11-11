@@ -65,25 +65,47 @@ namespace DreamDesignerDuiPlacementTestLocal
 		return FVector2D(FMath::Lerp(Rect->Min.X, Rect->Max.X, Pivot.X), FMath::Lerp(Rect->Max.Y, Rect->Min.Y, Pivot.Y));
 	}
 
-	/** The content group and its two rows, under a root whose overlay centres the group. */
-	TArray<FString> SettingsPanelLines()
+	/**
+	 * The layer a panel's effect stands in over everything, holding nothing -- the settings panel's pixel sort, its
+	 * pointer light: in front of every rect, so the first thing under the pointer wherever it is.
+	 */
+	TArray<FString> EffectLayerLines()
 	{
 		return {
+			TEXT(""),
+			TEXT("    Widget Sort {"),
+			TEXT("        @slot HorizontalAlignment = Fill"),
+			TEXT("        @slot VerticalAlignment = Fill"),
+			TEXT("    }"),
+		};
+	}
+
+	/**
+	 * The content group and its two rows, filling a root whose overlay lays an effect over everything. The header row is
+	 * a box holding its title at its left end, so most of it is empty.
+	 */
+	TArray<FString> SettingsPanelLines()
+	{
+		TArray<FString> Lines = {
 			TEXT("Widget Root {"),
 			TEXT("    AnchorData.SizeDelta = (720, 440)"),
 			TEXT("    + Overlay {}"),
 			TEXT(""),
 			TEXT("    Widget Content {"),
-			TEXT("        AnchorData.SizeDelta = (720, 440)"),
-			TEXT("        @slot HorizontalAlignment = Center"),
-			TEXT("        @slot VerticalAlignment = Center"),
+			TEXT("        @slot HorizontalAlignment = Fill"),
+			TEXT("        @slot VerticalAlignment = Fill"),
 			TEXT(""),
-			TEXT("        Widget Header {"),
+			TEXT("        HorizontalBox Header {"),
 			TEXT("            AnchorData.AnchorMin = (0, 1)"),
 			TEXT("            AnchorData.AnchorMax = (1, 1)"),
 			TEXT("            AnchorData.Pivot = (0.5, 1)"),
 			TEXT("            AnchorData.AnchoredPosition = (0, -58)"),
 			TEXT("            AnchorData.SizeDelta = (-88, 58)"),
+			TEXT(""),
+			TEXT("            Widget Title {"),
+			TEXT("                AnchorData.SizeDelta = (96, 58)"),
+			TEXT("                @slot SizeRule = Auto"),
+			TEXT("            }"),
 			TEXT("        }"),
 			TEXT("        Widget Footer {"),
 			TEXT("            AnchorData.AnchorMin = (0, 1)"),
@@ -93,8 +115,10 @@ namespace DreamDesignerDuiPlacementTestLocal
 			TEXT("            AnchorData.SizeDelta = (-88, 46)"),
 			TEXT("        }"),
 			TEXT("    }"),
-			TEXT("}")
 		};
+		Lines.Append(EffectLayerLines());
+		Lines.Add(TEXT("}"));
+		return Lines;
 	}
 }
 
@@ -104,10 +128,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * A row hung from its group's top edge, dragged sixty pixels to the right with the grid on. The row stays in its group --
- * the group has no panel, and the nearest ancestor that has one is not where it was dropped -- and the file changes on
- * one line: the anchored position's X takes the travel and its Y keeps -58, which a grid of ten would otherwise have
- * pulled to -60 although the pointer never moved that way.
+ * A row hung from its group's top edge -- stretched across it -- grabbed in the empty part of it right of its title and
+ * dragged sixty pixels to the right with the grid on. The row stays in its group: the group has no panel, the nearest
+ * ancestor that has one is not where it was dropped, and the effect layer in front of everything holds nothing to drop
+ * into. The file changes on one line: the anchored position's X takes the travel and its Y keeps -58, which a grid of
+ * ten would otherwise have pulled to -60 although the pointer never moved that way.
  */
 bool FDreamDesignerSidewaysDragWritesOnlyXTest::RunTest(const FString&)
 {
@@ -134,16 +159,27 @@ bool FDreamDesignerSidewaysDragWritesOnlyXTest::RunTest(const FString&)
 	{
 		return false;
 	}
+	// Half a pixel a unit: the group fills the design canvas, which runs past the viewport at one to one, and the row
+	// hangs from its top edge.
+	Driver.Toolkit()->SetDesignerPixelsPerUnit(0.5f);
+	Driver.PumpFrame();
 	SelectOnlyInDesigner(Driver, Header);
 	Driver.PumpFrame();
-	const TOptional<FBox2D> Rect = Driver.WidgetPixelRect(Driver.PreviewFor(Header));
-	if (!TestTrue(TEXT("The row is on screen"), Rect.IsSet() && WorkArea.IsInside(Rect->GetCenter())))
+	UDreamWidget* HeaderPreview = Driver.PreviewFor(Header);
+	const TOptional<FBox2D> Rect = Driver.WidgetPixelRect(HeaderPreview);
+	const FIntPoint Viewport = Driver.ViewportPixelSize();
+	const FBox2D Screen(FVector2D(20.0, 20.0), FVector2D(Viewport.X - 20.0, Viewport.Y - 20.0));
+	const FVector2D PixelsPerUnit = PixelsPerUnitFor(Driver, HeaderPreview);
+	if (!TestTrue(TEXT("The row is on screen"), Rect.IsSet() && Screen.IsInside(Rect->GetCenter()) && PixelsPerUnit.X > 0.0))
 	{
 		return false;
 	}
 	const FString TextBefore = Scoped.ReadFile();
-	// Inside the row, a quarter of the way along and halfway down: the Move handle, away from its edges and its pivot.
-	const FIntPoint From = PointInBox(Rect.GetValue(), 0.25, 0.5);
+	// Right of the title, three quarters of the way along and halfway down: the row's empty part, the Move handle, away
+	// from its edges and its pivot.
+	const FIntPoint From = PointInBox(Rect.GetValue(), 0.75, 0.5);
+	// Sixty pixels, onto the grid of ten.
+	const int32 ExpectedX = FMath::RoundToInt32(FMath::GridSnap(60.0 / PixelsPerUnit.X, 10.0));
 
 	TestTrue(TEXT("The drag completes"), Driver.DragFromTo(From, From + FIntPoint(60, 0), /*Steps*/ 6));
 	Driver.PumpFrame();
@@ -153,9 +189,9 @@ bool FDreamDesignerSidewaysDragWritesOnlyXTest::RunTest(const FString&)
 	TestTrue(TEXT("The row is still in its group"), Header != nullptr && Header->GetParent() == Content);
 	const FString TextAfter = Scoped.ReadFile();
 	const TArray<FString> Changed = ChangedLines(TextBefore, TextAfter);
-	const bool bOneLine = Changed.Num() == 1
-		&& Changed[0] == TEXT("AnchorData.AnchoredPosition = (0, -58) -> AnchorData.AnchoredPosition = (60, -58)");
-	if (!TestTrue(TEXT("The file changes on the anchored position's line, X to 60 and Y kept"), bOneLine))
+	const bool bOneLine = Changed.Num() == 1 && Changed[0] == FString::Printf(
+		TEXT("AnchorData.AnchoredPosition = (0, -58) -> AnchorData.AnchoredPosition = (%d, -58)"), ExpectedX);
+	if (!TestTrue(FString::Printf(TEXT("The file changes on the anchored position's line, X to %d and Y kept"), ExpectedX), bOneLine))
 	{
 		AddInfo(FString::Printf(TEXT("Changed: %s"), *FString::Join(Changed, TEXT(" | "))));
 		AddInfo(FString::Printf(TEXT("The file reads:\n%s"), *TextAfter));
@@ -163,7 +199,7 @@ bool FDreamDesignerSidewaysDragWritesOnlyXTest::RunTest(const FString&)
 	if (Header != nullptr)
 	{
 		TestTrue(FString::Printf(TEXT("The asset agrees: %s"), *Header->GetAnchoredPosition().ToString()),
-			Header->GetAnchoredPosition().Equals(FVector2D(60.0, -58.0), 1e-4));
+			Header->GetAnchoredPosition().Equals(FVector2D(ExpectedX, -58.0), 1e-4));
 	}
 	return true;
 }
@@ -259,7 +295,7 @@ bool FDreamDesignerDragIntoAnotherGroupTest::RunTest(const FString&)
 	FScopedDesignerPreferences Preferences;
 	Preferences.SetGridSnap(true, 10.0f);
 	Preferences.SetGuides(false);
-	FScopedDuiDesigner Scoped(TEXT("DesignerDragIntoGroupDui"), {
+	TArray<FString> Lines = {
 		TEXT("Widget Root {"),
 		TEXT("    AnchorData.SizeDelta = (720, 440)"),
 		TEXT("    + Overlay {}"),
@@ -287,8 +323,10 @@ bool FDreamDesignerDragIntoAnotherGroupTest::RunTest(const FString&)
 		TEXT("            }"),
 		TEXT("        }"),
 		TEXT("    }"),
-		TEXT("}")
-	});
+	};
+	Lines.Append(EffectLayerLines());
+	Lines.Add(TEXT("}"));
+	FScopedDuiDesigner Scoped(TEXT("DesignerDragIntoGroupDui"), Lines);
 	if (!Scoped.IsReady())
 	{
 		AddError(FString::Printf(TEXT("No text-authored designer to drive: %s."), *Scoped.Failure));
