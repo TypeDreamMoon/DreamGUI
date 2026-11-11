@@ -97,6 +97,16 @@ namespace DreamDesignerLayerEffectsPixelTestLocal
 		return Out;
 	}
 
+	/** Every widget under InRoot that is actually there, InRoot not counted, each one before the widgets it holds. */
+	void CollectLiveUnder(const UDreamWidget* InRoot, TArray<UDreamWidget*>& OutWidgets)
+	{
+		for (UDreamWidget* Child : LiveChildrenOf(InRoot))
+		{
+			OutWidgets.Add(Child);
+			CollectLiveUnder(Child, OutWidgets);
+		}
+	}
+
 	bool Differs(const FColor& InA, const FColor& InB)
 	{
 		return FMath::Abs(InA.R - InB.R) > ChangedBy || FMath::Abs(InA.G - InB.G) > ChangedBy || FMath::Abs(InA.B - InB.B) > ChangedBy;
@@ -796,21 +806,27 @@ bool FDreamDesignerPaletteEffectsPixelTest::RunTest(const FString& Parameters)
 			State->bAlive = false;
 			return;
 		}
+		// The centre is over the backdrop, a group with no panel, and a drop on a group lands in it -- so the new widget is looked
+		// for in the whole tree, not only among the root's children.
 		UDreamWidget* Root = DesignerTemplateRoot(State->Asset.Blueprint);
-		const TArray<UDreamWidget*> Existing = LiveChildrenOf(Root);
+		TArray<UDreamWidget*> Existing;
+		CollectLiveUnder(Root, Existing);
 		if (!TestTrue(FString::Printf(TEXT("The %s row's drop is taken"), *Row.ToString()), Driver.DropFromPalette(Row, Driver.ViewportCentrePixel())))
 		{
 			State->bAlive = false;
 			return;
 		}
-		for (UDreamWidget* Child : LiveChildrenOf(Root))
+		TArray<UDreamWidget*> After;
+		CollectLiveUnder(Root, After);
+		for (UDreamWidget* Widget : After)
 		{
-			if (!Existing.Contains(Child))
+			if (!Existing.Contains(Widget))
 			{
-				State->Made.Add(TEXT("Dropped"), Child);
+				State->Made.Add(TEXT("Dropped"), Widget);
+				break;
 			}
 		}
-		if (!TestNotNull(TEXT("The dropped widget arrived under the root"), State->Get(TEXT("Dropped"))))
+		if (!TestNotNull(TEXT("The drop made a widget"), State->Get(TEXT("Dropped"))))
 		{
 			State->bAlive = false;
 			return;
@@ -844,7 +860,10 @@ bool FDreamDesignerPaletteEffectsPixelTest::RunTest(const FString& Parameters)
 		{
 			FDreamPixelProbe::SaveCapture(Now.Pixels, Now.Size, FString::Printf(TEXT("Designer_Palette_%s"), *Row.ToString()));
 		}
-		AddInfo(FString::Printf(TEXT("%s: %d pixels of its rect changed"), *Row.ToString(), *Changed));
+		const UDreamWidget* Dropped = State->Get(TEXT("Dropped"));
+		const UDreamWidget* Parent = Dropped != nullptr ? Dropped->GetParent() : nullptr;
+		AddInfo(FString::Printf(TEXT("%s: landed in %s, %d pixels of its rect changed"), *Row.ToString(),
+			Parent != nullptr ? *Parent->GetName() : TEXT("nothing"), *Changed));
 	});
 	EnqueueDesignerTeardown(State);
 	return true;
