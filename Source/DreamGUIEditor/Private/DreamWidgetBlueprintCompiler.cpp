@@ -1253,12 +1253,15 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		&Localization);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
-		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
-		// node names a type nothing resolves); this reports the OUTCOME (there is nothing to compile
-		// into the class), and they are different facts that a reader acts on differently. It also
-		// means this branch can never fail silently, whatever a future builder decides to return.
-		OutDiagnostics.AddError(EDreamUIDiagnosticCode::EmptyTree, Ast.Root.Location,
-			TEXT("the file parsed but produced no hierarchy, so there is nothing to compile into this class"));
+		// The outcome, said only when nothing has said why: a builder that reported a cause (this node names a type
+		// nothing resolves) has failed the compile already, and a second message pinned to the root line -- a line with
+		// nothing wrong on it -- was one more entry in the problems panel for every real one. Never silent, whatever a
+		// future builder decides to return.
+		if (!OutDiagnostics.HasErrors())
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::EmptyTree, Ast.Root.Location,
+				TEXT("the file parsed but produced no hierarchy, so there is nothing to compile into this class"));
+		}
 		return;
 	}
 

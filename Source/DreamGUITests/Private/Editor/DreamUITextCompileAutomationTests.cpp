@@ -613,18 +613,17 @@ bool FDreamUITextEmptyTreeTest::RunTest(const FString& Parameters)
 		if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(Source.FilePath))) return false;
 
 		AddExpectedError(Code(EDreamUIDiagnosticCode::UnknownNodeType), EAutomationExpectedErrorFlags::Contains, 0);
-		AddExpectedError(Code(EDreamUIDiagnosticCode::EmptyTree), EAutomationExpectedErrorFlags::Contains, 0);
 
 		FCompilerResultsLog Results;
 		Compile(Fixture.Blueprint, Results);
 		TestTrue(TEXT("a file that builds nothing fails the compile"), Results.NumErrors > 0);
-		// Two codes, and both are wanted. The builder's says the CAUSE -- this node names a type
-		// nothing resolves -- and the compile stage's says the OUTCOME, that there is no hierarchy to
-		// put on the class. A reader acts on them differently, which is why they are not one code.
+		// One message, the cause: this node names a type nothing resolves. The outcome -- no hierarchy to put on the
+		// class -- is the failed compile itself, and saying it as well put a second entry on the root line, which has
+		// nothing wrong with it.
 		TestMessagesContain(*this, TEXT("the builder says which node it could not make"), Results,
 			Code(EDreamUIDiagnosticCode::UnknownNodeType));
-		TestMessagesContain(*this, TEXT("and the compile says there was nothing to compile"), Results,
-			Code(EDreamUIDiagnosticCode::EmptyTree));
+		TestFalse(TEXT("and nothing more about the root line"),
+			JoinMessages(Results).Contains(Code(EDreamUIDiagnosticCode::EmptyTree)));
 	}
 
 	return true;

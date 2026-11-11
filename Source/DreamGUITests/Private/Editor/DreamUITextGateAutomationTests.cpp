@@ -829,10 +829,8 @@ bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
 		{
 			return false;
 		}
+		// The refused route empties the whole build; the cause code is the one message, with no outcome code after it.
 		AddExpectedError(TEXT("DUI5010"), EAutomationExpectedErrorFlags::Contains, 0);
-		// The refused route empties the whole build, so the outcome code follows the cause code --
-		// the same pair every builder refusal produces.
-		AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
 		FScopedGatedDesigner Scoped(TEXT("EventRouteNA"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
 		TestTrue(TEXT("a non-assignable delegate fails the compile"), Scoped.CompileErrors > 0);
 	}
