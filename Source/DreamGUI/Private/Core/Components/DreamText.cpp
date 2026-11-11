@@ -722,8 +722,11 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 		Params.FieldSpreadTexels = Style.FieldSpreadTexels;
 		Params.QuadMarginTexels = Style.QuadMarginTexels;
 		Params.TexelToUV = Style.TexelToUV;
-		// A colour glyph draws its shadow from its own alpha, and only when the style has one.
+		// A colour glyph draws its shadow from its own alpha, and only when the style has one. Every glyph's underlay goes in
+		// a block of its own, under the glows and outlines, which an underlay alone does without.
 		Params.bHasUnderlay = TextStyle.UnderlayColor.A > 0;
+		Params.bHasOutlineOrGlow = (TextStyle.OutlineColor.A > 0 && TextStyle.OutlineWidth > 0.0f)
+			|| (TextStyle.GlowColor.A > 0 && TextStyle.GlowWidth > 0.0f);
 	}
 	else
 	{

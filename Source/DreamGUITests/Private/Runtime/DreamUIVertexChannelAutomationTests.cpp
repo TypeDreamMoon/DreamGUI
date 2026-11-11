@@ -63,6 +63,12 @@ namespace DreamUIVertexChannelTestLocal
 	/** DreamUIText_UnpackGlyphChannel (DreamUIText.ush): a code that is no colour glyph, as layer and dilate. */
 	void ShaderUnpackGlyphChannel(float InCode, float& OutLayer, float& OutDilateEm)
 	{
+		if (InCode > 55.5f)
+		{
+			OutLayer = 4.0f;
+			OutDilateEm = InCode - 56.0f;
+			return;
+		}
 		OutLayer = FMath::FloorToFloat((InCode + 0.5f * 16.0f) / 16.0f);
 		OutDilateEm = InCode - OutLayer * 16.0f;
 	}
@@ -77,6 +83,7 @@ namespace DreamUIVertexChannelTestLocal
 		FieldFace,
 		FieldEffects,
 		FieldBoth,
+		FieldUnderlay,
 	};
 
 	const TCHAR* KindName(EQuadKind InKind)
@@ -89,6 +96,7 @@ namespace DreamUIVertexChannelTestLocal
 		case EQuadKind::Coverage: return TEXT("coverage");
 		case EQuadKind::FieldFace: return TEXT("field face");
 		case EQuadKind::FieldEffects: return TEXT("field effects");
+		case EQuadKind::FieldUnderlay: return TEXT("field underlay");
 		default: return TEXT("field face and effects");
 		}
 	}
@@ -107,9 +115,13 @@ namespace DreamUIVertexChannelTestLocal
 		float Layer = 0.0f;
 		float DilateEm = 0.0f;
 		ShaderUnpackGlyphChannel(InCode, Layer, DilateEm);
-		if (Layer > 2.5f)
+		if (Layer == 3.0f)
 		{
 			return EQuadKind::Coverage;
+		}
+		if (Layer == 4.0f)
+		{
+			return EQuadKind::FieldUnderlay;
 		}
 		return Layer == 0.0f ? EQuadKind::FieldFace : (Layer == 1.0f ? EQuadKind::FieldEffects : EQuadKind::FieldBoth);
 	}
@@ -284,9 +296,9 @@ bool FDreamUIQuadCodeDecodeTest::RunTest(const FString& Parameters)
 		float Code;
 		EQuadKind Kind;
 	};
-	// Every code a painter or a modifier writes: field faces, effects and both, with dilates up to the field's reach (the
-	// effects copy's widest dilate), coverage phases 0 to 3, the colour glyph's face, effects copy and silhouette, and a bitmap
-	// font's 0.
+	// Every code a painter or a modifier writes: field faces, effects, both and underlay copies, with dilates up to the field's
+	// reach (the effects copy's widest dilate), coverage phases 0 to 3, the colour glyph's face, effects copy and silhouette,
+	// and a bitmap font's 0.
 	const FCase Cases[] =
 	{
 		{ 0.0f, EQuadKind::FieldFace },
@@ -297,6 +309,9 @@ bool FDreamUIQuadCodeDecodeTest::RunTest(const FString& Parameters)
 		{ 2.0f * DreamTextQuadCode::FieldLayerStride + 1.5f, EQuadKind::FieldBoth },
 		{ DreamTextQuadCode::CoverageBase, EQuadKind::Coverage },
 		{ DreamTextQuadCode::CoverageBase + 3.0f, EQuadKind::Coverage },
+		{ DreamTextQuadCode::UnderlayBase, EQuadKind::FieldUnderlay },
+		{ DreamTextQuadCode::UnderlayBase + 0.25f, EQuadKind::FieldUnderlay },
+		{ DreamTextQuadCode::UnderlayBase + 7.5f, EQuadKind::FieldUnderlay },
 		{ DreamTextQuadCode::ColorFace, EQuadKind::ColorFace },
 		{ DreamTextQuadCode::ColorEffects, EQuadKind::ColorEffects },
 		{ DreamTextQuadCode::ColorSilhouette, EQuadKind::ColorSilhouette },

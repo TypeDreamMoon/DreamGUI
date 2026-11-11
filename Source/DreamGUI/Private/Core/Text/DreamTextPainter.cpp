@@ -13,8 +13,11 @@
 
 namespace DreamTextPainterLocal
 {
-	/** What a field glyph's quad draws: UV2.x is DilateEm + DreamTextQuadCode::FieldLayerStride * Layer. */
-	enum class EGlyphLayer : int32 { Face = 0, Effects = 1, Both = 2 };
+	/**
+	 * What a field glyph's quad draws: UV2.x is DilateEm + DreamTextQuadCode::FieldLayerStride * Layer for the face, the glow
+	 * and outline (Effects) or all of it (Both); DreamTextQuadCode::UnderlayBase + DilateEm for the underlay alone.
+	 */
+	enum class EGlyphLayer : int32 { Face = 0, Effects = 1, Both = 2, Underlay };
 
 	/**
 	 * Grows a glyph quad into the atlas's distance field so an effect that reaches ReachEm outside the
@@ -240,14 +243,16 @@ namespace DreamTextPainterLocal
 	{
 		int32 Shadow = 0;
 		int32 Outline = 0;
+		int32 Underlay = 0;
 		int32 Effects = 0;
 		int32 Face = 0;
 
-		int32 Total() const { return Shadow + Outline + Effects + Face; }
+		int32 Total() const { return Shadow + Outline + Underlay + Effects + Face; }
 		void Add(const FQuadCopies& Other, int32 Times)
 		{
 			Shadow += Other.Shadow * Times;
 			Outline += Other.Outline * Times;
+			Underlay += Other.Underlay * Times;
 			Effects += Other.Effects * Times;
 			Face += Other.Face * Times;
 		}
@@ -409,22 +414,27 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	};
 	const int32 ShadowCopies = bBitmapShadow ? 1 : 0;
 	const int32 OutlineCopies = bBitmapOutline ? UE_ARRAY_COUNT(OutlineTaps) : 0;
-	// Every quad is written as several copies: an effect copy and a face copy for a field with effects, a shadow,
-	// eight outline taps and a face for a bitmap font with both, the face alone otherwise. A quad's copies are
-	// neighbours in the vertex buffer -- so a character's vertex range still covers all of them, which is what
-	// TextAnimation moves -- while each kind of copy has its own block of the index buffer, back to front: every
-	// shadow draws before any outline and every outline before any face, as Slate draws them in whole-run passes. Per
-	// glyph, the next glyph's outline used to land on top of this glyph's face wherever the two overlapped.
+	// Every quad is written as several copies: for a field with effects an underlay copy, an effects copy (glow and outline)
+	// and a face copy, as many of the first two as the style draws; a shadow, eight outline taps and a face for a bitmap
+	// font with both; the face alone otherwise. A quad's copies are neighbours in the vertex buffer -- so a character's
+	// vertex range still covers all of them, which is what TextAnimation moves -- while each kind of copy has its own block
+	// of the index buffer, back to front: every shadow or underlay draws before any outline or glow, and every outline
+	// before any face, as Slate draws them in whole-run passes. Per glyph, the next glyph's outline used to land on top of
+	// this glyph's face wherever the two overlapped, and the next glyph's underlay on this glyph's outline.
+	const bool bFieldUnderlay = bSeparateEffectLayer && Params.bHasUnderlay;
 	FQuadCopies PlainCopies;
 	PlainCopies.Shadow = ShadowCopies;
 	PlainCopies.Outline = OutlineCopies;
-	PlainCopies.Effects = bSeparateEffectLayer ? 1 : 0;
+	PlainCopies.Underlay = bFieldUnderlay ? 1 : 0;
+	PlainCopies.Effects = (bSeparateEffectLayer && (!bFieldUnderlay || Params.bHasOutlineOrGlow)) ? 1 : 0;
 	PlainCopies.Face = 1;
+	const int32 PlainEffectCopies = PlainCopies.Underlay + PlainCopies.Effects;
 	// A colour glyph has no field, so no outline or glow: its face, and under it one copy for the underlay when the text
-	// draws one -- the style's underlay on a field font, the drop shadow on a bitmap font -- made of the glyph's alpha.
+	// draws one -- the style's underlay on a field font, in the underlay block; the drop shadow on a bitmap font, in the
+	// shadow block -- made of the glyph's alpha.
 	FQuadCopies ColorCopies;
 	ColorCopies.Shadow = ShadowCopies;
-	ColorCopies.Effects = (Params.bDistanceField && Params.bHasUnderlay) ? 1 : 0;
+	ColorCopies.Underlay = (Params.bDistanceField && Params.bHasUnderlay) ? 1 : 0;
 	ColorCopies.Face = 1;
 	// A coverage glyph standing in for a field glyph still pending: its face alone, there being no field quad to draw the
 	// effects from yet.
@@ -473,10 +483,10 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	// Small text from coverage glyphs (FDreamTextCoverageParams). A coverage glyph is a face and nothing else: a text whose
 	// quads come with a bitmap font's shadow or outline copies keeps its field quads, and a text with effects draws from
 	// coverage only through the effects hybrid (EffectFace), each coverage item's field effects copy under its coverage face.
-	const bool bEffectsHybrid = PlainCopies.Effects > 0 && Coverage.EffectFace != EDreamSmallTextEffectFace::Field;
+	const bool bEffectsHybrid = PlainEffectCopies > 0 && Coverage.EffectFace != EDreamSmallTextEffectFace::Field;
 	const bool bCoverage = Coverage.bEnabled && Coverage.Font != nullptr && Coverage.DeviceScale > 0.0f
 		&& Coverage.RasterScale > 0.0f && PlainCopies.Shadow == 0 && PlainCopies.Outline == 0
-		&& (PlainCopies.Effects == 0 || bEffectsHybrid);
+		&& (PlainEffectCopies == 0 || bEffectsHybrid);
 	const float CoverageCodeY = Coverage.Contrast + (Coverage.bLinearTarget ? DreamTextQuadCode::CoverageLinearTarget : 0.0f);
 	TArray<EItemQuad>& ItemQuads = Scratch.ItemQuads;
 	ItemQuads.Reset();
@@ -834,11 +844,12 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Triangles, TotalQuads * 6, false);
 
 	FQuadWriter Writer(OutGeometry);
-	// The index buffer's blocks, back to front: shadows, outline taps, effects, faces.
+	// The index buffer's blocks, back to front: shadows, outline taps, underlays, effects, faces.
 	int32 ShadowIndexCursor = 0;
 	int32 OutlineIndexCursor = Blocks.Shadow * 6;
-	int32 EffectIndexCursor = (Blocks.Shadow + Blocks.Outline) * 6;
-	int32 FaceIndexCursor = (Blocks.Shadow + Blocks.Outline + Blocks.Effects) * 6;
+	int32 UnderlayIndexCursor = (Blocks.Shadow + Blocks.Outline) * 6;
+	int32 EffectIndexCursor = (Blocks.Shadow + Blocks.Outline + Blocks.Underlay) * 6;
+	int32 FaceIndexCursor = (Blocks.Shadow + Blocks.Outline + Blocks.Underlay + Blocks.Effects) * 6;
 
 	// The boxes a slot's paints are measured in, for one item (FDreamTextPaintSlot, the display list's boxes): the text
 	// block, the content box, the item's line, its own glyph box (its pen box across, its ascent to its descent down), or its
@@ -985,8 +996,9 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		const float Grow = Grown.XOffset - SourceGlyph.XOffset;// negative or zero: how far each edge moved out
 		const int32 Start = Writer.VertexCursor;
 		// Fonts without a field leave UV2.x at zero.
-		const float UV2X = Params.bDistanceField
-			? Source.DilateEm + DreamTextQuadCode::FieldLayerStride * static_cast<float>(static_cast<int32>(Layer)) : 0.0f;
+		const float UV2X = !Params.bDistanceField ? 0.0f
+			: Layer == EGlyphLayer::Underlay ? DreamTextQuadCode::UnderlayBase + Source.DilateEm
+			: Source.DilateEm + DreamTextQuadCode::FieldLayerStride * static_cast<float>(static_cast<int32>(Layer));
 		const float CopyLeft = Source.Left + Grow + Offset.X;
 		const float CopyRight = Source.Right - Grow + Offset.X;
 		const float CopyBottom = Source.Bottom + Grow + Offset.Y + Lift;
@@ -1002,10 +1014,10 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	};
 
 	// Every copy of one quad. They share the item's fill channels, measured on the quad as the layout placed it, and the
-	// effect copy of a field may be grown further into the field than the face copy. The face copy is in Color and paints
+	// effect copies of a field may be grown further into the field than the face copy. The face copy is in Color and paints
 	// with FaceSlot. The effects fade with EffectOpacity instead of the item's alpha: a field's effects copy paints with
-	// EffectsSlot, a bitmap font's shadow and outline copies -- in their own colours, at their own alpha times that -- with
-	// nothing.
+	// EffectsSlot (its outline), a field's underlay copy and a bitmap font's shadow and outline copies -- in their own
+	// colours, at their own alpha times that -- with nothing.
 	auto WriteCopies = [&](const FQuadSource& Source, const FColor& Color, int32 FaceSlot, int32 EffectsSlot)
 	{
 		const FQuadWriter::FFill Fill = MakeFill(Source.ItemIndex, Source.Left, Source.Right);
@@ -1032,8 +1044,15 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		{
 			FColor EffectsColor = Color;
 			EffectsColor.A = EffectAlpha;
-			const int32 EffectsStart = WriteCopy(Source, EGlyphLayer::Effects, BothReachEm, FVector2f::ZeroVector, 0.0f, EffectsColor, Fill, EffectIndexCursor);
-			PaintQuad(EffectsStart, EffectsSlot, Source.ItemIndex, false);
+			if (PlainCopies.Underlay > 0)
+			{
+				WriteCopy(Source, EGlyphLayer::Underlay, BothReachEm, FVector2f::ZeroVector, 0.0f, EffectsColor, Fill, UnderlayIndexCursor);
+			}
+			if (PlainCopies.Effects > 0)
+			{
+				const int32 EffectsStart = WriteCopy(Source, EGlyphLayer::Effects, BothReachEm, FVector2f::ZeroVector, 0.0f, EffectsColor, Fill, EffectIndexCursor);
+				PaintQuad(EffectsStart, EffectsSlot, Source.ItemIndex, false);
+			}
 			const int32 FaceStart = WriteCopy(Source, EGlyphLayer::Face, Params.FaceReachEm, FVector2f::ZeroVector, 0.0f, Color, Fill, FaceIndexCursor);
 			PaintQuad(FaceStart, FaceSlot, Source.ItemIndex, true);
 		}
@@ -1077,11 +1096,11 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		PaintQuad(Start, CoveragePaint.FaceSlot, ItemIndex, true);
 	};
 
-	// The effects hybrid (FDreamTextCoverageParams::EffectFace): a coverage item's effects from the field, in the effects block
-	// under its coverage face -- the layout's field quad, grown and dilated as a field item's effects copy is, moved by the
-	// face's snap shift so the two line up; for synthetic bold also raised by half the bold, since FreeType grows a bold
-	// coverage glyph right and up where the field dilates it both ways (the right half is the field's bold shift already).
-	// The raise comes before the italic shear, as the bold does in the raster.
+	// The effects hybrid (FDreamTextCoverageParams::EffectFace): a coverage item's effects from the field, in the underlay and
+	// effects blocks under its coverage face -- the layout's field quad, grown and dilated as a field item's effect copies
+	// are, moved by the face's snap shift so the two line up; for synthetic bold also raised by half the bold, since FreeType
+	// grows a bold coverage glyph right and up where the field dilates it both ways (the right half is the field's bold shift
+	// already). The raise comes before the italic shear, as the bold does in the raster.
 	auto WriteCoverageEffects = [&](int32 ItemIndex, const FCoverageQuad& Quad)
 	{
 		const FQuadSource Source = MakeGlyphSource(ItemIndex);
@@ -1089,9 +1108,16 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		FColor EffectsColor = EffectsPaint.SlotColor;
 		EffectsColor.A = EffectAlpha;
 		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Source.Left + Quad.Shift.X, Source.Right + Quad.Shift.X);
-		const int32 Start = WriteCopy(Source, EGlyphLayer::Effects, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), Quad.Shift,
-			Source.DilateEm * Source.Em, EffectsColor, Fill, EffectIndexCursor);
-		PaintQuad(Start, EffectsPaint.EffectsSlot, ItemIndex, false);
+		const float ReachEm = FMath::Max(Params.EffectReachEm, Params.FaceReachEm);
+		if (PlainCopies.Underlay > 0)
+		{
+			WriteCopy(Source, EGlyphLayer::Underlay, ReachEm, Quad.Shift, Source.DilateEm * Source.Em, EffectsColor, Fill, UnderlayIndexCursor);
+		}
+		if (PlainCopies.Effects > 0)
+		{
+			const int32 Start = WriteCopy(Source, EGlyphLayer::Effects, ReachEm, Quad.Shift, Source.DilateEm * Source.Em, EffectsColor, Fill, EffectIndexCursor);
+			PaintQuad(Start, EffectsPaint.EffectsSlot, ItemIndex, false);
+		}
 	};
 
 	// The shader draws a colour glyph's underlay from its alpha sampled at UV minus the style's offset, and keeps that offset
@@ -1133,10 +1159,10 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			WriteOne(Glyph, Left + Offset.X, Right + Offset.X, Bottom + Offset.Y, Top + Offset.Y, Item.Pen.Y + Offset.Y,
 				DreamTextQuadCode::ColorEffects, EffectsWhite, Fill, ShadowIndexCursor);
 		}
-		if (ColorCopies.Effects > 0)
+		if (ColorCopies.Underlay > 0)
 		{
-			// A field font's underlay, which the shader moves by the style's offset. Its fill is measured on its own edges,
-			// so the run's lit edge falls where the face's does.
+			// A field font's underlay, which the shader moves by the style's offset, in the underlay block with every field
+			// glyph's. Its fill is measured on its own edges, so the run's lit edge falls where the face's does.
 			FDreamUICharData Inset = Glyph;
 			float InsetX = 0.0f;
 			float InsetY = 0.0f;
@@ -1152,7 +1178,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 				Inset.MaxUV -= FVector2f(InsetUV, InsetUV);
 			}
 			WriteOne(Inset, Left + InsetX, Right - InsetX, Bottom + InsetY, Top - InsetY, Item.Pen.Y,
-				DreamTextQuadCode::ColorEffects, EffectsWhite, MakeFill(ItemIndex, Left + InsetX, Right - InsetX), EffectIndexCursor);
+				DreamTextQuadCode::ColorEffects, EffectsWhite, MakeFill(ItemIndex, Left + InsetX, Right - InsetX), UnderlayIndexCursor);
 		}
 		WriteOne(Glyph, Left, Right, Bottom, Top, Item.Pen.Y, DreamTextQuadCode::ColorFace, White, Fill, FaceIndexCursor);
 	};
