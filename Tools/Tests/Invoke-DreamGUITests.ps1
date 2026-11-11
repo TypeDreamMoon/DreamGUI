@@ -33,10 +33,9 @@
 .PARAMETER Preset
     A preset from presets.json: Quick (default), Interaction, Designer, Rhi, Validate, Pie, All.
 .PARAMETER Project
-    The .uproject. Default: $env:DREAMGUI_TEST_PROJECT, else the test host project when it exists,
-    else DevTest.
+    The .uproject. Default: $env:DREAMGUI_TEST_PROJECT; with neither, the runner stops and says so.
 .PARAMETER Engine
-    The engine root. Default: $env:DREAMGUI_ENGINE, else F:\UnrealEngine\UE_Moon.
+    The engine root. Default: $env:DREAMGUI_ENGINE; with neither, the runner stops and says so.
 .PARAMETER NoBuild
     Skip the build; the manifest is still checked.
 .PARAMETER SkipStaticChecks
@@ -112,11 +111,6 @@ trap {
     if ($_.InvocationInfo) { Write-Host "    $($_.InvocationInfo.PositionMessage)" }
     exit 2
 }
-
-# Where this machine keeps things; each can be overridden (see README.md).
-$HostProjectDefault = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\DreamGUITestHost.uproject'
-$DevTestProjectDefault = 'I:\UnrealProject_Moon\DEV_58\DevTest\DevTest.uproject'
-$EngineDefault = 'F:\UnrealEngine\UE_Moon'
 
 $ToolsDir = $PSScriptRoot
 $PresetsFile = Join-Path $ToolsDir 'presets.json'
@@ -472,18 +466,16 @@ $spec = $presets[$presetKey]
 $PresetArgs = @(Get-Prop $spec 'args' | Where-Object { $_ })
 $SoftQuit = [bool](Get-Prop $spec 'softQuit')
 
-if (-not $Engine) { $Engine = if ($env:DREAMGUI_ENGINE) { $env:DREAMGUI_ENGINE } else { $EngineDefault } }
+if (-not $Engine) { $Engine = $env:DREAMGUI_ENGINE }
+if (-not $Engine) { Stop-Run 2 'No engine: pass -Engine <engine root>, or set DREAMGUI_ENGINE.' }
 $Engine = Resolve-UserPath $Engine
 $EditorCmd = Join-Path $Engine 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $BuildBat = Join-Path $Engine 'Engine\Build\BatchFiles\Build.bat'
 if (-not (Test-Path -LiteralPath $EditorCmd -PathType Leaf)) { Stop-Run 2 "No UnrealEditor-Cmd.exe under the engine $Engine." }
 if (-not $NoBuild -and -not (Test-Path -LiteralPath $BuildBat -PathType Leaf)) { Stop-Run 2 "No Build.bat under the engine $Engine." }
 
-if (-not $Project) {
-    if ($env:DREAMGUI_TEST_PROJECT) { $Project = $env:DREAMGUI_TEST_PROJECT }
-    elseif (Test-Path -LiteralPath $HostProjectDefault -PathType Leaf) { $Project = $HostProjectDefault }
-    else { $Project = $DevTestProjectDefault }
-}
+if (-not $Project) { $Project = $env:DREAMGUI_TEST_PROJECT }
+if (-not $Project) { Stop-Run 2 'No project: pass -Project <path to the .uproject>, or set DREAMGUI_TEST_PROJECT (the test host''s .uproject, see Tools/TestHost/).' }
 $Project = Resolve-UserPath $Project
 if (-not (Test-Path -LiteralPath $Project -PathType Leaf) -or [IO.Path]::GetExtension($Project) -ne '.uproject') {
     Stop-Run 2 "The project $Project is not an existing .uproject."
