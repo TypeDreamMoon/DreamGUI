@@ -24,7 +24,7 @@ Requirements: PowerShell 7.2 or later (`pwsh`), Python 3.8 or later on `PATH` as
 pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1                    # Quick: build, then the headless suite
 pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1 -Preset Rhi -NoBuild
 pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1 -Filter "StartsWith:DreamGUI.Button" -Repeat 5
-pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1 -Project I:\UnrealProject_Moon\DEV_58\DevTest\DevTest.uproject
+pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1 -Project <ProjectDir>\<Project>.uproject
 ```
 
 The steps, in order:

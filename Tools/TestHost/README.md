@@ -101,7 +101,7 @@ In PowerShell, from anywhere; `$Host_` is the host directory. The steps build tw
 
 ```powershell
 $Engine = 'C:\Program Files\Epic Games\UE_5.8'
-$Host_  = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost'
+$Host_  = '<HostDir>'
 $Proj   = "$Host_\DreamGUITestHost.uproject"
 $Out    = "$Host_\Saved\TextSmoke"
 $env:NO_PROXY = "$env:NO_PROXY,[::1]"
@@ -189,8 +189,8 @@ The reference half of the text smoke test's commands, with the click probe's swi
 uncooked content. A few seconds once the editor target is built.
 
 ```powershell
-$Engine = 'F:\UnrealEngine\UE_Moon'
-$Host_  = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost'
+$Engine = '<EngineDir>'
+$Host_  = '<HostDir>'
 $Proj   = "$Host_\DreamGUITestHost.uproject"
 $Out    = "$Host_\Saved\ClickSmoke"
 
@@ -259,7 +259,7 @@ The test runner owns building and running; it picks the host up by itself when t
 exists:
 
 ```powershell
-pwsh -NoProfile -File I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\Plugins\DreamGUI\Tools\Tests\Invoke-DreamGUITests.ps1 -Project I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\DreamGUITestHost.uproject
+pwsh -NoProfile -File <HostDir>\Plugins\DreamGUI\Tools\Tests\Invoke-DreamGUITests.ps1 -Project <HostDir>\DreamGUITestHost.uproject
 ```
 
 See `Tools/Tests/README.md` for presets, reports and exit codes.
@@ -294,8 +294,8 @@ test builds it on purpose (above); against a launcher engine that costs a plugin
 The worktree is an ordinary checkout; change it with git, in the worktree:
 
 ```powershell
-git -C I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\Plugins\DreamGUI switch <branch>
-git -C I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\Plugins\DreamGUI switch --detach <commit>
+git -C <HostDir>\Plugins\DreamGUI switch <branch>
+git -C <HostDir>\Plugins\DreamGUI switch --detach <commit>
 ```
 
 - **One branch, one worktree.** git refuses to check out a branch that another worktree already has
@@ -325,8 +325,8 @@ already warmed:
 - The cache this engine actually reads and writes is the local **Zen** store. Its data directory is
   machine-wide (`[Zen.AutoLaunch] DataPath` in the engine's `BaseEngine.ini`, resolving to
   `%LOCALAPPDATA%\UnrealEngine\Common\Zen\Data`) and so is its namespace (`ue.ddc`): every project on
-  this engine uses the same store. On this machine `%LOCALAPPDATA%\UnrealEngine\Common\Zen` is a link to
-  `F:\Zen\Zen`, so the data is on F:. The setup script reports where the data physically lands and warns
+  this engine uses the same store. Where `%LOCALAPPDATA%\UnrealEngine\Common\Zen` is a link to
+  another drive, the data is on that drive. The setup script reports where the data physically lands and warns
   if it is on drive C; moving it is a machine-wide decision, not the host's.
 - The per-project FileSystem store (`<project>\LocalDerivedDataCache`) is configured `DeleteOnly` by this
   engine, so it takes no reads or writes; the host's lands on the host's own drive anyway.
