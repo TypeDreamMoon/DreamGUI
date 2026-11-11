@@ -478,7 +478,7 @@ bool FDreamUISyntaxParseNamespaceTest::RunTest(const FString& Parameters)
 
 	if (const FDreamUIStyle* Danger = Ast.FindStyle(TEXT("nier.Danger")))
 	{
-		TestEqual(TEXT("a base the library declares is renamed with it"), Danger->BaseName, FString(TEXT("nier.Card")));
+		TestEqual(TEXT("a base the library declares is renamed with it"), (Danger->BaseRefs.Num() == 1 ? Danger->BaseRefs[0].Name : FString()), FString(TEXT("nier.Card")));
 		TestTrue(TEXT("a resource reference on a style line"), Danger->Properties.Num() == 1
 			&& Danger->Properties[0].Value.Raw == TEXT("nier.Accent"));
 		TestTrue(TEXT("on a style's component"), Danger->Components.Num() == 1
@@ -493,7 +493,7 @@ bool FDreamUISyntaxParseNamespaceTest::RunTest(const FString& Parameters)
 
 	const FDreamUIStyle* Uses = Ast.FindStyle(TEXT("nier.Uses"));
 	TestTrue(TEXT("a base from the library's own namespace is renamed into this one"),
-		Uses != nullptr && Uses->BaseName == TEXT("nier.pal.Base"));
+		Uses != nullptr && Uses->BaseRefs.Num() == 1 && Uses->BaseRefs[0].Name == TEXT("nier.pal.Base"));
 	TestNotNull(TEXT("and that base is here under that name"), Ast.FindStyle(TEXT("nier.pal.Base")));
 	const FDreamUIStyle* Outside = Ast.FindStyle(TEXT("nier.Outside"));
 	TestTrue(TEXT("a name the library does not declare is left for wherever it resolves"),
@@ -512,7 +512,7 @@ bool FDreamUISyntaxParseNamespaceTest::RunTest(const FString& Parameters)
 	{
 		const FDreamUINode& R1 = Ast.Root.Children[0];
 		TestEqual(TEXT("a namespaced node type is joined as written"), R1.TypeName, FString(TEXT("nier.Row")));
-		TestEqual(TEXT("a namespaced style clause is joined as written"), R1.StyleName, FString(TEXT("nier.Danger")));
+		TestEqual(TEXT("a namespaced style clause is joined as written"), R1.GetFirstStyleName(), FString(TEXT("nier.Danger")));
 		TestTrue(TEXT("a namespaced resource value keeps its dots in Raw"), R1.Properties.Num() == 1
 			&& R1.Properties[0].Value.Kind == EDreamUIValueKind::ResourceRef && R1.Properties[0].Value.Raw == TEXT("nier.Ink"));
 		TestEqual(TEXT("located at its '@'"), R1.Properties[0].Value.Location.Column, 41);
@@ -758,7 +758,7 @@ bool FDreamUISyntaxParseAnonymousTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("an unnamed child of an unnamed node takes the made id as its parent's"),
 				Box.Children[0].Id, FString(TEXT("Root__HorizontalBox0__Text0")));
 			TestEqual(TEXT("the second of a type counts one"), Box.Children[1].Id, FString(TEXT("Root__HorizontalBox0__Text1")));
-			TestEqual(TEXT("a style clause needs no id before it"), Box.Children[1].StyleName, FString(TEXT("Caption")));
+			TestEqual(TEXT("a style clause needs no id before it"), Box.Children[1].GetFirstStyleName(), FString(TEXT("Caption")));
 		}
 		TestEqual(TEXT("counts are per parent"), Children[1].Id, FString(TEXT("Root__Text0")));
 		TestEqual(TEXT("a resource type loses its '@' to '_'"), Children[2].Id, FString(TEXT("Root___Row0")));
@@ -1288,7 +1288,7 @@ bool FDreamUISyntaxParseSlotTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("a declaration is a named slot"), static_cast<int32>(Rows->Kind), static_cast<int32>(EDreamUINodeKind::NamedSlot));
 		TestTrue(TEXT("the default one"), Rows->bDefaultSlot);
 		TestFalse(TEXT("which fills nothing"), Rows->bFillsSlot);
-		TestEqual(TEXT("wearing a style"), Rows->StyleName, FString(TEXT("RowList")));
+		TestEqual(TEXT("wearing a style"), Rows->GetFirstStyleName(), FString(TEXT("RowList")));
 		TestTrue(TEXT("with its component, property and slot line"), Rows->Components.Num() == 1
 			&& Rows->Properties.Num() == 1 && Rows->SlotProperties.Num() == 1);
 		TestEqual(TEXT("and no children"), Rows->Children.Num(), 0);

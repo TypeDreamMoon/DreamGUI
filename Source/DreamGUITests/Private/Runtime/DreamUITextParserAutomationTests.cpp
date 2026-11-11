@@ -244,7 +244,7 @@ bool FDreamUITextWholeFileShapeTest::RunTest(const FString& Parameters)
 	if (const FDreamUINode* Bg = ChildById(Root, TEXT("Bg")))
 	{
 		TestEqual(TEXT("a built-in tag is kept verbatim"), Bg->TypeName, FString(TEXT("Image")));
-		TestEqual(TEXT("a colon clause records the style by name"), Bg->StyleName, FString(TEXT("Card")));
+		TestEqual(TEXT("a colon clause records the style by name"), Bg->GetFirstStyleName(), FString(TEXT("Card")));
 		if (TestEqual(TEXT("with the block's one property"), Bg->Properties.Num(), 1))
 		{
 			TestEqual(TEXT("a hash literal is a colour"), static_cast<int32>(Bg->Properties[0].Value.Kind),
@@ -895,7 +895,7 @@ bool FDreamUITextClauseDiagnosticsTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("a style clause before a rename clause parses"), bParsed);
 		if (TestEqual(TEXT("producing one child"), Ast.Root.Children.Num(), 1))
 		{
-			TestEqual(TEXT("with its style"), Ast.Root.Children[0].StyleName, FString(TEXT("Card")));
+			TestEqual(TEXT("with its style"), Ast.Root.Children[0].GetFirstStyleName(), FString(TEXT("Card")));
 			TestEqual(TEXT("and its old id"), Ast.Root.Children[0].WasId, FString(TEXT("OkLabel")));
 		}
 	}
@@ -1269,7 +1269,7 @@ bool FDreamUITextNonAsciiNameTest::RunTest(const FString& Parameters)
 
 	if (TestEqual(TEXT("all three children came through"), Ast.Root.Children.Num(), 3))
 	{
-		TestEqual(TEXT("a style may be named in Chinese"), Ast.Root.Children[0].StyleName, FString(TEXT("卡片")));
+		TestEqual(TEXT("a style may be named in Chinese"), Ast.Root.Children[0].GetFirstStyleName(), FString(TEXT("卡片")));
 		TestEqual(TEXT("a name may mix scripts and underscores"), Ast.Root.Children[1].Id, FString(TEXT("按钮_OK")));
 		TestEqual(TEXT("so may a rename clause's old id"), Ast.Root.Children[1].WasId, FString(TEXT("旧名字")));
 		TestEqual(TEXT("and a named slot"), Ast.Root.Children[2].Id, FString(TEXT("页脚")));

@@ -293,6 +293,16 @@ struct DREAMGUI_API FDreamUIProperty
 	FDreamUISourceLocation Location;
 };
 
+/**
+ * One name of a style clause: `: Card`, or each of `: Card : Loud`. Location is the name's first word, where a
+ * diagnostic about that one name belongs.
+ */
+struct DREAMGUI_API FDreamUIStyleRef
+{
+	FString Name;
+	FDreamUISourceLocation Location;
+};
+
 /** `+ UIButton { … }` -- a UDreamUIBehaviour attached to the enclosing node. */
 struct DREAMGUI_API FDreamUIComponent
 {
@@ -380,8 +390,14 @@ struct DREAMGUI_API FDreamUINode
 	 */
 	FString RowKey;
 
-	/** `: StyleName` -- properties from that style are applied first, then these override. */
-	FString StyleName;
+	/**
+	 * `: Card` or `: Card : Loud` -- the styles this node wears, as written. Their properties apply first (see
+	 * FDreamUIAst::CollectStyleChain for the order), then the node's own override them. Empty when it wears none.
+	 */
+	TArray<FDreamUIStyleRef> StyleRefs;
+
+	/** The first style the node wears, or empty: what a caller that only ever met one style reads. */
+	const FString& GetFirstStyleName() const;
 
 	/**
 	 * Loops only: the loop variable, and the source of the sequence -- a no-argument UFUNCTION (`in GetItems()`) or a
@@ -418,8 +434,11 @@ struct DREAMGUI_API FDreamUINode
 struct DREAMGUI_API FDreamUIStyle
 {
 	FString Name;
-	/** `style Danger : Button` -- Button's properties apply first, then these override. Empty = none. */
-	FString BaseName;
+	/**
+	 * `style Danger : Button` or `style Danger : Button : Loud` -- the bases, as written. Their properties apply first
+	 * (FDreamUIAst::CollectStyleChain), then these override. Empty = none.
+	 */
+	TArray<FDreamUIStyleRef> BaseRefs;
 	TArray<FDreamUIProperty> Properties;
 	/** `+ Component { … }` lines inside the style. */
 	TArray<FDreamUIComponent> Components;
@@ -630,6 +649,27 @@ struct DREAMGUI_API FDreamUITimeline
 	FString SourceName;
 };
 
+/** Something CollectStyleChain met on the way. Which ones a caller reports, and where, is the caller's to say. */
+struct DREAMGUI_API FDreamUIStyleChainProblem
+{
+	enum class EKind : uint8
+	{
+		/** Ref names no style this AST can see. */
+		Unknown,
+		/** Following Ref's bases comes back to a style still being expanded. Nothing of the clause applies. */
+		Cycle,
+		/** Ref's style was already applied by an earlier name of the same clause (Through), so naming it again does nothing. */
+		AlreadyApplied,
+	};
+	EKind Kind = EKind::Unknown;
+	/** The name the problem is about, where it was written. */
+	FDreamUIStyleRef Ref;
+	/** The style whose clause holds Ref; null when Ref is in the clause the walk started from (a node's). */
+	const FDreamUIStyle* Owner = nullptr;
+	/** AlreadyApplied: the earlier name of the clause whose expansion applied it. Cycle: the style the walk came back to. */
+	FString Through;
+};
+
 struct DREAMGUI_API FDreamUIAst
 {
 	/** `class /Game/UI/WBP_SavePanel` -- which blueprint this tree compiles into. */
@@ -692,6 +732,21 @@ struct DREAMGUI_API FDreamUIAst
 	bool bHasRoot = false;
 
 	const FDreamUIStyle* FindStyle(const FString& InName) const;
+
+	/**
+	 * The styles a clause applies, in the order they apply -- the one rule every reader of a style clause shares.
+	 *
+	 * Left to right; each name brings its own bases first (recursively, by the same rule), and a style applies once, at
+	 * its FIRST appearance: `style A : Base`, `style B : Base` and `: A : B` apply Base, A, B. What comes later
+	 * overrides what came before, and the node's own lines come after all of it.
+	 *
+	 * A name nothing declares is skipped (its bases with it) and the rest still applies. A cycle empties OutBaseFirst --
+	 * nothing of a clause that inherits itself applies -- and returns false. Problems go to OutProblems when given, in
+	 * the order met; a name repeated within one clause, or already applied by an earlier name of the same clause, is an
+	 * AlreadyApplied problem and is otherwise harmless.
+	 */
+	bool CollectStyleChain(TConstArrayView<FDreamUIStyleRef> InClause, TArray<const FDreamUIStyle*>& OutBaseFirst,
+		TArray<FDreamUIStyleChainProblem>* OutProblems = nullptr) const;
 
 	/** The entry `@InName` refers to, or null. First declaration wins, like styles. */
 	const FDreamUIResource* FindResource(const FString& InName) const;

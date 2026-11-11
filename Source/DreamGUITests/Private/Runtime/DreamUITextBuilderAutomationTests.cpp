@@ -457,7 +457,7 @@ bool FDreamUITextBuilderStyleOrderTest::RunTest(const FString& Parameters)
 	using namespace DreamUITextBuilderTestLocal;
 
 	FDreamUINode Root = MakeNode(TEXT("Text"), TEXT("Label"));
-	Root.StyleName = TEXT("Card");
+	Root.StyleRefs.Add({ TEXT("Card"), FDreamUISourceLocation() });
 	Root.Properties.Add(AssignNumber(TEXT("RenderOpacity"), TEXT("0.75")));
 
 	FDreamUIAst Ast = AstWith(Root);
@@ -808,7 +808,7 @@ bool FDreamUITextBuilderDiagnosticCodesTest::RunTest(const FString& Parameters)
 		},
 		{
 			TEXT("a style the file does not declare"), EDreamUIDiagnosticCode::UnknownStyle,
-			[](FDreamUIAst& Ast) { Ast.Root.StyleName = TEXT("NoSuchStyle"); }
+			[](FDreamUIAst& Ast) { Ast.Root.StyleRefs.Add({ TEXT("NoSuchStyle"), FDreamUISourceLocation() }); }
 		},
 		{
 			TEXT("a '+' naming nothing attachable"), EDreamUIDiagnosticCode::UnknownBehaviourClass,

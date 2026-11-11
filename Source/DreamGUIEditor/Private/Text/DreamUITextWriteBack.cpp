@@ -857,41 +857,6 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
-	 * The style a node wears and every base it inherits, BASE FIRST -- the order the builder applies them in. Empty on a
-	 * cycle, where the builder applies nothing either.
-	 *
-	 * A style that came in under a namespace (`: nier.Card`) was written inside its library, where `: Label` meant the
-	 * library's Label; here that one is `nier.Label`, so a base is looked for under the derived style's namespace first.
-	 */
-	void CollectStyleChain(const FDreamUIAst& InAst, const FString& InStyleName, TArray<const FDreamUIStyle*>& OutChain)
-	{
-		OutChain.Reset();
-		TSet<const FDreamUIStyle*> Visited;
-		const FDreamUIStyle* Link = InStyleName.IsEmpty() ? nullptr : InAst.FindStyle(InStyleName);
-		while (Link != nullptr)
-		{
-			if (Visited.Contains(Link))
-			{
-				OutChain.Reset();
-				return;
-			}
-			Visited.Add(Link);
-			OutChain.Insert(Link, 0);
-			if (Link->BaseName.IsEmpty())
-			{
-				break;
-			}
-			const FDreamUIStyle* Base = nullptr;
-			int32 Dot = INDEX_NONE;
-			if (Link->Name.FindLastChar(TEXT('.'), Dot) && !Link->BaseName.Contains(TEXT(".")))
-			{
-				Base = InAst.FindStyle(Link->Name.Left(Dot + 1) + Link->BaseName);
-			}
-			Link = Base != nullptr ? Base : InAst.FindStyle(Link->BaseName);
-		}
-	}
-
-	/**
 	 * Every authored widget of a tree, by the one name the language has.
 	 *
 	 * To the nested boundary and no further. A nested widget blueprint hangs its own contents off
@@ -1914,7 +1879,8 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 		}
 
 		TArray<const FDreamUIStyle*> StyleChain;
-		CollectStyleChain(InAst, InNode.StyleName, StyleChain);
+		// The builder's order (FDreamUIAst::CollectStyleChain); empty on a cycle, where the builder applies nothing either.
+		InAst.CollectStyleChain(InNode.StyleRefs, StyleChain);
 
 		// ---- bare `Name = Value`: the widget, its visual, the container its type names ----------
 		{

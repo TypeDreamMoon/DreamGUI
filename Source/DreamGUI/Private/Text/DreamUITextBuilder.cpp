@@ -1946,60 +1946,45 @@ namespace DreamUITextBuilderLocal
 	void ResolveStyleChain(const FDreamUINode& InNode, FBuildContext& InContext, TArray<const FDreamUIStyle*>& OutBaseFirst)
 	{
 		OutBaseFirst.Reset();
-		if (InNode.StyleName.IsEmpty())
+		if (InNode.StyleRefs.IsEmpty())
 		{
 			return;
 		}
-		const FDreamUIStyle* Style = InContext.Ast->FindStyle(InNode.StyleName);
-		if (Style == nullptr)
+		// The order every reader of a clause shares (FDreamUIAst::CollectStyleChain): left to right, bases first, each
+		// style once. A repeated name is the parser's warning (StyleAlreadyApplied), said once per clause; what is
+		// reported here is what changes the build.
+		TArray<FDreamUIStyleChainProblem> Problems;
+		InContext.Ast->CollectStyleChain(InNode.StyleRefs, OutBaseFirst, &Problems);
+		for (const FDreamUIStyleChainProblem& Problem : Problems)
 		{
-			// Deliberately the second place this is checked -- FDreamUISourceFile catches it too,
-			// and in the normal pipeline the parse fails first so this never fires. It stays
-			// because the builder's other caller is an AST built by hand (the designer, a test),
-			// and there the alternative is applying no style and saying nothing.
-			//
-			// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this
-			// defensible rather than a habit: duplicate ids are a property of the whole FILE, so
-			// checking them here would mean the builder keeping its own id set to answer a
-			// question it is not the authority on. "Is this style declared" is one lookup in the
-			// AST the builder was handed.
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
-				FString::Printf(TEXT("no style named '%s' is declared in this file"), *InNode.StyleName));
-			return;
-		}
-		TArray<const FDreamUIStyle*> Chain;
-		TSet<const FDreamUIStyle*> Visited;
-		for (const FDreamUIStyle* Link = Style; Link != nullptr;)
-		{
-			if (Visited.Contains(Link))
+			if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Unknown && Problem.Owner == nullptr)
 			{
-				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
-					FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Style->Name));
-				return;
+				// Deliberately the second place this is checked -- FDreamUISourceFile catches it too, and in the normal
+				// pipeline the parse fails first so this never fires. It stays because the builder's other caller is an
+				// AST built by hand (the designer, a test), and there the alternative is applying no style and saying
+				// nothing.
+				//
+				// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this defensible rather
+				// than a habit: duplicate ids are a property of the whole FILE, so checking them here would mean the
+				// builder keeping its own id set to answer a question it is not the authority on. "Is this style
+				// declared" is one lookup in the AST the builder was handed.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
+					FString::Printf(TEXT("no style named '%s' is declared in this file"), *Problem.Ref.Name));
 			}
-			Visited.Add(Link);
-			Chain.Add(Link);
-			if (Link->BaseName.IsEmpty())
+			else if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Unknown)
 			{
-				break;
-			}
-			// Already the library's own when the style came in under a namespace: the parser renames a library style's
-			// base along with the style (`nier.Danger : nier.Label`), so the plain lookup is the right one here too.
-			const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
-			if (Base == nullptr)
-			{
-				// Link->Location is a line in the file that DECLARES the style, which an
-				// import chain makes a different file from the one being compiled.
-				AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+				// The owner's Location is a line in the file that DECLARES the style, which an import chain makes a
+				// different file from the one being compiled. The rest of the chain still applies.
+				AddErrorIn(*InContext.Diagnostics, Problem.Owner->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Problem.Owner->Location,
 					FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
-						*Link->Name, *Link->BaseName));
-				break;
+						*Problem.Owner->Name, *Problem.Ref.Name));
 			}
-			Link = Base;
-		}
-		for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
-		{
-			OutBaseFirst.Add(Chain[Index]);
+			else if (Problem.Kind == FDreamUIStyleChainProblem::EKind::Cycle)
+			{
+				// Reported against the node so every node wearing the broken style says so; nothing of it applies.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
+					FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Problem.Through));
+			}
 		}
 	}
 
@@ -2720,7 +2705,7 @@ namespace DreamUITextBuilderLocal
 						*InNode.Id, *InParent->GetDisplayName(), *InParent->GetClass()->GetName(), *InNode.Id));
 			return nullptr;
 		}
-		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleName.IsEmpty())
+		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleRefs.IsEmpty())
 		{
 			// The parser refuses this shape; an AST built by hand reaches here with it, and there is nothing these
 			// lines could be written on -- the slot widget is the component's, in another file.

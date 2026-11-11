@@ -2746,6 +2746,23 @@ namespace DreamUIPatchLocal
 		return true;
 	}
 
+	/** Two style clauses name the same styles in the same order (names compare as FNames do, case insensitively). */
+	bool SameStyleClause(TConstArrayView<FDreamUIStyleRef> InA, TConstArrayView<FDreamUIStyleRef> InB)
+	{
+		if (InA.Num() != InB.Num())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < InA.Num(); ++Index)
+		{
+			if (InA[Index].Name != InB[Index].Name)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/** The rows of InRow's table: its siblings that are rows of the same type, the run of them InRow stands in. */
 	void CollectTableRows(const FDreamUINode& InParent, const FDreamUINode& InRow, TArray<const FDreamUINode*>& OutRows)
 	{
@@ -2754,7 +2771,8 @@ namespace DreamUIPatchLocal
 		bool bFound = false;
 		for (const FDreamUINode& Child : InParent.Children)
 		{
-			const bool bSameTable = !Child.RowKey.IsEmpty() && Child.TypeName == InRow.TypeName && Child.StyleName == InRow.StyleName;
+			const bool bSameTable = !Child.RowKey.IsEmpty() && Child.TypeName == InRow.TypeName
+				&& SameStyleClause(Child.StyleRefs, InRow.StyleRefs);
 			if (bSameTable)
 			{
 				Run.Add(&Child);

@@ -1678,20 +1678,18 @@ namespace DreamWidgetRenameMigrationLocal
 				return true;
 			}
 		}
-		// A string can also reach the node THROUGH the style it wears -- the builder keys those by
+		// A string can also reach the node THROUGH the styles it wears -- the builder keys those by
 		// this node's id exactly the same way, so a rename orphans them exactly the same way. The
-		// walk mirrors the builder's chain (base upward, cycle-guarded); a broken chain just stops,
-		// because the builder already reported it and this predicate only decides whether to hint.
-		const FDreamUIStyle* Style = InNode.StyleName.IsEmpty() ? nullptr : InAst.FindStyle(InNode.StyleName);
-		TSet<const FDreamUIStyle*> Visited;
-		while (Style != nullptr && !Visited.Contains(Style))
+		// builder's own chain; a broken one applies nothing, because the builder already reported it
+		// and this predicate only decides whether to hint.
+		TArray<const FDreamUIStyle*> Chain;
+		InAst.CollectStyleChain(InNode.StyleRefs, Chain);
+		for (const FDreamUIStyle* Style : Chain)
 		{
-			Visited.Add(Style);
 			if (AnyUnkeyedString(Style->Properties))
 			{
 				return true;
 			}
-			Style = Style->BaseName.IsEmpty() ? nullptr : InAst.FindStyle(Style->BaseName);
 		}
 		return false;
 	}

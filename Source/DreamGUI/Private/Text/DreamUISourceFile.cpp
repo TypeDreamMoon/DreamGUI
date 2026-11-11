@@ -1026,9 +1026,12 @@ namespace DreamUIText
 				return;
 			}
 			InOutStyle.Name = Prefixed(InOutStyle.Name);
-			if (!InOutStyle.BaseName.IsEmpty() && StyleNames.Contains(InOutStyle.BaseName))
+			for (FDreamUIStyleRef& Base : InOutStyle.BaseRefs)
 			{
-				InOutStyle.BaseName = Prefixed(InOutStyle.BaseName);
+				if (StyleNames.Contains(Base.Name))
+				{
+					Base.Name = Prefixed(Base.Name);
+				}
 			}
 			PrefixReferences(InOutStyle.Properties);
 			for (FDreamUIComponent& Component : InOutStyle.Components)
@@ -1987,19 +1990,13 @@ namespace DreamUIText
 			Style.Name = Current().Text;
 			Advance();
 
-			if (Check(ETokenKind::Colon))
+			// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is the same relationship:
+			// properties from over there, then mine on top. `: nier.Button` takes a library's, the same way a node's
+			// clause does, and `: Button : Loud` takes both, in the order FDreamUIAst::CollectStyleChain says.
+			if (!ParseStyleRefs(Style.BaseRefs, FString::Printf(TEXT("expected a base style name after 'style %s :'"), *Style.Name)))
 			{
-				// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is
-				// the same relationship: properties from over there, then mine on top. `: nier.Button`
-				// takes a library's, the same way a node's clause does.
-				Advance();
-				if (!Check(ETokenKind::Identifier))
-				{
-					RaiseUnexpectedToken(FString::Printf(TEXT("expected a base style name after 'style %s :'"), *Style.Name));
-					RecoverToStatementBoundary();
-					return;
-				}
-				Style.BaseName = ParseQualifiedName(nullptr);
+				RecoverToStatementBoundary();
+				return;
 			}
 
 			if (!Check(ETokenKind::OpenBrace))
@@ -3024,14 +3021,31 @@ namespace DreamUIText
 
 		void ParseStyleClause(FDreamUINode& OutNode)
 		{
-			Advance(); // ':'
-			if (!Check(ETokenKind::Identifier))
+			// `: Card`, or `: nier.Card` -- a style a namespace brought in, under the name it was entered as -- or several,
+			// `: Card : Loud`, applied in the order FDreamUIAst::CollectStyleChain says.
+			ParseStyleRefs(OutNode.StyleRefs, TEXT("expected a style name after ':'"));
+		}
+
+		/**
+		 * `: Card` or `: Card : Loud` -- a style clause, the cursor on its first ':', each name appended to OutRefs at its
+		 * own location. False when a ':' has no name after it, reported with InMissingNameMessage; the names before it are
+		 * kept.
+		 */
+		bool ParseStyleRefs(TArray<FDreamUIStyleRef>& OutRefs, const FString& InMissingNameMessage)
+		{
+			while (Check(ETokenKind::Colon))
 			{
-				RaiseUnexpectedToken(TEXT("expected a style name after ':'"));
-				return;
+				Advance(); // ':'
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(InMissingNameMessage);
+					return false;
+				}
+				FDreamUIStyleRef& Ref = OutRefs.AddDefaulted_GetRef();
+				Ref.Location = Current().Location;
+				Ref.Name = ParseQualifiedName(nullptr);
 			}
-			// `: Card`, or `: nier.Card` -- a style a namespace brought in, under the name it was entered as.
-			OutNode.StyleName = ParseQualifiedName(nullptr);
+			return true;
 		}
 
 		/**
@@ -3250,7 +3264,8 @@ namespace DreamUIText
 			{
 				Ahead += 2;
 			}
-			if (Peek(Ahead).Kind == ETokenKind::Colon)
+			// `: Style`, as many as written (`: ListRow : Dense`).
+			while (Peek(Ahead).Kind == ETokenKind::Colon)
 			{
 				++Ahead;
 				if (Peek(Ahead).Kind != ETokenKind::Identifier)
@@ -3300,12 +3315,9 @@ namespace DreamUIText
 			{
 				NoteNamespaceReference(TypeName.Mid(1), TypeLocation);
 			}
-			FString StyleName;
-			if (Check(ETokenKind::Colon))
-			{
-				Advance();
-				StyleName = ParseQualifiedName(nullptr);
-			}
+			// IsRowsHeader has seen a name after every ':', so this cannot fail.
+			TArray<FDreamUIStyleRef> StyleRefs;
+			ParseStyleRefs(StyleRefs, TEXT("expected a style name after ':'"));
 
 			// The columns: property names, dotted or not, each once.
 			TArray<FString> Columns;
@@ -3391,7 +3403,7 @@ namespace DreamUIText
 					return;
 				}
 				const int32 IndexBefore = Index;
-				ParseRow(OutParent, TypeName, TypeLocation, StyleName, Columns);
+				ParseRow(OutParent, TypeName, TypeLocation, StyleRefs, Columns);
 				if (Index == IndexBefore)
 				{
 					Advance();
@@ -3401,12 +3413,12 @@ namespace DreamUIText
 
 		/** One line of a `rows` table: its values, in column order, and the block it may end in. */
 		void ParseRow(FDreamUINode& OutParent, const FString& InTypeName, const FDreamUISourceLocation& InTypeLocation,
-			const FString& InStyleName, const TArray<FString>& InColumns)
+			const TArray<FDreamUIStyleRef>& InStyleRefs, const TArray<FString>& InColumns)
 		{
 			FDreamUINode Row;
 			Row.Kind = EDreamUINodeKind::Widget;
 			Row.TypeName = InTypeName;
-			Row.StyleName = InStyleName;
+			Row.StyleRefs = InStyleRefs;
 			Row.Location = Current().Location;
 			Row.bAnonymous = true;
 			(void)InTypeLocation;
@@ -5445,15 +5457,55 @@ namespace DreamUIText
 
 				// A style qualified by a namespace nothing declared is reported once, as that (CheckNamespaceReferences):
 				// "no such style" on top would send the reader looking for a misspelt style that is not the mistake.
-				int32 Dot = INDEX_NONE;
-				const bool bUnknownNamespace = InNode.StyleName.FindChar(TEXT('.'), Dot)
-					&& !IsKnownNamespace(InAst, InNode.StyleName.Left(Dot));
-				if (!InNode.StyleName.IsEmpty() && !bUnknownNamespace && InAst.FindStyle(InNode.StyleName) == nullptr)
+				for (const FDreamUIStyleRef& Ref : InNode.StyleRefs)
 				{
-					Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
-						FString::Printf(TEXT("'%s' names a style this file does not declare"), *InNode.StyleName));
+					int32 Dot = INDEX_NONE;
+					const bool bUnknownNamespace = Ref.Name.FindChar(TEXT('.'), Dot) && !IsKnownNamespace(InAst, Ref.Name.Left(Dot));
+					if (!bUnknownNamespace && InAst.FindStyle(Ref.Name) == nullptr)
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownStyle, Ref.Location,
+							FString::Printf(TEXT("'%s' names a style this file does not declare"), *Ref.Name));
+					}
+				}
+				if (InNode.StyleRefs.Num() > 1)
+				{
+					CheckStylesAppliedTwice(InAst, InNode.StyleRefs);
 				}
 			});
+
+			// A style's own clause the same way, once per declaration rather than once per node that wears it. This
+			// file's declarations only: an imported library's are the library's to hear about, when it is compiled.
+			for (const FDreamUIStyle& Style : InAst.Styles)
+			{
+				if (Style.BaseRefs.Num() > 1)
+				{
+					CheckStylesAppliedTwice(InAst, Style.BaseRefs);
+				}
+			}
+		}
+
+		/**
+		 * StyleAlreadyApplied, a warning, for each name of InClause that an earlier name of the same clause has already
+		 * applied -- it changes nothing, and is most often a base the author forgot the other style already has. The
+		 * unknown names and the cycles are not reported here: the builder reports those, where it applies the chain.
+		 */
+		void CheckStylesAppliedTwice(const FDreamUIAst& InAst, TConstArrayView<FDreamUIStyleRef> InClause)
+		{
+			TArray<const FDreamUIStyle*> Chain;
+			TArray<FDreamUIStyleChainProblem> Problems;
+			InAst.CollectStyleChain(InClause, Chain, &Problems);
+			for (const FDreamUIStyleChainProblem& Problem : Problems)
+			{
+				if (Problem.Kind != FDreamUIStyleChainProblem::EKind::AlreadyApplied || Problem.Owner != nullptr)
+				{
+					continue;
+				}
+				Diagnostics.AddWarning(EDreamUIDiagnosticCode::StyleAlreadyApplied, Problem.Ref.Location,
+					Problem.Through.Equals(Problem.Ref.Name)
+						? FString::Printf(TEXT("style '%s' is named twice in this clause, so the second changes nothing"), *Problem.Ref.Name)
+						: FString::Printf(TEXT("style '%s' is already applied through '%s', so naming it again changes nothing"),
+							*Problem.Ref.Name, *Problem.Through));
+			}
 		}
 	};
 }
