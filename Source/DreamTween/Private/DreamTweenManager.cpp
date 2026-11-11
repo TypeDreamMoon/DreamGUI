@@ -371,6 +371,57 @@ void UDreamTweenManager::RetireTweener(UDreamTweener* Tweener)
 	}
 }
 
+void UDreamTweenManager::StopTweensReplacedBy(UDreamTweener* Starting)
+{
+	if (!IsValid(Starting) || Starting->ExclusiveChannels == 0 || !Starting->bReplacesEarlierTweens)
+	{
+		return;
+	}
+	// Found first, stopped after: a stopped tween's OnKill may start tweens of its own, which land in this list.
+	TArray<UDreamTweener*, TInlineAllocator<4>> Replaced;
+	bool bStartingSteppedHere = false;
+	for (const TObjectPtr<UDreamTweener>& Item : tweenerList)
+	{
+		UDreamTweener* Other = Item.Get();
+		if (Other == Starting)
+		{
+			bStartingSteppedHere = true;
+			continue;
+		}
+		if (!IsValid(Other) || Other->bRetired || Other->isMarkedToKill || !Other->bReplacesEarlierTweens
+			|| (Other->ExclusiveChannels & Starting->ExclusiveChannels) == 0 || Other->ExclusiveTarget != Starting->ExclusiveTarget)
+		{
+			continue;
+		}
+		// A later one that has not started yet was asked for after this one, and starts in its turn -- a fade out
+		// scheduled with a delay after a fade in still happens.
+		if (Other->ExclusiveOrder < Starting->ExclusiveOrder || Other->startToTween)
+		{
+			Replaced.Add(Other);
+		}
+	}
+	if (!bStartingSteppedHere)
+	{
+		return;
+	}
+	for (UDreamTweener* Other : Replaced)
+	{
+		if (!IsValid(Other) || Other->bRetired || Other->isMarkedToKill)
+		{
+			continue;
+		}
+		// A kept tween is somebody's to play again; it stands still where it is until they do.
+		if (Other->bAutoKill)
+		{
+			Other->Kill(false);
+		}
+		else
+		{
+			Other->Pause();
+		}
+	}
+}
+
 void UDreamTweenManager::DisableTick()
 {
 	bTickPaused = true;

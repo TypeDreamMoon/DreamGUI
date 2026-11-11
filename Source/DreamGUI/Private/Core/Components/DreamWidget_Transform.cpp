@@ -984,7 +984,38 @@ void UDreamWidget::SetRenderTransformAngle(float InAngle)
 	NewRotation.Roll = InAngle;
 	SetRenderRotation(NewRotation);
 }
+
+void UDreamWidget::SetRenderOffset(const FVector2D& InOffset)
+{
+	// The canvas plane is local Y (right) and Z (up); the depth the translation already has is left where it is.
+	SetRenderTranslation(FVector(RenderTranslation.X, InOffset.X, InOffset.Y));
+}
 #pragma region TweenAnimation
+namespace DreamWidgetTweenChannels
+{
+	/**
+	 * One bit for each property the widget's tween verbs write, for UDreamTweener::SetExclusive: a verb that starts stops
+	 * the earlier ones sharing a bit with it. Location is local (X depth, Y right, Z up); the anchored-position verbs
+	 * move Y and Z, and a world-space move any of the three.
+	 */
+	constexpr uint64 LocationX = 1ull << 0;
+	constexpr uint64 LocationY = 1ull << 1;
+	constexpr uint64 LocationZ = 1ull << 2;
+	constexpr uint64 Location = LocationX | LocationY | LocationZ;
+	constexpr uint64 Rotation = 1ull << 3;
+	constexpr uint64 Scale = 1ull << 4;
+	constexpr uint64 Opacity = 1ull << 5;
+	constexpr uint64 Width = 1ull << 6;
+	constexpr uint64 Height = 1ull << 7;
+	constexpr uint64 Size = Width | Height;
+	/** The render translation's depth (X) and its move on the canvas plane (Y, Z). */
+	constexpr uint64 RenderDepth = 1ull << 8;
+	constexpr uint64 RenderPlane = 1ull << 9;
+	constexpr uint64 RenderScale = 1ull << 10;
+	/** The render rotation's in-plane angle (Roll), and its turns out of the plane (Pitch, Yaw). */
+	constexpr uint64 RenderRoll = 1ull << 11;
+	constexpr uint64 RenderTilt = 1ull << 12;
+}
 #pragma region PositionXYZ
 UDreamTweener* UDreamWidget::LocalPositionXTo(double endValue, float duration, float delay, EDreamTweenEase ease)
 {
@@ -998,6 +1029,7 @@ UDreamTweener* UDreamWidget::LocalPositionXTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationX);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1015,6 +1047,7 @@ UDreamTweener* UDreamWidget::LocalPositionYTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationY);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1032,6 +1065,7 @@ UDreamTweener* UDreamWidget::LocalPositionZTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationZ);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1052,6 +1086,7 @@ UDreamTweener* UDreamWidget::WorldPositionXTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Location);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1069,6 +1104,7 @@ UDreamTweener* UDreamWidget::WorldPositionYTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Location);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1086,6 +1122,7 @@ UDreamTweener* UDreamWidget::WorldPositionZTo(double endValue, float duration, f
 	}), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Location);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1111,6 +1148,7 @@ UDreamTweener* UDreamWidget::LocalPositionTo(FVector endValue, float duration, f
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Location);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1127,6 +1165,7 @@ UDreamTweener* UDreamWidget::WorldPositionTo(FVector endValue, float duration, f
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Location);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1150,6 +1189,7 @@ UDreamTweener* UDreamWidget::LocalScaleTo(FVector endValue, float duration, floa
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Scale);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1170,6 +1210,7 @@ UDreamTweener* UDreamWidget::LocalUniformScaleTo(float endValue, float duration,
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Scale);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1188,6 +1229,7 @@ UDreamTweener* UDreamWidget::LocalRotationQuaternionTo(const FQuat& endValue, fl
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Rotation);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1212,6 +1254,7 @@ UDreamTweener* UDreamWidget::LocalRotatorTo(FRotator endValue, bool shortestPath
 		}), endValue, duration);
 		if (Tweener)
 		{
+			Tweener->SetExclusive(this, DreamWidgetTweenChannels::Rotation);
 			Tweener->SetDelay(delay)->SetEase(ease);
 			UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 		}
@@ -1230,6 +1273,7 @@ UDreamTweener* UDreamWidget::WorldRotationQuaternionTo(const FQuat& endValue, fl
 	, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Rotation);
 		Tweener->SetDelay(delay)->SetEase(ease);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1254,6 +1298,7 @@ UDreamTweener* UDreamWidget::WorldRotatorTo(FRotator endValue, bool shortestPath
 		}), endValue, duration);
 		if (Tweener)
 		{
+			Tweener->SetExclusive(this, DreamWidgetTweenChannels::Rotation);
 			Tweener->SetDelay(delay)->SetEase(ease);
 			UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 		}
@@ -1272,6 +1317,7 @@ UDreamTweener* UDreamWidget::RenderOpacityTo(float endValue, float duration, flo
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Opacity);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1286,6 +1332,7 @@ UDreamTweener* UDreamWidget::SizeDeltaTo(const FVector2D& endValue, float durati
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Size);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1300,6 +1347,7 @@ UDreamTweener* UDreamWidget::WidthTo(float endValue, float duration, float delay
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Width);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1314,6 +1362,7 @@ UDreamTweener* UDreamWidget::HeightTo(float endValue, float duration, float dela
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::Height);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1328,6 +1377,7 @@ UDreamTweener* UDreamWidget::AnchoredPositionTo(const FVector2D& endValue, float
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationY | DreamWidgetTweenChannels::LocationZ);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1342,6 +1392,7 @@ UDreamTweener* UDreamWidget::HorizontalAnchoredPositionTo(float endValue, float 
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationY);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1356,6 +1407,7 @@ UDreamTweener* UDreamWidget::VerticalAnchoredPositionTo(float endValue, float du
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::LocationZ);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1376,6 +1428,7 @@ UDreamTweener* UDreamWidget::RenderTranslationTo(const FVector& endValue, float 
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderDepth | DreamWidgetTweenChannels::RenderPlane);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1397,6 +1450,7 @@ UDreamTweener* UDreamWidget::RenderOffsetTo(const FVector2D& endValue, float dur
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderPlane);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1417,6 +1471,7 @@ UDreamTweener* UDreamWidget::RenderScaleTo(const FVector& endValue, float durati
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderScale);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}
@@ -1431,6 +1486,69 @@ UDreamTweener* UDreamWidget::RenderAngleTo(float endValue, float duration, float
 		, endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderRoll);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+UDreamTweener* UDreamWidget::RenderRotationTo(const FRotator& endValue, float duration, float delay, EDreamTweenEase ease)
+{
+	// Component by component, not along the shortest arc: what was asked for is these three angles, and a 0 to 180 yaw
+	// that the arc turned the other way, or folded into a roll, is not the turn that was authored.
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenRotatorGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return this->GetRenderRotation();
+		})
+		, FDreamTweenRotatorSetterFunction::CreateWeakLambda(this, [this](FRotator Value)
+		{
+			this->SetRenderRotation(Value);
+		})
+		, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderRoll | DreamWidgetTweenChannels::RenderTilt);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+UDreamTweener* UDreamWidget::RenderPoseTo(const FVector& endTranslation, const FRotator& endRotation, float duration, float delay, EDreamTweenEase ease)
+{
+	// One tween of the progress, 0 to 1, driving both, so the two share a clock and an ease and stop together. The start
+	// pose is read when it starts (OnStart comes before the first value is written), as every other verb reads its start.
+	struct FPose
+	{
+		FVector Translation = FVector::ZeroVector;
+		FRotator Rotation = FRotator::ZeroRotator;
+	};
+	TSharedRef<FPose> From = MakeShared<FPose>();
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenFloatGetterFunction::CreateLambda([]
+		{
+			return 0.0f;
+		})
+		, FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this, From, endTranslation, endRotation](float Progress)
+		{
+			this->SetRenderTranslation(FMath::Lerp(From->Translation, endTranslation, Progress));
+			this->SetRenderRotation(FRotator(
+				FMath::Lerp(From->Rotation.Pitch, endRotation.Pitch, Progress),
+				FMath::Lerp(From->Rotation.Yaw, endRotation.Yaw, Progress),
+				FMath::Lerp(From->Rotation.Roll, endRotation.Roll, Progress)));
+		})
+		, 1.0f, duration);
+	if (Tweener)
+	{
+		Tweener->OnStart(FSimpleDelegate::CreateWeakLambda(this, [this, From]
+		{
+			From->Translation = this->GetRenderTranslation();
+			From->Rotation = this->GetRenderRotation();
+		}));
+		Tweener->SetExclusive(this, DreamWidgetTweenChannels::RenderDepth | DreamWidgetTweenChannels::RenderPlane
+			| DreamWidgetTweenChannels::RenderRoll | DreamWidgetTweenChannels::RenderTilt);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
 	}

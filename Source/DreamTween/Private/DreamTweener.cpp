@@ -4,6 +4,9 @@
 #include "DreamTweener.h"
 #include "Curves/CurveFloat.h"
 #include "DreamTween.h"
+#include "DreamTweenManager.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
 UDreamTweener::UDreamTweener()
@@ -246,6 +249,21 @@ UDreamTweener* UDreamTweener::SetAutoKill(bool value)
 	bAutoKill = value;
 	return this;
 }
+UDreamTweener* UDreamTweener::SetExclusive(const UObject* InTarget, uint64 InChannels)
+{
+	if (elapseTime > 0 || startToTween)return this;
+	// Game thread only, as every tween is: the order of two calls is all this counts.
+	static uint64 NextExclusiveOrder = 0;
+	ExclusiveTarget = FObjectKey(InTarget);
+	ExclusiveChannels = InTarget != nullptr ? InChannels : 0;
+	ExclusiveOrder = ++NextExclusiveOrder;
+	return this;
+}
+UDreamTweener* UDreamTweener::SetReplacesEarlierTweens(bool value)
+{
+	bReplacesEarlierTweens = value;
+	return this;
+}
 UDreamTweener* UDreamTweener::SetFrom(bool value)
 {
 	if (elapseTime > 0 || startToTween)return this;
@@ -436,6 +454,21 @@ bool UDreamTweener::BeginTween()
 {
 	const int32 generation = clockGeneration;
 	startToTween = true;
+	// The earlier tweens of the same properties stop before this one reads where the value is: what they would have
+	// written next is this tween's to write now. Their OnKill may take this tween over, as any callback may.
+	if (ExclusiveChannels != 0 && bReplacesEarlierTweens)
+	{
+		UWorld* World = GEngine != nullptr ? GEngine->GetWorldFromContextObject(this, EGetWorldErrorMode::ReturnNull) : nullptr;
+		UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+		if (UDreamTweenManager* Manager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr)
+		{
+			Manager->StopTweensReplacedBy(this);
+			if (clockGeneration != generation)
+			{
+				return false;
+			}
+		}
+	}
 	//set initialize value
 	OnStartGetValue();
 	if (clockGeneration != generation)

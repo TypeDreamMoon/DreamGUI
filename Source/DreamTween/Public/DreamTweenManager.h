@@ -91,6 +91,15 @@ private:
 	 * reference has on whatever it animated.
 	 */
 	void RetireTweener(UDreamTweener* Tweener);
+public:
+	/**
+	 * Stop the tweens Starting replaces as it starts (UDreamTweener::SetExclusive): of the ones this manager steps, those
+	 * on Starting's target that write any of its properties and were made before it or have started already. Killed,
+	 * or paused if they are kept with SetAutoKill(false). Nothing when Starting itself is not stepped by this manager
+	 * -- a sequence's child -- or a tween turned it off with SetReplacesEarlierTweens(false).
+	 */
+	void StopTweensReplacedBy(UDreamTweener* Starting);
+private:
 	bool bTickPaused = false;
 	/** GFrameCounter + 1 of the engine frame each tick group was last stepped by TickFromWorld, indexed by tick type; 0 for never. */
 	uint64 LastWorldTickFrames[8] = {};
