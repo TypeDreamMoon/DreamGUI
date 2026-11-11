@@ -88,6 +88,11 @@ implemented for it. The project's default font is `UDreamGUISettings::DefaultFon
   built-in shader, so they need a distance-field font and *Use Built-in UI Shader* on; their lengths are in em, so a style
   reads the same at every size. The style is stored per widget in the canvas's widget property texture, so texts with
   different styles still batch into one draw call.
+- **Effects go under the whole text.** A text draws every glyph's underlay first, then every glyph's glow and outline,
+  then every face — the way a shadow goes under a whole run of type, outline and all. Where letters overlap (tight or
+  negative letter spacing, italic, a heavy condensed face), the next letter's shadow stays under this letter's outline and
+  face, and its outline under this letter's face. A text with an underlay and an outline or a glow draws three quads a
+  glyph instead of two.
 - **Bold and italic.** `BoldFont`, `ItalicFont` and `BoldItalicFont` name real faces; synthetic ones are used only without
   them.
 - **Fallback faces.** Each `Fallbacks` entry (`FDreamUIFontFallback`) has a `Font`, `Ranges` (code points), `Cultures`
@@ -99,6 +104,15 @@ implemented for it. The project's default font is `UDreamGUISettings::DefaultFon
   place. Give the text a font that covers the character, or add a fallback to the font. The default font reaches Chinese,
   Japanese and Korean through `/DreamGUI/DefaultFont_DistanceField_CJK`; a font of your own that covers only Latin does not,
   which is the usual cause of the warning.
+- **Overlapping contours.** A glyph drawn as separate strokes that run into each other — the way a variable font draws
+  its glyphs, and the way a static instance cut from one keeps them unless its overlaps were removed — can show a gap or a
+  seam in the distance field where the strokes cross; a contour that loops back over itself can lose a whole patch. Its
+  outline is right and FreeType fills it right; the field generator is what cannot follow it. DreamGUI measures the
+  overlap of every glyph it rasterizes and warns once per font, naming the first such glyph and its file (a font the
+  engine ships, such as the default CJK fallback, only says so in the log). Take the overlaps out of the file and use
+  that file instead: `pip install fonttools skia-pathops`, then
+  `python -c "from fontTools.ttLib import TTFont; from fontTools.ttLib.removeOverlaps import removeOverlaps; f = TTFont('in.ttf'); removeOverlaps(f); f.save('out.ttf')"`,
+  or cut the instance with `fonttools varLib.instancer --remove-overlaps`.
 - **Colour emoji**: CBDT/CBLC, sbix and COLRv0; `bPreferColorEmoji` is on by default. The shadow, outline and long-shadow
   modifiers draw a colour emoji's copies as silhouettes.
 

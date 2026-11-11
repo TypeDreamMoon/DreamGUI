@@ -466,6 +466,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
+  letters overlap -- tight or negative letter spacing, italic, a heavy condensed face -- the next letter's shadow landed on
+  this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with
+  an underlay and an outline or a glow draws three quads a glyph.
+- **A font whose glyphs overlap their own strokes says so.** A static instance cut from a variable font keeps its strokes
+  as separate contours that run into each other, and the distance field shows a gap or a seam where they cross -- a
+  silent fault until now. Every glyph's overlap is measured as it is rasterized, and the font warns once, naming the glyph
+  and its file and how to take the overlaps out of the file with fontTools' `removeOverlaps`. A font the engine ships
+  says so in the log alone.
 - **Lines added to a node written on one line stay in its block.** Two properties written into a block that opens and
   closes on one line (`Text Title { Text = "Hi" }`) in one write had the whole write refused, and a `+` line added to
   such a node was written after its brace -- a behaviour of the parent. Both now land inside the block.
