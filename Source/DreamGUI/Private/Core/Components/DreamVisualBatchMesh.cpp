@@ -14,6 +14,8 @@
 #include "Core/DreamUIClipData.h"
 #include "Event/DreamPointerEventData.h"
 #include "HAL/IConsoleManager.h"
+#include "Core/Text/DreamTextPaint.h"
+#include "Materials/MaterialInterface.h"
 
 DECLARE_CYCLE_STAT(TEXT("DreamVisualBatchMesh UpdateGeometry"), STAT_DreamUpdateGeometry, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamVisualBatchMesh TransformVertices"), STAT_TransformVertices, STATGROUP_DreamGUI);
@@ -26,6 +28,31 @@ static TAutoConsoleVariable<int32> CVarDreamUIAsyncVertexTransformMinVertices(
 	TEXT("over and waiting for it costs more than transforming a button's few dozen vertices. 0: every geometry on a worker."),
 	ECVF_Default);
 
+namespace DreamVisualBatchMeshLocal
+{
+	/**
+	 * Say once per material when an override material does not shade through MF_DreamUI_Shade: clipping, clip masks, mask
+	 * transitions and the opacity of a group reach a draw only through that function, and a material without it draws its
+	 * whole quad through all of them with nothing anywhere saying why. Its marker parameter answers in a cooked game too.
+	 */
+	void WarnIfNotShadedOnce(const UMaterialInterface* InMaterial, const UDreamWidget* InWidget)
+	{
+		float Marker = 0.0f;
+		if (InMaterial == nullptr
+			|| (InMaterial->GetScalarParameterDefaultValue(FHashedMaterialParameterInfo(DreamUIShadeMaterial::ShadeMarkerParameter), Marker) && Marker > 0.5f))
+		{
+			return;
+		}
+		static TSet<TObjectKey<UMaterialInterface>> Warned;
+		bool bAlreadyWarned = false;
+		Warned.Add(TObjectKey<UMaterialInterface>(InMaterial), &bAlreadyWarned);
+		if (!bAlreadyWarned)
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("Material %s, drawing '%s', does not shade through MF_DreamUI_Shade, so DreamGUI's clipping, clip masks, mask transitions and group opacity do not reach what it draws. Build it on MF_DreamUI_Shade (use its alpha as the opacity) to have them. Said once for each material."),
+				*GetPathNameSafe(InMaterial), InWidget != nullptr ? *InWidget->GetDisplayName() : TEXT("a visual"));
+		}
+	}
+}
 
 UDreamVisualBatchMesh::UDreamVisualBatchMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -231,6 +258,10 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		{
 			bMaterialChanged = false;
 			UIGeometry->Material = MaterialOverride != nullptr ? MaterialOverride.Get() : GetMaterialToCreateGeometry();
+			if (MaterialOverride != nullptr)
+			{
+				DreamVisualBatchMeshLocal::WarnIfNotShadedOnce(MaterialOverride, Widget);
+			}
 		}
 		//cheap, and unconditional so that it cannot go stale: the geometry is what the batcher sees,
 		//and the blend mode is part of a draw-call's identity there
