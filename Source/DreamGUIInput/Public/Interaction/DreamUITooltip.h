@@ -38,6 +38,26 @@ public:
 };
 
 /**
+ * Implemented by a tooltip widget class -- the one ToolTipWidgetClass or GetTooltipWidgetClass names -- that wants to know
+ * what it describes: told the source widget once it is made, before it is first laid out, so it can fill itself in on its
+ * first frame. Without it a tooltip had to ask the tooltip subsystem who it was shown for, and wait a frame to.
+ */
+UINTERFACE(MinimalAPI, Blueprintable, Category = DreamGUI)
+class UDreamUITooltipContent : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class DREAMGUIINPUT_API IDreamUITooltipContent
+{
+	GENERATED_BODY()
+public:
+	/** The widget whose tooltip this is: the one the pointer rests on, or its ancestor that offered the tooltip. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = DreamGUI)
+	void SetTooltipSource(UDreamWidget* Source);
+};
+
+/**
  * Pure decisions of the tooltip pipeline, pulled out of the subsystem so they are testable without
  * a world -- the same convention DreamPointerPolicy documents for the pointer pipeline.
  */

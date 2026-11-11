@@ -593,6 +593,12 @@ void UDreamUIDragDropSubsystem::ShowDragVisual(const FIntPoint& InKey)
 
 	Visual.Reset(CreateDreamWidget(GetWorld(), VisualClass, Holder.Get()));
 	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
+	// What it stands for, before its size is read: a ghost that shows the dragged item may change size filling itself in.
+	if (Visual->GetClass()->ImplementsInterface(UDreamUIDragVisual::StaticClass()))
+	{
+		IDreamUIDragVisual::Execute_OnDragVisualCreated(Visual.Get(), Operation.Get());
+		if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
+	}
 	Holder->SetSizeDelta(FVector2D(Visual->GetWidth(), Visual->GetHeight()));
 	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
 	Visual->SetAnchoredPosition(FVector2D::ZeroVector);

@@ -510,6 +510,13 @@ void UDreamUITooltipSubsystem::ShowFor(int32 InUserIndex, UDreamWidget* InSource
 			return;
 		}
 		State->CustomTooltip = CustomTooltip;
+		// What it describes, before its size is read: a tooltip that fills itself in from its source may change size doing it.
+		if (IsValid(CustomTooltip) && CustomTooltip->GetClass()->ImplementsInterface(UDreamUITooltipContent::StaticClass()))
+		{
+			IDreamUITooltipContent::Execute_SetTooltipSource(CustomTooltip, InSource);
+			State = FindCurrentState();
+			if (State == nullptr || !PendingHolder.IsValid() || !IsValid(CustomTooltip))return;
+		}
 		if (IsValid(CustomTooltip))
 		{
 			// The holder adopts the content's authored size, so positioning has a real rect to clamp.
