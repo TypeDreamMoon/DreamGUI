@@ -84,8 +84,20 @@ struct DREAMGUI_API FDreamUIValue
 	 */
 	TArray<FDreamUIValue> Items;
 
-	/** Map only: the keys, Keys[i] being the key of Items[i]. */
+	/**
+	 * Map only: the keys, Keys[i] being the key of Items[i].
+	 *
+	 * The FIRST entry may have been written without one -- `{ "Lamp", Tag: Lamp }`, a struct's primary field -- and its key
+	 * is then an Identifier with an empty Raw (IsPositionalKey). A map literal on a struct names its fields; only a struct
+	 * that declares a primary field (USTRUCT meta DreamGUI_PrimaryField) takes the keyless one.
+	 */
 	TArray<FDreamUIValue> Keys;
+
+	/** Map only: Keys[InIndex] is the keyless first entry's stand-in. */
+	bool IsPositionalKey(int32 InIndex) const
+	{
+		return Keys.IsValidIndex(InIndex) && Keys[InIndex].Kind == EDreamUIValueKind::Identifier && Keys[InIndex].Raw.IsEmpty();
+	}
 
 	/** String only: the key written in `@key("…")`, empty when the author did not override it. */
 	FString LocalizationKeyOverride;

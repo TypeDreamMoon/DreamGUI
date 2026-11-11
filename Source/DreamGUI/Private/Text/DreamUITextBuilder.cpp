@@ -837,6 +837,13 @@ namespace DreamUITextBuilderLocal
 		}
 		FScriptMapHelper Helper(AsMap, ValuePtr);
 		Helper.EmptyValues();
+		if (InValue.IsPositionalKey(0))
+		{
+			// The keyless first entry is a struct's primary field; a map has no entry without a key.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Items[0].Location,
+				FString::Printf(TEXT("'%s' is a map, and every entry of one is written 'key: value'"), *InProperty.Name));
+			return false;
+		}
 		for (int32 Index = 0; Index < InValue.Items.Num() && Index < InValue.Keys.Num(); ++Index)
 		{
 			FScratch Key(AsMap->KeyProp);
@@ -848,6 +855,69 @@ namespace DreamUITextBuilderLocal
 				return false;
 			}
 			Helper.AddPair(Key.Memory, Item.Memory);
+		}
+		return true;
+	}
+
+	/**
+	 * `{ Label: "Lamp", Tag: Lamp }` into a struct with no short form: each key names a field, and each value is written
+	 * by WriteValue against that field, so a field takes exactly the spellings a property of its type takes -- a text
+	 * gets its localization key (the field joins the property's name, as `Items.Label`, the key a dotted line would
+	 * make), a nested struct takes a map of its own. Fields the map does not name keep the value they had: a fresh
+	 * array element's defaults, or the class's, the same rule a dotted `Style.Field = …` line follows.
+	 *
+	 * The first entry may have no key -- `{ "Lamp", Tag: Lamp }` -- when the struct names a primary field (USTRUCT meta
+	 * DreamGUI_PrimaryField): the one field nearly every value sets, so a list of them reads as a list of labels.
+	 */
+	bool WriteStructFields(const FResolvedDestination& InDestination, const FDreamUINode& InNode, const FDreamUIProperty& InProperty,
+		const FDreamUIValue& InValue, const FStructProperty& InStruct, FBuildContext& InContext)
+	{
+		const UScriptStruct* Struct = InStruct.Struct;
+		FString PrimaryField;
+#if WITH_METADATA
+		PrimaryField = Struct->GetMetaData(TEXT("DreamGUI_PrimaryField"));
+#endif
+		for (int32 Index = 0; Index < InValue.Items.Num() && Index < InValue.Keys.Num(); ++Index)
+		{
+			const FDreamUIValue& Key = InValue.Keys[Index];
+			FString FieldName = Key.Raw;
+			if (InValue.IsPositionalKey(Index))
+			{
+				if (PrimaryField.IsEmpty())
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ContainerTypeMismatch, InValue.Items[Index].Location,
+						FString::Printf(TEXT("'%s' is a %s, whose fields are written by name, as in { Field: value }; it names no primary field, so its first entry needs a key too"),
+							*InProperty.Name, *Struct->GetName()));
+					return false;
+				}
+				FieldName = PrimaryField;
+			}
+			else if (Key.Kind != EDreamUIValueKind::Identifier)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownPropertyPathSegment, Key.Location,
+					FString::Printf(TEXT("'%s' is a %s, and its map is keyed by field names: '%s' is not one"),
+						*InProperty.Name, *Struct->GetName(), *Key.Raw));
+				return false;
+			}
+			FProperty* Field = FindFProperty<FProperty>(Struct, *FieldName);
+			if (Field == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownPropertyPathSegment, Key.Location,
+					FString::Printf(TEXT("%s has no field named '%s'%s"), *Struct->GetName(), *FieldName,
+						*FormatSuggestion(SuggestNearestProperty(FieldName, { Struct }))));
+				return false;
+			}
+			FResolvedDestination Element = InDestination;
+			Element.LeafProperty = Field;
+			Element.LeafValuePtr = Field->ContainerPtrToValuePtr<void>(InDestination.LeafValuePtr);
+			Element.bNested = true;
+			FDreamUIProperty ElementProperty = InProperty;
+			ElementProperty.Name = InProperty.Name + TEXT(".") + Field->GetName();
+			ElementProperty.Value = InValue.Items[Index];
+			if (!WriteValue(Element, InNode, ElementProperty, InContext))
+			{
+				return false;
+			}
 		}
 		return true;
 	}
@@ -1014,6 +1084,16 @@ namespace DreamUITextBuilderLocal
 		// literal on anything else is said here, before a branch below reads its slice as something it is not.
 		const bool bIsContainer = CastField<FArrayProperty>(Leaf) != nullptr || CastField<FSetProperty>(Leaf) != nullptr
 			|| CastField<FMapProperty>(Leaf) != nullptr;
+		// `{ Field: value, … }` on a struct that has no short form: the struct's fields, by name. Ahead of the container
+		// branch, which would otherwise read the braces as a TMap the property is not.
+		if (!bIsContainer && Value.Kind == EDreamUIValueKind::Map)
+		{
+			const FStructProperty* AsStruct = CastField<FStructProperty>(Leaf);
+			if (AsStruct != nullptr && AsStruct->Struct != nullptr && !DreamUIValueFormat::HasShortForm(Leaf))
+			{
+				return WriteStructFields(InDestination, InNode, InProperty, Value, *AsStruct, InContext);
+			}
+		}
 		if (bIsContainer || Value.Kind == EDreamUIValueKind::List || Value.Kind == EDreamUIValueKind::Map)
 		{
 			return WriteContainer(InDestination, InNode, InProperty, Value, InContext);

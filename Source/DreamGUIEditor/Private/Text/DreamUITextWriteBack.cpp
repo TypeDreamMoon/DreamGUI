@@ -396,6 +396,69 @@ namespace DreamUIWriteBackLocal
 	 * differ from the struct's defaults, so two equal values print alike and an untouched field is not spelled. Anything
 	 * else prints as a leaf does.
 	 */
+	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable);
+
+	/**
+	 * A struct as the map of its fields the builder reads -- `{ "Lamp", Tag: Lamp, bEnabled: false }`: the fields that
+	 * differ from the struct's defaults, in declaration order, the primary field (DreamGUI_PrimaryField) first and with no
+	 * key. False when a field has no spelling of its own; the caller then keeps the engine's quoted form.
+	 *
+	 * Only for a struct that names a primary field, which is the struct saying it was made to be written this way. The
+	 * rest keep the quoted form they always had: a colour field would be quantised through a hex code here, where the
+	 * engine's text keeps every bit of it.
+	 */
+	bool PrintStructAsMap(const FStructProperty* InStruct, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
+	{
+		const UScriptStruct* Struct = InStruct->Struct;
+		FString PrimaryField;
+#if WITH_METADATA
+		PrimaryField = Struct->GetMetaData(TEXT("DreamGUI_PrimaryField"));
+#endif
+		if (PrimaryField.IsEmpty())
+		{
+			return false;
+		}
+		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());
+		Struct->InitializeStruct(Defaults);
+		ON_SCOPE_EXIT
+		{
+			Struct->DestroyStruct(Defaults);
+			FMemory::Free(Defaults);
+		};
+		FString Primary;
+		TArray<FString> Entries;
+		for (TFieldIterator<FProperty> It(Struct); It; ++It)
+		{
+			const FProperty* Field = *It;
+			if (Field->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated)
+				|| Field->Identical_InContainer(InValuePtr, Defaults))
+			{
+				continue;
+			}
+			FString FieldText;
+			if (!PrintContainerElement(Field, Field->ContainerPtrToValuePtr<void>(InValuePtr), FieldText, OutValueIsUnrepresentable))
+			{
+				return false;
+			}
+			if (CastField<FNameProperty>(Field) != nullptr)
+			{
+				FieldText = BareNameKey(FieldText);
+			}
+			if (Field->GetName() == PrimaryField)
+			{
+				Primary = MoveTemp(FieldText);
+				continue;
+			}
+			Entries.Add(FString::Printf(TEXT("%s: %s"), *Field->GetName(), *FieldText));
+		}
+		if (!Primary.IsEmpty())
+		{
+			Entries.Insert(MoveTemp(Primary), 0);
+		}
+		OutText = Entries.IsEmpty() ? FString(TEXT("{}")) : FString::Printf(TEXT("{ %s }"), *FString::Join(Entries, TEXT(", ")));
+		return true;
+	}
+
 	bool PrintContainerElement(const FProperty* InElement, const void* InValuePtr, FString& OutText, bool* OutValueIsUnrepresentable)
 	{
 		if (PrintLiteral(InElement, InValuePtr, OutText, OutValueIsUnrepresentable))
@@ -407,6 +470,10 @@ namespace DreamUIWriteBackLocal
 			|| (OutValueIsUnrepresentable != nullptr && *OutValueIsUnrepresentable))
 		{
 			return false;
+		}
+		if (PrintStructAsMap(AsStruct, InValuePtr, OutText, OutValueIsUnrepresentable))
+		{
+			return true;
 		}
 		const UScriptStruct* Struct = AsStruct->Struct;
 		void* Defaults = FMemory::Malloc(FMath::Max(Struct->GetStructureSize(), 1), Struct->GetMinAlignment());

@@ -5140,6 +5140,23 @@ namespace DreamUIText
 						return false;
 					}
 					SkipSeparators();
+					if (OutValue.Items.Num() == 0 && (Check(ETokenKind::Comma) || Check(CloseKind)))
+					{
+						// `{ "Lamp", Tag: Lamp }` -- the first entry alone, with no key: a struct's primary field
+						// (FDreamUIValue::IsPositionalKey). Only the first, so the entries after it stay `key: value`
+						// and a missing ':' further on is still the mistake it always was. Whether the destination
+						// takes one is the builder's to say.
+						FDreamUIValue Positional;
+						Positional.Kind = EDreamUIValueKind::Identifier;
+						Positional.Location = Key.Location;
+						OutValue.Keys.Add(MoveTemp(Positional));
+						OutValue.Items.Add(MoveTemp(Key));
+						if (Check(ETokenKind::Comma))
+						{
+							Advance();
+						}
+						continue;
+					}
 					if (!Check(ETokenKind::Colon))
 					{
 						Refuse(FString::Printf(TEXT("a map entry is written 'key: value', and '%s' has no ':' after it"), *Ellipsize(Key.Raw)));
