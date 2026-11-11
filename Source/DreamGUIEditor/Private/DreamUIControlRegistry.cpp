@@ -56,6 +56,7 @@
 #include "Extensions/DreamCanvasRenderTargetPreviewer.h"
 #include "Extensions/DreamPolygon.h"
 #include "Extensions/DreamPolygonLine.h"
+#include "Extensions/DreamShape.h"
 #include "Extensions/DreamPostProcessRenderElement.h"
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 #include "Extensions/DreamRing.h"
@@ -1208,6 +1209,7 @@ void FDreamUIControlRegistry::RegisterDefaults()
 
 	Register(MakeVisual(TEXT("Polygon"), TEXT("Polygon"), DreamUIPaletteCategory::Shapes, UDreamPolygon::StaticClass()));
 	Register(MakeVisual(TEXT("PolygonLine"), TEXT("Polygon Line"), DreamUIPaletteCategory::Shapes, UDreamPolygonLine::StaticClass()));
+	Register(MakeVisual(TEXT("Shape"), TEXT("Shape"), DreamUIPaletteCategory::Shapes, UDreamShape::StaticClass()));
 	Register(MakeVisual(TEXT("Ring"), TEXT("Ring"), DreamUIPaletteCategory::Shapes, UDreamRing::StaticClass()));
 	Register(MakeVisual(TEXT("Line2DRaw"), TEXT("2D Line"), DreamUIPaletteCategory::Shapes, UDream2DLineRaw::StaticClass()));
 	Register(MakeVisual(TEXT("Line2DChildren"), TEXT("2D Line (Children as Points)"), DreamUIPaletteCategory::Shapes, UDream2DLineChildrenAsPoints::StaticClass()));

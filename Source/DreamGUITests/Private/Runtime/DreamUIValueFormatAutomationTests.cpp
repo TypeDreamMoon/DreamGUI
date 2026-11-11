@@ -189,7 +189,8 @@ bool FDreamUIValueFormatHasShortFormTest::RunTest(const FString& Parameters)
 	// A missing property here means the fixture drifted, not that the format is wrong, and the two
 	// failures look nothing alike -- so say which it is before asserting anything about the answer.
 	const TCHAR* Names[] = { TEXT("Vector2D"), TEXT("Vector2f"), TEXT("LinearColor"), TEXT("Color"),
-		TEXT("Margin"), TEXT("Vector"), TEXT("Rotator"), TEXT("Vector4"), TEXT("IntPoint"), TEXT("Scalar"), TEXT("Label") };
+		TEXT("Margin"), TEXT("Vector"), TEXT("Rotator"), TEXT("Vector3f"), TEXT("Vector4"), TEXT("Vector4f"), TEXT("IntVector"),
+		TEXT("IntPoint"), TEXT("Scalar"), TEXT("Label") };
 	for (const TCHAR* Name : Names)
 	{
 		if (!TestNotNull(*FString::Printf(TEXT("the fixture still declares '%s'"), Name), Prop(Name)))
@@ -205,10 +206,13 @@ bool FDreamUIValueFormatHasShortFormTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("FMargin has one"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Margin"))));
 	TestTrue(TEXT("FVector has one, since RelativeScale needed a spelling"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Vector"))));
 	TestTrue(TEXT("and FRotator, since RelativeRotationEuler did"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Rotator"))));
+	TestTrue(TEXT("FVector3f has one"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Vector3f"))));
+	TestTrue(TEXT("FVector4 has one"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Vector4"))));
+	TestTrue(TEXT("and FVector4f, since a brush's UVRegion needed a spelling"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Vector4f"))));
 
-	// The table is three entries and stays three entries. Each of these is a specific wrong match:
-	// FVector4 shares a name prefix, FIntPoint shares a shape, and the last two are not structs at all.
-	TestFalse(TEXT("FVector4 does not, despite the name"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Vector4"))));
+	// Each of these is a specific wrong match: FIntVector shares a name, FIntPoint shares a shape, and
+	// the last two are not structs at all.
+	TestFalse(TEXT("FIntVector does not, despite the name"), DreamUIValueFormat::HasShortForm(Prop(TEXT("IntVector"))));
 	TestFalse(TEXT("nor FIntPoint, despite the shape"), DreamUIValueFormat::HasShortForm(Prop(TEXT("IntPoint"))));
 	TestFalse(TEXT("nor a float"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Scalar"))));
 	TestFalse(TEXT("nor a string"), DreamUIValueFormat::HasShortForm(Prop(TEXT("Label"))));
@@ -219,13 +223,16 @@ bool FDreamUIValueFormatHasShortFormTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a margin's is four"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Margin"))), 4);
 	TestEqual(TEXT("a 3-vector's is three"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Vector"))), 3);
 	TestEqual(TEXT("and a rotator's is three"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Rotator"))), 3);
+	TestEqual(TEXT("and a float 3-vector's"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Vector3f"))), 3);
+	TestEqual(TEXT("a 4-vector's is four"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Vector4"))), 4);
+	TestEqual(TEXT("and a float 4-vector's"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Vector4f"))), 4);
 
 	// A colour HAS a short form but no arity, and the distinction is load-bearing: a caller that read
 	// INDEX_NONE as "no short form" would send colours to ExportTextItem, and one that reported an
 	// arity mismatch on a colour would name a number the syntax never has.
 	TestEqual(TEXT("a colour reports no arity"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("LinearColor"))), int32(INDEX_NONE));
 	TestEqual(TEXT("nor does an 8-bit colour"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Color"))), int32(INDEX_NONE));
-	TestEqual(TEXT("nor does anything outside the table"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("Vector4"))), int32(INDEX_NONE));
+	TestEqual(TEXT("nor does anything outside the table"), DreamUIValueFormat::GetExpectedTupleArity(Prop(TEXT("IntVector"))), int32(INDEX_NONE));
 	TestEqual(TEXT("nor does nothing"), DreamUIValueFormat::GetExpectedTupleArity(nullptr), int32(INDEX_NONE));
 
 	// Print refuses the same set, and must leave the caller's string alone when it does -- the caller
@@ -233,8 +240,24 @@ bool FDreamUIValueFormatHasShortFormTest::RunTest(const FString& Parameters)
 	FString Untouched = TEXT("sentinel");
 	FDreamUIValueFormatFixture Fixture;
 	TestFalse(TEXT("printing something outside the table is refused"),
-		DreamUIValueFormat::Print(Prop(TEXT("Vector4")), &Fixture.Vector4, Untouched));
+		DreamUIValueFormat::Print(Prop(TEXT("IntVector")), &Fixture.IntVector, Untouched));
 	TestEqual(TEXT("and leaves the output string alone"), Untouched, FString(TEXT("sentinel")));
+
+	// The wider vectors print and read back: a brush region as the .dui writes it, and a float 3-vector.
+	FDreamUIValueFormatFixture Wide;
+	Wide.Vector4f = FVector4f(0.3f, 0.2f, 0.4125f, 0.4f);
+	Wide.Vector4 = FVector4(-1.5, 2.25, 1.0e6, 0.1);
+	Wide.Vector3f = FVector3f(0.5f, -8.0f, 1.0f / 3.0f);
+	FDreamUIValueFormatFixture Back;
+	FString Text;
+	TestTrue(TEXT("an FVector4f round-trips"), RoundTrip(Prop(TEXT("Vector4f")), Wide.Vector4f, Back.Vector4f, Text) && Back.Vector4f == Wide.Vector4f);
+	TestEqual(TEXT("as the tuple a .dui writes"), Text, FString(TEXT("(0.3, 0.2, 0.4125, 0.4)")));
+	TestTrue(TEXT("an FVector4 round-trips"), RoundTrip(Prop(TEXT("Vector4")), Wide.Vector4, Back.Vector4, Text) && Back.Vector4 == Wide.Vector4);
+	TestTrue(TEXT("an FVector3f round-trips"), RoundTrip(Prop(TEXT("Vector3f")), Wide.Vector3f, Back.Vector3f, Text) && Back.Vector3f == Wide.Vector3f);
+	FVector4f Unchanged(1.0f, 2.0f, 3.0f, 4.0f);
+	TestFalse(TEXT("a 4-vector refuses three elements"),
+		DreamUIValueFormat::Parse(Prop(TEXT("Vector4f")), MakeTupleValue({ TEXT("1"), TEXT("2"), TEXT("3") }), &Unchanged));
+	TestTrue(TEXT("and is left as it was"), Unchanged == FVector4f(1.0f, 2.0f, 3.0f, 4.0f));
 
 	return true;
 }
@@ -875,14 +898,14 @@ bool FDreamUIValueFormatShapeMismatchTest::RunTest(const FString& Parameters)
 
 	// Nothing outside the table parses here at all, whatever shape it is handed: those go to
 	// ImportText, and answering for them would mean this file quietly owning another format.
-	// FVector4 holds the specimen role FVector held before FVector joined the table.
+	// FIntVector holds the specimen role FVector, then FVector4, held before each joined the table.
 	{
-		FVector4 Vector4Destination(1.0, 2.0, 3.0, 4.0);
+		FIntVector IntVectorDestination(1, 2, 3);
 		TestFalse(TEXT("a property outside the table takes no short form"),
-			DreamUIValueFormat::Parse(Prop(TEXT("Vector4")), MakeTupleValue({ TEXT("1"), TEXT("2"), TEXT("3"), TEXT("4") }), &Vector4Destination));
+			DreamUIValueFormat::Parse(Prop(TEXT("IntVector")), MakeTupleValue({ TEXT("4"), TEXT("5"), TEXT("6") }), &IntVectorDestination));
 		TestFalse(TEXT("and neither does no property at all"),
-			DreamUIValueFormat::Parse(nullptr, MakeTupleValue({ TEXT("1"), TEXT("2") }), &Vector4Destination));
-		TestTrue(TEXT("with the destination untouched"), Vector4Destination.X == 1.0);
+			DreamUIValueFormat::Parse(nullptr, MakeTupleValue({ TEXT("1"), TEXT("2") }), &IntVectorDestination));
+		TestTrue(TEXT("with the destination untouched"), IntVectorDestination.X == 1);
 	}
 
 	return true;

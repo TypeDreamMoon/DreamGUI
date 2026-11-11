@@ -54,6 +54,12 @@ namespace DreamUIValueFormatLocal
 		Vector2Float,
 		/** FVector, double components under LWC. RelativeScale is why it is here. */
 		Vector3Double,
+		/** FVector3f, float components: material and render-side vectors. */
+		Vector3Float,
+		/** FVector4, double components under LWC. */
+		Vector4Double,
+		/** FVector4f, float components. An image brush's UVRegion (min xy, max zw) is why it is here. */
+		Vector4Float,
 		/** FRotator, printed (Pitch, Yaw, Roll) in degrees. RelativeRotationEuler is why it is here. */
 		Rotator,
 		LinearColor,
@@ -95,6 +101,18 @@ namespace DreamUIValueFormatLocal
 		if (Struct == TBaseStructure<FVector>::Get())
 		{
 			return EShortForm::Vector3Double;
+		}
+		if (Struct == TVariantStructure<FVector3f>::Get())
+		{
+			return EShortForm::Vector3Float;
+		}
+		if (Struct == TBaseStructure<FVector4>::Get())
+		{
+			return EShortForm::Vector4Double;
+		}
+		if (Struct == TVariantStructure<FVector4f>::Get())
+		{
+			return EShortForm::Vector4Float;
 		}
 		if (Struct == TBaseStructure<FRotator>::Get())
 		{
@@ -424,8 +442,11 @@ int32 DreamUIValueFormat::GetExpectedTupleArity(const FProperty* InProperty)
 	case EShortForm::Vector2Float:
 		return 2;
 	case EShortForm::Vector3Double:
+	case EShortForm::Vector3Float:
 	case EShortForm::Rotator:
 		return 3;
+	case EShortForm::Vector4Double:
+	case EShortForm::Vector4Float:
 	case EShortForm::Margin:
 		return 4;
 	default:
@@ -444,6 +465,9 @@ EDreamUIValueKind DreamUIValueFormat::GetShortFormLiteralKind(const FProperty* I
 	case EShortForm::Vector2Double:
 	case EShortForm::Vector2Float:
 	case EShortForm::Vector3Double:
+	case EShortForm::Vector3Float:
+	case EShortForm::Vector4Double:
+	case EShortForm::Vector4Float:
 	case EShortForm::Rotator:
 	case EShortForm::Margin:
 		return EDreamUIValueKind::Tuple;
@@ -545,6 +569,39 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 		}
 		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
 			*PrintScalar(Value.X, false), *PrintScalar(Value.Y, false), *PrintScalar(Value.Z, false));
+		return true;
+	}
+	case EShortForm::Vector3Float:
+	{
+		const FVector3f& Value = *static_cast<const FVector3f*>(InValuePtr);
+		if (!AllFinite({static_cast<double>(Value.X), static_cast<double>(Value.Y), static_cast<double>(Value.Z)}))
+		{
+			return false;
+		}
+		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
+			*PrintScalar(Value.X, true), *PrintScalar(Value.Y, true), *PrintScalar(Value.Z, true));
+		return true;
+	}
+	case EShortForm::Vector4Double:
+	{
+		const FVector4& Value = *static_cast<const FVector4*>(InValuePtr);
+		if (!AllFinite({Value.X, Value.Y, Value.Z, Value.W}))
+		{
+			return false;
+		}
+		OutText = FString::Printf(TEXT("(%s, %s, %s, %s)"),
+			*PrintScalar(Value.X, false), *PrintScalar(Value.Y, false), *PrintScalar(Value.Z, false), *PrintScalar(Value.W, false));
+		return true;
+	}
+	case EShortForm::Vector4Float:
+	{
+		const FVector4f& Value = *static_cast<const FVector4f*>(InValuePtr);
+		if (!AllFinite({static_cast<double>(Value.X), static_cast<double>(Value.Y), static_cast<double>(Value.Z), static_cast<double>(Value.W)}))
+		{
+			return false;
+		}
+		OutText = FString::Printf(TEXT("(%s, %s, %s, %s)"),
+			*PrintScalar(Value.X, true), *PrintScalar(Value.Y, true), *PrintScalar(Value.Z, true), *PrintScalar(Value.W, true));
 		return true;
 	}
 	case EShortForm::Rotator:
@@ -678,6 +735,9 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 	case EShortForm::Vector2Double:
 	case EShortForm::Vector2Float:
 	case EShortForm::Vector3Double:
+	case EShortForm::Vector3Float:
+	case EShortForm::Vector4Double:
+	case EShortForm::Vector4Float:
 	case EShortForm::Rotator:
 	case EShortForm::Margin:
 	{
@@ -686,8 +746,7 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 		// would give the file two spellings for the same margin while the printer only ever writes
 		// the four. Every designer touch would then rewrite `Padding = 8` into `(8, 8, 8, 8)` --
 		// a line the author never edited, in every diff, for the rest of the file's life.
-		const int32 Arity = Form == EShortForm::Margin ? 4
-			: (Form == EShortForm::Vector3Double || Form == EShortForm::Rotator) ? 3 : 2;
+		const int32 Arity = GetExpectedTupleArity(InProperty);
 		if (InValue.Kind != EDreamUIValueKind::Tuple || InValue.Elements.Num() != Arity)
 		{
 			return false;
@@ -722,6 +781,29 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 			Out.X = Components[0];
 			Out.Y = Components[1];
 			Out.Z = Components[2];
+		}
+		else if (Form == EShortForm::Vector3Float)
+		{
+			FVector3f& Out = *static_cast<FVector3f*>(OutValuePtr);
+			Out.X = static_cast<float>(Components[0]);
+			Out.Y = static_cast<float>(Components[1]);
+			Out.Z = static_cast<float>(Components[2]);
+		}
+		else if (Form == EShortForm::Vector4Double)
+		{
+			FVector4& Out = *static_cast<FVector4*>(OutValuePtr);
+			Out.X = Components[0];
+			Out.Y = Components[1];
+			Out.Z = Components[2];
+			Out.W = Components[3];
+		}
+		else if (Form == EShortForm::Vector4Float)
+		{
+			FVector4f& Out = *static_cast<FVector4f*>(OutValuePtr);
+			Out.X = static_cast<float>(Components[0]);
+			Out.Y = static_cast<float>(Components[1]);
+			Out.Z = static_cast<float>(Components[2]);
+			Out.W = static_cast<float>(Components[3]);
 		}
 		else if (Form == EShortForm::Rotator)
 		{

@@ -5007,7 +5007,7 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
 	{
 		if (IsValid(Widget) && Widget->GetRenderCanvas() == this
-			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || Widget->GetClipToBelow()
+			&& ((Widget->GetLayerGroup() != nullptr && Widget->GetLayerGroup()->IsIsolated()) || (Widget->GetClipToBelow() && Widget->IsVisible())
 				|| ChildrenEffectVisualOf(Widget) != nullptr || StyleApartOf(Widget) != nullptr))
 		{
 			bAnyWidget = true;
@@ -5150,7 +5150,11 @@ void UDreamCanvas::InsertCompositeMarkers(TArray<FDreamUIRenderData>& InOutData)
 			}
 			// The first of the widgets that clip to one layer below that no clip level follows: the layer and they make a
 			// group, the layer put down as it is and they only where it has alpha.
-			if (!Widget->GetClipToBelow())
+			//
+			// Only while it is drawn. A hidden widget clips nothing, and its layer below must not be drawn as a group for it:
+			// that group costs a pass per frame for nothing, and as an offscreen layer composited back it is no longer drawn in
+			// its place among its siblings -- a hidden clipper on every item of a list turned each item into a composited layer.
+			if (!Widget->GetClipToBelow() || !Widget->IsVisible())
 			{
 				continue;
 			}
