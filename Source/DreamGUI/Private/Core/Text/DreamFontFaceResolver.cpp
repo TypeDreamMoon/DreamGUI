@@ -3,8 +3,11 @@
 #include "Core/Text/DreamFontFaceResolver.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Core/DreamUITextData.h"
+#include "DreamGUI.h"
 #include "Internationalization/Culture.h"
 #include "Internationalization/Internationalization.h"
+#include "Misc/ScopeLock.h"
+#include "UObject/ObjectKey.h"
 
 namespace DreamFontFaceResolverLocal
 {
@@ -36,6 +39,46 @@ namespace DreamFontFaceResolverLocal
 			}
 		}
 		return ECultureFit::Mismatched;
+	}
+
+	/**
+	 * Say once per font, the first time it is asked for a character none of its faces has, that the text shows a box
+	 * there: a Chinese label on a Latin-only font otherwise just comes out as boxes or nothing, with no word anywhere.
+	 * Whitespace and the control and invisible characters are never drawn, so nothing is said about them. The layout
+	 * may run off the game thread, hence the lock.
+	 */
+	void WarnMissingGlyphOnce(const UDreamUIFontData_BaseObject* Font, uint32 Codepoint)
+	{
+		if (Codepoint < 0x20 || (Codepoint >= 0x7F && Codepoint < 0xA0) || Codepoint == 0xFEFF
+			|| FDreamFontFaceResolver::IsDefaultIgnorable(Codepoint)
+			|| (Codepoint <= 0xFFFF && FChar::IsWhitespace(static_cast<TCHAR>(Codepoint))))
+		{
+			return;
+		}
+		static FCriticalSection Lock;
+		static TSet<FObjectKey> Warned;
+		{
+			FScopeLock Scope(&Lock);
+			bool bAlreadyWarned = false;
+			Warned.Add(FObjectKey(Font), &bAlreadyWarned);
+			if (bAlreadyWarned)
+			{
+				return;
+			}
+		}
+		FString Character;
+		if (Codepoint <= 0xFFFF)
+		{
+			Character.AppendChar(static_cast<TCHAR>(Codepoint));
+		}
+		else
+		{
+			const uint32 Offset = Codepoint - 0x10000;
+			Character.AppendChar(static_cast<TCHAR>(0xD800 + (Offset >> 10)));
+			Character.AppendChar(static_cast<TCHAR>(0xDC00 + (Offset & 0x3FF)));
+		}
+		UE_LOG(DreamGUI, Warning, TEXT("Font %s has no glyph for U+%04X '%s' in its own face or any of its fallbacks, so texts drawn with it show a box (or nothing) there. Give those texts a font that covers the character, or add a fallback to %s -- /DreamGUI/DefaultFont_DistanceField_CJK covers Chinese, Japanese and Korean. Said once for each font."),
+			*GetPathNameSafe(Font), Codepoint, *Character, *GetNameSafe(Font));
 	}
 
 	/** Whether a face may draw a cluster with this base: one of its ranges holds it, or it has none. */
@@ -365,9 +408,14 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(UDreamUIFontData_BaseObject
 	{
 		return FDreamFontFaceChoice();
 	}
-	return Resolve(Font->GetFaceTable(), Font->GetFaceCount(), Query,
+	const FDreamFontFaceChoice Choice = Resolve(Font->GetFaceTable(), Font->GetFaceCount(), Query,
 		[Font](int32 FaceIndex, uint32 Codepoint) { return Font->FaceHasCodepoint(FaceIndex, Codepoint); },
 		[Font](int32 FaceIndex) { return Font->IsColorFace(FaceIndex); });
+	if (!Choice.bCoversBase && Query.Cluster.Num() > 0)
+	{
+		DreamFontFaceResolverLocal::WarnMissingGlyphOnce(Font, Query.Cluster[0]);
+	}
+	return Choice;
 }
 
 bool FDreamFontFaceResolver::IsDefaultIgnorable(uint32 Codepoint)

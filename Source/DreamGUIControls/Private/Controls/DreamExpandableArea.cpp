@@ -262,6 +262,10 @@ void UDreamExpandableArea::ApplyStyle()
 		LabelVisual->SetText(Label);
 		LabelVisual->SetColor(Active.LabelColor);
 		LabelVisual->SetFontSize(Active.FontSize);
+		if (Active.Font != nullptr)
+		{
+			LabelVisual->SetFont(Active.Font);
+		}
 	}
 	if (UDreamText* ArrowVisual = ArrowNode != nullptr ? Cast<UDreamText>(ArrowNode->GetVisual()) : nullptr)
 	{

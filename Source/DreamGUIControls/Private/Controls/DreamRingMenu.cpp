@@ -259,6 +259,10 @@ void UDreamRingMenu::ApplyStyle()
 		{
 			Text->SetColor(Active.HubTextColor);
 			Text->SetFontSize(Active.HubFontSize);
+			if (Active.Font != nullptr)
+			{
+				Text->SetFont(Active.Font);
+			}
 		}
 		// Inside the hub's own square, inset so a caption does not run out over the ring.
 		const float Span = FMath::Max(0.0f, Inner * 2.0f - Active.HubFontSize);
@@ -622,6 +626,10 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 			{
 				Text->SetText(Item.Label);
 				Text->SetFontSize(InStyle.FontSize);
+				if (InStyle.Font != nullptr)
+				{
+					Text->SetFont(InStyle.Font);
+				}
 			}
 			PlaceCentred(Label,
 				FVector2D(0.0, Top - IconSpan - Spacing - LabelSpan * 0.5),

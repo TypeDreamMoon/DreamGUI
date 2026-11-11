@@ -1583,6 +1583,12 @@ struct DREAMGUICONTROLS_API FDreamExpandableAreaStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_FontSize"))
 	float FontSize = 15.0f;
 
+	/** The header's typeface, as a font data asset. Null leaves it on the project's default font (DreamGUI settings). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
 	bool bOverride_HeaderPadding = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_HeaderPadding"))
@@ -2097,6 +2103,12 @@ struct DREAMGUICONTROLS_API FDreamRingMenuStyle
 	bool bOverride_HubFontSize = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (EditCondition = "bOverride_HubFontSize"))
 	float HubFontSize = 18.0f;
+
+	/** The typeface of the items' labels and the hub's caption, as a font data asset. Null leaves them on the project's default font. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
 
 	/** An item's icon, when it has one. A brush stating its own ImageSize wins over this. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (InlineEditConditionToggle))
