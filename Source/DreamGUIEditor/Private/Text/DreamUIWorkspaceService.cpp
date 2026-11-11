@@ -174,17 +174,71 @@ FString FDreamUIWorkspaceService::BuildWorkspaceJson(const TArray<FDreamUISource
 	Root->SetObjectField(TEXT("settings"), Settings);
 
 	// The one line that closes the loop for a fresh machine: open the workspace, VSCode offers
-	// the extension that understands it.
+	// the extension that understands it. Under the id it has had since 0.9.2 -- this line still
+	// named the old one after the rename, so a machine that took the offer got the copy nothing
+	// updates any more, and with it a screen of diagnostics the compiler no longer raises. The old
+	// id is said to be unwanted too, so VSCode stops offering it to a workspace that already has it
+	// recommended from an earlier file.
 	TArray<TSharedPtr<FJsonValue>> Recommendations;
-	Recommendations.Add(MakeShared<FJsonValueString>(TEXT("typedreammoon.dreamui-language-support")));
+	Recommendations.Add(MakeShared<FJsonValueString>(ExtensionId));
+	TArray<TSharedPtr<FJsonValue>> Unwanted;
+	Unwanted.Add(MakeShared<FJsonValueString>(OldExtensionId));
 	TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
 	Extensions->SetArrayField(TEXT("recommendations"), Recommendations);
+	Extensions->SetArrayField(TEXT("unwantedRecommendations"), Unwanted);
 	Root->SetObjectField(TEXT("extensions"), Extensions);
 
 	FString Serialized;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
 	FJsonSerializer::Serialize(Root, Writer);
 	return Serialized;
+}
+
+TArray<FString> FDreamUIWorkspaceService::FindOldExtensionCopies(const FString& InExtensionsDirectory)
+{
+	// VSCode unpacks an extension into `<publisher>.<name>-<version>`. Any publisher: a .vsix installed from a local
+	// build can carry another one, and is the same stale copy.
+	TArray<FString> Found;
+	const FString OldName = FString(OldExtensionId).RightChop(FString(OldExtensionId).Find(TEXT(".")) + 1) + TEXT("-");
+	IFileManager::Get().IterateDirectory(*InExtensionsDirectory, [&Found, &OldName](const TCHAR* InPath, bool bInIsDirectory)
+	{
+		const FString Name = FPaths::GetCleanFilename(InPath);
+		int32 Dot = INDEX_NONE;
+		if (bInIsDirectory && Name.FindChar(TEXT('.'), Dot) && Name.Mid(Dot + 1).StartsWith(OldName, ESearchCase::IgnoreCase))
+		{
+			Found.Add(Name);
+		}
+		return true;
+	});
+	Found.Sort();
+	return Found;
+}
+
+void FDreamUIWorkspaceService::WarnAboutOldExtensionCopies()
+{
+	// Said here as well as by the extension itself (it warns about an old copy at start-up), because the case that
+	// mattered was the old copy ALONE: with no new extension installed there is nothing on that side to say anything,
+	// and every .dui opens to diagnostics the compiler stopped raising long ago.
+	const FString Home = FPlatformMisc::GetEnvironmentVariable(TEXT("USERPROFILE"));
+	if (Home.IsEmpty())
+	{
+		return;
+	}
+	const TArray<FString> Copies = FindOldExtensionCopies(FPaths::Combine(Home, TEXT(".vscode"), TEXT("extensions")));
+	if (Copies.IsEmpty())
+	{
+		return;
+	}
+	UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d VSCode has the .dui extension under its old id installed (%s); uninstall it ('code --uninstall-extension %s') and install %s."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FString::Join(Copies, TEXT(", ")), OldExtensionId, ExtensionId);
+	FNotificationInfo Info(FText::FromString(FString::Printf(
+		TEXT("VSCode has the old DreamUI extension installed (%s). Uninstall it and install %s, or .dui files show diagnostics the compiler no longer raises."),
+		*Copies[0], ExtensionId)));
+	Info.ExpireDuration = 12.0f;
+	if (TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info))
+	{
+		Item->SetCompletionState(SNotificationItem::CS_Fail);
+	}
 }
 
 bool FDreamUIWorkspaceService::WriteWorkspaceFile(FString& OutWorkspaceFilePath, FString& OutError)
@@ -236,6 +290,7 @@ void FDreamUIWorkspaceService::OpenWorkspace()
 	if (LaunchVSCodeWorkspace(WorkspaceFilePath))
 	{
 		Notify(FText::FromString(FString::Printf(TEXT("Opened DreamUI workspace in VSCode: %s"), *WorkspaceFilePath)), true);
+		WarnAboutOldExtensionCopies();
 		return;
 	}
 	if (FPlatformProcess::LaunchFileInDefaultExternalApplication(*WorkspaceFilePath, nullptr, ELaunchVerb::Edit, false))

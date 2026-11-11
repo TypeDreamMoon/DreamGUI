@@ -15,6 +15,17 @@ struct FDreamUISourceRoot;
  */
 struct DREAMGUIEDITOR_API FDreamUIWorkspaceService
 {
+	/** The extension the workspace recommends. */
+	static constexpr const TCHAR* ExtensionId = TEXT("typedreammoon.dreamgui-language-support");
+	/** Its id up to 0.9.1; a copy still installed under it runs beside the new one, or alone and out of date. */
+	static constexpr const TCHAR* OldExtensionId = TEXT("typedreammoon.dreamui-language-support");
+
+	/** The folders under InExtensionsDirectory (VSCode's `~/.vscode/extensions`) that hold a copy under the old id, any publisher. */
+	static TArray<FString> FindOldExtensionCopies(const FString& InExtensionsDirectory);
+
+	/** A notification and a log line when VSCode has an old copy installed. Called after the workspace opens in VSCode. */
+	static void WarnAboutOldExtensionCopies();
+
 	/**
 	 * The workspace JSON for these roots. Split from the writer so a test can hold it without
 	 * touching disk -- this file is read by ANOTHER program (VSCode) and written by nobody else;
