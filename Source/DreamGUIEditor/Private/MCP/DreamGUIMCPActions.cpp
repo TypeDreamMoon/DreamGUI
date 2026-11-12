@@ -1678,6 +1678,7 @@ namespace DreamGUIMCP
 					Overall.PartialPixels += State->PerFrame[Index].PartialPixels;
 					Overall.NearWhitePixels += State->PerFrame[Index].NearWhitePixels;
 					Overall.NearBlackPixels += State->PerFrame[Index].NearBlackPixels;
+					Overall.ApartPixels += State->PerFrame[Index].ApartPixels;
 					for (int32 Channel = 0; Channel < 3; ++Channel)
 					{
 						Overall.Sum[Channel] += State->PerFrame[Index].Sum[Channel];

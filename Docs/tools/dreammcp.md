@@ -132,7 +132,7 @@ are the file's: an authored `#1B1E26` reads back as `#1B1E26`. The same frame is
 | `meanColor`, `meanColorName` | the mean of the covered pixels as the picture shows them, and a plain name for it (greys under saturation 0.12, tinted greys under 0.4) |
 | `luminance` | Rec. 709 weights on the PNG's encoded values: min, max, mean, standard deviation |
 | `nearWhite`, `nearBlack` | covered pixels with every channel at 240 or above / 12 or below |
-| `flat` | luminance and every channel's standard deviation at most 0.012 |
+| `flat` | luminance and every channel's standard deviation at most 0.012, and at most 16 covered pixels standing apart from the frame's mean colour by 24 or more on a channel; a plain backdrop with a control and a label on it is not flat, and the summary says how much is drawn on it |
 
 The summary leads with the one fact that matters most: the screen draws almost nothing (under 0.5 % covered), is near black
 (90 % or more), near white (30 % or more), one flat colour, or else its coverage, mean colour and luminance range; then how

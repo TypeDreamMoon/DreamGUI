@@ -1474,6 +1474,29 @@ bool FDreamMCPPreviewStatsTest::RunTest(const FString& Parameters)
 			Sparks[Frame][Frame * 7 + Spark * 2500] = FColor(200, 255, 230, 255);
 		}
 	}
+	// A plain backdrop over the whole picture with a small control and its label drawn on it: not one flat colour.
+	TArray<FColor> Plain;
+	Plain.Init(FColor(28, 30, 38, 255), Big);
+	TArray<FColor> PlainBlack = Plain;
+	TArray<FColor> PlainWhite = Plain;
+	FPreviewStats Empty2;
+	Empty2.Add(Plain, PlainBlack, PlainWhite);
+	TestTrue(TEXT("a plain backdrop alone is one flat colour"), Empty2.IsFlat());
+	TArray<FColor> WithControl = Plain;
+	for (int32 Y = 40; Y < 46; ++Y)
+	{
+		for (int32 X = 40; X < 52; ++X)
+		{
+			WithControl[Y * 100 + X] = FColor(230, 233, 240, 255);
+		}
+	}
+	FPreviewStats Drawn;
+	Drawn.Add(WithControl, WithControl, WithControl);
+	TestFalse(TEXT("with a small control on it, it is not"), Drawn.IsFlat());
+	TArray<FString> DrawnNext;
+	const FString DrawnSentence = DescribePreview(Drawn, DrawnNext);
+	TestTrue(FString::Printf(TEXT("and the sentence says something is drawn on it: %s"), *DrawnSentence), DrawnSentence.Contains(TEXT("drawn on it")));
+
 	const TArray<FPreviewStats> NoStats;
 	TestFalse(TEXT("identical frames do not animate"), AnalysePreviewAnimation(Still, NoStats).bChanges);
 	const FPreviewAnimation Moving = AnalysePreviewAnimation(Sparks, NoStats);
