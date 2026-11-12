@@ -888,6 +888,18 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Aligned)), TEXT("t-3")))), TEXT("diagnostics"));
 	TestTrue(TEXT("VAlign = Center on a text suggests Middle"), AlignDiagnostics.Num() > 0
 		&& Field(AlignDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("did you mean 'Middle'")));
+
+	// One misspelt line in a style that three texts wear: one error, which says how many nodes it was raised for.
+	const FString Worn = Sources.Write(TEXT("Worn"), FString(TEXT("style Label {\n    FontSize = 20\n    Colr = #FFFFFF\n}\n\n"))
+		+ Screen(TEXT("    Text A : Label { Text = \"A\" }\n    Text B : Label { Text = \"B\" }\n    Text C : Label { Text = \"C\" }")));
+	const TSharedPtr<FJsonObject> WornResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Worn)), TEXT("t-4"))));
+	const TArray<TSharedPtr<FJsonValue>> WornDiagnostics = ArrayField(WornResult, TEXT("diagnostics"));
+	if (TestEqual(TEXT("a style's error worn by three nodes is one entry"), WornDiagnostics.Num(), 1))
+	{
+		TestTrue(TEXT("which says how often it was raised"), Field(WornDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("raised 3 times by this one line")));
+	}
+	TestTrue(FString::Printf(TEXT("and is counted once: %s"), *Field(WornResult, TEXT("summary"))), Field(WornResult, TEXT("summary")).Contains(TEXT("1 error,")));
 	return true;
 }
 

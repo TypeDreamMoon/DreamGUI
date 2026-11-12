@@ -106,6 +106,8 @@ They never fail a compile; they come out of `layout` (and DUI8007 out of `previe
 node's path, the line that writes it (or the control that made it) and a hint. One problem in a branch is reported once,
 not again for every node inside it, and a problem inside a component placed several times is one entry that names the
 other instances (`(the same at Root/CardB/Mute, ...)`); any finding repeated at the same place says `(reported N times)`.
+This holds for every answer, compile errors included: an error on a line of a `style` that several nodes wear is one
+entry, `(raised 3 times by this one line, once for each node that uses it)`, and is counted once.
 
 | Code | Severity | Reported when | Threshold |
 | --- | --- | --- | --- |

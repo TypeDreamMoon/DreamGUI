@@ -467,6 +467,7 @@ namespace DreamGUIMCP
 		Context.Done.Add(File);
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		const bool bOk = CompileOne(File, Context, &Blueprint);
+		CollapseRepeatedDiagnostics(Outcome.Diagnostics);
 		Outcome.Blueprint = Blueprint;
 		Outcome.bFailed = !bOk;
 		return Outcome;

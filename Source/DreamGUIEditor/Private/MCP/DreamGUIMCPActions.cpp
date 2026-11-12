@@ -302,6 +302,7 @@ namespace DreamGUIMCP
 				}
 
 				FResult& Result = State->Result;
+				CollapseRepeatedDiagnostics(Result.Diagnostics);
 				const int32 Errors = CountSeverity(Result.Diagnostics, TEXT("error"));
 				const int32 Warnings = CountSeverity(Result.Diagnostics, TEXT("warning"));
 				Result.Outcome = Errors > 0 ? EOutcome::SourceError : EOutcome::Ok;
