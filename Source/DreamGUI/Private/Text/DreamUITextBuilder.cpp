@@ -619,6 +619,14 @@ namespace DreamUITextBuilderLocal
 		{
 			ObjectPath += TEXT("_C");
 		}
+		// A package that is neither loaded nor on disk is not asked for: a load of it fails, and on the way it leaves an
+		// empty package of that name in memory, which then reads as "already there" to whatever creates the asset next
+		// (the component a screen names before it has been compiled, say).
+		const FString PackageName = FPackageName::ObjectPathToPackageName(ObjectPath);
+		if (FindPackage(nullptr, *PackageName) == nullptr && !FPackageName::DoesPackageExist(PackageName))
+		{
+			return nullptr;
+		}
 		if (UClass* Generated = LoadObject<UClass>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
 		{
 			return Generated;

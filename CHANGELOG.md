@@ -524,6 +524,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **Building a screen whose component is not compiled yet leaves nothing behind.** It tried to load the component's
+  class from a package that did not exist, which left an empty package of that name in memory -- one the DreamMCP
+  endpoint then took for an existing asset, refusing to create the component there until the engine restarted. A
+  package that is neither loaded nor on disk is no longer asked for, and the endpoint goes by the asset, not the package.
 - **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
   letters overlap -- tight or negative letter spacing, italic, a heavy condensed face -- the next letter's shadow landed on
   this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with
