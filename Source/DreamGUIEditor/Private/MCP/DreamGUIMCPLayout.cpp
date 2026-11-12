@@ -201,6 +201,7 @@ namespace DreamGUIMCP
 			const double RootLeft;
 			const double RootTop;
 			const UDreamCanvas* StageCanvas;
+			const FMatrix ViewProjection;
 			FAstIndex MainIndex;
 			TMap<const UClass*, TSharedPtr<FAstIndex>> ComponentIndices;
 
@@ -210,6 +211,7 @@ namespace DreamGUIMCP
 				, RootLeft(InRoot->GetLocalSpaceLeft())
 				, RootTop(InRoot->GetLocalSpaceTop())
 				, StageCanvas(InCanvas)
+				, ViewProjection(InCanvas != nullptr ? InCanvas->GetViewProjectionMatrix() : FMatrix::Identity)
 			{
 			}
 
@@ -220,6 +222,24 @@ namespace DreamGUIMCP
 				const FVector InRoot = RootTransform.InverseTransformPosition(World);
 				OutDepth = InRoot.X;
 				return FVector2D(InRoot.Y - RootLeft, RootTop - InRoot.Z);
+			}
+
+			/**
+			 * A point of the widget's own plane where the canvas draws it, in viewport pixels from the top left: through
+			 * the widget's drawn matrix (perspective and shear folded in) and the canvas's view projection, the way the
+			 * canvas renders it. False when the point lies behind the eye.
+			 */
+			bool Project(const UDreamWidget* InWidget, const FVector2D& InLocal, FVector2D& OutPixels) const
+			{
+				const FVector World = InWidget->GetWorldMatrix().TransformPosition(FVector(0.0, InLocal.X, InLocal.Y));
+				const FVector4 Clip = ViewProjection.TransformFVector4(FVector4(World, 1.0));
+				if (Clip.W <= UE_KINDA_SMALL_NUMBER)
+				{
+					return false;
+				}
+				OutPixels.X = (Clip.X / Clip.W * 0.5 + 0.5) * Out.Viewport.X;
+				OutPixels.Y = (0.5 - Clip.Y / Clip.W * 0.5) * Out.Viewport.Y;
+				return true;
 			}
 
 			/** The file a widget was written in and its node there, through the component that built it when it was one. */
@@ -268,11 +288,32 @@ namespace DreamGUIMCP
 					Box += ToPixels(InWidget, Corner, Depth);
 					MaxDepth = FMath::Max(MaxDepth, FMath::Abs(Depth));
 				}
+				Node.b3D = MaxDepth > 0.5 || InWidget->HasPerspectiveApplied() || InWidget->HasShearApplied();
+				if (Node.b3D)
+				{
+					// Turned out of the canvas plane (or sheared, or inside a perspective): where it is DRAWN, which is the
+					// outline through the matrix the geometry uses, projected by the canvas's own camera.
+					FBox2D Drawn(ForceInit);
+					bool bAllProjected = StageCanvas != nullptr;
+					for (const FVector2D Corner : { FVector2D(Left, Bottom), FVector2D(Right, Bottom), FVector2D(Left, Top), FVector2D(Right, Top) })
+					{
+						FVector2D OnScreen;
+						bAllProjected = bAllProjected && Project(InWidget, Corner, OnScreen);
+						Drawn += OnScreen;
+					}
+					if (bAllProjected)
+					{
+						Box = Drawn;
+					}
+					else
+					{
+						Node.bApproximate = true; // a corner behind the eye: the outline seen straight on is all there is
+					}
+				}
 				Node.X = Box.Min.X;
 				Node.Y = Box.Min.Y;
 				Node.W = Box.Max.X - Box.Min.X;
 				Node.H = Box.Max.Y - Box.Min.Y;
-				Node.b3D = MaxDepth > 0.5;
 
 				// What of it can show: cut to every clipping ancestor's rect.
 				FBox2D Visible = Box;
@@ -1000,7 +1041,7 @@ namespace DreamGUIMCP
 			if (!Node.Container.IsEmpty()) { Notes.Add(Node.Container); }
 			if (!Node.Anchors.IsEmpty() && Node.Depth > 0) { Notes.Add(Node.Anchors); }
 			if (Node.bClipped) { Notes.Add(Node.VisW <= 0.0 ? TEXT("clipped away") : TEXT("partly clipped")); }
-			if (Node.b3D) { Notes.Add(TEXT("turned in 3D")); }
+			if (Node.b3D) { Notes.Add(Node.bApproximate ? TEXT("turned in 3D, rect approximate: part of it is behind the eye") : TEXT("turned in 3D, rect as drawn in perspective")); }
 			if (!Node.Canvas.IsEmpty()) { Notes.Add(FString::Printf(TEXT("own canvas %s"), *Node.Canvas)); }
 			if (!Node.bAuthored && Node.Depth > 0) { Notes.Add(TEXT("part of its control")); }
 			if (Notes.Num() > 0)
@@ -1050,6 +1091,7 @@ namespace DreamGUIMCP
 			if (!Node.PlacedBy.IsEmpty()) { Object->SetStringField(TEXT("placedBy"), Node.PlacedBy); }
 			if (!Node.Anchors.IsEmpty()) { Object->SetStringField(TEXT("anchors"), Node.Anchors); }
 			if (Node.b3D) { Object->SetBoolField(TEXT("in3d"), true); }
+			if (Node.bApproximate) { Object->SetBoolField(TEXT("approximate"), true); }
 			if (Node.bHasText)
 			{
 				TSharedRef<FJsonObject> Text = MakeShared<FJsonObject>();

@@ -76,8 +76,13 @@ namespace DreamGUIMCP
 		double VisX = 0, VisY = 0, VisW = 0, VisH = 0;
 		bool bClipped = false;
 		bool bClipsChildren = false;
-		/** Turned out of the canvas plane (depth, yaw or pitch): the rect is the bound of its outline seen straight on. */
+		/**
+		 * Turned out of the canvas plane (depth, yaw or pitch), sheared, or inside a perspective: the rect is the bound of
+		 * its outline as the canvas's camera draws it.
+		 */
 		bool b3D = false;
+		/** A corner of a node turned in 3D lies behind the eye, so its rect is the outline seen straight on instead. */
+		bool bApproximate = false;
 
 		bool bActive = true;
 		bool bShown = true;

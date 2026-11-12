@@ -91,8 +91,11 @@ node and what is under it.
 
 `data.tree` is the same tree as JSON: per node `type`, `name`, `path`, `rect`, `visibleRect` when clipped, `visible`,
 `order` (draw order in its canvas), `canvas`, `pressable`, `container`, `placedBy`, `anchors`, `in3d`, `text` (`text`,
-`fontSize`, `cut`, `overflows`, `neededW`, `neededH`), `file` and `line`. A node turned in 3D is given the bound of its
-outline seen straight on; the picture shows its perspective.
+`fontSize`, `cut`, `overflows`, `neededW`, `neededH`), `file` and `line`. A node turned in 3D (or sheared, or inside a
+`Perspective`) is given the bound of its outline as the canvas's camera draws it -- its four corners through the matrix
+its geometry is drawn with and the canvas's view projection -- so its rect is where the picture shows it; the line says
+`turned in 3D, rect as drawn in perspective`. When a corner is behind the eye it says `rect approximate` and gives the
+outline seen straight on (`approximate` in `data.tree`).
 
 `sizes` lays the screen out at more viewports (`"1280x720, 2560x1440, 1080x1920"`, up to five). A problem found at one of
 them and not at `width` x `height` is reported as DUI8006, naming the size.
