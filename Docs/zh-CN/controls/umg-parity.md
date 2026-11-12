@@ -110,7 +110,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs -Out=<directory>
 ```
 
-不带 `-Out` 时写进插件的 `Docs/Reference/`。
+不带 `-Out` 时写进插件的 `Docs/Reference/`。这些描述是编辑器所用语言中的工具提示：在设置为其他语言的机器上添加 `-culture=en`，因为插件自身的页面是英文。
 
 - 属性的描述就是头文件里它上面的注释——这也是为什么那条注释要写给用这个控件的人，而不是维护它的人。
 - 每个属性一行写明它是否出现在细节面板、蓝图怎么读写（getter / setter 的名字）。

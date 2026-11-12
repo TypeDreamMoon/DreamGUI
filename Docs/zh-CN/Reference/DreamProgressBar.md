@@ -20,6 +20,12 @@ UMG 对齐是 UProgressBar 的核心：Percent 在 0..1 范围内，SetPercent/G
 
     /Script/DreamGUIControls.DreamProgressBar LoadProgress {
         Percent = 0.35
+    }
+
+    /Script/DreamGUIControls.DreamProgressBar Spinner {
+        Shape = Radial
+        Percent = 0.25
+    }
 
 <a id="properties"></a>
 

@@ -60,12 +60,12 @@ Widget Root {
   - [核心概念](concepts/widgets.md) — 控件、画布、世界空间、控件蓝图、布局、文本、渲染、输入、动画。
   - [.dui 语言](language/overview.md) — 节点与值、插槽与组件、样式、use、组件、视图模型、绑定、if 与 for、rows、时间轴、写回。
   - [控件库](controls/index.md) — 按钮、开关、滑条、列表、对话框、标签页……以及样式表和与 UMG 的逐项对照。
-  - [工具](tools/designer.md) — 设计器、VS Code 扩展、调试命令、测试套件、基准测试、脚本接口。
+  - [工具](tools/designer.md) — 设计器、VS Code 扩展、调试命令、测试套件、基准测试、脚本、AI 代理以及 DreamMCP 端点。
   - [迁移与升级](guides/migration.md) — 从 LGUI、LexUI 或早期构建迁过来，以及开发版之间的升级。
   - [打包与平台](guides/fonts-and-packaging.md) — 字体、彩色 emoji、ICU 数据怎么随游戏发出去；哪些平台真的跑过。
   - [导入分层文档](guides/layered-document-import.md) — 把 .psd 或 .psb 导成 DreamUI 控件：每种图层变成什么、命名约定、字体、再次导入。
   - [常见陷阱](guides/pitfalls.md) —— 看起来像 bug 但其实不是的情况：对单个属性使用补间、角度约定、射线检测目标、样式覆盖、字体、组内的效果，以及 UMG 名称不同之处。
   - [属性的 meta 标签](guides/property-meta.md) — 决定属性在细节面板里放在哪、是否隐藏、用什么控件的 `DreamGUI_` 标签；扩展的类怎么用。
-  - [诊断码](diagnostics/index.md) — 每条 .dui 诊断都是一个 DUInnnn 代码，按编译阶段分成七族。
+  - [诊断](diagnostics/index.md) — 每条 .dui 诊断都是一个 DUInnnn 代码，按阶段分为八族。
   - [API 参考](Reference/index.md) — 从反射生成的逐类属性与函数参考，每页末尾附与 UMG 的对照。
   - [更新日志](changelog/index.md) — 每个版本改了什么。

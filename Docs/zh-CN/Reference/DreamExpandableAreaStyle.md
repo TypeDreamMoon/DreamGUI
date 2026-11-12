@@ -23,6 +23,7 @@
 | `TransitionDuration` | `float` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `LabelColor` | `FColor` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `FontSize` | `float` | 可展开区域样式 | 是 | 读 / 写 |  |
+| `Font` | `TObjectPtr<UDreamUIFontData_BaseObject>` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `HeaderPadding` | `FMargin` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `ContentBackground` | `FColor` | 可展开区域样式 | 是 | 读 / 写 |  |
 | `ContentPadding` | `FMargin` | 可展开区域样式 | 是 | 读 / 写 |  |

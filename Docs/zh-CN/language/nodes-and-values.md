@@ -157,6 +157,25 @@ AnchorData.SizeDelta = (400, 240)
 
 标志位枚举没有 `|`；组合写成各个标志相加得到的数字。
 
+<a id="positions-sizes-and-axes"></a>
+
+### 位置、尺寸和轴
+
+盒子外的节点由其 `AnchorData` 放置，就像 Unity 的 RectTransform 一样，并且 **Y 轴向上**：
+
+- `AnchorMin`、`AnchorMax`：父节点上的点，每个轴上从 0 到 1，`(0, 0)` 是其**左下角**，`(1, 1)` 是其右上角。相等时，它们将节点固定在该点；不同时，它们会让节点随父节点拉伸。
+- `Pivot`：节点自身的点，同样从 0 到 1，`(0.5, 0.5)` 是其中心——即 `AnchoredPosition` 放置的位置。
+- `AnchoredPosition`：从锚点到轴心，单位为像素；Y 为正会将节点向**上**移动。
+- `SizeDelta`：在锚点重合的轴上，宽度和高度以像素为单位；在锚点拉伸的轴上，表示比它们之间的跨度大多少（或为负值，小多少）。`AnchorMin = (0, 0)`、`AnchorMax = (1, 1)`、`SizeDelta = (0, 0)` 会填满父节点。
+
+位于盒子（`VerticalBox`、`HorizontalBox`、网格）内的节点改由该盒子通过其 `@slot` 行（[槽位行](slots-and-components.md#slot-lines-slot-and-fill)）放置：垂直盒子给子节点的是它测量出的宽度，而不是盒子的宽度，除非子节点的 `@slot HorizontalAlignment = Fill`。
+
+渲染变换会移动节点的绘制位置，而不影响布局：
+
+- `RenderTranslation = (X, Y, Z)`，单位为像素：**X 是深度**——负值将节点拉向观察者并绘制得更大，正值将其推远——Y 向右，Z 向上。`(0, -40, 0)` 向左 40 px；`(-40, 0, 0)` 靠近 40。
+- `RenderRotation = (Pitch, Yaw, Roll)`，单位为度，围绕 `RenderTransformPivot`：Yaw 绕节点的垂直轴转动（正值使其右边缘靠近），Pitch 绕水平轴转动，Roll 在屏幕平面内转动（正值为顺时针）。
+- `RenderScale = (X, Y, Z)` 会按绘制时的效果缩放该节点。
+
 把列表写在不是数组或 Set 的属性上、把 Map 写在不是 Map 的属性上，或者节点的 Set/Map，都是 DUI4009；读不通的列表或 Map（括号没有闭合、Map 条目缺少 `:`，但 struct 的第一个条目除外，它可以不带键）是 DUI2023。
 
 字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于 `class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在所属 `DUI/` 目录下的路径（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。

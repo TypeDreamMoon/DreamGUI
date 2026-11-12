@@ -2,7 +2,7 @@
 
 ## 诊断
 
-每条消息都有一个代码 `DUInnnn`，打印为 `File.dui(line,col): error DUI3001: …`。第一位数字表示是哪个阶段拒绝的：1 词法分析器，2 语法分析器，3 语义，4 值，5 构建树，6 编译进蓝图，7 写回。
+每条消息都有一个代码，`DUInnnn`，打印为 `File.dui(line,col): error DUI3001: …`。第一位数字表示是哪个阶段拒绝的：1 词法分析器，2 语法分析器，3 语义，4 值，5 构建树，6 编译进蓝图，7 写回，8 布局（仅限 DreamMCP 的 `layout` 和 `preview`）。
 
 | 代码 | 名称 | 含义 |
 |---|---|---|
@@ -126,3 +126,10 @@
 | DUI7003 | PatchValueNotRepresentable | 一个这门语言无法拼写的值（一个非有限数字）；它所在的行保持不变。 |
 | DUI7004 | PatchSyntaxNotWritable | 一个对任何行都无法拼写的东西的修改：由 `if` 决定的可见性、无法重写的简写、对 `Tags` 的、任何行都无法承载的修改（两种写法皆是，或者 `@tag` 行无法容纳的名称）。 |
 | DUI7005 | PatchStyleComponentNotWritable | 一个对节点值的修改，而这个值来自样式的 `+` 行，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |
+| DUI8001 | LayoutOffScreen | 节点能显示的部分越过视口边缘，或完全位于视口之外。 |
+| DUI8002 | LayoutTextOverflow | 被溢出策略截断的文本，或布局超出其框的文本。 |
+| DUI8003 | LayoutTooSmall | 绘制或可按下但尺寸为零的节点，或小于 24 x 24 px 的可按下控件。 |
+| DUI8004 | LayoutOverlappingControls | 同一画布上相互重叠的两个可按下控件。 |
+| DUI8005 | LayoutNearlyAligned | 同级节点的边缘、中心或间距相差 1 到 3 px 而未对齐（信息）。 |
+| DUI8006 | LayoutBreaksAtSize | 在所要求的其他视口尺寸之一上出现布局问题，而在第一个尺寸上没有出现。 |
+| DUI8007 | LayoutLowContrast | 文本与背后内容的对比度低于 3 比 1（仅预览）。 |

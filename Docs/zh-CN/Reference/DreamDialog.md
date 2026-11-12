@@ -22,6 +22,9 @@
         Title   = "删除存档"
         Message = "这个操作不能撤销。"
         OnDialogClosed -> HandleAnswer
+    }
+
+用枚举固定一对 OK/Cancel 按钮，对同样的情况并不会表达得更好，对三按钮的情况更是无从表达，这正是数组胜出的原因。
 
 <a id="properties"></a>
 

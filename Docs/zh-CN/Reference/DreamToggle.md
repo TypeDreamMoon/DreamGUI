@@ -19,6 +19,13 @@ BP_Toggle 拥有的同样四个节点——一个方框、其中有一个勾选�
     Native.Toggle Mute {
         Style.TickChecked = #FF3355
         OnToggleChanged -> HandleMute
+    }
+
+刻意不带标签：复选框就是一个方块和它的标记，旁边的文字属于使用方的布局。在屏幕所需的任意行中，将它和一个 Text 节点搭配使用。
+
+在 API 层面，它沿用 UMG 的复选框：CheckedState（Unchecked/Checked/Undetermined）以及 GetCheckedState/SetCheckedState、IsChecked/SetIsChecked 和 OnCheckStateChanged。bIsOn 连同 GetIsOn/SetIsOn 和 OnToggleChanged 是两态子集的兼容写法，并且完全可绑定；这两种写法在每条路径上互为镜像，而当作者填写的值出现分歧时，CheckedState 胜出（参见 ReconcileCheckSpellings）。
+
+第三个状态是控件自身所有的。其下的行为仍为两态，并且在 Undetermined 成立期间停驻于未选中；勾选标记会把对勾换成 TickChecked 颜色的一条横杠。一次点击会以变为未选中的方式离开 Undetermined，正如 UMG 的 SCheckBox 那样。
 
 <a id="properties"></a>
 
