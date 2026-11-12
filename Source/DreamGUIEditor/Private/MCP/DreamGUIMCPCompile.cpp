@@ -176,6 +176,29 @@ namespace DreamGUIMCP
 			FCompileOutcome* Outcome = nullptr;
 		};
 
+		/**
+		 * A file that cannot be compiled. When it is the file the call named, that is the call's refusal; when it is a
+		 * component another file places, it is an error on that file, so the screen's answer says why its row is missing.
+		 */
+		void Refuse(FCompileContext& Context, const FString& InFile, const FString& InReason, const FString& InSummary, const FString& InNext = FString())
+		{
+			FCompileOutcome& Outcome = *Context.Outcome;
+			if (Context.Stack.Num() == 0)
+			{
+				Outcome.RefusalReason = InReason;
+				Outcome.RefusalSummary = InSummary;
+				Outcome.RefusalNext = InNext;
+				return;
+			}
+			FDiagnostic Diagnostic;
+			Diagnostic.Severity = TEXT("error");
+			Diagnostic.File = MakeProjectRelativePath(Context.Stack.Last());
+			Diagnostic.Message = FString::Printf(TEXT("the component %s cannot be compiled: %s"), *MakeProjectRelativePath(InFile), *InSummary); // I18N-EXEMPT: wire text
+			Diagnostic.Hint = InNext;
+			Diagnostic.Stage = TEXT("compile");
+			Outcome.Diagnostics.Add(MoveTemp(Diagnostic));
+		}
+
 		/** One file, its components first. False when it, or a component it needs, did not compile. */
 		bool CompileOne(const FString& InFile, FCompileContext& Context, UDreamWidgetBlueprint** OutBlueprint)
 		{
@@ -187,21 +210,7 @@ namespace DreamGUIMCP
 			FString Summary;
 			if (!ReadSource(InFile, Text, Reason, Summary))
 			{
-				if (Context.Stack.Num() == 0)
-				{
-					Outcome.RefusalReason = Reason;
-					Outcome.RefusalSummary = Summary;
-					Outcome.RefusalNext = TEXT("Give file as a path relative to the project root, for example DUI/Menu.dui.");
-				}
-				else
-				{
-					FDiagnostic Missing;
-					Missing.Severity = TEXT("error");
-					Missing.File = MakeProjectRelativePath(Context.Stack.Last());
-					Missing.Message = FString::Printf(TEXT("the component %s cannot be compiled: %s"), *Relative, *Summary); // I18N-EXEMPT: wire text
-					Missing.Stage = TEXT("compile");
-					Outcome.Diagnostics.Add(MoveTemp(Missing));
-				}
+				Refuse(Context, InFile, Reason, Summary, TEXT("Give file as a path relative to the project root, for example DUI/Menu.dui."));
 				return false;
 			}
 
@@ -249,24 +258,14 @@ namespace DreamGUIMCP
 				Blueprint = FindBlueprintOfSource(InFile);
 				if (Blueprint == nullptr)
 				{
-					if (Context.Stack.Num() == 0)
-					{
-						Outcome.RefusalReason = TEXT("no-class-line");
-						Outcome.RefusalSummary = FString::Printf(TEXT("%s has no class line, so it does not say which widget Blueprint to build."), *Relative); // I18N-EXEMPT: wire text
-						Outcome.RefusalNext = TEXT("Add a first line such as: class /Game/UI/WBP_Menu");
-					}
+					Refuse(Context, InFile, TEXT("no-class-line"), FString::Printf(TEXT("%s has no class line, so it does not say which widget Blueprint to build."), *Relative), TEXT("Add a first line such as: class /Game/UI/WBP_Menu")); // I18N-EXEMPT: wire text
 					return false;
 				}
 				AssetPath = Blueprint->GetOutermost()->GetName();
 			}
 			else if (AssetPath.StartsWith(TEXT("/Script/")))
 			{
-				if (Context.Stack.Num() == 0)
-				{
-					Outcome.RefusalReason = TEXT("native-class");
-					Outcome.RefusalSummary = FString::Printf(TEXT("%s is the source of the C++ class %s; only a widget Blueprint can be built from a file here."), *Relative, *Ast.ClassPath); // I18N-EXEMPT: wire text
-					Outcome.RefusalNext = TEXT("Write class /Game/<Folder>/WBP_<Name> for a Blueprint of your own.");
-				}
+				Refuse(Context, InFile, TEXT("native-class"), FString::Printf(TEXT("%s is the source of the C++ class %s; only a widget Blueprint can be built from a file here."), *Relative, *Ast.ClassPath), TEXT("Write class /Game/<Folder>/WBP_<Name> for a Blueprint of your own.")); // I18N-EXEMPT: wire text
 				return false;
 			}
 			else
@@ -274,27 +273,30 @@ namespace DreamGUIMCP
 				FText InvalidReason;
 				if (!FPackageName::IsValidLongPackageName(AssetPath, /*bIncludeReadOnlyRoots*/ false, &InvalidReason))
 				{
-					if (Context.Stack.Num() == 0)
-					{
-						Outcome.RefusalReason = TEXT("bad-class-path");
-						Outcome.RefusalSummary = FString::Printf(TEXT("The class line of %s names %s, which is not an asset path: %s"), *Relative, *Ast.ClassPath, *InvalidReason.ToString()); // I18N-EXEMPT: wire text
-						Outcome.RefusalNext = TEXT("Write it as class /Game/<Folder>/WBP_<Name>.");
-					}
+					Refuse(Context, InFile, TEXT("bad-class-path"), FString::Printf(TEXT("The class line of %s names %s, which is not an asset path: %s"), *Relative, *Ast.ClassPath, *InvalidReason.ToString()), TEXT("Write it as class /Game/<Folder>/WBP_<Name>.")); // I18N-EXEMPT: wire text
 					return false;
 				}
 				const FString AssetName = FPackageName::GetLongPackageAssetName(AssetPath);
-				if (FPackageName::DoesPackageExist(AssetPath) || FindPackage(nullptr, *AssetPath) != nullptr)
+				// The asset, not the package, says whether something is there: a failed load elsewhere can leave an
+				// empty package of this name in memory, and that is a place to create the Blueprint, not a refusal.
+				UPackage* const InMemory = FindPackage(nullptr, *AssetPath);
+				UObject* Existing = InMemory != nullptr ? FindObject<UObject>(InMemory, *AssetName) : nullptr;
+				const bool bOnDisk = FPackageName::DoesPackageExist(AssetPath);
+				if (Existing == nullptr && bOnDisk)
 				{
-					UObject* Existing = StaticLoadObject(UObject::StaticClass(), nullptr, *(AssetPath + TEXT(".") + AssetName));
+					Existing = StaticLoadObject(UObject::StaticClass(), nullptr, *(AssetPath + TEXT(".") + AssetName));
+					if (Existing == nullptr)
+					{
+						Refuse(Context, InFile, TEXT("not-a-dream-widget-blueprint"), FString::Printf(TEXT("%s is a package on disk with no asset named %s that loads."), *AssetPath, *AssetName), TEXT("Pick another path in the class line, or remove the package.")); // I18N-EXEMPT: wire text
+						return false;
+					}
+				}
+				if (Existing != nullptr)
+				{
 					Blueprint = Cast<UDreamWidgetBlueprint>(Existing);
 					if (Blueprint == nullptr)
 					{
-						if (Context.Stack.Num() == 0)
-						{
-							Outcome.RefusalReason = TEXT("not-a-dream-widget-blueprint");
-							Outcome.RefusalSummary = FString::Printf(TEXT("%s already exists and is not a DreamGUI widget Blueprint (%s)."), *AssetPath, *GetNameSafe(Existing ? Existing->GetClass() : nullptr)); // I18N-EXEMPT: wire text
-							Outcome.RefusalNext = TEXT("Pick another path in the class line.");
-						}
+						Refuse(Context, InFile, TEXT("not-a-dream-widget-blueprint"), FString::Printf(TEXT("%s already exists and is not a DreamGUI widget Blueprint (%s)."), *AssetPath, *GetNameSafe(Existing ? Existing->GetClass() : nullptr)), TEXT("Pick another path in the class line.")); // I18N-EXEMPT: wire text
 						return false;
 					}
 				}
@@ -308,11 +310,7 @@ namespace DreamGUIMCP
 					bCreated = Blueprint != nullptr;
 					if (Blueprint == nullptr)
 					{
-						if (Context.Stack.Num() == 0)
-						{
-							Outcome.RefusalReason = TEXT("create-failed");
-							Outcome.RefusalSummary = FString::Printf(TEXT("The widget Blueprint %s could not be created."), *AssetPath); // I18N-EXEMPT: wire text
-						}
+						Refuse(Context, InFile, TEXT("create-failed"), FString::Printf(TEXT("The widget Blueprint %s could not be created."), *AssetPath)); // I18N-EXEMPT: wire text
 						return false;
 					}
 				}
@@ -320,13 +318,10 @@ namespace DreamGUIMCP
 
 			if (!DreamUITextAuthoring::CanAuthorFromText(Blueprint))
 			{
-				if (Context.Stack.Num() == 0)
-				{
-					Outcome.RefusalReason = TEXT("not-text-authorable");
-					Outcome.RefusalSummary = FString::Printf(TEXT("%s derives from %s, which cannot be built from a .dui (it needs UDreamTextUserWidget as a parent)."), // I18N-EXEMPT: wire text
-						*AssetPath, *GetNameSafe(Blueprint->ParentClass));
-					Outcome.RefusalNext = TEXT("Point the class line at a new asset path; compile creates the Blueprint with the right parent.");
-				}
+				Refuse(Context, InFile, TEXT("not-text-authorable"),
+					FString::Printf(TEXT("%s derives from %s, which cannot be built from a .dui (it needs UDreamTextUserWidget as a parent)."), // I18N-EXEMPT: wire text
+						*AssetPath, *GetNameSafe(Blueprint->ParentClass)),
+					TEXT("Point the class line at a new asset path; compile creates the Blueprint with the right parent."));
 				return false;
 			}
 
