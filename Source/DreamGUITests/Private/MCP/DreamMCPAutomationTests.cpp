@@ -15,6 +15,7 @@
 #include "AssetCompilingManager.h"
 #include "Containers/Ticker.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HttpServerModule.h"
 #include "IImageWrapper.h"
@@ -667,6 +668,55 @@ bool FDreamMCPJobsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a job description echoes the call id"), Field(Done, TEXT("id")), FString(TEXT("job-c")));
 	TestEqual(TEXT("and names its action"), Field(Done, TEXT("action")), FString(TEXT("layout")));
 	TestEqual(TEXT("and carries its result"), Field(ResultOf(Done), TEXT("outcome")), FString(TEXT("ok")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPBusyEndpointsTest,
+	"DreamGUI.MCP.Jobs.TheIdleFrameCapWaitsForEveryDreamEndpoint",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPBusyEndpointsTest::RunTest(const FString& Parameters)
+{
+	IConsoleVariable* Shared = BusyEndpoints::Find();
+	if (!TestNotNull(TEXT("DreamMCP.BusyEndpoints exists"), Shared))
+	{
+		return false;
+	}
+	TestTrue(TEXT("under the name every Dream plugin looks for"), IConsoleManager::Get().FindConsoleVariable(TEXT("DreamMCP.BusyEndpoints")) == Shared);
+	TestTrue(TEXT("found again, not registered twice"), BusyEndpoints::Find() == Shared);
+	const int32 Before = Shared->GetInt();
+	Shared->Set(0, ECVF_SetByCode);
+	ON_SCOPE_EXIT { Shared->Set(Before, ECVF_SetByCode); };
+	TestEqual(TEXT("every endpoint idle: fifteen frames a second"), BusyEndpoints::HostFrameCap(), 15);
+
+	// Another Dream plugin's endpoint in the process takes a job and counts itself in, as its own code does.
+	Shared->Set(Shared->GetInt() + 1, ECVF_SetByCode);
+	TestEqual(TEXT("another plugin busy: no cap, though DreamGUI's endpoint is idle"), BusyEndpoints::HostFrameCap(), 0);
+
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Busy"), Screen(TEXT("    Text Label { Text = \"Busy\" }")));
+	const FString Args = FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File));
+	{
+		FTestEndpoint Test(*this, EEndpointMode::Editor);
+		TestEqual(TEXT("a queued job is accepted"), Send(Test.Endpoint, TEXT("POST"), TEXT("/call"), CallBody(TEXT("check"), Args, TEXT("b-1"))).Status, 202);
+		TestEqual(TEXT("and counts DreamGUI in"), Shared->GetInt(), 2);
+		for (int32 Tick = 0; Tick < 100 && Test.Endpoint.IsBusy(); ++Tick)
+		{
+			Test.Endpoint.TickJobs();
+		}
+		TestFalse(TEXT("the job ends"), Test.Endpoint.IsBusy());
+		TestEqual(TEXT("and counts DreamGUI out"), Shared->GetInt(), 1);
+		TestEqual(TEXT("the other plugin still busy: still no cap"), BusyEndpoints::HostFrameCap(), 0);
+
+		Shared->Set(Shared->GetInt() - 1, ECVF_SetByCode);
+		TestEqual(TEXT("the other plugin idle too: the cap comes back"), BusyEndpoints::HostFrameCap(), 15);
+
+		TestEqual(TEXT("another job"), Send(Test.Endpoint, TEXT("POST"), TEXT("/call"), CallBody(TEXT("check"), Args, TEXT("b-2"))).Status, 202);
+		TestEqual(TEXT("counts DreamGUI in again"), Shared->GetInt(), 1);
+	}
+	TestEqual(TEXT("an endpoint stopped with a job queued takes its count back"), Shared->GetInt(), 0);
+	BusyEndpoints::Add(-1);
+	TestEqual(TEXT("and the count never goes below 0"), Shared->GetInt(), 0);
 	return true;
 }
 

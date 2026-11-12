@@ -6,6 +6,7 @@
 
 #include "Async/Async.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HttpPath.h"
 #include "HttpRequestHandler.h"
@@ -527,6 +528,7 @@ namespace DreamGUIMCP
 		Self.Reset();
 		Jobs.Reset();
 		bStarted = false;
+		SyncBusyCount();
 	}
 
 	bool FEndpoint::HandleTicker(float)
@@ -1164,6 +1166,7 @@ namespace DreamGUIMCP
 		Job->Context.JobId = Job->JobId;
 		Job->QueuedAt = FPlatformTime::Seconds();
 		Jobs.Add(Job);
+		SyncBusyCount();
 
 		TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 		Body->SetStringField(TEXT("id"), CallId);
@@ -1341,17 +1344,59 @@ namespace DreamGUIMCP
 		Job.Result = Result.ToJson();
 		Job.Runner.Reset();
 		Job.FinishedAt = FPlatformTime::Seconds();
-		// The summary's first line: a layout's carries the whole tree below it.
-		FString Headline = Result.Summary;
-		int32 LineEnd = INDEX_NONE;
-		if (Headline.FindChar(TEXT('\n'), LineEnd))
-		{
-			Headline.LeftInline(LineEnd);
-		}
 		UE_LOG(LogDreamGUIMCP, Display, TEXT("DreamMCP: %s %s %s (%s) in %.2f s: %s"),
 			*Job.Action, *Job.JobId, LexJobState(Job.State), LexOutcome(Result.Outcome),
-			Job.StartedAt > 0.0 ? Job.FinishedAt - Job.StartedAt : 0.0, *Headline);
+			Job.StartedAt > 0.0 ? Job.FinishedAt - Job.StartedAt : 0.0, *Result.Summary);
 		PruneFinishedJobs();
+		SyncBusyCount();
+	}
+
+	void FEndpoint::SyncBusyCount()
+	{
+		const bool bBusy = bStarted && IsBusy();
+		if (bBusy != bCountedBusy)
+		{
+			BusyEndpoints::Add(bBusy ? 1 : -1);
+			bCountedBusy = bBusy;
+		}
+	}
+
+	// ------------------------------------------------------------------------------- DreamMCP.BusyEndpoints
+
+	namespace BusyEndpoints
+	{
+		IConsoleVariable* Find()
+		{
+			const TCHAR* const Name = TEXT("DreamMCP.BusyEndpoints");
+			IConsoleManager& Console = IConsoleManager::Get();
+			if (IConsoleVariable* Existing = Console.FindConsoleVariable(Name))
+			{
+				return Existing;
+			}
+			return Console.RegisterConsoleVariable(Name, 0,
+				TEXT("How many Dream plugins' DreamMCP endpoints in this process have a job queued or running. Each endpoint adds ")
+				TEXT("one when it gets busy and takes it back when it is idle again; a DreamMCP host caps its frame rate only while this is 0."),
+				ECVF_Default);
+		}
+
+		int32 Get()
+		{
+			const IConsoleVariable* Variable = Find();
+			return Variable != nullptr ? Variable->GetInt() : 0;
+		}
+
+		void Add(const int32 Delta)
+		{
+			if (IConsoleVariable* Variable = Find())
+			{
+				Variable->Set(FMath::Max(0, Variable->GetInt() + Delta), ECVF_SetByCode);
+			}
+		}
+
+		int32 HostFrameCap()
+		{
+			return Get() > 0 ? 0 : 15;
+		}
 	}
 
 	void FEndpoint::PruneFinishedJobs()

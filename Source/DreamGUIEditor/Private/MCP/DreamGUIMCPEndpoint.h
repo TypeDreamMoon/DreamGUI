@@ -285,6 +285,12 @@ namespace DreamGUIMCP
 		/** A job queued or running. */
 		bool IsBusy() const;
 
+		/**
+		 * Brings DreamMCP.BusyEndpoints in line with IsBusy: one up when this endpoint went from idle to busy, one down
+		 * when it went back. Called wherever the jobs change; Stop takes its count back.
+		 */
+		void SyncBusyCount();
+
 		int32 GetPort() const { return Port; }
 		const FString& GetToken() const { return Options.Token; }
 		const FManifest& GetManifest() const { return Manifest; }
@@ -373,5 +379,24 @@ namespace DreamGUIMCP
 		TArray<TSharedPtr<FJob>> Jobs;
 		int32 JobCounter = 0;
 		FTSTicker::FDelegateHandle TickerHandle;
+		/** This endpoint is counted in DreamMCP.BusyEndpoints. */
+		bool bCountedBusy = false;
 	};
+
+	/**
+	 * DreamMCP.BusyEndpoints: how many Dream plugins' endpoints in this process have a job queued or running. The Dream
+	 * plugins share it by name (an integer console variable, set with ECVF_SetByCode): whichever starts first registers it,
+	 * the others find it. A host caps its frame rate only while it is 0, so an idle endpoint does not slow another
+	 * plugin's job down.
+	 */
+	namespace BusyEndpoints
+	{
+		/** The variable, registered when no plugin has yet. */
+		DREAMGUIEDITOR_API IConsoleVariable* Find();
+		DREAMGUIEDITOR_API int32 Get();
+		/** Adds Delta, never going below 0. */
+		DREAMGUIEDITOR_API void Add(int32 Delta);
+		/** The frame cap of a host: none (0) while any endpoint is busy, 15 frames a second while all are idle. */
+		DREAMGUIEDITOR_API int32 HostFrameCap();
+	}
 }

@@ -203,10 +203,11 @@ namespace DreamGUIMCP
 					}
 				}
 
-				// Fifteen frames a second while idle; no cap while a job runs, since a job steps once per frame. Set only
-				// when this endpoint's own state changes: another Dream plugin's endpoint in the process keeps the same cap
-				// by the same rule, and a value set every frame would undo the cap it set for a job of its own.
-				const int32 FrameCap = GEndpoint->IsBusy() ? 0 : 15;
+				// Fifteen frames a second while every Dream endpoint in the process is idle; no cap while any has a job,
+				// since a job steps once per frame. The count is DreamMCP.BusyEndpoints, which the other Dream plugins'
+				// endpoints keep too, so one going idle does not slow another's job down. Set only when the cap this rule
+				// gives changes: the other plugins' hosts follow the same rule and arrive at the same value.
+				const int32 FrameCap = BusyEndpoints::HostFrameCap();
 				if (FrameCap != GHost.LastFrameCap)
 				{
 					if (IConsoleVariable* MaxFps = IConsoleManager::Get().FindConsoleVariable(TEXT("t.MaxFPS")))

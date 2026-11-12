@@ -38,7 +38,8 @@ a model that writes `.dui` cannot otherwise see: the laid-out screen, in words, 
 | Any other commandlet (`-run=DreamUICompileWidgets`, a cook), an automation run, a game | no | — | — |
 
 A host is nobody's editor: it writes no editor settings, does not auto-save, renders no realtime viewport, caps its frame
-rate while idle, accepts `POST /dream/gui/shutdown`, exits when the process that started it goes away
+rate at 15 while no Dream endpoint in the process has a job (the console variable `DreamMCP.BusyEndpoints`, which every
+Dream plugin's endpoint counts itself in and out of, is 0), accepts `POST /dream/gui/shutdown`, exits when the process that started it goes away
 (`-DreamMCPParentPid=<pid>`, `0` for none) and exits with code 3 when it cannot start answering within
 `-DreamMCPStartupTimeout` seconds (600 by default). In the user's editor `/shutdown` is refused (409, `not-a-host`).
 
