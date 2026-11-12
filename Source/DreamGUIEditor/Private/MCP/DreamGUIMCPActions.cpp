@@ -529,6 +529,27 @@ namespace DreamGUIMCP
 		FString FirstSentence(const FString& InText)
 		{
 			FString Text = InText.Replace(TEXT("\r"), TEXT(" ")).Replace(TEXT("\n"), TEXT(" "));
+			// What a C++ comment carries that is not for an author: an inline note after `//`, a heading in capitals
+			// opening a design note ("RENDER TRANSFORM."), a line about the details panel's meta tags.
+			const int32 Slashes = Text.StartsWith(TEXT("//")) ? 0 : Text.Find(TEXT(" //"));
+			if (Slashes != INDEX_NONE)
+			{
+				Text.LeftInline(Slashes);
+			}
+			Text.TrimStartAndEndInline();
+			const int32 HeadingEnd = Text.Find(TEXT(". "));
+			if (HeadingEnd > 0 && HeadingEnd < 40)
+			{
+				const FString Heading = Text.Left(HeadingEnd);
+				if (Heading.ToUpper() == Heading && Heading.ToLower() != Heading)
+				{
+					Text.RightChopInline(HeadingEnd + 2);
+				}
+			}
+			if (Text.Contains(TEXT("DreamGUI_")))
+			{
+				return FString();
+			}
 			int32 Stop = INDEX_NONE;
 			for (int32 Index = 0; Index + 1 < Text.Len(); ++Index)
 			{
@@ -546,6 +567,36 @@ namespace DreamGUIMCP
 			return Text.Len() > 160 ? Text.Left(157) + TEXT("...") : Text;
 		}
 
+		/**
+		 * What lookup says of the names every screen uses whose C++ comments are design notes or nothing: the anchors and
+		 * the render transform with their axes spelled out, and a few more. Null for any other name.
+		 */
+		const TCHAR* CuratedNote(const FString& InName)
+		{
+			struct FNote { const TCHAR* Name; const TCHAR* Text; };
+			static const FNote Notes[] = {
+				{ TEXT("AnchorData.AnchorMin"), TEXT("The point of the parent (0 to 1 on each axis) the node's lower-left anchor holds to; (0, 0) is the parent's BOTTOM-left, so Y goes up. Equal to AnchorMax, the node is held at that point; different, it stretches with the parent") },
+				{ TEXT("AnchorData.AnchorMax"), TEXT("The point of the parent (0 to 1, Y up) the node's upper-right anchor holds to; (1, 1) is the parent's top-right") },
+				{ TEXT("AnchorData.Pivot"), TEXT("The node's own point (0 to 1, Y up; (0.5, 0.5) is its centre) that AnchoredPosition places and the render transform turns about") },
+				{ TEXT("AnchorData.AnchoredPosition"), TEXT("Where the pivot sits from the anchors, in pixels: positive X is right, positive Y is UP") },
+				{ TEXT("AnchorData.SizeDelta"), TEXT("The size in pixels on an axis whose anchors meet; on an axis where they stretch, how much larger (positive) or smaller (negative) than the anchors' span") },
+				{ TEXT("RenderTranslation"), TEXT("Moves where it is drawn, not where layout puts it, in pixels: X is DEPTH (negative toward the viewer, drawn larger), Y is right, Z is up") },
+				{ TEXT("RenderRotation"), TEXT("Turns it as drawn, about RenderTransformPivot: (Pitch, Yaw, Roll) in degrees; Yaw turns about the vertical axis (positive brings the right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is clockwise)") },
+				{ TEXT("RenderScale"), TEXT("Scales it as drawn, about RenderTransformPivot, without changing the size layout gives it") },
+				{ TEXT("RenderTransformPivot"), TEXT("The point of the node (0 to 1, Y up) the render transform turns and scales about") },
+				{ TEXT("CornerRadius"), TEXT("The four corners' radii. With CornerRadiusUnitMode = Percentage (the default) each is a fraction, 1 rounding the corner fully: (24, 24, 24, 24) makes a capsule, not 24 px corners; set CornerRadiusUnitMode = Value for pixels") },
+				{ TEXT("DreamRectBlock"), TEXT("A rectangle drawn as a distance field: rounded corners (CornerRadius), a border, gradients and shadows") },
+			};
+			for (const FNote& Note : Notes)
+			{
+				if (InName == Note.Name)
+				{
+					return Note.Text;
+				}
+			}
+			return nullptr;
+		}
+
 		/** How many property lines one entry lists before it says how many more there are. */
 		constexpr int32 MaxPropertyLines = 60;
 
@@ -561,7 +612,11 @@ namespace DreamGUIMCP
 				Out->SetStringField(TEXT("class"), Class);
 			}
 			FString Tooltip;
-			if (InEntry->TryGetStringField(TEXT("tooltip"), Tooltip))
+			if (const TCHAR* Note = CuratedNote(Class))
+			{
+				Out->SetStringField(TEXT("about"), Note);
+			}
+			else if (InEntry->TryGetStringField(TEXT("tooltip"), Tooltip) && !FirstSentence(Tooltip).IsEmpty())
 			{
 				Out->SetStringField(TEXT("about"), FirstSentence(Tooltip));
 			}
@@ -602,9 +657,11 @@ namespace DreamGUIMCP
 					{
 						Line += FString::Printf(TEXT(" = %s"), *Default);
 					}
-					if (!PropTooltip.IsEmpty())
+					const TCHAR* const Note = CuratedNote(Name);
+					const FString About = Note != nullptr ? FString(Note) : FirstSentence(PropTooltip);
+					if (!About.IsEmpty())
 					{
-						Line += FString::Printf(TEXT(" -- %s"), *FirstSentence(PropTooltip));
+						Line += FString::Printf(TEXT(" -- %s"), *About);
 					}
 					Lines.Add(MakeShared<FJsonValueString>(Line));
 				}
@@ -684,18 +741,47 @@ namespace DreamGUIMCP
 				}
 			}
 
-			// The words every node and every @slot line can write, under the names an author asks for them by.
-			if (WantKind(TEXT("node")) && (Query.Equals(TEXT("Widget"), ESearchCase::IgnoreCase) || Query.Equals(TEXT("slot"), ESearchCase::IgnoreCase) || Query.Equals(TEXT("@slot"), ESearchCase::IgnoreCase)))
+			// The words every node and every @slot line can write, under the names an author asks for them by: `Widget`,
+			// `slot`, and either followed by the start of a property (`Widget.RenderRotation`, `slot.HorizontalAlignment`).
+			FString CommonPart;
+			FString CommonFilter;
+			for (const TCHAR* Common : { TEXT("Widget"), TEXT("@slot"), TEXT("slot") })
 			{
-				const bool bSlot = !Query.Equals(TEXT("Widget"), ESearchCase::IgnoreCase);
+				if (Query.Equals(Common, ESearchCase::IgnoreCase))
+				{
+					CommonPart = Common;
+					break;
+				}
+				if (Query.StartsWith(FString(Common) + TEXT("."), ESearchCase::IgnoreCase) && Query.Len() > FCString::Strlen(Common) + 1)
+				{
+					CommonPart = Common;
+					CommonFilter = Query.RightChop(FCString::Strlen(Common) + 1);
+					break;
+				}
+			}
+			if (!CommonPart.IsEmpty() && (WantKind(TEXT("node")) || (Kind == TEXT("property") && !CommonFilter.IsEmpty())))
+			{
+				const bool bSlot = !CommonPart.Equals(TEXT("Widget"), ESearchCase::IgnoreCase);
 				TSharedRef<FJsonObject> Entry = MakeShared<FJsonObject>();
 				Entry->SetArrayField(TEXT("properties"), Symbols->GetArrayField(bSlot ? TEXT("slotProperties") : TEXT("widgetProperties")));
-				if (!bSlot)
+				if (!bSlot && CommonFilter.IsEmpty())
 				{
 					Entry->SetArrayField(TEXT("events"), Symbols->GetArrayField(TEXT("widgetEvents")));
 				}
+				const TSharedRef<FJsonObject> Condensed = CondenseEntry(bSlot ? TEXT("@slot") : TEXT("Widget"), bSlot ? TEXT("slot") : TEXT("node"), Entry.ToSharedPtr(), CommonFilter);
 				Result.Data->SetBoolField(TEXT("exact"), true);
-				Result.Data->SetObjectField(TEXT("entry"), CondenseEntry(bSlot ? TEXT("@slot") : TEXT("Widget"), bSlot ? TEXT("slot") : TEXT("node"), Entry.ToSharedPtr(), FString()));
+				Result.Data->SetObjectField(TEXT("entry"), Condensed);
+				if (!CommonFilter.IsEmpty())
+				{
+					const int32 Count = Condensed->GetArrayField(TEXT("properties")).Num();
+					Result.Summary = FString::Printf(TEXT("%s: %s matching %s, which every %s takes."), bSlot ? TEXT("@slot") : TEXT("Widget"),
+						*Plural(Count, TEXT("property"), TEXT("properties")), *CommonFilter, bSlot ? TEXT("@slot line") : TEXT("node"));
+					if (Count == 0)
+					{
+						Result.Next.Add(FString::Printf(TEXT("lookup %s lists them all."), bSlot ? TEXT("slot") : TEXT("Widget")));
+					}
+					return Result;
+				}
 				Result.Summary = bSlot
 					? TEXT("@slot: what a node asks of the layout container of its parent (alignment, size rule, padding).")
 					: TEXT("Widget: the properties and events every node has, whatever its type (anchors, size, visibility...).");
@@ -714,14 +800,17 @@ namespace DreamGUIMCP
 			{
 				for (const FSection& Section : Sections)
 				{
-					if (!WantKind(Section.Kind) || Section.Object == nullptr || !Section.Object->IsValid())
+					// kind=property with `Type.Property` asks for that type's properties: the node or component section answers.
+					const bool bPropertiesOfType = Kind == TEXT("property") && !PropertyPart.IsEmpty()
+						&& (FCString::Strcmp(Section.Kind, TEXT("node")) == 0 || FCString::Strcmp(Section.Kind, TEXT("component")) == 0);
+					if ((!WantKind(Section.Kind) && !bPropertiesOfType) || Section.Object == nullptr || !Section.Object->IsValid())
 					{
 						continue;
 					}
 					for (const auto& Pair : (*Section.Object)->Values)
 					{
 						const FString Name(*Pair.Key);
-						const bool bWhole = Name.Equals(Query, Case);
+						const bool bWhole = Name.Equals(Query, Case) && WantKind(Section.Kind);
 						const bool bTypeWithProperty = !PropertyPart.IsEmpty() && Name.Equals(TypePart, Case);
 						if (!bWhole && !bTypeWithProperty)
 						{
