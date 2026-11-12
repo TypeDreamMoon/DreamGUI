@@ -13,6 +13,8 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "DreamWidgetBlueprint.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
@@ -1307,6 +1309,8 @@ namespace DreamGUIMCP
 				int32 Frames = 1;
 				double Time = 0.0;
 				double Duration = 1.0;
+				FString Timeline;
+				bool bTimelinePlayed = false;
 				UDreamWidgetBlueprint* Blueprint = nullptr;
 				FDreamUIAst Ast;
 				FResult Result;
@@ -1332,6 +1336,7 @@ namespace DreamGUIMCP
 			State->Frames = Frames;
 			State->Time = FMath::Max(0.0, Call.GetNumber(TEXT("time"), 0.0));
 			State->Duration = FMath::Clamp(Call.GetNumber(TEXT("duration"), 1.0), 0.01, 60.0);
+			State->Timeline = Call.GetString(TEXT("timeline")).TrimStartAndEnd();
 			State->StartedAt = FPlatformTime::Seconds();
 
 			return MakeUnique<FFunctionJob>([State](FJobContext& Context, FResult& OutResult)
@@ -1434,6 +1439,25 @@ namespace DreamGUIMCP
 					}
 					State->bWarmTimedOut = State->StableFrames < 3;
 					CaptureLayout(Stage, &State->Ast, State->File, State->Snapshot);
+					// A timeline the file declares, started from its beginning and looping: what `time` and the frames then
+					// sample. Nothing plays by itself otherwise.
+					if (!State->Timeline.IsEmpty())
+					{
+						const FDreamUIAnimationHandle Handle = Stage.GetScreen()->PlayAnimationByName(State->Timeline, 0.0f, /*NumLoopsToPlay*/ 0);
+						if (!Handle.IsValid())
+						{
+							TArray<FString> Names;
+							for (const FDreamUITimeline& Declared : State->Ast.Timelines)
+							{
+								Names.Add(Declared.Name);
+							}
+							Stage.Close();
+							OutResult = FResult::MakeRefused(TEXT("no-such-timeline"), FString::Printf(TEXT("%s has no timeline named %s."), *Rel(State->File), *State->Timeline),
+								Names.Num() > 0 ? FString::Printf(TEXT("Its timelines: %s."), *FString::Join(Names, TEXT(", "))) : FString(TEXT("Declare one with a timeline Name { ... } block.")));
+							return true;
+						}
+						State->bTimelinePlayed = true;
+					}
 					// The screen's own time, up to `time`: whatever animates by itself moves meanwhile.
 					for (double Elapsed = 0.0; Elapsed + 1e-6 < State->Time;)
 					{
@@ -1442,6 +1466,9 @@ namespace DreamGUIMCP
 						Elapsed += Step;
 					}
 					State->Phase = FState::EPhase::Frames;
+					// The first picture in the next frame: what a pass started (a particle simulation's step) lands at the end of
+					// this one.
+					Context.SetWaiting();
 					return false;
 				}
 				case FState::EPhase::Frames:
@@ -1483,6 +1510,8 @@ namespace DreamGUIMCP
 					State->Times.Add(State->Time + State->Duration * State->Frame / State->Frames);
 					if (++State->Frame < State->Frames)
 					{
+						// One picture a frame, for the same reason.
+						Context.SetWaiting();
 						return false;
 					}
 					Stage.Close();
@@ -1593,6 +1622,10 @@ namespace DreamGUIMCP
 				Result.Data->SetNumberField(TEXT("layoutWarnings"), LayoutWarnings);
 				Result.Data->SetNumberField(TEXT("width"), W);
 				Result.Data->SetNumberField(TEXT("height"), H);
+				if (State->bTimelinePlayed)
+				{
+					Result.Data->SetStringField(TEXT("timeline"), State->Timeline);
+				}
 				Result.Data->SetStringField(TEXT("background"), State->bChecker ? FString(TEXT("checker")) : FormatHexColor(FLinearColor(State->Background.R / 255.0f, State->Background.G / 255.0f, State->Background.B / 255.0f)));
 				Result.Data->SetObjectField(TEXT("stats"), (N > 1 ? State->PerFrame[0] : Overall).ToJson());
 				if (Animation.IsValid())

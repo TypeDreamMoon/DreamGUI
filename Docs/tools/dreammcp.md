@@ -55,7 +55,7 @@ saving a `.dui` does; a compile in a host saves them. Pictures go to `<Project>/
 | `diagnostics` | no | no | `file` | what the engine holds from the last check or compile of each file, errors first, without compiling |
 | `lookup` | no | no | `name`, `kind`, `limit` | an exact node type, component, enum or view model class gives its entry (properties with type, default and a one-line description from the C++ source, events), one a line in the answer's text; `Type.Property` narrows to properties starting so; otherwise every name containing the text. `Widget` lists what every node takes, `slot` what `@slot` takes |
 | `layout` | yes | yes | `file`, `width`, `height`, `sizes`, `root`, `depth`, `force` | compiles the screen as `compile` does, lays it out at the viewport size without drawing it, and lists every node and the problems (below) |
-| `preview` | yes | yes | `file`, `width`, `height`, `background`, `time`, `frames`, `duration`, `force` | compiles, draws the screen into a PNG, and measures it (below). Needs a process that draws |
+| `preview` | yes | yes | `file`, `width`, `height`, `background`, `timeline`, `time`, `frames`, `duration`, `force` | compiles, draws the screen into a PNG, and measures it (below). Needs a process that draws |
 | `info` | no | no | — | plugin version and commit, engine version and kind, OS, locale, mode, whether this process draws, the source folders |
 
 Paths in arguments and answers are relative to the project root (`DUI/Menu.dui`); a path relative to a `DUI/` folder
@@ -132,11 +132,13 @@ The summary leads with the one fact that matters most: the screen draws almost n
 (90 % or more), near white (30 % or more), one flat colour, or else its coverage, mean colour and luminance range; then how
 many texts are hard to read (DUI8007), how many layout problems `layout` would report, and the image's path.
 
-`background` is what shows behind the screen: `#RRGGBB` (`#1C1E26` by default) or `checker`. `time` runs the screen that
-many seconds before the picture, its own ticks advancing whatever animates by itself; `frames` (up to 16) spread over
-`duration` seconds are put side by side in one PNG (8192 px wide at most), and `data.animation` says whether they differ, by
-how much, and whether they zigzag (more frames or a shorter duration needed). A `timeline` block does not play by itself, and
-`preview` does not start one: it shows the screen as it stands before any animation.
+`background` is what shows behind the screen: `#RRGGBB` (`#1C1E26` by default) or `checker`. A `timeline` block does not
+play by itself: `timeline` names one of the file's to play from its start, looping, once the screen has settled. `time`
+runs the screen that many seconds before the picture, advancing the timeline, tweens and particles; `frames` (up to 16)
+spread over `duration` seconds are put side by side in one PNG (8192 px wide at most), and `data.animation` says whether they
+differ, by how much, and whether they zigzag (more frames or a shorter duration needed). A `RenderTranslation` key moves
+along X toward or away from the viewer (X is depth, Y right, Z up): `(0, -400, 0)` to `(0, 400, 0)` slides a node across,
+`(-400, 0, 0)` brings it 400 units nearer and draws it much larger.
 
 ### Screens in 3D
 
@@ -145,7 +147,7 @@ how much, and whether they zigzag (more frames or a shorter duration needed). A 
 | A render transform that turns a widget out of the canvas plane (`RenderRotation`, `RenderTranslation` with depth) | drawn in perspective, through the canvas's own camera, as the game draws a screen-space canvas |
 | Layer effects, blend modes, clip masks, rect blocks, text effects | drawn: they are part of the screen's own draw |
 | A screen shown on a panel in a level (a world-space canvas), seen through a camera | not drawn: the stage draws the screen itself, flat, into its picture; put the screen in the level and look at it in the editor |
-| Niagara particles in a screen | not drawn reliably: a particle system advances with its world's tick, and the stage ticks only the screen |
+| Niagara particles in a screen | drawn: the stage holds each system and steps it by the preview's own time, so `time` and the frames show the particles a game would after as many seconds; a system that waits for a pointer or a click (`bAutoActivate = false`) shows nothing until something starts it |
 
 ## See also
 

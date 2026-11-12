@@ -964,7 +964,7 @@ bool FDreamMCPLookupTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the text heads the entry with its name and class"), TextLines.StartsWith(TEXT("Text (DreamText)")));
 	TestTrue(TEXT("and lists the properties, one a line"), TextLines.Contains(TEXT("\nproperties:\n")) && TextLines.Contains(TEXT("\n  FontSize: ")));
 
-	const TSharedPtr<FJsonObject> One = ObjectField(Lookup(TEXT("{\"name\":\"Text.FontSize\"}")), TEXT("data"));
+	const TSharedPtr<FJsonObject> One =ObjectField(Lookup(TEXT("{\"name\":\"Text.FontSize\"}")), TEXT("data"));
 	const TArray<TSharedPtr<FJsonValue>> OneLines = ArrayField(ObjectField(One, TEXT("entry")), TEXT("properties"));
 	TestTrue(TEXT("Type.Property narrows to that property"), OneLines.Num() >= 1 && OneLines.Num() <= 3);
 
@@ -1291,6 +1291,29 @@ bool FDreamMCPPreviewStatsTest::RunTest(const FString& Parameters)
 	TArray<FString> EmptyNext;
 	TestTrue(TEXT("a screen that draws nothing is said to"), DescribePreview(Empty, EmptyNext).StartsWith(TEXT("The screen draws almost nothing")));
 	TestFalse(TEXT("with what to do"), EmptyNext.IsEmpty());
+
+	// Frames: a still screen, and the same screen with a few sparks moved -- too few to move the mean, enough to see.
+	const int32 Big = 100 * 100;
+	TArray<TArray<FColor>> Still;
+	Still.Init(TArray<FColor>(), 3);
+	for (TArray<FColor>& Frame : Still)
+	{
+		Frame.Init(FColor(28, 30, 38, 255), Big);
+	}
+	TArray<TArray<FColor>> Sparks = Still;
+	for (int32 Frame = 0; Frame < Sparks.Num(); ++Frame)
+	{
+		for (int32 Spark = 0; Spark < 4; ++Spark)
+		{
+			Sparks[Frame][Frame * 7 + Spark * 2500] = FColor(200, 255, 230, 255);
+		}
+	}
+	const TArray<FPreviewStats> NoStats;
+	TestFalse(TEXT("identical frames do not animate"), AnalysePreviewAnimation(Still, NoStats).bChanges);
+	const FPreviewAnimation Moving = AnalysePreviewAnimation(Sparks, NoStats);
+	TestTrue(TEXT("a few sparks barely move the mean"), Moving.MaxDifference <= FPreviewStatsThresholds::SameFrameDifference);
+	TestTrue(TEXT("but the share of changed pixels says they move"), Moving.bChanges);
+	TestEqual(TEXT("eight pixels of ten thousand changed"), Moving.MaxChangedShare, 8.0 / Big, 1e-12);
 	return true;
 }
 
@@ -1352,6 +1375,32 @@ bool FDreamMCPRenderPreviewTest::RunTest(const FString& Parameters)
 	const TSharedPtr<FJsonObject> Stats = ObjectField(ObjectField(Drawn, TEXT("data")), TEXT("stats"));
 	// 400x200 + 100x50 + two 260x4 rows of a 1920x1080 picture.
 	TestEqual(TEXT("coverage is what the screen draws"), Number(Stats, TEXT("coverage")), (400.0 * 200 + 100 * 50 + 2 * 260 * 4) / (1920.0 * 1080), 0.001);
+
+	// A timeline the file declares, played and sampled: the card slides across (Y is right; X would be depth).
+	const FString Slide = Sources.Write(TEXT("SlidePicture"), FString(TEXT(
+		"timeline Slide {\n"
+		"    duration = 1.0\n"
+		"    loop     = Loop\n"
+		"    Card.RenderTranslation : 0.0 = (0, -400, 0), 1.0 = (0, 400, 0)\n"
+		"}\n\n"))
+		+ Screen(TEXT("    Image Card {\n        AnchorData.SizeDelta = (200, 100)\n        Brush.TintColor = #FF0000\n    }")));
+	const FString SlideArgs = FString::Printf(TEXT("{\"file\":\"%s\",\"width\":960,\"height\":540,\"timeline\":\"Slide\",\"frames\":3,\"duration\":0.5}"), *JsonString(Slide));
+	const TSharedPtr<FJsonObject> Slid = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("preview"), SlideArgs, TEXT("t-slide"))));
+	if (TestEqual(TEXT("a timeline is played"), Field(Slid, TEXT("outcome")), FString(TEXT("ok"))))
+	{
+		const TSharedPtr<FJsonObject> Animation = ObjectField(ObjectField(Slid, TEXT("data")), TEXT("animation"));
+		bool bChanges = false;
+		Animation->TryGetBoolField(TEXT("changes"), bChanges);
+		TestTrue(TEXT("and its frames move"), bChanges);
+		TestEqual(TEXT("the answer names it"), Field(ObjectField(Slid, TEXT("data")), TEXT("timeline")), FString(TEXT("Slide")));
+		for (const TSharedPtr<FJsonValue>& Artifact : ArrayField(Slid, TEXT("artifacts")))
+		{
+			IFileManager::Get().Delete(*FPaths::Combine(FPaths::ProjectDir(), Field(Artifact->AsObject(), TEXT("path"))), false, true, true);
+		}
+	}
+	const TSharedPtr<FJsonObject> Unknown = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("preview"),
+		FString::Printf(TEXT("{\"file\":\"%s\",\"width\":960,\"height\":540,\"timeline\":\"Nope\"}"), *JsonString(Slide)), TEXT("t-nope"))));
+	TestEqual(TEXT("a timeline the file does not declare is refused"), Field(Unknown, TEXT("reason")), FString(TEXT("no-such-timeline")));
 	return true;
 }
 

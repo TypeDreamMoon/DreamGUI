@@ -229,6 +229,22 @@ namespace DreamGUIMCP
 		return Total / (3.0 * double(A.Num()));
 	}
 
+	double ChangedPixelShare(TConstArrayView<FColor> A, TConstArrayView<FColor> B)
+	{
+		if (A.Num() != B.Num() || A.Num() == 0)
+		{
+			return 0.0;
+		}
+		int32 Changed = 0;
+		for (int32 Index = 0; Index < A.Num(); ++Index)
+		{
+			const int32 Most = FMath::Max3(FMath::Abs(int32(A[Index].R) - int32(B[Index].R)), FMath::Abs(int32(A[Index].G) - int32(B[Index].G)),
+				FMath::Abs(int32(A[Index].B) - int32(B[Index].B)));
+			Changed += Most >= FThresholds::ChangedPixelDifference ? 1 : 0;
+		}
+		return double(Changed) / double(A.Num());
+	}
+
 	FPreviewAnimation AnalysePreviewAnimation(TConstArrayView<TArray<FColor>> Frames, TConstArrayView<FPreviewStats> PerFrame)
 	{
 		FPreviewAnimation Animation;
@@ -236,8 +252,9 @@ namespace DreamGUIMCP
 		for (int32 Index = 1; Index < Frames.Num(); ++Index)
 		{
 			Animation.MaxDifference = FMath::Max(Animation.MaxDifference, MeanFrameDifference(Frames[Index], Frames[0]));
+			Animation.MaxChangedShare = FMath::Max(Animation.MaxChangedShare, ChangedPixelShare(Frames[Index], Frames[0]));
 		}
-		Animation.bChanges = Animation.MaxDifference > FThresholds::SameFrameDifference;
+		Animation.bChanges = Animation.MaxDifference > FThresholds::SameFrameDifference || Animation.MaxChangedShare >= FThresholds::ChangedShare;
 		TArray<double> Adjacent;
 		for (int32 Index = 0; Index + 1 < Frames.Num(); ++Index)
 		{
@@ -274,12 +291,12 @@ namespace DreamGUIMCP
 	{
 		if (!Animation.bChanges)
 		{
-			OutNext.Add(TEXT("Nothing moved. An animation that has to be started (a timeline, a tween) does not run by itself in a preview."));
+			OutNext.Add(TEXT("Nothing moved. A timeline plays only when preview names it (timeline=<name>); a tween runs only when something starts it."));
 			return FString::Printf(TEXT("The %d frames over %g s are the same: nothing animates"), Animation.Frames, Duration);
 		}
 		const auto At = [&Times](int32 Index) { return Times.IsValidIndex(Index) ? Times[Index] : 0.0; };
-		FString Sentence = FString::Printf(TEXT("It animates over %d frames in %g s, changing by up to %.1f/255 per pixel: darkest at %g s, brightest at %g s"),
-			Animation.Frames, Duration, Animation.MaxDifference, At(Animation.Darkest), At(Animation.Brightest));
+		FString Sentence = FString::Printf(TEXT("It animates over %d frames in %g s, changing by up to %.1f/255 per pixel on average and %.2f%% of the pixels: darkest at %g s, brightest at %g s"),
+			Animation.Frames, Duration, Animation.MaxDifference, Animation.MaxChangedShare * 100.0, At(Animation.Darkest), At(Animation.Brightest));
 		if (Animation.bUndersampled)
 		{
 			Sentence += TEXT("; it jumps back and forth between frames, so it may change faster than they sample it");
@@ -295,6 +312,7 @@ namespace DreamGUIMCP
 		Object->SetNumberField(TEXT("frames"), Animation.Frames);
 		Object->SetNumberField(TEXT("duration"), Duration);
 		Object->SetNumberField(TEXT("maxDifference"), FMath::RoundToDouble(Animation.MaxDifference * 100.0) / 100.0);
+		Object->SetNumberField(TEXT("changedShare"), FMath::RoundToDouble(Animation.MaxChangedShare * 100000.0) / 100000.0);
 		Object->SetBoolField(TEXT("changes"), Animation.bChanges);
 		Object->SetNumberField(TEXT("straightness"), FMath::RoundToDouble(Animation.Straightness * 1000.0) / 1000.0);
 		Object->SetBoolField(TEXT("undersampled"), Animation.bUndersampled);

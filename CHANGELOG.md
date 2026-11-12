@@ -21,7 +21,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   with every node's rect in pixels, its text and whether that fits, and the problems a person sees at a glance -- off
   the screen, text cut, too small to press, controls on top of each other, edges a pixel or two off, what breaks at
   another size. `preview` draws the screen into a PNG and says how much it covers, its colours and which texts are
-  hard to read. The endpoint listens on 127.0.0.1 only, with a token; *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸
+  hard to read; it plays a timeline the file declares, and with `time` and `frames` shows it, tweens and Niagara
+  particles moving. A host caps its frame rate only while no Dream endpoint in it is busy (`DreamMCP.BusyEndpoints`).
+  The endpoint listens on 127.0.0.1 only, with a token; *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸
   Enable DreamMCP Endpoint* and `-NoDreamMCP` decide whether the editor serves it. See
   [DreamMCP endpoint](Docs/tools/dreammcp.md).
 - **Layout diagnostics, DUI8001 to DUI8007.** The problems `layout` and `preview` report have codes of their own, a new

@@ -25,8 +25,14 @@ namespace DreamGUIMCP
 		static constexpr int32 NearBlack = 12;
 		/** A luminance standard deviation at or under this, with every channel as steady, is one flat colour. */
 		static constexpr double FlatStdDev = 0.012;
-		/** Frames whose mean per-pixel difference stays at or under this (0-255) are the same picture. */
+		/** Frames whose mean per-pixel difference stays at or under this (0-255) are the same picture... */
 		static constexpr double SameFrameDifference = 0.5;
+		/**
+		 * ...unless this share of their pixels or more changed, each by ChangedPixelDifference or more on some channel: a few
+		 * sparks moving over a still screen barely move the mean.
+		 */
+		static constexpr double ChangedShare = 0.0002;
+		static constexpr int32 ChangedPixelDifference = 32;
 		/** Under this share of the viewport covered, the screen draws next to nothing. */
 		static constexpr double NearlyEmpty = 0.005;
 	};
@@ -79,11 +85,16 @@ namespace DreamGUIMCP
 	/** The mean absolute difference between two frames of the same size, per channel, 0-255. */
 	DREAMGUIEDITOR_API double MeanFrameDifference(TConstArrayView<FColor> A, TConstArrayView<FColor> B);
 
+	/** The share of pixels that differ between two frames of the same size by ChangedPixelDifference or more on some channel. */
+	DREAMGUIEDITOR_API double ChangedPixelShare(TConstArrayView<FColor> A, TConstArrayView<FColor> B);
+
 	/** What a strip of frames does over its time. */
 	struct FPreviewAnimation
 	{
 		int32 Frames = 0;
 		double MaxDifference = 0.0;
+		/** The largest share of pixels changed between the first frame and another. */
+		double MaxChangedShare = 0.0;
 		/** Over every three consecutive frames, the change first to third against the change through the middle: 1 a steady drift, 0 a jump there and back. */
 		double Straightness = 1.0;
 		bool bChanges = false;

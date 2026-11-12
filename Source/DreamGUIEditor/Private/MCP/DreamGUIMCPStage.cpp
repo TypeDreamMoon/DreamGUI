@@ -17,13 +17,59 @@
 #include "Misc/App.h"
 #include "RenderingThread.h"
 #include "TextureResource.h"
+#include "UObject/Class.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 
 namespace DreamGUIMCP
 {
 	namespace
 	{
 		TUniquePtr<FScreenStage> GStage;
+
+		/**
+		 * The visuals that keep time of their own outside a game world: a Niagara system steps its simulation as its canvas
+		 * draws, by the engine's frame time, once a frame. The stage holds them (paused) and steps them by the passes' time
+		 * instead, so the `time` and the frames of a preview show the particles a game would after as many seconds, and a
+		 * pass of no time leaves them where they are. Reached by reflection: their module, DreamGUINiagara, is one this
+		 * editor module does not depend on.
+		 */
+		void ForEachSelfTimedVisual(UDreamWidget* InRoot, TFunctionRef<void(UObject*)> InVisit)
+		{
+			const UClass* VisualClass = FindObject<UClass>(nullptr, TEXT("/Script/DreamGUINiagara.DreamNiagaraSystem"));
+			if (VisualClass == nullptr || InRoot == nullptr)
+			{
+				return;
+			}
+			TArray<UDreamWidget*> Widgets;
+			UDreamWidget::CollectChildrenWidgets(InRoot, Widgets, true);
+			for (UDreamWidget* Widget : Widgets)
+			{
+				UObject* Visual = IsValid(Widget) ? Widget->GetVisual() : nullptr;
+				if (Visual != nullptr && Visual->IsA(VisualClass))
+				{
+					InVisit(Visual);
+				}
+			}
+		}
+
+		/** Calls InObject's UFunction InName with the parameters InFill sets (each starts at its default). */
+		void CallFunction(UObject* InObject, const TCHAR* InName, TFunctionRef<void(UFunction*, uint8*)> InFill)
+		{
+			UFunction* Function = InObject != nullptr ? InObject->FindFunction(FName(InName)) : nullptr;
+			if (Function == nullptr)
+			{
+				return;
+			}
+			const int32 Size = FMath::Max<int32>(Function->ParmsSize, 1);
+			uint8* Params = static_cast<uint8*>(FMemory::Malloc(Size, Function->GetMinAlignment()));
+			FMemory::Memzero(Params, Size);
+			Function->InitializeStruct(Params);
+			InFill(Function, Params);
+			InObject->ProcessEvent(Function, Params);
+			Function->DestroyStruct(Params);
+			FMemory::Free(Params);
+		}
 	}
 
 	FScreenStage& FScreenStage::Get()
@@ -162,6 +208,16 @@ namespace DreamGUIMCP
 		// author put away in the designer.
 		UDreamUIManagerWorldSubsystem::RefreshAllUI(World);
 		FDreamWidgetPreviewHost::ApplyHiddenInDesigner(InBlueprint, Screen->GetContentRoot());
+		ForEachSelfTimedVisual(Root, [](UObject* Visual)
+		{
+			CallFunction(Visual, TEXT("SetPaused"), [](UFunction* Function, uint8* Params)
+			{
+				if (const FBoolProperty* Paused = FindFProperty<FBoolProperty>(Function, TEXT("bInPaused")))
+				{
+					Paused->SetPropertyValue_InContainer(Params, true);
+				}
+			});
+		});
 		return true;
 	}
 
@@ -176,6 +232,28 @@ namespace DreamGUIMCP
 		// Every glyph rasterised on the spot: a glyph handed to a worker lands after the layout read it, and the text is
 		// measured and drawn without it.
 		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+		if (InDeltaSeconds > 0.0f && Options.bDraw)
+		{
+			// The stage's world, as an asset editor ticks its preview world: a playing timeline is a sequence player, which the
+			// world's sequence tick manager advances. Only while drawing: a layout reads the screen before anything plays.
+			World->Tick(LEVELTICK_All, InDeltaSeconds);
+		}
+		if (InDeltaSeconds > 0.0f)
+		{
+			ForEachSelfTimedVisual(Root, [InDeltaSeconds](UObject* Visual)
+			{
+				CallFunction(Visual, TEXT("Advance"), [InDeltaSeconds](UFunction* Function, uint8* Params)
+				{
+					for (const TCHAR* Name : { TEXT("InSeconds"), TEXT("InStep") })
+					{
+						if (const FFloatProperty* Seconds = FindFProperty<FFloatProperty>(Function, Name))
+						{
+							Seconds->SetPropertyValue_InContainer(Params, InDeltaSeconds);
+						}
+					}
+				});
+			});
+		}
 		Manager->TickDreamUI(InDeltaSeconds);
 		World->SendAllEndOfFrameUpdates();
 		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);

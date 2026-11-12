@@ -108,7 +108,8 @@
           "width": { "type": "integer", "minimum": 64, "maximum": 4096, "description": "Picture width in pixels; default 1920" },
           "height": { "type": "integer", "minimum": 64, "maximum": 4096, "description": "Picture height in pixels; default 1080" },
           "background": { "type": "string", "description": "What is behind the screen: #RRGGBB, or checker to see what is see-through; default #1C1E26" },
-          "time": { "type": "number", "minimum": 0, "maximum": 60, "description": "Seconds the screen runs before the first picture, so what animates by itself moves; default 0" },
+          "timeline": { "type": "string", "description": "A timeline the file declares, played from its start (looping) before the pictures are taken: with frames, see it move" },
+          "time": { "type": "number", "minimum": 0, "maximum": 60, "description": "Seconds the screen runs (and the timeline plays) before the first picture; default 0" },
           "frames": { "type": "integer", "minimum": 1, "maximum": 16, "description": "Pictures over duration, side by side in one PNG; default 1" },
           "duration": { "type": "number", "minimum": 0.01, "maximum": 60, "description": "Seconds the frames are spread over; default 1" },
           "force": { "type": "boolean", "description": "Compile even when nothing has changed" }
