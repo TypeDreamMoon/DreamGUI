@@ -112,7 +112,8 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
 - `.skill/reference/` is built from `Docs/` (the language, the worked example, pitfalls, controls, diagnostics). After
   editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift.
 - `Docs/Reference/` is generated. Do not edit it. Regenerate with
-  `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs`.
+  `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs -culture=en` (without `-culture=en`
+  an editor in another language writes its translated tooltips).
 - A runtime file includes only its own module's and lower layers' headers. A new or moved file gets its row in
   `Tools/Tests/module-owners.csv`. The `layering` static check enforces it.
 - Test names are `DreamGUI.<Area>.<Sentence>`. A test that reads pixels carries `NonNullRHI`. Preset floors in

@@ -21,6 +21,7 @@ turns it off; a group with bAllowNoneSelected=false is what forbids that.
     /Script/DreamGUIControls.DreamRadioButton OptionA {
         bIsOn = true
         OnToggleChanged -> HandleOptionA
+    }
 
 ## Properties
 

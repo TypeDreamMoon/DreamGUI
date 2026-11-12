@@ -22,6 +22,26 @@ the default one, so nesting fills it:
     Native.Button Confirm {
         Text { Text = "确定" }
         OnClicked -> HandleConfirm
+    }
+
+One child, as every content slot takes one -- an icon BESIDE a label is a panel, and a panel is a
+thing the author puts in the hole rather than a thing the hole has to be. There used to be a
+stock `Label` property with a UDreamText node behind it, and the hole stood it down whenever it
+filled: two answers to "what is on this button" alternating, with a swap rule to keep exactly one
+of them awake. One answer needs no rule. UDreamDialog, which was that property's only real
+consumer, now puts a UDreamText of its own in the hole like any other host.
+
+ITS SIZE IS ITS CONTENT'S. The face is a UMG Size Box: it keeps ContentPadding around whatever is
+in the hole, and measures to that plus the padding, with the style's Height as a FLOOR rather
+than as the height. That is the difference between a button an Auto row can measure and the one
+this was: a stock label with a text layout of its own decided the height, the authored number was
+written onto the widget where the next arrange overwrote it, and the hole -- a container-less
+node -- never arranged what a host hung in it at all.
+
+Height being a floor is what makes both readings work: an empty button is ContentPadding wide and
+Height tall, a button with a line of text in it is that text plus the padding and still at least
+Height tall, and a button with something big in it grows. Width has no floor -- an axis nobody
+states is the consumer's, which is the family's rule everywhere else too.
 
 ## Properties
 

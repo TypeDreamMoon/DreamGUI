@@ -22,6 +22,20 @@ It composes into .dui with no language change at all, because a class path is al
     Native.Toggle Mute {
         Style.TickChecked = #FF3355
         OnToggleChanged -> HandleMute
+    }
+
+Deliberately label-less: a check box is one square and its mark, and the text beside it is the
+consumer's layout. Pair it with a Text node in whatever row the screen wants.
+
+API-wise it speaks UMG's check box: CheckedState (Unchecked/Checked/Undetermined) with
+GetCheckedState/SetCheckedState, IsChecked/SetIsChecked, and OnCheckStateChanged. bIsOn with
+GetIsOn/SetIsOn and OnToggleChanged are the compatibility spelling of the two-state subset and
+stay fully bindable; the two spellings mirror each other through every path, and when authored
+values disagree CheckedState wins (see ReconcileCheckSpellings).
+
+The third state is the control's own. The behaviour underneath stays two-state and is parked at
+unchecked while Undetermined stands; the tick swaps its check mark for a bar in the TickChecked
+colour. A click leaves Undetermined by becoming unchecked, as UMG's SCheckBox does.
 
 ## Properties
 

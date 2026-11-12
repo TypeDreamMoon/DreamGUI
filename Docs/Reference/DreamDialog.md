@@ -41,6 +41,10 @@ at all:
         Title   = "删除存档"
         Message = "这个操作不能撤销。"
         OnDialogClosed -> HandleAnswer
+    }
+
+A fixed OK/Cancel pair with an enum would have spelled that same case no better and had nothing to
+say about the three-button one, which is why the array won.
 
 ## Properties
 

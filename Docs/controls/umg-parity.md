@@ -125,7 +125,8 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs -Out=<directory>
 ```
 
-Without `-Out` it writes into the plugin's `Docs/Reference/`.
+Without `-Out` it writes into the plugin's `Docs/Reference/`. The descriptions are the tooltips in the editor's language:
+add `-culture=en` on a machine set to another one, as the plugin's own pages are English.
 
 - A property's description is the comment above it in the header — one more reason to write that comment for the
   person using the control rather than the person maintaining it.

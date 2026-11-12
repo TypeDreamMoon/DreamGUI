@@ -41,6 +41,7 @@ Every radius is in local units, measured from the ring's centre.
 | `FontSize` | `float` | Ring Menu Style|Text | yes | read / write |  |
 | `HubTextColor` | `FColor` | Ring Menu Style|Text | yes | read / write |  |
 | `HubFontSize` | `float` | Ring Menu Style|Text | yes | read / write |  |
+| `Font` | `TObjectPtr<UDreamUIFontData_BaseObject>` | Ring Menu Style|Text | yes | read / write |  |
 | `IconSize` | `FVector2D` | Ring Menu Style|Text | yes | read / write |  |
 | `IconSpacing` | `float` | Ring Menu Style|Text | yes | read / write |  |
 | `LabelHeight` | `float` | Ring Menu Style|Text | yes | read / write |  |
