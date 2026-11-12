@@ -99,7 +99,15 @@ In a `.dui` a control is a node typed by its **registry tag**: `Scope.Name`, wit
 under `Native`.
 
 ```dui
+// DUI/UI/AudioSettings.dui
 class /Game/UI/WBP_AudioSettings
+
+events {
+    MuteToggled()
+    VolumeMoved()
+    Applied()
+    Closed()
+}
 
 VerticalBox Root {
     AnchorData.AnchorMin = (0, 0)
@@ -110,24 +118,27 @@ VerticalBox Root {
 
     HorizontalBox {
         Spacing = 8
-        Native.Toggle Mute { OnToggleChanged -> HandleMuteChanged }
+        Native.Toggle Mute {
+            @slot MinDesiredSize = (28, 28)
+            OnToggleChanged -> emit MuteToggled()
+        }
         Text { Text = "Mute" }
     }
     Native.Slider Volume {
         MinValue = 0
         MaxValue = 1
         Value = 0.8
-        OnValueChanged -> HandleVolumeChanged
+        OnValueChanged -> emit VolumeMoved()
     }
     HorizontalBox {
         Spacing = 16
         Native.Button Apply {
             Text { Text = "Apply" }
-            OnClicked -> HandleApply
+            OnClicked -> emit Applied()
         }
         Native.Button Back {
             Text { Text = "Back" }
-            OnClicked -> HandleBack
+            OnClicked -> emit Closed()
         }
     }
 }
@@ -141,8 +152,14 @@ What to notice:
 - **Nested content goes into the control's default hole.** The `Text { }` inside `Native.Button` is the
   button's label — the button draws none of its own. A toggle has no hole; the text beside the box is your
   own layout, which is why it sits next to a `Text` in one `HorizontalBox` above.
-- **Events are routes**: `OnClicked -> HandleApply` sends the control's event to the user widget's
-  function of that name, as any other event is routed.
+- **Events are routes**: `OnClicked -> emit Applied()` raises the screen's own event for whoever opened it, and
+  `OnClicked -> HandleApply` would instead call the user widget's function of that name (which the class must have:
+  DUI6004 says when it does not). The arguments of an `emit` are expressions over the class -- the control's event
+  arguments are not among them -- so `MuteToggled` carries none, and whoever hears it reads `Mute` and `Volume`, the
+  class's variables for the two controls. Copied as it is, this file compiles and lays out with no error and no
+  warning.
+- **A toggle is only as big as its box**, 14 x 19 px by default: `@slot MinDesiredSize = (28, 28)` makes it big enough
+  to press (`layout` reports a control under 24 x 24 px, DUI8003).
 - A class with no tag can be named by its class path: `/Script/DreamGUIControls.DreamDialog Confirm { … }`.
   The write-back (the designer editing the file) always writes the tag, though: a class path names the
   module the class lives in, and a file written with one stops reading back the day the class moves.

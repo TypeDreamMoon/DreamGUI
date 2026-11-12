@@ -110,7 +110,9 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
   (`Source/DreamGUI/Public/Text/DreamUIDiagnostics.h`) and into `Docs/diagnostics/index.md` and
   `Docs/diagnostics/codes.md`.
 - `.skill/reference/` is built from `Docs/` (the language, the worked example, pitfalls, controls, diagnostics). After
-  editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift.
+  editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift. A code block whose
+  first line is `// DUI/<path>.dui` is a whole file that agents copy: `DreamGUI.MCP.Reference.*` compiles and lays out
+  every one and fails on any error or warning, so keep them self-contained (no handler the class must supply).
 - `Docs/Reference/` is generated. Do not edit it. Regenerate with
   `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs -culture=en` (without `-culture=en`
   an editor in another language writes its translated tooltips).
