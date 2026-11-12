@@ -122,6 +122,18 @@ public:
 	 * and with NM_DedicatedServer whenever IsRunningDedicatedServer().
 	 */
 	static bool ShouldRunForNetMode(ENetMode InNetMode);
+	/**
+	 * While one lives, a world made in a commandlet gets a manager as an editor's world does. A commandlet's worlds get none
+	 * (a cook, a compile, a resave lays nothing out), except the one a tool makes on purpose to lay a screen out without
+	 * drawing it: the DreamMCP host does that in its stage's world, and scopes this around making it. Game thread.
+	 */
+	struct DREAMGUI_API FCommandletWorldScope
+	{
+		FCommandletWorldScope();
+		~FCommandletWorldScope();
+		FCommandletWorldScope(const FCommandletWorldScope&) = delete;
+		FCommandletWorldScope& operator=(const FCommandletWorldScope&) = delete;
+	};
 	/** The engine's three, and editor previews: a preview's widgets need a manager as much as a level's. */
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
