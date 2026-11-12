@@ -146,6 +146,31 @@ namespace DreamUITextBuilderLocal
 		{
 			return FString();
 		}
+		// Words the enums of this library spell two ways: a text aligns to Middle, a slot to Center. The other spelling is
+		// what an author meant, and no edit distance finds it.
+		static const TCHAR* const Synonyms[][3] = {
+			{ TEXT("Center"), TEXT("Middle"), TEXT("Centre") },
+		};
+		for (const auto& Group : Synonyms)
+		{
+			const bool bInGroup = InName.Equals(Group[0], ESearchCase::IgnoreCase) || InName.Equals(Group[1], ESearchCase::IgnoreCase)
+				|| InName.Equals(Group[2], ESearchCase::IgnoreCase);
+			if (!bInGroup)
+			{
+				continue;
+			}
+			for (const TCHAR* Word : Group)
+			{
+				for (int32 i = 0; i < InEnum->NumEnums() - 1; i++)
+				{
+					const FString Candidate = InEnum->GetNameStringByIndex(i);
+					if (Candidate.Equals(Word, ESearchCase::IgnoreCase) && !Candidate.Equals(InName, ESearchCase::IgnoreCase))
+					{
+						return Candidate;
+					}
+				}
+			}
+		}
 		FString Best;
 		int32 BestDistance = MAX_int32;
 		// NumEnums() includes the generated _MAX entry, which is never something an author meant.
@@ -618,6 +643,14 @@ namespace DreamUITextBuilderLocal
 		if (!ObjectPath.EndsWith(TEXT("_C")))
 		{
 			ObjectPath += TEXT("_C");
+		}
+		// A package that is neither loaded nor on disk is not asked for: a load of it fails, and on the way it leaves an
+		// empty package of that name in memory, which then reads as "already there" to whatever creates the asset next
+		// (the component a screen names before it has been compiled, say).
+		const FString PackageName = FPackageName::ObjectPathToPackageName(ObjectPath);
+		if (FindPackage(nullptr, *PackageName) == nullptr && !FPackageName::DoesPackageExist(PackageName))
+		{
+			return nullptr;
 		}
 		if (UClass* Generated = LoadObject<UClass>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
 		{

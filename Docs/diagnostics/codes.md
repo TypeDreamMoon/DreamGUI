@@ -1,7 +1,8 @@
 ## Diagnostics
 
 Every message has a code, `DUInnnn`, printed as `File.dui(line,col): error DUI3001: …`. The first digit says which stage
-refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compiling into the Blueprint, 7 writing back.
+refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compiling into the Blueprint, 7 writing back,
+8 layout (DreamMCP's `layout` and `preview` only).
 
 | Code | Name | Meaning |
 |---|---|---|
@@ -125,3 +126,10 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |
 | DUI7004 | PatchSyntaxNotWritable | An edit to something no line spells: a visibility an `if` decides, a shorthand that cannot be rewritten, a change to `Tags` that no line can take (written both ways, or a name an `@tag` line cannot hold). |
 | DUI7005 | PatchStyleComponentNotWritable | An edit to a value a style's `+` line gives the node, from a caller that writes no override. The designer writes it as a `+` line on the node instead; a script can add that line, or change the style. |
+| DUI8001 | LayoutOffScreen | What can show of a node reaches past an edge of the viewport, or lies wholly outside it. |
+| DUI8002 | LayoutTextOverflow | A text cut short by its overflow policy, or laid out past its box. |
+| DUI8003 | LayoutTooSmall | A node that draws or can be pressed of zero size, or a pressable control under 24 x 24 px. |
+| DUI8004 | LayoutOverlappingControls | Two pressable controls of one canvas on top of each other. |
+| DUI8005 | LayoutNearlyAligned | Siblings whose edges, centres or gaps miss lining up by 1 to 3 px (an info). |
+| DUI8006 | LayoutBreaksAtSize | A layout problem at one of the further viewport sizes asked for, and not at the first. |
+| DUI8007 | LayoutLowContrast | A text that stands out from what is behind it less than 3 to 1 (preview only). |

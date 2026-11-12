@@ -13,6 +13,28 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **DreamMCP.** An AI agent connected through a [DreamMCP](https://github.com/TypeDreamMoon/dream-mcp) server gets a
+  `dream_gui` tool: `check`, `compile`, `diagnostics`, `lookup`, `layout`, `preview` and `info` for `.dui` files, answered
+  by the user's editor or by a host the server starts (the windowless editor, or `-run=DreamGUIHost` when nothing has to
+  be drawn). `compile` builds the Blueprint a file's `class` line names, creating it, and first every component the
+  file places; no manifest. `layout` lays the compiled screen out at a viewport size without drawing it and answers
+  with every node's rect in pixels, its text and whether that fits, and the problems a person sees at a glance -- off
+  the screen, text cut, too small to press, controls on top of each other, edges a pixel or two off, what breaks at
+  another size. `preview` draws the screen into a PNG and says how much it covers, its colours and which texts are
+  hard to read; it plays a timeline the file declares, and with `time` and `frames` shows it, tweens and Niagara
+  particles moving. A host caps its frame rate only while no Dream endpoint in it is busy (`DreamMCP.BusyEndpoints`).
+  The endpoint listens on 127.0.0.1 only, with a token; *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸
+  Enable DreamMCP Endpoint* and `-NoDreamMCP` decide whether the editor serves it. See
+  [DreamMCP endpoint](Docs/tools/dreammcp.md).
+- **Layout diagnostics, DUI8001 to DUI8007.** The problems `layout` and `preview` report have codes of their own, a new
+  range that no compile raises: warnings and infos with the node, its line and a hint. See
+  [Diagnostics](Docs/diagnostics/index.md).
+- **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
+  project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
+  (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
+  `compile` and `layout` from the command line for CI and agents with no DreamMCP server. They ship with the plugin.
+  See [Working with AI agents](Docs/tools/ai-agents.md).
+
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
   a procedural pattern (linear, radial, angular, diamond, blinds, checker, noise), through a threshold and softness that
@@ -336,6 +358,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
+  slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
+  `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way
+  the axes run (Y up in anchors, X as depth in `RenderTranslation`). See
+  [Positions, sizes and axes](Docs/language/nodes-and-values.md#positions-sizes-and-axes).
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
   gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
   them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*
@@ -502,6 +529,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **Building a screen whose component is not compiled yet leaves nothing behind.** It tried to load the component's
+  class from a package that did not exist, which left an empty package of that name in memory -- one the DreamMCP
+  endpoint then took for an existing asset, refusing to create the component there until the engine restarted. A
+  package that is neither loaded nor on disk is no longer asked for, and the endpoint goes by the asset, not the package.
 - **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
   letters overlap -- tight or negative letter spacing, italic, a heavy condensed face -- the next letter's shadow landed on
   this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with

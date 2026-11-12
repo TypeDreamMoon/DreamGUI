@@ -19,6 +19,7 @@ An expandable area: a header that toggles, and the content it hides.
 | `TransitionDuration` | `float` | Expandable Area Style | yes | read / write |  |
 | `LabelColor` | `FColor` | Expandable Area Style | yes | read / write |  |
 | `FontSize` | `float` | Expandable Area Style | yes | read / write |  |
+| `Font` | `TObjectPtr<UDreamUIFontData_BaseObject>` | Expandable Area Style | yes | read / write |  |
 | `HeaderPadding` | `FMargin` | Expandable Area Style | yes | read / write |  |
 | `ContentBackground` | `FColor` | Expandable Area Style | yes | read / write |  |
 | `ContentPadding` | `FMargin` | Expandable Area Style | yes | read / write |  |

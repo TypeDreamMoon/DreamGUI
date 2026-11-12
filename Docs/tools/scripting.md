@@ -139,6 +139,17 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Too
 the parent class and the `.dui` it names. Every compiler message is logged and the exit code is non-zero when anything
 failed. The manifest's format and the rest are in [Workflow](../getting-started/workflow.md#one-file-two-ways-in).
 
+To check, compile or lay out one file without writing a manifest, `.skill/dui.ps1` asks the engine what the
+[DreamMCP endpoint](dreammcp.md) answers: `check <file>` / `check -All` (writes nothing), `compile <file>` (the Blueprint
+the `class` line names, components first), `layout <file> -Width -Height -Sizes` (every node's rect and the layout
+problems). It uses an editor that is serving the project, or starts a headless host for the call, and exits 0 when the
+source has no error, 1 when it has, 2 when it could not run.
+
+```powershell
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check -All
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Menu.dui -Sizes "1280x720, 2560x1440"
+```
+
 ## Editor Python: a Widget Blueprint from a .dui
 
 Making assets in bulk — a family of components, a set of screens — need not be one *Set Source File...* click at a time.

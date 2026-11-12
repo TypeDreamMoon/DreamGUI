@@ -14,45 +14,34 @@ Two kinds of work happen here. Pick the section that matches yours.
 Paths in this section are relative to the game project's root. The plugin is in `Plugins/DreamGUI/`.
 
 `.dui` is not in your training data. Read the reference and copy from the examples. Do not guess from QML, XAML,
-UMG or CSS habits.
+UMG or CSS habits. A screen that compiles can still be laid out wrong: it is done when it also fits.
 
-1. Read: `Plugins/DreamGUI/Docs/language/overview.md` (the reference, one page per topic in that folder),
-   `Plugins/DreamGUI/Docs/language/example.md` (a worked example), and the `.dui` section of
-   `Plugins/DreamGUI/Docs/guides/pitfalls.md`. Small complete files: `Plugins/DreamGUI/Content/Samples/HelloDreamGUI.dui`
-   and `Plugins/DreamGUI/Content/Samples/NiagaraEffects.dui` (the test suite compiles both and fails on any error).
-2. Look up what exists: `<Project>/DUI/.dui-symbols.json` lists every node type, property, enum value, event and view
-   model class the compiler accepts. The editor writes it on startup, or at its console with `DreamUI.ExportSymbols`,
-   and only when `<Project>/DUI/` exists. Classes: `Plugins/DreamGUI/Docs/Reference/` (for example `DreamButton.md`).
-   Controls: `Plugins/DreamGUI/Docs/controls/index.md`.
+**If you have the `dream_gui` tool, a DreamMCP server is connected: use it for every step.** It answers in the user's
+editor or in an engine it keeps running, in a fraction of a second. `help` gives each action's arguments.
+
+1. Read: the `reference` action lists the pages (the language, a worked example, pitfalls, controls, diagnostics).
+   Without the tool: `Plugins/DreamGUI/.skill/reference/dui.md`, `example.md` and `pitfalls.md`.
+2. Look up every node type and property before writing it: `lookup` (`Text`, `Text.FontSize`, `VerticalBox`, `Widget`,
+   `slot`). Without the tool: `<Project>/DUI/.dui-symbols.json`, which the editor writes when `<Project>/DUI/` exists.
 3. Write the source under `<Project>/DUI/` (or `<Plugin>/DUI/`), never under `Content/`. The file's `class` line
    names the Blueprint it is the source of, for example `class /Game/UI/WBP_Hello`.
-4. Build it headlessly. List the widgets in a manifest, for example `<Project>/DUI/widgets.json`:
+4. `check` the file (it writes nothing), fix every error at its line, and check again.
+5. `layout` it at the sizes that matter (`sizes: "1280x720, 2560x1440"`): it compiles the screen (components it places
+   first), lists every node's rect and text, and reports what is off the screen, cut, too small or on top of another
+   (DUI8xxx). Fix those and run it again. `preview` draws the screen; its figures speak for the picture.
 
-   ```json
-   { "widgets": [ { "asset": "/Game/UI/WBP_Hello", "source": "Hello.dui" } ] }
-   ```
-
-   Then run, with every editor of that project closed:
-
-   ```text
-   "<Engine>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "<Project>/<Project>.uproject" -run=DreamUICompileWidgets -Manifest=DUI/widgets.json
-   ```
-
-   A missing Blueprint is created, then every entry is compiled and saved. `-Manifest` is relative to the project
-   folder; `source` is relative to `DUI/`. `-Only=WBP_A,WBP_B` limits the run. `-All [-Path=/Game/UI]` recompiles the
-   text-backed Blueprints that already exist. The exit code is non-zero when anything failed. The last line reads
-   `DreamUICompileWidgets: N compiled, M failed, of K.`
-5. Read the diagnostics: each one is printed as `File.dui(line,col): error DUI3001: …`. Look the code up in
-   `Plugins/DreamGUI/Docs/diagnostics/index.md` (or <https://gui.toolchain.64hz.cn/en/docs/diagnostics>). Fix, and build again until
-   every entry says `compiled and saved`.
-
-There are no agent skills and no MCP server for DreamGUI. The commandlet above is the headless entry point.
+Without the tool, the same verbs from the command line (each run starts an engine; write everything first):
+`pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check|compile|layout <file>`, `check -All` for every file.
+The skills `dream-gui-create`, `-verify` and `-diagnose` in `Plugins/DreamGUI/.skill/` walk these steps;
+`pwsh -NoProfile -File Plugins/DreamGUI/.skill/sync-skills.ps1` publishes them into `.claude/skills/`. A diagnostic reads
+`File.dui(line,col): error DUI3001: …`; every code is in `Plugins/DreamGUI/Docs/diagnostics/index.md`. More:
+`Plugins/DreamGUI/Docs/tools/dreammcp.md`. The commandlet `-run=DreamUICompileWidgets -Manifest=DUI/widgets.json`
+(`Docs/tools/scripting.md`) compiles a list of widgets with no endpoint, components listed first.
 
 ### Rules
 
-- Copy only from `Plugins/DreamGUI/Docs/` and `Plugins/DreamGUI/Content/Samples/`. Test `.dui` files are not examples.
-- A manifest entry's `asset` must be the path in the file's `class` line.
-- A manifest lists components before the screens that place them. Order matters.
+- Copy only from the reference, `Plugins/DreamGUI/Docs/` and `Plugins/DreamGUI/Content/Samples/`. Test `.dui` files
+  are not examples.
 - `parent` must be `UDreamTextUserWidget` or a subclass. Leave it out to get `UDreamTextUserWidget`.
 - Use only names that appear in `.dui-symbols.json` or the class reference. An unknown name is an error, not a no-op.
 - `Style.X = v` compiles but changes nothing while the project has a style sheet and `StyleSource` is the default.
@@ -120,8 +109,13 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
 - Diagnostic codes are stable. Never renumber or reuse one. A new code goes into `EDreamUIDiagnosticCode`
   (`Source/DreamGUI/Public/Text/DreamUIDiagnostics.h`) and into `Docs/diagnostics/index.md` and
   `Docs/diagnostics/codes.md`.
+- `.skill/reference/` is built from `Docs/` (the language, the worked example, pitfalls, controls, diagnostics). After
+  editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift. A code block whose
+  first line is `// DUI/<path>.dui` is a whole file that agents copy: `DreamGUI.MCP.Reference.*` compiles and lays out
+  every one and fails on any error or warning, so keep them self-contained (no handler the class must supply).
 - `Docs/Reference/` is generated. Do not edit it. Regenerate with
-  `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs`.
+  `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs -culture=en` (without `-culture=en`
+  an editor in another language writes its translated tooltips).
 - A runtime file includes only its own module's and lower layers' headers. A new or moved file gets its row in
   `Tools/Tests/module-owners.csv`. The `layering` static check enforces it.
 - Test names are `DreamGUI.<Area>.<Sentence>`. A test that reads pixels carries `NonNullRHI`. Preset floors in
@@ -138,7 +132,7 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
 - Contributing: `CONTRIBUTING.md`, `Docs/contributing/index.md`
 - Tests and the test host: `Docs/tools/tests.md`, `Tools/Tests/README.md`, `Tools/TestHost/README.md`
 - The language: `Docs/language/overview.md`; diagnostics: `Docs/diagnostics/index.md`
-- Agents: `Docs/tools/ai-agents.md`; scripting and the commandlet: `Docs/tools/scripting.md`
+- Agents: `Docs/tools/ai-agents.md`, `Docs/tools/dreammcp.md`, `.skill/README.md`; scripting: `Docs/tools/scripting.md`
 - The published manual: <https://gui.toolchain.64hz.cn>
 
 ## Don't

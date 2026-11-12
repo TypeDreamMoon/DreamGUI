@@ -4,7 +4,18 @@
 
 #include "CoreMinimal.h"
 
+struct FDreamUIDiagnostic;
 struct FDreamUIDiagnosticBag;
+
+/** One file's last compile outcome as the mailbox holds it. */
+struct FDreamUIDiagnosticsMailboxEntry
+{
+	/** The file, as the compile that deposited it named it (the resolved, absolute path). */
+	FString SourceName;
+	/** ISO 8601, UTC. */
+	FString CompiledAt;
+	TArray<FDreamUIDiagnostic> Diagnostics;
+};
 
 /**
  * The diagnostics mailbox: `DUI/.dui-diagnostics.json`, one entry per .dui the compiler has seen
@@ -57,4 +68,13 @@ struct DREAMGUIEDITOR_API FDreamUIDiagnosticsMailbox
 
 	/** Drops every deposited entry and any pending flush. Tests start clean with this. */
 	static void Reset();
+
+	/**
+	 * What the mailbox holds now, for a reader in this process (the DreamMCP endpoint's `diagnostics`): one entry per file a
+	 * compile of this session deposited, its diagnostics as that compile raised them, in no particular order.
+	 */
+	static void GetEntries(TArray<FDreamUIDiagnosticsMailboxEntry>& OutEntries);
+
+	/** The entry of one file, compared as paths; false when no compile of this session deposited one for it. */
+	static bool FindEntry(const FString& InSourceName, FDreamUIDiagnosticsMailboxEntry& OutEntry);
 };

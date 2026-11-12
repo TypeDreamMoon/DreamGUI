@@ -39,6 +39,7 @@ key is a value and `<->` binds against it.
     /Script/DreamGUIControls.DreamInputKeySelector JumpBinding {
         SelectedKey = (KeyName="SpaceBar")
         OnKeySelected -> HandleJumpRebound
+    }
 
 ## Properties
 

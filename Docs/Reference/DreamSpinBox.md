@@ -44,6 +44,7 @@ and in a field being edited the arrows are the field's and move its caret.
         Value = 5
         MaxValue = 10
         OnValueChanged -> HandleCount
+    }
 
 ## Properties
 

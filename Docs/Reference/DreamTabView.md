@@ -21,6 +21,48 @@ each one under the switcher. So this is a working tab view, from .dui, with noth
         Widget Video    { ... }
         Widget Audio    { ... }
         Widget Controls { ... }
+    }
+
+The two routes that were considered and are NOT what this does:
+
+  - A NamedSlot. UDreamNamedSlot takes exactly one child, so pages would need a panel wrapped
+    around them; worse, the host-fills-the-slot step lives inside InitializeWidgetStatic behind
+    an `InWidgetTreeArchetype != nullptr` gate, and a NATIVE class never has a widget-tree
+    archetype. A native control cannot receive named-slot content at all.
+  - Pages as a TArray property. The language cannot write a container: a tuple on a non-short-form
+    destination is refused outright (ValueTypeMismatch), and a bare string cannot spell an array
+    for ImportText. Nesting is the one thing .dui does natively, so nesting is the door.
+
+WHERE THE TABS COME FROM. One tab per index, for as many indices as there are labels OR pages --
+whichever is more, so the strip is never emptier than the thing it drives. TabLabels names tab i
+when it has an entry; otherwise the tab wears the page's own node id. That fallback is what makes
+the file above work with no label list at all, and TabLabels stays the spelling that a details
+panel, a Blueprint and a binding can all reach:
+
+    Native.TabView Settings {
+        TabLabels      <-  GetSettingsTabs()      // localizable, from the host class
+        ActiveTabIndex <-> CurrentSettingsTab
+        ...
+    }
+
+The same container limit bites the assignment form -- `TabLabels = (...)` does not parse into an
+array -- so a .dui that wants translated labels binds them rather than writing them inline. A node
+id is an identifier and not a translatable string, which is why the fallback is deliberately
+culture-invariant instead of pretending otherwise.
+
+WHY A TAB IS TWO VISUALS. A tab is a radio button that looks like a button: the toggles share one
+UUIToggleGroup, so mutual exclusion is the group's, not this control's. But a UUISelectable owns
+exactly two transitions and a tab needs three appearances -- pointer states, selected, and the
+label. The pointer transition tints the face; the CHECKED transition tints a separate full-bleed
+plate over it (aimed at one visual they overwrite each other and the selected colour would live
+only until the next hover -- the toggle's box-and-tick split, restated); and the label colour has
+no transition left, so the control pushes it directly. Three appearances, two transitions, one
+explicit push.
+
+THE SHOULDER BUTTONS switch tabs (IDreamUITabSwitchTarget): the project's PreviousTabKeys and
+NextTabKeys, LB and RB by default, reach the tab view the player's focus is in -- else the first one on
+their active screen -- and step to the previous or next enabled tab, round at the ends, as
+CommonUI's tab list does; the action bar shows the two prompts while there is such a tab view.
 
 ## Properties
 

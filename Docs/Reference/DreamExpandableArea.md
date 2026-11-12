@@ -19,6 +19,47 @@ and only one is reachable from here:
     Native.ExpandableArea Details {
         Label = "Advanced"
         Text Body { Text = "..." }
+    }
+
+Nesting, plainly. The text builder attaches a node's children to the widget it just built
+(BuildNode's TrySetParent), so those widgets arrive as children of THIS control, sitting beside
+the tree the control realized for itself -- and the content column is this control's DEFAULT
+NAMED SLOT, so they are moved into it for free.
+
+That used to be a hand-written adoption pass here, with a comment explaining that UDreamNamedSlot
+could not be used: a host's NamedSlotContent was hung by InitializeWidgetStatic, which returns
+immediately for a class with no widget-tree archetype, and a native control never has one -- so a
+slot declared here would have been a hole nothing could fill. That gate is gone (slots are now
+filled from UDreamUserWidget::Initialize, after NativeOnInitialized, which is the first moment
+BOTH kinds of contents exist), and with it the reason to hand-roll this. Code that assembles a
+hierarchy by hand can still call SetContent; the designer's drag into this control lands as a
+child, which is the same road as the .dui above.
+
+THE PART NAMES, which a Template's author has to spell exactly, because parts are bound by
+DISPLAY NAME and nothing checks the spelling but the missing-part log line:
+
+    ExpandableArea   the outer column
+    HeaderFace       the clickable header face; the node whose height IS HeaderHeight
+    HeaderRow        the indicator-and-label row inside the face
+    Arrow            the glyph indicator          (optional)
+    ArrowMark        the image indicator          (optional)
+    Label            the stock header text
+    Header           the header HOLE -- a UDreamNamedSlot  (optional)
+    Content          the body, and this control's default UDreamNamedSlot
+
+The face is "HeaderFace" and NOT "Header" on purpose. A named slot's name is its host node's
+display name (UDreamNamedSlot::GetSlotName), so the hole must be called Header -- that string is
+HeaderSlotName, a public binding key, and one of the two names GetNativeSlotNames promises. A
+part walk meets ancestors before descendants, so a face also called Header answers for BOTH, and
+the swap that puts the stock label away when the hole is filled then reads an empty hole and
+sleeps the entire header. A template that names its own header face Header re-creates exactly
+that: the header disappears, and the only trace is one missing-part line for HeaderFace.
+
+UMG parity is UExpandableArea's core: bIsExpanded, SetIsExpanded, OnExpansionChanged -- plus the
+library's OnValueChangedBP, because the expanded flag is a value and `<->` binds against it.
+
+Collapsed, the control measures as the HEADER and nothing more: an Auto slot asks the control for
+its size, and an expander that kept its expanded height would leave a hole in every list it is in.
 
 ## Properties
 

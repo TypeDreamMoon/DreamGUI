@@ -60,6 +60,14 @@ Each entry says what you see, why, and what to do; the page it links to has the 
   anchors for a size of its own. [Ring menu](../Reference/DreamRingMenu.md).
 - **`#8C8C94` is darker than it looks.** Colour literals are sRGB-encoded, and a tint is multiplied in linear space.
   [Values](../language/nodes-and-values.md#values).
+- **A positive `AnchoredPosition` Y moves a node up, and `(0, 0)` anchors are the bottom-left.** Y goes up, as in Unity.
+  In `RenderTranslation` X is depth: `(-40, 0, 0)` brings a node nearer and draws it larger; `(0, -40, 0)` moves it
+  left. `RenderRotation` is `(Pitch, Yaw, Roll)`. [Positions, sizes and axes](../language/nodes-and-values.md#positions-sizes-and-axes).
+- **`VAlign = Center` on a text is an error, and `@slot VerticalAlignment = Middle` is too.** A text's own alignment
+  says `Middle` (`Top`, `Middle`, `Bottom`); a slot's says `Center` (`Top`, `Center`, `Bottom`, `Fill`). The error
+  names the right one.
+- **`CornerRadius = (24, 24, 24, 24)` draws a capsule, not 24 px corners.** The radii are fractions by default
+  (`CornerRadiusUnitMode = Percentage`, 1 rounding a corner fully); write `CornerRadiusUnitMode = Value` for pixels.
 
 ## Text and fonts
 
@@ -74,6 +82,10 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 
 ## Layout and world space
 
+- **The text of a row in a vertical box stands one letter to a line.** A vertical box gives a child the width the child
+  measures, and a node whose `SizeDelta` width is 0 measures 0, so its text wraps after every character. Write
+  `@slot HorizontalAlignment = Fill` on the row (or in its style), or give it a width.
+  [Positions, sizes and axes](../language/nodes-and-values.md#positions-sizes-and-axes).
 - **A list that opens or grows draws past its panel.** A panel does not clip. Use a `ScrollBox`, or `Clipping =
   ClipToBounds`. [The panels](../concepts/layout.md#the-panels).
 - **A world-space panel sits off its actor.** The component's `Pivot` and size go on the user widget; give the class's root

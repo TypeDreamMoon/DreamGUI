@@ -18,6 +18,7 @@ body:
         - "Rendering and text / 渲染与文字"
         - "Input, controls and runtime / 输入、控件与运行时"
         - "VS Code extension / VS Code 扩展"
+        - "Agent skills and MCP / agent 技能与 MCP"
         - "Other / 其他"
     validations:
       required: true

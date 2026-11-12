@@ -76,9 +76,26 @@ void UDreamUIManagerWorldSubsystem::OnEnginePreExit()
 }
 #endif
 
+namespace DreamUIManagerLifecycleLocal
+{
+	/** How many FCommandletWorldScope are alive: worlds made meanwhile get a manager in a commandlet too. */
+	int32 GCommandletWorldScopes = 0;
+}
+
+UDreamUIManagerWorldSubsystem::FCommandletWorldScope::FCommandletWorldScope()
+{
+	check(IsInGameThread());
+	++DreamUIManagerLifecycleLocal::GCommandletWorldScopes;
+}
+
+UDreamUIManagerWorldSubsystem::FCommandletWorldScope::~FCommandletWorldScope()
+{
+	--DreamUIManagerLifecycleLocal::GCommandletWorldScopes;
+}
+
 bool UDreamUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
-	if (IsRunningCommandlet() || !Super::ShouldCreateSubsystem(Outer))
+	if ((IsRunningCommandlet() && DreamUIManagerLifecycleLocal::GCommandletWorldScopes == 0) || !Super::ShouldCreateSubsystem(Outer))
 	{
 		return false;
 	}

@@ -238,6 +238,35 @@ FString FDreamUIDiagnosticsMailbox::FlushNow(const FString& InOverrideDirectory)
 	return FinalPath;
 }
 
+void FDreamUIDiagnosticsMailbox::GetEntries(TArray<FDreamUIDiagnosticsMailboxEntry>& OutEntries)
+{
+	using namespace DreamUIMailboxLocal;
+	OutEntries.Reset(GEntries.Num());
+	for (const TPair<FString, FEntry>& Pair : GEntries)
+	{
+		FDreamUIDiagnosticsMailboxEntry& Entry = OutEntries.AddDefaulted_GetRef();
+		Entry.SourceName = Pair.Key;
+		Entry.CompiledAt = Pair.Value.CompiledAt;
+		Entry.Diagnostics = Pair.Value.Diagnostics;
+	}
+}
+
+bool FDreamUIDiagnosticsMailbox::FindEntry(const FString& InSourceName, FDreamUIDiagnosticsMailboxEntry& OutEntry)
+{
+	using namespace DreamUIMailboxLocal;
+	for (const TPair<FString, FEntry>& Pair : GEntries)
+	{
+		if (IsSameSource(Pair.Key, InSourceName))
+		{
+			OutEntry.SourceName = Pair.Key;
+			OutEntry.CompiledAt = Pair.Value.CompiledAt;
+			OutEntry.Diagnostics = Pair.Value.Diagnostics;
+			return true;
+		}
+	}
+	return false;
+}
+
 void FDreamUIDiagnosticsMailbox::Reset()
 {
 	using namespace DreamUIMailboxLocal;

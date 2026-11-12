@@ -30,6 +30,12 @@ is written by code, so there is nobody to notify.
 
     /Script/DreamGUIControls.DreamProgressBar LoadProgress {
         Percent = 0.35
+    }
+
+    /Script/DreamGUIControls.DreamProgressBar Spinner {
+        Shape = Radial
+        Percent = 0.25
+    }
 
 ## Properties
 
