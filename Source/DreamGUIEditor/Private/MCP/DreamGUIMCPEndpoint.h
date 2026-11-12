@@ -348,6 +348,8 @@ namespace DreamGUIMCP
 		void BindRoutes();
 		void UnbindRoutes();
 		bool PublishDiscovery(FString& OutError);
+		/** Publishes the discovery file as a hello is answered, when UpdateDiscovery has not yet. */
+		void PublishOnAnsweredHello();
 		void RetractDiscovery();
 		bool HandleTicker(float DeltaSeconds);
 

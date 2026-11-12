@@ -630,6 +630,20 @@ namespace DreamGUIMCP
 		}
 	}
 
+	void FEndpoint::PublishOnAnsweredHello()
+	{
+		if (!bStarted || !Options.bPublishDiscovery || bPublishedDiscovery || !Options.bListen || !Router.IsValid())
+		{
+			return;
+		}
+		FString PublishError;
+		if (PublishDiscovery(PublishError))
+		{
+			UE_LOG(LogDreamGUIMCP, Display, TEXT("DreamMCP: answering on 127.0.0.1:%d %.1f s after the endpoint started (a hello came in); published %s."),
+				Port, FPlatformTime::Seconds() - StartedAtSeconds, *GetDiscoveryFilePath());
+		}
+	}
+
 	void FEndpoint::UpdateDiscovery()
 	{
 		if (!bStarted || !Options.bPublishDiscovery || bPublishedDiscovery)
@@ -1014,7 +1028,15 @@ namespace DreamGUIMCP
 
 		if (Segments.Num() == 1 && Segments[0] == TEXT("hello"))
 		{
-			return Exchange.Verb == TEXT("GET") ? HandleHello() : WrongVerb(TEXT("GET"));
+			if (Exchange.Verb != TEXT("GET"))
+			{
+				return WrongVerb(TEXT("GET"));
+			}
+			// A hello that reached this handler came through the socket: the endpoint answers, which is all the discovery
+			// file waits for. Written now, before the answer leaves, so a server that started this process and gets its
+			// 200 finds the file -- its own hello usually comes before the one UpdateDiscovery asks on a worker.
+			PublishOnAnsweredHello();
+			return HandleHello();
 		}
 		if (Segments.Num() == 1 && Segments[0] == TEXT("call"))
 		{

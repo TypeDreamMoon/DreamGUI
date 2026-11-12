@@ -24,7 +24,7 @@ a model that writes `.dui` cannot otherwise see: the laid-out screen, in words, 
 | Port | `47800`, or `-DreamMCPPort=<n>`; a port that cannot be bound is skipped for the next, up to 16. Other Dream plugins in the same process share it, each under its own route |
 | Bind address | `127.0.0.1` only, proven at startup |
 | Authentication | the `X-Dream-Token` header on every request; the token is `DREAM_MCP_TOKEN` from the environment, else `-DreamMCPToken=<t>`, else random. A request with an `Origin` header is refused (403) |
-| Discovery | `<Project>/Saved/DreamMCP/gui.json`, written once the endpoint has answered a hello of its own, deleted when it stops if it still names this process |
+| Discovery | `<Project>/Saved/DreamMCP/gui.json`, written once the endpoint answers a hello (its own, or the first one a server sends, before that one is answered), deleted when it stops if it still names this process |
 | Hosts | the editor with `-DreamMCPHost -RenderOffscreen` (draws); `-run=DreamGUIHost -nullrhi -DreamMCPHost` (does not draw, still lays out) |
 | Switched off by | `-NoDreamMCP`; in the user's editor also *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸ Enable DreamMCP Endpoint* (on by default, read at startup) |
 
