@@ -358,6 +358,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
+  slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
+  `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way
+  the axes run (Y up in anchors, X as depth in `RenderTranslation`). See
+  [Positions, sizes and axes](Docs/language/nodes-and-values.md#positions-sizes-and-axes).
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
   gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
   them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*

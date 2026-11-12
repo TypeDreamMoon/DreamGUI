@@ -250,6 +250,32 @@ halves the light is `#BCBCBC`.
 
 A flags enum has no `|`; write a combination as the number its flags add up to.
 
+### Positions, sizes and axes
+
+A node outside a box is placed by its `AnchorData`, the way a Unity RectTransform is, and **Y goes up**:
+
+- `AnchorMin`, `AnchorMax`: points of the parent, 0 to 1 on each axis, `(0, 0)` its **bottom-left** and `(1, 1)` its
+  top-right. Equal, they hold the node at that point; different, they stretch it with the parent.
+- `Pivot`: the node's own point, 0 to 1 the same way, `(0.5, 0.5)` its centre -- what `AnchoredPosition` places.
+- `AnchoredPosition`: from the anchors to the pivot, in pixels; a positive Y moves the node **up**.
+- `SizeDelta`: width and height in pixels on an axis whose anchors meet; on an axis where they stretch, how much larger
+  (or, negative, smaller) than the span between them. `AnchorMin = (0, 0)`, `AnchorMax = (1, 1)`, `SizeDelta = (0, 0)`
+  fills the parent.
+
+A node inside a box (`VerticalBox`, `HorizontalBox`, a grid) is placed by the box instead, through its `@slot` lines
+([Slot lines](#slot-lines-slot-and-fill)): a vertical box gives a child the width it measures,
+not the box's, unless the child's `@slot HorizontalAlignment = Fill`.
+
+The render transform moves where a node is drawn and leaves layout alone:
+
+- `RenderTranslation = (X, Y, Z)`, in pixels: **X is depth** -- negative brings the node toward the viewer and draws it
+  larger, positive pushes it back -- Y is right and Z is up. `(0, -40, 0)` is 40 px to the left; `(-40, 0, 0)` is 40
+  nearer.
+- `RenderRotation = (Pitch, Yaw, Roll)`, in degrees, about `RenderTransformPivot`: Yaw turns the node about its vertical
+  axis (positive brings its right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is
+  clockwise).
+- `RenderScale = (X, Y, Z)` scales it as drawn.
+
 A list on a property that is not an array or a set, a map on one that is not a map, or a set or map of nodes, is
 DUI4009; a list or a map that does not read (a bracket never closed, a map entry with no `:`, other than the first of a struct's, which may go without a key) is DUI2023.
 
@@ -965,7 +991,7 @@ timeline Pulse {
     loop     = PingPong
 
     Icon.RenderScale            : 0.0 = (1, 1, 1), 0.3 = (1.25, 1.25, 1) ease InOutQuad, 0.6 = (1, 1, 1)
-    Row/Title.RenderTranslation : 0.0 = (-40, 0, 0), 0.2 = (0, 0, 0) ease OutCubic
+    Row/Title.RenderTranslation : 0.0 = (0, -40, 0), 0.2 = (0, 0, 0) ease OutCubic
     @0.3 -> Landed
 }
 
@@ -973,7 +999,9 @@ timeline Celebrate external
 ```
 
 One line per track: a path of node ids (`Row/Title`), the property it drives, and keys `time = value`, each with an
-optional `ease` from the tween library's names. A line with no path drives the widget the animation lives on. `@time
+optional `ease` from the tween library's names. `Row/Title` above slides in from 40 px to the left: in a
+`RenderTranslation` Y is right and X is depth, so `(-40, 0, 0)` would bring it 40 nearer instead ([Positions, sizes and
+axes](#positions-sizes-and-axes)). A line with no path drives the widget the animation lives on. `@time
 -> Name` is a key on the event track. `loop` is `Once`, `Loop` or `PingPong`; `duration` defaults to the last key. A
 track may drive what the animation editor offers -- a property marked `Interp`. `external` names an animation that
 lives in the asset and is edited in Sequencer. See also [Timelines](https://gui.toolchain.64hz.cn/en/docs/dui/timelines) on the docs site.

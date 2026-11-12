@@ -205,6 +205,32 @@ halves the light is `#BCBCBC`.
 
 A flags enum has no `|`; write a combination as the number its flags add up to.
 
+### Positions, sizes and axes
+
+A node outside a box is placed by its `AnchorData`, the way a Unity RectTransform is, and **Y goes up**:
+
+- `AnchorMin`, `AnchorMax`: points of the parent, 0 to 1 on each axis, `(0, 0)` its **bottom-left** and `(1, 1)` its
+  top-right. Equal, they hold the node at that point; different, they stretch it with the parent.
+- `Pivot`: the node's own point, 0 to 1 the same way, `(0.5, 0.5)` its centre -- what `AnchoredPosition` places.
+- `AnchoredPosition`: from the anchors to the pivot, in pixels; a positive Y moves the node **up**.
+- `SizeDelta`: width and height in pixels on an axis whose anchors meet; on an axis where they stretch, how much larger
+  (or, negative, smaller) than the span between them. `AnchorMin = (0, 0)`, `AnchorMax = (1, 1)`, `SizeDelta = (0, 0)`
+  fills the parent.
+
+A node inside a box (`VerticalBox`, `HorizontalBox`, a grid) is placed by the box instead, through its `@slot` lines
+([Slot lines](slots-and-components.md#slot-lines-slot-and-fill)): a vertical box gives a child the width it measures,
+not the box's, unless the child's `@slot HorizontalAlignment = Fill`.
+
+The render transform moves where a node is drawn and leaves layout alone:
+
+- `RenderTranslation = (X, Y, Z)`, in pixels: **X is depth** -- negative brings the node toward the viewer and draws it
+  larger, positive pushes it back -- Y is right and Z is up. `(0, -40, 0)` is 40 px to the left; `(-40, 0, 0)` is 40
+  nearer.
+- `RenderRotation = (Pitch, Yaw, Roll)`, in degrees, about `RenderTransformPivot`: Yaw turns the node about its vertical
+  axis (positive brings its right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is
+  clockwise).
+- `RenderScale = (X, Y, Z)` scales it as drawn.
+
 A list on a property that is not an array or a set, a map on one that is not a map, or a set or map of nodes, is
 DUI4009; a list or a map that does not read (a bracket never closed, a map entry with no `:`, other than the first of a struct's, which may go without a key) is DUI2023.
 
