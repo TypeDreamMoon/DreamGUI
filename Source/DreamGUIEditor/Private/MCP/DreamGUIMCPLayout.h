@@ -34,6 +34,12 @@ namespace DreamGUIMCP
 		inline constexpr double MinTargetSize = 24.0;
 		/** Two controls overlapping by at least this on both axes, in pixels, are on top of each other (DUI8004). */
 		inline constexpr double OverlapTolerance = 2.0;
+		/**
+		 * ...unless one lies at least LayeredShare inside the other and the other is LayeredAreaRatio times its area or more:
+		 * a button on a pressable card, a dialog on a click-away backdrop, layered on purpose.
+		 */
+		inline constexpr double LayeredShare = 0.95;
+		inline constexpr double LayeredAreaRatio = 4.0;
 		/** Edges or gaps differing by more than the first and at most the second, in pixels, nearly line up (DUI8005). */
 		inline constexpr double NearMissLow = 0.5;
 		inline constexpr double NearMissHigh = 3.0;
@@ -41,6 +47,8 @@ namespace DreamGUIMCP
 		inline constexpr double ContrastPoor = 3.0;
 		inline constexpr double ContrastLow = 4.5;
 		inline constexpr double LargeText = 24.0;
+		/** A control's own part (not a node the file writes) below this ratio is hidden on purpose, not hard to read. */
+		inline constexpr double HiddenByControl = 1.1;
 	}
 
 	/** One widget of the screen as it was laid out. */
@@ -98,6 +106,9 @@ namespace DreamGUIMCP
 		/** What the text needs and the box it has, pixels. */
 		FVector2f TextNeeded = FVector2f::ZeroVector;
 		FVector2f TextBox = FVector2f::ZeroVector;
+		/** Where text that does not fit spills: -1 left / 0 both sides / 1 right, and 1 down from the top / 0 both ways / -1 up. */
+		int8 TextSpillX = 0;
+		int8 TextSpillY = 0;
 
 		bool IsDrawn() const { return bActive && bShown && Opacity > 0.0f; }
 	};

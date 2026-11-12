@@ -346,6 +346,10 @@ namespace DreamGUIMCP
 							Node.TextNeeded = Fit.Needed;
 							Node.TextBox = Fit.Box;
 						}
+						const EDreamUITextParagraphHorizontalAlign HAlign = Text->GetParagraphHorizontalAlignment();
+						Node.TextSpillX = HAlign == EDreamUITextParagraphHorizontalAlign::Center ? 0 : HAlign == EDreamUITextParagraphHorizontalAlign::Right ? -1 : 1;
+						const EDreamUITextParagraphVerticalAlign VAlign = Text->GetParagraphVerticalAlignment();
+						Node.TextSpillY = VAlign == EDreamUITextParagraphVerticalAlign::Middle ? 0 : VAlign == EDreamUITextParagraphVerticalAlign::Bottom ? -1 : 1;
 					}
 				}
 
@@ -407,25 +411,6 @@ namespace DreamGUIMCP
 				}
 			}
 			return false;
-		}
-
-		int32 CommonAncestor(const FLayoutSnapshot& InSnapshot, int32 InA, int32 InB, int32& OutStepsA, int32& OutStepsB)
-		{
-			OutStepsA = 0;
-			for (int32 A = InSnapshot.Nodes[InA].Parent; A != INDEX_NONE; A = InSnapshot.Nodes[A].Parent)
-			{
-				++OutStepsA;
-				OutStepsB = 0;
-				for (int32 B = InSnapshot.Nodes[InB].Parent; B != INDEX_NONE; B = InSnapshot.Nodes[B].Parent)
-				{
-					++OutStepsB;
-					if (A == B)
-					{
-						return A;
-					}
-				}
-			}
-			return INDEX_NONE;
 		}
 
 		/** Whether any ancestor is drawn as nothing; one hidden branch is one finding, not one per node in it. */
@@ -565,6 +550,47 @@ namespace DreamGUIMCP
 			Issue.Weight = bOutside ? 3.0 : 2.0;
 		}
 
+		// DUI8001 for text: a node inside the screen whose text, laid out past its box, spills off it -- upward from a
+		// bottom-aligned box, both ways from a centred one -- where nothing clips it.
+		for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+		{
+			const FLayoutNode& Node = Nodes[Index];
+			if (!Node.bHasText || !Node.bTextOverflows || Node.bTextCut || !Node.IsDrawn() || OffScreen.Contains(Index) || IsUnderProblem(InSnapshot, Index, OffScreen))
+			{
+				continue;
+			}
+			bool bClippedByAncestor = false;
+			for (int32 Walk = Node.Parent; Walk != INDEX_NONE && !bClippedByAncestor; Walk = Nodes[Walk].Parent)
+			{
+				bClippedByAncestor = Nodes[Walk].bClipsChildren;
+			}
+			if (bClippedByAncestor)
+			{
+				continue;
+			}
+			const double DrawnW = FMath::Max<double>(Node.W, Node.TextNeeded.X);
+			const double DrawnH = FMath::Max<double>(Node.H, Node.TextNeeded.Y);
+			const double DrawnX = Node.TextSpillX > 0 ? Node.X : Node.TextSpillX < 0 ? Node.X + Node.W - DrawnW : Node.X + (Node.W - DrawnW) * 0.5;
+			const double DrawnY = Node.TextSpillY > 0 ? Node.Y : Node.TextSpillY < 0 ? Node.Y + Node.H - DrawnH : Node.Y + (Node.H - DrawnH) * 0.5;
+			TArray<FString> Edges;
+			if (-DrawnX > OffScreenTolerance) { Edges.Add(FString::Printf(TEXT("%s px past the left edge"), *Px(-DrawnX))); }
+			if (-DrawnY > OffScreenTolerance) { Edges.Add(FString::Printf(TEXT("%s px past the top"), *Px(-DrawnY))); }
+			if (DrawnX + DrawnW - VW > OffScreenTolerance) { Edges.Add(FString::Printf(TEXT("%s px past the right edge"), *Px(DrawnX + DrawnW - VW))); }
+			if (DrawnY + DrawnH - VH > OffScreenTolerance) { Edges.Add(FString::Printf(TEXT("%s px past the bottom"), *Px(DrawnY + DrawnH - VH))); }
+			if (Edges.Num() == 0)
+			{
+				continue;
+			}
+			FLayoutIssue& Issue = OutIssues.AddDefaulted_GetRef();
+			Issue.Code = static_cast<int32>(EDreamUIDiagnosticCode::LayoutOffScreen);
+			Issue.Node = Index;
+			Issue.Message = FString::Printf(TEXT("the text of %s, %s, spills out of its box and off the screen: %s"), *Who(InSnapshot, Index), *QuoteText(Node.Text),
+				*FString::Join(Edges, TEXT(", ")));
+			Issue.Hint = TEXT("Give the text room for what it needs (DUI8002 says how much), or move the box away from the edge.");
+			Issue.Key = FString::Printf(TEXT("8001|%s|text"), *Node.Path);
+			Issue.Weight = 1.9;
+		}
+
 		// DUI8002: a text cut by its overflow policy or laid out past its box.
 		for (int32 Index = 0; Index < Nodes.Num(); ++Index)
 		{
@@ -652,15 +678,26 @@ namespace DreamGUIMCP
 				{
 					continue; // a control inside a control: one press, the inner one's
 				}
-				int32 StepsA = 0;
-				int32 StepsB = 0;
-				if (CommonAncestor(InSnapshot, A, B, StepsA, StepsB) == INDEX_NONE || StepsA > 2 || StepsB > 2)
+				if (Nodes[A].Canvas != Nodes[B].Canvas)
 				{
-					continue; // siblings and cousins: what one panel puts side by side
+					continue; // another canvas draws, and is pressed, in an order of its own
 				}
+				// Wherever they sit in the tree -- buttons are nearly always in groups of their own -- what matters is where
+				// they end up on the screen.
 				double OverlapW = 0.0;
 				double OverlapH = 0.0;
 				if (!Intersects(Nodes[A], Nodes[B], LayoutLint::OverlapTolerance, OverlapW, OverlapH))
+				{
+					continue;
+				}
+				// A small control wholly on a much larger one (a button on a pressable card, a dialog on a click-away
+				// backdrop) is layered on purpose: the press reaching the one on top is the point.
+				const double AreaA = Nodes[A].VisW * Nodes[A].VisH;
+				const double AreaB = Nodes[B].VisW * Nodes[B].VisH;
+				const double OverlapArea = OverlapW * OverlapH;
+				const double Smaller = FMath::Min(AreaA, AreaB);
+				const double Larger = FMath::Max(AreaA, AreaB);
+				if (Smaller > 0.0 && OverlapArea >= Smaller * LayoutLint::LayeredShare && Larger >= Smaller * LayoutLint::LayeredAreaRatio)
 				{
 					continue;
 				}
@@ -845,6 +882,12 @@ namespace DreamGUIMCP
 			const double LInk = RelativeLuminance(Ink);
 			const double LBehind = RelativeLuminance(Behind);
 			const double Ratio = (FMath::Max(LInk, LBehind) + 0.05) / (FMath::Min(LInk, LBehind) + 0.05);
+			if (!Node.bAuthored && Ratio < LayoutLint::HiddenByControl)
+			{
+				// A control's own part painted the colour of what is behind it is put away on purpose: the tick of a
+				// toggle that is off, a caret that blinked out.
+				continue;
+			}
 			const bool bLarge = Node.FontSize >= LargeText;
 			FString Severity;
 			if (Ratio < ContrastPoor)

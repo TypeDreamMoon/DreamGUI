@@ -558,7 +558,7 @@ enum class EDreamUIDiagnosticCode : int32
 	LayoutTextOverflow = 8002,
 	/** A node that draws, holds children or takes the pointer, of zero size; or a pressable control under 24 px on a side. */
 	LayoutTooSmall = 8003,
-	/** Two pressable controls of one panel on top of each other: a press reaches only the upper one. */
+	/** Two pressable controls of one canvas on top of each other: a press reaches only the upper one. */
 	LayoutOverlappingControls = 8004,
 	/** Siblings whose edges, centres or gaps miss lining up by 1 to 3 px. An info. */
 	LayoutNearlyAligned = 8005,

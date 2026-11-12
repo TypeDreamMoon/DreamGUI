@@ -106,13 +106,13 @@ other instances (`(the same at Root/CardB/Mute, ...)`); any finding repeated at 
 
 | Code | Severity | Reported when | Threshold |
 | --- | --- | --- | --- |
-| [DUI8001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8001) | warning | what can show of a node (its rect cut to its clipping ancestors) reaches past an edge of the viewport, or lies wholly outside | more than 1 px |
+| [DUI8001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8001) | warning | what can show of a node (its rect cut to its clipping ancestors) reaches past an edge of the viewport, or lies wholly outside; or a text that does not fit its box spills off the screen (upward from a bottom-aligned box, both ways from a centred one) where nothing clips it | more than 1 px |
 | [DUI8002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002) | warning | a text is cut short by its overflow policy, or laid out past its box | the text's own measure (`UDreamText::MeasureFit`) |
 | [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | warning (info for a plain widget with children) | a node that draws, holds children or can be pressed has no width or height; a pressable control is smaller than a pointer needs | under 1 px; under 24 x 24 px (WCAG 2.2's minimum target) |
-| [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | warning | two pressable controls, siblings or cousins, overlap: a press there reaches only the upper one | 2 px or more on both axes |
+| [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | warning | two pressable controls in the same canvas overlap on the screen, wherever they are in the tree (one inside the other aside): a press there reaches only the upper one. A small control lying at least 95 % on one at least four times its area (a button on a pressable card, a dialog on a click-away backdrop) is layered on purpose and not reported | 2 px or more on both axes |
 | [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | info | siblings' left, right, top or bottom edges or centres nearly line up; a row or column of three or more has nearly even gaps | more than 0.5 and at most 3 px apart |
 | [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | warning | DUI8001–8004 at one of `sizes` and not at the first viewport | as the rule it repeats |
-| [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | warning / info | in `preview`: a text's colour (at its alpha) against the median of the pixels on a one-pixel ring just inside its box | WCAG contrast under 3 : 1 a warning; under 4.5 : 1 an info for text under 24 px |
+| [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | warning / info | in `preview`: a text's colour (at its alpha) against the median of the pixels on a one-pixel ring just inside its box. A control's own part painted within 1.1 : 1 of what is behind it (the tick of a toggle that is off) is hidden on purpose and not reported | WCAG contrast under 3 : 1 a warning; under 4.5 : 1 an info for text under 24 px |
 
 ## What `preview` measures
 
