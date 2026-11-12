@@ -24,6 +24,7 @@ UMG 对等性是 UInputKeySelector 的核心：SelectedChord（以 SelectedKey �
     /Script/DreamGUIControls.DreamInputKeySelector JumpBinding {
         SelectedKey = (KeyName="SpaceBar")
         OnKeySelected -> HandleJumpRebound
+    }
 
 <a id="properties"></a>
 

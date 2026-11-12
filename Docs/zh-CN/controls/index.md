@@ -102,7 +102,15 @@ description: DreamGUIControls 中有什么——按类别划分的 Dream* 控件
 在 `.dui` 里，控件是由其**注册表标签**作类型的节点：`Scope.Name`，插件的控件都在 `Native` 下。
 
 ```dui
+// DUI/UI/AudioSettings.dui
 class /Game/UI/WBP_AudioSettings
+
+events {
+    MuteToggled()
+    VolumeMoved()
+    Applied()
+    Closed()
+}
 
 VerticalBox Root {
     AnchorData.AnchorMin = (0, 0)
@@ -113,24 +121,27 @@ VerticalBox Root {
 
     HorizontalBox {
         Spacing = 8
-        Native.Toggle Mute { OnToggleChanged -> HandleMuteChanged }
+        Native.Toggle Mute {
+            @slot MinDesiredSize = (28, 28)
+            OnToggleChanged -> emit MuteToggled()
+        }
         Text { Text = "Mute" }
     }
     Native.Slider Volume {
         MinValue = 0
         MaxValue = 1
         Value = 0.8
-        OnValueChanged -> HandleVolumeChanged
+        OnValueChanged -> emit VolumeMoved()
     }
     HorizontalBox {
         Spacing = 16
         Native.Button Apply {
             Text { Text = "Apply" }
-            OnClicked -> HandleApply
+            OnClicked -> emit Applied()
         }
         Native.Button Back {
             Text { Text = "Back" }
-            OnClicked -> HandleBack
+            OnClicked -> emit Closed()
         }
     }
 }
@@ -140,7 +151,8 @@ VerticalBox Root {
 
 - **节点的行设置控件的属性**：`MinValue` 和 `Value` 是 `UDreamSlider` 的，命名与 UMG 一致（见[从 UMG 过来](umg-parity.md)）。样式结构体用点路径写：`Style.TickChecked = #FF3355`。
 - **嵌套内容进入控件的默认洞。** `Native.Button` 里的 `Text { }` 就是按钮的标签——按钮自己不绘制任何文字。开关没有洞；框旁边的文字是你自己的布局，所以上面它和一个 `Text` 同处一个 `HorizontalBox` 里。
-- **事件用路由接**：`OnClicked -> HandleApply` 把控件的事件接到用户 widget 的同名函数上，和接任何其他事件一样。
+- **事件用路由接**：`OnClicked -> emit Applied()` 会为打开它的一方触发屏幕自身的事件，而 `OnClicked -> HandleApply` 则会改为调用用户 widget 的同名函数（该类必须具有该函数：DUI6004 说明了它没有该函数时的情况）。`emit` 的参数是针对该类的表达式——控件的事件参数不在其中——因此 `MuteToggled` 不携带任何参数，而接收它的一方读取 `Mute` 和 `Volume`，即该类为这两个控件声明的变量。按原样复制，此文件在编译和布局时都不会产生错误和警告。
+- **开关只有其框那么大**，默认为 14 x 19 px：`@slot MinDesiredSize = (28, 28)` 让它大到足以按下（`layout` 会报告小于 24 x 24 px 的控件，DUI8003）。
 - 打不出标签的类，可以用类路径作类型：`/Script/DreamGUIControls.DreamDialog Confirm { … }`。但写回（designer 编辑文件）总是写标签：类路径带着类所在的模块名，用类路径写出的文件，在类换模块的那天就读不回来了。
 
 标签不是内建在语言里的。一个类在自己的 `.cpp` 里用一行把自己登记到注册表：

@@ -18,6 +18,26 @@
         Widget Video    { ... }
         Widget Audio    { ... }
         Widget Controls { ... }
+    }
+
+考虑过、但并非本实现所采用的两种做法：
+
+  - NamedSlot。UDreamNamedSlot 只接受一个子项，因此页面外面还得包一层面板；更糟的是，宿主填充槽位这一步位于 InitializeWidgetStatic 内部，受 `InWidgetTreeArchetype != nullptr` 判断保护，而原生类永远没有控件树原型。原生控件根本无法接收命名槽位的内容。
+  - 将页面做成 TArray 属性。这门语言无法书写容器：非短格式目标上的元组会被直接拒绝（ValueTypeMismatch），而裸字符串也无法为 ImportText 拼出数组。嵌套是 .dui 唯一原生支持的东西，所以嵌套就是那扇门。
+
+标签页从何而来。每个索引对应一个标签页，索引数量取标签数与页面数中较多的一方，因此标签条永远不会比它所驱动的内容更空。当 TabLabels 在该索引处有条目时，由它命名第 i 个标签页；否则标签页就沿用页面自身的节点 id。正是这一回退让上面的文件在完全没有标签列表的情况下也能工作，而 TabLabels 仍是详情面板、蓝图和绑定都能触及的写法：
+
+    Native.TabView Settings {
+        TabLabels      <-  GetSettingsTabs()      // localizable, from the host class
+        ActiveTabIndex <-> CurrentSettingsTab
+        ...
+    }
+
+同样的容器限制也影响赋值形式 —— `TabLabels = (...)` 无法解析为数组 —— 因此想要可翻译标签的 .dui 会去绑定它们，而不是内联书写。节点 id 是标识符而非可翻译字符串，这正是该回退刻意保持文化无关、而不是假装可以翻译的原因。
+
+为什么一个标签页是两个视觉件。标签页是一个长得像按钮的单选按钮：各个切换项共享同一个 UUIToggleGroup，因此互斥由该组负责，而不是本控件。但一个 UUISelectable 恰好拥有两个过渡，而标签页需要三种外观 —— 指针状态、选中态和标签。指针过渡给面着色；CHECKED 过渡给覆盖其上的一块独立满幅板着色（若都作用于同一个视觉件，它们会互相覆盖，选中色只会维持到下一次悬停 —— 这正是切换项盒子与勾选分离的翻版）；而标签颜色已无过渡可用，因此由控件直接推送。三种外观，两个过渡，一次显式推送。
+
+肩键用于切换标签页（IDreamUITabSwitchTarget）：项目配置的 PreviousTabKeys 和 NextTabKeys（默认为 LB 和 RB）会找到玩家焦点所在的标签视图 —— 若没有，则找到其当前活动屏幕上的第一个 —— 并切换到上一个或下一个已启用的标签页，在两端循环，与 CommonUI 的标签列表一致；只要存在这样的标签视图，操作栏就会显示这两个提示。
 
 <a id="properties"></a>
 

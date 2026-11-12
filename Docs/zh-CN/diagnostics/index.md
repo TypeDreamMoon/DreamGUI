@@ -3,13 +3,13 @@ title: "诊断码"
 description: "每一条 DUInnnn 诊断码：它意味着什么、如何产生、如何修复。"
 ---
 
-DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DUInnnn`，并以 `File.dui(line,col): error DUI3001: …` 的形式输出：文件、行和列（均从 1 开始计数）、严重级别、编码，以及一句指出问题文本的说明——例如 `Settings.dui(12,5): error DUI3001: 'Title' is already the id of the node on line 4`。当 Blueprint 编译时，它们会出现在其编译器结果中。编码是稳定的那一半：一个原因对应一个编码，同一个原因从两处到达仍保留同一个编码，测试断言的是编码而非措辞，因此措辞可以自由改进；已退役的编码保持退役，绝不会分配给其他任何事物。第一位数字说明是哪个阶段拒绝了它：1 词法分析器（不是标记的字符），2 解析器（无法组成语法的标记），3 含义（语法正确，但树不成立——重复的 id、未知的类型），4 值（值与它所写入的属性不匹配），5 构建树（反射拒绝了写入，或要写入的对象不存在），6 编译进 Blueprint（`.dui` 无法附加到其 Blueprint），7 写回（设计器无法将编辑写入文本）。
+DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DUInnnn`，并以 `File.dui(line,col): error DUI3001: …` 的形式输出：文件、行和列（均从 1 开始计数）、严重级别、编码，以及一句指出问题文本的说明——例如 `Settings.dui(12,5): error DUI3001: 'Title' is already the id of the node on line 4`。当蓝图编译时，它们会出现在其编译器结果中。编码是稳定的那一半：一个原因对应一个编码，同一个原因从两处到达仍保留同一个编码，测试断言的是编码而非措辞，因此措辞可以自由改进；已退役的编码保持退役，绝不会分配给其他任何事物。第一位数字说明是哪个阶段拒绝了它：1 词法分析器（不是标记的字符），2 解析器（无法组成语法的标记），3 含义（语法正确，但树不成立——重复的 id、未知的类型），4 值（值与它所写入的属性不匹配），5 构建树（反射拒绝了写入，或要写入的对象不存在），6 编译进蓝图（`.dui` 无法附加到其蓝图），7 写回（设计器无法将编辑写入文本），8 布局（一个编译通过的屏幕，由 DreamMCP 端点的 `layout` 和 `preview` 在某个视口尺寸下布局后显示出问题：绝不是编译期的问题，只有警告和信息）。
 
 严重级别在诊断被引发的地方决定，而不是由其范围决定。大多数编码是错误，错误会导致编译失败——一个无法解析的文件会保留 Blueprint 之前的层级结构，而不是将其清空。少数是警告——DUI3008、DUI3013、DUI3023、DUI3025、DUI5007、DUI6003——此时文件可以编译，但仍有值得一看之处。VS Code 扩展报告相同的编码和相同的措辞：单个文件能自行确定的内容（词法分析器、括号、重复名称等）会在你输入时检查，其余内容在 Unreal 编辑器编译后通过 `DUI/.dui-diagnostics.json` 进入其 Problems 面板；编译器始终是权威。
 
-<a id="the-seven-families"></a>
+<a id="the-eight-families"></a>
 
-## 七个家族
+## 八个家族
 
 | | 阶段 | 含义 | 编码 |
 | --- | --- | --- | --- |
@@ -20,6 +20,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI5xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx) | 构建树 | 反射拒绝了写入，或目标对象不存在。 | 25 |
 | [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | 编译 | .dui 无法附加到其 Blueprint。 | 24 |
 | [DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx) | 写回 | 设计器的编辑无法写入文本。 | 5 |
+| [DUI8xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx) | 布局 | 编译通过的屏幕在某个视口尺寸下布局后显示出问题。仅来自 DreamMCP 的 `layout` 和 `preview`。 | 7 |
 
 <a id="every-code"></a>
 
@@ -146,3 +147,10 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | 错误 | 一个这门语言写不出来的值（非有限的数），它所在的那一行保持原样。 |
 | [DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004) | `PatchSyntaxNotWritable` | 错误 | 对没有哪一行写着它的东西的一次编辑：由 `if` 决定的可见性、无法改写的简写、对 `Tags` 做出的任何行都无法接受的改动（写成两种方式，或者 `@tag` 行无法容纳的名字）。 |
 | [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |
+| [DUI8001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8001) | `LayoutOffScreen` | 警告 | 节点可见的部分超出视口边缘 1 px 以上，或完全位于视口之外；或者放不下的文本在没有任何裁剪的地方溢出屏幕。被裁剪的部分不计入；每个分支只报告一处。 |
+| [DUI8002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002) | `LayoutTextOverflow` | 警告 | 文本被其溢出策略截断，或布局超出其框；消息给出它需要的尺寸和它拥有的框。 |
+| [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | `LayoutTooSmall` | 警告 | 会绘制或可被按下的节点宽或高小于 1 px（对带有子控件的普通控件为信息级），或可按下控件小于 24 x 24 px。 |
+| [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | `LayoutOverlappingControls` | 警告 | 同一画布中的两个可按下控件在屏幕上于两个轴上都重叠 2 px 或更多，无论它们在树中的位置如何：此处的按下只会到达上面那个控件。落在面积为其四倍或以上的控件上的小控件属于刻意分层，不予报告。 |
+| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | `LayoutNearlyAligned` | 信息 | 兄弟节点的左、右、上或下边缘或中心相差超过 0.5 且最多 3 px，或者三个及以上的行或列其间距相差如此。 |
+| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | `LayoutBreaksAtSize` | 警告 | 在 `layout` 所获得的某个后续视口尺寸（`sizes`）下出现 DUI8001 到 DUI8004，而在第一个尺寸下没有。 |
+| [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | `LayoutLowContrast` | 警告 | 在 `preview` 中：文本颜色与其框内紧邻像素中位数的对比度低于 3 比 1（WCAG 的对比度）；对于小于 24 px 的文本，低于 4.5 比 1 的为信息级。 |

@@ -17,6 +17,7 @@
     /Script/DreamGUIControls.DreamRadioButton OptionA {
         bIsOn = true
         OnToggleChanged -> HandleOptionA
+    }
 
 <a id="properties"></a>
 

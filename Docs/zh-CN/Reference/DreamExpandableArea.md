@@ -17,6 +17,28 @@
     Native.ExpandableArea Details {
         Label = "Advanced"
         Text Body { Text = "..." }
+    }
+
+直接嵌套即可。文本构建器会把节点的子节点挂到它刚刚构建的控件上（BuildNode 的 TrySetParent），因此这些控件会作为这个控件的子节点到来，与该控件为自身构建的树并排——而内容列正是该控件的默认命名槽，所以它们会被顺带移入其中。
+
+这里以前是一段手写的接管流程，并配有注释说明为何不能使用 UDreamNamedSlot：宿主的 NamedSlotContent 由 InitializeWidgetStatic 挂载，而该函数对于没有 widget-tree 原型的类会立即返回，原生控件从来就没有这种原型——因此在这里声明的槽会是一个无人能填的洞。那道关卡已经不存在了（现在槽由 UDreamUserWidget::Initialize 填充，位于 NativeOnInitialized 之后，这是两类内容同时存在的最早时刻），随之消失的还有手工实现这一点的理由。手工组装层级的代码仍然可以调用 SetContent；设计器拖入此控件的内容会作为一个子节点落地，与上面 .dui 的路径相同。
+
+部件名称，模板的作者必须一字不差地拼写，因为部件是按显示名称绑定的，除了缺失部件的日志行之外没有任何东西检查拼写：
+
+    ExpandableArea   the outer column
+    HeaderFace       the clickable header face; the node whose height IS HeaderHeight
+    HeaderRow        the indicator-and-label row inside the face
+    Arrow            the glyph indicator          (optional)
+    ArrowMark        the image indicator          (optional)
+    Label            the stock header text
+    Header           the header HOLE -- a UDreamNamedSlot  (optional)
+    Content          the body, and this control's default UDreamNamedSlot
+
+面之所以叫“HeaderFace”而并非“Header”是有意为之。命名槽的名字就是其宿主节点的显示名称（UDreamNamedSlot::GetSlotName），因此这个洞必须叫 Header——该字符串就是 HeaderSlotName，一个公共绑定键，也是 GetNativeSlotNames 承诺的两个名字之一。部件遍历会先遇到祖先再遇到后代，所以一个同样叫 Header 的面会同时应答两者，于是当洞被填充时收起内置标签的那次替换会读到一个空的洞，并让整个头部休眠。模板若把自己的头部面命名为 Header，就会精确复现这一点：头部消失，唯一的痕迹是一条关于 HeaderFace 的缺失部件日志。
+
+与 UMG 对齐是 UExpandableArea 的核心：bIsExpanded、SetIsExpanded、OnExpansionChanged——再加上库的 OnValueChangedBP，因为展开标志是一个值，`<->` 会针对它进行绑定。
+
+折叠时，该控件只按头部来测量，仅此而已：Auto 槽会向控件询问其尺寸，而一个保留展开高度的展开器会在它所在的每个列表中留下一个空洞。
 
 <a id="properties"></a>
 

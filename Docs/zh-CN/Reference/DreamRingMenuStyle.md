@@ -41,6 +41,7 @@
 | `FontSize` | `float` | Ring Menu Style|Text | 是 | 读 / 写 |  |
 | `HubTextColor` | `FColor` | Ring Menu Style|Text | 是 | 读 / 写 |  |
 | `HubFontSize` | `float` | Ring Menu Style|Text | 是 | 读 / 写 |  |
+| `Font` | `TObjectPtr<UDreamUIFontData_BaseObject>` | Ring Menu Style|文本 | 是 | 读 / 写 |  |
 | `IconSize` | `FVector2D` | Ring Menu Style|Text | 是 | 读 / 写 |  |
 | `IconSpacing` | `float` | Ring Menu Style|Text | 是 | 读 / 写 |  |
 | `LabelHeight` | `float` | Ring Menu Style|Text | 是 | 读 / 写 |  |
