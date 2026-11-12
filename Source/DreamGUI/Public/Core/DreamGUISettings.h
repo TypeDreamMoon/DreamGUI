@@ -214,6 +214,17 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUIControls.DreamUIStyleSheet"))
 	TSoftObjectPtr<class UDataAsset> DefaultStyleSheet;
 
+	// ---------------------------------------------------------------- Editor
+
+#if WITH_EDITORONLY_DATA
+	/**
+	 * Let an AI agent connected through DreamMCP use this editor: check, compile, lay out and preview .dui screens through
+	 * a local endpoint (127.0.0.1 only, with a token). Read when the editor starts. Hosts DreamMCP starts itself ignore it.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor", meta = (DisplayName = "Enable DreamMCP Endpoint", ConfigRestartRequired = true))
+	bool bEnableDreamMCPEndpoint = true;
+#endif
+
 	// ---------------------------------------------------------------- Text
 
 	/**

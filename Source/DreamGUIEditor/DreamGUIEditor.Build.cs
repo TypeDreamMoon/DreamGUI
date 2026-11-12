@@ -109,6 +109,9 @@ public class DreamGUIEditor : ModuleRules
 				// SCulturePicker: the cultures of a font's fallback entries, a text's Language, and the
 				// font's "Resolve Sample" language are picked from the engine's own culture list.
 				"InternationalizationSettings",
+				// The DreamMCP endpoint (Private/MCP): an HTTP listener on 127.0.0.1, and the sockets that prove it is only there.
+				"HTTPServer",
+				"Sockets",
 				// ... add private dependencies that you statically link with here ...
 
             }

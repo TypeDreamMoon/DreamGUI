@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "protocol": 1,
+  "id": "gui",
+  "plugin": "DreamGUI",
+  "title": "DreamGUI",
+  "description": "DreamGUI builds Unreal UI screens from text. A .dui file under the project's DUI/ folder is the source of one widget Blueprint, named by its first line (class /Game/UI/WBP_Menu): nodes in a tree (Widget, Text, Image, Native.Button...), each with its properties, layout boxes attached with + VerticalBox { }, styles and components. Use this tool to check a source, compile it, see where every node lands at a viewport size with the problems that shows (layout), draw it (preview), read diagnostics, and look up the names the compiler accepts. Read the language reference before writing a screen, look names up instead of guessing them, and run layout after every change: a screen that compiles can still be laid out wrong.",
+  "route": "/dream/gui",
+  "host": { "commandlet": "DreamGUIHost" },
+  "extensions": [".dui"],
+  "sourceRoots": ["DUI"],
+  "reference": [
+    { "title": "The .dui language: everything a screen is written with", "path": ".skill/reference/dui.md" },
+    { "title": "A worked example: a settings screen in three files", "path": ".skill/reference/example.md" },
+    { "title": "Pitfalls: what compiles and still comes out wrong", "path": ".skill/reference/pitfalls.md" },
+    { "title": "Controls: every Native.* control and what it is for", "path": ".skill/reference/controls.md" },
+    { "title": "Diagnostics: every DUInnnn code, what it means and how to fix it", "path": ".skill/reference/diagnostics.md" }
+  ],
+  "actions": [
+    {
+      "name": "check",
+      "description": "Read a .dui the way the compiler does and report its errors. It builds nothing and writes nothing. Run it after every edit: it is the fastest test.",
+      "needs": "engine",
+      "writes": false,
+      "long": true,
+      "args": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "The .dui, relative to the project root, e.g. DUI/Menu.dui" },
+          "all": { "type": "boolean", "description": "Check every .dui of the project and its plugins instead of one file" }
+        }
+      }
+    },
+    {
+      "name": "compile",
+      "description": "Build the widget Blueprint the file's class line names, creating it when it does not exist, and first every component the file places with use \"X.dui\" as X. Writes assets: in the user's editor they stay in memory until the user saves them; in a host they are saved.",
+      "needs": "engine",
+      "writes": true,
+      "long": true,
+      "args": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "The .dui, relative to the project root" },
+          "force": { "type": "boolean", "description": "Compile even what has not changed since the last compile" }
+        },
+        "required": ["file"]
+      }
+    },
+    {
+      "name": "diagnostics",
+      "description": "The errors and warnings this engine already holds from the last check or compile of each file, without compiling anything. Without file: every file that has some.",
+      "needs": "engine",
+      "writes": false,
+      "long": false,
+      "args": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "The .dui, relative to the project root" }
+        }
+      }
+    },
+    {
+      "name": "lookup",
+      "description": "Find the names the compiler accepts: node types, components (+ VerticalBox), properties with their types and defaults, enum values, events and view model classes. An exact name gives its full entry, Type.Property one property; otherwise a list of names containing the text.",
+      "needs": "engine",
+      "writes": false,
+      "long": false,
+      "args": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "A name or part of one: Text, Native.Button, VerticalBox, Text.FontSize, Anchor, Widget (what every node has), slot (what @slot takes)" },
+          "kind": { "type": "string", "enum": ["any", "node", "component", "property", "enum", "viewmodel"], "description": "Search only this kind of name; default any" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 200, "description": "Most matches to list; default 30" }
+        },
+        "required": ["name"]
+      }
+    },
+    {
+      "name": "layout",
+      "description": "Compile the screen and lay it out at a viewport size, without drawing it. Lists every node with its rect in pixels, whether it shows, its text and whether that fits, then the problems: off the screen, text cut, too small to press, controls on top of each other, edges that nearly line up, sizes that break. Writes the Blueprint as compile does.",
+      "needs": "engine",
+      "writes": true,
+      "long": true,
+      "args": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "The .dui, relative to the project root" },
+          "width": { "type": "integer", "minimum": 64, "maximum": 7680, "description": "Viewport width in pixels; default 1920" },
+          "height": { "type": "integer", "minimum": 64, "maximum": 4320, "description": "Viewport height in pixels; default 1080" },
+          "sizes": { "type": "string", "description": "More viewports to try, comma separated, e.g. \"1280x720, 2560x1440, 1080x1920\": what breaks at only some of them is reported" },
+          "root": { "type": "string", "description": "List only this node and what is under it: its path (Root/Card) or its id" },
+          "depth": { "type": "integer", "minimum": 1, "maximum": 64, "description": "How many levels of the tree to list; default 6" },
+          "force": { "type": "boolean", "description": "Compile even when nothing has changed" }
+        },
+        "required": ["file"]
+      }
+    },
+    {
+      "name": "preview",
+      "description": "Compile the screen and draw it at a viewport size into one PNG, with figures a model can read without seeing it: how much of the viewport it covers, its colours, how bright, and texts that are hard to read against what is behind them. Writes the Blueprint as compile does.",
+      "needs": "render",
+      "writes": true,
+      "long": true,
+      "args": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "The .dui, relative to the project root" },
+          "width": { "type": "integer", "minimum": 64, "maximum": 4096, "description": "Picture width in pixels; default 1920" },
+          "height": { "type": "integer", "minimum": 64, "maximum": 4096, "description": "Picture height in pixels; default 1080" },
+          "background": { "type": "string", "description": "What is behind the screen: #RRGGBB, or checker to see what is see-through; default #1C1E26" },
+          "time": { "type": "number", "minimum": 0, "maximum": 60, "description": "Seconds the screen runs before the first picture, so what animates by itself moves; default 0" },
+          "frames": { "type": "integer", "minimum": 1, "maximum": 16, "description": "Pictures over duration, side by side in one PNG; default 1" },
+          "duration": { "type": "number", "minimum": 0.01, "maximum": 60, "description": "Seconds the frames are spread over; default 1" },
+          "force": { "type": "boolean", "description": "Compile even when nothing has changed" }
+        },
+        "required": ["file"]
+      }
+    },
+    {
+      "name": "info",
+      "description": "The plugin and engine versions, the source folders, and what this engine process can do (the user's editor or a host, draws or not).",
+      "needs": "engine",
+      "writes": false,
+      "long": false,
+      "args": { "type": "object", "properties": {} }
+    }
+  ]
+}

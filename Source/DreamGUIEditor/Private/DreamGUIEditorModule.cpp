@@ -14,6 +14,7 @@
 #include "KismetCompiler.h"
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintCompiler.h"
+#include "MCP/DreamGUIMCPService.h"
 
 #include "DreamGUIEditorStyle.h"
 #include "Designer/DreamUITextAuthoringGate.h"
@@ -236,6 +237,10 @@ void FDreamGUIEditorModule::StartupModule()
 	{
 		return;
 	}
+
+	// The DreamMCP endpoint, in the user's editor and in a host DreamMCP starts (MCP/DreamGUIMCPService.h decides which,
+	// and stays out of a commandlet that is not a host, an automation run and a game). It starts once the engine has.
+	DreamGUIMCP::StartupDreamGUIMCP(bStartedEditorSession);
 
 	FDreamGUIEditorStyle::Initialize();
 	FDreamGUIEditorStyle::ReloadTextures();
@@ -558,6 +563,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// behind, the builder's static would go on calling into a module that is gone.
 	FDreamUISourceWatcher::UninstallSourceClassResolver();
 	DreamUITranslationFit::UnregisterFromDreamLoc();
+	// Its discovery file goes before anything it calls into does.
+	DreamGUIMCP::ShutdownDreamGUIMCP();
 	DreamUITextLocator::UnregisterFromDreamLoc();
 
 	// All of it takes down the editor session; the compiler registration, which a game run on uncooked
