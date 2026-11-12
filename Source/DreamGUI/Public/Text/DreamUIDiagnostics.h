@@ -44,6 +44,8 @@ enum class EDreamUISeverity : uint8
  *   5xxx  builder    -- reflection refused the write, or the target object does not exist
  *   6xxx  compile    -- the .dui could not be attached to its blueprint
  *   7xxx  write-back -- the patcher could not put an edit into the text
+ *   8xxx  layout     -- a screen that compiled, laid out at a viewport size, shows a problem (the DreamMCP endpoint's
+ *                       `layout` and `preview`, never a compile; warnings and infos only)
  *
  * Gaps are deliberate; do not renumber to close them. A code that is retired stays retired.
  */
@@ -546,6 +548,24 @@ enum class EDreamUIDiagnosticCode : int32
 	 * author wrote the line, and the fix is to write one more.
 	 */
 	PatchStyleComponentNotWritable = 7005,
+
+	// --- 8xxx layout ---
+	// Raised by the DreamMCP endpoint's `layout` and `preview` on a screen laid out at a viewport size, never by a compile.
+	// Their thresholds are in Docs/tools/dreammcp.md and Private/MCP/DreamGUIMCPLayout.h.
+	/** What can show of a node reaches past an edge of the viewport, or lies wholly outside it. */
+	LayoutOffScreen = 8001,
+	/** A text cut short by its overflow policy, or laid out past its box. */
+	LayoutTextOverflow = 8002,
+	/** A node that draws, holds children or takes the pointer, of zero size; or a pressable control under 24 px on a side. */
+	LayoutTooSmall = 8003,
+	/** Two pressable controls of one panel on top of each other: a press reaches only the upper one. */
+	LayoutOverlappingControls = 8004,
+	/** Siblings whose edges, centres or gaps miss lining up by 1 to 3 px. An info. */
+	LayoutNearlyAligned = 8005,
+	/** One of the other layout problems at one of the further viewport sizes asked for, and not at the first. */
+	LayoutBreaksAtSize = 8006,
+	/** A text that stands out from the pixels behind it less than 3 to 1 (an info under 4.5 to 1 for small text). */
+	LayoutLowContrast = 8007,
 };
 
 /**

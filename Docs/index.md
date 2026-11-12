@@ -74,6 +74,6 @@ the viewport or drag into a level — step by step in [Your first screen](gettin
   - [Importing layered documents](guides/layered-document-import.md) — A .psd or .psb as a DreamUI widget: what each layer becomes, naming conventions, fonts, importing again.
   - [Common pitfalls](guides/pitfalls.md) — Things that look like bugs and are not: tweens on one property, angle conventions, raycast targets, style overrides, fonts, effects inside groups, and where UMG's names differ.
   - [Property meta tags](guides/property-meta.md) — The `DreamGUI_` tags that place a property in the details panels, hide it or pick its control; how an extension's classes use them.
-  - [Diagnostics](diagnostics/index.md) — Every .dui diagnostic is a DUInnnn code, in seven families by compile stage.
+  - [Diagnostics](diagnostics/index.md) — Every .dui diagnostic is a DUInnnn code, in eight families by stage.
   - [API reference](Reference/index.md) — Per-class property and function reference printed from reflection, each page ending with its UMG comparison.
   - [Changelog](changelog/index.md) — What changed in each version.
