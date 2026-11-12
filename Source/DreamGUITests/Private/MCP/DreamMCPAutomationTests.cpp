@@ -20,6 +20,7 @@
 #include "HttpServerModule.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
+#include "Interfaces/IPluginManager.h"
 #include "IPAddress.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
@@ -880,6 +881,13 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the duplicate id is DUI3001"), Codes(Broken).Contains(TEXT("DUI3001")));
 	TestFalse(TEXT("check builds no Blueprint"), FPackageName::DoesPackageExist(Sources.PackageRoot + TEXT("/WBP_Good")) || FindPackage(nullptr, *(Sources.PackageRoot + TEXT("/WBP_Good"))) != nullptr);
 	TestTrue(TEXT("and says so"), Field(Clean, TEXT("summary")).Contains(TEXT("Nothing was built")));
+
+	// The two spellings of the middle: a text's own alignment says Middle, a slot's says Center. The error names the other.
+	const FString Aligned = Sources.Write(TEXT("Aligned"), Screen(TEXT("    Text Label { Text = \"Hello\"  VAlign = Center }")));
+	const TArray<TSharedPtr<FJsonValue>> AlignDiagnostics = ArrayField(ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Aligned)), TEXT("t-3")))), TEXT("diagnostics"));
+	TestTrue(TEXT("VAlign = Center on a text suggests Middle"), AlignDiagnostics.Num() > 0
+		&& Field(AlignDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("did you mean 'Middle'")));
 	return true;
 }
 
@@ -939,6 +947,53 @@ bool FDreamMCPCompileTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPCheckBeforeCompileTest,
+	"DreamGUI.MCP.Actions.CheckingAScreenFirstLeavesItsComponentsToCompile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPCheckBeforeCompileTest::RunTest(const FString& Parameters)
+{
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const TCHAR* const CardBody = TEXT(
+		"Widget Root {\n"
+		"    AnchorData.SizeDelta = (200, 100)\n"
+		"    Image Face { AnchorData.AnchorMin = (0, 0)  AnchorData.AnchorMax = (1, 1)  AnchorData.SizeDelta = (0, 0) }\n"
+		"}\n");
+	// Placed directly, and through a library under a namespace: the two ways a screen names a component.
+	const FString Card = Sources.Write(TEXT("FreshCard"), CardBody);
+	const FString Direct = Sources.Write(TEXT("FreshDirect"), FString::Printf(TEXT("use \"%s\" as Card\n\n%s"), *Card,
+		*Screen(TEXT("    Card First { AnchorData.AnchoredPosition = (0, 100) }\n    Card Second { AnchorData.AnchoredPosition = (0, -100) }"))));
+	const FString Row = Sources.Write(TEXT("FreshRow"), CardBody);
+	const FString Library = Sources.Write(TEXT("FreshLibrary"), FString::Printf(TEXT("use \"%s\" as Row\n"), *Row), /*bClassLine*/ false);
+	const FString Namespaced = Sources.Write(TEXT("FreshNamespaced"), FString::Printf(TEXT("use \"%s\" as ui\n\n%s"), *Library,
+		*Screen(TEXT("    ui.Row Only { }"))));
+
+	int32 Call = 0;
+	const auto Run = [&](const TCHAR* InAction, const FString& InFile)
+	{
+		return ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(InAction, FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(InFile)),
+			FString::Printf(TEXT("fresh-%d"), ++Call))));
+	};
+	for (const FString& Host : { Direct, Namespaced })
+	{
+		const FString Name = FPaths::GetBaseFilename(Host);
+		// check first, as the guide says: the component has no Blueprint yet, which check reports and must leave be.
+		const TSharedPtr<FJsonObject> Checked = Run(TEXT("check"), Host);
+		TestEqual(FString::Printf(TEXT("%s: check reports the component not compiled yet"), *Name), Field(Checked, TEXT("outcome")), FString(TEXT("source-error")));
+		const TSharedPtr<FJsonObject> Laid = Run(TEXT("layout"), Host);
+		TestEqual(FString::Printf(TEXT("%s: layout afterwards compiles the component and the screen"), *Name), Field(Laid, TEXT("outcome")), FString(TEXT("ok")));
+		const TSharedPtr<FJsonObject> Again = Run(TEXT("compile"), Host);
+		TestEqual(FString::Printf(TEXT("%s: and a compile after that is fine"), *Name), Field(Again, TEXT("outcome")), FString(TEXT("ok")));
+	}
+	// The component itself, checked and then compiled on its own: nothing a check of its host did stands in the way.
+	const FString Lone = Sources.Write(TEXT("LoneCard"), CardBody);
+	const FString LoneHost = Sources.Write(TEXT("LoneHost"), FString::Printf(TEXT("use \"%s\" as Card\n\n%s"), *Lone, *Screen(TEXT("    Card Only { }"))));
+	Run(TEXT("check"), LoneHost);
+	TestEqual(TEXT("a component its host's check named compiles on its own"), Field(Run(TEXT("compile"), Lone), TEXT("outcome")), FString(TEXT("ok")));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLookupTest,
 	"DreamGUI.MCP.Actions.LookupFindsNodeTypesComponentsAndProperties",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -967,6 +1022,14 @@ bool FDreamMCPLookupTest::RunTest(const FString& Parameters)
 	const TSharedPtr<FJsonObject> One =ObjectField(Lookup(TEXT("{\"name\":\"Text.FontSize\"}")), TEXT("data"));
 	const TArray<TSharedPtr<FJsonValue>> OneLines = ArrayField(ObjectField(One, TEXT("entry")), TEXT("properties"));
 	TestTrue(TEXT("Type.Property narrows to that property"), OneLines.Num() >= 1 && OneLines.Num() <= 3);
+
+	// What every node takes, narrowed the same way; and kind=property asking for one type's properties.
+	const TSharedPtr<FJsonObject> Common = ObjectField(Lookup(TEXT("{\"name\":\"Widget.RenderRotation\"}")), TEXT("data"));
+	TestTrue(TEXT("Widget.RenderRotation narrows what every node takes"), ArrayField(ObjectField(Common, TEXT("entry")), TEXT("properties")).Num() >= 1);
+	const TSharedPtr<FJsonObject> SlotLine = ObjectField(Lookup(TEXT("{\"name\":\"slot.HorizontalAlignment\"}")), TEXT("data"));
+	TestTrue(TEXT("slot.HorizontalAlignment narrows what @slot takes"), ArrayField(ObjectField(SlotLine, TEXT("entry")), TEXT("properties")).Num() >= 1);
+	const TSharedPtr<FJsonObject> AsProperty = ObjectField(Lookup(TEXT("{\"name\":\"Native.Button.Style\",\"kind\":\"property\"}")), TEXT("data"));
+	TestTrue(TEXT("kind=property with Type.Property gives that type's properties"), ArrayField(ObjectField(AsProperty, TEXT("entry")), TEXT("properties")).Num() >= 1);
 
 	const TSharedPtr<FJsonObject> Box = ObjectField(Lookup(TEXT("{\"name\":\"VerticalBox\",\"kind\":\"component\"}")), TEXT("data"));
 	TestEqual(TEXT("VerticalBox is a component"), Field(ObjectField(Box, TEXT("entry")), TEXT("kind")), FString(TEXT("component")));
@@ -1109,6 +1172,18 @@ bool FDreamMCPLintTextTest::RunTest(const FString& Parameters)
 	const TArray<FLayoutIssue> Issues = Cut.Lint();
 	TestEqual(TEXT("a text past its box is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutTextOverflow), 1);
 	TestTrue(TEXT("with what it needs and what it has"), Issues.Num() > 0 && Issues[0].Message.Contains(TEXT("needs 60x190 px and has 60x30")));
+
+	// The same text centred in a box near the top: what spills upward leaves the screen, which is a second finding.
+	FSnapshotBuilder High;
+	const int32 Squeezed = High.Add(0, TEXT("Squeezed"), TEXT("Text"), 100, 5, 120, 24);
+	High.Snapshot.Nodes[Squeezed].bHasText = true;
+	High.Snapshot.Nodes[Squeezed].Text = TEXT("A sentence that needs five lines");
+	High.Snapshot.Nodes[Squeezed].bTextOverflows = true;
+	High.Snapshot.Nodes[Squeezed].TextNeeded = FVector2f(120, 129);
+	High.Snapshot.Nodes[Squeezed].TextBox = FVector2f(120, 24);
+	const TArray<FLayoutIssue> Spilled = High.Lint();
+	TestEqual(TEXT("it does not fit"), CountCode(Spilled, EDreamUIDiagnosticCode::LayoutTextOverflow), 1);
+	TestEqual(TEXT("and what spills goes off the top of the screen"), CountCode(Spilled, EDreamUIDiagnosticCode::LayoutOffScreen), 1);
 	return true;
 }
 
@@ -1156,6 +1231,26 @@ bool FDreamMCPLintOverlapTest::RunTest(const FString& Parameters)
 	const TArray<FLayoutIssue> Issues = Stacked.Lint();
 	TestEqual(TEXT("buttons overlapping by 80 px are reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutOverlappingControls), 1);
 	TestTrue(TEXT("naming the one on top"), Issues.Num() > 0 && Issues.Last().Message.StartsWith(TEXT("Native.Button D lies over Native.Button C")));
+
+	// Each button in a group of its own, its pressable face a level below the button: the tree is no excuse.
+	FSnapshotBuilder Grouped;
+	const int32 GroupA = Grouped.Add(0, TEXT("GroupA"), TEXT("Widget"), 0, 0, 960, 540);
+	const int32 GroupB = Grouped.Add(0, TEXT("GroupB"), TEXT("Widget"), 0, 0, 960, 540);
+	const int32 Accept = Grouped.Add(GroupA, TEXT("Accept"), TEXT("Native.Button"), 540, 321, 240, 38);
+	const int32 Decline = Grouped.Add(GroupB, TEXT("Decline"), TEXT("Native.Button"), 720, 321, 240, 38);
+	const int32 AcceptFace = Grouped.Add(Accept, TEXT("Face"), TEXT("RectBlock"), 540, 321, 240, 38);
+	const int32 DeclineFace = Grouped.Add(Decline, TEXT("Face"), TEXT("RectBlock"), 720, 321, 240, 38);
+	Grouped.Snapshot.Nodes[AcceptFace].bInteractive = true;
+	Grouped.Snapshot.Nodes[DeclineFace].bInteractive = true;
+	TestEqual(TEXT("buttons in different groups overlapping by 60 px are reported"), CountCode(Grouped.Lint(), EDreamUIDiagnosticCode::LayoutOverlappingControls), 1);
+
+	// A button wholly on a much larger pressable card is layered on purpose.
+	FSnapshotBuilder Layered;
+	const int32 Card = Layered.Add(0, TEXT("Card"), TEXT("Native.Button"), 100, 100, 400, 300);
+	const int32 OnCard = Layered.Add(0, TEXT("Close"), TEXT("Native.Button"), 440, 110, 48, 48);
+	Layered.Snapshot.Nodes[Card].bInteractive = true;
+	Layered.Snapshot.Nodes[OnCard].bInteractive = true;
+	TestEqual(TEXT("a small button wholly on a large pressable card is not reported"), CountCode(Layered.Lint(), EDreamUIDiagnosticCode::LayoutOverlappingControls), 0);
 	return true;
 }
 
@@ -1247,6 +1342,56 @@ bool FDreamMCPLintContrastTest::RunTest(const FString& Parameters)
 	LintContrast(Faint.Snapshot, Picture(FColor(32, 36, 44, 255)), FIntPoint(1000, 600), Issues);
 	TestEqual(TEXT("grey text on a grey backdrop is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutLowContrast), 1);
 	TestTrue(TEXT("as a warning, with the ratio"), Issues.Num() > 0 && Issues[0].Severity == TEXT("warning") && Issues[0].Message.Contains(TEXT("to 1")));
+
+	// A toggle that is off paints its tick the colour of its box: a control's own part, hidden on purpose.
+	FSnapshotBuilder Toggle;
+	const int32 Box = Toggle.Add(0, TEXT("Mute"), TEXT("Native.Toggle"), 100, 100, 40, 40);
+	const int32 Tick = Toggle.Add(Box, TEXT("Tick"), TEXT("Text"), 104, 104, 32, 32);
+	Toggle.Snapshot.Nodes[Tick].bAuthored = false;
+	Toggle.Snapshot.Nodes[Tick].bHasText = true;
+	Toggle.Snapshot.Nodes[Tick].Text = TEXT("v");
+	Toggle.Snapshot.Nodes[Tick].Color = FColor(47, 52, 63, 255);
+	Toggle.Snapshot.Nodes[Tick].FontSize = 16;
+	TArray<FLayoutIssue> Hidden;
+	LintContrast(Toggle.Snapshot, Picture(FColor(47, 52, 63, 255)), FIntPoint(1000, 600), Hidden);
+	TestEqual(TEXT("a control's own part the colour of what is behind it is not reported"), Hidden.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPDuplicateDiagnosticsTest,
+	"DreamGUI.MCP.Protocol.TheSameFindingIsListedOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPDuplicateDiagnosticsTest::RunTest(const FString& Parameters)
+{
+	FResult Result = FResult::MakeOk(TEXT("Checked."));
+	FDiagnostic Style;
+	Style.Code = TEXT("DUI4005");
+	Style.File = TEXT("DUI/Menu.dui");
+	Style.Line = 45;
+	Style.Column = 16;
+	Style.Message = TEXT("a value that does not fit");
+	Result.Diagnostics = { Style, Style, Style, Style };
+	FDiagnostic Small;
+	Small.Code = TEXT("DUI8003");
+	Small.Severity = TEXT("warning");
+	Small.File = TEXT("DUI/Card.dui");
+	Small.Line = 9;
+	Small.Message = TEXT("Native.Toggle Mute can be pressed but is only 14x19 px");
+	for (const TCHAR* Instance : { TEXT("Root/CardA/Mute"), TEXT("Root/CardB/Mute"), TEXT("Root/CardC/Mute") })
+	{
+		Small.Node = Instance;
+		Result.Diagnostics.Add(Small);
+	}
+	const TArray<TSharedPtr<FJsonValue>> Listed = Result.ToJson()->GetArrayField(TEXT("diagnostics"));
+	if (!TestEqual(TEXT("one entry for each finding"), Listed.Num(), 2))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the repeated one says how often"), Field(Listed[0]->AsObject(), TEXT("message")).EndsWith(TEXT("(reported 4 times)")));
+	TestTrue(TEXT("the one in several instances says where else"),
+		Field(Listed[1]->AsObject(), TEXT("message")).EndsWith(TEXT("(the same at Root/CardB/Mute, Root/CardC/Mute)")));
+	TestEqual(TEXT("and keeps the first instance as its node"), Field(Listed[1]->AsObject(), TEXT("node")), FString(TEXT("Root/CardA/Mute")));
 	return true;
 }
 
@@ -1314,6 +1459,154 @@ bool FDreamMCPPreviewStatsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("a few sparks barely move the mean"), Moving.MaxDifference <= FPreviewStatsThresholds::SameFrameDifference);
 	TestTrue(TEXT("but the share of changed pixels says they move"), Moving.bChanges);
 	TestEqual(TEXT("eight pixels of ten thousand changed"), Moving.MaxChangedShare, 8.0 / Big, 1e-12);
+
+	// A strip whose first frame is empty and the next half covered is not "almost nothing".
+	const TArray<FPreviewStats> Strip = { Empty, Stats };
+	FPreviewStats Together;
+	Together.Add(Black, Black, Whites);
+	Together.Add(Picture, OverBlack, OverWhite);
+	TArray<FString> StripNext;
+	const FString StripSentence = DescribePreviewFrames(Together, Strip, StripNext);
+	TestFalse(FString::Printf(TEXT("the strip is described by all its frames: %s"), *StripSentence), StripSentence.Contains(TEXT("almost nothing")));
+	TestTrue(FString::Printf(TEXT("naming how many: %s"), *StripSentence), StripSentence.StartsWith(TEXT("Over its 2 frames it covers")));
+	TestTrue(TEXT("and the range of its coverage"), StripSentence.Contains(TEXT("most in frame 2")));
+	return true;
+}
+
+// ------------------------------------------------------------------------------------------------- reference
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPReferenceExamplesTest,
+	"DreamGUI.MCP.Reference.EveryCompleteExampleCompilesAndLaysOutClean",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/**
+ * The pages an agent is told to copy from (.skill/reference/, built from Docs/): every code block whose first line is
+ * `// DUI/<path>.dui` is a whole file, and the files of one page are one example. Each is written out at its path, its
+ * class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a class
+ * line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ */
+bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
+{
+	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
+	if (!TestTrue(TEXT("the plugin is found"), Plugin.IsValid()))
+	{
+		return false;
+	}
+	const FString ReferenceDir = FPaths::ConvertRelativePathToFull(FPaths::Combine(Plugin->GetBaseDir(), TEXT(".skill"), TEXT("reference")));
+	TArray<FString> Pages;
+	IFileManager::Get().FindFiles(Pages, *FPaths::Combine(ReferenceDir, TEXT("*.md")), /*Files*/ true, /*Directories*/ false);
+	Pages.Sort();
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	int32 Call = 0;
+	int32 FileCount = 0;
+	const auto Run = [&](const TCHAR* InAction, const FString& InFile)
+	{
+		return ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(InAction, FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(InFile)),
+			FString::Printf(TEXT("ref-%d"), ++Call))));
+	};
+	const auto Problems = [](const TSharedPtr<FJsonObject>& InResult)
+	{
+		TArray<FString> Out;
+		for (const TSharedPtr<FJsonValue>& Value : ArrayField(InResult, TEXT("diagnostics")))
+		{
+			const TSharedPtr<FJsonObject> Diagnostic = Value->AsObject();
+			if (Field(Diagnostic, TEXT("severity")) != TEXT("info"))
+			{
+				Out.Add(FString::Printf(TEXT("%s %s line %d: %s"), *Field(Diagnostic, TEXT("severity")), *Field(Diagnostic, TEXT("code")),
+					static_cast<int32>(Number(Diagnostic, TEXT("line"))), *Field(Diagnostic, TEXT("message"))));
+			}
+		}
+		return FString::Join(Out, TEXT("; "));
+	};
+
+	for (const FString& Page : Pages)
+	{
+		FString Markdown;
+		FFileHelper::LoadFileToString(Markdown, *FPaths::Combine(ReferenceDir, Page));
+		TArray<FString> Lines;
+		Markdown.ParseIntoArrayLines(Lines, /*bCullEmpty*/ false);
+		TArray<TPair<FString, FString>> Files;
+		for (int32 Index = 0; Index < Lines.Num(); ++Index)
+		{
+			if (!Lines[Index].TrimStart().StartsWith(TEXT("```")))
+			{
+				continue;
+			}
+			int32 End = Index + 1;
+			while (End < Lines.Num() && !Lines[End].TrimStart().StartsWith(TEXT("```")))
+			{
+				++End;
+			}
+			const FString First = Index + 1 < End ? Lines[Index + 1].TrimStartAndEnd() : FString();
+			if (First.StartsWith(TEXT("// DUI/")) && First.EndsWith(TEXT(".dui")))
+			{
+				FString Body;
+				for (int32 Line = Index + 1; Line < End; ++Line)
+				{
+					Body += Lines[Line] + TEXT("\n");
+				}
+				Files.Emplace(First.RightChop(7), Body);
+			}
+			Index = End;
+		}
+		if (Files.IsEmpty())
+		{
+			continue;
+		}
+
+		FScopedSources Sources;
+		TMap<FString, FString> Written;
+		for (const TPair<FString, FString>& File : Files)
+		{
+			Written.Add(File.Key, FPaths::Combine(Sources.Directory, File.Key));
+		}
+		TSet<FString> WithClass;
+		TSet<FString> Components;
+		for (const TPair<FString, FString>& File : Files)
+		{
+			FString Body = File.Value.Replace(TEXT("\nclass /Game/"), *FString::Printf(TEXT("\nclass %s/"), *Sources.PackageRoot));
+			if (Body.Contains(TEXT("\nclass ")))
+			{
+				WithClass.Add(File.Key);
+			}
+			for (const TPair<FString, FString>& Target : Written)
+			{
+				const FString Quoted = FString::Printf(TEXT("use \"%s\""), *Target.Key);
+				if (Body.Contains(Quoted))
+				{
+					if (Body.Contains(Quoted + TEXT(" as ")))
+					{
+						Components.Add(Target.Key); // placed by name: a component, when it has a class line
+					}
+					Body = Body.Replace(*Quoted, *FString::Printf(TEXT("use \"%s\""), *Target.Value));
+				}
+			}
+			IFileManager::Get().MakeDirectory(*FPaths::GetPath(Written[File.Key]), /*Tree*/ true);
+			FFileHelper::SaveStringToFile(Body, *Written[File.Key], FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+		}
+		for (const TPair<FString, FString>& File : Files)
+		{
+			if (!WithClass.Contains(File.Key))
+			{
+				continue;
+			}
+			++FileCount;
+			const FString What = FString::Printf(TEXT("%s: DUI/%s"), *Page, *File.Key);
+			const TSharedPtr<FJsonObject> Compiled = Run(TEXT("compile"), Written[File.Key]);
+			const FString CompileProblems = Problems(Compiled);
+			TestTrue(FString::Printf(TEXT("%s compiles (%s)"), *What, *Field(Compiled, TEXT("summary"))), Field(Compiled, TEXT("outcome")) == TEXT("ok"));
+			TestTrue(FString::Printf(TEXT("%s compiles with no warning: %s"), *What, *CompileProblems), CompileProblems.IsEmpty());
+			if (Components.Contains(File.Key))
+			{
+				continue;
+			}
+			const TSharedPtr<FJsonObject> Laid = Run(TEXT("layout"), Written[File.Key]);
+			const FString LayoutProblems = Problems(Laid);
+			TestTrue(FString::Printf(TEXT("%s lays out (%s)"), *What, *Field(Laid, TEXT("summary"))), Field(Laid, TEXT("outcome")) == TEXT("ok"));
+			TestTrue(FString::Printf(TEXT("%s lays out with no problem: %s"), *What, *LayoutProblems), LayoutProblems.IsEmpty());
+		}
+	}
+	TestTrue(FString::Printf(TEXT("the reference has complete examples to check (%d files with a class line)"), FileCount), FileCount >= 3);
 	return true;
 }
 
@@ -1401,6 +1694,58 @@ bool FDreamMCPRenderPreviewTest::RunTest(const FString& Parameters)
 	const TSharedPtr<FJsonObject> Unknown = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("preview"),
 		FString::Printf(TEXT("{\"file\":\"%s\",\"width\":960,\"height\":540,\"timeline\":\"Nope\"}"), *JsonString(Slide)), TEXT("t-nope"))));
 	TestEqual(TEXT("a timeline the file does not declare is refused"), Field(Unknown, TEXT("reason")), FString(TEXT("no-such-timeline")));
+
+	// A card turned 35 degrees about its vertical axis: layout's rect is where the picture shows it, within a pixel or two.
+	const FString Tilted = Sources.Write(TEXT("TiltedPicture"), Screen(TEXT(
+		"    Image Card {\n        AnchorData.SizeDelta = (600, 360)\n        RenderRotation = (0, 35, 0)\n        Brush.TintColor = #FF0000\n    }")));
+	const FString TiltedArgs = FString::Printf(TEXT("{\"file\":\"%s\",\"width\":960,\"height\":540}"), *JsonString(Tilted));
+	const TSharedPtr<FJsonObject> TiltedTree = ObjectField(ObjectField(ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("layout"), TiltedArgs, TEXT("t-tilt-l")))), TEXT("data")), TEXT("tree"));
+	const TSharedPtr<FJsonObject> CardNode = FindTreeNode(TiltedTree, TEXT("Root/Card"));
+	const TSharedPtr<FJsonObject> CardRect = ObjectField(CardNode, TEXT("rect"));
+	bool bIn3D = false;
+	if (CardNode.IsValid())
+	{
+		CardNode->TryGetBoolField(TEXT("in3d"), bIn3D);
+	}
+	TestTrue(TEXT("the turned card says so"), bIn3D);
+	const TSharedPtr<FJsonObject> TiltedDrawn = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("preview"), TiltedArgs, TEXT("t-tilt-p"))));
+	const TArray<TSharedPtr<FJsonValue>> TiltedArtifacts = ArrayField(TiltedDrawn, TEXT("artifacts"));
+	if (TestEqual(TEXT("the turned card is drawn"), TiltedArtifacts.Num(), 1) && CardRect.IsValid())
+	{
+		const FString TiltedFile = FPaths::Combine(FPaths::ProjectDir(), Field(TiltedArtifacts[0]->AsObject(), TEXT("path")));
+		ON_SCOPE_EXIT { IFileManager::Get().Delete(*TiltedFile, false, true, true); };
+		TArray<uint8> TiltedPng;
+		FFileHelper::LoadFileToArray(TiltedPng, *TiltedFile);
+		TSharedPtr<IImageWrapper> TiltedReader = Wrappers.CreateImageWrapper(EImageFormat::PNG);
+		TArray<uint8> TiltedRaw;
+		if (TestTrue(TEXT("it reads as a PNG"), TiltedReader.IsValid() && TiltedReader->SetCompressed(TiltedPng.GetData(), TiltedPng.Num()) && TiltedReader->GetRaw(ERGBFormat::BGRA, 8, TiltedRaw)))
+		{
+			const int32 PW = static_cast<int32>(TiltedReader->GetWidth());
+			const int32 PH = static_cast<int32>(TiltedReader->GetHeight());
+			int32 MinX = PW, MinY = PH, MaxX = -1, MaxY = -1;
+			for (int32 Y = 0; Y < PH; ++Y)
+			{
+				for (int32 X = 0; X < PW; ++X)
+				{
+					const uint8* Pixel = &TiltedRaw[(Y * PW + X) * 4];
+					if (Pixel[2] > 128 && Pixel[1] < 80 && Pixel[0] < 80) // red: the card
+					{
+						MinX = FMath::Min(MinX, X); MaxX = FMath::Max(MaxX, X);
+						MinY = FMath::Min(MinY, Y); MaxY = FMath::Max(MaxY, Y);
+					}
+				}
+			}
+			const double RX = Number(CardRect, TEXT("x"));
+			const double RY = Number(CardRect, TEXT("y"));
+			const double RW = Number(CardRect, TEXT("w"));
+			const double RH = Number(CardRect, TEXT("h"));
+			const FString Seen = FString::Printf(TEXT("layout %.0f,%.0f %.0fx%.0f; drawn %d..%d x %d..%d"), RX, RY, RW, RH, MinX, MaxX, MinY, MaxY);
+			TestTrue(FString::Printf(TEXT("its left edge (%s)"), *Seen), FMath::Abs(RX - MinX) <= 2.0);
+			TestTrue(FString::Printf(TEXT("its right edge (%s)"), *Seen), FMath::Abs(RX + RW - (MaxX + 1)) <= 2.0);
+			TestTrue(FString::Printf(TEXT("its top edge (%s)"), *Seen), FMath::Abs(RY - MinY) <= 2.0);
+			TestTrue(FString::Printf(TEXT("its bottom edge (%s)"), *Seen), FMath::Abs(RY + RH - (MaxY + 1)) <= 2.0);
+		}
+	}
 	return true;
 }
 
