@@ -990,9 +990,18 @@ bool FDreamMCPCheckBeforeCompileTest::RunTest(const FString& Parameters)
 	for (const FString& Host : { Direct, Namespaced })
 	{
 		const FString Name = FPaths::GetBaseFilename(Host);
-		// check first, as the guide says: the component has no Blueprint yet, which check reports and must leave be.
+		// check first, as the guide says: the component has no Blueprint yet, which is no fault of the source.
 		const TSharedPtr<FJsonObject> Checked = Run(TEXT("check"), Host);
-		TestEqual(FString::Printf(TEXT("%s: check reports the component not compiled yet"), *Name), Field(Checked, TEXT("outcome")), FString(TEXT("source-error")));
+		TestEqual(FString::Printf(TEXT("%s: a component not compiled yet is not an error of the source"), *Name), Field(Checked, TEXT("outcome")), FString(TEXT("ok")));
+		TestTrue(FString::Printf(TEXT("%s: the summary says it is not compiled yet: %s"), *Name, *Field(Checked, TEXT("summary"))),
+			Field(Checked, TEXT("summary")).Contains(TEXT("not compiled yet")));
+		const TArray<TSharedPtr<FJsonValue>> CheckNext = ArrayField(Checked, TEXT("next"));
+		TestTrue(FString::Printf(TEXT("%s: next says the source is fine and layout compiles the component first"), *Name),
+			CheckNext.Num() > 0 && CheckNext[0]->AsString().StartsWith(TEXT("The source is fine. Run layout")));
+		for (const TSharedPtr<FJsonValue>& Value : ArrayField(Checked, TEXT("diagnostics")))
+		{
+			TestEqual(FString::Printf(TEXT("%s: its DUI5018 is an info"), *Name), Field(Value->AsObject(), TEXT("severity")), FString(TEXT("info")));
+		}
 		const TSharedPtr<FJsonObject> Laid = Run(TEXT("layout"), Host);
 		TestEqual(FString::Printf(TEXT("%s: layout afterwards compiles the component and the screen"), *Name), Field(Laid, TEXT("outcome")), FString(TEXT("ok")));
 		const TSharedPtr<FJsonObject> Again = Run(TEXT("compile"), Host);

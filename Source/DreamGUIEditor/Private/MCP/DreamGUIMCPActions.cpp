@@ -252,6 +252,7 @@ namespace DreamGUIMCP
 				int32 Nodes = 0;
 				FResult Result;
 				TArray<TSharedPtr<FJsonValue>> PerFile;
+				TArray<FString> Uncompiled;
 			};
 			TSharedRef<FState> State = MakeShared<FState>();
 			State->Files = MoveTemp(Files);
@@ -288,6 +289,10 @@ namespace DreamGUIMCP
 					State->Result.Diagnostics.Append(Check.Diagnostics);
 					State->Clean += Check.bClean ? 1 : 0;
 					State->Nodes += Check.Nodes;
+					for (const FString& Component : Check.UncompiledComponents)
+					{
+						State->Uncompiled.AddUnique(Component);
+					}
 					TSharedRef<FJsonObject> Entry = MakeShared<FJsonObject>();
 					Entry->SetStringField(TEXT("file"), Rel(File));
 					Entry->SetStringField(TEXT("asset"), Check.AssetPath);
@@ -311,11 +316,24 @@ namespace DreamGUIMCP
 				Result.Data->SetNumberField(TEXT("errors"), Errors);
 				Result.Data->SetNumberField(TEXT("warnings"), Warnings);
 				Result.Data->SetArrayField(TEXT("files"), State->PerFile);
+				// Components not compiled yet are no fault of the source: they are said apart, and compile or layout fixes them.
+				FString UncompiledNote;
+				if (State->Uncompiled.Num() > 0)
+				{
+					TArray<TSharedPtr<FJsonValue>> UncompiledValues;
+					for (const FString& Component : State->Uncompiled)
+					{
+						UncompiledValues.Add(MakeShared<FJsonValueString>(Component));
+					}
+					Result.Data->SetArrayField(TEXT("componentsNotCompiledYet"), UncompiledValues);
+					UncompiledNote = FString::Printf(TEXT("; %s not compiled yet (%s), which compile and layout build first"),
+						*Plural(State->Uncompiled.Num(), TEXT("component it places is"), TEXT("components it places are")), *FString::Join(State->Uncompiled, TEXT(", ")));
+				}
 				if (State->PerFile.Num() == 1)
 				{
-					Result.Summary = FString::Printf(TEXT("Checked %s: %s, %s, %s. Nothing was built."), *Rel(State->Files[0]),
+					Result.Summary = FString::Printf(TEXT("Checked %s: %s, %s, %s%s. Nothing was built."), *Rel(State->Files[0]),
 						*Plural(Errors, TEXT("error"), TEXT("errors")), *Plural(Warnings, TEXT("warning"), TEXT("warnings")),
-						*Plural(State->Nodes, TEXT("node"), TEXT("nodes")));
+						*Plural(State->Nodes, TEXT("node"), TEXT("nodes")), *UncompiledNote);
 				}
 				else
 				{
@@ -325,6 +343,11 @@ namespace DreamGUIMCP
 				if (Errors > 0)
 				{
 					Result.Next.Add(TEXT("Fix the errors at the lines given, then check again. Each code has its page at the doc link."));
+				}
+				else if (State->Uncompiled.Num() > 0)
+				{
+					Result.Next.Add(FString::Printf(TEXT("The source is fine. Run layout (or compile): it compiles %s first, then this screen; nothing needs changing."),
+						*FString::Join(State->Uncompiled, TEXT(", "))));
 				}
 				else
 				{

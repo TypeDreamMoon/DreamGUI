@@ -29,6 +29,11 @@ namespace DreamGUIMCP
 		FString AssetPath;
 		int32 Nodes = 0;
 		TArray<FDiagnostic> Diagnostics;
+		/**
+		 * Component files the source places whose Blueprints have not been compiled yet, project-relative. Not an error of
+		 * the source: compile and layout compile them first. Their DUI5018 comes back as an info.
+		 */
+		TArray<FString> UncompiledComponents;
 	};
 
 	/** Parse and build InAbsoluteFile the way the compiler reads it, into a tree that is thrown away. Writes nothing. */
