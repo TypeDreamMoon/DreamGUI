@@ -13,6 +13,26 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **DreamMCP.** An AI agent connected through a [DreamMCP](https://github.com/TypeDreamMoon/dream-mcp) server gets a
+  `dream_gui` tool: `check`, `compile`, `diagnostics`, `lookup`, `layout`, `preview` and `info` for `.dui` files, answered
+  by the user's editor or by a host the server starts (the windowless editor, or `-run=DreamGUIHost` when nothing has to
+  be drawn). `compile` builds the Blueprint a file's `class` line names, creating it, and first every component the
+  file places; no manifest. `layout` lays the compiled screen out at a viewport size without drawing it and answers
+  with every node's rect in pixels, its text and whether that fits, and the problems a person sees at a glance -- off
+  the screen, text cut, too small to press, controls on top of each other, edges a pixel or two off, what breaks at
+  another size. `preview` draws the screen into a PNG and says how much it covers, its colours and which texts are
+  hard to read. The endpoint listens on 127.0.0.1 only, with a token; *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸
+  Enable DreamMCP Endpoint* and `-NoDreamMCP` decide whether the editor serves it. See
+  [DreamMCP endpoint](Docs/tools/dreammcp.md).
+- **Layout diagnostics, DUI8001 to DUI8007.** The problems `layout` and `preview` report have codes of their own, a new
+  range that no compile raises: warnings and infos with the node, its line and a hint. See
+  [Diagnostics](Docs/diagnostics/index.md).
+- **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
+  project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
+  (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
+  `compile` and `layout` from the command line for CI and agents with no DreamMCP server. They ship with the plugin.
+  See [Working with AI agents](Docs/tools/ai-agents.md).
+
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
   a procedural pattern (linear, radial, angular, diamond, blinds, checker, noise), through a threshold and softness that

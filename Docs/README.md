@@ -13,7 +13,7 @@ these files; Chinese translations are maintained under `zh-CN/` in this plugin a
 | Language | [.dui reference](language/index.md), [bindings](language/bindings.md), [designer write-back](language/write-back.md) |
 | Controls | [Control catalogue](controls/index.md), [styles](controls/styles.md), [UMG comparison](controls/umg-parity.md) |
 | Guides | [Fonts and packaging](guides/fonts-and-packaging.md), [migration](guides/migration.md), [upgrading](guides/upgrading.md), [platforms](guides/platforms.md), [common pitfalls](guides/pitfalls.md) |
-| Tools | [Designer](tools/designer.md), [debugging](tools/debugging.md), [tests](tools/tests.md), [scripting](tools/scripting.md), [AI agents](tools/ai-agents.md) |
+| Tools | [Designer](tools/designer.md), [debugging](tools/debugging.md), [tests](tools/tests.md), [scripting](tools/scripting.md), [AI agents](tools/ai-agents.md), [DreamMCP endpoint](tools/dreammcp.md) |
 | Contributing | [Reporting problems, building, the test gate](contributing/index.md) |
 | Reference | [Generated class reference](Reference/index.md) |
 | Diagnostics | [Overview](diagnostics/index.md), [diagnostic catalogue](diagnostics/codes.md) |

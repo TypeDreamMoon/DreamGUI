@@ -68,7 +68,7 @@ the viewport or drag into a level — step by step in [Your first screen](gettin
   - [Concepts](concepts/widgets.md) — Widgets, canvases, world space, widget Blueprints, layout, text, rendering, input, animation.
   - [The .dui language](language/overview.md) — Nodes and values, slots and components, styles, use, components, view models, bindings, if and for, rows, timelines, write-back.
   - [Controls](controls/index.md) — Buttons, toggles, sliders, lists, dialogs, tab views... plus style sheets and the member-by-member UMG comparison.
-  - [Tools](tools/designer.md) — The designer, the VS Code extension, debugging commands, the test suite, benchmarks, scripting.
+  - [Tools](tools/designer.md) — The designer, the VS Code extension, debugging commands, the test suite, benchmarks, scripting, AI agents and the DreamMCP endpoint.
   - [Migration and upgrades](guides/migration.md) — Coming from LGUI, LexUI or an early build, and upgrading between development builds.
   - [Packaging and platforms](guides/fonts-and-packaging.md) — Shipping fonts, colour emoji and ICU data with a game; which platforms have actually run.
   - [Importing layered documents](guides/layered-document-import.md) — A .psd or .psb as a DreamUI widget: what each layer becomes, naming conventions, fonts, importing again.
