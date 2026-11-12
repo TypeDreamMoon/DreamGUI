@@ -22,6 +22,10 @@ namespace DreamGUIMCP
 		FString Percent(double Share)
 		{
 			const double Value = Share * 100.0;
+			if (Value > 0.0 && Value < 0.1)
+			{
+				return FString::Printf(TEXT("%.2f%%"), Value);
+			}
 			return Value > 0.0 && Value < 1.0 ? FString::Printf(TEXT("%.1f%%"), Value) : FString::Printf(TEXT("%.0f%%"), Value);
 		}
 	}
@@ -29,6 +33,12 @@ namespace DreamGUIMCP
 	void FPreviewStats::Add(TConstArrayView<FColor> Picture, TConstArrayView<FColor> OverBlack, TConstArrayView<FColor> OverWhite)
 	{
 		const bool bHasBackdrops = OverBlack.Num() == Picture.Num() && OverWhite.Num() == Picture.Num();
+		const auto IsCovered = [&](int32 Index)
+		{
+			return !bHasBackdrops || MaxChannelDifference(OverBlack[Index], OverWhite[Index]) < FThresholds::UncoveredDifference;
+		};
+		double FrameSum[3] = { 0.0, 0.0, 0.0 };
+		int64 FrameCovered = 0;
 		for (int32 Index = 0; Index < Picture.Num(); ++Index)
 		{
 			++Pixels;
@@ -46,6 +56,10 @@ namespace DreamGUIMCP
 				}
 			}
 			++CoveredPixels;
+			++FrameCovered;
+			FrameSum[0] += Pixel.R;
+			FrameSum[1] += Pixel.G;
+			FrameSum[2] += Pixel.B;
 			Sum[0] += Pixel.R / 255.0;
 			Sum[1] += Pixel.G / 255.0;
 			Sum[2] += Pixel.B / 255.0;
@@ -64,6 +78,18 @@ namespace DreamGUIMCP
 			if (Pixel.R <= FThresholds::NearBlack && Pixel.G <= FThresholds::NearBlack && Pixel.B <= FThresholds::NearBlack)
 			{
 				++NearBlackPixels;
+			}
+		}
+		// What stands apart from this frame's mean colour: what is drawn on a backdrop, however little of the frame it is.
+		if (FrameCovered > 0)
+		{
+			const FColor Mean(uint8(FrameSum[0] / FrameCovered + 0.5), uint8(FrameSum[1] / FrameCovered + 0.5), uint8(FrameSum[2] / FrameCovered + 0.5), 255);
+			for (int32 Index = 0; Index < Picture.Num(); ++Index)
+			{
+				if (IsCovered(Index) && MaxChannelDifference(Picture[Index], Mean) >= FThresholds::ApartDifference)
+				{
+					++ApartPixels;
+				}
 			}
 		}
 	}
@@ -115,7 +141,8 @@ namespace DreamGUIMCP
 
 	bool FPreviewStats::IsFlat() const
 	{
-		return CoveredPixels > 0 && GetLumaStdDev() <= FThresholds::FlatStdDev && GetChannelStdDev() <= FThresholds::FlatStdDev;
+		return CoveredPixels > 0 && GetLumaStdDev() <= FThresholds::FlatStdDev && GetChannelStdDev() <= FThresholds::FlatStdDev
+			&& ApartPixels <= FThresholds::FlatApartPixels;
 	}
 
 	TSharedRef<FJsonObject> FPreviewStats::ToJson() const
@@ -389,6 +416,13 @@ namespace DreamGUIMCP
 		}
 		FString Sentence = FString::Printf(TEXT("%s; mean colour %s (%s), luminance %.2f to %.2f"), *Covers, *FormatHexColor(Mean), *NameColor(Mean),
 			Stats.LumaMin, Stats.LumaMax);
+		// Nearly all of it one colour, with something drawn on it: say how much stands apart, so a few controls on a plain
+		// backdrop are not taken for an empty screen.
+		const double ApartShare = Stats.CoveredPixels > 0 ? double(Stats.ApartPixels) / double(Stats.CoveredPixels) : 0.0;
+		if (Stats.ApartPixels > FThresholds::FlatApartPixels && ApartShare < 0.05)
+		{
+			Sentence += FString::Printf(TEXT(", nearly all of it that one colour with %s of it drawn on it in others"), *Percent(ApartShare));
+		}
 		if (Stats.GetPartialShare() >= 0.05)
 		{
 			Sentence += FString::Printf(TEXT(", %s of it partly transparent"), *Percent(Stats.GetPartialShare()));

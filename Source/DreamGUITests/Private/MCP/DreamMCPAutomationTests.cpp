@@ -888,6 +888,18 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Aligned)), TEXT("t-3")))), TEXT("diagnostics"));
 	TestTrue(TEXT("VAlign = Center on a text suggests Middle"), AlignDiagnostics.Num() > 0
 		&& Field(AlignDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("did you mean 'Middle'")));
+
+	// One misspelt line in a style that three texts wear: one error, which says how many nodes it was raised for.
+	const FString Worn = Sources.Write(TEXT("Worn"), FString(TEXT("style Label {\n    FontSize = 20\n    Colr = #FFFFFF\n}\n\n"))
+		+ Screen(TEXT("    Text A : Label { Text = \"A\" }\n    Text B : Label { Text = \"B\" }\n    Text C : Label { Text = \"C\" }")));
+	const TSharedPtr<FJsonObject> WornResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Worn)), TEXT("t-4"))));
+	const TArray<TSharedPtr<FJsonValue>> WornDiagnostics = ArrayField(WornResult, TEXT("diagnostics"));
+	if (TestEqual(TEXT("a style's error worn by three nodes is one entry"), WornDiagnostics.Num(), 1))
+	{
+		TestTrue(TEXT("which says how often it was raised"), Field(WornDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("raised 3 times by this one line")));
+	}
+	TestTrue(FString::Printf(TEXT("and is counted once: %s"), *Field(WornResult, TEXT("summary"))), Field(WornResult, TEXT("summary")).Contains(TEXT("1 error,")));
 	return true;
 }
 
@@ -978,9 +990,18 @@ bool FDreamMCPCheckBeforeCompileTest::RunTest(const FString& Parameters)
 	for (const FString& Host : { Direct, Namespaced })
 	{
 		const FString Name = FPaths::GetBaseFilename(Host);
-		// check first, as the guide says: the component has no Blueprint yet, which check reports and must leave be.
+		// check first, as the guide says: the component has no Blueprint yet, which is no fault of the source.
 		const TSharedPtr<FJsonObject> Checked = Run(TEXT("check"), Host);
-		TestEqual(FString::Printf(TEXT("%s: check reports the component not compiled yet"), *Name), Field(Checked, TEXT("outcome")), FString(TEXT("source-error")));
+		TestEqual(FString::Printf(TEXT("%s: a component not compiled yet is not an error of the source"), *Name), Field(Checked, TEXT("outcome")), FString(TEXT("ok")));
+		TestTrue(FString::Printf(TEXT("%s: the summary says it is not compiled yet: %s"), *Name, *Field(Checked, TEXT("summary"))),
+			Field(Checked, TEXT("summary")).Contains(TEXT("not compiled yet")));
+		const TArray<TSharedPtr<FJsonValue>> CheckNext = ArrayField(Checked, TEXT("next"));
+		TestTrue(FString::Printf(TEXT("%s: next says the source is fine and layout compiles the component first"), *Name),
+			CheckNext.Num() > 0 && CheckNext[0]->AsString().StartsWith(TEXT("The source is fine. Run layout")));
+		for (const TSharedPtr<FJsonValue>& Value : ArrayField(Checked, TEXT("diagnostics")))
+		{
+			TestEqual(FString::Printf(TEXT("%s: its DUI5018 is an info"), *Name), Field(Value->AsObject(), TEXT("severity")), FString(TEXT("info")));
+		}
 		const TSharedPtr<FJsonObject> Laid = Run(TEXT("layout"), Host);
 		TestEqual(FString::Printf(TEXT("%s: layout afterwards compiles the component and the screen"), *Name), Field(Laid, TEXT("outcome")), FString(TEXT("ok")));
 		const TSharedPtr<FJsonObject> Again = Run(TEXT("compile"), Host);
@@ -1453,6 +1474,29 @@ bool FDreamMCPPreviewStatsTest::RunTest(const FString& Parameters)
 			Sparks[Frame][Frame * 7 + Spark * 2500] = FColor(200, 255, 230, 255);
 		}
 	}
+	// A plain backdrop over the whole picture with a small control and its label drawn on it: not one flat colour.
+	TArray<FColor> Plain;
+	Plain.Init(FColor(28, 30, 38, 255), Big);
+	TArray<FColor> PlainBlack = Plain;
+	TArray<FColor> PlainWhite = Plain;
+	FPreviewStats Empty2;
+	Empty2.Add(Plain, PlainBlack, PlainWhite);
+	TestTrue(TEXT("a plain backdrop alone is one flat colour"), Empty2.IsFlat());
+	TArray<FColor> WithControl = Plain;
+	for (int32 Y = 40; Y < 46; ++Y)
+	{
+		for (int32 X = 40; X < 52; ++X)
+		{
+			WithControl[Y * 100 + X] = FColor(230, 233, 240, 255);
+		}
+	}
+	FPreviewStats Drawn;
+	Drawn.Add(WithControl, WithControl, WithControl);
+	TestFalse(TEXT("with a small control on it, it is not"), Drawn.IsFlat());
+	TArray<FString> DrawnNext;
+	const FString DrawnSentence = DescribePreview(Drawn, DrawnNext);
+	TestTrue(FString::Printf(TEXT("and the sentence says something is drawn on it: %s"), *DrawnSentence), DrawnSentence.Contains(TEXT("drawn on it")));
+
 	const TArray<FPreviewStats> NoStats;
 	TestFalse(TEXT("identical frames do not animate"), AnalysePreviewAnimation(Still, NoStats).bChanges);
 	const FPreviewAnimation Moving = AnalysePreviewAnimation(Sparks, NoStats);

@@ -67,6 +67,63 @@ namespace DreamGUIMCP
 		return Result;
 	}
 
+	void CollapseRepeatedDiagnostics(TArray<FDiagnostic>& InOut)
+	{
+		// One entry for one finding at one place. A style's error is raised once for every node that wears the style -- the
+		// same code at the same line and column, the message naming each node -- and a component's layout problem once for
+		// every instance of it. The first stays, saying how often, and where else when the others name other nodes.
+		TArray<FDiagnostic> Unique;
+		TArray<int32> Counts;
+		TArray<bool> MessagesDiffer;
+		TArray<TArray<FString>> OtherNodes;
+		TMap<FString, int32> IndexByKey;
+		for (FDiagnostic& Diagnostic : InOut)
+		{
+			const FString Key = FString::Printf(TEXT("%s|%s|%s|%d|%d"), *Diagnostic.Code, *Diagnostic.Severity, *Diagnostic.File, Diagnostic.Line, Diagnostic.Column);
+			// A diagnostic with no place of its own is only the same as another when it says the same thing.
+			const FString FullKey = Diagnostic.Line > 0 ? Key : Key + TEXT("|") + Diagnostic.Message;
+			if (const int32* Found = IndexByKey.Find(FullKey))
+			{
+				++Counts[*Found];
+				MessagesDiffer[*Found] |= Diagnostic.Message != Unique[*Found].Message;
+				if (!Diagnostic.Node.IsEmpty() && Diagnostic.Node != Unique[*Found].Node)
+				{
+					OtherNodes[*Found].AddUnique(Diagnostic.Node);
+				}
+				continue;
+			}
+			IndexByKey.Add(FullKey, Unique.Num());
+			Unique.Add(MoveTemp(Diagnostic));
+			Counts.Add(1);
+			MessagesDiffer.Add(false);
+			OtherNodes.AddDefaulted();
+		}
+		for (int32 Index = 0; Index < Unique.Num(); ++Index)
+		{
+			FString& Message = Unique[Index].Message;
+			if (Counts[Index] <= 1)
+			{
+				continue;
+			}
+			if (MessagesDiffer[Index])
+			{
+				Message += FString::Printf(TEXT(" (raised %d times by this one line, once for each node that uses it)"), Counts[Index]); // I18N-EXEMPT: wire text
+			}
+			else if (OtherNodes[Index].Num() > 0)
+			{
+				const TArray<FString>& Others = OtherNodes[Index];
+				const int32 Shown = FMath::Min(Others.Num(), 3);
+				Message += FString::Printf(TEXT(" (the same at %s%s)"), *FString::Join(TArrayView<const FString>(Others.GetData(), Shown), TEXT(", ")), // I18N-EXEMPT: wire text
+					Others.Num() > Shown ? *FString::Printf(TEXT(" and %d more"), Others.Num() - Shown) : TEXT(""));
+			}
+			else
+			{
+				Message += FString::Printf(TEXT(" (reported %d times)"), Counts[Index]); // I18N-EXEMPT: wire text
+			}
+		}
+		InOut = MoveTemp(Unique);
+	}
+
 	TSharedRef<FJsonObject> FResult::ToJson() const
 	{
 		TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
@@ -103,47 +160,18 @@ namespace DreamGUIMCP
 		};
 		Ordered.StableSort([&Rank](const FDiagnostic& A, const FDiagnostic& B) { return Rank(A) < Rank(B); });
 
-		// One entry for the same finding at the same place: a style's error is raised once for every node that uses the
-		// style, and a component's layout problem once for every instance of it. The entry says how often, and where else.
-		TArray<const FDiagnostic*> Unique;
-		TArray<int32> Counts;
-		TArray<TArray<FString>> OtherNodes;
-		TMap<FString, int32> IndexByKey;
+		TArray<FDiagnostic> Listed;
+		Listed.Reserve(Ordered.Num());
 		for (const FDiagnostic* DiagnosticPtr : Ordered)
 		{
-			const FDiagnostic& Diagnostic = *DiagnosticPtr;
-			const FString Key = FString::Printf(TEXT("%s|%s|%s|%d|%d|%s"), *Diagnostic.Code, *Diagnostic.Severity, *Diagnostic.File, Diagnostic.Line, Diagnostic.Column, *Diagnostic.Message);
-			if (const int32* Found = IndexByKey.Find(Key))
-			{
-				++Counts[*Found];
-				if (!Diagnostic.Node.IsEmpty() && Diagnostic.Node != Unique[*Found]->Node)
-				{
-					OtherNodes[*Found].AddUnique(Diagnostic.Node);
-				}
-				continue;
-			}
-			IndexByKey.Add(Key, Unique.Num());
-			Unique.Add(DiagnosticPtr);
-			Counts.Add(1);
-			OtherNodes.AddDefaulted();
+			Listed.Add(*DiagnosticPtr);
 		}
+		CollapseRepeatedDiagnostics(Listed);
 
 		TArray<TSharedPtr<FJsonValue>> DiagnosticValues;
-		for (int32 UniqueIndex = 0; UniqueIndex < Unique.Num(); ++UniqueIndex)
+		for (const FDiagnostic& Diagnostic : Listed)
 		{
-			const FDiagnostic& Diagnostic = *Unique[UniqueIndex];
-			FString Message = Diagnostic.Message;
-			if (OtherNodes[UniqueIndex].Num() > 0)
-			{
-				const TArray<FString>& Others = OtherNodes[UniqueIndex];
-				const int32 Listed = FMath::Min(Others.Num(), 3);
-				Message += FString::Printf(TEXT(" (the same at %s%s)"), *FString::Join(TArrayView<const FString>(Others.GetData(), Listed), TEXT(", ")),
-					Others.Num() > Listed ? *FString::Printf(TEXT(" and %d more"), Others.Num() - Listed) : TEXT(""));
-			}
-			else if (Counts[UniqueIndex] > 1)
-			{
-				Message += FString::Printf(TEXT(" (reported %d times)"), Counts[UniqueIndex]);
-			}
+			const FString& Message = Diagnostic.Message;
 			TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 			if (!Diagnostic.Code.IsEmpty())
 			{

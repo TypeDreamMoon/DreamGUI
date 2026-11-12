@@ -99,6 +99,13 @@ namespace DreamGUIMCP
 		TSharedRef<FJsonObject> ToJson() const;
 	};
 
+	/**
+	 * One entry for one finding at one place: diagnostics with the same code, severity, file, line and column (the message
+	 * too, for one with no line) become the first of them, its message saying how many there were and, when they name
+	 * other nodes, which. Order is kept. ToJson does this too; an action that counts its diagnostics does it first.
+	 */
+	DREAMGUIEDITOR_API void CollapseRepeatedDiagnostics(TArray<FDiagnostic>& InOut);
+
 	/** The body serialized, condensed. */
 	DREAMGUIEDITOR_API FString SerializeJson(const TSharedRef<FJsonObject>& Object);
 

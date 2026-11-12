@@ -25,6 +25,12 @@ namespace DreamGUIMCP
 		static constexpr int32 NearBlack = 12;
 		/** A luminance standard deviation at or under this, with every channel as steady, is one flat colour. */
 		static constexpr double FlatStdDev = 0.012;
+		/**
+		 * ...and no more than this many covered pixels stand apart from its frame's mean colour by ApartDifference or more on
+		 * some channel: a toggle and its label on a plain backdrop barely move the deviation, and are not one flat colour.
+		 */
+		static constexpr int64 FlatApartPixels = 16;
+		static constexpr int32 ApartDifference = 24;
 		/** Frames whose mean per-pixel difference stays at or under this (0-255) are the same picture... */
 		static constexpr double SameFrameDifference = 0.5;
 		/**
@@ -46,6 +52,8 @@ namespace DreamGUIMCP
 		int64 PartialPixels = 0;
 		int64 NearWhitePixels = 0;
 		int64 NearBlackPixels = 0;
+		/** Covered pixels standing apart from their frame's mean colour (ApartDifference or more on some channel): what is drawn on a backdrop. */
+		int64 ApartPixels = 0;
 		double Sum[3] = { 0.0, 0.0, 0.0 };
 		double SumSquares[3] = { 0.0, 0.0, 0.0 };
 		double LumaSum = 0.0;

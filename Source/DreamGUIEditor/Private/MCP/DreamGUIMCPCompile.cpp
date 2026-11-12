@@ -452,7 +452,31 @@ namespace DreamGUIMCP
 			}
 		}
 		AppendDiagnostics(Outcome.Diagnostics, Bag, InAbsoluteFile);
-		Outcome.bClean = !Bag.HasErrors();
+
+		// A component placed by a file whose Blueprint is not compiled yet: the builder can only say its class loads
+		// nothing, but nothing in the source is wrong -- compile and layout compile the component first. An info, not an
+		// error, so a check of a screen written before its row says the screen is fine.
+		const FString Marker = TEXT("loads nothing yet");
+		for (FDiagnostic& Diagnostic : Outcome.Diagnostics)
+		{
+			if (Diagnostic.Code != FormatDiagnosticCode(static_cast<int32>(EDreamUIDiagnosticCode::ComponentAliasUnresolved)) || !Diagnostic.Message.Contains(Marker))
+			{
+				continue;
+			}
+			const int32 NamesAt = Diagnostic.Message.Find(TEXT("names '"));
+			const int32 PathStart = NamesAt != INDEX_NONE ? NamesAt + 7 : INDEX_NONE;
+			const int32 PathEnd = PathStart != INDEX_NONE ? Diagnostic.Message.Find(TEXT("'"), ESearchCase::CaseSensitive, ESearchDir::FromStart, PathStart) : INDEX_NONE;
+			const FString Component = PathEnd != INDEX_NONE ? Diagnostic.Message.Mid(PathStart, PathEnd - PathStart) : FString();
+			Diagnostic.Severity = TEXT("info");
+			Diagnostic.Message = Diagnostic.Message.Replace(TEXT(" -- compile that file into it first"), TEXT(""));
+			Diagnostic.Hint = TEXT("Nothing to change in the source: compile or layout compiles the component first, then this file.");
+			if (!Component.IsEmpty())
+			{
+				Outcome.UncompiledComponents.AddUnique(Component);
+			}
+		}
+		CollapseRepeatedDiagnostics(Outcome.Diagnostics);
+		Outcome.bClean = !Outcome.Diagnostics.ContainsByPredicate([](const FDiagnostic& Diagnostic) { return Diagnostic.Severity == TEXT("error"); });
 		return Outcome;
 	}
 
@@ -467,6 +491,7 @@ namespace DreamGUIMCP
 		Context.Done.Add(File);
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		const bool bOk = CompileOne(File, Context, &Blueprint);
+		CollapseRepeatedDiagnostics(Outcome.Diagnostics);
 		Outcome.Blueprint = Blueprint;
 		Outcome.bFailed = !bOk;
 		return Outcome;

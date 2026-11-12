@@ -50,7 +50,7 @@ saving a `.dui` does; a compile in a host saves them. Pictures go to `<Project>/
 
 | Action | Long | Writes | Arguments | Answers |
 | --- | --- | --- | --- | --- |
-| `check` | yes | no | `file`, or `all: true` | parses the file and builds its tree the way the compiler does, into a tree that is thrown away. Reports lexer, parser, meaning, value and builder errors (DUI1xxx–5xxx); what only a compile sees (props, events, view models, expression bindings: DUI6xxx) needs `compile` |
+| `check` | yes | no | `file`, or `all: true` | parses the file and builds its tree the way the compiler does, into a tree that is thrown away. Reports lexer, parser, meaning, value and builder errors (DUI1xxx–5xxx); what only a compile sees (props, events, view models, expression bindings: DUI6xxx) needs `compile`. A component the file places that has not been compiled yet is no error of the source: its DUI5018 is an info, the summary names it, and `next` says to run `layout` or `compile`, which compile it first |
 | `compile` | yes | yes | `file`, `force` | builds the widget Blueprint the file's `class` line names, creating it when it does not exist, and first every component the file places with `use "X.dui" as X`. Nothing that has not changed since this process last compiled it is compiled again unless `force` |
 | `diagnostics` | no | no | `file` | what the engine holds from the last check or compile of each file, errors first, without compiling |
 | `lookup` | no | no | `name`, `kind`, `limit` | an exact node type, component, enum or view model class gives its entry (properties with type, default and a one-line description from the C++ source, events), one a line in the answer's text; `Type.Property` narrows to properties starting so (with `kind: "property"` too); otherwise every name containing the text. `Widget` lists what every node takes, `slot` what `@slot` takes, and `Widget.RenderRotation`, `slot.HorizontalAlignment` narrow them. The anchors and the render transform say their axes (Y up, X depth) |
@@ -106,6 +106,8 @@ They never fail a compile; they come out of `layout` (and DUI8007 out of `previe
 node's path, the line that writes it (or the control that made it) and a hint. One problem in a branch is reported once,
 not again for every node inside it, and a problem inside a component placed several times is one entry that names the
 other instances (`(the same at Root/CardB/Mute, ...)`); any finding repeated at the same place says `(reported N times)`.
+This holds for every answer, compile errors included: an error on a line of a `style` that several nodes wear is one
+entry, `(raised 3 times by this one line, once for each node that uses it)`, and is counted once.
 
 | Code | Severity | Reported when | Threshold |
 | --- | --- | --- | --- |
@@ -130,7 +132,7 @@ are the file's: an authored `#1B1E26` reads back as `#1B1E26`. The same frame is
 | `meanColor`, `meanColorName` | the mean of the covered pixels as the picture shows them, and a plain name for it (greys under saturation 0.12, tinted greys under 0.4) |
 | `luminance` | Rec. 709 weights on the PNG's encoded values: min, max, mean, standard deviation |
 | `nearWhite`, `nearBlack` | covered pixels with every channel at 240 or above / 12 or below |
-| `flat` | luminance and every channel's standard deviation at most 0.012 |
+| `flat` | luminance and every channel's standard deviation at most 0.012, and at most 16 covered pixels standing apart from the frame's mean colour by 24 or more on a channel; a plain backdrop with a control and a label on it is not flat, and the summary says how much is drawn on it |
 
 The summary leads with the one fact that matters most: the screen draws almost nothing (under 0.5 % covered), is near black
 (90 % or more), near white (30 % or more), one flat colour, or else its coverage, mean colour and luminance range; then how
