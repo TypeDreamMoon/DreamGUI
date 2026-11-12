@@ -52,7 +52,7 @@ saving a `.dui` does; a compile in a host saves them. Pictures go to `<Project>/
 | `check` | yes | no | `file`, or `all: true` | parses the file and builds its tree the way the compiler does, into a tree that is thrown away. Reports lexer, parser, meaning, value and builder errors (DUI1xxx–5xxx); what only a compile sees (props, events, view models, expression bindings: DUI6xxx) needs `compile` |
 | `compile` | yes | yes | `file`, `force` | builds the widget Blueprint the file's `class` line names, creating it when it does not exist, and first every component the file places with `use "X.dui" as X`. Nothing that has not changed since this process last compiled it is compiled again unless `force` |
 | `diagnostics` | no | no | `file` | what the engine holds from the last check or compile of each file, errors first, without compiling |
-| `lookup` | no | no | `name`, `kind`, `limit` | an exact node type, component, enum or view model class gives its entry (properties with type, default and a one-line description from the C++ source, events); `Type.Property` narrows to properties starting so; otherwise every name containing the text. `Widget` lists what every node takes, `slot` what `@slot` takes |
+| `lookup` | no | no | `name`, `kind`, `limit` | an exact node type, component, enum or view model class gives its entry (properties with type, default and a one-line description from the C++ source, events), one a line in the answer's text; `Type.Property` narrows to properties starting so; otherwise every name containing the text. `Widget` lists what every node takes, `slot` what `@slot` takes |
 | `layout` | yes | yes | `file`, `width`, `height`, `sizes`, `root`, `depth`, `force` | compiles the screen as `compile` does, lays it out at the viewport size without drawing it, and lists every node and the problems (below) |
 | `preview` | yes | yes | `file`, `width`, `height`, `background`, `time`, `frames`, `duration`, `force` | compiles, draws the screen into a PNG, and measures it (below). Needs a process that draws |
 | `info` | no | no | — | plugin version and commit, engine version and kind, OS, locale, mode, whether this process draws, the source folders |
@@ -66,8 +66,9 @@ The screen is put on a stage of the endpoint's own — a preview world, a root t
 instanced under it the way the designer instances it — and laid out until every glyph is in and two passes agree. Nothing
 of the user's level is touched. Layout reads no pixels, so the headless host lays screens out as well as the editor does.
 
-The answer's summary starts with one sentence — the file, the viewport, how many nodes, how many problems and the most
-serious — and continues with the screen, one node a line, children indented under their parent:
+The answer's summary is one sentence — the file, the viewport, how many nodes, how many problems and the most serious.
+Its `text`, which the server shows as written after the summary, is the screen, one node a line, children indented under
+their parent:
 
 ```text
 Laid out DUI/Menu.dui at 1920x1080: 7 nodes, 1 problem (1 warning(s), 0 info); the most serious: ...
@@ -83,8 +84,9 @@ Each line is the node's type as the file writes it, its id, its rect in viewport
 its text with its font size, `CUT` or `OVERFLOWS(needs WxH)` when the text does not fit, and in brackets what else matters:
 `hidden` / `inactive` / `transparent`, `pressable`, its own layout box, how its anchors hold it when no box places it
 (`centred`, `fills its parent`, `held at the top left`...), `partly clipped`, `turned in 3D`, `own canvas X`, and `part of
-its control` for what a control builds for itself (a button's face). `depth` (6 by default) limits the levels listed and the
-answer says how many were left out; `root` lists one node and what is under it.
+its control` for what a control builds for itself (a button's face). `depth` (6 by default) limits the levels listed, and
+the list stops at 250 lines; the answer's `next` says how many nodes were left out and how to see them; `root` lists one
+node and what is under it.
 
 `data.tree` is the same tree as JSON: per node `type`, `name`, `path`, `rect`, `visibleRect` when clipped, `visible`,
 `order` (draw order in its canvas), `canvas`, `pressable`, `container`, `placedBy`, `anchors`, `in3d`, `text` (`text`,

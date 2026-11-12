@@ -15,7 +15,7 @@
     call goes to it, and what a compile writes stays in that editor's memory. Otherwise a headless host is started for the
     call (`-run=DreamGUIHost -nullrhi -DreamMCPHost`, about ten seconds), asked, and shut down; a compile there saves.
 
-    Output: the answer's summary, one line per diagnostic as `File.dui(line,col): severity DUInnnn: message`, and a last
+    Output: the answer's summary, its text when it has one (layout: the screen, one node a line), one line per diagnostic as `File.dui(line,col): severity DUInnnn: message`, and a last
     line `RESULT=OK` or `RESULT=FAILED`. Exit code 0 when the source has no error, 1 when it has, 2 when the call was
     refused or could not be made (no engine, no project, the file is missing).
 
@@ -234,6 +234,7 @@ if ($Json) {
     $Result | ConvertTo-Json -Depth 12
 } else {
     Write-Output $Result.summary
+    if ($Result.text) { Write-Output $Result.text }
     foreach ($D in @($Result.diagnostics)) {
         if (-not $D) { continue }
         $Where = if ($D.file) { if ($D.line) { "$($D.file)($($D.line),$($D.column))" } else { $D.file } } else { 'dui' }

@@ -641,7 +641,7 @@ namespace DreamGUIMCP
 			return Out;
 		}
 
-		FResult RunLookup(const FActionCall& Call)
+		FResult FindLookupAnswer(const FActionCall& Call)
 		{
 			const FString Query = Call.GetString(TEXT("name")).TrimStartAndEnd();
 			const FString Kind = Call.GetString(TEXT("kind")).IsEmpty() ? FString(TEXT("any")) : Call.GetString(TEXT("kind"));
@@ -869,6 +869,113 @@ namespace DreamGUIMCP
 			return Result;
 		}
 
+		/** One item of an entry's list as a line: a string as it is, an object by its name (and type). */
+		FString DescribeLookupItem(const TSharedPtr<FJsonValue>& Item)
+		{
+			FString Line;
+			if (!Item.IsValid() || Item->TryGetString(Line))
+			{
+				return Line;
+			}
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			if (Item->TryGetObject(Object) && Object->IsValid())
+			{
+				(*Object)->TryGetStringField(TEXT("name"), Line);
+				FString Type;
+				if ((*Object)->TryGetStringField(TEXT("type"), Type) && !Type.IsEmpty())
+				{
+					Line += TEXT(": ") + Type;
+				}
+			}
+			return Line;
+		}
+
+		/**
+		 * The answer as lines the model reads in full, whatever the server does with a long data object: an entry's
+		 * heading and each of its lists (properties, events, values), or the names found, one a line.
+		 */
+		FString FormatLookupText(const FJsonObject& Data)
+		{
+			TArray<FString> Lines;
+			const TSharedPtr<FJsonObject>* Entry = nullptr;
+			if (Data.TryGetObjectField(TEXT("entry"), Entry) && Entry->IsValid())
+			{
+				const FJsonObject& Fields = **Entry;
+				FString Heading;
+				Fields.TryGetStringField(TEXT("name"), Heading);
+				FString Class;
+				if (Fields.TryGetStringField(TEXT("class"), Class) && !Class.IsEmpty())
+				{
+					Heading += FString::Printf(TEXT(" (%s)"), *Class);
+				}
+				FString About;
+				if (Fields.TryGetStringField(TEXT("about"), About) && !About.IsEmpty())
+				{
+					Heading += TEXT(": ") + About;
+				}
+				Lines.Add(Heading);
+				for (const auto& Pair : Fields.Values)
+				{
+					const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
+					if (!Pair.Value.IsValid() || !Pair.Value->TryGetArray(Items) || Items->IsEmpty())
+					{
+						continue;
+					}
+					Lines.Add(FString(*Pair.Key) + TEXT(":"));
+					for (const TSharedPtr<FJsonValue>& Item : *Items)
+					{
+						const FString Line = DescribeLookupItem(Item);
+						if (!Line.IsEmpty())
+						{
+							Lines.Add(TEXT("  ") + Line);
+						}
+					}
+				}
+				FString More;
+				if (Fields.TryGetStringField(TEXT("more"), More) && !More.IsEmpty())
+				{
+					Lines.Add(More);
+				}
+			}
+			else
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Matches = nullptr;
+				if (Data.TryGetArrayField(TEXT("matches"), Matches))
+				{
+					for (const TSharedPtr<FJsonValue>& Match : *Matches)
+					{
+						const TSharedPtr<FJsonObject>* Object = nullptr;
+						if (!Match.IsValid() || !Match->TryGetObject(Object) || !Object->IsValid())
+						{
+							continue;
+						}
+						FString Name;
+						FString Kind;
+						FString On;
+						(*Object)->TryGetStringField(TEXT("name"), Name);
+						(*Object)->TryGetStringField(TEXT("kind"), Kind);
+						FString Line = FString::Printf(TEXT("%s (%s)"), *Name, *Kind);
+						if ((*Object)->TryGetStringField(TEXT("on"), On) && !On.IsEmpty())
+						{
+							Line += TEXT(" on ") + On;
+						}
+						Lines.Add(Line);
+					}
+				}
+			}
+			return FString::Join(Lines, TEXT("\n"));
+		}
+
+		FResult RunLookup(const FActionCall& Call)
+		{
+			FResult Result = FindLookupAnswer(Call);
+			if (Result.Data.IsValid())
+			{
+				Result.Text = FormatLookupText(*Result.Data);
+			}
+			return Result;
+		}
+
 		// --------------------------------------------------------------------------------------------- layout
 
 		/** The issues of one snapshot as diagnostics, after the ones found at every size are told from those found at some. */
@@ -1071,7 +1178,8 @@ namespace DreamGUIMCP
 				{
 					Headline += FString::Printf(TEXT(" The compile also warned %d time(s)."), CompileWarnings);
 				}
-				Result.Summary = Headline + TEXT("\nThe screen, one node a line (x, y from the top left of the viewport, in pixels):\n") + Tree;
+				Result.Summary = Headline;
+				Result.Text = TEXT("The screen, one node a line (x, y from the top left of the viewport, in pixels):\n") + Tree;
 
 				Result.Data = MakeShared<FJsonObject>();
 				Result.Data->SetStringField(TEXT("file"), Rel(State->File));
@@ -1099,7 +1207,7 @@ namespace DreamGUIMCP
 				Result.Data->SetNumberField(TEXT("seconds"), FMath::RoundToDouble((FPlatformTime::Seconds() - State->StartedAt) * 100.0) / 100.0);
 				if (Hidden > 0)
 				{
-					Result.Next.Add(FString::Printf(TEXT("%d node(s) deeper than depth %d are not listed: call layout with depth=%d, or root=<path> to look inside one."), Hidden, Depth, Depth + 4));
+					Result.Next.Add(FString::Printf(TEXT("%d node(s) are not listed (deeper than depth %d, or past the first 250 lines): call layout with depth=%d for more levels, or root=<path or id> to list only that part of the screen."), Hidden, Depth, Depth + 4));
 				}
 				if (Warnings > 0)
 				{

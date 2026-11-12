@@ -80,7 +80,13 @@ namespace DreamGUIMCP
 		{
 			Root->SetStringField(TEXT("reason"), Reason);
 		}
-		Root->SetStringField(TEXT("summary"), Summary);
+		// The protocol keeps the summary to one line; a message quoted into it may carry line breaks of its own.
+		const FString OneLine = Summary.Replace(TEXT("\r\n"), TEXT(" ")).Replace(TEXT("\n"), TEXT(" ")).Replace(TEXT("\r"), TEXT(" "));
+		Root->SetStringField(TEXT("summary"), OneLine);
+		if (!Text.IsEmpty())
+		{
+			Root->SetStringField(TEXT("text"), Text);
+		}
 
 		// Errors first, then warnings, then infos, each kind in the order it was found: what a summary leads with is what
 		// the list leads with, and an info never sits above the error it is read next to.

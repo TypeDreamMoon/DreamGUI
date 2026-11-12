@@ -24,8 +24,9 @@ Paths are relative to the game project's root.
 4. `dream_gui { "action": "diagnostics" }` reads back what the engine holds for every file, errors first, without
    compiling anything.
 
-Each result starts with one summary line, then one line per diagnostic: severity, code, `file:line:column`, message,
-hint and a link to the code's page. The outcome is `ok`, `source-error` (fix the file), or `refused` with a reason and
+Each result starts with one summary line, then its text when it has one (`layout`: the screen, one node a line;
+`lookup`: the entry), then one line per diagnostic: severity, code, `file:line:column`, message, hint and a link to the
+code's page. The outcome is `ok`, `source-error` (fix the file), or `refused` with a reason and
 what to do next: do that, do not switch to the script. A file is verified when `check` and `compile` are `ok` and
 `layout` has no warnings at the sizes asked for.
 
@@ -38,7 +39,7 @@ pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 compile DUI/MainMenu.dui
 pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/MainMenu.dui -Width 1920 -Height 1080 -Sizes "1280x720"
 ```
 
-Each prints the summary, one line per diagnostic as `File.dui(line,col): severity DUInnnn: message`, and a last line
+Each prints the summary, the text (for `layout`, the screen one node a line), one line per diagnostic as `File.dui(line,col): severity DUInnnn: message`, and a last line
 `RESULT=OK` or `RESULT=FAILED`. Exit code 0: no error; 1: the source has errors; 2: the call could not be made (no
 project, no engine, no such file). When an editor of the project is open and serving DreamMCP, the script uses it and a
 compile stays in that editor's memory; otherwise it starts a headless engine for the call (about ten seconds) and a

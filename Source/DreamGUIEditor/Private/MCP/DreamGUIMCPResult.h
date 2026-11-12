@@ -75,8 +75,13 @@ namespace DreamGUIMCP
 		EOutcome Outcome = EOutcome::Ok;
 		/** A stable machine code for a refusal or an engine error, `kebab-case`. Empty for `ok` and `source-error`. */
 		FString Reason;
-		/** One line for the model: what happened. */
+		/** One line for the model: what happened. No line breaks. */
 		FString Summary;
+		/**
+		 * Optional preformatted plain text for the model, several lines: the server shows it as written after the summary
+		 * and before the diagnostics, cut at its limit. Left out of the body when empty.
+		 */
+		FString Text;
 		TArray<FDiagnostic> Diagnostics;
 		TArray<FWrite> Writes;
 		TArray<FArtifact> Artifacts;

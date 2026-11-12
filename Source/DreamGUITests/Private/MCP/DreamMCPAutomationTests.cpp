@@ -910,6 +910,9 @@ bool FDreamMCPLookupTest::RunTest(const FString& Parameters)
 		bHasFontSize |= Line->AsString().StartsWith(TEXT("FontSize:"));
 	}
 	TestTrue(TEXT("its properties include FontSize with its type"), bHasFontSize);
+	const FString TextLines = Field(Text, TEXT("text"));
+	TestTrue(TEXT("the text heads the entry with its name and class"), TextLines.StartsWith(TEXT("Text (DreamText)")));
+	TestTrue(TEXT("and lists the properties, one a line"), TextLines.Contains(TEXT("\nproperties:\n")) && TextLines.Contains(TEXT("\n  FontSize: ")));
 
 	const TSharedPtr<FJsonObject> One = ObjectField(Lookup(TEXT("{\"name\":\"Text.FontSize\"}")), TEXT("data"));
 	const TArray<TSharedPtr<FJsonValue>> OneLines = ArrayField(ObjectField(One, TEXT("entry")), TEXT("properties"));
@@ -924,6 +927,7 @@ bool FDreamMCPLookupTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("part of a name lists matches"), bPartialExact);
 	TestTrue(TEXT("at most the limit"), ArrayField(Partial, TEXT("matches")).Num() <= 5);
 	TestTrue(TEXT("of a total that may be larger"), Number(Partial, TEXT("total")) >= ArrayField(Partial, TEXT("matches")).Num());
+	TestTrue(TEXT("the text names each match and its kind"), Field(Lookup(TEXT("{\"name\":\"Anchor\",\"limit\":5}")), TEXT("text")).Contains(TEXT(" (")));
 
 	// Wire text does not depend on the editor's language: the tooltips are their source's.
 	const FString About = Field(ObjectField(TextData, TEXT("entry")), TEXT("about"));
@@ -969,8 +973,11 @@ bool FDreamMCPLayoutGoldenTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("its rows say what places them"), Field(FindTreeNode(Tree, TEXT("Root/Column/RowA")), TEXT("placedBy")), FString(TEXT("VerticalBox")));
 	TestTrue(TEXT("every node has its line"), Number(FindTreeNode(Tree, TEXT("Root/Panel")), TEXT("line")) > 0);
 	const FString Summary = Field(Laid, TEXT("summary"));
-	TestTrue(TEXT("the summary carries the tree, a node a line"), Summary.Contains(TEXT("Image Panel  x=760 y=440 w=400 h=200")));
-	TestTrue(TEXT("children indented under their parent"), Summary.Contains(TEXT("\n    Image RowA  x=1640 y=20 w=260 h=4")));
+	TestFalse(TEXT("the summary is one line"), Summary.Contains(TEXT("\n")));
+	TestTrue(TEXT("and names the file and the viewport"), Summary.Contains(TEXT("at 1920x1080")));
+	const FString Text = Field(Laid, TEXT("text"));
+	TestTrue(TEXT("the text carries the tree, a node a line"), Text.Contains(TEXT("Image Panel  x=760 y=440 w=400 h=200")));
+	TestTrue(TEXT("children indented under their parent"), Text.Contains(TEXT("\n    Image RowA  x=1640 y=20 w=260 h=4")));
 
 	// Another viewport: the same file follows its anchors.
 	const TSharedPtr<FJsonObject> Small = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("layout"),
