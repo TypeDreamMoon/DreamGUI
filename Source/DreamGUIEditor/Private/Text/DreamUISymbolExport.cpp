@@ -37,6 +37,18 @@ namespace DreamUISymbolExportLocal
 {
 	FDelegateHandle GStartupHandle;
 
+	/**
+	 * The tooltips as their source wrote them (the ToolTip metadata, English), rather than translated into the editor's
+	 * language: BuildSymbols(true), for a reader whose answer must not depend on how the editor is set up.
+	 */
+	bool GInvariantTooltips = false;
+
+	template <typename T>
+	FString TooltipOf(const T* InField)
+	{
+		return GInvariantTooltips ? InField->GetMetaData(TEXT("ToolTip")) : InField->GetToolTipText().ToString();
+	}
+
 	FAutoConsoleCommand GExportCommand(
 		TEXT("DreamUI.ExportSymbols"),
 		TEXT("Rewrites DUI/.dui-symbols.json, the completion data the VSCode extension reads."),
@@ -126,7 +138,7 @@ namespace DreamUISymbolExportLocal
 			TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 			Entry->SetStringField(TEXT("name"), Path);
 			Entry->SetStringField(TEXT("type"), Leaf->GetCPPType());
-			const FString Tooltip = Leaf->GetToolTipText().ToString();
+			const FString Tooltip = TooltipOf(Leaf);
 			if (!Tooltip.IsEmpty())
 			{
 				Entry->SetStringField(TEXT("tooltip"), Tooltip);
@@ -339,7 +351,7 @@ namespace DreamUISymbolExportLocal
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("name"), TEXT("Shown"));
 		Entry->SetStringField(TEXT("type"), Shown->GetCPPType());
-		const FString Tooltip = Shown->GetToolTipText().ToString();
+		const FString Tooltip = TooltipOf(Shown);
 		if (!Tooltip.IsEmpty())
 		{
 			Entry->SetStringField(TEXT("tooltip"), Tooltip);
@@ -536,7 +548,7 @@ namespace DreamUISymbolExportLocal
 			Member->SetStringField(TEXT("type"), DescribePinType(Property));
 			Member->SetBoolField(TEXT("fieldNotify"), DreamUIBindingPath::FindFieldId(InClass, Property->GetFName()).IsValid());
 			Member->SetBoolField(TEXT("writable"), !Property->HasAnyPropertyFlags(CPF_BlueprintReadOnly) || HasOneValueSetter(InClass, Name));
-			const FString Tooltip = Property->GetToolTipText().ToString();
+			const FString Tooltip = TooltipOf(Property);
 			if (!Tooltip.IsEmpty())
 			{
 				Member->SetStringField(TEXT("tooltip"), Tooltip);
@@ -578,7 +590,7 @@ namespace DreamUISymbolExportLocal
 				Params.Add(MakeShared<FJsonValueObject>(Param));
 			}
 			Member->SetArrayField(TEXT("params"), Params);
-			const FString Tooltip = Function->GetToolTipText().ToString();
+			const FString Tooltip = TooltipOf(Function);
 			if (!Tooltip.IsEmpty())
 			{
 				Member->SetStringField(TEXT("tooltip"), Tooltip);
@@ -633,7 +645,7 @@ TSharedRef<FJsonObject> FDreamUISymbolExport::DescribeViewModels()
 		const UClass* Class = Entry.Value;
 		TSharedPtr<FJsonObject> Described = MakeShared<FJsonObject>();
 		Described->SetStringField(TEXT("class"), Class->GetPathName());
-		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		const FString ClassTooltip = TooltipOf(Class);
 		if (!ClassTooltip.IsEmpty())
 		{
 			Described->SetStringField(TEXT("tooltip"), ClassTooltip);
@@ -669,8 +681,6 @@ void FDreamUISymbolExport::Unregister()
 
 FString FDreamUISymbolExport::ExportNow()
 {
-	using namespace DreamUISymbolExportLocal;
-
 	const FString Directory = FPaths::ConvertRelativePathToFull(
 		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
 	if (!IFileManager::Get().DirectoryExists(*Directory))
@@ -678,7 +688,41 @@ FString FDreamUISymbolExport::ExportNow()
 		return FString();
 	}
 
-	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	const TSharedRef<FJsonObject> Root = BuildSymbols();
+	FString Serialized;
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+	FJsonSerializer::Serialize(Root, Writer);
+
+	const FString FilePath = FPaths::Combine(Directory, TEXT(".dui-symbols.json"));
+
+	// Not rewritten when it would say the same thing. This runs at every editor start, and a file written with
+	// identical bytes is still a change as far as VS Code is concerned: it reloads the symbols and drops what it
+	// has cached, for a process that taught it nothing new. Compared as text, case-sensitively -- FString's own ==
+	// is case-blind, and a symbol that changed only in case is a changed symbol.
+	FString Existing;
+	if (FFileHelper::LoadFileToString(Existing, *FilePath) && Existing.Equals(Serialized, ESearchCase::CaseSensitive))
+	{
+		UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d '%s' is already up to date."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+		return FilePath;
+	}
+	if (!FFileHelper::SaveStringToFile(Serialized, *FilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Could not write '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+		return FString();
+	}
+	UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d Wrote '%s'."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+	return FilePath;
+}
+
+TSharedRef<FJsonObject> FDreamUISymbolExport::BuildSymbols(const bool bInvariantTooltips)
+{
+	using namespace DreamUISymbolExportLocal;
+	TGuardValue<bool> Invariant(GInvariantTooltips, bInvariantTooltips);
+
+	TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 	// 2: `viewModels`, the `viewmodels` keywords, and `singleCastEvents` beside the event lists.
 	Root->SetNumberField(TEXT("version"), 2);
 	TMap<FString, TSharedPtr<FJsonObject>> Enums;
@@ -696,7 +740,7 @@ FString FDreamUISymbolExport::ExportNow()
 		if (Tag.Value != nullptr)
 		{
 			Entry->SetStringField(TEXT("class"), Tag.Value->GetName());
-			const FString ClassTooltip = Tag.Value->GetToolTipText().ToString();
+			const FString ClassTooltip = TooltipOf(Tag.Value);
 			if (!ClassTooltip.IsEmpty())
 			{
 				Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
@@ -725,7 +769,7 @@ FString FDreamUISymbolExport::ExportNow()
 		TSharedPtr<FJsonObject> TagEntry = MakeShared<FJsonObject>();
 		TagEntry->SetStringField(TEXT("kind"), TEXT("widget"));
 		TagEntry->SetStringField(TEXT("class"), Class->GetName());
-		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		const FString ClassTooltip = TooltipOf(Class);
 		if (!ClassTooltip.IsEmpty())
 		{
 			TagEntry->SetStringField(TEXT("tooltip"), ClassTooltip);
@@ -758,7 +802,7 @@ FString FDreamUISymbolExport::ExportNow()
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("kind"), TEXT("container"));
 		Entry->SetStringField(TEXT("class"), Class->GetName());
-		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		const FString ClassTooltip = TooltipOf(Class);
 		if (!ClassTooltip.IsEmpty())
 		{
 			Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
@@ -812,7 +856,7 @@ FString FDreamUISymbolExport::ExportNow()
 		}
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("class"), Class->GetName());
-		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		const FString ClassTooltip = TooltipOf(Class);
 		if (!ClassTooltip.IsEmpty())
 		{
 			Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
@@ -850,31 +894,5 @@ FString FDreamUISymbolExport::ExportNow()
 		PropTypes.Add(MakeShared<FJsonValueString>(Type));
 	}
 	Root->SetArrayField(TEXT("propTypes"), PropTypes);
-
-	FString Serialized;
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-	FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
-
-	const FString FilePath = FPaths::Combine(Directory, TEXT(".dui-symbols.json"));
-
-	// Not rewritten when it would say the same thing. This runs at every editor start, and a file written with
-	// identical bytes is still a change as far as VS Code is concerned: it reloads the symbols and drops what it
-	// has cached, for a process that taught it nothing new. Compared as text, case-sensitively -- FString's own ==
-	// is case-blind, and a symbol that changed only in case is a changed symbol.
-	FString Existing;
-	if (FFileHelper::LoadFileToString(Existing, *FilePath) && Existing.Equals(Serialized, ESearchCase::CaseSensitive))
-	{
-		UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d '%s' is already up to date."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
-		return FilePath;
-	}
-	if (!FFileHelper::SaveStringToFile(Serialized, *FilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
-	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Could not write '%s'."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
-		return FString();
-	}
-	UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d Wrote '%s'."),
-		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
-	return FilePath;
+	return Root;
 }

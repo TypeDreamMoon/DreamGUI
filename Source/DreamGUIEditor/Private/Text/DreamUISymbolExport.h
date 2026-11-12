@@ -30,6 +30,13 @@ public:
 	static FString ExportNow();
 
 	/**
+	 * What the file holds, built now and not written anywhere: for a reader in this process (the DreamMCP endpoint's
+	 * `lookup`), which must answer in a project that has no DUI/ directory yet as well. bInvariantTooltips: each tooltip as
+	 * its source wrote it (English), not as the editor's language shows it.
+	 */
+	static TSharedRef<FJsonObject> BuildSymbols(bool bInvariantTooltips = false);
+
+	/**
 	 * The file's `viewModels` object, on its own: every loaded class a `viewmodels` line can name and what a member path
 	 * can reach on it. Exposed for the tests, which have no DUI/ directory to read the file back from.
 	 */
