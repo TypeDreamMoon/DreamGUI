@@ -305,6 +305,41 @@ namespace DreamGUIMCP
 		return Sentence;
 	}
 
+	FString DescribePreviewFrames(const FPreviewStats& Overall, TConstArrayView<FPreviewStats> PerFrame, TArray<FString>& OutNext)
+	{
+		if (PerFrame.Num() <= 1)
+		{
+			return DescribePreview(PerFrame.Num() == 1 ? PerFrame[0] : Overall, OutNext);
+		}
+		int32 Emptiest = 0;
+		int32 Fullest = 0;
+		for (int32 Index = 1; Index < PerFrame.Num(); ++Index)
+		{
+			if (PerFrame[Index].GetCoverage() < PerFrame[Emptiest].GetCoverage()) { Emptiest = Index; }
+			if (PerFrame[Index].GetCoverage() > PerFrame[Fullest].GetCoverage()) { Fullest = Index; }
+		}
+		const double Low = PerFrame[Emptiest].GetCoverage();
+		const double High = PerFrame[Fullest].GetCoverage();
+		if (High < FThresholds::NearlyEmpty)
+		{
+			OutNext.Add(TEXT("Run layout: it says where each node is and which are hidden, zero-sized or off the screen."));
+			return FString::Printf(TEXT("The screen draws almost nothing in any of its %d frames: at most %s of the viewport is covered"), PerFrame.Num(), *Percent(High));
+		}
+		// The frames together, unless they average out to next to nothing: then the fullest frame speaks for them.
+		TArray<FString> Ignored;
+		FString Sentence = DescribePreview(Overall.GetCoverage() < FThresholds::NearlyEmpty ? PerFrame[Fullest] : Overall, Ignored);
+		if (Sentence.StartsWith(TEXT("It ")))
+		{
+			Sentence[0] = TEXT('i');
+		}
+		Sentence = FString::Printf(TEXT("Over its %d frames %s"), PerFrame.Num(), *Sentence);
+		if (High - Low >= 0.01)
+		{
+			Sentence += FString::Printf(TEXT(" (frame by frame %s to %s covered, least in frame %d, most in frame %d)"), *Percent(Low), *Percent(High), Emptiest + 1, Fullest + 1);
+		}
+		return Sentence;
+	}
+
 	TSharedRef<FJsonObject> PreviewAnimationToJson(const FPreviewAnimation& Animation, TConstArrayView<FPreviewStats> PerFrame,
 		TConstArrayView<double> Times, const double Duration)
 	{

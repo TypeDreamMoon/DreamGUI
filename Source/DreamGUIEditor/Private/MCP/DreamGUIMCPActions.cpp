@@ -1581,7 +1581,7 @@ namespace DreamGUIMCP
 				if (N > 1)
 				{
 					const FPreviewAnimation Analysis = AnalysePreviewAnimation(State->Pictures, State->PerFrame);
-					Sentence = DescribePreview(State->PerFrame[0], Next) + TEXT(". ") + DescribePreviewAnimation(Analysis, State->PerFrame, State->Times, State->Duration, Next);
+					Sentence = DescribePreviewFrames(Overall, State->PerFrame, Next) + TEXT(". ") + DescribePreviewAnimation(Analysis, State->PerFrame, State->Times, State->Duration, Next);
 					Animation = PreviewAnimationToJson(Analysis, State->PerFrame, State->Times, State->Duration);
 				}
 				else

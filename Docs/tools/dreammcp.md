@@ -134,7 +134,9 @@ are the file's: an authored `#1B1E26` reads back as `#1B1E26`. The same frame is
 
 The summary leads with the one fact that matters most: the screen draws almost nothing (under 0.5 % covered), is near black
 (90 % or more), near white (30 % or more), one flat colour, or else its coverage, mean colour and luminance range; then how
-many texts are hard to read (DUI8007), how many layout problems `layout` would report, and the image's path.
+many texts are hard to read (DUI8007), how many layout problems `layout` would report, and the image's path. A strip of
+frames is described by all of them (`Over its 16 frames it covers ...`, with the least and most covered frame), never
+by the first alone.
 
 `background` is what shows behind the screen: `#RRGGBB` (`#1C1E26` by default) or `checker`. A `timeline` block does not
 play by itself: `timeline` names one of the file's to play from its start, looping, once the screen has settled. `time`

@@ -115,4 +115,10 @@ namespace DreamGUIMCP
 
 	/** The one fact about a picture a model should know first, as a sentence without its full stop, and what to do in OutNext. */
 	DREAMGUIEDITOR_API FString DescribePreview(const FPreviewStats& Stats, TArray<FString>& OutNext);
+
+	/**
+	 * The sentence a strip of frames leads with: Overall (the frames' sums together) said as DescribePreview says one
+	 * picture, with how far the coverage ranges over the frames -- never "draws almost nothing" when some frame draws.
+	 */
+	DREAMGUIEDITOR_API FString DescribePreviewFrames(const FPreviewStats& Overall, TConstArrayView<FPreviewStats> PerFrame, TArray<FString>& OutNext);
 }
