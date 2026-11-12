@@ -116,6 +116,12 @@ namespace DreamGUIMCP
 		/** The Kismet compiler's own errors -- not the .dui's, which the mailbox carries -- as diagnostics with no code. */
 		void AppendKismetErrors(TArray<FDiagnostic>& Out, const FCompilerResultsLog& InResults, const FString& InFile, const TArray<FDiagnostic>& InTextDiagnostics)
 		{
+			// The .dui's own errors are reported into the log as well, in the editor's language and without their codes; when
+			// there are any, they are what failed the compile, and the log's copies would only repeat them.
+			if (InTextDiagnostics.ContainsByPredicate([](const FDiagnostic& Known) { return Known.Severity == TEXT("error"); }))
+			{
+				return;
+			}
 			for (const TSharedRef<FTokenizedMessage>& Message : InResults.Messages)
 			{
 				if (Message->GetSeverity() != EMessageSeverity::Error)

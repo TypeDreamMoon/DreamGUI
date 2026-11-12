@@ -103,10 +103,47 @@ namespace DreamGUIMCP
 		};
 		Ordered.StableSort([&Rank](const FDiagnostic& A, const FDiagnostic& B) { return Rank(A) < Rank(B); });
 
-		TArray<TSharedPtr<FJsonValue>> DiagnosticValues;
+		// One entry for the same finding at the same place: a style's error is raised once for every node that uses the
+		// style, and a component's layout problem once for every instance of it. The entry says how often, and where else.
+		TArray<const FDiagnostic*> Unique;
+		TArray<int32> Counts;
+		TArray<TArray<FString>> OtherNodes;
+		TMap<FString, int32> IndexByKey;
 		for (const FDiagnostic* DiagnosticPtr : Ordered)
 		{
 			const FDiagnostic& Diagnostic = *DiagnosticPtr;
+			const FString Key = FString::Printf(TEXT("%s|%s|%s|%d|%d|%s"), *Diagnostic.Code, *Diagnostic.Severity, *Diagnostic.File, Diagnostic.Line, Diagnostic.Column, *Diagnostic.Message);
+			if (const int32* Found = IndexByKey.Find(Key))
+			{
+				++Counts[*Found];
+				if (!Diagnostic.Node.IsEmpty() && Diagnostic.Node != Unique[*Found]->Node)
+				{
+					OtherNodes[*Found].AddUnique(Diagnostic.Node);
+				}
+				continue;
+			}
+			IndexByKey.Add(Key, Unique.Num());
+			Unique.Add(DiagnosticPtr);
+			Counts.Add(1);
+			OtherNodes.AddDefaulted();
+		}
+
+		TArray<TSharedPtr<FJsonValue>> DiagnosticValues;
+		for (int32 UniqueIndex = 0; UniqueIndex < Unique.Num(); ++UniqueIndex)
+		{
+			const FDiagnostic& Diagnostic = *Unique[UniqueIndex];
+			FString Message = Diagnostic.Message;
+			if (OtherNodes[UniqueIndex].Num() > 0)
+			{
+				const TArray<FString>& Others = OtherNodes[UniqueIndex];
+				const int32 Listed = FMath::Min(Others.Num(), 3);
+				Message += FString::Printf(TEXT(" (the same at %s%s)"), *FString::Join(TArrayView<const FString>(Others.GetData(), Listed), TEXT(", ")),
+					Others.Num() > Listed ? *FString::Printf(TEXT(" and %d more"), Others.Num() - Listed) : TEXT(""));
+			}
+			else if (Counts[UniqueIndex] > 1)
+			{
+				Message += FString::Printf(TEXT(" (reported %d times)"), Counts[UniqueIndex]);
+			}
 			TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 			if (!Diagnostic.Code.IsEmpty())
 			{
@@ -122,7 +159,7 @@ namespace DreamGUIMCP
 				Object->SetNumberField(TEXT("line"), Diagnostic.Line);
 				Object->SetNumberField(TEXT("column"), FMath::Max(1, Diagnostic.Column));
 			}
-			Object->SetStringField(TEXT("message"), Diagnostic.Message);
+			Object->SetStringField(TEXT("message"), Message);
 			if (!Diagnostic.Hint.IsEmpty())
 			{
 				Object->SetStringField(TEXT("hint"), Diagnostic.Hint);
