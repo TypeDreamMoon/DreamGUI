@@ -74,6 +74,8 @@ namespace DreamGUIMCP
 		virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 		virtual FString GetReferencerName() const override { return TEXT("DreamGUIMCP::FScreenStage"); }
 
+		/** Out of line with the destructor: the scene is an incomplete type here, and a constructor made where it is unknown cannot unwind its member. */
+		FScreenStage();
 		~FScreenStage();
 
 	private:

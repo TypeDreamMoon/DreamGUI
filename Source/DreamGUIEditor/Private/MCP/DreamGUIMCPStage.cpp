@@ -90,6 +90,8 @@ namespace DreamGUIMCP
 		GStage.Reset();
 	}
 
+	FScreenStage::FScreenStage() = default;
+
 	FScreenStage::~FScreenStage()
 	{
 		Close();
