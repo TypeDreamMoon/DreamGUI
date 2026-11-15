@@ -112,9 +112,20 @@ void UDreamScrollBox::WireParts()
 		// stale offset and snap the content back to the top.
 		ScrollView->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
 	}
+	if (ContentStack != nullptr)
+	{
+		ContentStack->GetOnLayoutCommittedEvent().RemoveAll(this);
+	}
 	ContentStack = ContentNode != nullptr
 		? Cast<UDreamLayoutContainerStackBox>(ContentNode->GetLayoutContainer())
 		: nullptr;
+	if (ContentStack != nullptr)
+	{
+		// Repeated/conditional content, text bindings and slot changes invalidate this layout even
+		// when the viewport is unchanged. Re-take its extent after that layout commits, including
+		// when the last child is removed. No per-frame scan is needed for an unchanged list.
+		ContentStack->GetOnLayoutCommittedEvent().AddUObject(this, &UDreamScrollBox::RefreshContentExtent);
+	}
 	// The one part whose field is TYPED, so the generic list cannot carry it. Bound here, by the
 	// same name the built-in tree gives it, and a template offering something that is not a scroll
 	// bar leaves it null rather than half-bound.
@@ -908,7 +919,12 @@ void UDreamScrollBox::RefreshContentExtent()
 		// layout pass -- which is what lets an extent be re-taken the moment content is added instead
 		// of a frame later. Never below the viewport: a content rect smaller than the window it sits
 		// in has a negative scroll range, which reads as content that slides when it should not.
-		const FVector2f Preferred = ContentStack->GetLayoutPreferredSize();
+		// The content fills the viewport across the scrolling axis. Measure against that same
+		// constraint so wrapping text and nested Fill slots report their arranged height/width,
+		// rather than the size they would need at an old or authored cross-axis extent.
+		const FVector2f Preferred = ContentStack->GetLayoutPreferredSize(
+			bHorizontal ? FDreamMeasureSpec::Undefined() : FDreamMeasureSpec::Exactly(ViewportSize.X),
+			bHorizontal ? FDreamMeasureSpec::Exactly(ViewportSize.Y) : FDreamMeasureSpec::Undefined());
 		if (bHorizontal)
 		{
 			Extent.X = FMath::Max(ViewportSize.X, static_cast<double>(Preferred.X));

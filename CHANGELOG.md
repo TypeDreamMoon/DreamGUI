@@ -529,6 +529,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- Native scroll boxes refresh their range after content layout commits, including dynamic rows, removals and visibility changes. Switching from a long list to a short list no longer retains the old scrollable extent.
+
+- Native scroll boxes measure wrapping content against the viewport's cross-axis size, including nested Fill slots. Scrolling to the end no longer exposes a blank tail calculated from stale or authored widths; horizontal boxes follow the same rule.
+
 - Scope-free scroll-box key tests explicitly select menu input, so a host configured for gameplay outside menus no longer disables their navigation fixture.
 
 - `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.

@@ -1250,6 +1250,7 @@ void UDreamPanelLayoutBase::CalculateLayout()
 			UDreamWidget::MarkLayoutForRebuild(Child);
 		}
 	}
+	OnLayoutCommitted.Broadcast();
 }
 
 FVector2f UDreamPanelLayoutBase::MeasureUnconstrained() const

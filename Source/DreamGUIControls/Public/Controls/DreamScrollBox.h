@@ -545,9 +545,9 @@ public:
 	 * Re-take the content's extent from the stack and tell the behaviour its range moved -- and, when
 	 * that changed whether anything overflows, bring an auto-hiding bar out or put it away.
 	 *
-	 * The counterpart of UUIScrollView::RectRangeChanged, and it exists for the same reason: nothing
-	 * re-measures a scrolled column on its own, because the column's size is not layout output -- it
-	 * is the control's statement of how far there is to scroll.
+	 * The control also calls this after its content layout commits, so dynamic additions, removals,
+	 * visibility and text changes update the range without requiring a viewport resize. Call it
+	 * explicitly when an immediate range is needed before the next layout pass.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	void RefreshContentExtent();

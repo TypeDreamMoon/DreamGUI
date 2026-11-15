@@ -8,6 +8,11 @@ A widget's own `AnchorData` decides its rect — until its parent carries a layo
 `SizeDelta`. A panel is not a separate class here but a sub-object of the widget (`LayoutContainer`), so a widget can be
 laid out one way and drawn another. `bIgnoreLayout` on a child takes it out of its parent's layout.
 
+Native C++ consumers can subscribe to `UDreamPanelLayoutBase::GetOnLayoutCommittedEvent()` to react
+after a dirty panel commits its children, including an empty list. Measurement alone does not emit it.
+The native scroll box uses this event to refresh its extent when dynamic content changes without a
+viewport resize; unchanged layouts need no per-frame scan.
+
 ## Rebuilt along the lines of Blink and Yoga
 
 The layout was rebuilt the way Blink and Yoga do it, on four principles:

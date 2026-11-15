@@ -746,4 +746,103 @@ bool FDreamScrollBoxFocusUpdatedTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxConstrainedContentExtentTest,
+	"DreamGUI.ScrollBox.ContentExtentUsesViewportCrossAxisForNestedFillWrapping",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScrollBoxConstrainedContentExtentTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxParityTestLocal;
+	for (const bool bHorizontal : {false, true})
+	{
+		TDreamTestControl<UDreamScrollBox> Box(MakeBox());
+		Box->SetOrientation(bHorizontal ? EDreamPanelOrientation::Horizontal : EDreamPanelOrientation::Vertical);
+		Box->SetWidth(bHorizontal ? 80.f : 300.f);
+		Box->SetHeight(bHorizontal ? 300.f : 80.f);
+		Box->Style.Padding = FMargin(10.f);
+		Box->ApplyStyle();
+
+		auto MakeChild = [&](UDreamWidget* Parent, float Cross, float Main)
+		{
+			auto* Child = NewObject<UDreamWidget>(Parent);
+			Child->SetWidth(bHorizontal ? Main : Cross);
+			Child->SetHeight(bHorizontal ? Cross : Main);
+			Child->TrySetParent(Parent, false);
+			return Child;
+		};
+		auto* Row = MakeChild(Box->GetContentNode(), 100.f, 100.f);
+		auto* RowLayout = Row->CreateNewLayoutContainer<UDreamLayoutContainerStackBox>();
+		RowLayout->SetOrientation(bHorizontal ? EDreamPanelOrientation::Vertical : EDreamPanelOrientation::Horizontal);
+		MakeChild(Row, 100.f, 30.f);
+		auto* Wrapped = MakeChild(Row, 60.f, 70.f);
+		Wrapped->CreateNewPanelSlot<UDreamPanelSlot>()->SizeRule = EDreamPanelSizeRule::Fill;
+		auto* Wrap = Wrapped->CreateNewLayoutContainer<UDreamLayoutContainerWrapBox>();
+		Wrap->SetOrientation(bHorizontal ? EDreamPanelOrientation::Vertical : EDreamPanelOrientation::Horizontal);
+		for (int32 Index = 0; Index < 4; ++Index) MakeChild(Wrapped, 60.f, 70.f);
+
+		// 300 - 14 gutter - 20 padding - 100 fixed = 166: two items per line, two lines.
+		// The old unconstrained measurement used Wrapped's authored 60 and invented four lines.
+		Box->RefreshContentExtent();
+		const auto Extent = Box->GetScrollView()->GetContentSize();
+		TestEqual(TEXT("Nested Fill wraps at the viewport width/height, preserving padding"),
+			bHorizontal ? Extent.X : Extent.Y, 160.0, .01);
+		Box->ScrollToEnd();
+		TestEqual(TEXT("End offset excludes phantom lines"), Box->GetScrollOffset(), 80.f, .01f);
+
+		// A narrower cross axis really needs four lines. Resizing must remeasure both ways.
+		if (bHorizontal) Box->SetHeight(226.f); else Box->SetWidth(226.f);
+		Box->ApplyStyle();
+		Box->RefreshContentExtent();
+		Box->ScrollToEnd();
+		TestEqual(TEXT("Narrow viewport retains all four real lines and padding"), Box->GetScrollOffset(), 220.f, .01f);
+		if (bHorizontal) Box->SetHeight(300.f); else Box->SetWidth(300.f);
+		Box->ApplyStyle();
+		Box->RefreshContentExtent();
+		Box->ScrollToEnd();
+		TestEqual(TEXT("Widening removes the obsolete tail"), Box->GetScrollOffset(), 80.f, .01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxDynamicContentExtentTest,
+	"DreamGUI.ScrollBox.CommittedDynamicContentUpdatesRangeWithoutViewportResize",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScrollBoxDynamicContentExtentTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxParityTestLocal;
+	TDreamTestControl<UDreamScrollBox> Box(MakeBox());
+	TArray<UDreamWidget*> Rows;
+	for (int32 Index = 0; Index < 3; ++Index)
+	{
+		auto* Row = NewObject<UDreamWidget>(Box->GetContentNode());
+		Row->SetWidth(200.f);
+		Row->SetHeight(100.f);
+		Row->TrySetParent(Box->GetContentNode(), false);
+		Rows.Add(Row);
+	}
+	auto Commit = [&]
+	{
+		Box->ContentStack->MarkLayoutDirty();
+		static_cast<UDreamLayoutContainer*>(Box->ContentStack.Get())->CalculateLayout();
+	};
+	Commit();
+	TestEqual(TEXT("New children expand the range after layout"), Box->GetScrollOffsetOfEnd(), 100.f, .01f);
+	Rows.Last()->SetShown(false);
+	Commit();
+	TestEqual(TEXT("Conditional content shrinks the range"), Box->GetScrollOffsetOfEnd(), 0.f, .01f);
+	Rows.Last()->SetShown(true);
+	Commit();
+	TestEqual(TEXT("Showing content expands the range again"), Box->GetScrollOffsetOfEnd(), 100.f, .01f);
+	Rows.Last()->SetHeight(200.f);
+	Commit();
+	TestEqual(TEXT("Changed content size expands the range"), Box->GetScrollOffsetOfEnd(), 200.f, .01f);
+	for (auto* Row : Rows) Row->DestroyWidget();
+	Commit();
+	TestEqual(TEXT("Removing all children clears the old range"), Box->GetScrollOffsetOfEnd(), 0.f, .01f);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

@@ -130,7 +130,11 @@ public:
 	/** Drop Widget's entries, for a caller that is about to write the widget's geometry mid-pass. */
 	void ForgetDesiredSize(const UDreamWidget* Widget) const;
 
+	/** Raised after a dirty layout commits its children, including an empty result. Not raised for measurement alone. */
+	TMulticastDelegate<void()>& GetOnLayoutCommittedEvent() { return OnLayoutCommitted; }
+
 protected:
+	TMulticastDelegate<void()> OnLayoutCommitted;
 	FVector2f PreferredSize = FVector2f::ZeroVector;
 	virtual void OnUnregister() override;
 	UDreamPanelSlot* EnsureSlot(UDreamWidget* Child) const;
