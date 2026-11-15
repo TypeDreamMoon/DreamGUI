@@ -1228,6 +1228,25 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 		ScreenColorRenderTargetTexture = InTargetOverride.IsValid() ? InTargetOverride : InView.Family->RenderTarget->GetRenderTargetTexture();
 		if (ScreenColorRenderTargetTexture == nullptr)return false;//invalid render target
 
+		if (bIsMainViewport)
+		{
+			Targets.HDROutput=DreamUIHDR::FromTarget(*InView.Family->RenderTarget);
+			if (Targets.HDROutput.IsActive())
+			{
+				Targets.HDROutputTarget=ScreenColorRenderTargetTexture;
+				const auto Size=ScreenColorRenderTargetTexture->GetSizeXY();
+				const auto Desc=FPooledRenderTargetDesc::Create2DDesc(Size,PF_FloatRGBA,FClearValueBinding::Black,
+					TexCreate_None,TexCreate_RenderTargetable|TexCreate_ShaderResource,false);
+				GRenderTargetPool.FindFreeElement(RHICmdList,Desc,Targets.HDRWorkingTarget,TEXT("DreamUI_HDRWorking"));
+				if (!Targets.HDRWorkingTarget.IsValid()) return false;
+				auto Working=GraphBuilder.RegisterExternalTexture(Targets.HDRWorkingTarget,TEXT("DreamUI_HDRWorking"));
+				auto Encoded=RegisterExternalTexture(GraphBuilder,Targets.HDROutputTarget,TEXT("DreamUI_HDROutput"));
+				DreamUIHDR::AddTransferPass(GraphBuilder,GetGlobalShaderMap(InView.GetFeatureLevel()),Encoded,Working,
+					FIntRect(FIntPoint::ZeroValue,Size),Targets.HDROutput,true);
+				ScreenColorRenderTargetTexture=Targets.HDRWorkingTarget->GetRHI();
+			}
+		}
+
 		if (NumSamples > 1)
 		{
 			//get msaa render target, sRGB when the view's target is (MakeMultisampledTargetDesc), which it normally is not
@@ -1302,7 +1321,7 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 	FRDGTextureRef RenderTargetTexture = RegisterExternalTexture(GraphBuilder, ScreenColorRenderTargetTexture, TEXT("DreamUIRendererTargetTexture"));
 	const float EngineGamma = GEngine ? GEngine->GetDisplayGamma() : 2.2f;
 	float GammaValue =
-		(RendererType == EDreamUIRendererType::RenderTarget || !bIsMainViewport) ? 1.0f : EngineGamma;
+		(RendererType == EDreamUIRendererType::RenderTarget || !bIsMainViewport || Targets.HDROutput.IsActive()) ? 1.0f : EngineGamma;
 
 	Targets.bIsMainViewport = bIsMainViewport;
 	Targets.bRenderWireframe = bRenderWireframe;
@@ -2468,6 +2487,13 @@ void FDreamUIRenderer::Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneVie
 		auto Dst = RegisterExternalTexture(GraphBuilder, Targets.OrignScreenColorRenderTargetTexture, TEXT("DreamUIResolveDst"));
 
 		AddResolvePass(GraphBuilder, FRDGTextureMSAA(Src, Dst), Targets.ViewRect, Targets.NumSamples, GetGlobalShaderMap(InView.GetFeatureLevel()));
+	}
+	if (Targets.HDROutput.IsActive())
+	{
+		auto Working=GraphBuilder.RegisterExternalTexture(Targets.HDRWorkingTarget,TEXT("DreamUI_HDRWorking"));
+		auto Output=RegisterExternalTexture(GraphBuilder,Targets.HDROutputTarget,TEXT("DreamUI_HDROutput"));
+		DreamUIHDR::AddTransferPass(GraphBuilder,GetGlobalShaderMap(InView.GetFeatureLevel()),Working,Output,
+			Targets.ViewRect,Targets.HDROutput,false);
 	}
 }
 

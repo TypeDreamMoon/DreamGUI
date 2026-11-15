@@ -11,6 +11,7 @@
 #include "DreamUIRender/DreamUIBlendMode.h"
 #include "DreamUIRender/IDreamUIRendererPrimitive.h"
 #include "DreamUIRender/IDreamUIRendererViewSource.h"
+#include "DreamUIRender/DreamUIHDR.h"
 
 class FDreamUIGizmoMesh;
 struct FDreamUIPostProcessVertex;
@@ -358,6 +359,10 @@ private:
 		FTextureRHIRef OrignScreenColorRenderTargetTexture;
 		FTextureRHIRef ScreenColorRenderTargetTexture;
 		TRefCountPtr<IPooledRenderTarget> MSAARenderTarget;
+		/** HDR scene decoded to linear light before either built-in or material draws blend. */
+		TRefCountPtr<IPooledRenderTarget> HDRWorkingTarget;
+		FTextureRHIRef HDROutputTarget;
+		DreamUIHDR::FOutput HDROutput;
 		uint8 NumSamples = 1;
 		FIntRect ViewRect;
 		FVector4f DepthTextureScaleOffset = FVector4f(1, 1, 0, 0);
@@ -381,6 +386,9 @@ private:
 		, bool bInDrawGizmos, bool bInAllowRenderScale);
 	/** The multisampled target resolved into the one the UI ends up in. */
 	void Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRecordTargets& Targets);
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDreamUIHDRTestAccess;
+#endif
 #if WITH_EDITORONLY_DATA
 private:
 	bool bIsEditorPreview = false;

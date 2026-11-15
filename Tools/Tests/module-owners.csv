@@ -524,3 +524,6 @@ Source/DreamGUI/Public/Utils/MaxRectsBinPack/MaxRectsBinPack.h,DreamGUI,utilitie
 Source/DreamGUI/Public/Utils/sdf/LICENSE.txt,DreamGUI,third-party notice travelling with sdf.h
 Source/DreamGUI/Public/Utils/sdf/README.md,DreamGUI,third-party notice travelling with sdf.h
 Source/DreamGUI/Public/Utils/sdf/sdf.h,DreamGUI,utilities
+Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIHDR.h,DreamGUIRenderer,HDR display transfer
+Source/DreamGUIRenderer/Private/DreamUIRender/DreamUIHDR.cpp,DreamGUIRenderer,HDR display transfer
+Source/DreamGUITests/Private/RHI/DreamHDRPixelAutomationTests.cpp,DreamGUITests,HDR display pixel acceptance

@@ -1,0 +1,27 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Private/TonemapCommon.ush"
+
+Texture2D SourceTexture;
+float PaperWhiteNits;
+
+float4 MainPS(float4 Position : SV_POSITION) : SV_Target0
+{
+    float4 Colour=SourceTexture.Load(int3(int2(Position.xy),0));
+#if DREAMUI_HDR_TO_WORKING
+    #if DREAMUI_HDR_SCRGB
+        Colour.rgb*=UE_SCRGB_WHITE_NITS/PaperWhiteNits;
+    #else
+        const float3x3 Rec2020ToSRGB=mul(XYZ_2_sRGB_MAT,Rec2020_2_XYZ_MAT);
+        Colour.rgb=mul(Rec2020ToSRGB,ST2084ToLinear(saturate(Colour.rgb)))/PaperWhiteNits;
+    #endif
+#else
+    #if DREAMUI_HDR_SCRGB
+        Colour.rgb*=PaperWhiteNits/UE_SCRGB_WHITE_NITS;
+    #else
+        const float3x3 SRGBToRec2020=mul(XYZ_2_Rec2020_MAT,sRGB_2_XYZ_MAT);
+        Colour.rgb=LinearToST2084(max(mul(SRGBToRec2020,Colour.rgb)*PaperWhiteNits,0.0));
+    #endif
+#endif
+    return Colour;
+}

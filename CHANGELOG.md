@@ -13,6 +13,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- HDR display targets composite screen UI in linear light at the display paper white, then encode to PQ/Rec2020 or scRGB. SDR and linear capture targets retain their existing rendering path.
+
 - **DreamMCP.** An AI agent connected through a [DreamMCP](https://github.com/TypeDreamMoon/dream-mcp) server gets a
   `dream_gui` tool: `check`, `compile`, `diagnostics`, `lookup`, `layout`, `preview` and `info` for `.dui` files, answered
   by the user's editor or by a host the server starts (the windowless editor, or `-run=DreamGUIHost` when nothing has to
