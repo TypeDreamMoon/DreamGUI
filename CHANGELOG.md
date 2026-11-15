@@ -529,6 +529,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- Scope-free scroll-box key tests explicitly select menu input, so a host configured for gameplay outside menus no longer disables their navigation fixture.
+
 - `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.
 
 - The DreamMCP preview stage defines its constructor alongside the complete preview-scene type, fixing independent compilation of layout and preview callers that previously instantiated an incomplete-type deleter.

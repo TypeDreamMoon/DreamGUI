@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "Core/DreamGUISettings.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Controls/DreamButton.h"
@@ -140,6 +141,8 @@ REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxDisabledPadTest, "DreamGUI.S
  */
 bool FDreamScrollBoxDisabledPadTest::RunTest(const FString& Parameters)
 {
+	// This fixture has no menu scope. Its UI-key contract must not inherit a host's gameplay-only fallback.
+	TGuardValue<EDreamUIScopeInputMode> InputMode(GetMutableDefault<UDreamGUISettings>()->InputModeWithoutScope, EDreamUIScopeInputMode::All);
 	using namespace DreamScrollBoxConfigTestLocal;
 	using namespace DreamControlsConfigTest;
 	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize());
@@ -260,6 +263,8 @@ REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxScaledPadTest, "DreamGUI.Scr
  */
 bool FDreamScrollBoxScaledPadTest::RunTest(const FString& Parameters)
 {
+	// This fixture has no menu scope. Its UI-key contract must not inherit a host's gameplay-only fallback.
+	TGuardValue<EDreamUIScopeInputMode> InputMode(GetMutableDefault<UDreamGUISettings>()->InputModeWithoutScope, EDreamUIScopeInputMode::All);
 	using namespace DreamScrollBoxConfigTestLocal;
 	using namespace DreamControlsConfigTest;
 	FFocusDrawnByKeys Settings;
