@@ -13,6 +13,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- Navigation indicators expose `GetAnimDuration` / `SetAnimDuration`. Zero snaps native focus movement and fades immediately, including an in-progress transition, for host accessibility policies.
+
 - `UUITextInput::GetOnInputActivateEvent()` exposes the existing begin/end-edit notification to native consumers, alongside the text-change and submit delegates.
 
 - **DreamMCP.** An AI agent connected through a [DreamMCP](https://github.com/TypeDreamMoon/dream-mcp) server gets a

@@ -204,6 +204,13 @@ navigation press looks only at the player's own screen-space canvases.
   a pad and comes back on the mouse or the keyboard (`bHideCursorOnGamepad`); elsewhere DreamGUI leaves the cursor alone.
   `bAutoVirtualCursorOnGamepad` (off by default) shows a virtual cursor whenever the physical device is a gamepad.
 
+The native focus indicator exposes `UUINavigationInputSelectionHandler::SetAnimDuration` and `GetAnimDuration`.
+Use `FindFor(Widget)` to find the current indicator. Setting its duration to zero finishes an active movement or fade
+immediately and makes subsequent selections snap, preserving the visible focus outline. Negative and non-finite
+durations become zero. Restore the previous duration when a temporary accessibility policy ends. A newly created
+indicator starts with its authored duration; apply the policy to replacements too. Blueprint handlers overriding the
+selection events remain responsible for their own animations.
+
 ## Popups, modals, tooltips, drag and drop
 
 **The popup layer** (`UDreamUIPopupLayer`) is one per player. A popup — a dropdown's list, a menu — stays the widget it

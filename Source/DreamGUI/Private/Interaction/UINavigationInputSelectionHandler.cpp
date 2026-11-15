@@ -190,6 +190,7 @@ void UUINavigationInputSelectionHandler::MakeRingInert(UDreamWidget* InRingWidge
 
 UDreamTweener* UUINavigationInputSelectionHandler::FadeCursorTo(UDreamWidget* InWidget, float InOpacity)
 {
+	if (AnimDuration <= 0.0f) { InWidget->SetRenderOpacity(InOpacity); return nullptr; }
 	UDreamTweener* Tweener = InWidget->RenderOpacityTo(InOpacity, AnimDuration, 0, EDreamTweenEase::Linear);
 	if (Tweener != nullptr)
 	{
@@ -208,6 +209,11 @@ UDreamTweener* UUINavigationInputSelectionHandler::FadeCursorTo(UDreamWidget* In
 
 void UUINavigationInputSelectionHandler::MoveCursorTo(UDreamWidget* InWidget, const FVector& InLocation, const FVector2D& InSize)
 {
+	if (AnimDuration <= 0.0f)
+	{
+		InWidget->SetRelativeLocation(InLocation); InWidget->SetSizeDelta(InSize);
+		InWidget->SetRelativeRotation(FQuat::Identity); return;
+	}
 	if (UDreamTweener* PositionTween = InWidget->LocalPositionTo(InLocation, AnimDuration, 0, EDreamTweenEase::InOutSine))
 	{
 		TweenerCollection.Add(PositionTween);
@@ -269,6 +275,22 @@ FVector UUINavigationInputSelectionHandler::RingLocationOver(const UDreamWidget*
 	// child's place through the same layout transforms).
 	const FVector CentreInWorld = InSelected->GetLayoutWorldTransform().TransformPosition(CentreOnSelected);
 	return InRingParent->GetLayoutWorldTransform().InverseTransformPosition(CentreInWorld);
+}
+
+void UUINavigationInputSelectionHandler::SetAnimDuration(float Value)
+{
+	const float Duration=FMath::IsFinite(Value) ? FMath::Max(Value,0.0f) : 0.0f;
+	if (AnimDuration==Duration) return;
+	AnimDuration=Duration;
+	if (Duration>0.0f || bCanExecuteBlueprintEvent) return;
+	if (CurrentSelected.IsValid()) { SelectWidget(CurrentSelected.Get()); return; }
+	// Finish an already retiring ring instead of cancelling the fade and stranding its picture.
+	if (!TweenerCollection.IsEmpty())
+	{
+		for (auto& Tween:TweenerCollection) UDreamTweenBPLibrary::KillIfIsTweening(this,Tween.Get());
+		TweenerCollection.Reset();
+		if (auto* Widget=GetWidget()) Widget->DestroyWidget();
+	}
 }
 
 void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
