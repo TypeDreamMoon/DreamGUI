@@ -101,6 +101,10 @@ text update the range even while the viewport stays the same size.
 
 ## Placing a control from .dui
 
+Native consumers of a text field's `UUITextInput` can subscribe to `GetOnInputActivateEvent()` to
+observe begin/end-edit alongside `GetOnValueChangedEvent()` and `GetOnSubmitEvent()`. The activation
+event carries `true` when editing begins and `false` when it ends.
+
 In a `.dui` a control is a node typed by its **registry tag**: `Scope.Name`, with the plugin's controls
 under `Native`.
 

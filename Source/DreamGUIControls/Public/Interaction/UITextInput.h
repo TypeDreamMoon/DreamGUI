@@ -368,6 +368,8 @@ public:
 	/** The C++ halves of the events, the accessors every sibling behaviour already has. */
 	FDreamUIMulticastDelegateString& GetOnValueChangedEvent() { return OnValueChangedCPP; }
 	FDreamUIMulticastDelegateString& GetOnSubmitEvent() { return OnSubmitCPP; }
+	/** Native begin/end-edit notification, matching OnInputActivateBP. */
+	FDreamUIMulticastDelegateBool& GetOnInputActivateEvent() { return OnInputActivateCPP; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		class UDreamText* GetTextComponent()const;
