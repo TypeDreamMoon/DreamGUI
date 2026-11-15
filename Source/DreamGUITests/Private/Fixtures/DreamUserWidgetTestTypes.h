@@ -8,6 +8,19 @@
 
 class UDreamWidget;
 
+/** A temporary interaction that cancels ticking when its screen disappears. */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUserWidgetDisableTickFixture : public UDreamUserWidget
+{
+	GENERATED_BODY()
+public:
+	virtual void NativeOnDisable() override
+	{
+		SetWantsTick(false);
+		Super::NativeOnDisable();
+	}
+};
+
 /**
  * Native stand-in for what the compiler will generate: a user widget class whose properties are named
  * after the widgets in its template.

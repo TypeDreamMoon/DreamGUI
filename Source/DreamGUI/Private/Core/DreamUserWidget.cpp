@@ -1182,10 +1182,12 @@ UDreamUserWidget* UDreamUserWidgetEventBridge::GetUserWidget() const
 void UDreamUserWidgetEventBridge::SyncTickEnabled(bool bValue)
 {
 	bStartWithTickEnabled = bValue;
-	if (bIsEnableCalled)
+	if (bIsEnableCalled || bForwardingDisable)
 	{
 		// Enabled: the standard door, which adds to or removes from the manager's tick list once
 		// Start has run and leaves the flag for the start pass to read when it has not.
+		// Call_OnDisable lowers bIsEnableCalled BEFORE forwarding NativeOnDisable, but removes
+		// its tick registration AFTER it. Opting out inside that callback must still detach it.
 		SetCanExecuteTick(bValue);
 	}
 	else
@@ -1234,6 +1236,7 @@ void UDreamUserWidgetEventBridge::Tick(float DeltaTime)
 
 void UDreamUserWidgetEventBridge::OnDisable()
 {
+	TGuardValue<bool> DisableGuard(bForwardingDisable, true);
 	Super::OnDisable();
 	if (UDreamUserWidget* UserWidget = GetUserWidget())
 	{

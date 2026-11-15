@@ -80,6 +80,10 @@ default answer), where UMG's return an `FReply`. Overriders call `Super` and ret
 | `NativeOnDrop` / `NativeOnDragCancelled` | the same names |
 | `NativeOnTouchGesture` | `NativeOnPointerPinch` and `NativeOnPointerSwipe` |
 | `NativeOnKeyDown` / `NativeOnKeyUp` / `NativeOnKeyChar` / `NativeOnAnalogValueChanged` | the same names, with a `UDreamKeyEventData` |
+
+Call `SetWantsTick(false)` to cancel a temporary interaction, including from `NativeOnDisable`.
+Opting out during that callback removes the manager registration immediately; it does not leave a
+disabled widget ticking or revive the cancelled interaction when the widget becomes active again.
 | `NativeOnFocusReceived` / `NativeOnFocusLost` | the same names, with the user and pointer index (return void) |
 | `NativeOnNavigation` | `NativeOnNavigate(Direction, OutNextWidget)` |
 

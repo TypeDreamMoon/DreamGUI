@@ -529,6 +529,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.
+
 - The DreamMCP preview stage defines its constructor alongside the complete preview-scene type, fixing independent compilation of layout and preview callers that previously instantiated an incomplete-type deleter.
 
 - **Building a screen whose component is not compiled yet leaves nothing behind.** It tried to load the component's

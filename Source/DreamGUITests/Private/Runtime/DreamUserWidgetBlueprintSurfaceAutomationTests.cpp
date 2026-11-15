@@ -18,6 +18,7 @@
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Interaction/UIEventTrigger.h"
 #include "DreamScopedWorld.h"
+#include "DreamUserWidgetTestTypes.h"
 
 #include "Driver/DreamDriver.h"
 #include "Driver/DreamDriverLocators.h"
@@ -383,6 +384,40 @@ bool FDreamUserWidgetTickOptInTest::RunTest(const FString& Parameters)
 	Manager->TickDreamUI(0.016f);
 	TestEqual(TEXT("opting back in resumes ticking"), TickingBridge->TickForwardCount, 3);
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUserWidgetDisableTickTest,
+	"DreamGUI.UserWidget.BlueprintSurface.OptingOutInsideDisableRemovesTheManagerTick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUserWidgetDisableTickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUserWidgetBlueprintSurfaceTestLocal;
+	FScopedGameWorld Scope;
+	auto* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
+	auto* Widget = NewObject<UDreamUserWidgetDisableTickFixture>(Scope.World);
+	Widget->Initialize();
+	Widget->OnRegister();
+	Widget->SetWantsTick(true);
+	Widget->BeginPlay();
+	auto* Bridge = Widget->GetComponent<UDreamUserWidgetEventBridge>();
+	if (!TestNotNull(TEXT("Tick bridge exists"), Bridge)) return false;
+	Manager->TickDreamUI(.016f);
+	TestEqual(TEXT("Interaction starts ticking"), Bridge->TickForwardCount, 1);
+	Widget->SetWidgetActive(false);
+	TestFalse(TEXT("NativeOnDisable opts out"), Widget->GetWantsTick());
+	Manager->TickDreamUI(.016f);
+	TestEqual(TEXT("No manager tick after opting out inside disable"), Bridge->TickForwardCount, 1);
+	Widget->SetWidgetActive(true);
+	Manager->TickDreamUI(.016f);
+	TestEqual(TEXT("Re-enabling does not revive a cancelled interaction"), Bridge->TickForwardCount, 1);
+	Widget->SetWantsTick(true);
+	Manager->TickDreamUI(.016f);
+	TestEqual(TEXT("A new interaction registers exactly once"), Bridge->TickForwardCount, 2);
+	Widget->DestroyWidget();
+	Manager->TickDreamUI(.016f);
 	return true;
 }
 
