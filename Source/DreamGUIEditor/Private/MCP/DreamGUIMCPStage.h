@@ -37,6 +37,7 @@ namespace DreamGUIMCP
 	class DREAMGUIEDITOR_API FScreenStage : public FGCObject
 	{
 	public:
+		FScreenStage();
 		/** The one stage of the process; its world is made on first use and kept. */
 		static FScreenStage& Get();
 		/** Takes the world down (module shutdown). */

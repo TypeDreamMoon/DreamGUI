@@ -72,6 +72,9 @@ namespace DreamGUIMCP
 		}
 	}
 
+	// Constructor cleanup also instantiates Scene's deleter; keep it beside the complete preview-scene type.
+	FScreenStage::FScreenStage() = default;
+
 	FScreenStage& FScreenStage::Get()
 	{
 		if (!GStage.IsValid())
