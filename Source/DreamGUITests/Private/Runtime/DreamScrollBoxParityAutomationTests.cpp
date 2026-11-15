@@ -845,4 +845,33 @@ bool FDreamScrollBoxDynamicContentExtentTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxCachedViewportResizeTest,
+	"DreamGUI.ScrollBox.ResizingWithCachedViewportUpdatesContentWithoutInput",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScrollBoxCachedViewportResizeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxParityTestLocal;
+	for (const bool bHorizontal : {false, true})
+	{
+		TDreamTestControl<UDreamScrollBox> Box(MakeBox());
+		if (bHorizontal) Box->SetOrientation(EDreamPanelOrientation::Horizontal);
+		FillBox(*Box, 1000.f);
+		UDreamWidget* Viewport = Box->GetContentNode()->GetParent();
+		for (float Size : {600.f, 180.f, 420.f})
+		{
+			// A rendered viewport has cached its resolved size. Reading it before
+			// the outer box's children are invalidated must not determine the new extent.
+			const FVector2D Previous = Viewport->GetSize();
+			if (bHorizontal) Box->SetHeight(Size); else Box->SetWidth(Size);
+			const float Actual = bHorizontal ? Box->GetContentNode()->GetHeight() : Box->GetContentNode()->GetWidth();
+			const float Expected = bHorizontal ? Viewport->GetHeight() : Viewport->GetWidth();
+			TestEqual(TEXT("Content fills the resized viewport without style push, input or a manual extent refresh"), Actual, Expected, .01f);
+			TestFalse(TEXT("The test changed the cross-axis size"), Viewport->GetSize().Equals(Previous));
+		}
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

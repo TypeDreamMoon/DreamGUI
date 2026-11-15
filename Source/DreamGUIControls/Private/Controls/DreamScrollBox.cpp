@@ -88,11 +88,14 @@ void UDreamScrollBox::RealizeBuiltIn()
 
 void UDreamScrollBox::WireParts()
 {
-	// A resize changes the viewport, and the content's extent is measured against it. It no longer
-	// has to re-publish anchors to make the stretched children agree: a parent's resolved size
-	// invalidates its anchor-driven children at the source now (UDreamWidget::SetWidth), which
-	// retired the per-frame watch this control kept -- and the designer oscillation with it.
-	GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
+	// Dimension notifications precede propagation to children. At the outer box's notification
+	// its stretched viewport may still have its previous size cached. Measure when the viewport
+	// itself has been invalidated instead: the point-anchored content cannot follow it by anchors.
+	if (ViewportNode != nullptr)
+	{
+		ViewportNode->GetDimensionChangedEvent().RemoveAll(this);
+		ViewportNode->GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
+	}
 
 	ScrollView = EnsureComponent<UUIScrollView>(ViewportNode);
 	if (ScrollView != nullptr)

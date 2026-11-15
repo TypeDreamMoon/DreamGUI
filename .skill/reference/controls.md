@@ -98,6 +98,9 @@ the scrolling axis. Wrapping text and nested Fill slots therefore contribute the
 they need in that viewport. Resizing and committed content layout changes remeasure the extent;
 authored content padding remains scrollable. Repeated and conditional rows, removals and changing
 text update the range even while the viewport stays the same size.
+The content extent follows the inner viewport's size notification, after its cached dimensions
+have been invalidated. Window and parent-layout resizes therefore update the content's cross-axis
+size without another click, a style reapplication, or a manual `RefreshContentExtent` call.
 
 ## Placing a control from .dui
 
