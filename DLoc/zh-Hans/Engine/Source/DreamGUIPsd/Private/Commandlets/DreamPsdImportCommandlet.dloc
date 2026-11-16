@@ -14,4 +14,6 @@ namespace UObjectToolTips
 DreamPsdImportCommandlet {
     at    Source/DreamGUIPsd/Private/Commandlets/DreamPsdImportCommandlet.h#DreamPsdImportCommandlet
     src   "Imports a layered document without opening the editor:\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -Psd=<file> [-Folder=/Game/UI] [-Name=<name>] [-Dui=<file>]\n      [-NoBlueprint] [-NoSave] [-DryRun] [-Dump] [-Report=<file>]\n\n-Dump prints the document as the reader sees it (every layer, its kind, blocks and masks) and imports nothing.\n-Report writes the import's report to a file. Exit code 0 when the import succeeded.\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -WriteSample=<file>\n\nwrites an original sample document that exercises what the importer maps, to try it on."
+    text  "不开编辑器导入一份分层文档：\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -Psd=<file> [-Folder=/Game/UI] [-Name=<name>] [-Dui=<file>]\n      [-NoBlueprint] [-NoSave] [-DryRun] [-Dump] [-Report=<file>]\n\n-Dump 按读取器的视角打印这份文档（每一层、它的类型、块与遮罩），不做任何导入。\n-Report 把导入报告写进文件。导入成功时退出码为 0。\n\n  UnrealEditor-Cmd.exe <project> -run=DreamPsdImport -WriteSample=<file>\n\n写出一个原创的样例文档，覆盖导入器映射的各种情况，方便拿它试。"
+    state draft
 }

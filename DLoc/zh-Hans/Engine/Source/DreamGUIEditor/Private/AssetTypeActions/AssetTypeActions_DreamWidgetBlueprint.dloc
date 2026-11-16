@@ -40,6 +40,8 @@ ConvertToText {
 ConvertToTextTooltip {
     at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.cpp
     src   "Write each selected Blueprint's hierarchy, bindings and routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first; a backup of the asset (<Name>_PreDui) is made before anything changes."
+    text  "把每个选中的蓝图的层级、绑定和路由写进 DUI/ 下新建的 .dui，并从今以后由它构建这个类。\n文件装不下的东西会先列出来；改动之前会先做一份资产备份（<Name>_PreDui）。"
+    state draft
 }
 
 NewChildBlueprint {

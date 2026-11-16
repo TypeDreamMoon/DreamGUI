@@ -2157,6 +2157,8 @@ DreamUIBPLibrary:BeginDeferredCreateDreamWidget {
 DreamUIBPLibrary:ConstructWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget
     src   "Make a widget that exists but is not on screen -- the counterpart of UMG's\nWidgetTree::ConstructWidget<T>(). It draws nothing and its behaviours do not run until you\nhand it to AddChild or AddToViewport; until then it is held by the DreamUI manager, so it will\nnot be collected out from under you while you configure it.\n\nVisualClass is what the widget looks like (DreamImage, DreamText, ...). Leave it null for a bare\nwidget, which is what a pure container is. Give it a layout container afterwards to make it a\npanel -- in this fork \"panel\" is a subobject, not a separate class."
+    text  "创建一个已经存在、但还不在屏幕上的控件——对应 UMG 的\nWidgetTree::ConstructWidget<T>()。它什么都不画，它的行为在你把它交给 AddChild 或 AddToViewport 之前\n也不会运行；在那之前它由 DreamUI 管理器持有，所以在你配置它的过程中不会被回收。\n\nVisualClass 决定控件长什么样（DreamImage、DreamText……）。纯容器就把它留空，得到一个\n裸控件。之后给它一个布局容器，它就变成面板——在这个分叉里\"panel\"是一个子对象，不是单独的类。"
+    state draft
 }
 
 DreamUIBPLibrary:CreateDreamWidgetOfClass {

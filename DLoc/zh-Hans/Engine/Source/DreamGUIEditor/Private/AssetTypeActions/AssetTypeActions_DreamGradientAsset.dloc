@@ -12,6 +12,8 @@ CopyAsCss {
 CopyAsCss_ToolTip {
     at    Source/DreamGUIEditor/Private/AssetTypeActions/AssetTypeActions_DreamGradientAsset.cpp
     src   "Copy the gradient as CSS, the way a .dui file, a project gradient preset or a rich text's <gradient=...> writes it."
+    text  "把这个渐变按 CSS 复制出来，写法与 .dui 文件、项目渐变预设或富文本的 <gradient=...> 一致。"
+    state draft
 }
 
 Name {

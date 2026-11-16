@@ -741,6 +741,8 @@ DreamGUISettings:ExtentKeys {
 DreamGUISettings:GradientPresets {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:GradientPresets
     src   "Gradients a rich text's `<gradient=Name>` finds by name, written as CSS (FDreamGradient::ParseCss), e.g. Gold =\n\"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)\". Looked up after the text's custom style entries and before\nthe name itself is read as CSS; the editor's gradient picker offers them beside the gradient assets."
+    text  "富文本的 `<gradient=Name>` 按名字找到的渐变，用 CSS 书写（FDreamGradient::ParseCss），例如 Gold =\n\"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)\"。查找在文本的自定义样式条目之后、\n在该名字本身被当作 CSS 读取之前进行；编辑器的渐变选择器会在渐变资产旁列出它们。"
+    state draft
 }
 
 DreamGUISettings:InputModeWithoutScope {

@@ -946,6 +946,8 @@ DreamUIText_Emoji:Sequence {
 DreamUIText_RichTextCustomTag:bHyperlink {
     at    Source/DreamGUI/Public/Core/DreamUITextData.h#DreamUIText_RichTextCustomTag:bHyperlink
     src   "This range came from `<a=Id>` rather than `<Id>`: it is a hyperlink, and TagName is its id.\nUDreamText::FindHyperlinkByWorldPosition hit-tests these, and nothing else about them differs --\na link is still a named character range, so a custom style and TextAnimation reach it as usual."
+    text  "这个范围来自 `<a=Id>` 而不是 `<Id>`：它是一个超链接，TagName 就是它的 id。\nUDreamText::FindHyperlinkByWorldPosition 对它们做命中测试，除此之外别无不同——\n链接仍然是一个有名字的字符范围，所以自定义样式和 TextAnimation 照常作用到它。"
+    state draft
 }
 
 DreamUIText_RichTextCustomTag:CharIndexEnd {
