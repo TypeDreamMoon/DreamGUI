@@ -33,6 +33,8 @@ DreamUIControlsGalleryPanel:GalleryClickTotal {
 DreamUIControlsGalleryPanel:GetClickTotalText {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetClickTotalText
     src   "Get Click Total Text"
+    text  "获取点击总文本"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue {
@@ -46,6 +48,8 @@ DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue {
 DreamUIControlsGalleryPanel:GetEventLogText {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetEventLogText
     src   "Get Event Log Text"
+    text  "获取事件日志文本"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:GetEventLogText:ReturnValue {
@@ -95,6 +99,8 @@ DreamUIControlsGalleryPanel:OnGalleryButton {
 DreamUIControlsGalleryPanel:OnGalleryChipDropped {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryChipDropped
     src   "On Gallery Chip Dropped"
+    text  "画廊碎片放下时"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:OnGalleryChipDropped:InOperation {
@@ -108,6 +114,8 @@ DreamUIControlsGalleryPanel:OnGalleryChipDropped:InOperation {
 DreamUIControlsGalleryPanel:OnGallerySecondButton {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGallerySecondButton
     src   "On Gallery Second Button"
+    text  "画廊第二按钮时"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:OnGalleryToggle {
@@ -128,6 +136,8 @@ DreamUIControlsGalleryPanel:OnGalleryToggle:InValue {
 DreamUIControlsGalleryPanel:OnGalleryWheelPick {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryWheelPick
     src   "On Gallery Wheel Pick"
+    text  "画廊滚轮选择时"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:OnGalleryWheelPick:InIndex {

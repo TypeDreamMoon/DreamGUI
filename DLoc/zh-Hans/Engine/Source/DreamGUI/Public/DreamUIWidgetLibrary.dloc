@@ -12,6 +12,8 @@ DreamUIWidgetLibrary {
 DreamUIWidgetLibrary:BeginDragWithOperation {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:BeginDragWithOperation
     src   "Begin Drag with Operation"
+    text  "用操作开始拖拽"
+    state machine
 }
 
 DreamUIWidgetLibrary:BeginDragWithOperation:InOperation {
@@ -111,6 +113,8 @@ DreamUIWidgetLibrary:DismissAllMenus:WorldContextObject {
 DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush
     src   "Equal (Dream UI Image Brush)"
+    text  "相等（DreamUI 图像笔刷）"
+    state machine
 }
 
 DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush:A {

@@ -580,6 +580,8 @@ DreamGUISettings:bAutoVirtualCursorOnGamepad {
 DreamGUISettings:bEnableDreamMCPEndpoint {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
     src   "Let an AI agent connected through DreamMCP use this editor: check, compile, lay out and preview .dui screens through\na local endpoint (127.0.0.1 only, with a token). Read when the editor starts. Hosts DreamMCP starts itself ignore it."
+    text  "允许通过 DreamMCP 连接的 AI 代理使用这个编辑器：经由本地端点检查、编译、布局并预览 `.dui` 界面\n（仅 127.0.0.1，带令牌）。编辑器启动时读取。DreamMCP 自己启动的宿主会忽略它。"
+    state machine
 }
 
 DreamGUISettings:bFieldTextCorrection {

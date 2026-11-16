@@ -274,6 +274,8 @@ DreamTabView:SetActiveTabIndex:InIndex {
 DreamTabView:SetActiveTabIndexWithoutNotify {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndexWithoutNotify
     src   "Set Active Tab Index Without Notify"
+    text  "设置活动标签索引（不通知）"
+    state machine
 }
 
 DreamTabView:SetActiveTabIndexWithoutNotify:InIndex {
@@ -340,6 +342,8 @@ DreamTabView:SetTabEnabled:InIndex {
 DreamTabView:SetTabEnabledStates {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabledStates
     src   "Set Tab Enabled States"
+    text  "设置标签启用状态"
+    state machine
 }
 
 DreamTabView:SetTabEnabledStates:InTabEnabled {

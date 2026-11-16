@@ -12,6 +12,8 @@ DreamPointerDoubleClickInterface {
 DreamPointerDoubleClickInterface:OnPointerDoubleClick {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick
     src   "On Pointer Double Click"
+    text  "指针双击时"
+    state machine
 }
 
 DreamPointerDoubleClickInterface:OnPointerDoubleClick:EventData {

@@ -521,6 +521,8 @@ UIScrollView:CanScrollInSmallSize {
 UIScrollView:CanScrollOnAxis {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollOnAxis
     src   "Can Scroll on Axis"
+    text  "能否沿轴滚动"
+    state machine
 }
 
 UIScrollView:CanScrollOnAxis:bInHorizontalAxis {
@@ -541,6 +543,8 @@ UIScrollView:CanScrollOnAxis:ReturnValue {
 UIScrollView:CanScrollWidgetIntoView {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:CanScrollWidgetIntoView
     src   "Can Scroll Widget Into View"
+    text  "能否把控件滚动到可见"
+    state machine
 }
 
 UIScrollView:CanScrollWidgetIntoView:InChild {
@@ -857,6 +861,8 @@ UIScrollView:GetFrontPadScrolling:ReturnValue {
 UIScrollView:GetGamepadScrollingEnabled {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetGamepadScrollingEnabled
     src   "Get Gamepad Scrolling Enabled"
+    text  "获取手柄滚动是否启用"
+    state machine
 }
 
 UIScrollView:GetGamepadScrollingEnabled:ReturnValue {
@@ -992,6 +998,8 @@ UIScrollView:GetOverscrollPercentage:ReturnValue {
 UIScrollView:GetPointerScrollingEnabled {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GetPointerScrollingEnabled
     src   "Get Pointer Scrolling Enabled"
+    text  "获取指针滚动是否启用"
+    state machine
 }
 
 UIScrollView:GetPointerScrollingEnabled:ReturnValue {
@@ -1203,6 +1211,8 @@ UIScrollView:GetWheelScrollMultiplier:ReturnValue {
 UIScrollView:GlideToScrollOffset {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:GlideToScrollOffset
     src   "Glide to Scroll Offset"
+    text  "平滑滚动到偏移"
+    state machine
 }
 
 UIScrollView:GlideToScrollOffset:InDuration {
@@ -1672,6 +1682,8 @@ UIScrollView:SetFrontPadScrolling:value {
 UIScrollView:SetGamepadScrollingEnabled {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetGamepadScrollingEnabled
     src   "Set Gamepad Scrolling Enabled"
+    text  "设置手柄滚动启用"
+    state machine
 }
 
 UIScrollView:SetGamepadScrollingEnabled:value {
@@ -1776,6 +1788,8 @@ UIScrollView:SetOutOfRangeDamper:value {
 UIScrollView:SetPointerScrollingEnabled {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollView.h#UIScrollView:SetPointerScrollingEnabled
     src   "Set Pointer Scrolling Enabled"
+    text  "设置指针滚动启用"
+    state machine
 }
 
 UIScrollView:SetPointerScrollingEnabled:value {

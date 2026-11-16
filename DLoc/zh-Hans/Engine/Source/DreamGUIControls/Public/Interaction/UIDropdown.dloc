@@ -133,6 +133,8 @@ UIDropdown:CaptionText {
 UIDropdown:ClearItemCustomDataFunction {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ClearItemCustomDataFunction
     src   "Clear Item Custom Data Function"
+    text  "清除条目自定义数据函数"
+    state machine
 }
 
 UIDropdown:CreatedItemArray {
@@ -416,6 +418,8 @@ UIDropdown:SetHorizontalPosition:InValue {
 UIDropdown:SetItemCustomDataFunction {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemCustomDataFunction
     src   "Set Item Custom Data Function"
+    text  "设置条目自定义数据函数"
+    state machine
 }
 
 UIDropdown:SetItemCustomDataFunction:InFunction {
@@ -533,6 +537,8 @@ UIDropdown:SetValue:InValue {
 UIDropdown:SetValueWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValueWithoutNotify
     src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UIDropdown:SetValueWithoutNotify:InValue {
@@ -641,6 +647,8 @@ UIDropdownItemComponent {
 UIDropdownItemComponent:DynamicDelegate_OnSelect {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:DynamicDelegate_OnSelect
     src   "Dynamic Delegate on Select"
+    text  "选中时的动态委托"
+    state machine
 }
 
 UIDropdownItemComponent:GetImage {
@@ -738,6 +746,8 @@ UIDropdownItemComponent:ReceiveInit:OnSelectCallback {
 UIDropdownItemComponent:ReceiveSetSelectionState {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveSetSelectionState
     src   "SetSelectionState"
+    text  "设置选择状态"
+    state machine
 }
 
 UIDropdownItemComponent:ReceiveSetSelectionState:InSelect {

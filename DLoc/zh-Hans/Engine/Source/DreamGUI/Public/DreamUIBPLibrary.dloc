@@ -12,6 +12,8 @@ DreamUIBPLibrary {
 DreamUIBPLibrary:AddWidgetOfClassToScreen {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen
     src   "Add Widget Of Class to Screen"
+    text  "按类把控件添加到屏幕"
+    state machine
 }
 
 DreamUIBPLibrary:AddWidgetOfClassToScreen:InCallbackBeforeAlive {
@@ -56,6 +58,8 @@ DreamUIBPLibrary:AddWidgetOfClassToScreen:WorldContextObject {
 DreamUIBPLibrary:AddWidgetOfClassToViewport {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport
     src   "Add Widget Of Class to Viewport"
+    text  "按类把控件添加到视口"
+    state machine
 }
 
 DreamUIBPLibrary:AddWidgetOfClassToViewport:InWidgetClass {
@@ -93,6 +97,8 @@ DreamUIBPLibrary:AddWidgetOfClassToViewport:WorldContextObject {
 DreamUIBPLibrary:AttachWidgetToSceneComponent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent
     src   "Attach Widget to Scene Component"
+    text  "把控件附加到场景组件"
+    state machine
 }
 
 DreamUIBPLibrary:AttachWidgetToSceneComponent:InRoot {
@@ -121,6 +127,8 @@ DreamUIBPLibrary:AttachWidgetToSceneComponent:ReturnValue {
 DreamUIBPLibrary:BeginDeferredCreateDreamWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget
     src   "Begin Deferred Create Dream Widget"
+    text  "开始延迟创建 Dream 控件"
+    state machine
 }
 
 DreamUIBPLibrary:BeginDeferredCreateDreamWidget:OwningPlayer {
@@ -196,6 +204,8 @@ DreamUIBPLibrary:ConstructWidget:WorldContextObject {
 DreamUIBPLibrary:CreateDreamWidgetOfClass {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass
     src   "Create Dream Widget Of Class"
+    text  "按类创建 Dream 控件"
+    state machine
 }
 
 DreamUIBPLibrary:CreateDreamWidgetOfClass:InWidgetClass {
@@ -225,6 +235,8 @@ DreamUIBPLibrary:CreateDreamWidgetOfClass:WorldContextObject {
 DreamUIBPLibrary:DreamGUIExecuteControllerInputAction {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamGUIExecuteControllerInputAction
     src   "Dream GUIExecute Controller Input Action"
+    text  "DreamGUI 执行控制器输入动作"
+    state machine
 }
 
 DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:inputKey {
@@ -1908,6 +1920,8 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InEvent {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteActor {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor
     src   "Dream UIEvent Delegate Execute Actor"
+    text  "DreamUI 事件委托执行（Actor）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InEvent {
@@ -1928,6 +1942,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteBool {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteBool
     src   "Dream UIEvent Delegate Execute Bool"
+    text  "DreamUI 事件委托执行（布尔）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InEvent {
@@ -1948,6 +1964,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteClass {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass
     src   "Dream UIEvent Delegate Execute Class"
+    text  "DreamUI 事件委托执行（类）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InEvent {
@@ -1968,6 +1986,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteColor {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteColor
     src   "Dream UIEvent Delegate Execute Color"
+    text  "DreamUI 事件委托执行（颜色）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InEvent {
@@ -1988,6 +2008,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty
     src   "Dream UIEvent Delegate Execute Empty"
+    text  "DreamUI 事件委托执行（无参）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent {
@@ -2001,6 +2023,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat
     src   "Dream UIEvent Delegate Execute Float"
+    text  "DreamUI 事件委托执行（浮点）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InEvent {
@@ -2021,6 +2045,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32 {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32
     src   "Dream UIEvent Delegate Execute Int 32"
+    text  "DreamUI 事件委托执行（32 位整数）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InEvent {
@@ -2041,6 +2067,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor
     src   "Dream UIEvent Delegate Execute Linear Color"
+    text  "DreamUI 事件委托执行（线性颜色）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InEvent {
@@ -2061,6 +2089,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteName {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteName
     src   "Dream UIEvent Delegate Execute Name"
+    text  "DreamUI 事件委托执行（名称）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InEvent {
@@ -2081,6 +2111,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteObject {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject
     src   "Dream UIEvent Delegate Execute Object"
+    text  "DreamUI 事件委托执行（对象）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InEvent {
@@ -2101,6 +2133,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent
     src   "Dream UIEvent Delegate Execute Pointer Event"
+    text  "DreamUI 事件委托执行（指针事件）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InEvent {
@@ -2121,6 +2155,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion
     src   "Dream UIEvent Delegate Execute Quaternion"
+    text  "DreamUI 事件委托执行（四元数）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InEvent {
@@ -2141,6 +2177,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator
     src   "Dream UIEvent Delegate Execute Rotator"
+    text  "DreamUI 事件委托执行（旋转体）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InEvent {
@@ -2161,6 +2199,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteString {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString
     src   "Dream UIEvent Delegate Execute String"
+    text  "DreamUI 事件委托执行（字符串）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InEvent {
@@ -2181,6 +2221,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteText {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteText
     src   "Dream UIEvent Delegate Execute Text"
+    text  "DreamUI 事件委托执行（文本）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InEvent {
@@ -2201,6 +2243,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8 {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8
     src   "Dream UIEvent Delegate Execute UInt 8"
+    text  "DreamUI 事件委托执行（8 位无符号整数）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InEvent {
@@ -2221,6 +2265,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2 {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2
     src   "Dream UIEvent Delegate Execute Vector 2"
+    text  "DreamUI 事件委托执行（二维向量）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InEvent {
@@ -2241,6 +2287,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3 {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3
     src   "Dream UIEvent Delegate Execute Vector 3"
+    text  "DreamUI 事件委托执行（三维向量）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InEvent {
@@ -2261,6 +2309,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InParameter {
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4 {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4
     src   "Dream UIEvent Delegate Execute Vector 4"
+    text  "DreamUI 事件委托执行（四维向量）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InEvent {
@@ -2281,6 +2331,8 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InParameter {
 DreamUIBPLibrary:DreamUIExecuteControllerInputAxis {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIExecuteControllerInputAxis
     src   "Dream UIExecute Controller Input Axis"
+    text  "DreamUI 执行控制器输入轴"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:inputKey {
@@ -2341,6 +2393,8 @@ DreamUIBPLibrary:DuplicateWidget:WorldContextObject {
 DreamUIBPLibrary:DuplicateWidgetWithPreparedData {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData
     src   "Duplicate Widget with Prepared Data"
+    text  "用已准备的数据复制控件"
+    state machine
 }
 
 DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Data {
@@ -2378,6 +2432,8 @@ DreamUIBPLibrary:DuplicateWidgetWithPreparedData:WorldContextObject {
 DreamUIBPLibrary:FinishDeferredCreateDreamWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget
     src   "Finish Deferred Create Dream Widget"
+    text  "完成延迟创建的 Dream 控件"
+    state machine
 }
 
 DreamUIBPLibrary:FinishDeferredCreateDreamWidget:ReturnValue {
@@ -2415,6 +2471,8 @@ DreamUIBPLibrary:ForceLayoutPrepass:InWidget {
 DreamUIBPLibrary:GetComponentInChildren {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren
     src   "Get Component in Children"
+    text  "在子项中获取组件"
+    state machine
 }
 
 DreamUIBPLibrary:GetComponentInChildren:ComponentClass {
@@ -2459,6 +2517,8 @@ DreamUIBPLibrary:GetComponentInChildren:ReturnValue {
 DreamUIBPLibrary:GetComponentInParent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent
     src   "Get Component in Parent"
+    text  "在父项中获取组件"
+    state machine
 }
 
 DreamUIBPLibrary:GetComponentInParent:ComponentClass {
@@ -2503,6 +2563,8 @@ DreamUIBPLibrary:GetComponentInParent:ReturnValue {
 DreamUIBPLibrary:GetComponentsInChildren {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren
     src   "Get Components in Children"
+    text  "在子项中获取组件集合"
+    state machine
 }
 
 DreamUIBPLibrary:GetComponentsInChildren:ComponentClass {
@@ -2547,6 +2609,8 @@ DreamUIBPLibrary:GetComponentsInChildren:ReturnValue {
 DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot
     src   "Get or Create Screen Space UIRoot"
+    text  "获取或创建屏幕空间 UI 根"
+    state machine
 }
 
 DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:ReturnValue {
@@ -2568,6 +2632,8 @@ DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:WorldContextObject {
 DreamUIBPLibrary:GetSpriteBorderSize {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize
     src   "Get Sprite Border Size"
+    text  "获取精灵边框尺寸"
+    state machine
 }
 
 DreamUIBPLibrary:GetSpriteBorderSize:borderBottom {
@@ -2609,6 +2675,8 @@ DreamUIBPLibrary:GetSpriteBorderSize:SpriteInfo {
 DreamUIBPLibrary:GetSpriteBorderUV {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV
     src   "Get Sprite Border UV"
+    text  "获取精灵边框 UV"
+    state machine
 }
 
 DreamUIBPLibrary:GetSpriteBorderUV:borderUV0X {

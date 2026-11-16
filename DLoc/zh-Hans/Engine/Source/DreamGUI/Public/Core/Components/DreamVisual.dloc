@@ -283,6 +283,8 @@ DreamVisual:GetCustomRaycastObject:ReturnValue {
 DreamVisual:GetFinalAlpha01 {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalAlpha01
     src   "Get Final Alpha 01"
+    text  "获取最终不透明度（0-1）"
+    state machine
 }
 
 DreamVisual:GetFinalAlpha01:ReturnValue {
@@ -508,6 +510,8 @@ DreamVisualCustomRaycast {
 DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual
     src   "Get Raycast Pixel from UIBatch Mesh Visual"
+    text  "从 UI 合批网格视觉获取射线命中像素"
+    state machine
 }
 
 DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:InLocalSpaceRayEnd {

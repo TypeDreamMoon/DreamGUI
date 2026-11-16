@@ -135,6 +135,8 @@ UIListEntry:ItemIndex {
 UIListEntry:ReceiveOnListItemAssigned {
     at    Source/DreamGUIControls/Public/Interaction/UIListView.h#UIListEntry:ReceiveOnListItemAssigned
     src   "On List Item Assigned"
+    text  "列表条目被分配时"
+    state machine
 }
 
 UIListEntry:ReceiveOnListItemAssigned:bInSelected {

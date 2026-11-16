@@ -66,6 +66,8 @@ DreamSpriteBase:SetOverrideMaterial:Value {
 DreamSpriteBase:SetSizeFromSpriteData {
     at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetSizeFromSpriteData
     src   "Set Size from Sprite Data"
+    text  "从精灵数据设置尺寸"
+    state machine
 }
 
 DreamSpriteBase:SetSprite {

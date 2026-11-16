@@ -12,6 +12,8 @@ DreamStandaloneInputModule {
 DreamStandaloneInputModule:bIgnoreMouseUntilItMoves {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:bIgnoreMouseUntilItMoves
     src   "Ignore Mouse Until It Moves"
+    text  "鼠标移动前忽略它"
+    state machine
 }
 
 DreamStandaloneInputModule:bOverrideMousePosition {
@@ -54,6 +56,8 @@ DreamStandaloneInputModule:GetOverrideMousePosition:ReturnValue {
 DreamStandaloneInputModule:GetTouchPointerID {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:GetTouchPointerID
     src   "Get Touch Pointer ID"
+    text  "获取触摸指针 ID"
+    state machine
 }
 
 DreamStandaloneInputModule:GetTouchPointerID:InTouchID {
@@ -216,6 +220,8 @@ DreamStandaloneInputModule:InputTrigger:InTriggerPress {
 DreamStandaloneInputModule:InputTriggerForNavigation {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:InputTriggerForNavigation
     src   "Input Trigger for Navigation"
+    text  "导航的输入触发器"
+    state machine
 }
 
 DreamStandaloneInputModule:InputTriggerForNavigation:InPointerID {
@@ -250,6 +256,8 @@ DreamStandaloneInputModule:SetOverrideMousePosition:bInOverride {
 DreamStandaloneInputModule:SetOverridePointerPosition {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:SetOverridePointerPosition
     src   "Set Override Pointer Position"
+    text  "设置覆盖指针位置"
+    state machine
 }
 
 DreamStandaloneInputModule:SetOverridePointerPosition:InPosition {
@@ -294,6 +302,8 @@ DreamStandaloneInputModule {
 DreamStandaloneInputModule:bIgnoreMouseUntilItMoves {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:bIgnoreMouseUntilItMoves
     src   "Leave the mouse out until it has moved, or pressed, since the game began: a mouse that happens to rest over a list\nwhen a menu opens otherwise hovers its row on the very first frame and takes the focus a pad or a script was about\nto set -- in a recording made off screen too, where the OS mouse rests wherever it was left. A substituted pointer\n(SetOverrideMousePosition) is never left out."
+    text  "在鼠标自游戏开始以来移动或按下之前，先不理会它：一个恰好停在列表上的鼠标，\n在菜单打开时会让列表第一帧就悬停到那一行，抢走手柄或脚本正要设的焦点——\n在离屏录制的场合也一样，那里系统鼠标停在它被留下的位置。被替换过的指针\n（SetOverrideMousePosition）永不被忽略。"
+    state machine
 }
 
 DreamStandaloneInputModule:GetMousePosition {
@@ -376,4 +386,6 @@ DreamStandaloneInputModule:SetOverridePointerPosition {
 DreamStandaloneInputModule:TapNavigation {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h#DreamStandaloneInputModule:TapNavigation
     src   "One navigation step, as a key pressed and let go: taken on the next frame, one per tap. For code driving the focus\n-- a recording, a test, a tutorial -- where InputNavigation pressed and released on one frame takes no step."
+    text  "一次导航步进，等同于按下再松开一个键：在下一帧生效，每次轻触一步。供代码驱动焦点时使用\n——录制、测试、教程——那种场合下在同一帧按下并松开 InputNavigation 不会走一步。"
+    state machine
 }

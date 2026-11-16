@@ -5,6 +5,8 @@ namespace UObjectDisplayNames
 DreamUITooltipContent {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent
     src   "Dream UITooltip Content"
+    text  "DreamUI 提示框内容"
+    state machine
 }
 
 DreamUITooltipContent:SetTooltipSource {
@@ -32,6 +34,8 @@ DreamUITooltipSourceInterface {
 DreamUITooltipSourceInterface:GetTooltipWidgetClass {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface:GetTooltipWidgetClass
     src   "Get Tooltip Widget Class"
+    text  "获取提示框控件类"
+    state machine
 }
 
 DreamUITooltipSourceInterface:GetTooltipWidgetClass:ReturnValue {
@@ -52,6 +56,8 @@ DreamUITooltipSubsystem {
 DreamUITooltipSubsystem:Get {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:Get
     src   "Get DreamUI Tooltip Subsystem"
+    text  "获取 DreamUI 提示框子系统"
+    state machine
 }
 
 DreamUITooltipSubsystem:Get:ReturnValue {
@@ -80,6 +86,8 @@ DreamUITooltipSubsystem:HideTooltip {
 DreamUITooltipSubsystem:HideTooltipForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltipForUser
     src   "Hide Tooltip for User"
+    text  "为玩家隐藏提示框"
+    state machine
 }
 
 DreamUITooltipSubsystem:HideTooltipForUser:InUserIndex {
@@ -144,6 +152,8 @@ namespace UObjectToolTips
 DreamUITooltipContent:SetTooltipSource {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent:SetTooltipSource
     src   "The widget whose tooltip this is: the one the pointer rests on, or its ancestor that offered the tooltip."
+    text  "这个提示框属于哪个控件：指针停留的那个，或者提供了该提示框的它的祖先。"
+    state machine
 }
 
 DreamUITooltipSourceInterface:GetTooltipWidgetClass {

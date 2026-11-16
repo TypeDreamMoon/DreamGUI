@@ -170,6 +170,8 @@ DreamRectBlock:BodyGradient {
 DreamRectBlock:BodyGradientAlphaTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientAlphaTo
     src   "Body Gradient Alpha To"
+    text  "主体渐变透明度终点"
+    state machine
 }
 
 DreamRectBlock:BodyGradientAlphaTo:delay {
@@ -222,6 +224,8 @@ DreamRectBlock:BodyGradientCenter {
 DreamRectBlock:BodyGradientCenterTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientCenterTo
     src   "Body Gradient Center To"
+    text  "主体渐变中心终点"
+    state machine
 }
 
 DreamRectBlock:BodyGradientCenterTo:delay {
@@ -281,6 +285,8 @@ DreamRectBlock:BodyGradientColor {
 DreamRectBlock:BodyGradientColorTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientColorTo
     src   "Body Gradient Color To"
+    text  "主体渐变颜色终点"
+    state machine
 }
 
 DreamRectBlock:BodyGradientColorTo:delay {
@@ -333,6 +339,8 @@ DreamRectBlock:BodyGradientRadius {
 DreamRectBlock:BodyGradientRadiusTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRadiusTo
     src   "Body Gradient Radius To"
+    text  "主体渐变半径终点"
+    state machine
 }
 
 DreamRectBlock:BodyGradientRadiusTo:delay {
@@ -392,6 +400,8 @@ DreamRectBlock:BodyGradientRotation {
 DreamRectBlock:BodyGradientRotationTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BodyGradientRotationTo
     src   "Body Gradient Rotation To"
+    text  "主体渐变旋转终点"
+    state machine
 }
 
 DreamRectBlock:BodyGradientRotationTo:delay {
@@ -588,6 +598,8 @@ DreamRectBlock:BorderGradient {
 DreamRectBlock:BorderGradientAlphaTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientAlphaTo
     src   "Border Gradient Alpha To"
+    text  "边框渐变透明度终点"
+    state machine
 }
 
 DreamRectBlock:BorderGradientAlphaTo:delay {
@@ -640,6 +652,8 @@ DreamRectBlock:BorderGradientCenter {
 DreamRectBlock:BorderGradientCenterTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientCenterTo
     src   "Border Gradient Center To"
+    text  "边框渐变中心终点"
+    state machine
 }
 
 DreamRectBlock:BorderGradientCenterTo:delay {
@@ -699,6 +713,8 @@ DreamRectBlock:BorderGradientColor {
 DreamRectBlock:BorderGradientColorTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientColorTo
     src   "Border Gradient Color To"
+    text  "边框渐变颜色终点"
+    state machine
 }
 
 DreamRectBlock:BorderGradientColorTo:delay {
@@ -751,6 +767,8 @@ DreamRectBlock:BorderGradientRadius {
 DreamRectBlock:BorderGradientRadiusTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRadiusTo
     src   "Border Gradient Radius To"
+    text  "边框渐变半径终点"
+    state machine
 }
 
 DreamRectBlock:BorderGradientRadiusTo:delay {
@@ -810,6 +828,8 @@ DreamRectBlock:BorderGradientRotation {
 DreamRectBlock:BorderGradientRotationTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:BorderGradientRotationTo
     src   "Border Gradient Rotation To"
+    text  "边框渐变旋转终点"
+    state machine
 }
 
 DreamRectBlock:BorderGradientRotationTo:delay {
@@ -1398,6 +1418,8 @@ DreamRectBlock:GetCornerRadiusUnitMode:ReturnValue {
 DreamRectBlock:GetEffectiveBodyGradient {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectiveBodyGradient
     src   "Get Effective Body Gradient"
+    text  "获取有效主体渐变"
+    state machine
 }
 
 DreamRectBlock:GetEffectiveBodyGradient:ReturnValue {
@@ -1411,6 +1433,8 @@ DreamRectBlock:GetEffectiveBodyGradient:ReturnValue {
 DreamRectBlock:GetEffectiveBorderGradient {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectiveBorderGradient
     src   "Get Effective Border Gradient"
+    text  "获取有效边框渐变"
+    state machine
 }
 
 DreamRectBlock:GetEffectiveBorderGradient:ReturnValue {
@@ -1424,6 +1448,8 @@ DreamRectBlock:GetEffectiveBorderGradient:ReturnValue {
 DreamRectBlock:GetEffectsAsLayerStyle {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:GetEffectsAsLayerStyle
     src   "Get Effects as Layer Style"
+    text  "以图层样式获取效果"
+    state machine
 }
 
 DreamRectBlock:GetEffectsAsLayerStyle:ReturnValue {
@@ -1887,6 +1913,8 @@ DreamRectBlock:GetSoftEdge:ReturnValue {
 DreamRectBlock:InnerShadowAlphaTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAlphaTo
     src   "Inner Shadow Alpha To"
+    text  "内阴影透明度终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowAlphaTo:delay {
@@ -1939,6 +1967,8 @@ DreamRectBlock:InnerShadowAngle {
 DreamRectBlock:InnerShadowAngleTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowAngleTo
     src   "Inner Shadow Angle To"
+    text  "内阴影角度终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowAngleTo:delay {
@@ -1991,6 +2021,8 @@ DreamRectBlock:InnerShadowBlur {
 DreamRectBlock:InnerShadowBlurTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowBlurTo
     src   "Inner Shadow Blur To"
+    text  "内阴影模糊终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowBlurTo:delay {
@@ -2050,6 +2082,8 @@ DreamRectBlock:InnerShadowColor {
 DreamRectBlock:InnerShadowColorTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowColorTo
     src   "Inner Shadow Color To"
+    text  "内阴影颜色终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowColorTo:delay {
@@ -2102,6 +2136,8 @@ DreamRectBlock:InnerShadowDistance {
 DreamRectBlock:InnerShadowDistanceTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowDistanceTo
     src   "Inner Shadow Distance To"
+    text  "内阴影距离终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowDistanceTo:delay {
@@ -2161,6 +2197,8 @@ DreamRectBlock:InnerShadowSize {
 DreamRectBlock:InnerShadowSizeTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:InnerShadowSizeTo
     src   "Inner Shadow Size To"
+    text  "内阴影尺寸终点"
+    state machine
 }
 
 DreamRectBlock:InnerShadowSizeTo:delay {
@@ -2213,6 +2251,8 @@ DreamRectBlock:InnerShadowSizeUnitMode {
 DreamRectBlock:OuterShadowAlphaTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAlphaTo
     src   "Outer Shadow Alpha To"
+    text  "外阴影透明度终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowAlphaTo:delay {
@@ -2265,6 +2305,8 @@ DreamRectBlock:OuterShadowAngle {
 DreamRectBlock:OuterShadowAngleTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowAngleTo
     src   "Outer Shadow Angle To"
+    text  "外阴影角度终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowAngleTo:delay {
@@ -2317,6 +2359,8 @@ DreamRectBlock:OuterShadowBlur {
 DreamRectBlock:OuterShadowBlurTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowBlurTo
     src   "Outer Shadow Blur To"
+    text  "外阴影模糊终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowBlurTo:delay {
@@ -2376,6 +2420,8 @@ DreamRectBlock:OuterShadowColor {
 DreamRectBlock:OuterShadowColorTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowColorTo
     src   "Outer Shadow Color To"
+    text  "外阴影颜色终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowColorTo:delay {
@@ -2428,6 +2474,8 @@ DreamRectBlock:OuterShadowDistance {
 DreamRectBlock:OuterShadowDistanceTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowDistanceTo
     src   "Outer Shadow Distance To"
+    text  "外阴影距离终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowDistanceTo:delay {
@@ -2487,6 +2535,8 @@ DreamRectBlock:OuterShadowSize {
 DreamRectBlock:OuterShadowSizeTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:OuterShadowSizeTo
     src   "Outer Shadow Size To"
+    text  "外阴影尺寸终点"
+    state machine
 }
 
 DreamRectBlock:OuterShadowSizeTo:delay {
@@ -2546,6 +2596,8 @@ DreamRectBlock:RadialFillAngle {
 DreamRectBlock:RadialFillAngleTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillAngleTo
     src   "Radial Fill Angle To"
+    text  "径向填充角度终点"
+    state machine
 }
 
 DreamRectBlock:RadialFillAngleTo:delay {
@@ -2598,6 +2650,8 @@ DreamRectBlock:RadialFillCenter {
 DreamRectBlock:RadialFillCenterTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillCenterTo
     src   "Radial Fill Center To"
+    text  "径向填充中心终点"
+    state machine
 }
 
 DreamRectBlock:RadialFillCenterTo:delay {
@@ -2657,6 +2711,8 @@ DreamRectBlock:RadialFillRotation {
 DreamRectBlock:RadialFillRotationTo {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:RadialFillRotationTo
     src   "Radial Fill Rotation To"
+    text  "径向填充旋转终点"
+    state machine
 }
 
 DreamRectBlock:RadialFillRotationTo:delay {
@@ -3098,6 +3154,8 @@ DreamRectBlock:SetCornerRadiusUnitMode:value {
 DreamRectBlock:SetEffectsFromLayerStyle {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetEffectsFromLayerStyle
     src   "Set Effects from Layer Style"
+    text  "从图层样式设置效果"
+    state machine
 }
 
 DreamRectBlock:SetEffectsFromLayerStyle:InStyle {
@@ -3546,6 +3604,8 @@ DreamRectBlock:SetShapeBlendOperation:Value {
 DreamRectBlock:SetSizeFromBodyTexture {
     at    Source/DreamGUI/Public/Core/Components/DreamRectBlock.h#DreamRectBlock:SetSizeFromBodyTexture
     src   "Set Size from Body Texture"
+    text  "从主体纹理设置尺寸"
+    state machine
 }
 
 DreamRectBlock:SetSoftEdge {

@@ -54,6 +54,8 @@ DreamUIDynamicSpriteAtlasManager:AtlasMap {
 DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag {
     at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag
     src   "Dispose Atlas by Packing Tag"
+    text  "按打包标签释放图集"
+    state machine
 }
 
 DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag {
@@ -66,6 +68,8 @@ DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag {
 DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag {
     at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag
     src   "Evict Unused Sprites by Packing Tag"
+    text  "按打包标签剔除未使用的精灵"
+    state machine
 }
 
 DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:InPackingTag {
@@ -86,6 +90,8 @@ DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:ReturnValue {
 DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag {
     at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag
     src   "Trim Atlas by Packing Tag"
+    text  "按打包标签裁剪图集"
+    state machine
 }
 
 DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:InPackingTag {

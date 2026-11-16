@@ -344,6 +344,8 @@ DreamTextInput:GetIsPassword:ReturnValue {
 DreamTextInput:GetIsReadOnly {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsReadOnly
     src   "Get Is Read Only"
+    text  "获取是否只读"
+    state machine
 }
 
 DreamTextInput:GetIsReadOnly:ReturnValue {
@@ -674,6 +676,8 @@ DreamTextInput:GetTextJustify:ReturnValue {
 DreamTextInput:GetTextOverflowPolicy {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextOverflowPolicy
     src   "Get Text Overflow Policy"
+    text  "获取文本溢出策略"
+    state machine
 }
 
 DreamTextInput:GetTextOverflowPolicy:ReturnValue {
@@ -755,6 +759,8 @@ DreamTextInput:InputType {
 DreamTextInput:IsAnyTextSelected {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:IsAnyTextSelected
     src   "Is Any Text Selected"
+    text  "是否有文本被选中"
+    state machine
 }
 
 DreamTextInput:IsAnyTextSelected:ReturnValue {
@@ -1079,6 +1085,8 @@ DreamTextInput:SetIsPassword:bInIsPassword {
 DreamTextInput:SetIsReadOnly {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsReadOnly
     src   "Set Is Read Only"
+    text  "设置只读"
+    state machine
 }
 
 DreamTextInput:SetIsReadOnly:bInReadOnly {

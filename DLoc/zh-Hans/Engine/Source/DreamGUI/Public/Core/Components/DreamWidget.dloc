@@ -287,6 +287,8 @@ DreamWidget:bWidgetActive {
 DreamWidget:CanAcceptAdditionalChildren {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:CanAcceptAdditionalChildren
     src   "Can Accept Additional Children"
+    text  "能否接受额外子项"
+    state machine
 }
 
 DreamWidget:CanAcceptAdditionalChildren:AdditionalChildCount {
@@ -412,6 +414,8 @@ DreamWidget:Components {
 DreamWidget:CreateNewLayoutContainer {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:CreateNewLayoutContainer
     src   "Create New Layout Container"
+    text  "新建布局容器"
+    state machine
 }
 
 DreamWidget:CreateNewLayoutContainer:Class {
@@ -433,6 +437,8 @@ DreamWidget:CreateNewLayoutContainer:ReturnValue {
 DreamWidget:CreateNewLayoutSelf {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:CreateNewLayoutSelf
     src   "Create New Layout Self"
+    text  "新建自身布局"
+    state machine
 }
 
 DreamWidget:CreateNewLayoutSelf:Class {
@@ -454,6 +460,8 @@ DreamWidget:CreateNewLayoutSelf:ReturnValue {
 DreamWidget:CreateNewPanelSlot {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:CreateNewPanelSlot
     src   "Create New Panel Slot"
+    text  "新建面板插槽"
+    state machine
 }
 
 DreamWidget:CreateNewPanelSlot:ReturnValue {
@@ -549,6 +557,8 @@ DreamWidget:DisplayName {
 DreamWidget:FindChildArrayByDisplayName {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:FindChildArrayByDisplayName
     src   "Find Child Array by Display Name"
+    text  "按显示名查找子项数组"
+    state machine
 }
 
 DreamWidget:FindChildArrayByDisplayName:IncludeChildren {
@@ -578,6 +588,8 @@ DreamWidget:FindChildArrayByDisplayName:ReturnValue {
 DreamWidget:FindChildByDisplayName {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:FindChildByDisplayName
     src   "Find Child by Display Name"
+    text  "按显示名查找子项"
+    state machine
 }
 
 DreamWidget:FindChildByDisplayName:IncludeChildren {
@@ -607,6 +619,8 @@ DreamWidget:FindChildByDisplayName:ReturnValue {
 DreamWidget:FindClipToBelowUnderlay {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:FindClipToBelowUnderlay
     src   "Find Clip to Below Underlay"
+    text  "查找剪贴到下方的衬底"
+    state machine
 }
 
 DreamWidget:FindClipToBelowUnderlay:ReturnValue {
@@ -780,6 +794,8 @@ DreamWidget:GetAnchorOffset:ReturnValue {
 DreamWidget:GetAnchorOffsetBottom {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetAnchorOffsetBottom
     src   "Get Anchor Offset Bottom"
+    text  "获取锚点偏移（下）"
+    state machine
 }
 
 DreamWidget:GetAnchorOffsetBottom:ReturnValue {
@@ -793,6 +809,8 @@ DreamWidget:GetAnchorOffsetBottom:ReturnValue {
 DreamWidget:GetAnchorOffsetLeft {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetAnchorOffsetLeft
     src   "Get Anchor Offset Left"
+    text  "获取锚点偏移（左）"
+    state machine
 }
 
 DreamWidget:GetAnchorOffsetLeft:ReturnValue {
@@ -806,6 +824,8 @@ DreamWidget:GetAnchorOffsetLeft:ReturnValue {
 DreamWidget:GetAnchorOffsetRight {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetAnchorOffsetRight
     src   "Get Anchor Offset Right"
+    text  "获取锚点偏移（右）"
+    state machine
 }
 
 DreamWidget:GetAnchorOffsetRight:ReturnValue {
@@ -819,6 +839,8 @@ DreamWidget:GetAnchorOffsetRight:ReturnValue {
 DreamWidget:GetAnchorOffsetTop {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetAnchorOffsetTop
     src   "Get Anchor Offset Top"
+    text  "获取锚点偏移（上）"
+    state machine
 }
 
 DreamWidget:GetAnchorOffsetTop:ReturnValue {
@@ -847,6 +869,8 @@ DreamWidget:GetAttachedRootSceneComponent:ReturnValue {
 DreamWidget:GetChildByIndex {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetChildByIndex
     src   "Get Child by Index"
+    text  "按索引获取子项"
+    state machine
 }
 
 DreamWidget:GetChildByIndex:index {
@@ -924,6 +948,8 @@ DreamWidget:GetChildrenCount:ReturnValue {
 DreamWidget:GetChildrenHitTestVisibleInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetChildrenHitTestVisibleInHierarchy
     src   "Get Children Hit Test Visible in Hierarchy"
+    text  "获取层级中参与命中测试的子项"
+    state machine
 }
 
 DreamWidget:GetChildrenHitTestVisibleInHierarchy:ReturnValue {
@@ -998,6 +1024,8 @@ DreamWidget:GetClippingMargin:ReturnValue {
 DreamWidget:GetClipToBelow {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetClipToBelow
     src   "Get Clip to Below"
+    text  "获取是否剪贴到下方"
+    state machine
 }
 
 DreamWidget:GetClipToBelow:ReturnValue {
@@ -1035,6 +1063,8 @@ DreamWidget:GetComponent:ReturnValue {
 DreamWidget:GetComponentByInterface {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetComponentByInterface
     src   "Get Component by Interface"
+    text  "按接口获取组件"
+    state machine
 }
 
 DreamWidget:GetComponentByInterface:InterfaceClass {
@@ -1141,6 +1171,8 @@ DreamWidget:GetDisplayName:ReturnValue {
 DreamWidget:GetFinalRenderOpacity {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetFinalRenderOpacity
     src   "Get Final Render Opacity"
+    text  "获取最终渲染不透明度"
+    state machine
 }
 
 DreamWidget:GetFinalRenderOpacity:ReturnValue {
@@ -1232,6 +1264,8 @@ DreamWidget:GetHeight:ReturnValue {
 DreamWidget:GetHitTestVisibleInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetHitTestVisibleInHierarchy
     src   "Get Hit Test Visible in Hierarchy"
+    text  "获取层级中是否参与命中测试"
+    state machine
 }
 
 DreamWidget:GetHitTestVisibleInHierarchy:ReturnValue {
@@ -1245,6 +1279,8 @@ DreamWidget:GetHitTestVisibleInHierarchy:ReturnValue {
 DreamWidget:GetHorizontalAnchoredPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetHorizontalAnchoredPosition
     src   "Get Horizontal Anchored Position"
+    text  "获取水平锚定位置"
+    state machine
 }
 
 DreamWidget:GetHorizontalAnchoredPosition:ReturnValue {
@@ -1273,6 +1309,8 @@ DreamWidget:GetIgnoreLayout:ReturnValue {
 DreamWidget:GetInheritedContentTint {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetInheritedContentTint
     src   "Get Inherited Content Tint"
+    text  "获取继承的内容着色"
+    state machine
 }
 
 DreamWidget:GetInheritedContentTint:ReturnValue {
@@ -1301,6 +1339,8 @@ DreamWidget:GetInteractable:ReturnValue {
 DreamWidget:GetInteractableInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetInteractableInHierarchy
     src   "Get Interactable in Hierarchy"
+    text  "获取层级中是否可交互"
+    state machine
 }
 
 DreamWidget:GetInteractableInHierarchy:ReturnValue {
@@ -1330,6 +1370,8 @@ DreamWidget:GetIsEnabled:ReturnValue {
 DreamWidget:GetIsEnabledInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetIsEnabledInHierarchy
     src   "Get Is Enabled in Hierarchy"
+    text  "获取层级中是否启用"
+    state machine
 }
 
 DreamWidget:GetIsEnabledInHierarchy:ReturnValue {
@@ -1404,6 +1446,8 @@ DreamWidget:GetLayoutSelf:ReturnValue {
 DreamWidget:GetLayoutVisibleInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLayoutVisibleInHierarchy
     src   "Get Layout Visible in Hierarchy"
+    text  "获取层级中是否参与布局"
+    state machine
 }
 
 DreamWidget:GetLayoutVisibleInHierarchy:ReturnValue {
@@ -1417,6 +1461,8 @@ DreamWidget:GetLayoutVisibleInHierarchy:ReturnValue {
 DreamWidget:GetLocalSpaceBottom {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceBottom
     src   "Get Local Space Bottom"
+    text  "获取局部空间下边"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceBottom:ReturnValue {
@@ -1430,6 +1476,8 @@ DreamWidget:GetLocalSpaceBottom:ReturnValue {
 DreamWidget:GetLocalSpaceCenter {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceCenter
     src   "Get Local Space Center"
+    text  "获取局部空间中心"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceCenter:ReturnValue {
@@ -1443,6 +1491,8 @@ DreamWidget:GetLocalSpaceCenter:ReturnValue {
 DreamWidget:GetLocalSpaceLeft {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceLeft
     src   "Get Local Space Left"
+    text  "获取局部空间左边"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceLeft:ReturnValue {
@@ -1456,6 +1506,8 @@ DreamWidget:GetLocalSpaceLeft:ReturnValue {
 DreamWidget:GetLocalSpaceLeftBottomPoint {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceLeftBottomPoint
     src   "Get Local Space Left Bottom Point"
+    text  "获取局部空间左下点"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceLeftBottomPoint:ReturnValue {
@@ -1469,6 +1521,8 @@ DreamWidget:GetLocalSpaceLeftBottomPoint:ReturnValue {
 DreamWidget:GetLocalSpaceRight {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceRight
     src   "Get Local Space Right"
+    text  "获取局部空间右边"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceRight:ReturnValue {
@@ -1482,6 +1536,8 @@ DreamWidget:GetLocalSpaceRight:ReturnValue {
 DreamWidget:GetLocalSpaceRightTopPoint {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceRightTopPoint
     src   "Get Local Space Right Top Point"
+    text  "获取局部空间右上点"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceRightTopPoint:ReturnValue {
@@ -1495,6 +1551,8 @@ DreamWidget:GetLocalSpaceRightTopPoint:ReturnValue {
 DreamWidget:GetLocalSpaceTop {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetLocalSpaceTop
     src   "Get Local Space Top"
+    text  "获取局部空间上边"
+    state machine
 }
 
 DreamWidget:GetLocalSpaceTop:ReturnValue {
@@ -1508,6 +1566,8 @@ DreamWidget:GetLocalSpaceTop:ReturnValue {
 DreamWidget:GetMaxChildrenCapacity {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetMaxChildrenCapacity
     src   "Get Max Children Capacity"
+    text  "获取最大子项容量"
+    state machine
 }
 
 DreamWidget:GetMaxChildrenCapacity:ReturnValue {
@@ -1551,6 +1611,8 @@ DreamWidget:GetNavigationBoundaryRule:ReturnValue {
 DreamWidget:GetOrCreateNavigation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetOrCreateNavigation
     src   "Get or Create Navigation"
+    text  "获取或创建导航"
+    state machine
 }
 
 DreamWidget:GetOrCreateNavigation:ReturnValue {
@@ -1596,6 +1658,8 @@ DreamWidget:GetOwningPlayer:ReturnValue {
 DreamWidget:GetOwningPlayerIndex {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetOwningPlayerIndex
     src   "Get Owning Player Index"
+    text  "获取所属玩家索引"
+    state machine
 }
 
 DreamWidget:GetOwningPlayerIndex:ReturnValue {
@@ -1640,6 +1704,8 @@ DreamWidget:GetParent:ReturnValue {
 DreamWidget:GetPathDisplayName {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetPathDisplayName
     src   "Get Path Display Name"
+    text  "获取路径显示名"
+    state machine
 }
 
 DreamWidget:GetPathDisplayName:ReturnValue {
@@ -1690,6 +1756,8 @@ DreamWidget:GetPerspectiveDistance:ReturnValue {
 DreamWidget:GetPerspectiveFieldOfView {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetPerspectiveFieldOfView
     src   "Get Perspective Field Of View"
+    text  "获取透视视场角"
+    state machine
 }
 
 DreamWidget:GetPerspectiveFieldOfView:ReturnValue {
@@ -1749,6 +1817,8 @@ DreamWidget:GetPixelSnapping:ReturnValue {
 DreamWidget:GetPixelSnappingInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetPixelSnappingInHierarchy
     src   "Get Pixel Snapping in Hierarchy"
+    text  "获取层级中是否像素对齐"
+    state machine
 }
 
 DreamWidget:GetPixelSnappingInHierarchy:ReturnValue {
@@ -1777,6 +1847,8 @@ DreamWidget:GetRaycastable:ReturnValue {
 DreamWidget:GetRaycastableInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRaycastableInHierarchy
     src   "Get Raycastable in Hierarchy"
+    text  "获取层级中是否可射线检测"
+    state machine
 }
 
 DreamWidget:GetRaycastableInHierarchy:ReturnValue {
@@ -1865,6 +1937,8 @@ DreamWidget:GetRenderCanvas:ReturnValue {
 DreamWidget:GetRenderLayerMode {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRenderLayerMode
     src   "Get Render Layer Mode"
+    text  "获取渲染图层模式"
+    state machine
 }
 
 DreamWidget:GetRenderLayerMode:ReturnValue {
@@ -1970,6 +2044,8 @@ DreamWidget:GetRenderTransformAngle:ReturnValue {
 DreamWidget:GetRenderTransformPivot {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRenderTransformPivot
     src   "Get Render Transform Pivot"
+    text  "获取渲染变换枢轴点"
+    state machine
 }
 
 DreamWidget:GetRenderTransformPivot:ReturnValue {
@@ -1998,6 +2074,8 @@ DreamWidget:GetRenderTranslation:ReturnValue {
 DreamWidget:GetRenderVisibleInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRenderVisibleInHierarchy
     src   "Get Render Visible in Hierarchy"
+    text  "获取层级中是否渲染可见"
+    state machine
 }
 
 DreamWidget:GetRenderVisibleInHierarchy:ReturnValue {
@@ -2011,6 +2089,8 @@ DreamWidget:GetRenderVisibleInHierarchy:ReturnValue {
 DreamWidget:GetResolvedFlowDirection {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetResolvedFlowDirection
     src   "Get Resolved Flow Direction"
+    text  "获取解析后的流向"
+    state machine
 }
 
 DreamWidget:GetResolvedFlowDirection:ReturnValue {
@@ -2039,6 +2119,8 @@ DreamWidget:GetRestrictNavigationArea:ReturnValue {
 DreamWidget:GetRestrictNavigationAreaWidget {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRestrictNavigationAreaWidget
     src   "Get Restrict Navigation Area Widget"
+    text  "获取限制导航区域的控件"
+    state machine
 }
 
 DreamWidget:GetRestrictNavigationAreaWidget:ReturnValue {
@@ -2083,6 +2165,8 @@ DreamWidget:GetRootCanvas:ReturnValue {
 DreamWidget:GetRootWidgetInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetRootWidgetInHierarchy
     src   "Get Root Widget in Hierarchy"
+    text  "获取层级中的根控件"
+    state machine
 }
 
 DreamWidget:GetRootWidgetInHierarchy:ReturnValue {
@@ -2234,6 +2318,8 @@ DreamWidget:GetUpVector:ReturnValue {
 DreamWidget:GetVerticalAnchoredPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetVerticalAnchoredPosition
     src   "Get Vertical Anchored Position"
+    text  "获取垂直锚定位置"
+    state machine
 }
 
 DreamWidget:GetVerticalAnchoredPosition:ReturnValue {
@@ -2293,6 +2379,8 @@ DreamWidget:GetWidgetActive:ReturnValue {
 DreamWidget:GetWidgetActiveInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:GetWidgetActiveInHierarchy
     src   "Get Widget Active in Hierarchy"
+    text  "获取层级中控件是否激活"
+    state machine
 }
 
 DreamWidget:GetWidgetActiveInHierarchy:ReturnValue {
@@ -2564,6 +2652,8 @@ DreamWidget:HasMouseCaptureByUser:ReturnValue {
 DreamWidget:HasOwnRenderShear {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:HasOwnRenderShear
     src   "Has Own Render Shear"
+    text  "是否有自身的渲染切变"
+    state machine
 }
 
 DreamWidget:HasOwnRenderShear:ReturnValue {
@@ -2607,6 +2697,8 @@ DreamWidget:HasPerspectiveApplied:ReturnValue {
 DreamWidget:HasPerspectiveInHierarchy {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:HasPerspectiveInHierarchy
     src   "Has Perspective in Hierarchy"
+    text  "层级中是否有透视"
+    state machine
 }
 
 DreamWidget:HasPerspectiveInHierarchy:ReturnValue {
@@ -2769,6 +2861,8 @@ DreamWidget:HeightTo:ReturnValue {
 DreamWidget:HorizontalAnchoredPositionTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:HorizontalAnchoredPositionTo
     src   "Horizontal Anchored Position To"
+    text  "水平锚定位置终点"
+    state machine
 }
 
 DreamWidget:HorizontalAnchoredPositionTo:delay {
@@ -2885,6 +2979,8 @@ DreamWidget:IsInViewport:ReturnValue {
 DreamWidget:IsPointVisibleOnClip {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:IsPointVisibleOnClip
     src   "Is Point Visible on Clip"
+    text  "点是否在裁剪内可见"
+    state machine
 }
 
 DreamWidget:IsPointVisibleOnClip:ReturnValue {
@@ -2922,6 +3018,8 @@ DreamWidget:IsRendered:ReturnValue {
 DreamWidget:IsRenderTargetUI {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:IsRenderTargetUI
     src   "Is Render Target UI"
+    text  "是否渲染目标 UI"
+    state machine
 }
 
 DreamWidget:IsRenderTargetUI:ReturnValue {
@@ -2935,6 +3033,8 @@ DreamWidget:IsRenderTargetUI:ReturnValue {
 DreamWidget:IsScreenSpaceOverlayUI {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:IsScreenSpaceOverlayUI
     src   "Is Screen Space Overlay UI"
+    text  "是否屏幕空间覆盖 UI"
+    state machine
 }
 
 DreamWidget:IsScreenSpaceOverlayUI:ReturnValue {
@@ -2964,6 +3064,8 @@ DreamWidget:IsVisible:ReturnValue {
 DreamWidget:IsWorldSpaceUI {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:IsWorldSpaceUI
     src   "Is World Space UI"
+    text  "是否世界空间 UI"
+    state machine
 }
 
 DreamWidget:IsWorldSpaceUI:ReturnValue {
@@ -3038,6 +3140,8 @@ DreamWidget:LocalPositionTo:ReturnValue {
 DreamWidget:LocalPositionXTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:LocalPositionXTo
     src   "Local Position X To"
+    text  "局部位置 X 终点"
+    state machine
 }
 
 DreamWidget:LocalPositionXTo:delay {
@@ -3083,6 +3187,8 @@ DreamWidget:LocalPositionXTo:ReturnValue {
 DreamWidget:LocalPositionYTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:LocalPositionYTo
     src   "Local Position Y To"
+    text  "局部位置 Y 终点"
+    state machine
 }
 
 DreamWidget:LocalPositionYTo:delay {
@@ -3128,6 +3234,8 @@ DreamWidget:LocalPositionYTo:ReturnValue {
 DreamWidget:LocalPositionZTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:LocalPositionZTo
     src   "Local Position Z To"
+    text  "局部位置 Z 终点"
+    state machine
 }
 
 DreamWidget:LocalPositionZTo:delay {
@@ -3173,6 +3281,8 @@ DreamWidget:LocalPositionZTo:ReturnValue {
 DreamWidget:LocalRotationQuaternionTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:LocalRotationQuaternionTo
     src   "Local Rotation Quaternion To"
+    text  "局部旋转四元数终点"
+    state machine
 }
 
 DreamWidget:LocalRotationQuaternionTo:delay {
@@ -3320,6 +3430,8 @@ DreamWidget:LocalScaleTo:ReturnValue {
 DreamWidget:LocalUniformScaleTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:LocalUniformScaleTo
     src   "Local Uniform Scale To"
+    text  "局部等缩放终点"
+    state machine
 }
 
 DreamWidget:LocalUniformScaleTo:delay {
@@ -3365,6 +3477,8 @@ DreamWidget:LocalUniformScaleTo:ReturnValue {
 DreamWidget:MarkLayoutForRebuild {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:MarkLayoutForRebuild
     src   "Mark Layout for Rebuild"
+    text  "标记布局待重建"
+    state machine
 }
 
 DreamWidget:MarkLayoutForRebuild:InWidget {
@@ -3378,6 +3492,8 @@ DreamWidget:MarkLayoutForRebuild:InWidget {
 DreamWidget:MoveComponentToIndex {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:MoveComponentToIndex
     src   "Move Component to Index"
+    text  "把组件移动到指定索引"
+    state machine
 }
 
 DreamWidget:MoveComponentToIndex:Component {
@@ -4138,6 +4254,8 @@ DreamWidget:SetAnchoredPosition:Value {
 DreamWidget:SetAnchoredPositionAndSizeDelta {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAnchoredPositionAndSizeDelta
     src   "Set Anchored Position and Size Delta"
+    text  "设置锚定位置与尺寸增量"
+    state machine
 }
 
 DreamWidget:SetAnchoredPositionAndSizeDelta:Position {
@@ -4204,6 +4322,8 @@ DreamWidget:SetAnchorOffset:Value {
 DreamWidget:SetAnchorOffsetBottom {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAnchorOffsetBottom
     src   "Set Anchor Offset Bottom"
+    text  "设置锚点偏移（下）"
+    state machine
 }
 
 DreamWidget:SetAnchorOffsetBottom:Value {
@@ -4217,6 +4337,8 @@ DreamWidget:SetAnchorOffsetBottom:Value {
 DreamWidget:SetAnchorOffsetLeft {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAnchorOffsetLeft
     src   "Set Anchor Offset Left"
+    text  "设置锚点偏移（左）"
+    state machine
 }
 
 DreamWidget:SetAnchorOffsetLeft:Value {
@@ -4230,6 +4352,8 @@ DreamWidget:SetAnchorOffsetLeft:Value {
 DreamWidget:SetAnchorOffsetRight {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAnchorOffsetRight
     src   "Set Anchor Offset Right"
+    text  "设置锚点偏移（右）"
+    state machine
 }
 
 DreamWidget:SetAnchorOffsetRight:Value {
@@ -4243,6 +4367,8 @@ DreamWidget:SetAnchorOffsetRight:Value {
 DreamWidget:SetAnchorOffsetTop {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAnchorOffsetTop
     src   "Set Anchor Offset Top"
+    text  "设置锚点偏移（上）"
+    state machine
 }
 
 DreamWidget:SetAnchorOffsetTop:Value {
@@ -4256,11 +4382,15 @@ DreamWidget:SetAnchorOffsetTop:Value {
 DreamWidget:SetAsFirstSibling {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAsFirstSibling
     src   "Set as First Sibling"
+    text  "设为第一个同级"
+    state machine
 }
 
 DreamWidget:SetAsLastSibling {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetAsLastSibling
     src   "Set as Last Sibling"
+    text  "设为最后一个同级"
+    state machine
 }
 
 DreamWidget:SetClipMask {
@@ -4327,6 +4457,8 @@ DreamWidget:SetClippingMargin:Value {
 DreamWidget:SetClipToBelow {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetClipToBelow
     src   "Set Clip to Below"
+    text  "设置剪贴到下方"
+    state machine
 }
 
 DreamWidget:SetClipToBelow:Value {
@@ -4449,6 +4581,8 @@ DreamWidget:SetHeight:Value {
 DreamWidget:SetHorizontalAnchoredPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetHorizontalAnchoredPosition
     src   "Set Horizontal Anchored Position"
+    text  "设置水平锚定位置"
+    state machine
 }
 
 DreamWidget:SetHorizontalAnchoredPosition:Value {
@@ -4462,6 +4596,8 @@ DreamWidget:SetHorizontalAnchoredPosition:Value {
 DreamWidget:SetHorizontalAnchorMinMax {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetHorizontalAnchorMinMax
     src   "Set Horizontal Anchor Min Max"
+    text  "设置水平锚点最小最大值"
+    state machine
 }
 
 DreamWidget:SetHorizontalAnchorMinMax:bKeepRelativeLocation {
@@ -4489,6 +4625,8 @@ DreamWidget:SetHorizontalAnchorMinMax:Value {
 DreamWidget:SetHorizontalAndVerticalAnchorMinMax {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetHorizontalAndVerticalAnchorMinMax
     src   "Set Horizontal and Vertical Anchor Min Max"
+    text  "设置水平与垂直锚点最小最大值"
+    state machine
 }
 
 DreamWidget:SetHorizontalAndVerticalAnchorMinMax:bKeepRelativeLocation {
@@ -4677,6 +4815,8 @@ DreamWidget:SetPerspective:Value {
 DreamWidget:SetPerspectiveFieldOfView {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetPerspectiveFieldOfView
     src   "Set Perspective Field Of View"
+    text  "设置透视视场角"
+    state machine
 }
 
 DreamWidget:SetPerspectiveFieldOfView:Value {
@@ -4736,6 +4876,8 @@ DreamWidget:SetPixelSnapping:Value {
 DreamWidget:SetPositionAndSizeForLayoutAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetPositionAndSizeForLayoutAnimation
     src   "Set Position and Size for Layout Animation"
+    text  "设置布局动画的位置与尺寸"
+    state machine
 }
 
 DreamWidget:SetPositionAndSizeForLayoutAnimation:Position {
@@ -4757,6 +4899,8 @@ DreamWidget:SetPositionAndSizeForLayoutAnimation:Size {
 DreamWidget:SetPositionForLayoutAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetPositionForLayoutAnimation
     src   "Set Position for Layout Animation"
+    text  "设置布局动画的位置"
+    state machine
 }
 
 DreamWidget:SetPositionForLayoutAnimation:Position {
@@ -4871,6 +5015,8 @@ DreamWidget:SetRelativeScale:Value {
 DreamWidget:SetRenderLayerMode {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetRenderLayerMode
     src   "Set Render Layer Mode"
+    text  "设置渲染图层模式"
+    state machine
 }
 
 DreamWidget:SetRenderLayerMode:Value {
@@ -5070,6 +5216,8 @@ DreamWidget:SetSizeDelta:Value {
 DreamWidget:SetSizeForLayoutAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetSizeForLayoutAnimation
     src   "Set Size for Layout Animation"
+    text  "设置布局动画尺寸"
+    state machine
 }
 
 DreamWidget:SetSizeForLayoutAnimation:Position {
@@ -5168,6 +5316,8 @@ DreamWidget:SetUserFocus:ReturnValue {
 DreamWidget:SetVerticalAnchoredPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetVerticalAnchoredPosition
     src   "Set Vertical Anchored Position"
+    text  "设置垂直锚定位置"
+    state machine
 }
 
 DreamWidget:SetVerticalAnchoredPosition:Value {
@@ -5181,6 +5331,8 @@ DreamWidget:SetVerticalAnchoredPosition:Value {
 DreamWidget:SetVerticalAnchorMinMax {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetVerticalAnchorMinMax
     src   "Set Vertical Anchor Min Max"
+    text  "设置垂直锚点最小最大值"
+    state machine
 }
 
 DreamWidget:SetVerticalAnchorMinMax:bKeepRelativeLocation {
@@ -5239,6 +5391,8 @@ DreamWidget:SetWidgetActive:Value {
 DreamWidget:SetWidgetTweenerAffectByGamePauseAndTimeDilation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetWidgetTweenerAffectByGamePauseAndTimeDilation
     src   "Set Widget Tweener Affect by Game Pause and Time Dilation"
+    text  "设置控件补间是否受游戏暂停与时间缩放影响"
+    state machine
 }
 
 DreamWidget:SetWidgetTweenerAffectByGamePauseAndTimeDilation:Tweener {
@@ -5483,6 +5637,8 @@ DreamWidget:TrySetParent:ReturnValue {
 DreamWidget:VerticalAnchoredPositionTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:VerticalAnchoredPositionTo
     src   "Vertical Anchored Position To"
+    text  "垂直锚定位置终点"
+    state machine
 }
 
 DreamWidget:VerticalAnchoredPositionTo:delay {
@@ -5645,6 +5801,8 @@ DreamWidget:WorldPositionTo:ReturnValue {
 DreamWidget:WorldPositionXTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:WorldPositionXTo
     src   "World Position X To"
+    text  "世界位置 X 终点"
+    state machine
 }
 
 DreamWidget:WorldPositionXTo:delay {
@@ -5690,6 +5848,8 @@ DreamWidget:WorldPositionXTo:ReturnValue {
 DreamWidget:WorldPositionYTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:WorldPositionYTo
     src   "World Position Y To"
+    text  "世界位置 Y 终点"
+    state machine
 }
 
 DreamWidget:WorldPositionYTo:delay {
@@ -5735,6 +5895,8 @@ DreamWidget:WorldPositionYTo:ReturnValue {
 DreamWidget:WorldPositionZTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:WorldPositionZTo
     src   "World Position Z To"
+    text  "世界位置 Z 终点"
+    state machine
 }
 
 DreamWidget:WorldPositionZTo:delay {
@@ -5780,6 +5942,8 @@ DreamWidget:WorldPositionZTo:ReturnValue {
 DreamWidget:WorldRotationQuaternionTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:WorldRotationQuaternionTo
     src   "World Rotation Quaternion To"
+    text  "世界旋转四元数终点"
+    state machine
 }
 
 DreamWidget:WorldRotationQuaternionTo:delay {
@@ -6287,6 +6451,8 @@ DreamWidget:AddChild {
 DreamWidget:AddTag {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:AddTag
     src   "Adds InTag unless it is already there (or None)."
+    text  "加入 InTag，除非它已经存在（或为 None）。"
+    state machine
 }
 
 DreamWidget:AnchorData {
@@ -6761,6 +6927,8 @@ DreamWidget:HasShearApplied {
 DreamWidget:HasTag {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:HasTag
     src   "Whether Tags holds InTag. None is never a tag."
+    text  "Tags 里是否含有 InTag。None 永远不是一个标签。"
+    state machine
 }
 
 DreamWidget:Interactable {
@@ -6941,6 +7109,8 @@ DreamWidget:RemoveFromParent {
 DreamWidget:RemoveTag {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:RemoveTag
     src   "Takes InTag out; false when it was not there."
+    text  "移除 InTag；它本来就不存在时返回 false。"
+    state machine
 }
 
 DreamWidget:RenderCanvas {
@@ -6960,11 +7130,15 @@ DreamWidget:RenderLayer {
 DreamWidget:RenderOpacity {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:RenderOpacity
     src   "Interp, so a .dui timeline and the animation editor can key a fade as they key a move."
+    text  "标为 Interp，因此 `.dui` 时间轴和动画编辑器可以像给位移打关键帧那样给淡入打关键帧。"
+    state machine
 }
 
 DreamWidget:RenderPoseTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:RenderPoseTo
     src   "The render translation and rotation together, on one clock and one ease: a pose the widget moves into."
+    text  "渲染平移与旋转合在一起，共用一条时钟和一条缓动：控件移动到的姿态。"
+    state machine
 }
 
 DreamWidget:RenderRotation {
@@ -6978,6 +7152,8 @@ DreamWidget:RenderRotation {
 DreamWidget:RenderRotationTo {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:RenderRotationTo
     src   "The whole render rotation, out of the plane as well as in it: a side panel swinging open on its hinge, a card\nturning over. Each of Pitch, Yaw and Roll runs from where it is to where it is told, so 0 to 180 of yaw is half a\nturn rather than none."
+    text  "完整的渲染旋转，既含面内也含面外：侧面板绕铰链打开、卡片翻面。Pitch、Yaw、Roll 各自从\n当前位置走到指定位置，所以 yaw 的 0 到 180 是半圈而不是不动。"
+    state machine
 }
 
 DreamWidget:RenderScale {
@@ -7117,6 +7293,8 @@ DreamWidget:SetRenderLayerMode {
 DreamWidget:SetRenderOffset {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetRenderOffset
     src   "The render translation's move on the canvas plane -- x right, y up -- with its depth (RenderTranslation.X) left\nwhere it is: SetRenderTranslation(FVector(0, x, y)) would set the depth to 0 as well. The setter RenderOffsetTo\ntweens."
+    text  "渲染平移在画布平面上的移动——x 向右，y 向上——其深度（RenderTranslation.X）保持\n原样：SetRenderTranslation(FVector(0, x, y)) 会把深度也置为 0。设值函数 RenderOffsetTo\n负责补间。"
+    state machine
 }
 
 DreamWidget:SetRenderTransformAngle {
@@ -7165,6 +7343,8 @@ DreamWidget:SetWidgetActive {
 DreamWidget:SetWidgetTweenerAffectByGamePauseAndTimeDilation {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:SetWidgetTweenerAffectByGamePauseAndTimeDilation
     src   "Every tween verb above -- and the visuals' ColorTo, AlphaTo and their siblings -- replaces the earlier ones on the\nsame property when it starts: RenderOpacityTo(0) started after RenderOpacityTo(1) stops the fade in, rather than\nboth running and the last to end winning. A verb's tween run by a sequence is left to the sequence, and a tween\nkept with SetAutoKill(false) is paused instead of killed. SetReplacesEarlierTweens(false) on a tween lets it run\nalongside the others (UDreamTweener::SetExclusive)."
+    text  "上面每个补间动词——以及视觉的 ColorTo、AlphaTo 及其同类——在开始时都会替换同一属性上\n更早的那些：在 RenderOpacityTo(1) 之后启动的 RenderOpacityTo(0) 会中止这次淡入，而不是\n两个都跑、最后结束的那个赢。由序列驱动的动词补间交给序列处理，而用 SetAutoKill(false) 保留的补间\n会被暂停而不是终止。在补间上调用 SetReplacesEarlierTweens(false) 可让它与其他补间\n并行（UDreamTweener::SetExclusive）。"
+    state machine
 }
 
 DreamWidget:Shown {
@@ -7205,6 +7385,8 @@ DreamWidget:TabNavigation {
 DreamWidget:Tags {
     at    Source/DreamGUI/Public/Core/Components/DreamWidget.h#DreamWidget:Tags
     src   "Names for the code that finds widgets by what they ARE rather than by their id -- every trim, every sigil -- as\nAActor::Tags does for actors. A `.dui` writes them `@tag Trim, Glow`; UDreamUserWidget::GetWidgetsByTag finds them\nin a user widget's own tree. Nothing in the library reads them."
+    text  "给那些按控件\"是什么\"而不是按 id 来查找它们的代码用的名字——每一处裁剪、每一个符号——就像\nAActor::Tags 之于 Actor。`.dui` 写成 `@tag Trim, Glow`；UDreamUserWidget::GetWidgetsByTag 在用户控件自己的树里\n找到它们。库中没有任何东西读取它们。"
+    state machine
 }
 
 DreamWidget:ToolTipWidgetClass {

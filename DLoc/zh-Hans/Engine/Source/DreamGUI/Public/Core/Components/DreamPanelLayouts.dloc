@@ -294,6 +294,8 @@ DreamLayoutContainerGridPanel:SetColumnFill:Value {
 DreamLayoutContainerGridPanel:SetColumnFillAt {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetColumnFillAt
     src   "Set Column Fill At"
+    text  "设置列填充位置"
+    state machine
 }
 
 DreamLayoutContainerGridPanel:SetColumnFillAt:InCoefficient {
@@ -345,6 +347,8 @@ DreamLayoutContainerGridPanel:SetRowFill:Value {
 DreamLayoutContainerGridPanel:SetRowFillAt {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetRowFillAt
     src   "Set Row Fill At"
+    text  "设置行填充位置"
+    state machine
 }
 
 DreamLayoutContainerGridPanel:SetRowFillAt:InCoefficient {
@@ -854,6 +858,8 @@ DreamLayoutContainerScaleBox:bIgnoreInheritedScale {
 DreamLayoutContainerScaleBox:GetSafeZoneScale {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:GetSafeZoneScale
     src   "Get Safe Zone Scale"
+    text  "获取安全区缩放"
+    state machine
 }
 
 DreamLayoutContainerScaleBox:GetSafeZoneScale:ReturnValue {
@@ -1049,6 +1055,8 @@ DreamLayoutContainerScrollBox:bFrontPadScrolling {
 DreamLayoutContainerScrollBox:CanScrollWidgetIntoView {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:CanScrollWidgetIntoView
     src   "Can Scroll Widget Into View"
+    text  "能否把控件滚动到可见"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:CanScrollWidgetIntoView:InWidget {
@@ -1139,6 +1147,8 @@ DreamLayoutContainerScrollBox:GetAnalogMouseWheelKey:ReturnValue {
 DreamLayoutContainerScrollBox:GetAnimatedScrollTarget {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAnimatedScrollTarget
     src   "Get Animated Scroll Target"
+    text  "获取滚动动画目标"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetAnimatedScrollTarget:ReturnValue {
@@ -1257,6 +1267,8 @@ DreamLayoutContainerScrollBox:GetFrontPadScrolling:ReturnValue {
 DreamLayoutContainerScrollBox:GetMaxScrollOffset {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetMaxScrollOffset
     src   "Get Max Scroll Offset"
+    text  "获取最大滚动偏移"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetMaxScrollOffset:ReturnValue {
@@ -1562,6 +1574,8 @@ DreamLayoutContainerScrollBox:GetWheelScrollMultiplier:ReturnValue {
 DreamLayoutContainerScrollBox:HandleScrollbarValueChanged {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:HandleScrollbarValueChanged
     src   "Handle Scrollbar Value Changed"
+    text  "处理滚动条值变更"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:HandleScrollbarValueChanged:InValue {
@@ -1597,6 +1611,8 @@ DreamLayoutContainerScrollBox:IsAnimatingScroll:ReturnValue {
 DreamLayoutContainerScrollBox:IsScrollGestureMirrored {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsScrollGestureMirrored
     src   "Is Scroll Gesture Mirrored"
+    text  "滚动手势是否镜像"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:IsScrollGestureMirrored:ReturnValue {
@@ -2131,6 +2147,8 @@ DreamLayoutContainerScrollBox:SetScrollOffset:Value {
 DreamLayoutContainerScrollBox:SetScrollOffsetAnimated {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollOffsetAnimated
     src   "Set Scroll Offset Animated"
+    text  "设置滚动偏移动画"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:SetScrollOffsetAnimated:Value {
@@ -2321,6 +2339,8 @@ DreamLayoutContainerSizeBox:ClearWidthOverride {
 DreamLayoutContainerSizeBox:GetMaxDesiredHeight {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMaxDesiredHeight
     src   "Get Max Desired Height"
+    text  "获取最大期望高度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:GetMaxDesiredHeight:ReturnValue {
@@ -2334,6 +2354,8 @@ DreamLayoutContainerSizeBox:GetMaxDesiredHeight:ReturnValue {
 DreamLayoutContainerSizeBox:GetMaxDesiredWidth {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMaxDesiredWidth
     src   "Get Max Desired Width"
+    text  "获取最大期望宽度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:GetMaxDesiredWidth:ReturnValue {
@@ -2347,6 +2369,8 @@ DreamLayoutContainerSizeBox:GetMaxDesiredWidth:ReturnValue {
 DreamLayoutContainerSizeBox:GetMinDesiredHeight {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMinDesiredHeight
     src   "Get Min Desired Height"
+    text  "获取最小期望高度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:GetMinDesiredHeight:ReturnValue {
@@ -2383,6 +2407,8 @@ DreamLayoutContainerSizeBox:HeightOverride {
 DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride
     src   "Is Max Aspect Ratio Override"
+    text  "是否覆盖最大宽高比"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride:ReturnValue {
@@ -2396,6 +2422,8 @@ DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride:ReturnValue {
 DreamLayoutContainerSizeBox:IsMinAspectRatioOverride {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:IsMinAspectRatioOverride
     src   "Is Min Aspect Ratio Override"
+    text  "是否覆盖最小宽高比"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:IsMinAspectRatioOverride:ReturnValue {
@@ -3036,6 +3064,8 @@ DreamLayoutContainerWrapBox:bExplicitWrapSize {
 DreamLayoutContainerWrapBox:GetInnerSlotPadding {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:GetInnerSlotPadding
     src   "Get Inner Slot Padding"
+    text  "获取内部插槽填充"
+    state machine
 }
 
 DreamLayoutContainerWrapBox:GetInnerSlotPadding:ReturnValue {

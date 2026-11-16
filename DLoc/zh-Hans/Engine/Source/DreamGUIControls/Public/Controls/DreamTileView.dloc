@@ -97,6 +97,8 @@ DreamTileView:GetNavigationTarget:ReturnValue {
 DreamTileView:GetRowLineCount {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetRowLineCount
     src   "Get Row Line Count"
+    text  "获取行内行数"
+    state machine
 }
 
 DreamTileView:GetRowLineCount:ReturnValue {

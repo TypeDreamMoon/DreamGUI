@@ -27,6 +27,8 @@ DreamUIDragDropSubsystem:CancelActiveDrag:ReturnValue {
 DreamUIDragDropSubsystem:CancelActiveDragForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDragForUser
     src   "Cancel Active Drag for User"
+    text  "取消玩家的当前拖拽"
+    state machine
 }
 
 DreamUIDragDropSubsystem:CancelActiveDragForUser:InUserIndex {
@@ -47,6 +49,8 @@ DreamUIDragDropSubsystem:CancelActiveDragForUser:ReturnValue {
 DreamUIDragDropSubsystem:Get {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:Get
     src   "Get DreamUI DragDrop Subsystem"
+    text  "获取 DreamUI 拖放子系统"
+    state machine
 }
 
 DreamUIDragDropSubsystem:Get:ReturnValue {
@@ -83,6 +87,8 @@ DreamUIDragDropSubsystem:GetDragCount:ReturnValue {
 DreamUIDragDropSubsystem:GetDragOperationForPointer {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForPointer
     src   "Get Drag Operation for Pointer"
+    text  "获取指针的拖拽操作"
+    state machine
 }
 
 DreamUIDragDropSubsystem:GetDragOperationForPointer:InPointerID {
@@ -103,6 +109,8 @@ DreamUIDragDropSubsystem:GetDragOperationForPointer:ReturnValue {
 DreamUIDragDropSubsystem:GetDragOperationForUserPointer {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer
     src   "Get Drag Operation for User Pointer"
+    text  "获取玩家指针的拖拽操作"
+    state machine
 }
 
 DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InPointerID {
@@ -130,6 +138,8 @@ DreamUIDragDropSubsystem:GetDragOperationForUserPointer:ReturnValue {
 DreamUIDragDropSubsystem:GetHoveredTargetForPointer {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer
     src   "Get Hovered Target for Pointer"
+    text  "获取指针的悬停目标"
+    state machine
 }
 
 DreamUIDragDropSubsystem:GetHoveredTargetForPointer:InPointerID {
@@ -150,6 +160,8 @@ DreamUIDragDropSubsystem:GetHoveredTargetForPointer:ReturnValue {
 DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer
     src   "Get Hovered Target for User Pointer"
+    text  "获取玩家指针的悬停目标"
+    state machine
 }
 
 DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InPointerID {
@@ -177,6 +189,8 @@ DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:ReturnValue {
 DreamUIDragDropSubsystem:IsDragInProgress {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgress
     src   "Is Drag in Progress"
+    text  "是否正在拖拽"
+    state machine
 }
 
 DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue {
@@ -190,6 +204,8 @@ DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue {
 DreamUIDragDropSubsystem:IsDragInProgressForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgressForUser
     src   "Is Drag in Progress for User"
+    text  "玩家是否正在拖拽"
+    state machine
 }
 
 DreamUIDragDropSubsystem:IsDragInProgressForUser:InUserIndex {
@@ -277,11 +293,15 @@ DreamUIDragSource:Tag {
 DreamUIDragVisual {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual
     src   "Dream UIDrag Visual"
+    text  "DreamUI 拖拽视觉"
+    state machine
 }
 
 DreamUIDragVisual:OnDragVisualCreated {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual:OnDragVisualCreated
     src   "On Drag Visual Created"
+    text  "拖拽视觉创建时"
+    state machine
 }
 
 DreamUIDragVisual:OnDragVisualCreated:Operation {
@@ -500,6 +520,8 @@ DreamUIDragSource:Tag {
 DreamUIDragVisual:OnDragVisualCreated {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual:OnDragVisualCreated
     src   "The drag this visual stands for, as the drop targets will see it."
+    text  "这个视觉所代表的拖拽，就放下目标看到的样子。"
+    state machine
 }
 
 DreamUIDropTarget {

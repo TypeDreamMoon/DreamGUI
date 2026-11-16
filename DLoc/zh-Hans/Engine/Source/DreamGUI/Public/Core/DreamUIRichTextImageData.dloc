@@ -19,6 +19,8 @@ DreamUIRichTextImageData:AnimationFps {
 DreamUIRichTextImageData:BroadcastOnDataChange {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:BroadcastOnDataChange
     src   "Broadcast on Data Change"
+    text  "数据变更时广播"
+    state machine
 }
 
 DreamUIRichTextImageData:GetAnimationFps {
@@ -54,6 +56,8 @@ DreamUIRichTextImageData:GetImageMap:ReturnValue {
 DreamUIRichTextImageData:GetMutableImageMap {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetMutableImageMap
     src   "Get Mutable Image Map"
+    text  "获取可变图像映射"
+    state machine
 }
 
 DreamUIRichTextImageData:GetMutableImageMap:ReturnValue {

@@ -175,6 +175,8 @@ DreamLayoutContainer:Children {
 DreamLayoutContainer:CreateNewLayoutAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:CreateNewLayoutAnimation
     src   "Create New Layout Animation"
+    text  "新建布局动画"
+    state machine
 }
 
 DreamLayoutContainer:CreateNewLayoutAnimation:Class {

@@ -12,6 +12,8 @@ DreamPointerLongPressInterface {
 DreamPointerLongPressInterface:OnPointerLongPress {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress
     src   "On Pointer Long Press"
+    text  "指针长按时"
+    state machine
 }
 
 DreamPointerLongPressInterface:OnPointerLongPress:EventData {

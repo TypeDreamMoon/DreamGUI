@@ -12,6 +12,8 @@ DreamViewModel {
 DreamViewModel:IsDesignTimeInstance {
     at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:IsDesignTimeInstance
     src   "Is Design Time Instance"
+    text  "是否设计时实例"
+    state machine
 }
 
 DreamViewModel:IsDesignTimeInstance:ReturnValue {

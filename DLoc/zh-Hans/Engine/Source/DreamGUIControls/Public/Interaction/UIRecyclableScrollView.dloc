@@ -108,6 +108,8 @@ UIRecyclableScrollView:GetCacheCellList:ReturnValue {
 UIRecyclableScrollView:GetCellItemByDataIndex {
     at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetCellItemByDataIndex
     src   "Get Cell Item by Data Index"
+    text  "按数据索引获取单元格条目"
+    state machine
 }
 
 UIRecyclableScrollView:GetCellItemByDataIndex:Index {
@@ -272,6 +274,8 @@ UIRecyclableScrollView:GetSpace:ReturnValue {
 UIRecyclableScrollView:GetUserFriendlyCacheCellList {
     at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:GetUserFriendlyCacheCellList
     src   "Get User Friendly Cache Cell List"
+    text  "获取缓存的单元格列表"
+    state machine
 }
 
 UIRecyclableScrollView:GetUserFriendlyCacheCellList:OutResult {
@@ -308,6 +312,8 @@ UIRecyclableScrollView:Rows {
 UIRecyclableScrollView:ScrollToByDataIndex {
     at    Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h#UIRecyclableScrollView:ScrollToByDataIndex
     src   "Scroll to by Data Index"
+    text  "按数据索引滚动到"
+    state machine
 }
 
 UIRecyclableScrollView:ScrollToByDataIndex:InAnimationDuration {

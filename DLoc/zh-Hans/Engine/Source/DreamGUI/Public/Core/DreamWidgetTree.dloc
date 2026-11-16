@@ -27,6 +27,8 @@ DreamWidgetTree:CountWidgets:ReturnValue {
 DreamWidgetTree:FindWidgetByVariableName {
     at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:FindWidgetByVariableName
     src   "Find Widget by Variable Name"
+    text  "按变量名查找控件"
+    state machine
 }
 
 DreamWidgetTree:FindWidgetByVariableName:InVariableName {

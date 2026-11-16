@@ -104,6 +104,8 @@ DreamTweener:GetElapsedTime:ReturnValue {
 DreamTweener:GetLoopCycleCount {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetLoopCycleCount
     src   "Get Loop Cycle Count"
+    text  "获取循环圈数"
+    state machine
 }
 
 DreamTweener:GetLoopCycleCount:ReturnValue {
@@ -132,6 +134,8 @@ DreamTweener:GetProgress:ReturnValue {
 DreamTweener:GetReplacesEarlierTweens {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetReplacesEarlierTweens
     src   "Get Replaces Earlier Tweens"
+    text  "获取是否替换先前补间"
+    state machine
 }
 
 DreamTweener:GetReplacesEarlierTweens:ReturnValue {
@@ -590,6 +594,8 @@ DreamTweener:SetLoop:ReturnValue {
 DreamTweener:SetReplacesEarlierTweens {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens
     src   "Set Replaces Earlier Tweens"
+    text  "设置是否替换先前补间"
+    state machine
 }
 
 DreamTweener:SetReplacesEarlierTweens:ReturnValue {
@@ -611,6 +617,8 @@ DreamTweener:SetReplacesEarlierTweens:value {
 DreamTweener:SetRuntimeFloatCurve {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetRuntimeFloatCurve
     src   "Set Runtime Float Curve"
+    text  "设置运行时浮点曲线"
+    state machine
 }
 
 DreamTweener:SetRuntimeFloatCurve:ReturnValue {
@@ -1213,6 +1221,8 @@ DreamTweener:SetLoop {
 DreamTweener:SetReplacesEarlierTweens {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens
     src   "Does this tween stop the earlier tweens of the same properties when it starts? On for the tweens the property\nverbs make (UDreamWidget::RenderOpacityTo, RenderOffsetTo, a visual's ColorTo and the rest); off lets two of them\nrun on one property at once, as before. Means nothing for a tween made with UDreamTweenManager::To directly."
+    text  "这个补间开始时，是否中止同一属性上更早的补间？对属性动词创建的补间\n（UDreamWidget::RenderOpacityTo、RenderOffsetTo，视觉的 ColorTo 等）默认为开；关掉就让两个补间\n同时作用于一个属性，与以前一样。对直接用 UDreamTweenManager::To 创建的补间没有意义。"
+    state machine
 }
 
 DreamTweener:SetRuntimeFloatCurve {

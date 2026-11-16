@@ -42,6 +42,8 @@ DreamMeshModifierBase:GetEnable:ReturnValue {
 DreamMeshModifierBase:GetVisualBatchMesh {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:GetVisualBatchMesh
     src   "Get Visual Batch Mesh"
+    text  "获取视觉合批网格"
+    state machine
 }
 
 DreamMeshModifierBase:GetVisualBatchMesh:ReturnValue {
@@ -55,6 +57,8 @@ DreamMeshModifierBase:GetVisualBatchMesh:ReturnValue {
 DreamMeshModifierBase:ReceiveModifyUIGeometry {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamMeshModifierBase:ReceiveModifyUIGeometry
     src   "ModifyUIGeometry"
+    text  "修改 UI 几何"
+    state machine
 }
 
 DreamMeshModifierBase:ReceiveModifyUIGeometry:InGeometryModifierHelper {
@@ -89,6 +93,8 @@ DreamVisualBatchMeshModifierHelper {
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition
     src   "UIText Helper Function Get Char Geometry Absolute Position"
+    text  "UI 文本辅助函数：获取字符几何的绝对位置"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_AbsolutePosition:InCharIndex {
@@ -116,6 +122,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharGeometry_Absolute
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01 {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01
     src   "UIText Helper Function Get Char Horizontal Position Ratio 01"
+    text  "UI 文本辅助函数：获取字符水平位置比例（0-1）"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositionRatio01:InCharIndex {
@@ -143,6 +151,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_GetCharHorizontalPositio
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha
     src   "UIText Helper Function Modify Char Geometry Alpha"
+    text  "UI 文本辅助函数：修改字符几何透明度"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha:InAlpha {
@@ -170,6 +180,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Alpha
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color
     src   "UIText Helper Function Modify Char Geometry Color"
+    text  "UI 文本辅助函数：修改字符几何颜色"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color:InCharIndex {
@@ -197,6 +209,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Color
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position
     src   "UIText Helper Function Modify Char Geometry Position"
+    text  "UI 文本辅助函数：修改字符几何位置"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Position:InCharIndex {
@@ -231,6 +245,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Posit
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate
     src   "UIText Helper Function Modify Char Geometry Rotate"
+    text  "UI 文本辅助函数：修改字符几何旋转"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotate:InCharIndex {
@@ -258,6 +274,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Rotat
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale
     src   "UIText Helper Function Modify Char Geometry Scale"
+    text  "UI 文本辅助函数：修改字符几何缩放"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale:InCharIndex {
@@ -285,6 +303,8 @@ DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Scale
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h#DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform
     src   "UIText Helper Function Modify Char Geometry Transform"
+    text  "UI 文本辅助函数：修改字符几何变换"
+    state machine
 }
 
 DreamVisualBatchMeshModifierHelper:UITextHelperFunction_ModifyCharGeometry_Transform:InCharIndex {

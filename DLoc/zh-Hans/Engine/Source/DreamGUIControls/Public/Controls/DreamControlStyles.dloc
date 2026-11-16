@@ -4830,6 +4830,8 @@ DreamExpandableAreaStyle:bOverride_ExpandedBrush {
 DreamExpandableAreaStyle:bOverride_Font {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:bOverride_Font
     src   "The header's typeface, as a font data asset. Null leaves it on the project's default font (DreamGUI settings)."
+    text  "表头的字体，以一个字体数据资产表示。为空则该表头沿用项目默认字体（DreamGUI 设置）。"
+    state machine
 }
 
 DreamExpandableAreaStyle:bOverride_HeaderDisabled {
@@ -5129,6 +5131,8 @@ DreamRingMenuStyle:bOverride_ContentWidth {
 DreamRingMenuStyle:bOverride_Font {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_Font
     src   "The typeface of the items' labels and the hub's caption, as a font data asset. Null leaves them on the project's default font."
+    text  "各项标签与中心标题的字体，以一个字体数据资产表示。为空则沿用项目默认字体。"
+    state machine
 }
 
 DreamRingMenuStyle:bOverride_HighlightGrowth {

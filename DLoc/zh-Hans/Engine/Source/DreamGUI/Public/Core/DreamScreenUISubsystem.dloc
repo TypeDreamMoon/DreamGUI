@@ -108,6 +108,8 @@ DreamScreenUISubsystem:ClearStack:InOwningPlayer {
 DreamScreenUISubsystem:CreateWidgetOnScreen {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:CreateWidgetOnScreen
     src   "Create Widget on Screen"
+    text  "在屏幕上创建控件"
+    state machine
 }
 
 DreamScreenUISubsystem:CreateWidgetOnScreen:InOwningPlayer {
@@ -180,6 +182,8 @@ DreamScreenUISubsystem:GetAllUINames:ReturnValue {
 DreamScreenUISubsystem:GetDreamScreenUISubsystem {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetDreamScreenUISubsystem
     src   "Get DreamUI Screen UI Subsystem"
+    text  "获取 DreamUI 屏幕 UI 子系统"
+    state machine
 }
 
 DreamScreenUISubsystem:GetDreamScreenUISubsystem:ReturnValue {
@@ -201,6 +205,8 @@ DreamScreenUISubsystem:GetDreamScreenUISubsystem:WorldContextObject {
 DreamScreenUISubsystem:GetOrCreateScreenRoot {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRoot
     src   "Get or Create Screen Root"
+    text  "获取或创建屏幕根"
+    state machine
 }
 
 DreamScreenUISubsystem:GetOrCreateScreenRoot:InOwningPlayer {
@@ -221,6 +227,8 @@ DreamScreenUISubsystem:GetOrCreateScreenRoot:ReturnValue {
 DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex
     src   "Get or Create Screen Root for User Index"
+    text  "获取或创建指定玩家的屏幕根"
+    state machine
 }
 
 DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:InUserIndex {
@@ -241,6 +249,8 @@ DreamScreenUISubsystem:GetOrCreateScreenRootForUserIndex:ReturnValue {
 DreamScreenUISubsystem:GetOrCreateScreenRootForWidget {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetOrCreateScreenRootForWidget
     src   "Get or Create Screen Root for Widget"
+    text  "获取或创建控件所属的屏幕根"
+    state machine
 }
 
 DreamScreenUISubsystem:GetOrCreateScreenRootForWidget:InContextWidget {
@@ -284,6 +294,8 @@ DreamScreenUISubsystem:GetPageClass:ReturnValue {
 DreamScreenUISubsystem:GetPageHasCustomPlacement {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetPageHasCustomPlacement
     src   "Get Page Has Custom Placement"
+    text  "获取页面是否有自定义放置"
+    state machine
 }
 
 DreamScreenUISubsystem:GetPageHasCustomPlacement:InRoot {
@@ -327,6 +339,8 @@ DreamScreenUISubsystem:GetPageState:ReturnValue {
 DreamScreenUISubsystem:GetRegisteredPageNames {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetRegisteredPageNames
     src   "Get Registered Page Names"
+    text  "获取已注册的页面名称"
+    state machine
 }
 
 DreamScreenUISubsystem:GetRegisteredPageNames:ReturnValue {
@@ -362,6 +376,8 @@ DreamScreenUISubsystem:GetScreenCanvas:ReturnValue {
 DreamScreenUISubsystem:GetScreenPlayerIndices {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:GetScreenPlayerIndices
     src   "Get Screen Player Indices"
+    text  "获取屏幕玩家索引"
+    state machine
 }
 
 DreamScreenUISubsystem:GetScreenPlayerIndices:ReturnValue {
@@ -694,6 +710,8 @@ DreamScreenUISubsystem:PushUI:InRoot {
 DreamScreenUISubsystem:PushWidgetOfClass {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:PushWidgetOfClass
     src   "Push Widget Of Class"
+    text  "按类推入控件"
+    state machine
 }
 
 DreamScreenUISubsystem:PushWidgetOfClass:bHidePrevious {
@@ -855,6 +873,8 @@ DreamScreenUISubsystem:ScreenRoots {
 DreamScreenUISubsystem:SetPageHasCustomPlacement {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:SetPageHasCustomPlacement
     src   "Set Page Has Custom Placement"
+    text  "设置页面自定义放置"
+    state machine
 }
 
 DreamScreenUISubsystem:SetPageHasCustomPlacement:bInCustomPlacement {
@@ -905,6 +925,8 @@ DreamScreenUISubsystem:SetUIVisible:InName {
 DreamScreenUISubsystem:ShowWidgetOfClass {
     at    Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h#DreamScreenUISubsystem:ShowWidgetOfClass
     src   "Show Widget Of Class"
+    text  "按类显示控件"
+    state machine
 }
 
 DreamScreenUISubsystem:ShowWidgetOfClass:InName {

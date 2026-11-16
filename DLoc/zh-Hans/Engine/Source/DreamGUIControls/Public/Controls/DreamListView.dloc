@@ -1863,6 +1863,8 @@ DreamListViewBase:FocusSelectedRow:ReturnValue {
 DreamListViewBase:GetAllowDragDrop {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragDrop
     src   "Get Allow Drag Drop"
+    text  "获取允许拖放"
+    state machine
 }
 
 DreamListViewBase:GetAllowDragDrop:ReturnValue {
@@ -1891,6 +1893,8 @@ DreamListViewBase:GetAllowDragging:ReturnValue {
 DreamListViewBase:GetAllowKeepPreselectedItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowKeepPreselectedItems
     src   "Get Allow Keep Preselected Items"
+    text  "获取允许保留预选项"
+    state machine
 }
 
 DreamListViewBase:GetAllowKeepPreselectedItems:ReturnValue {
@@ -1994,6 +1998,8 @@ DreamListViewBase:GetDragEdgeScrollSpeed:ReturnValue {
 DreamListViewBase:GetDraggedItemIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDraggedItemIndex
     src   "Get Dragged Item Index"
+    text  "获取拖拽条目索引"
+    state machine
 }
 
 DreamListViewBase:GetDraggedItemIndex:ReturnValue {
@@ -2389,6 +2395,8 @@ DreamListViewBase:GetRowCount:ReturnValue {
 DreamListViewBase:GetRowItemIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowItemIndex
     src   "Get Row Item Index"
+    text  "获取行条目索引"
+    state machine
 }
 
 DreamListViewBase:GetRowItemIndex:InPoolIndex {
@@ -2674,6 +2682,8 @@ DreamListViewBase:GetWheelScrollMultiplier:ReturnValue {
 DreamListViewBase:IsItemSelectableOrNavigable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelectableOrNavigable
     src   "Is Item Selectable or Navigable"
+    text  "条目是否可选或可导航"
+    state machine
 }
 
 DreamListViewBase:IsItemSelectableOrNavigable:InItemIndex {
@@ -3239,6 +3249,8 @@ DreamListViewBase:SetAllowDragging:bInAllow {
 DreamListViewBase:SetAllowKeepPreselectedItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowKeepPreselectedItems
     src   "Set Allow Keep Preselected Items"
+    text  "设置允许保留预选项"
+    state machine
 }
 
 DreamListViewBase:SetAllowKeepPreselectedItems:bInAllow {
@@ -3311,6 +3323,8 @@ DreamListViewBase:SetConsumeMouseWheel:InConsume {
 DreamListViewBase:SetDragDropOperationClass {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropOperationClass
     src   "Set Drag Drop Operation Class"
+    text  "设置拖放操作类"
+    state machine
 }
 
 DreamListViewBase:SetDragDropOperationClass:InOperationClass {
@@ -3323,6 +3337,8 @@ DreamListViewBase:SetDragDropOperationClass:InOperationClass {
 DreamListViewBase:SetDragDropVisualEntryClass {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualEntryClass
     src   "Set Drag Drop Visual Entry Class"
+    text  "设置拖放视觉条目类"
+    state machine
 }
 
 DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass {
@@ -3335,6 +3351,8 @@ DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass {
 DreamListViewBase:SetDragDropVisualOffset {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualOffset
     src   "Set Drag Drop Visual Offset"
+    text  "设置拖放视觉偏移"
+    state machine
 }
 
 DreamListViewBase:SetDragDropVisualOffset:InOffset {
@@ -3348,6 +3366,8 @@ DreamListViewBase:SetDragDropVisualOffset:InOffset {
 DreamListViewBase:SetDragDropVisualPivot {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualPivot
     src   "Set Drag Drop Visual Pivot"
+    text  "设置拖放视觉枢轴点"
+    state machine
 }
 
 DreamListViewBase:SetDragDropVisualPivot:InPivot {
@@ -3754,6 +3774,8 @@ DreamListViewBase:SetSelectedIndex:InIndex {
 DreamListViewBase:SetSelectedIndexWithoutNotify {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndexWithoutNotify
     src   "Set Selected Index Without Notify"
+    text  "设置选中索引（不通知）"
+    state machine
 }
 
 DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex {

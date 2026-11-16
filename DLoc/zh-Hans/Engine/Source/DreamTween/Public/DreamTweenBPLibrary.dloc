@@ -12,6 +12,8 @@ DreamTweenBPLibrary {
 DreamTweenBPLibrary:ArrayKillIfIsTweening {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:ArrayKillIfIsTweening
     src   "Kill If Is Tweening (Array)"
+    text  "补间中则终止（数组）"
+    state machine
 }
 
 DreamTweenBPLibrary:ArrayKillIfIsTweening:callComplete {
@@ -473,6 +475,8 @@ DreamTweenBPLibrary:IsTweening:WorldContextObject {
 DreamTweenBPLibrary:KillAllTweensOnTarget {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:KillAllTweensOnTarget
     src   "Kill All Tweens on Target"
+    text  "终止目标上的所有补间"
+    state machine
 }
 
 DreamTweenBPLibrary:KillAllTweensOnTarget:callComplete {
@@ -501,6 +505,8 @@ DreamTweenBPLibrary:KillAllTweensOnTarget:WorldContextObject {
 DreamTweenBPLibrary:KillIfIsTweening {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:KillIfIsTweening
     src   "Kill if Is Tweening"
+    text  "补间中则终止"
+    state machine
 }
 
 DreamTweenBPLibrary:KillIfIsTweening:callComplete {
@@ -654,6 +660,8 @@ DreamTweenBPLibrary:LocalPositionTo:target {
 DreamTweenBPLibrary:LocalPositionTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionTo_Sweep
     src   "Local Position To (Sweep)"
+    text  "局部位置终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionTo_Sweep:delay {
@@ -723,6 +731,8 @@ DreamTweenBPLibrary:LocalPositionTo_Sweep:teleport {
 DreamTweenBPLibrary:LocalPositionXTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionXTo
     src   "Local Position X To"
+    text  "局部位置 X 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionXTo:delay {
@@ -776,6 +786,8 @@ DreamTweenBPLibrary:LocalPositionXTo:target {
 DreamTweenBPLibrary:LocalPositionXTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionXTo_Sweep
     src   "Local Position X To (Sweep)"
+    text  "局部位置 X 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionXTo_Sweep:delay {
@@ -845,6 +857,8 @@ DreamTweenBPLibrary:LocalPositionXTo_Sweep:teleport {
 DreamTweenBPLibrary:LocalPositionYTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionYTo
     src   "Local Position Y To"
+    text  "局部位置 Y 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionYTo:delay {
@@ -898,6 +912,8 @@ DreamTweenBPLibrary:LocalPositionYTo:target {
 DreamTweenBPLibrary:LocalPositionYTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionYTo_Sweep
     src   "Local Position Y To (Sweep)"
+    text  "局部位置 Y 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionYTo_Sweep:delay {
@@ -967,6 +983,8 @@ DreamTweenBPLibrary:LocalPositionYTo_Sweep:teleport {
 DreamTweenBPLibrary:LocalPositionZTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionZTo
     src   "Local Position Z To"
+    text  "局部位置 Z 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionZTo:delay {
@@ -1020,6 +1038,8 @@ DreamTweenBPLibrary:LocalPositionZTo:target {
 DreamTweenBPLibrary:LocalPositionZTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionZTo_Sweep
     src   "Local Position Z To (Sweep)"
+    text  "局部位置 Z 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionZTo_Sweep:delay {
@@ -1089,6 +1109,8 @@ DreamTweenBPLibrary:LocalPositionZTo_Sweep:teleport {
 DreamTweenBPLibrary:LocalRotateEulerAngleTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotateEulerAngleTo
     src   "Local Rotate Euler Angle To"
+    text  "局部旋转欧拉角终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotateEulerAngleTo:delay {
@@ -1141,6 +1163,8 @@ DreamTweenBPLibrary:LocalRotateEulerAngleTo:target {
 DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep
     src   "Local Rotate Euler Angle To (Sweep)"
+    text  "局部旋转欧拉角终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep:delay {
@@ -1209,6 +1233,8 @@ DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep:teleport {
 DreamTweenBPLibrary:LocalRotationQuaternionTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotationQuaternionTo
     src   "Local Rotation Quaternion To"
+    text  "局部旋转四元数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotationQuaternionTo:delay {
@@ -1262,6 +1288,8 @@ DreamTweenBPLibrary:LocalRotationQuaternionTo:target {
 DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep
     src   "Local Rotation Quaternion To (Sweep)"
+    text  "局部旋转四元数终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep:delay {
@@ -1394,6 +1422,8 @@ DreamTweenBPLibrary:LocalRotatorTo:target {
 DreamTweenBPLibrary:LocalRotatorTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotatorTo_Sweep
     src   "Local Rotator To (Sweep)"
+    text  "局部旋转体终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotatorTo_Sweep:delay {
@@ -1526,6 +1556,8 @@ DreamTweenBPLibrary:LocalScaleTo:target {
 DreamTweenBPLibrary:MaterialScalarParameterTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MaterialScalarParameterTo
     src   "Material Scalar Parameter To"
+    text  "材质标量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MaterialScalarParameterTo:delay {
@@ -1595,6 +1627,8 @@ DreamTweenBPLibrary:MaterialScalarParameterTo:WorldContextObject {
 DreamTweenBPLibrary:MaterialVectorParameterTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MaterialVectorParameterTo
     src   "Material Vector Parameter To"
+    text  "材质向量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MaterialVectorParameterTo:delay {
@@ -1664,6 +1698,8 @@ DreamTweenBPLibrary:MaterialVectorParameterTo:WorldContextObject {
 DreamTweenBPLibrary:MeshMaterialScalarParameterTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MeshMaterialScalarParameterTo
     src   "Mesh Material Scalar Parameter To"
+    text  "网格体材质标量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MeshMaterialScalarParameterTo:delay {
@@ -1733,6 +1769,8 @@ DreamTweenBPLibrary:MeshMaterialScalarParameterTo:target {
 DreamTweenBPLibrary:MeshMaterialVectorParameterTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MeshMaterialVectorParameterTo
     src   "Mesh Material Vector Parameter To"
+    text  "网格体材质向量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MeshMaterialVectorParameterTo:delay {
@@ -2054,6 +2092,8 @@ DreamTweenBPLibrary:SpringFloat:WorldContextObject {
 DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo
     src   "UMG Border Content Color and Opacity To"
+    text  "UMG 边框内容颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo:delay {
@@ -2115,6 +2155,8 @@ DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo
     src   "UMG Border Slot Padding To"
+    text  "UMG 边框插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo:delay {
@@ -2176,6 +2218,8 @@ DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo
     src   "UMG Button Color and Opacity To"
+    text  "UMG 按钮颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo:delay {
@@ -2237,6 +2281,8 @@ DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo
     src   "UMG Button Slot Padding To"
+    text  "UMG 按钮插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo:delay {
@@ -2298,6 +2344,8 @@ DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo
     src   "UMG Canvas Panel Slot Position To"
+    text  "UMG 画布面板插槽位置终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo:delay {
@@ -2359,6 +2407,8 @@ DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo
     src   "UMG Canvas Panel Slot Size To"
+    text  "UMG 画布面板插槽尺寸终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo:delay {
@@ -2420,6 +2470,8 @@ DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo
     src   "UMG Horizontal Box Slot Padding To"
+    text  "UMG 水平框插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo:delay {
@@ -2481,6 +2533,8 @@ DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo
     src   "UMG Image Color and Opacity To"
+    text  "UMG 图像颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo:delay {
@@ -2542,6 +2596,8 @@ DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo
     src   "UMG Overlay Slot Padding To"
+    text  "UMG 叠加插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo:delay {
@@ -2603,6 +2659,8 @@ DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_RenderOpacityTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderOpacityTo
     src   "UMG Render Opacity To"
+    text  "UMG 渲染不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderOpacityTo:delay {
@@ -2664,6 +2722,8 @@ DreamTweenBPLibrary:UMG_RenderOpacityTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_RenderTransform_AngleTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_AngleTo
     src   "UMG Render Transform Angle To"
+    text  "UMG 渲染变换角度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_AngleTo:delay {
@@ -2725,6 +2785,8 @@ DreamTweenBPLibrary:UMG_RenderTransform_AngleTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo
     src   "UMG Render Transform Scale To"
+    text  "UMG 渲染变换缩放终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo:delay {
@@ -2786,6 +2848,8 @@ DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_RenderTransform_ShearTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_ShearTo
     src   "UMG Render Transform Shear To"
+    text  "UMG 渲染变换切变终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_ShearTo:delay {
@@ -2847,6 +2911,8 @@ DreamTweenBPLibrary:UMG_RenderTransform_ShearTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo
     src   "UMG Render Transform Translation To"
+    text  "UMG 渲染变换平移终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo:delay {
@@ -2908,6 +2974,8 @@ DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo
     src   "UMG User Widget Color and Opacity To"
+    text  "UMG 用户控件颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo:delay {
@@ -2969,6 +3037,8 @@ DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo:WorldContextObject {
 DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo
     src   "UMG Vertical Box Slot Padding To"
+    text  "UMG 垂直框插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo:delay {
@@ -3392,6 +3462,8 @@ DreamTweenBPLibrary:WorldPositionTo:target {
 DreamTweenBPLibrary:WorldPositionTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionTo_Sweep
     src   "World Position To (Sweep)"
+    text  "世界位置终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionTo_Sweep:delay {
@@ -3461,6 +3533,8 @@ DreamTweenBPLibrary:WorldPositionTo_Sweep:teleport {
 DreamTweenBPLibrary:WorldPositionXTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionXTo
     src   "World Position X To"
+    text  "世界位置 X 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionXTo:delay {
@@ -3514,6 +3588,8 @@ DreamTweenBPLibrary:WorldPositionXTo:target {
 DreamTweenBPLibrary:WorldPositionXTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionXTo_Sweep
     src   "World Position X To (Sweep)"
+    text  "世界位置 X 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionXTo_Sweep:delay {
@@ -3583,6 +3659,8 @@ DreamTweenBPLibrary:WorldPositionXTo_Sweep:teleport {
 DreamTweenBPLibrary:WorldPositionYTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionYTo
     src   "World Position Y To"
+    text  "世界位置 Y 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionYTo:delay {
@@ -3636,6 +3714,8 @@ DreamTweenBPLibrary:WorldPositionYTo:target {
 DreamTweenBPLibrary:WorldPositionYTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionYTo_Sweep
     src   "World Position Y To (Sweep)"
+    text  "世界位置 Y 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionYTo_Sweep:delay {
@@ -3705,6 +3785,8 @@ DreamTweenBPLibrary:WorldPositionYTo_Sweep:teleport {
 DreamTweenBPLibrary:WorldPositionZTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionZTo
     src   "World Position Z To"
+    text  "世界位置 Z 终点"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionZTo:delay {
@@ -3758,6 +3840,8 @@ DreamTweenBPLibrary:WorldPositionZTo:target {
 DreamTweenBPLibrary:WorldPositionZTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionZTo_Sweep
     src   "World Position Z To (Sweep)"
+    text  "世界位置 Z 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionZTo_Sweep:delay {
@@ -3827,6 +3911,8 @@ DreamTweenBPLibrary:WorldPositionZTo_Sweep:teleport {
 DreamTweenBPLibrary:WorldRotateEulerAngleTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotateEulerAngleTo
     src   "World Rotate Euler Angle To"
+    text  "世界旋转欧拉角终点"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotateEulerAngleTo:delay {
@@ -3879,6 +3965,8 @@ DreamTweenBPLibrary:WorldRotateEulerAngleTo:target {
 DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep
     src   "World Rotate Euler Angle To (Sweep)"
+    text  "世界旋转欧拉角终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep:delay {
@@ -3947,6 +4035,8 @@ DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep:teleport {
 DreamTweenBPLibrary:WorldRotationQuaternionTo {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotationQuaternionTo
     src   "World Rotation Quaternion To"
+    text  "世界旋转四元数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotationQuaternionTo:delay {
@@ -4000,6 +4090,8 @@ DreamTweenBPLibrary:WorldRotationQuaternionTo:target {
 DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep
     src   "World Rotation Quaternion To (Sweep)"
+    text  "世界旋转四元数终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep:delay {
@@ -4132,6 +4224,8 @@ DreamTweenBPLibrary:WorldRotatorTo:target {
 DreamTweenBPLibrary:WorldRotatorTo_Sweep {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotatorTo_Sweep
     src   "World Rotator To (Sweep)"
+    text  "世界旋转体终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotatorTo_Sweep:delay {

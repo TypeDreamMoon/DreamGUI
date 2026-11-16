@@ -98,6 +98,8 @@ DreamPath:GetLength:ReturnValue {
 DreamPath:GetPointAtDistance {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance
     src   "Get Point at Distance"
+    text  "按距离获取点"
+    state machine
 }
 
 DreamPath:GetPointAtDistance:InDistance {

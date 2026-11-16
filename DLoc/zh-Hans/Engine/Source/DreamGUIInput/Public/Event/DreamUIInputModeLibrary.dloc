@@ -12,6 +12,8 @@ DreamUIInputModeLibrary {
 DreamUIInputModeLibrary:GetPlayerControllerForUser {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetPlayerControllerForUser
     src   "Get Player Controller for User"
+    text  "获取玩家的玩家控制器"
+    state machine
 }
 
 DreamUIInputModeLibrary:GetPlayerControllerForUser:ReturnValue {
@@ -41,6 +43,8 @@ DreamUIInputModeLibrary:GetPlayerControllerForUser:WorldContextObject {
 DreamUIInputModeLibrary:GetShowMouseCursor {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:GetShowMouseCursor
     src   "Get Show Mouse Cursor"
+    text  "获取是否显示鼠标光标"
+    state machine
 }
 
 DreamUIInputModeLibrary:GetShowMouseCursor:ReturnValue {
@@ -158,6 +162,8 @@ DreamUIInputModeLibrary:SetInputModeGameOnly:WorldContextObject {
 DreamUIInputModeLibrary:SetInputModeUIOnly {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetInputModeUIOnly
     src   "Set Input Mode UIOnly"
+    text  "设置输入模式为仅 UI"
+    state machine
 }
 
 DreamUIInputModeLibrary:SetInputModeUIOnly:bFlushInput {
@@ -234,6 +240,8 @@ DreamUIInputModeLibrary:SetMouseLockMode:WorldContextObject {
 DreamUIInputModeLibrary:SetShowMouseCursor {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h#DreamUIInputModeLibrary:SetShowMouseCursor
     src   "Set Show Mouse Cursor"
+    text  "设置显示鼠标光标"
+    state machine
 }
 
 DreamUIInputModeLibrary:SetShowMouseCursor:bShowCursor {

@@ -27,6 +27,8 @@ DreamStaticMesh:GetMeshCache:ReturnValue {
 DreamStaticMesh:GetOrCreateDynamicMaterialInstance {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetOrCreateDynamicMaterialInstance
     src   "Get or Create Dynamic Material Instance"
+    text  "获取或创建动态材质实例"
+    state machine
 }
 
 DreamStaticMesh:GetOrCreateDynamicMaterialInstance:ReturnValue {

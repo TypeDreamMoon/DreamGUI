@@ -919,6 +919,8 @@ UISelectable:GetNavigationDown:ReturnValue {
 UISelectable:GetNavigationDownExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationDownExplicit
     src   "Get Navigation Down Explicit"
+    text  "获取显式导航（下）"
+    state machine
 }
 
 UISelectable:GetNavigationDownExplicit:ReturnValue {
@@ -947,6 +949,8 @@ UISelectable:GetNavigationLeft:ReturnValue {
 UISelectable:GetNavigationLeftExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationLeftExplicit
     src   "Get Navigation Left Explicit"
+    text  "获取显式导航（左）"
+    state machine
 }
 
 UISelectable:GetNavigationLeftExplicit:ReturnValue {
@@ -975,6 +979,8 @@ UISelectable:GetNavigationNext:ReturnValue {
 UISelectable:GetNavigationNextExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationNextExplicit
     src   "Get Navigation Next Explicit"
+    text  "获取显式导航（下一个）"
+    state machine
 }
 
 UISelectable:GetNavigationNextExplicit:ReturnValue {
@@ -1003,6 +1009,8 @@ UISelectable:GetNavigationPrev:ReturnValue {
 UISelectable:GetNavigationPrevExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationPrevExplicit
     src   "Get Navigation Prev Explicit"
+    text  "获取显式导航（上一个）"
+    state machine
 }
 
 UISelectable:GetNavigationPrevExplicit:ReturnValue {
@@ -1031,6 +1039,8 @@ UISelectable:GetNavigationRight:ReturnValue {
 UISelectable:GetNavigationRightExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationRightExplicit
     src   "Get Navigation Right Explicit"
+    text  "获取显式导航（右）"
+    state machine
 }
 
 UISelectable:GetNavigationRightExplicit:ReturnValue {
@@ -1059,6 +1069,8 @@ UISelectable:GetNavigationUp:ReturnValue {
 UISelectable:GetNavigationUpExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationUpExplicit
     src   "Get Navigation Up Explicit"
+    text  "获取显式导航（上）"
+    state machine
 }
 
 UISelectable:GetNavigationUpExplicit:ReturnValue {
@@ -1645,6 +1657,8 @@ UISelectable:SetNavigationDown:Value {
 UISelectable:SetNavigationDownExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationDownExplicit
     src   "Set Navigation Down Explicit"
+    text  "设置显式导航（下）"
+    state machine
 }
 
 UISelectable:SetNavigationDownExplicit:Value {
@@ -1673,6 +1687,8 @@ UISelectable:SetNavigationLeft:Value {
 UISelectable:SetNavigationLeftExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationLeftExplicit
     src   "Set Navigation Left Explicit"
+    text  "设置显式导航（左）"
+    state machine
 }
 
 UISelectable:SetNavigationLeftExplicit:Value {
@@ -1701,6 +1717,8 @@ UISelectable:SetNavigationNext:Value {
 UISelectable:SetNavigationNextExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationNextExplicit
     src   "Set Navigation Next Explicit"
+    text  "设置显式导航（下一个）"
+    state machine
 }
 
 UISelectable:SetNavigationNextExplicit:Value {
@@ -1729,6 +1747,8 @@ UISelectable:SetNavigationPrev:Value {
 UISelectable:SetNavigationPrevExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationPrevExplicit
     src   "Set Navigation Prev Explicit"
+    text  "设置显式导航（上一个）"
+    state machine
 }
 
 UISelectable:SetNavigationPrevExplicit:Value {
@@ -1757,6 +1777,8 @@ UISelectable:SetNavigationRight:Value {
 UISelectable:SetNavigationRightExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationRightExplicit
     src   "Set Navigation Right Explicit"
+    text  "设置显式导航（右）"
+    state machine
 }
 
 UISelectable:SetNavigationRightExplicit:Value {
@@ -1785,6 +1807,8 @@ UISelectable:SetNavigationUp:Value {
 UISelectable:SetNavigationUpExplicit {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationUpExplicit
     src   "Set Navigation Up Explicit"
+    text  "设置显式导航（上）"
+    state machine
 }
 
 UISelectable:SetNavigationUpExplicit:Value {
@@ -2083,6 +2107,8 @@ UISelectableTransition:ReceiveOnHovered:InImmediateSet {
 UISelectableTransition:ReceiveOnNormal {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnNormal
     src   "OnNormal"
+    text  "法线时"
+    state machine
 }
 
 UISelectableTransition:ReceiveOnNormal:InImmediateSet {

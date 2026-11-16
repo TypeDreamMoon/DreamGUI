@@ -99,6 +99,8 @@ DreamLyricsView:FontSize {
 DreamLyricsView:GetActiveLineIndex {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetActiveLineIndex
     src   "Get Active Line Index"
+    text  "获取当前活动行索引"
+    state machine
 }
 
 DreamLyricsView:GetActiveLineIndex:ReturnValue {

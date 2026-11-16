@@ -409,6 +409,8 @@ DreamSpinBox:GetSliderExponent:ReturnValue {
 DreamSpinBox:GetSliderMaxValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMaxValue
     src   "Get Slider Max Value"
+    text  "获取滑条最大值"
+    state machine
 }
 
 DreamSpinBox:GetSliderMaxValue:ReturnValue {
@@ -422,6 +424,8 @@ DreamSpinBox:GetSliderMaxValue:ReturnValue {
 DreamSpinBox:GetSliderMinValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMinValue
     src   "Get Slider Min Value"
+    text  "获取滑条最小值"
+    state machine
 }
 
 DreamSpinBox:GetSliderMinValue:ReturnValue {
@@ -497,6 +501,8 @@ DreamSpinBox:GetVirtualKeyboardDismissAction:ReturnValue {
 DreamSpinBox:HasFiniteSliderRange {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:HasFiniteSliderRange
     src   "Has Finite Slider Range"
+    text  "是否有有限滑条范围"
+    state machine
 }
 
 DreamSpinBox:HasFiniteSliderRange:ReturnValue {

@@ -197,6 +197,8 @@ DreamUIRenderTargetGeometrySource:GetRenderTarget:ReturnValue {
 DreamUIRenderTargetGeometrySource:GetRenderTargetSize {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTargetSize
     src   "Get Render Target Size"
+    text  "获取渲染目标尺寸"
+    state machine
 }
 
 DreamUIRenderTargetGeometrySource:GetRenderTargetSize:ReturnValue {

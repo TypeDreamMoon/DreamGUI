@@ -58,6 +58,8 @@ UIToggleGroup:GetSelectedItem:ReturnValue {
 UIToggleGroup:GetToggleByIndex {
     at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleByIndex
     src   "Get Toggle by Index"
+    text  "按索引获取开关"
+    state machine
 }
 
 UIToggleGroup:GetToggleByIndex:InIndex {

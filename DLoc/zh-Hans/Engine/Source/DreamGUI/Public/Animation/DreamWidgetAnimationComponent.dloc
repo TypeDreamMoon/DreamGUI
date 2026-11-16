@@ -775,6 +775,8 @@ DreamWidgetAnimationComponent:GetSequenceArray:ReturnValue {
 DreamWidgetAnimationComponent:GetSequenceByDisplayName {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByDisplayName
     src   "Get Sequence by Display Name"
+    text  "按显示名获取序列"
+    state machine
 }
 
 DreamWidgetAnimationComponent:GetSequenceByDisplayName:InName {
@@ -796,6 +798,8 @@ DreamWidgetAnimationComponent:GetSequenceByDisplayName:ReturnValue {
 DreamWidgetAnimationComponent:GetSequenceByIndex {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:GetSequenceByIndex
     src   "Get Sequence by Index"
+    text  "按索引获取序列"
+    state machine
 }
 
 DreamWidgetAnimationComponent:GetSequenceByIndex:InIndex {
@@ -863,6 +867,8 @@ DreamWidgetAnimationComponent:InitSequencePlayer {
 DreamWidgetAnimationComponent:IsAffectedByGamePause {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAffectedByGamePause
     src   "Is Affected by Game Pause"
+    text  "是否受游戏暂停影响"
+    state machine
 }
 
 DreamWidgetAnimationComponent:IsAffectedByGamePause:ReturnValue {
@@ -876,6 +882,8 @@ DreamWidgetAnimationComponent:IsAffectedByGamePause:ReturnValue {
 DreamWidgetAnimationComponent:IsAffectedByTimeDilation {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:IsAffectedByTimeDilation
     src   "Is Affected by Time Dilation"
+    text  "是否受时间缩放影响"
+    state machine
 }
 
 DreamWidgetAnimationComponent:IsAffectedByTimeDilation:ReturnValue {
@@ -1123,6 +1131,8 @@ DreamWidgetAnimationComponent:PlayAnimation:StartAtTime {
 DreamWidgetAnimationComponent:PlayAnimationByDisplayName {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:PlayAnimationByDisplayName
     src   "Play Animation by Display Name"
+    text  "按显示名播放动画"
+    state machine
 }
 
 DreamWidgetAnimationComponent:PlayAnimationByDisplayName:bRestoreState {
@@ -1697,6 +1707,8 @@ DreamWidgetAnimationComponent:SetPlaybackSpeed:PlaybackSpeed {
 DreamWidgetAnimationComponent:SetSequenceByDisplayName {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByDisplayName
     src   "Set Sequence by Display Name"
+    text  "按显示名设置序列"
+    state machine
 }
 
 DreamWidgetAnimationComponent:SetSequenceByDisplayName:InName {
@@ -1710,6 +1722,8 @@ DreamWidgetAnimationComponent:SetSequenceByDisplayName:InName {
 DreamWidgetAnimationComponent:SetSequenceByIndex {
     at    Source/DreamGUI/Public/Animation/DreamWidgetAnimationComponent.h#DreamWidgetAnimationComponent:SetSequenceByIndex
     src   "Set Sequence by Index"
+    text  "按索引设置序列"
+    state machine
 }
 
 DreamWidgetAnimationComponent:SetSequenceByIndex:InIndex {

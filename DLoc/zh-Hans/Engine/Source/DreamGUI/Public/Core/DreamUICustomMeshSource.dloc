@@ -56,6 +56,8 @@ DreamUICustomMeshSource {
 DreamUICustomMeshSource:GetHitUVbyFaceIndex {
     at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex
     src   "Get Hit UVby Face Index"
+    text  "按面索引获取命中 UV"
+    state machine
 }
 
 DreamUICustomMeshSource:GetHitUVbyFaceIndex:InDreamMesh {
@@ -97,6 +99,8 @@ DreamUICustomMeshSource:GetHitUVbyFaceIndex:ReturnValue {
 DreamUICustomMeshSource:ReceiveGetHitUV {
     at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV
     src   "GetHitUV"
+    text  "获取命中 UV"
+    state machine
 }
 
 DreamUICustomMeshSource:ReceiveGetHitUV:InDreamMesh {
@@ -194,6 +198,8 @@ DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexUVChanged {
 DreamUICustomMeshSource:ReceiveSupportDrawcallBatching {
     at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveSupportDrawcallBatching
     src   "SupportDrawcallBatching"
+    text  "支持绘制调用合批"
+    state machine
 }
 
 DreamUICustomMeshSource:ReceiveSupportDrawcallBatching:ReturnValue {

@@ -300,6 +300,8 @@ DreamBorder:SetBrushColor:InBrushColor {
 DreamBorder:SetBrushFromSprite {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromSprite
     src   "Set Brush from Sprite"
+    text  "从精灵设置笔刷"
+    state machine
 }
 
 DreamBorder:SetBrushFromSprite:InSprite {

@@ -66,6 +66,8 @@ DreamUIBehaviour:GetAnimationPlayer:ReturnValue {
 DreamUIBehaviour:GetPathDisplayName {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetPathDisplayName
     src   "Get Path Display Name"
+    text  "获取路径显示名"
+    state machine
 }
 
 DreamUIBehaviour:GetPathDisplayName:ReturnValue {
@@ -181,11 +183,15 @@ DreamUIBehaviour:ReceiveOnDimensionsChanged:WidthChanged {
 DreamUIBehaviour:ReceiveOnDisable {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDisable
     src   "OnDisable"
+    text  "禁用时"
+    state machine
 }
 
 DreamUIBehaviour:ReceiveOnEnable {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnEnable
     src   "OnEnable"
+    text  "启用时"
+    state machine
 }
 
 DreamUIBehaviour:ReceiveOnInteractableChanged {
@@ -257,6 +263,8 @@ DreamUIBehaviour:ReceiveTick:DeltaTime {
 DreamUIBehaviour:SetCanExecuteTick {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:SetCanExecuteTick
     src   "Set Can Execute Tick"
+    text  "设置是否可 Tick"
+    state machine
 }
 
 DreamUIBehaviour:SetCanExecuteTick:Value {

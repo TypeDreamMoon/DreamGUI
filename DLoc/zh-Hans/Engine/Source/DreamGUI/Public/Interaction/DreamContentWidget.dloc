@@ -179,6 +179,8 @@ DreamNamedSlotHost:ClearSlot:SlotName {
 DreamNamedSlotHost:GetContentForSlot {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetContentForSlot
     src   "Get Content for Slot"
+    text  "获取插槽内容"
+    state machine
 }
 
 DreamNamedSlotHost:GetContentForSlot:ReturnValue {
@@ -223,6 +225,8 @@ DreamNamedSlotHost:NamedSlots {
 DreamNamedSlotHost:SetContentForSlot {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:SetContentForSlot
     src   "Set Content for Slot"
+    text  "设置插槽内容"
+    state machine
 }
 
 DreamNamedSlotHost:SetContentForSlot:Content {

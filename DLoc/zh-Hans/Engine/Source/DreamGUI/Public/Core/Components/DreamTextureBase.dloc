@@ -66,6 +66,8 @@ DreamTextureBase:SetOverrideMaterial:Value {
 DreamTextureBase:SetSizeFromTexture {
     at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetSizeFromTexture
     src   "Set Size from Texture"
+    text  "从纹理设置尺寸"
+    state machine
 }
 
 DreamTextureBase:SetTexture {

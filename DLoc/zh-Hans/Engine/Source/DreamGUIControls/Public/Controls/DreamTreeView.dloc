@@ -292,6 +292,8 @@ DreamTreeView:SetItemExpansion:InItemIndex {
 DreamTreeView:SetItemsWithDepths {
     at    Source/DreamGUIControls/Public/Controls/DreamTreeView.h#DreamTreeView:SetItemsWithDepths
     src   "Set Items with Depths"
+    text  "设置带层级的条目"
+    state machine
 }
 
 DreamTreeView:SetItemsWithDepths:InDepths {

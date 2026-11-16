@@ -94,6 +94,8 @@ DreamButton:GetAcceptedMouseButtons:ReturnValue {
 DreamButton:GetAllowDragDrop {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAllowDragDrop
     src   "Get Allow Drag Drop"
+    text  "获取允许拖放"
+    state machine
 }
 
 DreamButton:GetAllowDragDrop:ReturnValue {

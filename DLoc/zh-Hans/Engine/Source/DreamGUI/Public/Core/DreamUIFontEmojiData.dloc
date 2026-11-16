@@ -19,6 +19,8 @@ DreamUIFontEmojiData:AnimationFps {
 DreamUIFontEmojiData:BroadcastOnDataChange {
     at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:BroadcastOnDataChange
     src   "Broadcast on Data Change"
+    text  "数据变更时广播"
+    state machine
 }
 
 DreamUIFontEmojiData:DataMap {
@@ -61,6 +63,8 @@ DreamUIFontEmojiData:GetDataMap:ReturnValue {
 DreamUIFontEmojiData:GetMutableDataMap {
     at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetMutableDataMap
     src   "Get Mutable Data Map"
+    text  "获取可变数据映射"
+    state machine
 }
 
 DreamUIFontEmojiData:GetMutableDataMap:ReturnValue {

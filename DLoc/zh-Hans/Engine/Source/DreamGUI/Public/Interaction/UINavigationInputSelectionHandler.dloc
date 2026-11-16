@@ -26,11 +26,15 @@ UINavigationInputSelectionHandler:CurrentSelected {
 UINavigationInputSelectionHandler:ReceiveSelectNone {
     at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectNone
     src   "SelectNone"
+    text  "选择无"
+    state machine
 }
 
 UINavigationInputSelectionHandler:ReceiveSelectWidget {
     at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectWidget
     src   "SelectWidget"
+    text  "选中控件"
+    state machine
 }
 
 UINavigationInputSelectionHandler:ReceiveSelectWidget:InSelected {

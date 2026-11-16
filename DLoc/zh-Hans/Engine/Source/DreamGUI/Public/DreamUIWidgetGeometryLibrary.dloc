@@ -393,6 +393,8 @@ DreamUIWidgetGeometryLibrary:ScreenToViewport:WorldContextObject {
 DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute
     src   "Screen to Widget Absolute"
+    text  "屏幕坐标转控件绝对坐标"
+    state machine
 }
 
 DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:InScreenPosition {
@@ -421,6 +423,8 @@ DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:ReturnValue {
 DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal
     src   "Screen to Widget Local"
+    text  "屏幕坐标转控件局部坐标"
+    state machine
 }
 
 DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InGeometry {

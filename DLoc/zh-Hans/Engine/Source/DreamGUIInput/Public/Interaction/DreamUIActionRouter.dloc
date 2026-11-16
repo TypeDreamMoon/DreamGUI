@@ -173,6 +173,8 @@ DreamUIActionRouter:HandleKey:ReturnValue {
 DreamUIActionRouter:HandleKeyWithModifiers {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers
     src   "Handle Key with Modifiers"
+    text  "处理带修饰键的按键"
+    state machine
 }
 
 DreamUIActionRouter:HandleKeyWithModifiers:bAltDown {
@@ -240,6 +242,8 @@ DreamUIActionRouter:HandleKeyWithModifiers:ReturnValue {
 DreamUIActionRouter:RefreshInputActionKeys {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RefreshInputActionKeys
     src   "Refresh Input Action Keys"
+    text  "刷新输入动作按键"
+    state machine
 }
 
 DreamUIActionRouter:RegisterAction {

@@ -69,6 +69,8 @@ DreamUIModalSubsystem:CloseTopModal:InUserIndex {
 DreamUIModalSubsystem:Get {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:Get
     src   "Get DreamUI Modal Subsystem"
+    text  "获取 DreamUI 模态子系统"
+    state machine
 }
 
 DreamUIModalSubsystem:Get:ReturnValue {
@@ -90,6 +92,8 @@ DreamUIModalSubsystem:Get:WorldContextObject {
 DreamUIModalSubsystem:GetActiveModalWidget {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget
     src   "Get Active Modal Widget"
+    text  "获取当前活动模态控件"
+    state machine
 }
 
 DreamUIModalSubsystem:GetActiveModalWidget:InUserIndex {
@@ -132,6 +136,8 @@ DreamUIModalSubsystem:GetModalDepth:ReturnValue {
 DreamUIModalSubsystem:IsAnyModalActive {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsAnyModalActive
     src   "Is Any Modal Active"
+    text  "是否有模态激活"
+    state machine
 }
 
 DreamUIModalSubsystem:IsAnyModalActive:ReturnValue {

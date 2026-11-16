@@ -378,6 +378,8 @@ UITextInput:DisplayType {
 UITextInput:GetActiveTextInput {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInput
     src   "Get Active Text Input"
+    text  "获取当前活动文本输入"
+    state machine
 }
 
 UITextInput:GetActiveTextInput:ReturnValue {
@@ -391,6 +393,8 @@ UITextInput:GetActiveTextInput:ReturnValue {
 UITextInput:GetActiveTextInputForPlayer {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetActiveTextInputForPlayer
     src   "Get Active Text Input for Player"
+    text  "获取指定玩家的活动文本输入"
+    state machine
 }
 
 UITextInput:GetActiveTextInputForPlayer:PlayerIndex {
@@ -525,6 +529,8 @@ UITextInput:GetClearKeyboardFocusOnCommit:ReturnValue {
 UITextInput:GetCompositionBeginIndex {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetCompositionBeginIndex
     src   "Get Composition Begin Index"
+    text  "获取组合起始索引"
+    state machine
 }
 
 UITextInput:GetCompositionBeginIndex:ReturnValue {
@@ -703,6 +709,8 @@ UITextInput:GetPasswordChar:ReturnValue {
 UITextInput:GetPlaceHolderActor {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:GetPlaceHolderActor
     src   "Get Place Holder Actor"
+    text  "获取占位 Actor"
+    state machine
 }
 
 UITextInput:GetPlaceHolderActor:ReturnValue {
@@ -897,6 +905,8 @@ UITextInput:GetVirtualKeyboardTrigger:ReturnValue {
 UITextInput:HandleCharacterInputString {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:HandleCharacterInputString
     src   "Handle Character Input String"
+    text  "处理字符输入串"
+    state machine
 }
 
 UITextInput:HandleCharacterInputString:InCharacters {
@@ -939,6 +949,8 @@ UITextInput:InputType {
 UITextInput:IsAnyTextSelected {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsAnyTextSelected
     src   "Is Any Text Selected"
+    text  "是否有文本被选中"
+    state machine
 }
 
 UITextInput:IsAnyTextSelected:ReturnValue {
@@ -952,6 +964,8 @@ UITextInput:IsAnyTextSelected:ReturnValue {
 UITextInput:IsContextMenuOpen {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:IsContextMenuOpen
     src   "Is Context Menu Open"
+    text  "快捷菜单是否打开"
+    state machine
 }
 
 UITextInput:IsContextMenuOpen:ReturnValue {
@@ -1106,6 +1120,8 @@ UITextInput:SelectionMaskObjectArray {
 UITextInput:SelectWordAtCaret {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SelectWordAtCaret
     src   "Select Word at Caret"
+    text  "选中光标处的词"
+    state machine
 }
 
 UITextInput:SetAllowContextMenu {
@@ -1540,6 +1556,8 @@ UITextInput:SetTextVisual:Value {
 UITextInput:SetTextWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetTextWithoutNotify
     src   "Set Text Without Notify"
+    text  "设置文本（不通知）"
+    state machine
 }
 
 UITextInput:SetTextWithoutNotify:InText {
@@ -1598,6 +1616,8 @@ UITextInput:SetVirtualKeyboardTrigger:Value {
 UITextInput:SetVirtualKeyboradOptions {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:SetVirtualKeyboradOptions
     src   "Set Virtual Keyborad Options"
+    text  "设置虚拟键盘选项"
+    state machine
 }
 
 UITextInput:SetVirtualKeyboradOptions:Value {
@@ -1656,6 +1676,8 @@ UITextInput:UndoHistoryLength {
 UITextInput:VerifyAndInsertStringAtCaretPosition {
     at    Source/DreamGUIControls/Public/Interaction/UITextInput.h#UITextInput:VerifyAndInsertStringAtCaretPosition
     src   "Verify and Insert String at Caret Position"
+    text  "校验并在光标位置插入字符串"
+    state machine
 }
 
 UITextInput:VerifyAndInsertStringAtCaretPosition:ReturnValue {

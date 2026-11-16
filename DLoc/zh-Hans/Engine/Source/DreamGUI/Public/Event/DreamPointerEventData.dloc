@@ -71,6 +71,8 @@ DreamPointerEventData:FaceIndex {
 DreamPointerEventData:GetCumulativeMoveDelta {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta
     src   "Get Cumulative Move Delta"
+    text  "获取累计移动增量"
+    state machine
 }
 
 DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue {
@@ -84,6 +86,8 @@ DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue {
 DreamPointerEventData:GetDragRayDirection {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayDirection
     src   "Get Drag Ray Direction"
+    text  "获取拖拽射线方向"
+    state machine
 }
 
 DreamPointerEventData:GetDragRayDirection:ReturnValue {
@@ -97,6 +101,8 @@ DreamPointerEventData:GetDragRayDirection:ReturnValue {
 DreamPointerEventData:GetDragRayOrigin {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin
     src   "Get Drag Ray Origin"
+    text  "获取拖拽射线起点"
+    state machine
 }
 
 DreamPointerEventData:GetDragRayOrigin:ReturnValue {
@@ -110,6 +116,8 @@ DreamPointerEventData:GetDragRayOrigin:ReturnValue {
 DreamPointerEventData:GetHighlightedComponentForNavigation {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetHighlightedComponentForNavigation
     src   "Get Highlighted Component for Navigation"
+    text  "获取导航高亮组件"
+    state machine
 }
 
 DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
@@ -123,6 +131,8 @@ DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
 DreamPointerEventData:GetLocalPointInPlane {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane
     src   "Get Local Point in Plane"
+    text  "获取平面内的局部点"
+    state machine
 }
 
 DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
@@ -136,6 +146,8 @@ DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
 DreamPointerEventData:GetWorldPointInPlane {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane
     src   "Get World Point in Plane"
+    text  "获取平面内的世界点"
+    state machine
 }
 
 DreamPointerEventData:GetWorldPointInPlane:ReturnValue {
@@ -149,6 +161,8 @@ DreamPointerEventData:GetWorldPointInPlane:ReturnValue {
 DreamPointerEventData:GetWorldPointSpherical {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointSpherical
     src   "Get World Point Spherical"
+    text  "获取球面世界点"
+    state machine
 }
 
 DreamPointerEventData:GetWorldPointSpherical:ReturnValue {
@@ -184,6 +198,8 @@ DreamPointerEventData:InputType {
 DreamPointerEventData:IsPointerOverUI {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:IsPointerOverUI
     src   "Is Pointer Over UI"
+    text  "指针是否在 UI 上"
+    state machine
 }
 
 DreamPointerEventData:IsPointerOverUI:ReturnValue {
@@ -338,6 +354,8 @@ DreamPointerEventData:ScrollAxisValue {
 DreamPointerEventData:SetHighlightedWidgetForNavigation {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:SetHighlightedWidgetForNavigation
     src   "Set Highlighted Widget for Navigation"
+    text  "设置导航高亮控件"
+    state machine
 }
 
 DreamPointerEventData:SetHighlightedWidgetForNavigation:InWidget {

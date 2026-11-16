@@ -655,6 +655,8 @@ DreamScrollBox:GetWheelScrollMultiplier:ReturnValue {
 DreamScrollBox:IsAlwaysShowScrollbar {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbar
     src   "Is Always Show Scrollbar"
+    text  "是否始终显示滚动条"
+    state machine
 }
 
 DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue {
@@ -668,6 +670,8 @@ DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue {
 DreamScrollBox:IsAlwaysShowScrollbarTrack {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbarTrack
     src   "Is Always Show Scrollbar Track"
+    text  "是否始终显示滚动条轨道"
+    state machine
 }
 
 DreamScrollBox:IsAlwaysShowScrollbarTrack:ReturnValue {

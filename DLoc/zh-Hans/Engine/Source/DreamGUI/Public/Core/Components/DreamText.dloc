@@ -77,6 +77,8 @@ DreamText:ClearFillSegments {
 DreamText:ClearTagColorOverride {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClearTagColorOverride
     src   "Clear Tag Color Override"
+    text  "清除标签颜色覆盖"
+    state machine
 }
 
 DreamText:ClearTagColorOverride:InTagIndex {
@@ -89,6 +91,8 @@ DreamText:ClearTagColorOverride:InTagIndex {
 DreamText:ClearTagColorOverrides {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:ClearTagColorOverrides
     src   "Clear Tag Color Overrides"
+    text  "清除所有标签颜色覆盖"
+    state machine
 }
 
 DreamText:ClickHyperlink {
@@ -165,6 +169,8 @@ DreamText:FillSegments {
 DreamText:FindHyperlinkByWorldPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkByWorldPosition
     src   "Find Hyperlink by World Position"
+    text  "按世界位置查找超链接"
+    state machine
 }
 
 DreamText:FindHyperlinkByWorldPosition:InWorldPosition {
@@ -192,6 +198,8 @@ DreamText:FindHyperlinkByWorldPosition:ReturnValue {
 DreamText:FindHyperlinkIndexByWorldPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:FindHyperlinkIndexByWorldPosition
     src   "Find Hyperlink Index by World Position"
+    text  "按世界位置查找超链接索引"
+    state machine
 }
 
 DreamText:FindHyperlinkIndexByWorldPosition:InWorldPosition {
@@ -295,6 +303,8 @@ DreamText:GetBestFitMinSize:ReturnValue {
 DreamText:GetCharPropertyArray {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetCharPropertyArray
     src   "Get Char Property Array"
+    text  "获取字符属性数组"
+    state machine
 }
 
 DreamText:GetCharPropertyArray:ReturnValue {
@@ -700,6 +710,8 @@ DreamText:GetPaintAngleOffset:ReturnValue {
 DreamText:GetPaintCenterOffset {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetPaintCenterOffset
     src   "Get Paint Center Offset"
+    text  "获取绘制中心偏移"
+    state machine
 }
 
 DreamText:GetPaintCenterOffset:ReturnValue {
@@ -728,6 +740,8 @@ DreamText:GetPaintScale:ReturnValue {
 DreamText:GetParagraphHorizontalAlignment {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetParagraphHorizontalAlignment
     src   "Get Paragraph Horizontal Alignment"
+    text  "获取段落水平对齐"
+    state machine
 }
 
 DreamText:GetParagraphHorizontalAlignment:ReturnValue {
@@ -741,6 +755,8 @@ DreamText:GetParagraphHorizontalAlignment:ReturnValue {
 DreamText:GetParagraphVerticalAlignment {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetParagraphVerticalAlignment
     src   "Get Paragraph Vertical Alignment"
+    text  "获取段落垂直对齐"
+    state machine
 }
 
 DreamText:GetParagraphVerticalAlignment:ReturnValue {
@@ -769,6 +785,8 @@ DreamText:GetPhraseWrap:ReturnValue {
 DreamText:GetRenderedFontSize {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRenderedFontSize
     src   "Get Rendered Font Size"
+    text  "获取实际渲染字号"
+    state machine
 }
 
 DreamText:GetRenderedFontSize:ReturnValue {
@@ -812,6 +830,8 @@ DreamText:GetRichTextCustomStyleData:ReturnValue {
 DreamText:GetRichTextCustomTagArray {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextCustomTagArray
     src   "Get Rich Text Custom Tag Array"
+    text  "获取富文本自定义标签数组"
+    state machine
 }
 
 DreamText:GetRichTextCustomTagArray:ReturnValue {
@@ -840,6 +860,8 @@ DreamText:GetRichTextImageData:ReturnValue {
 DreamText:GetRichTextImageTagArray {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetRichTextImageTagArray
     src   "Get Rich Text Image Tag Array"
+    text  "获取富文本图像标签数组"
+    state machine
 }
 
 DreamText:GetRichTextImageTagArray:ReturnValue {
@@ -913,6 +935,8 @@ DreamText:GetTabSize:ReturnValue {
 DreamText:GetTagColorOverride {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetTagColorOverride
     src   "Get Tag Color Override"
+    text  "获取标签颜色覆盖"
+    state machine
 }
 
 DreamText:GetTagColorOverride:InTagIndex {
@@ -1032,6 +1056,8 @@ DreamText:GetUseKerning:ReturnValue {
 DreamText:GetVisibleCharCount {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:GetVisibleCharCount
     src   "Get Visible Char Count"
+    text  "获取可见字符数"
+    state machine
 }
 
 DreamText:GetVisibleCharCount:ReturnValue {
@@ -1090,6 +1116,8 @@ DreamText:HAlign {
 DreamText:HasPerCharacterAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:HasPerCharacterAnimation
     src   "Has Per Character Animation"
+    text  "是否有逐字动画"
+    state machine
 }
 
 DreamText:HasPerCharacterAnimation:ReturnValue {
@@ -1207,6 +1235,8 @@ DreamText:PhraseWrap {
 DreamText:RegisterPerCharacterAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:RegisterPerCharacterAnimation
     src   "Register Per Character Animation"
+    text  "注册逐字动画"
+    state machine
 }
 
 DreamText:RegisterPerCharacterAnimation:InAnimator {
@@ -1700,6 +1730,8 @@ DreamText:SetPaintBoxes:InVertical {
 DreamText:SetPaintCenterOffset {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetPaintCenterOffset
     src   "Set Paint Center Offset"
+    text  "设置绘制中心偏移"
+    state machine
 }
 
 DreamText:SetPaintCenterOffset:Value {
@@ -1728,6 +1760,8 @@ DreamText:SetPaintScale:Value {
 DreamText:SetParagraphHorizontalAlignment {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetParagraphHorizontalAlignment
     src   "Set Paragraph Horizontal Alignment"
+    text  "设置段落水平对齐"
+    state machine
 }
 
 DreamText:SetParagraphHorizontalAlignment:Value {
@@ -1741,6 +1775,8 @@ DreamText:SetParagraphHorizontalAlignment:Value {
 DreamText:SetParagraphVerticalAlignment {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetParagraphVerticalAlignment
     src   "Set Paragraph Vertical Alignment"
+    text  "设置段落垂直对齐"
+    state machine
 }
 
 DreamText:SetParagraphVerticalAlignment:Value {
@@ -1874,6 +1910,8 @@ DreamText:SetTabSize:Value {
 DreamText:SetTagColorOverride {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:SetTagColorOverride
     src   "Set Tag Color Override"
+    text  "设置标签颜色覆盖"
+    state machine
 }
 
 DreamText:SetTagColorOverride:InColor {
@@ -2060,6 +2098,8 @@ DreamText:TextTransform {
 DreamText:TryClickHyperlinkAtWorldPosition {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:TryClickHyperlinkAtWorldPosition
     src   "Try Click Hyperlink at World Position"
+    text  "尝试在世界位置点击超链接"
+    state machine
 }
 
 DreamText:TryClickHyperlinkAtWorldPosition:InWorldPosition {
@@ -2080,6 +2120,8 @@ DreamText:TryClickHyperlinkAtWorldPosition:ReturnValue {
 DreamText:UnregisterPerCharacterAnimation {
     at    Source/DreamGUI/Public/Core/Components/DreamText.h#DreamText:UnregisterPerCharacterAnimation
     src   "Unregister Per Character Animation"
+    text  "注销逐字动画"
+    state machine
 }
 
 DreamText:UnregisterPerCharacterAnimation:InAnimator {

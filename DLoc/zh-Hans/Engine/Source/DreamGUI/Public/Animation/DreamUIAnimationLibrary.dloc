@@ -43,6 +43,8 @@ DreamUIAnimationLibrary:EqualAnimationHandles:ReturnValue {
 DreamUIAnimationLibrary:GetAnimationFromHandle {
     at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle
     src   "Get Animation (Animation Handle)"
+    text  "获取动画（动画句柄）"
+    state machine
 }
 
 DreamUIAnimationLibrary:GetAnimationFromHandle:Handle {
@@ -64,6 +66,8 @@ DreamUIAnimationLibrary:GetAnimationFromHandle:ReturnValue {
 DreamUIAnimationLibrary:IsAnimationHandleValid {
     at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:IsAnimationHandleValid
     src   "Is Valid (Animation Handle)"
+    text  "是否有效（动画句柄）"
+    state machine
 }
 
 DreamUIAnimationLibrary:IsAnimationHandleValid:Handle {

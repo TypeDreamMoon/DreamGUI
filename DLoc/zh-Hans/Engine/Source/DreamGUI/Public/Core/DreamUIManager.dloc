@@ -118,6 +118,8 @@ DreamUIManagerWorldSubsystem:RectBlockDataRows {
 DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent
     src   "Register Dream UICulture Changed Event"
+    text  "注册 DreamUI 语言变更事件"
+    state machine
 }
 
 DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent:InItem {
@@ -153,6 +155,8 @@ DreamUIManagerWorldSubsystem:Selection {
 DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent
     src   "Unregister Dream UICulture Changed Event"
+    text  "注销 DreamUI 语言变更事件"
+    state machine
 }
 
 DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent:InItem {

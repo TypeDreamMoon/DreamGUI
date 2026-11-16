@@ -574,6 +574,8 @@ UISlider:SetValue:InValue {
 UISlider:SetValueWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValueWithoutNotify
     src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UISlider:SetValueWithoutNotify:InValue {

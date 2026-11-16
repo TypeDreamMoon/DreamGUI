@@ -51,6 +51,8 @@ DreamImage:SetBrush:Value {
 DreamImage:SetBrush_DreamUISprite {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_DreamUISprite
     src   "Set Brush Dream UISprite"
+    text  "设置笔刷为 DreamUI 精灵"
+    state machine
 }
 
 DreamImage:SetBrush_DreamUISprite:Value {
@@ -79,6 +81,8 @@ DreamImage:SetBrush_Material:Value {
 DreamImage:SetBrush_SlateSprite {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_SlateSprite
     src   "Set Brush Slate Sprite"
+    text  "设置笔刷为 Slate 精灵"
+    state machine
 }
 
 DreamImage:SetBrush_SlateSprite:Value {
@@ -107,6 +111,8 @@ DreamImage:SetBrush_Texture:Value {
 DreamImage:SetBrushFillAmount {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFillAmount
     src   "Set Brush Fill Amount"
+    text  "设置笔刷填充量"
+    state machine
 }
 
 DreamImage:SetBrushFillAmount:Value {

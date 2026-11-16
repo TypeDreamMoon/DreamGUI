@@ -86,6 +86,8 @@ DreamScreenSpaceRaycaster:GetRootCanvas:ReturnValue {
 DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare {
     at    Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h#DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare
     src   "Get Scaled Drag Threshold Square"
+    text  "获取缩放后的拖拽阈值平方"
+    state machine
 }
 
 DreamScreenSpaceRaycaster:GetScaledDragThresholdSquare:ReturnValue {

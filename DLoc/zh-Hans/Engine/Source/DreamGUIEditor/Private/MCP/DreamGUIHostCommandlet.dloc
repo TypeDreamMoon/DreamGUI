@@ -5,4 +5,6 @@ namespace UObjectDisplayNames
 DreamGUIHostCommandlet {
     at    Source/DreamGUIEditor/Private/MCP/DreamGUIHostCommandlet.h#DreamGUIHostCommandlet
     src   "Dream GUIHost Commandlet"
+    text  "DreamGUI 宿主 Commandlet"
+    state machine
 }

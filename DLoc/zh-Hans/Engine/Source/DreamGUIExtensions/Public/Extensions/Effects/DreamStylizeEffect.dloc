@@ -276,6 +276,8 @@ DreamStylizeEffect {
 DreamStylizeEffect:GetLayerParameter {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter
     src   "One number of one layer, as SetLayerParameter names it; false when there is no such layer or number."
+    text  "某一图层的某个数值，按 SetLayerParameter 的命名方式；没有该图层或该数值时返回 false。"
+    state machine
 }
 
 DreamStylizeEffect:Layers {
@@ -288,6 +290,8 @@ DreamStylizeEffect:Layers {
 DreamStylizeEffect:SetLayerParameter {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter
     src   "One number of one layer, by the name of its property on FDreamStylizeLayer (AberrationAmount, ScanlineStrength,\nGlitchIntensity...): what a chromatic aberration that follows the camera's speed, or a scanline that rolls for a\ntransition, changes every frame -- without building the whole list again for SetLayers. A whole-number or on/off\nproperty takes the value rounded, or non-zero as on. False, and nothing changed, for a layer that is not there or a\nname that is not a number of a layer."
+    text  "某一图层的某个数值，用它在该图层上的属性名（FDreamStylizeLayer 上的 AberrationAmount、ScanlineStrength、\nGlitchIntensity……）指定：跟随相机速度的色差、为转场滚动的扫描线就是每帧改它——不必为 SetLayers 重建整个列表。\n整数属性或开关属性会取四舍五入后的值，非零即为开。图层不存在、或该名字不是\n图层上的数值时，返回 false 且什么都不改。"
+    state machine
 }
 
 DreamStylizeEffect:TriggerBurst {

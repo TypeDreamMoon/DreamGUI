@@ -34,6 +34,8 @@ DreamUINavigationStack:GetActiveScope:ReturnValue {
 DreamUINavigationStack:GetEffectiveInputMode {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode
     src   "Get Effective Input Mode"
+    text  "获取有效输入模式"
+    state machine
 }
 
 DreamUINavigationStack:GetEffectiveInputMode:InUserIndex {

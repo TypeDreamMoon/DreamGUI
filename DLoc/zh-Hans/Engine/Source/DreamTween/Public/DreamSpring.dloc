@@ -12,6 +12,8 @@ DreamSpringLibrary {
 DreamSpringLibrary:IsSpringAtRest {
     at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest
     src   "Is Spring at Rest"
+    text  "弹簧是否静止"
+    state machine
 }
 
 DreamSpringLibrary:IsSpringAtRest:Params {

@@ -47,6 +47,8 @@ UIScrollbar {
 UIScrollbar:ApplyValueToVisual {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:ApplyValueToVisual
     src   "Apply Value to Visual"
+    text  "把值应用到视觉"
+    state machine
 }
 
 UIScrollbar:DirectionType {
@@ -105,6 +107,8 @@ UIScrollbar:GetHandle:ReturnValue {
 UIScrollbar:GetHandleAreaLength {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandleAreaLength
     src   "Get Handle Area Length"
+    text  "获取手柄区域长度"
+    state machine
 }
 
 UIScrollbar:GetHandleAreaLength:ReturnValue {
@@ -368,6 +372,8 @@ UIScrollbar:SetValue:InValue {
 UIScrollbar:SetValueAndSize {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueAndSize
     src   "Set Value and Size"
+    text  "设置值与尺寸"
+    state machine
 }
 
 UIScrollbar:SetValueAndSize:FireEvent {
@@ -396,6 +402,8 @@ UIScrollbar:SetValueAndSize:InValue {
 UIScrollbar:SetValueWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueWithoutNotify
     src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UIScrollbar:SetValueWithoutNotify:InValue {

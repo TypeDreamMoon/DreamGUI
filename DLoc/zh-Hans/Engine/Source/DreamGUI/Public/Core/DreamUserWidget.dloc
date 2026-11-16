@@ -194,6 +194,8 @@ DreamUserWidget:GetWidgetFromName {
 DreamUserWidget:GetWidgetsByTag {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag
     src   "Every widget of THIS widget's own contents that carries InTag (UDreamWidget::Tags, `@tag` in a .dui), parents\nbefore children, siblings in order.\n\nOwn contents: what this class authored. A nested component's insides are its own class's and are not searched --\nits widgets answer to its GetWidgetsByTag -- but the component instance itself is, and so is whatever this widget\nput into the component's slots, which is this widget's content wherever it ends up hanging. What a host put into\nTHIS widget's slots is the host's, and is not. Empty before Initialize, and for None."
+    text  "本控件自身内容中所有带 InTag 的控件（UDreamWidget::Tags，`.dui` 里的 `@tag`），父项先于\n子项，同级按顺序。\n\n自身内容：即本类编写出来的东西。嵌套组件的内部属于它自己的类，不会被搜索——\n它自己的控件由它的 GetWidgetsByTag 回答——但组件实例本身算，本控件放进\n该组件插槽里的东西也算，它们不论挂到哪里都是本控件的内容。而宿主放进\n本控件插槽里的东西属于宿主，不算。Initialize 之前为空，对 None 也为空。"
+    state machine
 }
 
 DreamUserWidget:HandleFocusLostBroadcast {
@@ -720,6 +722,8 @@ DreamUserWidget:bWantsTick {
 DreamUserWidget:ClearPlacementInViewport {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ClearPlacementInViewport
     src   "Clear Placement in Viewport"
+    text  "清除视口中的放置"
+    state machine
 }
 
 DreamUserWidget:EachAdapters {
@@ -739,6 +743,8 @@ DreamUserWidget:EvaluatePropertyBindings {
 DreamUserWidget:FindAnimationComponentFor {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FindAnimationComponentFor
     src   "Find Animation Component For"
+    text  "为此控件查找动画组件"
+    state machine
 }
 
 DreamUserWidget:FindAnimationComponentFor:InAnimation {
@@ -828,6 +834,8 @@ DreamUserWidget:GetAllowEventBubbleUp:ReturnValue {
 DreamUserWidget:GetAnimationByName {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetAnimationByName
     src   "Get Animation by Name"
+    text  "按名字获取动画"
+    state machine
 }
 
 DreamUserWidget:GetAnimationByName:Name {
@@ -888,6 +896,8 @@ DreamUserWidget:GetCanNavigateHere:ReturnValue {
 DreamUserWidget:GetContentForNamedSlot {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetContentForNamedSlot
     src   "Get Content for Named Slot"
+    text  "获取命名插槽的内容"
+    state machine
 }
 
 DreamUserWidget:GetContentForNamedSlot:InSlotName {
@@ -923,6 +933,8 @@ DreamUserWidget:GetContentRoot:ReturnValue {
 DreamUserWidget:GetDefaultSlotName {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetDefaultSlotName
     src   "Get Default Slot Name"
+    text  "获取默认插槽名称"
+    state machine
 }
 
 DreamUserWidget:GetDefaultSlotName:ReturnValue {
@@ -952,6 +964,8 @@ DreamUserWidget:GetLocalSize:ReturnValue {
 DreamUserWidget:GetNativeSlotNames {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetNativeSlotNames
     src   "Get Native Slot Names"
+    text  "获取原生插槽名称"
+    state machine
 }
 
 DreamUserWidget:GetNativeSlotNames:ReturnValue {
@@ -981,6 +995,8 @@ DreamUserWidget:GetOwningPlayerPawn:ReturnValue {
 DreamUserWidget:GetScreenSpaceRect {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetScreenSpaceRect
     src   "Get Screen Space Rect"
+    text  "获取屏幕空间矩形"
+    state machine
 }
 
 DreamUserWidget:GetScreenSpaceRect:ReturnValue {
@@ -1033,6 +1049,8 @@ DreamUserWidget:GetWantsTick:ReturnValue {
 DreamUserWidget:GetWidgetFromName {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetFromName
     src   "Get Widget from Name"
+    text  "按名字获取控件"
+    state machine
 }
 
 DreamUserWidget:GetWidgetFromName:InVariableName {
@@ -1054,6 +1072,8 @@ DreamUserWidget:GetWidgetFromName:ReturnValue {
 DreamUserWidget:GetWidgetsByTag {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag
     src   "Get Widgets by Tag"
+    text  "按标签获取控件"
+    state machine
 }
 
 DreamUserWidget:GetWidgetsByTag:InTag {
@@ -1090,6 +1110,8 @@ DreamUserWidget:GetWidgetTree:ReturnValue {
 DreamUserWidget:HandleFocusLostBroadcast {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusLostBroadcast
     src   "Handle Focus Lost Broadcast"
+    text  "处理焦点丢失广播"
+    state machine
 }
 
 DreamUserWidget:HandleFocusLostBroadcast:PointerId {
@@ -1110,6 +1132,8 @@ DreamUserWidget:HandleFocusLostBroadcast:UserIndex {
 DreamUserWidget:HandleFocusReceivedBroadcast {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusReceivedBroadcast
     src   "Handle Focus Received Broadcast"
+    text  "处理焦点获得广播"
+    state machine
 }
 
 DreamUserWidget:HandleFocusReceivedBroadcast:PointerId {
@@ -1358,6 +1382,8 @@ DreamUserWidget:K2_BroadcastFieldValueChanged:FieldId {
 DreamUserWidget:K2_GetDeclaredSlotNames {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_GetDeclaredSlotNames
     src   "Get Declared Slot Names"
+    text  "获取声明的插槽名称"
+    state machine
 }
 
 DreamUserWidget:K2_GetDeclaredSlotNames:ReturnValue {
@@ -1999,6 +2025,8 @@ DreamUserWidget:PlayAnimation:StartAtTime {
 DreamUserWidget:PlayAnimationByName {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationByName
     src   "Play Animation by Name"
+    text  "按名字播放动画"
+    state machine
 }
 
 DreamUserWidget:PlayAnimationByName:bRestoreState {
@@ -2690,6 +2718,8 @@ DreamUserWidget:SetCanNavigateHere:Value {
 DreamUserWidget:SetContentForNamedSlot {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetContentForNamedSlot
     src   "Set Content for Named Slot"
+    text  "设置命名插槽的内容"
+    state machine
 }
 
 DreamUserWidget:SetContentForNamedSlot:InContent {

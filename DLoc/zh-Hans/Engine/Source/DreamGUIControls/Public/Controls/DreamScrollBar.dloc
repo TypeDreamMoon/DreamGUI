@@ -347,6 +347,8 @@ DreamScrollBar:OnValueChangedBP {
 DreamScrollBar:RefreshFromScrollView {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:RefreshFromScrollView
     src   "Refresh from Scroll View"
+    text  "从滚动视图刷新"
+    state machine
 }
 
 DreamScrollBar:ScrollView {
@@ -568,6 +570,8 @@ DreamScrollBar:SetValue:InValue {
 DreamScrollBar:SetValueWithoutNotify {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValueWithoutNotify
     src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 DreamScrollBar:SetValueWithoutNotify:InValue {

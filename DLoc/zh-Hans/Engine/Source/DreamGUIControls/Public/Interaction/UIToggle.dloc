@@ -33,6 +33,8 @@ UIToggle:CustomToggleTransition {
 UIToggle:GetIndexInGroup {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup
     src   "Get Index in Group"
+    text  "获取组内索引"
+    state machine
 }
 
 UIToggle:GetIndexInGroup:ReturnValue {
@@ -195,6 +197,8 @@ UIToggle:SetIsOn:Value {
 UIToggle:SetIsOnWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOnWithoutNotify
     src   "Set Is on Without Notify"
+    text  "设置开启状态（不通知）"
+    state machine
 }
 
 UIToggle:SetIsOnWithoutNotify:Value {
@@ -283,6 +287,8 @@ UIToggle:SetValue:Value {
 UIToggle:SetValueWithoutNotify {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValueWithoutNotify
     src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UIToggle:SetValueWithoutNotify:Value {
@@ -353,6 +359,8 @@ UIToggleTransition:GetToggleComponent:ReturnValue {
 UIToggleTransition:ReceiveToggleOff {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOff
     src   "ToggleOff"
+    text  "关闭"
+    state machine
 }
 
 UIToggleTransition:ReceiveToggleOff:InImmediateSet {
@@ -365,6 +373,8 @@ UIToggleTransition:ReceiveToggleOff:InImmediateSet {
 UIToggleTransition:ReceiveToggleOn {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOn
     src   "ToggleOn"
+    text  "打开"
+    state machine
 }
 
 UIToggleTransition:ReceiveToggleOn:InImmediateSet {

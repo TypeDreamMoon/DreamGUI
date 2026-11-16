@@ -64,6 +64,8 @@ DreamTweenManager:KillAllTweens:callComplete {
 DreamTweenManager:KillAllTweensOnTarget {
     at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget
     src   "Kill All Tweens on Target"
+    text  "终止目标上的所有补间"
+    state machine
 }
 
 DreamTweenManager:KillAllTweensOnTarget:callComplete {

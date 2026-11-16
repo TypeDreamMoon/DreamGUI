@@ -58,6 +58,8 @@ DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue {
 DreamUICaptureLibrary:SaveCanvasToPng {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng
     src   "Save Canvas to Png"
+    text  "把画布保存为 PNG"
+    state machine
 }
 
 DreamUICaptureLibrary:SaveCanvasToPng:InCanvas {
@@ -87,6 +89,8 @@ DreamUICaptureLibrary:SaveCanvasToPng:ReturnValue {
 DreamUICaptureLibrary:SaveRenderTargetToPng {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng
     src   "Save Render Target to Png"
+    text  "把渲染目标保存为 PNG"
+    state machine
 }
 
 DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath {
@@ -116,6 +120,8 @@ DreamUICaptureLibrary:SaveRenderTargetToPng:ReturnValue {
 DreamUICaptureLibrary:SaveViewportToPng {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng
     src   "Save Viewport to Png"
+    text  "把视口保存为 PNG"
+    state machine
 }
 
 DreamUICaptureLibrary:SaveViewportToPng:InFilePath {

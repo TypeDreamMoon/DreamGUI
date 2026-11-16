@@ -33,6 +33,8 @@ DreamUISpriteData:bUseEdgePixelPadding {
 DreamUISpriteData:CreateDreamUISpriteData {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData
     src   "Create Dream UISprite Data"
+    text  "创建 DreamUI 精灵数据"
+    state machine
 }
 
 DreamUISpriteData:CreateDreamUISpriteData:InBorder {

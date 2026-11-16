@@ -19,6 +19,8 @@ DreamUIVirtualCursorSubsystem:ActivateVirtualCursor {
 DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser
     src   "Activate Virtual Cursor for User"
+    text  "为指定玩家激活虚拟光标"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:ActivateVirtualCursorForUser:InUserIndex {
@@ -38,6 +40,8 @@ DreamUIVirtualCursorSubsystem:DeactivateVirtualCursor {
 DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser
     src   "Deactivate Virtual Cursor for User"
+    text  "为指定玩家停用虚拟光标"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser:InUserIndex {
@@ -50,6 +54,8 @@ DreamUIVirtualCursorSubsystem:DeactivateVirtualCursorForUser:InUserIndex {
 DreamUIVirtualCursorSubsystem:Get {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:Get
     src   "Get DreamUI Virtual Cursor Subsystem"
+    text  "获取 DreamUI 虚拟光标子系统"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:Get:ReturnValue {
@@ -71,6 +77,8 @@ DreamUIVirtualCursorSubsystem:Get:WorldContextObject {
 DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition
     src   "Get Virtual Cursor Position"
+    text  "获取虚拟光标位置"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition:ReturnValue {
@@ -84,6 +92,8 @@ DreamUIVirtualCursorSubsystem:GetVirtualCursorPosition:ReturnValue {
 DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser
     src   "Get Virtual Cursor Position for User"
+    text  "获取指定玩家的虚拟光标位置"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:InUserIndex {
@@ -104,6 +114,8 @@ DreamUIVirtualCursorSubsystem:GetVirtualCursorPositionForUser:ReturnValue {
 DreamUIVirtualCursorSubsystem:IsVirtualCursorActive {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:IsVirtualCursorActive
     src   "Is Virtual Cursor Active"
+    text  "虚拟光标是否激活"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:IsVirtualCursorActive:ReturnValue {
@@ -117,6 +129,8 @@ DreamUIVirtualCursorSubsystem:IsVirtualCursorActive:ReturnValue {
 DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser
     src   "Is Virtual Cursor Active for User"
+    text  "玩家的虚拟光标是否激活"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:IsVirtualCursorActiveForUser:InUserIndex {
@@ -152,6 +166,8 @@ DreamUIVirtualCursorSubsystem:SetConfirmPressed:bInPressed {
 DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h#DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser
     src   "Set Confirm Pressed for User"
+    text  "设置玩家的确认按下"
+    state machine
 }
 
 DreamUIVirtualCursorSubsystem:SetConfirmPressedForUser:bInPressed {

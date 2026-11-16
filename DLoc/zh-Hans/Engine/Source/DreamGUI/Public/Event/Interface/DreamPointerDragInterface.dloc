@@ -12,6 +12,8 @@ DreamPointerDragInterface {
 DreamPointerDragInterface:OnPointerBeginDrag {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag
     src   "On Pointer Begin Drag"
+    text  "指针开始拖拽时"
+    state machine
 }
 
 DreamPointerDragInterface:OnPointerBeginDrag:EventData {
@@ -56,6 +58,8 @@ DreamPointerDragInterface:OnPointerDrag:ReturnValue {
 DreamPointerDragInterface:OnPointerEndDrag {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerEndDrag
     src   "On Pointer End Drag"
+    text  "指针结束拖拽时"
+    state machine
 }
 
 DreamPointerDragInterface:OnPointerEndDrag:EventData {

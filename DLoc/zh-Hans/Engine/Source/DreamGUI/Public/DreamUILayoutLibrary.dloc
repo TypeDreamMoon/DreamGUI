@@ -221,6 +221,8 @@ DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:ReturnValue {
 DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance
     src   "Project World Location to Widget Position with Distance"
+    text  "把世界位置投影为控件位置（带距离）"
+    state machine
 }
 
 DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:bPlayerViewportRelative {
@@ -288,6 +290,8 @@ DreamUILayoutLibrary:RemoveAllWidgets:WorldContextObject {
 DreamUILayoutLibrary:SlotAsPanelSlot {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:SlotAsPanelSlot
     src   "Slot as Panel Slot"
+    text  "作为面板插槽的插槽"
+    state machine
 }
 
 DreamUILayoutLibrary:SlotAsPanelSlot:InWidget {

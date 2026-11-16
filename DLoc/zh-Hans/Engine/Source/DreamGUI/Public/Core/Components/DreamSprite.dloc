@@ -144,6 +144,8 @@ DreamSprite:GetPixelsPerUnitMultiplier:ReturnValue {
 DreamSprite:GetSpriteDrawType {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetSpriteDrawType
     src   "Get Sprite Draw Type"
+    text  "获取精灵绘制类型"
+    state machine
 }
 
 DreamSprite:GetSpriteDrawType:ReturnValue {

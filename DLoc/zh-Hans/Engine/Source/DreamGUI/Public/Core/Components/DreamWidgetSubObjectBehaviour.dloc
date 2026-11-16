@@ -12,6 +12,8 @@ DreamWidgetSubObjectBehaviour {
 DreamWidgetSubObjectBehaviour:GetPathDisplayName {
     at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetPathDisplayName
     src   "Get Path Display Name"
+    text  "获取路径显示名"
+    state machine
 }
 
 DreamWidgetSubObjectBehaviour:GetPathDisplayName:ReturnValue {

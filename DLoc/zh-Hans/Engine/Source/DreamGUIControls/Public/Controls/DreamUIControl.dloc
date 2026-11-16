@@ -79,6 +79,8 @@ DreamUIControl:GetStyleVariant:ReturnValue {
 DreamUIControl:GetUnboundRequiredParts {
     at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetUnboundRequiredParts
     src   "Get Unbound Required Parts"
+    text  "获取未绑定的必需部件"
+    state machine
 }
 
 DreamUIControl:GetUnboundRequiredParts:ReturnValue {

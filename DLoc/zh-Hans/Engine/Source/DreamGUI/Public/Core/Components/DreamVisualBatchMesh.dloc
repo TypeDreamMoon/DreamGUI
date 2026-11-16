@@ -40,6 +40,8 @@ DreamUIGeometryHelper:AddTriangle:index2 {
 DreamUIGeometryHelper:AddVertexFull {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexFull
     src   "Add Vertex Full"
+    text  "添加顶点（完整）"
+    state machine
 }
 
 DreamUIGeometryHelper:AddVertexFull:color {
@@ -107,6 +109,8 @@ DreamUIGeometryHelper:AddVertexFull:uv3 {
 DreamUIGeometryHelper:AddVertexSimple {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexSimple
     src   "Add Vertex Simple"
+    text  "添加顶点（简单）"
+    state machine
 }
 
 DreamUIGeometryHelper:AddVertexSimple:color {
@@ -135,6 +139,8 @@ DreamUIGeometryHelper:AddVertexSimple:uv0 {
 DreamUIGeometryHelper:AddVertexStruct {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexStruct
     src   "Add Vertex Struct"
+    text  "添加顶点（结构体）"
+    state machine
 }
 
 DreamUIGeometryHelper:AddVertexStruct:vertex {
@@ -148,6 +154,8 @@ DreamUIGeometryHelper:AddVertexStruct:vertex {
 DreamUIGeometryHelper:AddVertexTriangleStream {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:AddVertexTriangleStream
     src   "Add Vertex Triangle Stream"
+    text  "添加顶点（三角形流）"
+    state machine
 }
 
 DreamUIGeometryHelper:AddVertexTriangleStream:InVertexTriangleStream {
@@ -207,6 +215,8 @@ DreamUIGeometryHelper:Clear {
 DreamUIGeometryHelper:GetVertexTriangleStream {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamUIGeometryHelper:GetVertexTriangleStream
     src   "Get Vertex Triangle Stream"
+    text  "获取顶点三角形流"
+    state machine
 }
 
 DreamUIGeometryHelper:GetVertexTriangleStream:OutVertexTriangleStream {
@@ -371,6 +381,8 @@ DreamVisualBatchMesh:PropertiesForMaterial {
 DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry
     src   "GetMaterialToCreateGeometry"
+    text  "获取用于创建几何的材质"
+    state machine
 }
 
 DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry:ReturnValue {
@@ -384,6 +396,8 @@ DreamVisualBatchMesh:ReceiveGetMaterialToCreateGeometry:ReturnValue {
 DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h#DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry
     src   "GetTextureToCreateGeometry"
+    text  "获取用于创建几何的纹理"
+    state machine
 }
 
 DreamVisualBatchMesh:ReceiveGetTextureToCreateGeometry:ReturnValue {

@@ -234,6 +234,8 @@ DreamNiagaraSystem:bWriteUIParameters {
 DreamNiagaraSystem:ClearPointerPositionOverride {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:ClearPointerPositionOverride
     src   "Clear Pointer Position Override"
+    text  "清除指针位置覆盖"
+    state machine
 }
 
 DreamNiagaraSystem:Component {
@@ -410,6 +412,8 @@ DreamNiagaraSystem:ResetSystem {
 DreamNiagaraSystem:SetBlendModeOverride {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride
     src   "Set Blend Mode Override"
+    text  "设置混合模式覆盖"
+    state machine
 }
 
 DreamNiagaraSystem:SetBlendModeOverride:bInOverride {
@@ -505,6 +509,8 @@ DreamNiagaraSystem:SetPlane:InPlane {
 DreamNiagaraSystem:SetPointerPositionOverride {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPointerPositionOverride
     src   "Set Pointer Position Override"
+    text  "设置指针位置覆盖"
+    state machine
 }
 
 DreamNiagaraSystem:SetPointerPositionOverride:bInInside {
@@ -637,6 +643,8 @@ DreamNiagaraSystem:SetVariableInt:InValue {
 DreamNiagaraSystem:SetVariableLinearColor {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableLinearColor
     src   "Set Variable Linear Color"
+    text  "设置线性颜色变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableLinearColor:InName {
@@ -681,6 +689,8 @@ DreamNiagaraSystem:SetVariableObject:InValue {
 DreamNiagaraSystem:SetVariableVec2 {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec2
     src   "Set Variable Vec 2"
+    text  "设置二维向量变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableVec2:InName {
@@ -702,6 +712,8 @@ DreamNiagaraSystem:SetVariableVec2:InValue {
 DreamNiagaraSystem:SetVariableVec3 {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec3
     src   "Set Variable Vec 3"
+    text  "设置三维向量变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableVec3:InName {

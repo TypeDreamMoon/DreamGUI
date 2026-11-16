@@ -228,6 +228,8 @@ namespace UObjectToolTips
 DreamRing:EndAngle {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngle
     src   "Degrees, in the same convention as StartAngle: from three o'clock, counter-clockwise. The arc runs counter-clockwise from StartAngle when this is the greater, clockwise when it is the smaller."
+    text  "度数，与 StartAngle 同一约定：从三点钟方向起，逆时针。本值更大时弧从 StartAngle 逆时针走，更小时顺时针走。"
+    state machine
 }
 
 DreamRing:Segment {
@@ -240,4 +242,6 @@ DreamRing:Segment {
 DreamRing:StartAngle {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngle
     src   "Degrees from three o'clock, counter-clockwise: 0 is the right, 90 the top. Native.RingMenu and a text on a path measure\nfrom twelve o'clock, clockwise instead. A progress ring running clockwise from the top is\nStartAngle = 90, EndAngle = 90 - 360 * progress."
+    text  "以三点钟方向为 0、逆时针计的度数：0 是右方，90 是上方。Native.RingMenu 和沿路径的文字改为\n从十二点钟方向、顺时针计。从顶部顺时针走的进度环是\nStartAngle = 90，EndAngle = 90 - 360 * progress。"
+    state machine
 }

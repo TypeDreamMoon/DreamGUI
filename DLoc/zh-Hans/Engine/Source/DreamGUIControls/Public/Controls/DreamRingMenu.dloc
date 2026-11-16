@@ -146,6 +146,8 @@ DreamRingMenu:GetItemCount:ReturnValue {
 DreamRingMenu:GetItemMidAngle {
     at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemMidAngle
     src   "Get Item Mid Angle"
+    text  "获取条目中间角度"
+    state machine
 }
 
 DreamRingMenu:GetItemMidAngle:InIndex {
@@ -167,6 +169,8 @@ DreamRingMenu:GetItemMidAngle:ReturnValue {
 DreamRingMenu:GetItemStartAngle {
     at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemStartAngle
     src   "Get Item Start Angle"
+    text  "获取条目起始角度"
+    state machine
 }
 
 DreamRingMenu:GetItemStartAngle:InIndex {
@@ -188,6 +192,8 @@ DreamRingMenu:GetItemStartAngle:ReturnValue {
 DreamRingMenu:GetItemSweepAngle {
     at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:GetItemSweepAngle
     src   "Get Item Sweep Angle"
+    text  "获取条目扫掠角度"
+    state machine
 }
 
 DreamRingMenu:GetItemSweepAngle:InIndex {
@@ -630,6 +636,8 @@ DreamRingMenu:SetSelectedIndex:InIndex {
 DreamRingMenu:SetSelectedIndexWithoutNotify {
     at    Source/DreamGUIControls/Public/Controls/DreamRingMenu.h#DreamRingMenu:SetSelectedIndexWithoutNotify
     src   "Set Selected Index Without Notify"
+    text  "设置选中索引（不通知）"
+    state machine
 }
 
 DreamRingMenu:SetSelectedIndexWithoutNotify:InIndex {
