@@ -775,6 +775,17 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `unwantedRecommendations`; and when the editor opens the workspace in VS Code it warns, in a notification and the log,
   if `~/.vscode/extensions` holds a copy under the old id. The extension's next release reads the new syntax above.
 
+### Fixed
+
+- **The events of a `.dui` class are usable from the details panel again.** The **Events** rows of a text-authored
+  class were all greyed -- a row per event, none of them clickable -- while the same rows on a hand-authored class
+  were live. A custom row reaches the details view through `FIsCustomRowReadOnly`, which hands the gate two names
+  and no property behind them, so the gate answers by category; a route is the one edit there that the file does
+  take (the row writes `OnClick -> Handler` as a line of the `.dui`, and checks the line before the handler exists),
+  so that category now joins the gradient CSS and stop rows as one that asks itself. Adding a handler, removing a
+  route and every refusal -- a nested instance with no node here, two widgets under one name, an event no Blueprint
+  pin can carry -- are unchanged.
+
 ## 1.0.0
 
 Everything of the 2.1.0 development build, and the `.dui` language grown into what screens are written in: components
