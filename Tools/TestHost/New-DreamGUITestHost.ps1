@@ -31,17 +31,20 @@
     repository's .git\worktrees directory when it creates the worktree.
 
 .PARAMETER Root
-    The host project directory. Must not be on drive C.
+    The host project directory. Must not be on drive C. Defaults to $env:DREAMGUI_TEST_HOST; with
+    neither, the script stops and says so.
 
 .PARAMETER RepoPath
     Any working tree of the DreamGUI repository; the new worktree is added to that repository.
+    Defaults to $env:DREAMGUI_TEST_REPO, else the working tree that holds this script.
 
 .PARAMETER Branch
     The branch the worktree must have checked out (and is created with).
 
 .PARAMETER EngineRoot
-    The engine directory. By default it is looked up from the EngineAssociation in the template's
-    .uproject (HKCU\Software\Epic Games\Unreal Engine\Builds), falling back to F:\UnrealEngine\UE_Moon.
+    The engine directory. Defaults to $env:DREAMGUI_ENGINE (the variable the test runner reads), else
+    the engine the EngineAssociation in the template's .uproject is registered at
+    (HKCU\Software\Epic Games\Unreal Engine\Builds). With none of the three, the script stops and says so.
 
 .PARAMETER Force
     Replace template files that differ from the template, keeping a backup of each.
@@ -78,9 +81,9 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [string] $Root = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost',
-    [string] $RepoPath = 'I:\UnrealProject_Moon\DEV_58\DevTest\Plugins\DreamGUI',
-    [string] $Branch = 'feat/tests-completion',
+    [string] $Root = $env:DREAMGUI_TEST_HOST,
+    [string] $RepoPath = $env:DREAMGUI_TEST_REPO,
+    [string] $Branch = 'main',
     [string] $EngineRoot = '',
     [switch] $Force,
     [switch] $KeepCurrentHead,
@@ -98,7 +101,6 @@ $TemplateVersion = 5
 $ProjectFileName = 'DreamGUITestHost.uproject'
 $MetadataFileName = '.dreamgui-testhost.json'
 $TemplateEngineIniRelative = 'Config\DefaultEngine.ini'
-$FallbackEngineRoot = 'F:\UnrealEngine\UE_Moon'
 # Below this the first build (plugin and project intermediates, logs) is at risk of running out of room.
 $MinimumFreeGigabytes = 15
 
@@ -310,6 +312,13 @@ $TemplateDirectory = Join-Path $PSScriptRoot 'Template'
 $TemplateProject = Join-Path $TemplateDirectory $ProjectFileName
 $TemplateEngineIni = Join-Path $TemplateDirectory $TemplateEngineIniRelative
 
+if ([string]::IsNullOrWhiteSpace($Root)) {
+    Stop-WithFailure @('No host directory: pass -Root <host directory>, or set DREAMGUI_TEST_HOST.')
+}
+if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+    # Tools\TestHost\ is two levels below the repository's root.
+    $RepoPath = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+}
 $Root = ConvertTo-NormalPath (Resolve-UserPath $Root)
 $RepoPath = ConvertTo-NormalPath (Resolve-UserPath $RepoPath)
 $WorktreePath = Join-Path $Root 'Plugins\DreamGUI'
@@ -373,34 +382,38 @@ if (Test-Path -LiteralPath $TemplateProject -PathType Leaf) {
         $Failures.Add("The template's $ProjectFileName is not valid JSON: $($_.Exception.Message)")
     }
 }
+if ([string]::IsNullOrWhiteSpace($EngineRoot) -and -not [string]::IsNullOrWhiteSpace($env:DREAMGUI_ENGINE)) {
+    $EngineRoot = $env:DREAMGUI_ENGINE
+    Write-Info "Engine from DREAMGUI_ENGINE: $EngineRoot"
+}
+if ([string]::IsNullOrWhiteSpace($EngineRoot) -and $EngineAssociation) {
+    try {
+        $Registered = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Epic Games\Unreal Engine\Builds' -Name $EngineAssociation -ErrorAction Stop).$EngineAssociation
+        if (-not [string]::IsNullOrWhiteSpace($Registered)) {
+            $EngineRoot = $Registered
+            Write-Info "Engine $EngineAssociation is registered at $Registered."
+        }
+    }
+    catch {
+        Write-Info "Engine $EngineAssociation is not registered for this user."
+    }
+}
 if ([string]::IsNullOrWhiteSpace($EngineRoot)) {
-    if ($EngineAssociation) {
-        try {
-            $Registered = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Epic Games\Unreal Engine\Builds' -Name $EngineAssociation -ErrorAction Stop).$EngineAssociation
-            if (-not [string]::IsNullOrWhiteSpace($Registered)) {
-                $EngineRoot = $Registered
-                Write-Info "Engine $EngineAssociation is registered at $Registered."
-            }
-        }
-        catch {
-            Write-Info "Engine $EngineAssociation is not registered for this user; using $FallbackEngineRoot."
-        }
-    }
-    if ([string]::IsNullOrWhiteSpace($EngineRoot)) {
-        $EngineRoot = $FallbackEngineRoot
-    }
-}
-$EngineRoot = ConvertTo-NormalPath (Resolve-UserPath $EngineRoot)
-$BuildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
-$EditorCommand = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
-if (-not (Test-Path -LiteralPath $BuildBatch -PathType Leaf)) {
-    $Failures.Add("No engine at $EngineRoot (expected $BuildBatch). Pass -EngineRoot.")
-}
-elseif (-not (Test-Path -LiteralPath $EditorCommand -PathType Leaf)) {
-    Write-Warning "The engine at $EngineRoot has no $EditorCommand yet; the host can be created, but nothing can run in it until the engine is built."
+    $Failures.Add("No engine: pass -EngineRoot <engine root>, or set DREAMGUI_ENGINE. The template's engine association$(if ($EngineAssociation) { " $EngineAssociation" }) is not registered for this user.")
 }
 else {
-    Write-Info "Engine: $EngineRoot"
+    $EngineRoot = ConvertTo-NormalPath (Resolve-UserPath $EngineRoot)
+    $BuildBatch = Join-Path $EngineRoot 'Engine\Build\BatchFiles\Build.bat'
+    $EditorCommand = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
+    if (-not (Test-Path -LiteralPath $BuildBatch -PathType Leaf)) {
+        $Failures.Add("No engine at $EngineRoot (expected $BuildBatch). Pass -EngineRoot.")
+    }
+    elseif (-not (Test-Path -LiteralPath $EditorCommand -PathType Leaf)) {
+        Write-Warning "The engine at $EngineRoot has no $EditorCommand yet; the host can be created, but nothing can run in it until the engine is built."
+    }
+    else {
+        Write-Info "Engine: $EngineRoot"
+    }
 }
 
 if ($Failures.Count -gt 0) {
