@@ -682,6 +682,8 @@ EDreamTextPaintBox.Line {
 EDreamTextPaintBox.Run {
     at    Source/DreamGUI/Public/Core/Text/DreamTextPaint.h#EDreamTextPaintBox:Run
     src   "A rich-text tag's run: its pieces on every line laid end to end horizontally (CSS's `box-decoration-break: slice`),\nits ascent to descent vertically. What a tag paint (`<gradient=Name>`) is always measured across."
+    text  "富文本标签的 run：它在每一行上的片段水平首尾相接（CSS 的 `box-decoration-break: slice`），\n垂直方向从 ascent 到 descent。标签绘制（`<gradient=Name>`）总是按它来度量。"
+    state draft
 }
 
 EDreamTextPaintBox.TextBlock {
