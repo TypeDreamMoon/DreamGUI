@@ -16,6 +16,13 @@ DreamUIPlayTweenComponent:bPlayOnStart {
     state machine
 }
 
+DreamUIPlayTweenComponent:GetPlayTween {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:GetPlayTween
+    src   "Get Play Tween"
+    text  "获取播放缓动"
+    state machine
+}
+
 DreamUIPlayTweenComponent:GetPlayTween:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:GetPlayTween:ReturnValue
     src   "Return Value"
@@ -24,9 +31,25 @@ DreamUIPlayTweenComponent:GetPlayTween:ReturnValue {
     state draft
 }
 
+DreamUIPlayTweenComponent:Play {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:Play
+    src   "Play"
+    // from the engine's zh-Hans
+    text  "播放"
+    state draft
+}
+
 DreamUIPlayTweenComponent:PlayTween {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:PlayTween
     src   "Play Tween"
     text  "播放缓动"
     state machine
+}
+
+DreamUIPlayTweenComponent:Stop {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h#DreamUIPlayTweenComponent:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "停止"
+    state draft
 }

@@ -9,6 +9,13 @@ DreamUIPopupLayer {
     state machine
 }
 
+DreamUIPopupLayer:Elevate {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate
+    src   "Elevate"
+    text  "提升层级"
+    state machine
+}
+
 DreamUIPopupLayer:Elevate:InWidget {
     at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Elevate:InWidget
     src   "In Widget"
@@ -22,6 +29,14 @@ DreamUIPopupLayer:Elevate:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIPopupLayer:Restore {
+    at    Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h#DreamUIPopupLayer:Restore
+    src   "Restore"
+    // from the engine's zh-Hans
+    text  "恢复"
     state draft
 }
 

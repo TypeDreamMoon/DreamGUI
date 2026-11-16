@@ -8,3 +8,10 @@ NotAFileTimeline {
     text  "此动画不是 `.dui` 文件的“时间线”块。"
     state machine
 }
+
+WriteTimeline {
+    at    Source/DreamGUIEditor/Private/Text/DreamUITimelineWriteBack.cpp
+    src   "Edit Timeline"
+    text  "编辑时间轴"
+    state machine
+}

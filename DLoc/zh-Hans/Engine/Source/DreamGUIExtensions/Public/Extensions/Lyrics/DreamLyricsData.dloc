@@ -85,6 +85,13 @@ DreamLyricsLibrary {
     state machine
 }
 
+DreamLyricsLibrary:ParseLRC {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC
+    src   "Parse LRC"
+    text  "解析 LRC"
+    state machine
+}
+
 DreamLyricsLibrary:ParseLRC:OutLyrics {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC:OutLyrics
     src   "Out Lyrics"
@@ -106,6 +113,13 @@ DreamLyricsLibrary:ParseLRC:Text {
     // from the engine's zh-Hans
     text  "文本"
     state draft
+}
+
+DreamLyricsLibrary:ParseTTML {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML
+    src   "Parse TTML"
+    text  "解析 TTML"
+    state machine
 }
 
 DreamLyricsLibrary:ParseTTML:OutError {

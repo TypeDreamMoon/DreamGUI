@@ -46,6 +46,13 @@ DreamUIPlayTween:EaseType {
     state machine
 }
 
+DreamUIPlayTween:GetAffectByGamePause {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByGamePause
+    src   "Get Affect by Game Pause"
+    text  "获取受游戏暂停影响"
+    state machine
+}
+
 DreamUIPlayTween:GetAffectByGamePause:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByGamePause:ReturnValue
     src   "Return Value"
@@ -54,11 +61,26 @@ DreamUIPlayTween:GetAffectByGamePause:ReturnValue {
     state draft
 }
 
+DreamUIPlayTween:GetAffectByTimeDilation {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByTimeDilation
+    src   "Get Affect by Time Dilation"
+    text  "获取受时间缩放影响"
+    state machine
+}
+
 DreamUIPlayTween:GetAffectByTimeDilation:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetAffectByTimeDilation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIPlayTween:GetDuration {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetDuration
+    src   "Get Duration"
+    // from the engine's zh-Hans
+    text  "获取时长"
     state draft
 }
 
@@ -70,12 +92,26 @@ DreamUIPlayTween:GetDuration:ReturnValue {
     state draft
 }
 
+DreamUIPlayTween:GetEaseCurve {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetEaseCurve
+    src   "Get Ease Curve"
+    text  "获取缓动曲线"
+    state machine
+}
+
 DreamUIPlayTween:GetEaseCurve:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetEaseCurve:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIPlayTween:GetEaseType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetEaseType
+    src   "Get Ease Type"
+    text  "获取缓动类型"
+    state machine
 }
 
 DreamUIPlayTween:GetEaseType:ReturnValue {
@@ -86,12 +122,26 @@ DreamUIPlayTween:GetEaseType:ReturnValue {
     state draft
 }
 
+DreamUIPlayTween:GetLoopCount {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetLoopCount
+    src   "Get Loop Count"
+    text  "获取循环次数"
+    state machine
+}
+
 DreamUIPlayTween:GetLoopCount:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetLoopCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIPlayTween:GetLoopType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetLoopType
+    src   "Get Loop Type"
+    text  "获取循环类型"
+    state machine
 }
 
 DreamUIPlayTween:GetLoopType:ReturnValue {
@@ -102,12 +152,26 @@ DreamUIPlayTween:GetLoopType:ReturnValue {
     state draft
 }
 
+DreamUIPlayTween:GetStartDelay {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetStartDelay
+    src   "Get Start Delay"
+    text  "获取开始延迟"
+    state machine
+}
+
 DreamUIPlayTween:GetStartDelay:ReturnValue {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetStartDelay:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIPlayTween:GetTweener {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:GetTweener
+    src   "Get Tweener"
+    text  "获取缓动器"
+    state machine
 }
 
 DreamUIPlayTween:GetTweener:ReturnValue {
@@ -191,6 +255,13 @@ DreamUIPlayTween:OnUpdateProgressBP {
     state machine
 }
 
+DreamUIPlayTween:SetAffectByGamePause {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByGamePause
+    src   "Set Affect by Game Pause"
+    text  "设置受游戏暂停影响"
+    state machine
+}
+
 DreamUIPlayTween:SetAffectByGamePause:Value {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByGamePause:Value
     src   "Value"
@@ -199,11 +270,26 @@ DreamUIPlayTween:SetAffectByGamePause:Value {
     state draft
 }
 
+DreamUIPlayTween:SetAffectByTimeDilation {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByTimeDilation
+    src   "Set Affect by Time Dilation"
+    text  "设置受时间缩放影响"
+    state machine
+}
+
 DreamUIPlayTween:SetAffectByTimeDilation:Value {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetAffectByTimeDilation:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUIPlayTween:SetDuration {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetDuration
+    src   "Set Duration"
+    // from the engine's zh-Hans
+    text  "Set Duration"
     state draft
 }
 
@@ -215,12 +301,26 @@ DreamUIPlayTween:SetDuration:Value {
     state draft
 }
 
+DreamUIPlayTween:SetEaseCurve {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetEaseCurve
+    src   "Set Ease Curve"
+    text  "设置缓动曲线"
+    state machine
+}
+
 DreamUIPlayTween:SetEaseCurve:Value {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetEaseCurve:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIPlayTween:SetEaseType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetEaseType
+    src   "Set Ease Type"
+    text  "设置缓动类型"
+    state machine
 }
 
 DreamUIPlayTween:SetEaseType:Value {
@@ -231,12 +331,26 @@ DreamUIPlayTween:SetEaseType:Value {
     state draft
 }
 
+DreamUIPlayTween:SetLoopCount {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetLoopCount
+    src   "Set Loop Count"
+    text  "设置循环次数"
+    state machine
+}
+
 DreamUIPlayTween:SetLoopCount:Value {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetLoopCount:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIPlayTween:SetLoopType {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetLoopType
+    src   "Set Loop Type"
+    text  "设置循环类型"
+    state machine
 }
 
 DreamUIPlayTween:SetLoopType:Value {
@@ -247,6 +361,13 @@ DreamUIPlayTween:SetLoopType:Value {
     state draft
 }
 
+DreamUIPlayTween:SetStartDelay {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetStartDelay
+    src   "Set Start Delay"
+    text  "设置开始延迟"
+    state machine
+}
+
 DreamUIPlayTween:SetStartDelay:Value {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:SetStartDelay:Value
     src   "Value"
@@ -255,11 +376,27 @@ DreamUIPlayTween:SetStartDelay:Value {
     state draft
 }
 
+DreamUIPlayTween:Start {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:Start
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
 DreamUIPlayTween:StartDelay {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:StartDelay
     src   "Start Delay"
     // from the engine's zh-Hans
     text  "开始延迟"
+    state draft
+}
+
+DreamUIPlayTween:Stop {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h#DreamUIPlayTween:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "停止"
     state draft
 }
 

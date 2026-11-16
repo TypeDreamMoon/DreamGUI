@@ -9,6 +9,13 @@ DreamPointerEnterExitInterface {
     state machine
 }
 
+DreamPointerEnterExitInterface:OnPointerEnter {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerEnter
+    src   "On Pointer Enter"
+    text  "指针进入时"
+    state machine
+}
+
 DreamPointerEnterExitInterface:OnPointerEnter:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerEnter:EventData
     src   "Event Data"
@@ -23,6 +30,13 @@ DreamPointerEnterExitInterface:OnPointerEnter:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEnterExitInterface:OnPointerExit {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerEnterExitInterface.h#DreamPointerEnterExitInterface:OnPointerExit
+    src   "On Pointer Exit"
+    text  "指针离开时"
+    state machine
 }
 
 DreamPointerEnterExitInterface:OnPointerExit:EventData {

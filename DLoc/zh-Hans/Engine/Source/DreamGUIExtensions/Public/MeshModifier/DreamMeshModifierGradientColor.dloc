@@ -54,12 +54,26 @@ DreamMeshModifierGradientColor:DirectionType {
     state machine
 }
 
+DreamMeshModifierGradientColor:GetColor1 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor1
+    src   "Get Color 1"
+    text  "获取颜色 1"
+    state machine
+}
+
 DreamMeshModifierGradientColor:GetColor1:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor1:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierGradientColor:GetColor2 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor2
+    src   "Get Color 2"
+    text  "获取颜色 2"
+    state machine
 }
 
 DreamMeshModifierGradientColor:GetColor2:ReturnValue {
@@ -70,12 +84,26 @@ DreamMeshModifierGradientColor:GetColor2:ReturnValue {
     state draft
 }
 
+DreamMeshModifierGradientColor:GetColor3 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor3
+    src   "Get Color 3"
+    text  "获取颜色3"
+    state machine
+}
+
 DreamMeshModifierGradientColor:GetColor3:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor3:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierGradientColor:GetColor4 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetColor4
+    src   "Get Color 4"
+    text  "获取颜色 4"
+    state machine
 }
 
 DreamMeshModifierGradientColor:GetColor4:ReturnValue {
@@ -86,12 +114,26 @@ DreamMeshModifierGradientColor:GetColor4:ReturnValue {
     state draft
 }
 
+DreamMeshModifierGradientColor:GetDirectionType {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetDirectionType
+    src   "Get Direction Type"
+    text  "获取方向类型"
+    state machine
+}
+
 DreamMeshModifierGradientColor:GetDirectionType:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetDirectionType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierGradientColor:GetMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:GetMultiplySourceAlpha
+    src   "Get Multiply Source Alpha"
+    text  "获取是否混合源 Alpha"
+    state machine
 }
 
 DreamMeshModifierGradientColor:GetMultiplySourceAlpha:ReturnValue {
@@ -102,12 +144,26 @@ DreamMeshModifierGradientColor:GetMultiplySourceAlpha:ReturnValue {
     state draft
 }
 
+DreamMeshModifierGradientColor:SetColor1 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor1
+    src   "Set Color 1"
+    text  "设置颜色 1"
+    state machine
+}
+
 DreamMeshModifierGradientColor:SetColor1:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor1:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierGradientColor:SetColor2 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor2
+    src   "Set Color 2"
+    text  "设置颜色 2"
+    state machine
 }
 
 DreamMeshModifierGradientColor:SetColor2:Value {
@@ -118,12 +174,26 @@ DreamMeshModifierGradientColor:SetColor2:Value {
     state draft
 }
 
+DreamMeshModifierGradientColor:SetColor3 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor3
+    src   "Set Color 3"
+    text  "设置颜色3"
+    state machine
+}
+
 DreamMeshModifierGradientColor:SetColor3:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor3:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierGradientColor:SetColor4 {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetColor4
+    src   "Set Color 4"
+    text  "设置颜色 4"
+    state machine
 }
 
 DreamMeshModifierGradientColor:SetColor4:Value {
@@ -134,12 +204,26 @@ DreamMeshModifierGradientColor:SetColor4:Value {
     state draft
 }
 
+DreamMeshModifierGradientColor:SetDirectionType {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetDirectionType
+    src   "Set Direction Type"
+    text  "设置方向类型"
+    state machine
+}
+
 DreamMeshModifierGradientColor:SetDirectionType:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetDirectionType:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierGradientColor:SetMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h#DreamMeshModifierGradientColor:SetMultiplySourceAlpha
+    src   "Set Multiply Source Alpha"
+    text  "设置是否混合源 Alpha"
+    state machine
 }
 
 DreamMeshModifierGradientColor:SetMultiplySourceAlpha:Value {

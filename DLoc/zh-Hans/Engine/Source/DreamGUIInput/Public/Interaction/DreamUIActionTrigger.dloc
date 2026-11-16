@@ -32,11 +32,26 @@ DreamUIActionTrigger:bDisplayInActionBar {
     state draft
 }
 
+DreamUIActionTrigger:GetAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetAction
+    src   "Get Action"
+    text  "获取操作"
+    state machine
+}
+
 DreamUIActionTrigger:GetAction:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetAction:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIActionTrigger:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
     state draft
 }
 
@@ -48,6 +63,20 @@ DreamUIActionTrigger:GetUserIndex:ReturnValue {
     state draft
 }
 
+DreamUIActionTrigger:HandleActionExecuted {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:HandleActionExecuted
+    src   "Handle Action Executed"
+    text  "处理动作已执行"
+    state machine
+}
+
+DreamUIActionTrigger:IsActionBound {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:IsActionBound
+    src   "Is Action Bound"
+    text  "动作是否已绑定"
+    state machine
+}
+
 DreamUIActionTrigger:IsActionBound:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:IsActionBound:ReturnValue
     src   "Return Value"
@@ -56,12 +85,33 @@ DreamUIActionTrigger:IsActionBound:ReturnValue {
     state draft
 }
 
+DreamUIActionTrigger:ReceiveOnActionTriggered {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:ReceiveOnActionTriggered
+    src   "OnActionTriggered"
+    text  "动作触发时"
+    state machine
+}
+
+DreamUIActionTrigger:SetAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetAction
+    src   "Set Action"
+    text  "设置操作"
+    state machine
+}
+
 DreamUIActionTrigger:SetAction:InAction {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetAction:InAction
     src   "In Action"
     // from the engine's zh-Hans
     text  "输入操作"
     state draft
+}
+
+DreamUIActionTrigger:SetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SetUserIndex
+    src   "Set User Index"
+    text  "设置用户索引"
+    state machine
 }
 
 DreamUIActionTrigger:SetUserIndex:Value {
@@ -76,6 +126,13 @@ DreamUIActionTrigger:SyntheticPointerEvent {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:SyntheticPointerEvent
     src   "Synthetic Pointer Event"
     text  "合成指针事件"
+    state machine
+}
+
+DreamUIActionTrigger:TriggerAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h#DreamUIActionTrigger:TriggerAction
+    src   "Trigger Action"
+    text  "触发动作"
     state machine
 }
 

@@ -1,0 +1,15 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUICompileWidgetsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUICompileWidgetsCommandlet.h#DreamUICompileWidgetsCommandlet
+    src   "Dream UICompile Widgets Commandlet"
+}
+
+namespace UObjectToolTips
+
+DreamUICompileWidgetsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUICompileWidgetsCommandlet.h#DreamUICompileWidgetsCommandlet
+    src   "Creates and compiles text-authored DreamUI Widget Blueprints from their `.dui` files without opening the editor --\nthe headless half of Tools > Rebuild DUI, for build scripts and CI.\n\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=<file.json> [-Only=WBP_A,WBP_B]\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]\n\nThe manifest lists the widgets in the order they must be compiled -- a component before the screens that place it:\n\n    { \"widgets\": [\n        { \"asset\": \"/Game/UI/WBP_Row\",    \"parent\": \"/Script/MyGame.MyRow\",    \"source\": \"UI/Row.dui\" },\n        { \"asset\": \"/Game/UI/WBP_Screen\", \"parent\": \"/Script/DreamGUI.DreamTextUserWidget\", \"source\": \"UI/Screen.dui\" } ] }\n\nA missing Blueprint is created with that parent; an existing one is reparented when its parent differs, pointed at the\nsource, compiled and saved. \"parent\" may be omitted (UDreamTextUserWidget). -All recompiles every text-authored\nWidget Blueprint already in the project instead (optionally under -Path). Every compiler message is logged, and the\ncommandlet exits non-zero when any widget failed to load, compile or save."
+}

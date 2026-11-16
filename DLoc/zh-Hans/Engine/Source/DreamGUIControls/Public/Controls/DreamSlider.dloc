@@ -70,6 +70,14 @@ DreamSlider:FillNode {
     state machine
 }
 
+DreamSlider:GetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetDirection
+    src   "Get Direction"
+    // from the engine's zh-Hans
+    text  "获取方向"
+    state draft
+}
+
 DreamSlider:GetDirection:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetDirection:ReturnValue
     src   "Return Value"
@@ -78,11 +86,26 @@ DreamSlider:GetDirection:ReturnValue {
     state draft
 }
 
+DreamSlider:GetIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetIndentHandle
+    src   "Get Indent Handle"
+    text  "获取缩进柄"
+    state machine
+}
+
 DreamSlider:GetIndentHandle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetIndentHandle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:GetMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMaxValue
+    src   "Get Max Value"
+    // from the engine's zh-Hans
+    text  "获取最大值"
     state draft
 }
 
@@ -94,11 +117,27 @@ DreamSlider:GetMaxValue:ReturnValue {
     state draft
 }
 
+DreamSlider:GetMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMinValue
+    src   "Get Min Value"
+    // from the engine's zh-Hans
+    text  "获取最小值"
+    state draft
+}
+
 DreamSlider:GetMinValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMinValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:GetMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetMouseUsesStep
+    src   "Get Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "Get Mouse Uses Step"
     state draft
 }
 
@@ -110,11 +149,26 @@ DreamSlider:GetMouseUsesStep:ReturnValue {
     state draft
 }
 
+DreamSlider:GetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNavigationChangeInterval
+    src   "Get Navigation Change Interval"
+    text  "获取导航变化间隔"
+    state machine
+}
+
 DreamSlider:GetNavigationChangeInterval:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNavigationChangeInterval:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:GetNormalizedValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetNormalizedValue
+    src   "Get Normalized Value"
+    // from the engine's zh-Hans
+    text  "获取标准化值"
     state draft
 }
 
@@ -126,12 +180,26 @@ DreamSlider:GetNormalizedValue:ReturnValue {
     state draft
 }
 
+DreamSlider:GetRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetRequiresControllerLock
+    src   "Get Requires Controller Lock"
+    text  "获取需要控制器锁定"
+    state machine
+}
+
 DreamSlider:GetRequiresControllerLock:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetRequiresControllerLock:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSlider:GetSliderBarColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetSliderBarColor
+    src   "Get Slider Bar Color"
+    text  "获取滑条颜色"
+    state machine
 }
 
 DreamSlider:GetSliderBarColor:ReturnValue {
@@ -142,11 +210,26 @@ DreamSlider:GetSliderBarColor:ReturnValue {
     state draft
 }
 
+DreamSlider:GetSliderHandleColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetSliderHandleColor
+    src   "Get Slider Handle Color"
+    text  "获取滑柄颜色"
+    state machine
+}
+
 DreamSlider:GetSliderHandleColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetSliderHandleColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:GetStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetStepSize
+    src   "Get Step Size"
+    // from the engine's zh-Hans
+    text  "Get Step Size"
     state draft
 }
 
@@ -158,11 +241,26 @@ DreamSlider:GetStepSize:ReturnValue {
     state draft
 }
 
+DreamSlider:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamSlider:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:GetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -172,6 +270,13 @@ DreamSlider:GetValue:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSlider:GetWholeNumbers {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:GetWholeNumbers
+    src   "Get Whole Numbers"
+    text  "获取整数"
+    state machine
 }
 
 DreamSlider:GetWholeNumbers:ReturnValue {
@@ -196,11 +301,26 @@ DreamSlider:HandleNode {
     state machine
 }
 
+DreamSlider:IsControllerCaptured {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsControllerCaptured
+    src   "Is Controller Captured"
+    text  "控制器是否已捕获"
+    state machine
+}
+
 DreamSlider:IsControllerCaptured:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsControllerCaptured:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSlider:IsLocked {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:IsLocked
+    src   "Is Locked"
+    // from the engine's zh-Hans
+    text  "为锁定"
     state draft
 }
 
@@ -282,11 +402,26 @@ DreamSlider:OnValueChangedBP {
     state machine
 }
 
+DreamSlider:SetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetDirection
+    src   "Set Direction"
+    text  "设置方向"
+    state machine
+}
+
 DreamSlider:SetDirection:InDirection {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetDirection:InDirection
     src   "In Direction"
     // from the engine's zh-Hans
     text  "输入方向"
+    state draft
+}
+
+DreamSlider:SetIndentHandle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetIndentHandle
+    src   "Set Indent Handle"
+    // from the engine's zh-Hans
+    text  "设置缩进柄"
     state draft
 }
 
@@ -297,11 +432,27 @@ DreamSlider:SetIndentHandle:bInIndentHandle {
     state machine
 }
 
+DreamSlider:SetLocked {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetLocked
+    src   "Set Locked"
+    // from the engine's zh-Hans
+    text  "Set Locked"
+    state draft
+}
+
 DreamSlider:SetLocked:bInLocked {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetLocked:bInLocked
     src   "In Locked"
     // from the engine's zh-Hans
     text  "输入已锁定"
+    state draft
+}
+
+DreamSlider:SetMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMaxValue
+    src   "Set Max Value"
+    // from the engine's zh-Hans
+    text  "设置最大值"
     state draft
 }
 
@@ -312,6 +463,14 @@ DreamSlider:SetMaxValue:InMaxValue {
     state machine
 }
 
+DreamSlider:SetMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMinValue
+    src   "Set Min Value"
+    // from the engine's zh-Hans
+    text  "设置最小值"
+    state draft
+}
+
 DreamSlider:SetMinValue:InMinValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMinValue:InMinValue
     src   "In Min Value"
@@ -319,10 +478,25 @@ DreamSlider:SetMinValue:InMinValue {
     state machine
 }
 
+DreamSlider:SetMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMouseUsesStep
+    src   "Set Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "Set Mouse Uses Step"
+    state draft
+}
+
 DreamSlider:SetMouseUsesStep:bInMouseUsesStep {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetMouseUsesStep:bInMouseUsesStep
     src   "In Mouse Uses Step"
     text  "鼠标使用步进"
+    state machine
+}
+
+DreamSlider:SetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetNavigationChangeInterval
+    src   "Set Navigation Change Interval"
+    text  "设置导航变化间隔"
     state machine
 }
 
@@ -334,11 +508,26 @@ DreamSlider:SetNavigationChangeInterval:InInterval {
     state draft
 }
 
+DreamSlider:SetRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetRequiresControllerLock
+    src   "Set Requires Controller Lock"
+    text  "设置需要控制器锁定"
+    state machine
+}
+
 DreamSlider:SetRequiresControllerLock:bInRequiresControllerLock {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetRequiresControllerLock:bInRequiresControllerLock
     src   "In Requires Controller Lock"
     text  "需要控制器锁定"
     state machine
+}
+
+DreamSlider:SetSliderBarColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetSliderBarColor
+    src   "Set Slider Bar Color"
+    // from the engine's zh-Hans
+    text  "Set Slider Bar Color"
+    state draft
 }
 
 DreamSlider:SetSliderBarColor:InSliderBarColor {
@@ -348,6 +537,14 @@ DreamSlider:SetSliderBarColor:InSliderBarColor {
     state machine
 }
 
+DreamSlider:SetSliderHandleColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetSliderHandleColor
+    src   "Set Slider Handle Color"
+    // from the engine's zh-Hans
+    text  "设置滑柄颜色"
+    state draft
+}
+
 DreamSlider:SetSliderHandleColor:InSliderHandleColor {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetSliderHandleColor:InSliderHandleColor
     src   "In Slider Handle Color"
@@ -355,11 +552,27 @@ DreamSlider:SetSliderHandleColor:InSliderHandleColor {
     state machine
 }
 
+DreamSlider:SetStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStepSize
+    src   "Set Step Size"
+    // from the engine's zh-Hans
+    text  "Set Step Size"
+    state draft
+}
+
 DreamSlider:SetStepSize:InStepSize {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStepSize:InStepSize
     src   "In Step Size"
     text  "步进大小"
     state machine
+}
+
+DreamSlider:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamSlider:SetStyle:InStyle {
@@ -370,12 +583,27 @@ DreamSlider:SetStyle:InStyle {
     state draft
 }
 
+DreamSlider:SetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
+    state draft
+}
+
 DreamSlider:SetValue:InValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetValue:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamSlider:SetWholeNumbers {
+    at    Source/DreamGUIControls/Public/Controls/DreamSlider.h#DreamSlider:SetWholeNumbers
+    src   "Set Whole Numbers"
+    text  "设置整数"
+    state machine
 }
 
 DreamSlider:SetWholeNumbers:bInWholeNumbers {

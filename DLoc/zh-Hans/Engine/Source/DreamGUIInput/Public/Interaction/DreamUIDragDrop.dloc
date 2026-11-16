@@ -9,12 +9,24 @@ DreamUIDragDropSubsystem {
     state machine
 }
 
+DreamUIDragDropSubsystem:CancelActiveDrag {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDrag
+    src   "Cancel Active Drag"
+    text  "取消当前拖拽"
+    state machine
+}
+
 DreamUIDragDropSubsystem:CancelActiveDrag:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDrag:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:CancelActiveDragForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:CancelActiveDragForUser
+    src   "Cancel Active Drag for User"
 }
 
 DreamUIDragDropSubsystem:CancelActiveDragForUser:InUserIndex {
@@ -30,6 +42,11 @@ DreamUIDragDropSubsystem:CancelActiveDragForUser:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:Get {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:Get
+    src   "Get DreamUI DragDrop Subsystem"
 }
 
 DreamUIDragDropSubsystem:Get:ReturnValue {
@@ -48,12 +65,24 @@ DreamUIDragDropSubsystem:Get:WorldContextObject {
     state draft
 }
 
+DreamUIDragDropSubsystem:GetDragCount {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragCount
+    src   "Get Drag Count"
+    text  "获取拖拽计数"
+    state machine
+}
+
 DreamUIDragDropSubsystem:GetDragCount:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForPointer
+    src   "Get Drag Operation for Pointer"
 }
 
 DreamUIDragDropSubsystem:GetDragOperationForPointer:InPointerID {
@@ -69,6 +98,11 @@ DreamUIDragDropSubsystem:GetDragOperationForPointer:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:GetDragOperationForUserPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetDragOperationForUserPointer
+    src   "Get Drag Operation for User Pointer"
 }
 
 DreamUIDragDropSubsystem:GetDragOperationForUserPointer:InPointerID {
@@ -93,6 +127,11 @@ DreamUIDragDropSubsystem:GetDragOperationForUserPointer:ReturnValue {
     state draft
 }
 
+DreamUIDragDropSubsystem:GetHoveredTargetForPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer
+    src   "Get Hovered Target for Pointer"
+}
+
 DreamUIDragDropSubsystem:GetHoveredTargetForPointer:InPointerID {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForPointer:InPointerID
     src   "In Pointer ID"
@@ -106,6 +145,11 @@ DreamUIDragDropSubsystem:GetHoveredTargetForPointer:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer
+    src   "Get Hovered Target for User Pointer"
 }
 
 DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:InPointerID {
@@ -130,12 +174,22 @@ DreamUIDragDropSubsystem:GetHoveredTargetForUserPointer:ReturnValue {
     state draft
 }
 
+DreamUIDragDropSubsystem:IsDragInProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgress
+    src   "Is Drag in Progress"
+}
+
 DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgress:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDragDropSubsystem:IsDragInProgressForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragDropSubsystem:IsDragInProgressForUser
+    src   "Is Drag in Progress for User"
 }
 
 DreamUIDragDropSubsystem:IsDragInProgressForUser:InUserIndex {
@@ -164,6 +218,13 @@ DreamUIDragSource:bAllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:bAllowEventBubbleUp
     src   "Allow Event Bubble Up"
     text  "允许事件冒泡"
+    state machine
+}
+
+DreamUIDragSource:CreateDragOperation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragSource:CreateDragOperation
+    src   "Create Drag Operation"
+    text  "创建拖拽操作"
     state machine
 }
 
@@ -213,10 +274,35 @@ DreamUIDragSource:Tag {
     state draft
 }
 
+DreamUIDragVisual {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual
+    src   "Dream UIDrag Visual"
+}
+
+DreamUIDragVisual:OnDragVisualCreated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual:OnDragVisualCreated
+    src   "On Drag Visual Created"
+}
+
+DreamUIDragVisual:OnDragVisualCreated:Operation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual:OnDragVisualCreated:Operation
+    src   "Operation"
+    // from the engine's zh-Hans
+    text  "运算"
+    state draft
+}
+
 DreamUIDropTarget {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget
     src   "DreamUI Drop Target"
     text  "DreamUI 放置目标"
+    state machine
+}
+
+DreamUIDropTarget:CanAcceptDrop {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:CanAcceptDrop
+    src   "Can Accept Drop"
+    text  "可接受放下"
     state machine
 }
 
@@ -236,12 +322,26 @@ DreamUIDropTarget:CanAcceptDrop:ReturnValue {
     state draft
 }
 
+DreamUIDropTarget:HandleAcceptedDrop {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:HandleAcceptedDrop
+    src   "Handle Accepted Drop"
+    text  "处理接受的放下"
+    state machine
+}
+
 DreamUIDropTarget:HandleAcceptedDrop:Operation {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:HandleAcceptedDrop:Operation
     src   "Operation"
     // from the engine's zh-Hans
     text  "运算"
     state draft
+}
+
+DreamUIDropTarget:IsDragHovered {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDropTarget:IsDragHovered
+    src   "Is Drag Hovered"
+    text  "拖拽是否悬停"
+    state machine
 }
 
 DreamUIDropTarget:IsDragHovered:ReturnValue {
@@ -395,6 +495,11 @@ DreamUIDragSource:Tag {
     src   "Copied onto the operation. See UDreamDragDropOperation for what each means."
     text  "复制到操作上。各属性的含义参见 UDreamDragDropOperation。"
     state machine
+}
+
+DreamUIDragVisual:OnDragVisualCreated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h#DreamUIDragVisual:OnDragVisualCreated
+    src   "The drag this visual stands for, as the drop targets will see it."
 }
 
 DreamUIDropTarget {

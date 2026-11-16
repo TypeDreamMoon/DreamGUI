@@ -17,12 +17,26 @@ DreamNativeWidgetHost:BackgroundColor {
     state draft
 }
 
+DreamNativeWidgetHost:GetHostedWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetHostedWidget
+    src   "Get Hosted Widget"
+    text  "获取宿主控件"
+    state machine
+}
+
 DreamNativeWidgetHost:GetHostedWidget:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetHostedWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamNativeWidgetHost:GetWidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:GetWidgetClass
+    src   "Get Widget Class"
+    text  "获取控件类"
+    state machine
 }
 
 DreamNativeWidgetHost:GetWidgetClass:ReturnValue {
@@ -55,6 +69,14 @@ DreamNativeWidgetHost:ResolutionScale {
     state draft
 }
 
+DreamNativeWidgetHost:SetBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetBackgroundColor
+    src   "Set Background Color"
+    // from the engine's zh-Hans
+    text  "Set Background Color"
+    state draft
+}
+
 DreamNativeWidgetHost:SetBackgroundColor:InBackgroundColor {
     at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetBackgroundColor:InBackgroundColor
     src   "In Background Color"
@@ -63,10 +85,24 @@ DreamNativeWidgetHost:SetBackgroundColor:InBackgroundColor {
     state draft
 }
 
+DreamNativeWidgetHost:SetResolutionScale {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetResolutionScale
+    src   "Set Resolution Scale"
+    text  "设置分辨率缩放"
+    state machine
+}
+
 DreamNativeWidgetHost:SetResolutionScale:InResolutionScale {
     at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetResolutionScale:InResolutionScale
     src   "In Resolution Scale"
     text  "输入分辨率缩放"
+    state machine
+}
+
+DreamNativeWidgetHost:SetWidgetClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h#DreamNativeWidgetHost:SetWidgetClass
+    src   "Set Widget Class"
+    text  "设置控件类"
     state machine
 }
 

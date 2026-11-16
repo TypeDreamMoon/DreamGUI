@@ -9,6 +9,14 @@ DreamUICaptureLibrary {
     state machine
 }
 
+DreamUICaptureLibrary:CaptureAll {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll
+    src   "Capture All"
+    // from the engine's zh-Hans
+    text  "捕获所有"
+    state draft
+}
+
 DreamUICaptureLibrary:CaptureAll:InDirectory {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll:InDirectory
     src   "In Directory"
@@ -32,12 +40,24 @@ DreamUICaptureLibrary:CaptureAll:ReturnValue {
     state draft
 }
 
+DreamUICaptureLibrary:GetCaptureDirectory {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory
+    src   "Get Capture Directory"
+    text  "获取捕获目录"
+    state machine
+}
+
 DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng
+    src   "Save Canvas to Png"
 }
 
 DreamUICaptureLibrary:SaveCanvasToPng:InCanvas {
@@ -64,6 +84,11 @@ DreamUICaptureLibrary:SaveCanvasToPng:ReturnValue {
     state draft
 }
 
+DreamUICaptureLibrary:SaveRenderTargetToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng
+    src   "Save Render Target to Png"
+}
+
 DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath
     src   "In File Path"
@@ -86,6 +111,11 @@ DreamUICaptureLibrary:SaveRenderTargetToPng:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUICaptureLibrary:SaveViewportToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng
+    src   "Save Viewport to Png"
 }
 
 DreamUICaptureLibrary:SaveViewportToPng:InFilePath {

@@ -23,6 +23,13 @@ DreamGUISettings:bAutoVirtualCursorOnGamepad {
     state machine
 }
 
+DreamGUISettings:bEnableDreamMCPEndpoint {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Enable DreamMCP Endpoint"
+    text  "启用 DreamMCP 端点"
+    state machine
+}
+
 DreamGUISettings:bFieldTextCorrection {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
     src   "Field Text Correction"
@@ -570,6 +577,11 @@ DreamGUISettings:bAutoVirtualCursorOnGamepad {
     state machine
 }
 
+DreamGUISettings:bEnableDreamMCPEndpoint {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Let an AI agent connected through DreamMCP use this editor: check, compile, lay out and preview .dui screens through\na local endpoint (127.0.0.1 only, with a token). Read when the editor starts. Hosts DreamMCP starts itself ignore it."
+}
+
 DreamGUISettings:bFieldTextCorrection {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
     src   "Run the face of distance-field text above SmallTextMaxPixelSize through the same coverage correction small text gets\n(the contrast and the linear-light blend), so its weight does not jump at the cut-off. Off by default until measured\nagainst Chrome. Drawn by the shaders: the canvases pass it with the font atlas's geometry (FontAtlasInfo.z negated)."
@@ -1048,6 +1060,14 @@ namespace UObjectCategory
     state machine
 }
 
+Editor {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Editor"
+    // from the engine's zh-Hans
+    text  "编辑器"
+    state draft
+}
+
 Text {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCorrection
     src   "Text"
@@ -1108,14 +1128,6 @@ Modal {
     src   "Modal"
     text  "模态"
     state machine
-}
-
-Editor {
-    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PresetControlFolder
-    src   "Editor"
-    // from the engine's zh-Hans
-    text  "编辑器"
-    state draft
 }
 
 Editor|Palette {

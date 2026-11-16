@@ -31,12 +31,26 @@ DreamVisualPostProcess:bUseFullSize {
     state machine
 }
 
+DreamVisualPostProcess:GetMaskTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetMaskTexture
+    src   "Get Mask Texture"
+    text  "获取遮罩纹理"
+    state machine
+}
+
 DreamVisualPostProcess:GetMaskTexture:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetMaskTexture:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisualPostProcess:GetMaskTextureUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetMaskTextureUVRect
+    src   "Get Mask Texture UVRect"
+    text  "获取遮罩纹理 UV 矩形"
+    state machine
 }
 
 DreamVisualPostProcess:GetMaskTextureUVRect:ReturnValue {
@@ -47,12 +61,26 @@ DreamVisualPostProcess:GetMaskTextureUVRect:ReturnValue {
     state draft
 }
 
+DreamVisualPostProcess:GetOutputRenderTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetOutputRenderTarget
+    src   "Get Output Render Target"
+    text  "获取输出渲染目标"
+    state machine
+}
+
 DreamVisualPostProcess:GetOutputRenderTarget:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetOutputRenderTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisualPostProcess:GetRenderType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetRenderType
+    src   "Get Render Type"
+    text  "获取渲染类型"
+    state machine
 }
 
 DreamVisualPostProcess:GetRenderType:ReturnValue {
@@ -63,12 +91,26 @@ DreamVisualPostProcess:GetRenderType:ReturnValue {
     state draft
 }
 
+DreamVisualPostProcess:GetTintMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetTintMode
+    src   "Get Tint Mode"
+    text  "获取着色模式"
+    state machine
+}
+
 DreamVisualPostProcess:GetTintMode:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetTintMode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisualPostProcess:GetTintStrength {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetTintStrength
+    src   "Get Tint Strength"
+    text  "获取着色强度"
+    state machine
 }
 
 DreamVisualPostProcess:GetTintStrength:ReturnValue {
@@ -79,11 +121,26 @@ DreamVisualPostProcess:GetTintStrength:ReturnValue {
     state draft
 }
 
+DreamVisualPostProcess:GetUseFullSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetUseFullSize
+    src   "Get Use Full Size"
+    text  "获取使用全尺寸"
+    state machine
+}
+
 DreamVisualPostProcess:GetUseFullSize:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:GetUseFullSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamVisualPostProcess:IsEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
     state draft
 }
 
@@ -126,12 +183,27 @@ DreamVisualPostProcess:RenderType {
     state draft
 }
 
+DreamVisualPostProcess:SetEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
+    state draft
+}
+
 DreamVisualPostProcess:SetEnabled:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetEnabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisualPostProcess:SetMaskTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetMaskTexture
+    src   "Set Mask Texture"
+    text  "设置遮罩纹理"
+    state machine
 }
 
 DreamVisualPostProcess:SetMaskTexture:Value {
@@ -142,12 +214,26 @@ DreamVisualPostProcess:SetMaskTexture:Value {
     state draft
 }
 
+DreamVisualPostProcess:SetMaskTextureUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetMaskTextureUVRect
+    src   "Set Mask Texture UVRect"
+    text  "设置遮罩纹理 UV 矩形"
+    state machine
+}
+
 DreamVisualPostProcess:SetMaskTextureUVRect:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetMaskTextureUVRect:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisualPostProcess:SetRenderType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetRenderType
+    src   "Set Render Type"
+    text  "设置渲染类型"
+    state machine
 }
 
 DreamVisualPostProcess:SetRenderType:Value {
@@ -158,6 +244,13 @@ DreamVisualPostProcess:SetRenderType:Value {
     state draft
 }
 
+DreamVisualPostProcess:SetTintMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintMode
+    src   "Set Tint Mode"
+    text  "设置着色模式"
+    state machine
+}
+
 DreamVisualPostProcess:SetTintMode:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintMode:Value
     src   "Value"
@@ -166,12 +259,26 @@ DreamVisualPostProcess:SetTintMode:Value {
     state draft
 }
 
+DreamVisualPostProcess:SetTintStrength {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintStrength
+    src   "Set Tint Strength"
+    text  "设置着色强度"
+    state machine
+}
+
 DreamVisualPostProcess:SetTintStrength:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetTintStrength:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisualPostProcess:SetUseFullSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisualPostProcess.h#DreamVisualPostProcess:SetUseFullSize
+    src   "Set Use Full Size"
+    text  "设置使用全尺寸"
+    state machine
 }
 
 DreamVisualPostProcess:SetUseFullSize:Value {

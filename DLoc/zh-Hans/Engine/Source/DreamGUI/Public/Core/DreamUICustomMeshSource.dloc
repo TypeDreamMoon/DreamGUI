@@ -53,6 +53,11 @@ DreamUICustomMeshSource {
     state machine
 }
 
+DreamUICustomMeshSource:GetHitUVbyFaceIndex {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex
+    src   "Get Hit UVby Face Index"
+}
+
 DreamUICustomMeshSource:GetHitUVbyFaceIndex:InDreamMesh {
     at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:GetHitUVbyFaceIndex:InDreamMesh
     src   "In Dream Mesh"
@@ -87,6 +92,11 @@ DreamUICustomMeshSource:GetHitUVbyFaceIndex:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUICustomMeshSource:ReceiveGetHitUV {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveGetHitUV
+    src   "GetHitUV"
 }
 
 DreamUICustomMeshSource:ReceiveGetHitUV:InDreamMesh {
@@ -139,6 +149,13 @@ DreamUICustomMeshSource:ReceiveGetHitUV:ReturnValue {
     state draft
 }
 
+DreamUICustomMeshSource:ReceiveOnFillMesh {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh
+    src   "OnCreateMesh"
+    text  "创建网格时"
+    state machine
+}
+
 DreamUICustomMeshSource:ReceiveOnFillMesh:InDreamMesh {
     at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveOnFillMesh:InDreamMesh
     src   "In Dream Mesh"
@@ -172,6 +189,11 @@ DreamUICustomMeshSource:ReceiveOnFillMesh:InVertexUVChanged {
     src   "In Vertex UVChanged"
     text  "顶点 UV 已更改"
     state machine
+}
+
+DreamUICustomMeshSource:ReceiveSupportDrawcallBatching {
+    at    Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h#DreamUICustomMeshSource:ReceiveSupportDrawcallBatching
+    src   "SupportDrawcallBatching"
 }
 
 DreamUICustomMeshSource:ReceiveSupportDrawcallBatching:ReturnValue {

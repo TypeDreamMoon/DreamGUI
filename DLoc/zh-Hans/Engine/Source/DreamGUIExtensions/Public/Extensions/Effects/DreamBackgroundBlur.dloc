@@ -25,12 +25,26 @@ DreamBackgroundBlur:BlurStrength {
     state draft
 }
 
+DreamBackgroundBlur:GetApplyAlphaToBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetApplyAlphaToBlur
+    src   "Get Apply Alpha to Blur"
+    text  "获取为模糊应用透明度"
+    state machine
+}
+
 DreamBackgroundBlur:GetApplyAlphaToBlur:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetApplyAlphaToBlur:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBackgroundBlur:GetBlurStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetBlurStrength
+    src   "Get Blur Strength"
+    text  "获取模糊强度"
+    state machine
 }
 
 DreamBackgroundBlur:GetBlurStrength:ReturnValue {
@@ -41,12 +55,26 @@ DreamBackgroundBlur:GetBlurStrength:ReturnValue {
     state draft
 }
 
+DreamBackgroundBlur:GetMaxDownSampleLevel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetMaxDownSampleLevel
+    src   "Get Max Down Sample Level"
+    text  "获取最大降采样级别"
+    state machine
+}
+
 DreamBackgroundBlur:GetMaxDownSampleLevel:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetMaxDownSampleLevel:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBackgroundBlur:GetStrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:GetStrengthMap
+    src   "Get Strength Map"
+    text  "获取强度图"
+    state machine
 }
 
 DreamBackgroundBlur:GetStrengthMap:ReturnValue {
@@ -64,11 +92,27 @@ DreamBackgroundBlur:MaxDownSampleLevel {
     state machine
 }
 
+DreamBackgroundBlur:SetApplyAlphaToBlur {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetApplyAlphaToBlur
+    src   "Set Apply Alpha to Blur"
+    // from the engine's zh-Hans
+    text  "设置为模糊应用透明度"
+    state draft
+}
+
 DreamBackgroundBlur:SetApplyAlphaToBlur:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetApplyAlphaToBlur:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamBackgroundBlur:SetBlurStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetBlurStrength
+    src   "Set Blur Strength"
+    // from the engine's zh-Hans
+    text  "设置模糊强度"
     state draft
 }
 
@@ -80,12 +124,26 @@ DreamBackgroundBlur:SetBlurStrength:Value {
     state draft
 }
 
+DreamBackgroundBlur:SetMaxDownSampleLevel {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetMaxDownSampleLevel
+    src   "Set Max Down Sample Level"
+    text  "设置最大降采样级别"
+    state machine
+}
+
 DreamBackgroundBlur:SetMaxDownSampleLevel:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetMaxDownSampleLevel:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamBackgroundBlur:SetStrengthMap {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundBlur.h#DreamBackgroundBlur:SetStrengthMap
+    src   "Set Strength Map"
+    text  "设置强度图"
+    state machine
 }
 
 DreamBackgroundBlur:SetStrengthMap:Value {

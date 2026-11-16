@@ -9,12 +9,26 @@ DreamMeshModifierPositionAsUV {
     state machine
 }
 
+DreamMeshModifierPositionAsUV:GetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:GetScale
+    src   "Get Scale"
+    text  "获取缩放"
+    state machine
+}
+
 DreamMeshModifierPositionAsUV:GetScale:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:GetScale:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierPositionAsUV:GetUVChannel {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:GetUVChannel
+    src   "Get UVChannel"
+    text  "获取UV通道"
+    state machine
 }
 
 DreamMeshModifierPositionAsUV:GetUVChannel:ReturnValue {
@@ -33,12 +47,27 @@ DreamMeshModifierPositionAsUV:Scale {
     state draft
 }
 
+DreamMeshModifierPositionAsUV:SetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:SetScale
+    src   "Set Scale"
+    // from the engine's zh-Hans
+    text  "设置缩放"
+    state draft
+}
+
 DreamMeshModifierPositionAsUV:SetScale:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:SetScale:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierPositionAsUV:SetUVChannel {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h#DreamMeshModifierPositionAsUV:SetUVChannel
+    src   "Set UVChannel"
+    text  "设置UV通道"
+    state machine
 }
 
 DreamMeshModifierPositionAsUV:SetUVChannel:Value {

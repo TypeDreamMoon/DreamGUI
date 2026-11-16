@@ -16,12 +16,26 @@ DreamBackgroundPixelate:ApplyAlphaToStrength {
     state machine
 }
 
+DreamBackgroundPixelate:GetApplyAlphaToStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:GetApplyAlphaToStrength
+    src   "Get Apply Alpha to Strength"
+    text  "获取是否受 Alpha 影响"
+    state machine
+}
+
 DreamBackgroundPixelate:GetApplyAlphaToStrength:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:GetApplyAlphaToStrength:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBackgroundPixelate:GetPixelateStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:GetPixelateStrength
+    src   "Get Pixelate Strength"
+    text  "获取像素化强度"
+    state machine
 }
 
 DreamBackgroundPixelate:GetPixelateStrength:ReturnValue {
@@ -39,12 +53,26 @@ DreamBackgroundPixelate:PixelateStrength {
     state machine
 }
 
+DreamBackgroundPixelate:SetApplyAlphaToStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:SetApplyAlphaToStrength
+    src   "Set Apply Alpha to Strength"
+    text  "设置是否受 Alpha 影响"
+    state machine
+}
+
 DreamBackgroundPixelate:SetApplyAlphaToStrength:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:SetApplyAlphaToStrength:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamBackgroundPixelate:SetPixelateStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamBackgroundPixelate.h#DreamBackgroundPixelate:SetPixelateStrength
+    src   "Set Pixelate Strength"
+    text  "设置像素化强度"
+    state machine
 }
 
 DreamBackgroundPixelate:SetPixelateStrength:Value {

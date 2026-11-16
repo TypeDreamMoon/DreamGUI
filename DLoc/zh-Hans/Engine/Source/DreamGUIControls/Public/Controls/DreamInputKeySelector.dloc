@@ -9,11 +9,27 @@ DreamInputKeySelector {
     state machine
 }
 
+DreamInputKeySelector:AllowGamepadKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowGamepadKeys
+    src   "Allow Gamepad Keys"
+    // from the engine's zh-Hans
+    text  "允许手柄键"
+    state draft
+}
+
 DreamInputKeySelector:AllowGamepadKeys:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowGamepadKeys:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:AllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:AllowModifierKeys
+    src   "Allow Modifier Keys"
+    // from the engine's zh-Hans
+    text  "允许辅助键"
     state draft
 }
 
@@ -48,6 +64,13 @@ DreamInputKeySelector:bCaptureKeysWhileListening {
     state machine
 }
 
+DreamInputKeySelector:BeginListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:BeginListening
+    src   "Begin Listening"
+    text  "开始监听"
+    state machine
+}
+
 DreamInputKeySelector:bEscapeCancels {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:bEscapeCancels
     src   "Escape Cancels"
@@ -69,6 +92,13 @@ DreamInputKeySelector:ButtonBehaviour {
     state machine
 }
 
+DreamInputKeySelector:CancelListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:CancelListening
+    src   "Cancel Listening"
+    text  "取消监听"
+    state machine
+}
+
 DreamInputKeySelector:EscapeKeys {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:EscapeKeys
     src   "Escape Keys"
@@ -84,12 +114,26 @@ DreamInputKeySelector:FaceNode {
     state machine
 }
 
+DreamInputKeySelector:GetCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetCaptureKeysWhileListening
+    src   "Get Capture Keys While Listening"
+    text  "获取捕获监听时的键"
+    state machine
+}
+
 DreamInputKeySelector:GetCaptureKeysWhileListening:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetCaptureKeysWhileListening:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamInputKeySelector:GetEscapeCancels {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetEscapeCancels
+    src   "Get Escape Cancels"
+    text  "获取按下 Esc 键取消"
+    state machine
 }
 
 DreamInputKeySelector:GetEscapeCancels:ReturnValue {
@@ -100,6 +144,13 @@ DreamInputKeySelector:GetEscapeCancels:ReturnValue {
     state draft
 }
 
+DreamInputKeySelector:GetEscapeKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetEscapeKeys
+    src   "Get Escape Keys"
+    text  "获取退出键"
+    state machine
+}
+
 DreamInputKeySelector:GetEscapeKeys:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetEscapeKeys:ReturnValue
     src   "Return Value"
@@ -108,11 +159,26 @@ DreamInputKeySelector:GetEscapeKeys:ReturnValue {
     state draft
 }
 
+DreamInputKeySelector:GetIsListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsListening
+    src   "Get Is Listening"
+    text  "获取正在监听"
+    state machine
+}
+
 DreamInputKeySelector:GetIsListening:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsListening:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamInputKeySelector:GetIsSelectingKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetIsSelectingKey
+    src   "Get Is Selecting Key"
+    // from the engine's zh-Hans
+    text  "获取为选择键"
     state draft
 }
 
@@ -124,12 +190,26 @@ DreamInputKeySelector:GetIsSelectingKey:ReturnValue {
     state draft
 }
 
+DreamInputKeySelector:GetListeningText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetListeningText
+    src   "Get Listening Text"
+    text  "获取监听文本"
+    state machine
+}
+
 DreamInputKeySelector:GetListeningText:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetListeningText:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamInputKeySelector:GetNoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetNoKeyText
+    src   "Get No Key Text"
+    text  "获取无键文本"
+    state machine
 }
 
 DreamInputKeySelector:GetNoKeyText:ReturnValue {
@@ -140,6 +220,13 @@ DreamInputKeySelector:GetNoKeyText:ReturnValue {
     state draft
 }
 
+DreamInputKeySelector:GetSelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedChord
+    src   "Get Selected Chord"
+    text  "获取已选组合键"
+    state machine
+}
+
 DreamInputKeySelector:GetSelectedChord:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedChord:ReturnValue
     src   "Return Value"
@@ -148,12 +235,26 @@ DreamInputKeySelector:GetSelectedChord:ReturnValue {
     state draft
 }
 
+DreamInputKeySelector:GetSelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedKey
+    src   "Get Selected Key"
+    text  "获取选定键"
+    state machine
+}
+
 DreamInputKeySelector:GetSelectedKey:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetSelectedKey:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamInputKeySelector:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamInputKeySelector:GetStyle:ReturnValue {
@@ -192,6 +293,13 @@ DreamInputKeySelector:NoKeyText {
     state machine
 }
 
+DreamInputKeySelector:NotifyChordPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyChordPressed
+    src   "Notify Chord Pressed"
+    text  "通知和弦按下"
+    state machine
+}
+
 DreamInputKeySelector:NotifyChordPressed:InChord {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyChordPressed:InChord
     src   "In Chord"
@@ -205,6 +313,13 @@ DreamInputKeySelector:NotifyChordPressed:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamInputKeySelector:NotifyKeyPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:NotifyKeyPressed
+    src   "Notify Key Pressed"
+    text  "通知按键按下"
+    state machine
 }
 
 DreamInputKeySelector:NotifyKeyPressed:InKey {
@@ -267,11 +382,27 @@ DreamInputKeySelector:SelectedKey {
     state draft
 }
 
+DreamInputKeySelector:SetAllowGamepadKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetAllowGamepadKeys
+    src   "Set Allow Gamepad Keys"
+    // from the engine's zh-Hans
+    text  "设置允许手柄键"
+    state draft
+}
+
 DreamInputKeySelector:SetAllowGamepadKeys:bInAllowGamepadKeys {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetAllowGamepadKeys:bInAllowGamepadKeys
     src   "In Allow Gamepad Keys"
     // from the engine's zh-Hans
     text  "在允许的手柄键中"
+    state draft
+}
+
+DreamInputKeySelector:SetAllowModifierKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetAllowModifierKeys
+    src   "Set Allow Modifier Keys"
+    // from the engine's zh-Hans
+    text  "设置允许辅助键"
     state draft
 }
 
@@ -283,10 +414,24 @@ DreamInputKeySelector:SetAllowModifierKeys:bInAllowModifierKeys {
     state draft
 }
 
+DreamInputKeySelector:SetCaptureKeysWhileListening {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetCaptureKeysWhileListening
+    src   "Set Capture Keys While Listening"
+    text  "设置捕获监听时的键"
+    state machine
+}
+
 DreamInputKeySelector:SetCaptureKeysWhileListening:bInCaptureKeysWhileListening {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetCaptureKeysWhileListening:bInCaptureKeysWhileListening
     src   "In Capture Keys While Listening"
     text  "正在捕获键"
+    state machine
+}
+
+DreamInputKeySelector:SetEscapeCancels {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeCancels
+    src   "Set Escape Cancels"
+    text  "设置按下 Esc 键取消"
     state machine
 }
 
@@ -297,11 +442,27 @@ DreamInputKeySelector:SetEscapeCancels:bInEscapeCancels {
     state machine
 }
 
+DreamInputKeySelector:SetEscapeKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeKeys
+    src   "Set Escape Keys"
+    // from the engine's zh-Hans
+    text  "设置退出键"
+    state draft
+}
+
 DreamInputKeySelector:SetEscapeKeys:InKeys {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetEscapeKeys:InKeys
     src   "In Keys"
     // from the engine's zh-Hans
     text  "在键中"
+    state draft
+}
+
+DreamInputKeySelector:SetKeySelectionText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetKeySelectionText
+    src   "Set Key Selection Text"
+    // from the engine's zh-Hans
+    text  "设置键选项文本"
     state draft
 }
 
@@ -313,11 +474,26 @@ DreamInputKeySelector:SetKeySelectionText:InKeySelectionText {
     state draft
 }
 
+DreamInputKeySelector:SetListeningText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetListeningText
+    src   "Set Listening Text"
+    text  "设置监听文本"
+    state machine
+}
+
 DreamInputKeySelector:SetListeningText:InListeningText {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetListeningText:InListeningText
     src   "In Listening Text"
     text  "监听文本"
     state machine
+}
+
+DreamInputKeySelector:SetNoKeySpecifiedText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeySpecifiedText
+    src   "Set No Key Specified Text"
+    // from the engine's zh-Hans
+    text  "设置未指定键文本"
+    state draft
 }
 
 DreamInputKeySelector:SetNoKeySpecifiedText:InNoKeySpecifiedText {
@@ -328,10 +504,24 @@ DreamInputKeySelector:SetNoKeySpecifiedText:InNoKeySpecifiedText {
     state draft
 }
 
+DreamInputKeySelector:SetNoKeyText {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeyText
+    src   "Set No Key Text"
+    text  "设置无键文本"
+    state machine
+}
+
 DreamInputKeySelector:SetNoKeyText:InNoKeyText {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetNoKeyText:InNoKeyText
     src   "In No Key Text"
     text  "无按键文本"
+    state machine
+}
+
+DreamInputKeySelector:SetSelectedChord {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedChord
+    src   "Set Selected Chord"
+    text  "设置已选组合键"
     state machine
 }
 
@@ -342,6 +532,14 @@ DreamInputKeySelector:SetSelectedChord:InChord {
     state machine
 }
 
+DreamInputKeySelector:SetSelectedKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedKey
+    src   "Set Selected Key"
+    // from the engine's zh-Hans
+    text  "设置选定键"
+    state draft
+}
+
 DreamInputKeySelector:SetSelectedKey:InKey {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetSelectedKey:InKey
     src   "In Key"
@@ -350,11 +548,27 @@ DreamInputKeySelector:SetSelectedKey:InKey {
     state draft
 }
 
+DreamInputKeySelector:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamInputKeySelector:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamInputKeySelector:SetTextBlockVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h#DreamInputKeySelector:SetTextBlockVisibility
+    src   "Set Text Block Visibility"
+    // from the engine's zh-Hans
+    text  "设置文本块可视性"
     state draft
 }
 

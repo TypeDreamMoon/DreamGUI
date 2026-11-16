@@ -16,12 +16,26 @@ UISpriteSequencePlayer:bSnapSpriteSize {
     state machine
 }
 
+UISpriteSequencePlayer:GetSnapSpriteSize {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:GetSnapSpriteSize
+    src   "Get Snap Sprite Size"
+    text  "获取自动调整精灵大小"
+    state machine
+}
+
 UISpriteSequencePlayer:GetSnapSpriteSize:ReturnValue {
     at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:GetSnapSpriteSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISpriteSequencePlayer:GetSpriteSequence {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:GetSpriteSequence
+    src   "Get Sprite Sequence"
+    text  "获取精灵序列"
+    state machine
 }
 
 UISpriteSequencePlayer:GetSpriteSequence:ReturnValue {
@@ -32,12 +46,26 @@ UISpriteSequencePlayer:GetSpriteSequence:ReturnValue {
     state draft
 }
 
+UISpriteSequencePlayer:SetSnapSpriteSize {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SetSnapSpriteSize
+    src   "Set Snap Sprite Size"
+    text  "设置自动调整精灵大小"
+    state machine
+}
+
 UISpriteSequencePlayer:SetSnapSpriteSize:value {
     at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SetSnapSpriteSize:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISpriteSequencePlayer:SetSpriteSequence {
+    at    Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h#UISpriteSequencePlayer:SetSpriteSequence
+    src   "Set Sprite Sequence"
+    text  "设置精灵序列"
+    state machine
 }
 
 UISpriteSequencePlayer:SetSpriteSequence:value {

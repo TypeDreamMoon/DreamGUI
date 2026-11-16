@@ -17,6 +17,14 @@ DreamUIAnimationPlayCallbackProxy:Finished {
     state draft
 }
 
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject
+    src   "Play Animation with Finished event"
+    // from the engine's zh-Hans
+    text  "Play Animation with Finished event"
+    state draft
+}
+
 DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Animation {
     at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Animation
     src   "Animation"
@@ -78,6 +86,14 @@ DreamUIAnimationPlayCallbackProxy:NewPlayAnimationProxyObject:Widget {
     src   "Widget"
     // from the engine's zh-Hans
     text  "控件"
+    state draft
+}
+
+DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationPlayCallbackProxy.h#DreamUIAnimationPlayCallbackProxy:NewPlayAnimationTimeRangeProxyObject
+    src   "Play Animation Time Range with Finished event"
+    // from the engine's zh-Hans
+    text  "Play Animation Time Range with Finished event"
     state draft
 }
 

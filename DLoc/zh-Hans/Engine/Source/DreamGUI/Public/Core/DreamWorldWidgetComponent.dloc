@@ -32,11 +32,26 @@ DreamWorldWidgetComponent:DrawSize {
     state draft
 }
 
+DreamWorldWidgetComponent:GetBackend {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetBackend
+    src   "Get Backend"
+    text  "获取后端"
+    state machine
+}
+
 DreamWorldWidgetComponent:GetBackend:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetBackend:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamWorldWidgetComponent:GetDrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetDrawSize
+    src   "Get Draw Size"
+    // from the engine's zh-Hans
+    text  "获取绘制大小"
     state draft
 }
 
@@ -48,12 +63,27 @@ DreamWorldWidgetComponent:GetDrawSize:ReturnValue {
     state draft
 }
 
+DreamWorldWidgetComponent:GetPivot {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetPivot
+    src   "Get Pivot"
+    // from the engine's zh-Hans
+    text  "获取枢轴"
+    state draft
+}
+
 DreamWorldWidgetComponent:GetPivot:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetPivot:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWorldWidgetComponent:GetSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetSortOrder
+    src   "Get Sort Order"
+    text  "获取排序顺序"
+    state machine
 }
 
 DreamWorldWidgetComponent:GetSortOrder:ReturnValue {
@@ -64,6 +94,13 @@ DreamWorldWidgetComponent:GetSortOrder:ReturnValue {
     state draft
 }
 
+DreamWorldWidgetComponent:GetTraceChannel {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetTraceChannel
+    src   "Get Trace Channel"
+    text  "获取检测通道"
+    state machine
+}
+
 DreamWorldWidgetComponent:GetTraceChannel:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetTraceChannel:ReturnValue
     src   "Return Value"
@@ -72,12 +109,26 @@ DreamWorldWidgetComponent:GetTraceChannel:ReturnValue {
     state draft
 }
 
+DreamWorldWidgetComponent:GetUseDesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetUseDesignSize
+    src   "Get Use Design Size"
+    text  "获取使用设计尺寸"
+    state machine
+}
+
 DreamWorldWidgetComponent:GetUseDesignSize:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetUseDesignSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWorldWidgetComponent:GetWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:GetWidgetClass
+    src   "Get Widget Class"
+    text  "获取控件类"
+    state machine
 }
 
 DreamWorldWidgetComponent:GetWidgetClass:ReturnValue {
@@ -96,6 +147,13 @@ DreamWorldWidgetComponent:Pivot {
     state draft
 }
 
+DreamWorldWidgetComponent:SetBackend {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetBackend
+    src   "Set Backend"
+    text  "设置后端"
+    state machine
+}
+
 DreamWorldWidgetComponent:SetBackend:InBackend {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetBackend:InBackend
     src   "In Backend"
@@ -103,11 +161,27 @@ DreamWorldWidgetComponent:SetBackend:InBackend {
     state machine
 }
 
+DreamWorldWidgetComponent:SetDrawSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetDrawSize
+    src   "Set Draw Size"
+    // from the engine's zh-Hans
+    text  "设置绘制大小"
+    state draft
+}
+
 DreamWorldWidgetComponent:SetDrawSize:InSize {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetDrawSize:InSize
     src   "In Size"
     // from the engine's zh-Hans
     text  "输入尺寸"
+    state draft
+}
+
+DreamWorldWidgetComponent:SetPivot {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetPivot
+    src   "Set Pivot"
+    // from the engine's zh-Hans
+    text  "设置枢轴"
     state draft
 }
 
@@ -119,10 +193,25 @@ DreamWorldWidgetComponent:SetPivot:InPivot {
     state draft
 }
 
+DreamWorldWidgetComponent:SetSortOrder {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetSortOrder
+    src   "Set Sort Order"
+    // from the engine's zh-Hans
+    text  "设置排序顺序"
+    state draft
+}
+
 DreamWorldWidgetComponent:SetSortOrder:InSortOrder {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetSortOrder:InSortOrder
     src   "In Sort Order"
     text  "排序方式"
+    state machine
+}
+
+DreamWorldWidgetComponent:SetTraceChannel {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetTraceChannel
+    src   "Set Trace Channel"
+    text  "设置检测通道"
     state machine
 }
 
@@ -134,12 +223,26 @@ DreamWorldWidgetComponent:SetTraceChannel:InChannel {
     state draft
 }
 
+DreamWorldWidgetComponent:SetUseDesignSize {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetUseDesignSize
+    src   "Set Use Design Size"
+    text  "设置使用设计尺寸"
+    state machine
+}
+
 DreamWorldWidgetComponent:SetUseDesignSize:bInUse {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetUseDesignSize:bInUse
     src   "In Use"
     // from the engine's zh-Hans
     text  "In Use"
     state draft
+}
+
+DreamWorldWidgetComponent:SetWidgetClass {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:SetWidgetClass
+    src   "Set Widget Class"
+    text  "设置控件类"
+    state machine
 }
 
 DreamWorldWidgetComponent:SetWidgetClass:InClass {
@@ -227,7 +330,8 @@ DreamWorldWidgetComponent:GetDrawSize {
 
 DreamWorldWidgetComponent:Pivot {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetComponent.h#DreamWorldWidgetComponent:Pivot
-    src   "Where on the root this component sits: (0.5, 0.5) centres the panel on the actor."
+    prev  "Where on the root this component sits: (0.5, 0.5) centres the panel on the actor."
+    src   "Where on the root this component sits: (0.5, 0.5) centres the panel on the actor. It is the pivot of the user\nwidget the class makes; a root node in the class with a fixed size and a pivot of its own is placed inside that\nagain, and the panel ends up off the actor by the difference. A class meant for a world widget gives its root\n`: Fill`."
     text  "该组件位于根上的位置：(0.5, 0.5) 会将面板居中到 Actor 上。"
     state machine
 }

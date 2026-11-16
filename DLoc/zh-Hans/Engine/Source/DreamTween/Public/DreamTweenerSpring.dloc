@@ -9,11 +9,27 @@ DreamTweenerSpring {
     state machine
 }
 
+DreamTweenerSpring:GetTarget {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetTarget
+    src   "Get Target"
+    // from the engine's zh-Hans
+    text  "Get Target"
+    state draft
+}
+
 DreamTweenerSpring:GetTarget:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:GetValue {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -25,12 +41,27 @@ DreamTweenerSpring:GetValue:ReturnValue {
     state draft
 }
 
+DreamTweenerSpring:GetVelocity {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetVelocity
+    src   "Get Velocity"
+    // from the engine's zh-Hans
+    text  "获取速度"
+    state draft
+}
+
 DreamTweenerSpring:GetVelocity:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:GetVelocity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweenerSpring:SetSpringParams {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetSpringParams
+    src   "Set Spring Params"
+    text  "设置弹簧参数"
+    state machine
 }
 
 DreamTweenerSpring:SetSpringParams:InParams {
@@ -49,6 +80,14 @@ DreamTweenerSpring:SetSpringParams:ReturnValue {
     state draft
 }
 
+DreamTweenerSpring:SetTarget {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetTarget
+    src   "Set Target"
+    // from the engine's zh-Hans
+    text  "设置目标"
+    state draft
+}
+
 DreamTweenerSpring:SetTarget:InTarget {
     at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetTarget:InTarget
     src   "In Target"
@@ -62,6 +101,14 @@ DreamTweenerSpring:SetTarget:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTweenerSpring:SetVelocity {
+    at    Source/DreamTween/Public/DreamTweenerSpring.h#DreamTweenerSpring:SetVelocity
+    src   "Set Velocity"
+    // from the engine's zh-Hans
+    text  "设定速度"
     state draft
 }
 

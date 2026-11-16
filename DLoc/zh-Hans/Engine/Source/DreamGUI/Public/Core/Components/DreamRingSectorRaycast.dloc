@@ -9,6 +9,11 @@ DreamRingSectorRaycast {
     state machine
 }
 
+DreamRingSectorRaycast:AngleOfLocalPoint {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint
+    src   "Angle Of Local Point"
+}
+
 DreamRingSectorRaycast:AngleOfLocalPoint:InLocalPoint {
     at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:AngleOfLocalPoint:InLocalPoint
     src   "In Local Point"
@@ -30,6 +35,11 @@ DreamRingSectorRaycast:InnerRadius {
     // from the engine's zh-Hans
     text  "内部半径"
     state draft
+}
+
+DreamRingSectorRaycast:IsAngleInSweep {
+    at    Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h#DreamRingSectorRaycast:IsAngleInSweep
+    src   "Is Angle in Sweep"
 }
 
 DreamRingSectorRaycast:IsAngleInSweep:InAngle {

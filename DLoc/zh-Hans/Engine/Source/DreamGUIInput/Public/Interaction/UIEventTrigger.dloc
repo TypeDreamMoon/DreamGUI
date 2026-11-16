@@ -16,6 +16,13 @@ UIEventTrigger:AllowEventBubbleUp {
     state machine
 }
 
+UIEventTrigger:GetAllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:GetAllowEventBubbleUp
+    src   "Get Allow Event Bubble Up"
+    text  "获取允许事件冒泡"
+    state machine
+}
+
 UIEventTrigger:GetAllowEventBubbleUp:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:GetAllowEventBubbleUp:ReturnValue
     src   "Return Value"
@@ -203,6 +210,13 @@ UIEventTrigger:OnPointerUpBP {
     at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:OnPointerUpBP
     src   "OnPointerUp"
     text  "OnPointerUp"
+    state machine
+}
+
+UIEventTrigger:SetAllowEventBubbleUp {
+    at    Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h#UIEventTrigger:SetAllowEventBubbleUp
+    src   "Set Allow Event Bubble Up"
+    text  "设置允许事件冒泡"
     state machine
 }
 

@@ -9,6 +9,11 @@ DreamPointerLongPressInterface {
     state machine
 }
 
+DreamPointerLongPressInterface:OnPointerLongPress {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress
+    src   "On Pointer Long Press"
+}
+
 DreamPointerLongPressInterface:OnPointerLongPress:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h#DreamPointerLongPressInterface:OnPointerLongPress:EventData
     src   "Event Data"

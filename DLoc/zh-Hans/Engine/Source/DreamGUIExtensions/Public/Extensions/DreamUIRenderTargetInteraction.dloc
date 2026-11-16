@@ -37,12 +37,26 @@ DreamUIRenderTargetInteractionSourceInterface {
     state machine
 }
 
+DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas
+    src   "Get Target Canvas"
+    text  "获取目标画布"
+    state machine
+}
+
 DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:GetTargetCanvas:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h#DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace
+    src   "Perform Line Trace"
+    text  "执行射线检测"
+    state machine
 }
 
 DreamUIRenderTargetInteractionSourceInterface:PerformLineTrace:InHitFaceIndex {

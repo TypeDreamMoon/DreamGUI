@@ -9,6 +9,11 @@ DreamPointerDoubleClickInterface {
     state machine
 }
 
+DreamPointerDoubleClickInterface:OnPointerDoubleClick {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick
+    src   "On Pointer Double Click"
+}
+
 DreamPointerDoubleClickInterface:OnPointerDoubleClick:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDoubleClickInterface.h#DreamPointerDoubleClickInterface:OnPointerDoubleClick:EventData
     src   "Event Data"

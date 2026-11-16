@@ -54,12 +54,27 @@ DreamImageSequencePlayer:Fps {
     state draft
 }
 
+DreamImageSequencePlayer:GetDuration {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetDuration
+    src   "Get Duration"
+    // from the engine's zh-Hans
+    text  "获取时长"
+    state draft
+}
+
 DreamImageSequencePlayer:GetDuration:ReturnValue {
     at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetDuration:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamImageSequencePlayer:GetFps {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetFps
+    src   "Get Fps"
+    text  "获取帧率"
+    state machine
 }
 
 DreamImageSequencePlayer:GetFps:ReturnValue {
@@ -70,11 +85,26 @@ DreamImageSequencePlayer:GetFps:ReturnValue {
     state draft
 }
 
+DreamImageSequencePlayer:GetIsPlaying {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetIsPlaying
+    src   "Get Is Playing"
+    text  "是否正在播放"
+    state machine
+}
+
 DreamImageSequencePlayer:GetIsPlaying:ReturnValue {
     at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetIsPlaying:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamImageSequencePlayer:GetLoop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:GetLoop
+    src   "Get Loop"
+    // from the engine's zh-Hans
+    text  "Get Loop"
     state draft
 }
 
@@ -86,11 +116,42 @@ DreamImageSequencePlayer:GetLoop:ReturnValue {
     state draft
 }
 
+DreamImageSequencePlayer:Pause {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Pause
+    src   "Pause"
+    // from the engine's zh-Hans
+    text  "暂停"
+    state draft
+}
+
+DreamImageSequencePlayer:Play {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Play
+    src   "Play"
+    // from the engine's zh-Hans
+    text  "播放"
+    state draft
+}
+
+DreamImageSequencePlayer:SeekFrame {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekFrame
+    src   "Seek Frame"
+    text  "定位到帧"
+    state machine
+}
+
 DreamImageSequencePlayer:SeekFrame:frameNumber {
     at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekFrame:frameNumber
     src   "Frame Number"
     // from the engine's zh-Hans
     text  "帧数"
+    state draft
+}
+
+DreamImageSequencePlayer:SeekTime {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SeekTime
+    src   "Seek Time"
+    // from the engine's zh-Hans
+    text  "寻找时间"
     state draft
 }
 
@@ -102,6 +163,13 @@ DreamImageSequencePlayer:SeekTime:time {
     state draft
 }
 
+DreamImageSequencePlayer:SetFps {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetFps
+    src   "Set Fps"
+    text  "设置帧率"
+    state machine
+}
+
 DreamImageSequencePlayer:SetFps:value {
     at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetFps:value
     src   "Value"
@@ -110,11 +178,27 @@ DreamImageSequencePlayer:SetFps:value {
     state draft
 }
 
+DreamImageSequencePlayer:SetLoop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetLoop
+    src   "Set Loop"
+    // from the engine's zh-Hans
+    text  "Set Loop"
+    state draft
+}
+
 DreamImageSequencePlayer:SetLoop:value {
     at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:SetLoop:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamImageSequencePlayer:Stop {
+    at    Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h#DreamImageSequencePlayer:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "停止"
     state draft
 }
 

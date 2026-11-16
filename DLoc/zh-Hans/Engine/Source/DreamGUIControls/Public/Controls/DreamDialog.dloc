@@ -80,6 +80,14 @@ DreamDialog:CancelResult {
     state machine
 }
 
+DreamDialog:Close {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Close
+    src   "Close"
+    // from the engine's zh-Hans
+    text  "Close"
+    state draft
+}
+
 DreamDialog:Close:InResult {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:Close:InResult
     src   "In Result"
@@ -101,12 +109,33 @@ DreamDialog:DimmerNode {
     state machine
 }
 
+DreamDialog:FocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:FocusDefaultButton
+    src   "Focus Default Button"
+    text  "聚焦默认按钮"
+    state machine
+}
+
+DreamDialog:GetButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetButtons
+    src   "Get Buttons"
+    text  "获取按钮"
+    state machine
+}
+
 DreamDialog:GetButtons:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetButtons:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamDialog:GetDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetDefaultButton
+    src   "Get Default Button"
+    text  "获取默认按钮"
+    state machine
 }
 
 DreamDialog:GetDefaultButton:ReturnValue {
@@ -117,6 +146,13 @@ DreamDialog:GetDefaultButton:ReturnValue {
     state draft
 }
 
+DreamDialog:GetMessage {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetMessage
+    src   "Get Message"
+    text  "获取消息"
+    state machine
+}
+
 DreamDialog:GetMessage:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetMessage:ReturnValue
     src   "Return Value"
@@ -125,12 +161,26 @@ DreamDialog:GetMessage:ReturnValue {
     state draft
 }
 
+DreamDialog:GetShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetShowDimmer
+    src   "Get Show Dimmer"
+    text  "获取显示遮罩层"
+    state machine
+}
+
 DreamDialog:GetShowDimmer:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetShowDimmer:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamDialog:GetTitle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:GetTitle
+    src   "Get Title"
+    text  "获取标题"
+    state machine
 }
 
 DreamDialog:GetTitle:ReturnValue {
@@ -177,6 +227,20 @@ DreamDialog:PanelNode {
     state machine
 }
 
+DreamDialog:RequestCancel {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:RequestCancel
+    src   "Request Cancel"
+    text  "请求取消"
+    state machine
+}
+
+DreamDialog:ResolveCancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ResolveCancelResult
+    src   "Resolve Cancel Result"
+    text  "解析取消结果"
+    state machine
+}
+
 DreamDialog:ResolveCancelResult:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:ResolveCancelResult:ReturnValue
     src   "Return Value"
@@ -185,10 +249,24 @@ DreamDialog:ResolveCancelResult:ReturnValue {
     state draft
 }
 
+DreamDialog:SetButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetButtons
+    src   "Set Buttons"
+    text  "设置按钮"
+    state machine
+}
+
 DreamDialog:SetButtons:InButtons {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetButtons:InButtons
     src   "In Buttons"
     text  "按钮"
+    state machine
+}
+
+DreamDialog:SetCancelResult {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCancelResult
+    src   "Set Cancel Result"
+    text  "设置取消结果"
     state machine
 }
 
@@ -199,10 +277,24 @@ DreamDialog:SetCancelResult:InCancelResult {
     state machine
 }
 
+DreamDialog:SetCloseOnBack {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnBack
+    src   "Set Close on Back"
+    text  "设置点击返回按钮关闭"
+    state machine
+}
+
 DreamDialog:SetCloseOnBack:bInCloseOnBack {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnBack:bInCloseOnBack
     src   "In Close on Back"
     text  "点击返回关闭"
+    state machine
+}
+
+DreamDialog:SetCloseOnDimmerClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetCloseOnDimmerClick
+    src   "Set Close on Dimmer Click"
+    text  "设置点击遮罩层关闭"
     state machine
 }
 
@@ -213,10 +305,24 @@ DreamDialog:SetCloseOnDimmerClick:bInCloseOnDimmerClick {
     state machine
 }
 
+DreamDialog:SetFocusDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetFocusDefaultButton
+    src   "Set Focus Default Button"
+    text  "设置聚焦默认按钮"
+    state machine
+}
+
 DreamDialog:SetFocusDefaultButton:bInFocusDefaultButton {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetFocusDefaultButton:bInFocusDefaultButton
     src   "In Focus Default Button"
     text  "默认按钮获得焦点"
+    state machine
+}
+
+DreamDialog:SetMessage {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetMessage
+    src   "Set Message"
+    text  "设置消息"
     state machine
 }
 
@@ -228,11 +334,26 @@ DreamDialog:SetMessage:InMessage {
     state draft
 }
 
+DreamDialog:SetShowDimmer {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetShowDimmer
+    src   "Set Show Dimmer"
+    text  "设置显示遮罩层"
+    state machine
+}
+
 DreamDialog:SetShowDimmer:bInShowDimmer {
     at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetShowDimmer:bInShowDimmer
     src   "In Show Dimmer"
     text  "显示遮罩层"
     state machine
+}
+
+DreamDialog:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamDialog:SetStyle:InStyle {
@@ -241,6 +362,13 @@ DreamDialog:SetStyle:InStyle {
     // from the engine's zh-Hans
     text  "输入风格"
     state draft
+}
+
+DreamDialog:SetTitle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SetTitle
+    src   "Set Title"
+    text  "设置标题"
+    state machine
 }
 
 DreamDialog:SetTitle:InTitle {
@@ -257,6 +385,13 @@ DreamDialog:Style {
     // from the engine's zh-Hans
     text  "样式"
     state draft
+}
+
+DreamDialog:SubmitDefaultButton {
+    at    Source/DreamGUIControls/Public/Controls/DreamDialog.h#DreamDialog:SubmitDefaultButton
+    src   "Submit Default Button"
+    text  "提交默认按钮"
+    state machine
 }
 
 DreamDialog:Title {

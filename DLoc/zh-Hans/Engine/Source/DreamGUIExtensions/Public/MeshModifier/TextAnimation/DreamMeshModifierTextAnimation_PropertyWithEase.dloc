@@ -17,11 +17,27 @@ DreamMeshModifierTextAnimation_AlphaProperty:Alpha {
     state draft
 }
 
+DreamMeshModifierTextAnimation_AlphaProperty:GetAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_AlphaProperty:GetAlpha
+    src   "Get Alpha"
+    // from the engine's zh-Hans
+    text  "Get Alpha"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_AlphaProperty:GetAlpha:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_AlphaProperty:GetAlpha:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_AlphaProperty:SetAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_AlphaProperty:SetAlpha
+    src   "Set Alpha"
+    // from the engine's zh-Hans
+    text  "Set Alpha"
     state draft
 }
 
@@ -55,12 +71,26 @@ DreamMeshModifierTextAnimation_ColorProperty:Color {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ColorProperty:GetColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:GetColor
+    src   "Get Color"
+    text  "获取颜色"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ColorProperty:GetColor:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:GetColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorProperty:GetUseHSV {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:GetUseHSV
+    src   "Get Use HSV"
+    text  "获取使用 HSV"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorProperty:GetUseHSV:ReturnValue {
@@ -71,12 +101,27 @@ DreamMeshModifierTextAnimation_ColorProperty:GetUseHSV:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ColorProperty:SetColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:SetColor
+    src   "Set Color"
+    // from the engine's zh-Hans
+    text  "设置颜色"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_ColorProperty:SetColor:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:SetColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorProperty:SetUseHSV {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorProperty:SetUseHSV
+    src   "Set Use HSV"
+    text  "设置使用 HSV"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorProperty:SetUseHSV:Value {
@@ -101,12 +146,26 @@ DreamMeshModifierTextAnimation_ColorRandomProperty:bUseHSV {
     state machine
 }
 
+DreamMeshModifierTextAnimation_ColorRandomProperty:GetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetMax
+    src   "Get Max"
+    text  "获取最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ColorRandomProperty:GetMax:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetMax:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorRandomProperty:GetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetMin
+    src   "Get Min"
+    text  "获取最小"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorRandomProperty:GetMin:ReturnValue {
@@ -117,12 +176,26 @@ DreamMeshModifierTextAnimation_ColorRandomProperty:GetMin:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ColorRandomProperty:GetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetSeed
+    src   "Get Seed"
+    text  "获取种子"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ColorRandomProperty:GetSeed:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetSeed:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorRandomProperty:GetUseHSV {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:GetUseHSV
+    src   "Get Use HSV"
+    text  "获取使用 HSV"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorRandomProperty:GetUseHSV:ReturnValue {
@@ -157,12 +230,26 @@ DreamMeshModifierTextAnimation_ColorRandomProperty:Seed {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ColorRandomProperty:SetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetMax
+    src   "Set Max"
+    text  "设置最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ColorRandomProperty:SetMax:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetMax:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorRandomProperty:SetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetMin
+    src   "Set Min"
+    text  "设置最小"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorRandomProperty:SetMin:Value {
@@ -173,12 +260,26 @@ DreamMeshModifierTextAnimation_ColorRandomProperty:SetMin:Value {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ColorRandomProperty:SetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetSeed
+    src   "Set Seed"
+    text  "设置种子"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ColorRandomProperty:SetSeed:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetSeed:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ColorRandomProperty:SetUseHSV {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ColorRandomProperty:SetUseHSV
+    src   "Set Use HSV"
+    text  "设置使用 HSV"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ColorRandomProperty:SetUseHSV:Value {
@@ -194,6 +295,14 @@ DreamMeshModifierTextAnimation_PositionProperty {
     src   "Position Property (UI Effect TextAnimation)"
     text  "位置属性 (UI 效果文本动画)"
     state machine
+}
+
+DreamMeshModifierTextAnimation_PositionProperty:GetPosition {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionProperty:GetPosition
+    src   "Get Position"
+    // from the engine's zh-Hans
+    text  "Get Position"
+    state draft
 }
 
 DreamMeshModifierTextAnimation_PositionProperty:GetPosition:ReturnValue {
@@ -212,6 +321,14 @@ DreamMeshModifierTextAnimation_PositionProperty:Position {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PositionProperty:SetPosition {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionProperty:SetPosition
+    src   "Set Position"
+    // from the engine's zh-Hans
+    text  "设置位置"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_PositionProperty:SetPosition:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionProperty:SetPosition:Value
     src   "Value"
@@ -227,6 +344,13 @@ DreamMeshModifierTextAnimation_PositionRandomProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_PositionRandomProperty:GetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:GetMax
+    src   "Get Max"
+    text  "获取最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PositionRandomProperty:GetMax:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:GetMax:ReturnValue
     src   "Return Value"
@@ -235,12 +359,26 @@ DreamMeshModifierTextAnimation_PositionRandomProperty:GetMax:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PositionRandomProperty:GetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:GetMin
+    src   "Get Min"
+    text  "获取最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PositionRandomProperty:GetMin:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:GetMin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_PositionRandomProperty:GetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:GetSeed
+    src   "Get Seed"
+    text  "获取种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_PositionRandomProperty:GetSeed:ReturnValue {
@@ -275,6 +413,13 @@ DreamMeshModifierTextAnimation_PositionRandomProperty:Seed {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PositionRandomProperty:SetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:SetMax
+    src   "Set Max"
+    text  "设置最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PositionRandomProperty:SetMax:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:SetMax:Value
     src   "Value"
@@ -283,12 +428,26 @@ DreamMeshModifierTextAnimation_PositionRandomProperty:SetMax:Value {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PositionRandomProperty:SetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:SetMin
+    src   "Set Min"
+    text  "设置最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PositionRandomProperty:SetMin:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:SetMin:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_PositionRandomProperty:SetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PositionRandomProperty:SetSeed
+    src   "Set Seed"
+    text  "设置种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_PositionRandomProperty:SetSeed:Value {
@@ -321,12 +480,26 @@ DreamMeshModifierTextAnimation_PropertyWithEase:EaseType {
     state machine
 }
 
+DreamMeshModifierTextAnimation_PropertyWithEase:GetCurveFloat {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:GetCurveFloat
+    src   "Get Curve Float"
+    text  "获取曲线浮点"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PropertyWithEase:GetCurveFloat:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:GetCurveFloat:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithEase:GetEaseType {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:GetEaseType
+    src   "Get Ease Type"
+    text  "获取缓动类型"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_PropertyWithEase:GetEaseType:ReturnValue {
@@ -337,12 +510,26 @@ DreamMeshModifierTextAnimation_PropertyWithEase:GetEaseType:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseCurve {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseCurve
+    src   "Set Ease Curve"
+    text  "设置缓动曲线"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseCurve:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseCurve:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseType {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseType
+    src   "Set Ease Type"
+    text  "设置缓动类型"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_PropertyWithEase:SetEaseType:Value {
@@ -358,6 +545,14 @@ DreamMeshModifierTextAnimation_RotationProperty {
     src   "Rotation Property (UI Effect TextAnimation)"
     text  "旋转属性 (UI 效果文本动画)"
     state machine
+}
+
+DreamMeshModifierTextAnimation_RotationProperty:GetRotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationProperty:GetRotator
+    src   "Get Rotator"
+    // from the engine's zh-Hans
+    text  "Get Rotator"
+    state draft
 }
 
 DreamMeshModifierTextAnimation_RotationProperty:GetRotator:ReturnValue {
@@ -376,6 +571,13 @@ DreamMeshModifierTextAnimation_RotationProperty:rotator {
     state draft
 }
 
+DreamMeshModifierTextAnimation_RotationProperty:SetRotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationProperty:SetRotator
+    src   "Set Rotator"
+    text  "设置旋转"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_RotationProperty:SetRotator:value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationProperty:SetRotator:value
     src   "Value"
@@ -391,6 +593,13 @@ DreamMeshModifierTextAnimation_RotationRandomProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_RotationRandomProperty:GetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:GetMax
+    src   "Get Max"
+    text  "获取最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_RotationRandomProperty:GetMax:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:GetMax:ReturnValue
     src   "Return Value"
@@ -399,12 +608,26 @@ DreamMeshModifierTextAnimation_RotationRandomProperty:GetMax:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_RotationRandomProperty:GetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:GetMin
+    src   "Get Min"
+    text  "获取最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_RotationRandomProperty:GetMin:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:GetMin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_RotationRandomProperty:GetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:GetSeed
+    src   "Get Seed"
+    text  "获取种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_RotationRandomProperty:GetSeed:ReturnValue {
@@ -439,6 +662,13 @@ DreamMeshModifierTextAnimation_RotationRandomProperty:Seed {
     state draft
 }
 
+DreamMeshModifierTextAnimation_RotationRandomProperty:SetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:SetMax
+    src   "Set Max"
+    text  "设置最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_RotationRandomProperty:SetMax:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:SetMax:Value
     src   "Value"
@@ -447,12 +677,26 @@ DreamMeshModifierTextAnimation_RotationRandomProperty:SetMax:Value {
     state draft
 }
 
+DreamMeshModifierTextAnimation_RotationRandomProperty:SetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:SetMin
+    src   "Set Min"
+    text  "设置最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_RotationRandomProperty:SetMin:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:SetMin:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_RotationRandomProperty:SetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_RotationRandomProperty:SetSeed
+    src   "Set Seed"
+    text  "设置种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_RotationRandomProperty:SetSeed:Value {
@@ -467,6 +711,13 @@ DreamMeshModifierTextAnimation_ScaleProperty {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleProperty
     src   "Scale Property (UI Effect TextAnimation)"
     text  "缩放属性 (UI 效果文本动画)"
+    state machine
+}
+
+DreamMeshModifierTextAnimation_ScaleProperty:GetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleProperty:GetScale
+    src   "Get Scale"
+    text  "获取缩放"
     state machine
 }
 
@@ -486,6 +737,14 @@ DreamMeshModifierTextAnimation_ScaleProperty:Scale {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ScaleProperty:SetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleProperty:SetScale
+    src   "Set Scale"
+    // from the engine's zh-Hans
+    text  "设置缩放"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_ScaleProperty:SetScale:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleProperty:SetScale:Value
     src   "Value"
@@ -501,6 +760,13 @@ DreamMeshModifierTextAnimation_ScaleRandomProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMax
+    src   "Get Max"
+    text  "获取最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMax:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMax:ReturnValue
     src   "Return Value"
@@ -509,12 +775,26 @@ DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMax:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMin
+    src   "Get Min"
+    text  "获取最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMin:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:GetMin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleRandomProperty:GetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:GetSeed
+    src   "Get Seed"
+    text  "获取种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ScaleRandomProperty:GetSeed:ReturnValue {
@@ -549,6 +829,13 @@ DreamMeshModifierTextAnimation_ScaleRandomProperty:Seed {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMax {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMax
+    src   "Set Max"
+    text  "设置最大"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMax:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMax:Value
     src   "Value"
@@ -557,12 +844,26 @@ DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMax:Value {
     state draft
 }
 
+DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMin {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMin
+    src   "Set Min"
+    text  "设置最小"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMin:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:SetMin:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleRandomProperty:SetSeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h#DreamMeshModifierTextAnimation_ScaleRandomProperty:SetSeed
+    src   "Set Seed"
+    text  "设置种子"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_ScaleRandomProperty:SetSeed:Value {

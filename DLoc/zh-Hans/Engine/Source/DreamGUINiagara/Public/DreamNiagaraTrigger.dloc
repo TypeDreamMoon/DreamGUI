@@ -16,12 +16,26 @@ DreamNiagaraTrigger:ClickAddsProgress {
     state machine
 }
 
+DreamNiagaraTrigger:FindSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FindSystem
+    src   "Find System"
+    text  "查找系统"
+    state machine
+}
+
 DreamNiagaraTrigger:FindSystem:ReturnValue {
     at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:FindSystem:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamNiagaraTrigger:Fire {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraTrigger.h#DreamNiagaraTrigger:Fire
+    src   "Fire"
+    text  "触发"
+    state machine
 }
 
 DreamNiagaraTrigger:Fire:InAction {

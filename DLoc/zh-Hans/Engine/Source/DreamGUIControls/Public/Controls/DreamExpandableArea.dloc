@@ -59,6 +59,14 @@ DreamExpandableArea:ExpansionDuration {
     state machine
 }
 
+DreamExpandableArea:GetContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetContent
+    src   "Get Content"
+    // from the engine's zh-Hans
+    text  "获取内容"
+    state draft
+}
+
 DreamExpandableArea:GetContent:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetContent:ReturnValue
     src   "Return Value"
@@ -67,11 +75,26 @@ DreamExpandableArea:GetContent:ReturnValue {
     state draft
 }
 
+DreamExpandableArea:GetExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetExpansionDuration
+    src   "Get Expansion Duration"
+    text  "获取展开持续时间"
+    state machine
+}
+
 DreamExpandableArea:GetExpansionDuration:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetExpansionDuration:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamExpandableArea:GetIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetIsExpanded
+    src   "Get Is Expanded"
+    // from the engine's zh-Hans
+    text  "获取已扩展"
     state draft
 }
 
@@ -83,6 +106,14 @@ DreamExpandableArea:GetIsExpanded:ReturnValue {
     state draft
 }
 
+DreamExpandableArea:GetLabel {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetLabel
+    src   "Get Label"
+    // from the engine's zh-Hans
+    text  "获取标签"
+    state draft
+}
+
 DreamExpandableArea:GetLabel:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetLabel:ReturnValue
     src   "Return Value"
@@ -91,12 +122,26 @@ DreamExpandableArea:GetLabel:ReturnValue {
     state draft
 }
 
+DreamExpandableArea:GetMaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetMaxHeight
+    src   "Get Max Height"
+    text  "获取最大高度"
+    state machine
+}
+
 DreamExpandableArea:GetMaxHeight:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetMaxHeight:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamExpandableArea:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamExpandableArea:GetStyle:ReturnValue {
@@ -181,12 +226,27 @@ DreamExpandableArea:RootNode {
     state draft
 }
 
+DreamExpandableArea:SetContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetContent
+    src   "Set Content"
+    // from the engine's zh-Hans
+    text  "设置内容"
+    state draft
+}
+
 DreamExpandableArea:SetContent:InContent {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetContent:InContent
     src   "In Content"
     // from the engine's zh-Hans
     text  "输入内容"
     state draft
+}
+
+DreamExpandableArea:SetExpansionDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetExpansionDuration
+    src   "Set Expansion Duration"
+    text  "设置展开持续时间"
+    state machine
 }
 
 DreamExpandableArea:SetExpansionDuration:InExpansionDuration {
@@ -196,11 +256,27 @@ DreamExpandableArea:SetExpansionDuration:InExpansionDuration {
     state machine
 }
 
+DreamExpandableArea:SetIsExpanded {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetIsExpanded
+    src   "Set Is Expanded"
+    // from the engine's zh-Hans
+    text  "设置已扩展"
+    state draft
+}
+
 DreamExpandableArea:SetIsExpanded:bInIsExpanded {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetIsExpanded:bInIsExpanded
     src   "In Is Expanded"
     text  "是否展开（输入）"
     state machine
+}
+
+DreamExpandableArea:SetLabel {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetLabel
+    src   "Set Label"
+    // from the engine's zh-Hans
+    text  "设置标签"
+    state draft
 }
 
 DreamExpandableArea:SetLabel:InLabel {
@@ -211,11 +287,26 @@ DreamExpandableArea:SetLabel:InLabel {
     state draft
 }
 
+DreamExpandableArea:SetMaxHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetMaxHeight
+    src   "Set Max Height"
+    text  "设置最大高度"
+    state machine
+}
+
 DreamExpandableArea:SetMaxHeight:InMaxHeight {
     at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetMaxHeight:InMaxHeight
     src   "In Max Height"
     // from the engine's zh-Hans
     text  "输入最大高度"
+    state draft
+}
+
+DreamExpandableArea:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
     state draft
 }
 
@@ -232,6 +323,14 @@ DreamExpandableArea:Style {
     src   "Style"
     // from the engine's zh-Hans
     text  "样式"
+    state draft
+}
+
+DreamExpandableArea:ToggleExpansion {
+    at    Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h#DreamExpandableArea:ToggleExpansion
+    src   "Toggle Expansion"
+    // from the engine's zh-Hans
+    text  "Toggle Expansion"
     state draft
 }
 

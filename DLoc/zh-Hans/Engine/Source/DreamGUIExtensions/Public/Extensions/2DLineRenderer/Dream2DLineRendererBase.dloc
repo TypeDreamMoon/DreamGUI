@@ -24,6 +24,13 @@ Dream2DLineRendererBase:EndType {
     state draft
 }
 
+Dream2DLineRendererBase:GetEndType {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetEndType
+    src   "Get End Type"
+    text  "获取末端类型"
+    state machine
+}
+
 Dream2DLineRendererBase:GetEndType:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetEndType:ReturnValue
     src   "Return Value"
@@ -32,12 +39,26 @@ Dream2DLineRendererBase:GetEndType:ReturnValue {
     state draft
 }
 
+Dream2DLineRendererBase:GetLineWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetLineWidth
+    src   "Get Line Width"
+    text  "获取行宽度"
+    state machine
+}
+
 Dream2DLineRendererBase:GetLineWidth:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetLineWidth:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+Dream2DLineRendererBase:GetLineWidthOffset {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:GetLineWidthOffset
+    src   "Get Line Width Offset"
+    text  "获取线宽偏移"
+    state machine
 }
 
 Dream2DLineRendererBase:GetLineWidthOffset:ReturnValue {
@@ -60,6 +81,13 @@ Dream2DLineRendererBase:LineWidthOffset {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthOffset
     src   "Line Width Offset"
     text  "线宽偏移"
+    state machine
+}
+
+Dream2DLineRendererBase:LineWidthTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:LineWidthTo
+    src   "Line Width To"
+    text  "线宽终点"
     state machine
 }
 
@@ -102,6 +130,13 @@ Dream2DLineRendererBase:LineWidthTo:ReturnValue {
     state draft
 }
 
+Dream2DLineRendererBase:SetEndType {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetEndType
+    src   "Set End Type"
+    text  "设置末端类型"
+    state machine
+}
+
 Dream2DLineRendererBase:SetEndType:newValue {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetEndType:newValue
     src   "New Value"
@@ -110,12 +145,26 @@ Dream2DLineRendererBase:SetEndType:newValue {
     state draft
 }
 
+Dream2DLineRendererBase:SetLineWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetLineWidth
+    src   "Set Line Width"
+    text  "设置行宽度"
+    state machine
+}
+
 Dream2DLineRendererBase:SetLineWidth:newValue {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetLineWidth:newValue
     src   "New Value"
     // from the engine's zh-Hans
     text  "新值"
     state draft
+}
+
+Dream2DLineRendererBase:SetLineWidthOffset {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h#Dream2DLineRendererBase:SetLineWidthOffset
+    src   "Set Line Width Offset"
+    text  "设置线宽偏移"
+    state machine
 }
 
 Dream2DLineRendererBase:SetLineWidthOffset:newValue {

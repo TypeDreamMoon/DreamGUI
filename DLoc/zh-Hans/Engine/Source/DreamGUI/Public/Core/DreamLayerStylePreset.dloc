@@ -47,12 +47,26 @@ DreamLayerStylePreset:Blending {
     state draft
 }
 
+DreamLayerStylePreset:GetBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:GetBlending
+    src   "Get Blending"
+    text  "获取正在混合"
+    state machine
+}
+
 DreamLayerStylePreset:GetBlending:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:GetBlending:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerStylePreset:GetStyle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamLayerStylePreset:GetStyle:ReturnValue {
@@ -63,12 +77,26 @@ DreamLayerStylePreset:GetStyle:ReturnValue {
     state draft
 }
 
+DreamLayerStylePreset:IncludesBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:IncludesBlending
+    src   "Includes Blending"
+    text  "包含混合"
+    state machine
+}
+
 DreamLayerStylePreset:IncludesBlending:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:IncludesBlending:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerStylePreset:SetBlending {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetBlending
+    src   "Set Blending"
+    text  "设置正在混合"
+    state machine
 }
 
 DreamLayerStylePreset:SetBlending:bInInclude {
@@ -84,6 +112,14 @@ DreamLayerStylePreset:SetBlending:InBlending {
     src   "In Blending"
     text  "输入混合"
     state machine
+}
+
+DreamLayerStylePreset:SetStyle {
+    at    Source/DreamGUI/Public/Core/DreamLayerStylePreset.h#DreamLayerStylePreset:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamLayerStylePreset:SetStyle:InStyle {

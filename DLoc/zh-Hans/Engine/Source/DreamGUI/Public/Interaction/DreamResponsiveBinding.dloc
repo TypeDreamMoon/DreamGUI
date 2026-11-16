@@ -9,6 +9,13 @@ DreamDataBinding {
     state machine
 }
 
+DreamDataBinding:ApplyBinding {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:ApplyBinding
+    src   "Apply Binding"
+    text  "应用绑定"
+    state machine
+}
+
 DreamDataBinding:ApplyBinding:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamDataBinding:ApplyBinding:ReturnValue
     src   "Return Value"
@@ -67,6 +74,20 @@ DreamResponsiveBehaviour:ActiveRule {
     at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:ActiveRule
     src   "Active Rule"
     text  "活动规则"
+    state machine
+}
+
+DreamResponsiveBehaviour:EvaluateResponsiveRules {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:EvaluateResponsiveRules
+    src   "Evaluate Responsive Rules"
+    text  "求值响应式规则"
+    state machine
+}
+
+DreamResponsiveBehaviour:GetActiveRule {
+    at    Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h#DreamResponsiveBehaviour:GetActiveRule
+    src   "Get Active Rule"
+    text  "获取活动规则"
     state machine
 }
 

@@ -32,6 +32,13 @@ DreamTiltCard:Damping {
     state draft
 }
 
+DreamTiltCard:GetTilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:GetTilt
+    src   "Get Tilt"
+    text  "获取倾斜"
+    state machine
+}
+
 DreamTiltCard:GetTilt:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:GetTilt:ReturnValue
     src   "Return Value"
@@ -45,6 +52,14 @@ DreamTiltCard:HoverScale {
     src   "Hover Scale"
     text  "悬停缩放"
     state machine
+}
+
+DreamTiltCard:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
 }
 
 DreamTiltCard:IsEnabled:ReturnValue {
@@ -70,6 +85,14 @@ DreamTiltCard:PointerId {
     state machine
 }
 
+DreamTiltCard:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
+    state draft
+}
+
 DreamTiltCard:SetEnabled:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetEnabled:Value
     src   "Value"
@@ -78,12 +101,26 @@ DreamTiltCard:SetEnabled:Value {
     state draft
 }
 
+DreamTiltCard:SetFollowPointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetFollowPointer
+    src   "Set Follow Pointer"
+    text  "设置跟随指针"
+    state machine
+}
+
 DreamTiltCard:SetFollowPointer:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetFollowPointer:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTiltCard:SetTargetTilt {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamTiltCard.h#DreamTiltCard:SetTargetTilt
+    src   "Set Target Tilt"
+    text  "设置目标倾斜"
+    state machine
 }
 
 DreamTiltCard:SetTargetTilt:Value {

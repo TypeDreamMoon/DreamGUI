@@ -16,6 +16,13 @@ DreamWidgetPresenterComponentBase:bWidgetVisible {
     state machine
 }
 
+DreamWidgetPresenterComponentBase:GetLoadedCanvas {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedCanvas
+    src   "Get Loaded Canvas"
+    text  "获取已加载的画布"
+    state machine
+}
+
 DreamWidgetPresenterComponentBase:GetLoadedCanvas:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedCanvas:ReturnValue
     src   "Return Value"
@@ -24,12 +31,26 @@ DreamWidgetPresenterComponentBase:GetLoadedCanvas:ReturnValue {
     state draft
 }
 
+DreamWidgetPresenterComponentBase:GetLoadedWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedWidget
+    src   "Get Loaded Widget"
+    text  "获取已加载控件"
+    state machine
+}
+
 DreamWidgetPresenterComponentBase:GetLoadedWidget:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetLoadedWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWidgetPresenterComponentBase:GetNavigationSelection {
+    at    Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h#DreamWidgetPresenterComponentBase:GetNavigationSelection
+    src   "Get Navigation Selection"
+    text  "获取导航选择"
+    state machine
 }
 
 DreamWidgetPresenterComponentBase:GetNavigationSelection:ReturnValue {

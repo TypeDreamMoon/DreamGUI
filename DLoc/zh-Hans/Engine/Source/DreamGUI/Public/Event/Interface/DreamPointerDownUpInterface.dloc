@@ -9,6 +9,13 @@ DreamPointerDownUpInterface {
     state machine
 }
 
+DreamPointerDownUpInterface:OnPointerDown {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerDown
+    src   "On Pointer Down"
+    text  "指针按下时"
+    state machine
+}
+
 DreamPointerDownUpInterface:OnPointerDown:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerDown:EventData
     src   "Event Data"
@@ -23,6 +30,13 @@ DreamPointerDownUpInterface:OnPointerDown:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerDownUpInterface:OnPointerUp {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDownUpInterface.h#DreamPointerDownUpInterface:OnPointerUp
+    src   "On Pointer Up"
+    text  "指针抬起时"
+    state machine
 }
 
 DreamPointerDownUpInterface:OnPointerUp:EventData {

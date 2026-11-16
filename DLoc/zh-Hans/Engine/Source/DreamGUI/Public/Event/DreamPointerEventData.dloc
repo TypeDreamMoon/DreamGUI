@@ -68,12 +68,22 @@ DreamPointerEventData:FaceIndex {
     state draft
 }
 
+DreamPointerEventData:GetCumulativeMoveDelta {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta
+    src   "Get Cumulative Move Delta"
+}
+
 DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetDragRayDirection {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayDirection
+    src   "Get Drag Ray Direction"
 }
 
 DreamPointerEventData:GetDragRayDirection:ReturnValue {
@@ -84,12 +94,22 @@ DreamPointerEventData:GetDragRayDirection:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetDragRayOrigin {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin
+    src   "Get Drag Ray Origin"
+}
+
 DreamPointerEventData:GetDragRayOrigin:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetHighlightedComponentForNavigation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetHighlightedComponentForNavigation
+    src   "Get Highlighted Component for Navigation"
 }
 
 DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
@@ -100,6 +120,11 @@ DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetLocalPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane
+    src   "Get Local Point in Plane"
+}
+
 DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane:ReturnValue
     src   "Return Value"
@@ -108,12 +133,22 @@ DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetWorldPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane
+    src   "Get World Point in Plane"
+}
+
 DreamPointerEventData:GetWorldPointInPlane:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetWorldPointSpherical {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointSpherical
+    src   "Get World Point Spherical"
 }
 
 DreamPointerEventData:GetWorldPointSpherical:ReturnValue {
@@ -144,6 +179,11 @@ DreamPointerEventData:InputType {
     // from the engine's zh-Hans
     text  "输入类型"
     state draft
+}
+
+DreamPointerEventData:IsPointerOverUI {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:IsPointerOverUI
+    src   "Is Pointer Over UI"
 }
 
 DreamPointerEventData:IsPointerOverUI:ReturnValue {
@@ -293,6 +333,11 @@ DreamPointerEventData:ScrollAxisValue {
     src   "Scroll Axis Value"
     text  "滚动轴值"
     state machine
+}
+
+DreamPointerEventData:SetHighlightedWidgetForNavigation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:SetHighlightedWidgetForNavigation
+    src   "Set Highlighted Widget for Navigation"
 }
 
 DreamPointerEventData:SetHighlightedWidgetForNavigation:InWidget {

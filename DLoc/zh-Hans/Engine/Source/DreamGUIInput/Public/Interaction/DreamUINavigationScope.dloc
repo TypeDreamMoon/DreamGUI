@@ -9,6 +9,13 @@ DreamUINavigationScope {
     state machine
 }
 
+DreamUINavigationScope:ActivateScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ActivateScope
+    src   "Activate Scope"
+    text  "激活作用域"
+    state machine
+}
+
 DreamUINavigationScope:bActivateWhenEnabled {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:bActivateWhenEnabled
     src   "Activate when Enabled"
@@ -44,10 +51,24 @@ DreamUINavigationScope:bRestoreLastFocus {
     state machine
 }
 
+DreamUINavigationScope:DeactivateScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:DeactivateScope
+    src   "Deactivate Scope"
+    text  "停用作用域"
+    state machine
+}
+
 DreamUINavigationScope:DesiredFocusTarget {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:DesiredFocusTarget
     src   "Desired Focus Target"
     text  "目标焦点"
+    state machine
+}
+
+DreamUINavigationScope:GetActivateWhenEnabled {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetActivateWhenEnabled
+    src   "Get Activate when Enabled"
+    text  "获取启用时激活"
     state machine
 }
 
@@ -59,12 +80,26 @@ DreamUINavigationScope:GetActivateWhenEnabled:ReturnValue {
     state draft
 }
 
+DreamUINavigationScope:GetCloseOnBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetCloseOnBack
+    src   "Get Close on Back"
+    text  "获取点击返回按钮关闭"
+    state machine
+}
+
 DreamUINavigationScope:GetCloseOnBack:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetCloseOnBack:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUINavigationScope:GetConfineNavigation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetConfineNavigation
+    src   "Get Confine Navigation"
+    text  "获取限制导航"
+    state machine
 }
 
 DreamUINavigationScope:GetConfineNavigation:ReturnValue {
@@ -75,11 +110,26 @@ DreamUINavigationScope:GetConfineNavigation:ReturnValue {
     state draft
 }
 
+DreamUINavigationScope:GetDesiredFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetDesiredFocusTarget
+    src   "Get Desired Focus Target"
+    text  "获取目标焦点"
+    state machine
+}
+
 DreamUINavigationScope:GetDesiredFocusTarget:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetDesiredFocusTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUINavigationScope:GetInputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetInputMode
+    src   "Get Input Mode"
+    // from the engine's zh-Hans
+    text  "Get Input Mode"
     state draft
 }
 
@@ -91,12 +141,26 @@ DreamUINavigationScope:GetInputMode:ReturnValue {
     state draft
 }
 
+DreamUINavigationScope:GetRememberedFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetRememberedFocus
+    src   "Get Remembered Focus"
+    text  "获取记住的焦点"
+    state machine
+}
+
 DreamUINavigationScope:GetRememberedFocus:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetRememberedFocus:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUINavigationScope:GetRestoreLastFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetRestoreLastFocus
+    src   "Get Restore Last Focus"
+    text  "获取恢复上次焦点"
+    state machine
 }
 
 DreamUINavigationScope:GetRestoreLastFocus:ReturnValue {
@@ -107,12 +171,27 @@ DreamUINavigationScope:GetRestoreLastFocus:ReturnValue {
     state draft
 }
 
+DreamUINavigationScope:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
+    state draft
+}
+
 DreamUINavigationScope:GetUserIndex:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:GetUserIndex:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUINavigationScope:HandleBackAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:HandleBackAction
+    src   "Handle Back Action"
+    text  "处理返回动作"
+    state machine
 }
 
 DreamUINavigationScope:HandleBackAction:ReturnValue {
@@ -129,6 +208,13 @@ DreamUINavigationScope:InputMode {
     // from the engine's zh-Hans
     text  "输入模式"
     state draft
+}
+
+DreamUINavigationScope:IsScopeActive {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:IsScopeActive
+    src   "Is Scope Active"
+    text  "作用域是否激活"
+    state machine
 }
 
 DreamUINavigationScope:IsScopeActive:ReturnValue {
@@ -153,10 +239,31 @@ DreamUINavigationScope:OnScopeDeactivated {
     state machine
 }
 
+DreamUINavigationScope:ReceiveScopeActivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ReceiveScopeActivated
+    src   "OnScopeActivated"
+    text  "作用域激活时"
+    state machine
+}
+
+DreamUINavigationScope:ReceiveScopeDeactivated {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ReceiveScopeDeactivated
+    src   "OnScopeDeactivated"
+    text  "作用域停用时"
+    state machine
+}
+
 DreamUINavigationScope:RememberedFocus {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:RememberedFocus
     src   "Remembered Focus"
     text  "记住的焦点"
+    state machine
+}
+
+DreamUINavigationScope:ResolveFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:ResolveFocusTarget
+    src   "Resolve Focus Target"
+    text  "解析焦点目标"
     state machine
 }
 
@@ -168,12 +275,26 @@ DreamUINavigationScope:ResolveFocusTarget:ReturnValue {
     state draft
 }
 
+DreamUINavigationScope:SetActivateWhenEnabled {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetActivateWhenEnabled
+    src   "Set Activate when Enabled"
+    text  "设置启用时激活"
+    state machine
+}
+
 DreamUINavigationScope:SetActivateWhenEnabled:Value {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetActivateWhenEnabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUINavigationScope:SetCloseOnBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetCloseOnBack
+    src   "Set Close on Back"
+    text  "设置点击返回按钮关闭"
+    state machine
 }
 
 DreamUINavigationScope:SetCloseOnBack:Value {
@@ -184,6 +305,13 @@ DreamUINavigationScope:SetCloseOnBack:Value {
     state draft
 }
 
+DreamUINavigationScope:SetConfineNavigation {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetConfineNavigation
+    src   "Set Confine Navigation"
+    text  "设置限制导航"
+    state machine
+}
+
 DreamUINavigationScope:SetConfineNavigation:Value {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetConfineNavigation:Value
     src   "Value"
@@ -192,11 +320,26 @@ DreamUINavigationScope:SetConfineNavigation:Value {
     state draft
 }
 
+DreamUINavigationScope:SetDesiredFocusTarget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetDesiredFocusTarget
+    src   "Set Desired Focus Target"
+    text  "设置目标焦点"
+    state machine
+}
+
 DreamUINavigationScope:SetDesiredFocusTarget:Value {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetDesiredFocusTarget:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUINavigationScope:SetInputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetInputMode
+    src   "Set Input Mode"
+    // from the engine's zh-Hans
+    text  "Set Input Mode"
     state draft
 }
 
@@ -208,12 +351,26 @@ DreamUINavigationScope:SetInputMode:Value {
     state draft
 }
 
+DreamUINavigationScope:SetRestoreLastFocus {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetRestoreLastFocus
+    src   "Set Restore Last Focus"
+    text  "设置恢复上次焦点"
+    state machine
+}
+
 DreamUINavigationScope:SetRestoreLastFocus:Value {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetRestoreLastFocus:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUINavigationScope:SetUserIndex {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h#DreamUINavigationScope:SetUserIndex
+    src   "Set User Index"
+    text  "设置用户索引"
+    state machine
 }
 
 DreamUINavigationScope:SetUserIndex:Value {

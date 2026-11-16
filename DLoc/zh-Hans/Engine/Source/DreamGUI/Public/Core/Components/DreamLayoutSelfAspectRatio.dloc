@@ -24,12 +24,27 @@ DreamLayoutSelfAspectRatio:AspectRatioType {
     state machine
 }
 
+DreamLayoutSelfAspectRatio:GetAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatio
+    src   "Get Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "获取高宽比"
+    state draft
+}
+
 DreamLayoutSelfAspectRatio:GetAspectRatio:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatio:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutSelfAspectRatio:GetAspectRatioType {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:GetAspectRatioType
+    src   "Get Aspect Ratio Type"
+    text  "获取宽高比类型"
+    state machine
 }
 
 DreamLayoutSelfAspectRatio:GetAspectRatioType:ReturnValue {
@@ -40,12 +55,27 @@ DreamLayoutSelfAspectRatio:GetAspectRatioType:ReturnValue {
     state draft
 }
 
+DreamLayoutSelfAspectRatio:SetAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:SetAspectRatio
+    src   "Set Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "设置高宽比"
+    state draft
+}
+
 DreamLayoutSelfAspectRatio:SetAspectRatio:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:SetAspectRatio:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutSelfAspectRatio:SetAspectRatioType {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h#DreamLayoutSelfAspectRatio:SetAspectRatioType
+    src   "Set Aspect Ratio Type"
+    text  "设置宽高比类型"
+    state machine
 }
 
 DreamLayoutSelfAspectRatio:SetAspectRatioType:Value {

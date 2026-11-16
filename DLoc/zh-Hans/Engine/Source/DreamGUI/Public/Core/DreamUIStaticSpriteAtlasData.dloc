@@ -44,6 +44,13 @@ DreamUIStaticSpriteAtlasData:EdgePixelPadding {
     state machine
 }
 
+DreamUIStaticSpriteAtlasData:GetAtlasTexture {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:GetAtlasTexture
+    src   "Get Atlas Texture"
+    text  "获取图集纹理"
+    state machine
+}
+
 DreamUIStaticSpriteAtlasData:GetAtlasTexture:Index {
     at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:GetAtlasTexture:Index
     src   "Index"
@@ -72,6 +79,13 @@ DreamUIStaticSpriteAtlasData:PrevSpriteDataArray {
     at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:PrevSpriteDataArray
     src   "Prev Sprite Data Array"
     text  "前一个精灵数据数组"
+    state machine
+}
+
+DreamUIStaticSpriteAtlasData:ReadPixel {
+    at    Source/DreamGUI/Public/Core/DreamUIStaticSpriteAtlasData.h#DreamUIStaticSpriteAtlasData:ReadPixel
+    src   "Read Pixel"
+    text  "读取像素"
     state machine
 }
 

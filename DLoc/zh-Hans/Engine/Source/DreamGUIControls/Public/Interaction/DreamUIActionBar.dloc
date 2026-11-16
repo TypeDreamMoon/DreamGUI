@@ -24,6 +24,13 @@ DreamUIActionBar:EntryWidgets {
     state machine
 }
 
+DreamUIActionBar:GetEntryWidgets {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetEntryWidgets
+    src   "Get Entry Widgets"
+    text  "获取条目控件"
+    state machine
+}
+
 DreamUIActionBar:GetEntryWidgets:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetEntryWidgets:ReturnValue
     src   "Return Value"
@@ -32,11 +39,26 @@ DreamUIActionBar:GetEntryWidgets:ReturnValue {
     state draft
 }
 
+DreamUIActionBar:GetPrompts {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetPrompts
+    src   "Get Prompts"
+    text  "获取提示"
+    state machine
+}
+
 DreamUIActionBar:GetPrompts:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetPrompts:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIActionBar:GetUserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
     state draft
 }
 
@@ -62,6 +84,21 @@ DreamUIActionBar:Prompts {
     // from the engine's zh-Hans
     text  "Prompts"
     state draft
+}
+
+DreamUIActionBar:Rebuild {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:Rebuild
+    src   "Rebuild"
+    // from the engine's zh-Hans
+    text  "Rebuild"
+    state draft
+}
+
+DreamUIActionBar:SetUserIndex {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBar:SetUserIndex
+    src   "Set User Index"
+    text  "设置用户索引"
+    state machine
 }
 
 DreamUIActionBar:SetUserIndex:Value {
@@ -102,12 +139,26 @@ DreamUIActionBarEntry:Binding {
     state draft
 }
 
+DreamUIActionBarEntry:GetBinding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetBinding
+    src   "Get Binding"
+    text  "获取绑定"
+    state machine
+}
+
 DreamUIActionBarEntry:GetBinding:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetBinding:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIActionBarEntry:GetHoldProgress {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:GetHoldProgress
+    src   "Get Hold Progress"
+    text  "获取按住进度"
+    state machine
 }
 
 DreamUIActionBarEntry:GetHoldProgress:ReturnValue {
@@ -139,6 +190,13 @@ DreamUIActionBarEntry:LabelText {
     state machine
 }
 
+DreamUIActionBarEntry:ReceiveOnBindingChanged {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnBindingChanged
+    src   "OnBindingChanged"
+    text  "绑定变更时"
+    state machine
+}
+
 DreamUIActionBarEntry:ReceiveOnBindingChanged:InBinding {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnBindingChanged:InBinding
     src   "In Binding"
@@ -147,11 +205,26 @@ DreamUIActionBarEntry:ReceiveOnBindingChanged:InBinding {
     state draft
 }
 
+DreamUIActionBarEntry:ReceiveOnHoldProgressChanged {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnHoldProgressChanged
+    src   "OnHoldProgressChanged"
+    text  "长按进度变更时"
+    state machine
+}
+
 DreamUIActionBarEntry:ReceiveOnHoldProgressChanged:InHoldProgress {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:ReceiveOnHoldProgressChanged:InHoldProgress
     src   "In Hold Progress"
     text  "按住进度"
     state machine
+}
+
+DreamUIActionBarEntry:SetBinding {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetBinding
+    src   "Set Binding"
+    // from the engine's zh-Hans
+    text  "设置绑定"
+    state draft
 }
 
 DreamUIActionBarEntry:SetBinding:InBinding {
@@ -162,6 +235,13 @@ DreamUIActionBarEntry:SetBinding:InBinding {
     state draft
 }
 
+DreamUIActionBarEntry:SetIconImage {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetIconImage
+    src   "Set Icon Image"
+    text  "设置图标图像"
+    state machine
+}
+
 DreamUIActionBarEntry:SetIconImage:Value {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetIconImage:Value
     src   "Value"
@@ -170,11 +250,26 @@ DreamUIActionBarEntry:SetIconImage:Value {
     state draft
 }
 
+DreamUIActionBarEntry:SetKeyText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetKeyText
+    src   "Set Key Text"
+    text  "设置按键文本"
+    state machine
+}
+
 DreamUIActionBarEntry:SetKeyText:Value {
     at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetKeyText:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUIActionBarEntry:SetLabelText {
+    at    Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h#DreamUIActionBarEntry:SetLabelText
+    src   "Set Label Text"
+    // from the engine's zh-Hans
+    text  "设置标签文本"
     state draft
 }
 

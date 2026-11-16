@@ -26,12 +26,26 @@ DreamMeshModifierMirror:bMirrorVertically {
     state draft
 }
 
+DreamMeshModifierMirror:GetMirrorHorizontally {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:GetMirrorHorizontally
+    src   "Get Mirror Horizontally"
+    text  "获取水平镜像"
+    state machine
+}
+
 DreamMeshModifierMirror:GetMirrorHorizontally:ReturnValue {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:GetMirrorHorizontally:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierMirror:GetMirrorVertically {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:GetMirrorVertically
+    src   "Get Mirror Vertically"
+    text  "获取垂直镜像"
+    state machine
 }
 
 DreamMeshModifierMirror:GetMirrorVertically:ReturnValue {
@@ -42,12 +56,26 @@ DreamMeshModifierMirror:GetMirrorVertically:ReturnValue {
     state draft
 }
 
+DreamMeshModifierMirror:SetMirrorHorizontally {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:SetMirrorHorizontally
+    src   "Set Mirror Horizontally"
+    text  "设置水平镜像"
+    state machine
+}
+
 DreamMeshModifierMirror:SetMirrorHorizontally:Value {
     at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:SetMirrorHorizontally:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierMirror:SetMirrorVertically {
+    at    Source/DreamGUI/Public/MeshModifier/DreamMeshModifierMirror.h#DreamMeshModifierMirror:SetMirrorVertically
+    src   "Set Mirror Vertically"
+    text  "设置垂直镜像"
+    state machine
 }
 
 DreamMeshModifierMirror:SetMirrorVertically:Value {

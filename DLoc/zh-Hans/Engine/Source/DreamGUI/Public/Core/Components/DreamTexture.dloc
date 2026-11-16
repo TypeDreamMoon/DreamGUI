@@ -66,12 +66,26 @@ DreamTexture:fillOriginType_Radial90 {
     state machine
 }
 
+DreamTexture:GetDrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetDrawType
+    src   "Get Draw Type"
+    text  "获取绘制类型"
+    state machine
+}
+
 DreamTexture:GetDrawType:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetDrawType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTexture:GetFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillAmount
+    src   "Get Fill Amount"
+    text  "获取填充量"
+    state machine
 }
 
 DreamTexture:GetFillAmount:ReturnValue {
@@ -82,12 +96,26 @@ DreamTexture:GetFillAmount:ReturnValue {
     state draft
 }
 
+DreamTexture:GetFillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillDirectionFlip
+    src   "Get Fill Direction Flip"
+    text  "获取填充方向翻转"
+    state machine
+}
+
 DreamTexture:GetFillDirectionFlip:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillDirectionFlip:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTexture:GetFillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillMethod
+    src   "Get Fill Method"
+    text  "获取填充方法"
+    state machine
 }
 
 DreamTexture:GetFillMethod:ReturnValue {
@@ -98,12 +126,26 @@ DreamTexture:GetFillMethod:ReturnValue {
     state draft
 }
 
+DreamTexture:GetFillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillOrigin
+    src   "Get Fill Origin"
+    text  "获取填充原点"
+    state machine
+}
+
 DreamTexture:GetFillOrigin:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetFillOrigin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTexture:GetPixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetPixelsPerUnitMultiplier
+    src   "Get Pixels Per Unit Multiplier"
+    text  "获取像素/单位倍数"
+    state machine
 }
 
 DreamTexture:GetPixelsPerUnitMultiplier:ReturnValue {
@@ -114,11 +156,26 @@ DreamTexture:GetPixelsPerUnitMultiplier:ReturnValue {
     state draft
 }
 
+DreamTexture:GetSpriteInfo {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetSpriteInfo
+    src   "Get Sprite Info"
+    text  "获取Sprite信息"
+    state machine
+}
+
 DreamTexture:GetSpriteInfo:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetSpriteInfo:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTexture:GetUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:GetUVRect
+    src   "Get UVRect"
+    // from the engine's zh-Hans
+    text  "获取UR矩形"
     state draft
 }
 
@@ -137,12 +194,26 @@ DreamTexture:PixelsPerUnitMultiplier {
     state machine
 }
 
+DreamTexture:SetDrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetDrawType
+    src   "Set Draw Type"
+    text  "设置绘制类型"
+    state machine
+}
+
 DreamTexture:SetDrawType:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetDrawType:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTexture:SetFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillAmount
+    src   "Set Fill Amount"
+    text  "设置填充量"
+    state machine
 }
 
 DreamTexture:SetFillAmount:Value {
@@ -153,12 +224,26 @@ DreamTexture:SetFillAmount:Value {
     state draft
 }
 
+DreamTexture:SetFillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillDirectionFlip
+    src   "Set Fill Direction Flip"
+    text  "设置填充方向翻转"
+    state machine
+}
+
 DreamTexture:SetFillDirectionFlip:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillDirectionFlip:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTexture:SetFillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillMethod
+    src   "Set Fill Method"
+    text  "设置填充方法"
+    state machine
 }
 
 DreamTexture:SetFillMethod:Value {
@@ -169,12 +254,26 @@ DreamTexture:SetFillMethod:Value {
     state draft
 }
 
+DreamTexture:SetFillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillOrigin
+    src   "Set Fill Origin"
+    text  "设置填充原点"
+    state machine
+}
+
 DreamTexture:SetFillOrigin:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetFillOrigin:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTexture:SetPixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetPixelsPerUnitMultiplier
+    src   "Set Pixels Per Unit Multiplier"
+    text  "设置像素/单位倍数"
+    state machine
 }
 
 DreamTexture:SetPixelsPerUnitMultiplier:Value {
@@ -185,11 +284,26 @@ DreamTexture:SetPixelsPerUnitMultiplier:Value {
     state draft
 }
 
+DreamTexture:SetSpriteInfo {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetSpriteInfo
+    src   "Set Sprite Info"
+    text  "设置Sprite信息"
+    state machine
+}
+
 DreamTexture:SetSpriteInfo:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetSpriteInfo:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamTexture:SetUVRect {
+    at    Source/DreamGUI/Public/Core/Components/DreamTexture.h#DreamTexture:SetUVRect
+    src   "Set UVRect"
+    // from the engine's zh-Hans
+    text  "设置UR矩形"
     state draft
 }
 

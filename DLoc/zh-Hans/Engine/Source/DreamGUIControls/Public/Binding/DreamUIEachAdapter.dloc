@@ -25,6 +25,14 @@ DreamUIEachAdapter:Owner {
     state draft
 }
 
+DreamUIEachAdapter:Refresh {
+    at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:Refresh
+    src   "Refresh"
+    // from the engine's zh-Hans
+    text  "Refresh"
+    state draft
+}
+
 DreamUIEachAdapter:View {
     at    Source/DreamGUIControls/Public/Binding/DreamUIEachAdapter.h#DreamUIEachAdapter:View
     src   "View"

@@ -25,6 +25,13 @@ DreamBaseEventData:SelectedComponent {
     state draft
 }
 
+DreamBaseEventData:ToString {
+    at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:ToString
+    src   "ToString (DreamIEventData)"
+    text  "转为字符串（DreamIEventData）"
+    state machine
+}
+
 DreamBaseEventData:ToString:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamBaseEventData.h#DreamBaseEventData:ToString:ReturnValue
     src   "Return Value"

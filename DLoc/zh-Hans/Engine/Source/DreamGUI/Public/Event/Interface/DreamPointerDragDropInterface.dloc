@@ -9,6 +9,11 @@ DreamPointerDragDropInterface {
     state machine
 }
 
+DreamPointerDragDropInterface:OnPointerDragDrop {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragDropInterface.h#DreamPointerDragDropInterface:OnPointerDragDrop
+    src   "On Pointer Drag Drop"
+}
+
 DreamPointerDragDropInterface:OnPointerDragDrop:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragDropInterface.h#DreamPointerDragDropInterface:OnPointerDragDrop:EventData
     src   "Event Data"

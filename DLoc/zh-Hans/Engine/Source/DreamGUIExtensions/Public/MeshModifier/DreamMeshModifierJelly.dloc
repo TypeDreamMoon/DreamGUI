@@ -55,10 +55,24 @@ DreamMeshModifierJelly:DragStretch {
     state machine
 }
 
+DreamMeshModifierJelly:DragTo {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragTo
+    src   "Drag To"
+    text  "拖拽到"
+    state machine
+}
+
 DreamMeshModifierJelly:DragTo:InLocalPoint {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:DragTo:InLocalPoint
     src   "In Local Point"
     text  "本地点角度"
+    state machine
+}
+
+DreamMeshModifierJelly:EndDrag {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:EndDrag
+    src   "End Drag"
+    text  "结束拖拽"
     state machine
 }
 
@@ -70,12 +84,26 @@ DreamMeshModifierJelly:Frequency {
     state draft
 }
 
+DreamMeshModifierJelly:GetAnchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetAnchor
+    src   "Get Anchor"
+    text  "获取锚点"
+    state machine
+}
+
 DreamMeshModifierJelly:GetAnchor:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetAnchor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierJelly:GetDampingRatio {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetDampingRatio
+    src   "Get Damping Ratio"
+    text  "获取阻尼比"
+    state machine
 }
 
 DreamMeshModifierJelly:GetDampingRatio:ReturnValue {
@@ -86,12 +114,26 @@ DreamMeshModifierJelly:GetDampingRatio:ReturnValue {
     state draft
 }
 
+DreamMeshModifierJelly:GetFrequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetFrequency
+    src   "Get Frequency"
+    text  "获取频率"
+    state machine
+}
+
 DreamMeshModifierJelly:GetFrequency:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetFrequency:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierJelly:GetInertia {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:GetInertia
+    src   "Get Inertia"
+    text  "获取惯性"
+    state machine
 }
 
 DreamMeshModifierJelly:GetInertia:ReturnValue {
@@ -106,6 +148,13 @@ DreamMeshModifierJelly:Inertia {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Inertia
     src   "Inertia"
     text  "惯性"
+    state machine
+}
+
+DreamMeshModifierJelly:IsAtRest {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:IsAtRest
+    src   "Is at Rest"
+    text  "是否静止"
     state machine
 }
 
@@ -131,6 +180,14 @@ DreamMeshModifierJelly:MaxVertices {
     state machine
 }
 
+DreamMeshModifierJelly:Poke {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Poke
+    src   "Poke"
+    // from the engine's zh-Hans
+    text  "戳"
+    state draft
+}
+
 DreamMeshModifierJelly:Poke:InVelocity {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Poke:InVelocity
     src   "In Velocity"
@@ -154,12 +211,26 @@ DreamMeshModifierJelly:Rows {
     state draft
 }
 
+DreamMeshModifierJelly:SetAnchor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetAnchor
+    src   "Set Anchor"
+    text  "设置锚点"
+    state machine
+}
+
 DreamMeshModifierJelly:SetAnchor:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetAnchor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierJelly:SetDampingRatio {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetDampingRatio
+    src   "Set Damping Ratio"
+    text  "设置阻尼比"
+    state machine
 }
 
 DreamMeshModifierJelly:SetDampingRatio:Value {
@@ -170,11 +241,26 @@ DreamMeshModifierJelly:SetDampingRatio:Value {
     state draft
 }
 
+DreamMeshModifierJelly:SetDragStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetDragStretch
+    src   "Set Drag Stretch"
+    text  "设置拖动拉伸"
+    state machine
+}
+
 DreamMeshModifierJelly:SetDragStretch:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetDragStretch:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMeshModifierJelly:SetFrequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetFrequency
+    src   "Set Frequency"
+    // from the engine's zh-Hans
+    text  "设置频率"
     state draft
 }
 
@@ -186,12 +272,26 @@ DreamMeshModifierJelly:SetFrequency:Value {
     state draft
 }
 
+DreamMeshModifierJelly:SetInertia {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetInertia
+    src   "Set Inertia"
+    text  "设置惯性"
+    state machine
+}
+
 DreamMeshModifierJelly:SetInertia:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetInertia:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierJelly:SetLatticeSize {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetLatticeSize
+    src   "Set Lattice Size"
+    text  "设置网格尺寸"
+    state machine
 }
 
 DreamMeshModifierJelly:SetLatticeSize:InColumns {
@@ -208,12 +308,26 @@ DreamMeshModifierJelly:SetLatticeSize:InRows {
     state machine
 }
 
+DreamMeshModifierJelly:SetMaxStretch {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetMaxStretch
+    src   "Set Max Stretch"
+    text  "设置最大拉伸"
+    state machine
+}
+
 DreamMeshModifierJelly:SetMaxStretch:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetMaxStretch:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierJelly:SetPressed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressed
+    src   "Set Pressed"
+    text  "设置已按下"
+    state machine
 }
 
 DreamMeshModifierJelly:SetPressed:bInPressed {
@@ -231,12 +345,26 @@ DreamMeshModifierJelly:SetPressed:InLocalPoint {
     state machine
 }
 
+DreamMeshModifierJelly:SetPressSquash {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressSquash
+    src   "Set Press Squash"
+    text  "设置按压挤压"
+    state machine
+}
+
 DreamMeshModifierJelly:SetPressSquash:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:SetPressSquash:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierJelly:Settle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierJelly.h#DreamMeshModifierJelly:Settle
+    src   "Settle"
+    text  "稳定"
+    state machine
 }
 
 EDreamJellyAnchor.Bottom {

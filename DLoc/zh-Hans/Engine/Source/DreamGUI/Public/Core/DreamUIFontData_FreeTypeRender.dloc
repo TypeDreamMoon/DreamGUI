@@ -115,6 +115,13 @@ DreamUIFontData_FreeTypeRender:FontType {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:GetFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:GetFallbacks
+    src   "Get Fallbacks"
+    text  "获取备用字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue
     src   "Return Value"
@@ -151,6 +158,13 @@ DreamUIFontData_FreeTypeRender:RenderTextArray {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:SetFallbackFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts
+    src   "Set Fallback Fonts"
+    text  "设置回退字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks
     src   "In Fallbacks"
@@ -158,10 +172,24 @@ DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:SetFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks
+    src   "Set Fallbacks"
+    text  "设置备用字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks
     src   "In Fallbacks"
     text  "备用字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFontFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFontFilePath
+    src   "Set Font File Path"
+    text  "设置字体文件路径"
     state machine
 }
 
@@ -178,6 +206,13 @@ DreamUIFontData_FreeTypeRender:SetFontFilePath:InPath {
     // from the engine's zh-Hans
     text  "在路径中"
     state draft
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts
+    src   "Set Style Fonts"
+    text  "设置样式字体"
+    state machine
 }
 
 DreamUIFontData_FreeTypeRender:SetStyleFonts:InBold {
@@ -198,6 +233,13 @@ DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic
     src   "In Italic"
     text  "斜体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetVerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetVerticalMetrics
+    src   "Set Vertical Metrics"
+    text  "设置垂直指标"
     state machine
 }
 

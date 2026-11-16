@@ -30,12 +30,26 @@ UIScrollViewWithScrollbar {
     state machine
 }
 
+UIScrollViewWithScrollbar:GetHorizontalScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbar
+    src   "Get Horizontal Scrollbar"
+    text  "获取水平滚动条"
+    state machine
+}
+
 UIScrollViewWithScrollbar:GetHorizontalScrollbar:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbar:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility
+    src   "Get Horizontal Scrollbar Visibility"
+    text  "获取水平滚动条可视性"
+    state machine
 }
 
 UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility:ReturnValue {
@@ -46,6 +60,13 @@ UIScrollViewWithScrollbar:GetHorizontalScrollbarVisibility:ReturnValue {
     state draft
 }
 
+UIScrollViewWithScrollbar:GetVerticalScrollbar {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbar
+    src   "Get Vertical Scrollbar"
+    text  "获取垂直滚动条"
+    state machine
+}
+
 UIScrollViewWithScrollbar:GetVerticalScrollbar:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbar:ReturnValue
     src   "Return Value"
@@ -54,12 +75,26 @@ UIScrollViewWithScrollbar:GetVerticalScrollbar:ReturnValue {
     state draft
 }
 
+UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility
+    src   "Get Vertical Scrollbar Visibility"
+    text  "获取垂直滚动条可视性"
+    state machine
+}
+
 UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetVerticalScrollbarVisibility:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIScrollViewWithScrollbar:GetViewport {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:GetViewport
+    src   "Get Viewport"
+    text  "获取视口"
+    state machine
 }
 
 UIScrollViewWithScrollbar:GetViewport:ReturnValue {
@@ -91,12 +126,26 @@ UIScrollViewWithScrollbar:HorizontalScrollbarWidget {
     state machine
 }
 
+UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility
+    src   "Set Horizontal Scrollbar Visibility"
+    text  "设置水平滚动条可视性"
+    state machine
+}
+
 UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility:value {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:SetHorizontalScrollbarVisibility:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UIScrollViewWithScrollbar:SetVerticalScrollbarVisibility {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h#UIScrollViewWithScrollbar:SetVerticalScrollbarVisibility
+    src   "Set Vertical Scrollbar Visibility"
+    text  "设置垂直滚动条可视性"
+    state machine
 }
 
 UIScrollViewWithScrollbar:SetVerticalScrollbarVisibility:value {

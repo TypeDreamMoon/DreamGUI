@@ -9,12 +9,26 @@ UISpriteSheetTexturePlayer {
     state machine
 }
 
+UISpriteSheetTexturePlayer:GetHeightCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:GetHeightCount
+    src   "Get Height Count"
+    text  "获取身高计数"
+    state machine
+}
+
 UISpriteSheetTexturePlayer:GetHeightCount:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:GetHeightCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISpriteSheetTexturePlayer:GetWidthCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:GetWidthCount
+    src   "Get Width Count"
+    text  "获取宽度计数"
+    state machine
 }
 
 UISpriteSheetTexturePlayer:GetWidthCount:ReturnValue {
@@ -33,12 +47,26 @@ UISpriteSheetTexturePlayer:HeightCount {
     state draft
 }
 
+UISpriteSheetTexturePlayer:SetHeightCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetHeightCount
+    src   "Set Height Count"
+    text  "设置身高计数"
+    state machine
+}
+
 UISpriteSheetTexturePlayer:SetHeightCount:value {
     at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetHeightCount:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISpriteSheetTexturePlayer:SetWidthCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h#UISpriteSheetTexturePlayer:SetWidthCount
+    src   "Set Width Count"
+    text  "设置宽度计数"
+    state machine
 }
 
 UISpriteSheetTexturePlayer:SetWidthCount:value {

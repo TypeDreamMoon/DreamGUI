@@ -39,12 +39,26 @@ DreamThrobber:ElapsedInCycle {
     state machine
 }
 
+DreamThrobber:GetAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimate
+    src   "Get Animate"
+    text  "获取动画"
+    state machine
+}
+
 DreamThrobber:GetAnimate:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimate:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamThrobber:GetAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateHorizontally
+    src   "Get Animate Horizontally"
+    text  "获取水平设置动画"
+    state machine
 }
 
 DreamThrobber:GetAnimateHorizontally:ReturnValue {
@@ -55,12 +69,26 @@ DreamThrobber:GetAnimateHorizontally:ReturnValue {
     state draft
 }
 
+DreamThrobber:GetAnimateOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateOpacity
+    src   "Get Animate Opacity"
+    text  "获取动画不透明度"
+    state machine
+}
+
 DreamThrobber:GetAnimateOpacity:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamThrobber:GetAnimateVertically {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetAnimateVertically
+    src   "Get Animate Vertically"
+    text  "获取垂直设置动画"
+    state machine
 }
 
 DreamThrobber:GetAnimateVertically:ReturnValue {
@@ -71,12 +99,26 @@ DreamThrobber:GetAnimateVertically:ReturnValue {
     state draft
 }
 
+DreamThrobber:GetNumberOfPieces {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetNumberOfPieces
+    src   "Get Number Of Pieces"
+    text  "获取图像块数量"
+    state machine
+}
+
 DreamThrobber:GetNumberOfPieces:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetNumberOfPieces:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamThrobber:GetPeriod {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPeriod
+    src   "Get Period"
+    text  "获取周期"
+    state machine
 }
 
 DreamThrobber:GetPeriod:ReturnValue {
@@ -87,12 +129,26 @@ DreamThrobber:GetPeriod:ReturnValue {
     state draft
 }
 
+DreamThrobber:GetPhase {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPhase
+    src   "Get Phase"
+    text  "获取相位"
+    state machine
+}
+
 DreamThrobber:GetPhase:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetPhase:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamThrobber:GetRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetRadius
+    src   "Get Radius"
+    text  "获取半径"
+    state machine
 }
 
 DreamThrobber:GetRadius:ReturnValue {
@@ -103,12 +159,26 @@ DreamThrobber:GetRadius:ReturnValue {
     state draft
 }
 
+DreamThrobber:GetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetShape
+    src   "Get Shape"
+    text  "获取形状"
+    state machine
+}
+
 DreamThrobber:GetShape:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetShape:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamThrobber:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamThrobber:GetStyle:ReturnValue {
@@ -133,6 +203,13 @@ DreamThrobber:PieceRootNode {
     state machine
 }
 
+DreamThrobber:SetAnimate {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimate
+    src   "Set Animate"
+    text  "设置动画"
+    state machine
+}
+
 DreamThrobber:SetAnimate:bInAnimate {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimate:bInAnimate
     src   "In Animate"
@@ -140,11 +217,27 @@ DreamThrobber:SetAnimate:bInAnimate {
     state machine
 }
 
+DreamThrobber:SetAnimateHorizontally {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateHorizontally
+    src   "Set Animate Horizontally"
+    // from the engine's zh-Hans
+    text  "设置水平设置动画"
+    state draft
+}
+
 DreamThrobber:SetAnimateHorizontally:bInAnimateHorizontally {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateHorizontally:bInAnimateHorizontally
     src   "In Animate Horizontally"
     // from the engine's zh-Hans
     text  "在水平设置动画中"
+    state draft
+}
+
+DreamThrobber:SetAnimateOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateOpacity
+    src   "Set Animate Opacity"
+    // from the engine's zh-Hans
+    text  "设置动画不透明度"
     state draft
 }
 
@@ -156,11 +249,27 @@ DreamThrobber:SetAnimateOpacity:bInAnimateOpacity {
     state draft
 }
 
+DreamThrobber:SetAnimateVertically {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateVertically
+    src   "Set Animate Vertically"
+    // from the engine's zh-Hans
+    text  "设置垂直设置动画"
+    state draft
+}
+
 DreamThrobber:SetAnimateVertically:bInAnimateVertically {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetAnimateVertically:bInAnimateVertically
     src   "In Animate Vertically"
     // from the engine's zh-Hans
     text  "在垂直设置动画中"
+    state draft
+}
+
+DreamThrobber:SetNumberOfPieces {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetNumberOfPieces
+    src   "Set Number Of Pieces"
+    // from the engine's zh-Hans
+    text  "设置图像块数量"
     state draft
 }
 
@@ -172,11 +281,27 @@ DreamThrobber:SetNumberOfPieces:InNumberOfPieces {
     state draft
 }
 
+DreamThrobber:SetPeriod {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetPeriod
+    src   "Set Period"
+    // from the engine's zh-Hans
+    text  "设置周期"
+    state draft
+}
+
 DreamThrobber:SetPeriod:InPeriod {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetPeriod:InPeriod
     src   "In Period"
     // from the engine's zh-Hans
     text  "在周期中"
+    state draft
+}
+
+DreamThrobber:SetRadius {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetRadius
+    src   "Set Radius"
+    // from the engine's zh-Hans
+    text  "设置半径"
     state draft
 }
 
@@ -188,11 +313,26 @@ DreamThrobber:SetRadius:InRadius {
     state draft
 }
 
+DreamThrobber:SetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetShape
+    src   "Set Shape"
+    text  "设置形状"
+    state machine
+}
+
 DreamThrobber:SetShape:InShape {
     at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetShape:InShape
     src   "In Shape"
     text  "形状"
     state machine
+}
+
+DreamThrobber:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamThrobber.h#DreamThrobber:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamThrobber:SetStyle:InStyle {

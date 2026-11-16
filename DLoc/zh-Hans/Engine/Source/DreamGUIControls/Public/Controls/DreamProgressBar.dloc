@@ -40,12 +40,26 @@ DreamProgressBar:FillType {
     state draft
 }
 
+DreamProgressBar:GetFillColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillColorAndOpacity
+    src   "Get Fill Color and Opacity"
+    text  "获取填充颜色和不透明度"
+    state machine
+}
+
 DreamProgressBar:GetFillColorAndOpacity:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillColorAndOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamProgressBar:GetFillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetFillType
+    src   "Get Fill Type"
+    text  "获取填充类型"
+    state machine
 }
 
 DreamProgressBar:GetFillType:ReturnValue {
@@ -56,12 +70,26 @@ DreamProgressBar:GetFillType:ReturnValue {
     state draft
 }
 
+DreamProgressBar:GetIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetIsMarquee
+    src   "Get Is Marquee"
+    text  "获取为边框"
+    state machine
+}
+
 DreamProgressBar:GetIsMarquee:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetIsMarquee:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamProgressBar:GetMarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetMarqueeDuration
+    src   "Get Marquee Duration"
+    text  "获取缓动时长"
+    state machine
 }
 
 DreamProgressBar:GetMarqueeDuration:ReturnValue {
@@ -72,12 +100,26 @@ DreamProgressBar:GetMarqueeDuration:ReturnValue {
     state draft
 }
 
+DreamProgressBar:GetMarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetMarqueeFraction
+    src   "Get Marquee Fraction"
+    text  "获取缓动进度"
+    state machine
+}
+
 DreamProgressBar:GetMarqueeFraction:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetMarqueeFraction:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamProgressBar:GetPercent {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetPercent
+    src   "Get Percent"
+    text  "获取百分比"
+    state machine
 }
 
 DreamProgressBar:GetPercent:ReturnValue {
@@ -88,12 +130,26 @@ DreamProgressBar:GetPercent:ReturnValue {
     state draft
 }
 
+DreamProgressBar:GetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetShape
+    src   "Get Shape"
+    text  "获取形状"
+    state machine
+}
+
 DreamProgressBar:GetShape:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetShape:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamProgressBar:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamProgressBar:GetStyle:ReturnValue {
@@ -133,10 +189,25 @@ DreamProgressBar:Percent {
     state draft
 }
 
+DreamProgressBar:SetFillColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillColorAndOpacity
+    src   "Set Fill Color and Opacity"
+    // from the engine's zh-Hans
+    text  "设置填充颜色和不透明度"
+    state draft
+}
+
 DreamProgressBar:SetFillColorAndOpacity:InFillColorAndOpacity {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillColorAndOpacity:InFillColorAndOpacity
     src   "In Fill Color and Opacity"
     text  "填充颜色和不透明度"
+    state machine
+}
+
+DreamProgressBar:SetFillType {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetFillType
+    src   "Set Fill Type"
+    text  "设置填充类型"
     state machine
 }
 
@@ -147,10 +218,25 @@ DreamProgressBar:SetFillType:InFillType {
     state machine
 }
 
+DreamProgressBar:SetIsMarquee {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetIsMarquee
+    src   "Set Is Marquee"
+    // from the engine's zh-Hans
+    text  "设置为边框"
+    state draft
+}
+
 DreamProgressBar:SetIsMarquee:bInIsMarquee {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetIsMarquee:bInIsMarquee
     src   "In Is Marquee"
     text  "是否缓动"
+    state machine
+}
+
+DreamProgressBar:SetMarqueeDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeDuration
+    src   "Set Marquee Duration"
+    text  "设置缓动时长"
     state machine
 }
 
@@ -161,11 +247,26 @@ DreamProgressBar:SetMarqueeDuration:InMarqueeDuration {
     state machine
 }
 
+DreamProgressBar:SetMarqueeFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeFraction
+    src   "Set Marquee Fraction"
+    text  "设置缓动进度"
+    state machine
+}
+
 DreamProgressBar:SetMarqueeFraction:InMarqueeFraction {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetMarqueeFraction:InMarqueeFraction
     src   "In Marquee Fraction"
     text  "缓动进度"
     state machine
+}
+
+DreamProgressBar:SetPercent {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetPercent
+    src   "Set Percent"
+    // from the engine's zh-Hans
+    text  "设置百分比"
+    state draft
 }
 
 DreamProgressBar:SetPercent:InPercent {
@@ -176,11 +277,26 @@ DreamProgressBar:SetPercent:InPercent {
     state draft
 }
 
+DreamProgressBar:SetShape {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetShape
+    src   "Set Shape"
+    text  "设置形状"
+    state machine
+}
+
 DreamProgressBar:SetShape:InShape {
     at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetShape:InShape
     src   "In Shape"
     text  "形状"
     state machine
+}
+
+DreamProgressBar:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamProgressBar.h#DreamProgressBar:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamProgressBar:SetStyle:InStyle {

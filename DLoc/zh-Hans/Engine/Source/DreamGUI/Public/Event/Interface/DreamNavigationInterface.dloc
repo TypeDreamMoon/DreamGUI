@@ -9,12 +9,26 @@ DreamNavigationInterface {
     state machine
 }
 
+DreamNavigationInterface:CanNavigateHere {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:CanNavigateHere
+    src   "Can Navigate Here"
+    text  "可作为导航目标"
+    state machine
+}
+
 DreamNavigationInterface:CanNavigateHere:ReturnValue {
     at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:CanNavigateHere:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamNavigationInterface:OnNavigate {
+    at    Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h#DreamNavigationInterface:OnNavigate
+    src   "On Navigate"
+    text  "导航时"
+    state machine
 }
 
 DreamNavigationInterface:OnNavigate:direction {
