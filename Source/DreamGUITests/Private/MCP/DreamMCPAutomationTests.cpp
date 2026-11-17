@@ -914,6 +914,23 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 	const TSharedPtr<FJsonObject> RootlessResult = ResultOf(RunToEnd(*this, Test.Endpoint,
 		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Rootless)), TEXT("t-6"))));
 	TestTrue(TEXT("a file with a class line and no root is DUI2006"), Codes(RootlessResult).Contains(TEXT("DUI2006")));
+
+	// A value a library's style gets wrong is reported in the library, at the style's line -- not at that line number of
+	// the screen that wears the style.
+	const FString BadLibrary = Sources.Write(TEXT("BrokenLibrary"),
+		TEXT("// a library\n\nstyle Rounded {\n    CornerRadius = (4, 4)\n}\n"), /*bClassLine*/ false);
+	const FString Wearer = Sources.Write(TEXT("Wearer"), FString::Printf(TEXT("use \"%s\"\n\n%s"), *BadLibrary,
+		*Screen(TEXT("    RectBlock Face : Rounded { }"))));
+	const TSharedPtr<FJsonObject> WearerResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Wearer)), TEXT("t-7"))));
+	const TArray<TSharedPtr<FJsonValue>> WearerDiagnostics = ArrayField(WearerResult, TEXT("diagnostics"));
+	if (TestEqual(FString::Printf(TEXT("the style's wrong value is one error: %s"), *Field(WearerResult, TEXT("summary"))), WearerDiagnostics.Num(), 1))
+	{
+		const TSharedPtr<FJsonObject> Wrong = WearerDiagnostics[0]->AsObject();
+		TestEqual(TEXT("a tuple of the wrong length is DUI4004"), Field(Wrong, TEXT("code")), FString(TEXT("DUI4004")));
+		TestTrue(FString::Printf(TEXT("reported in the library (%s)"), *Field(Wrong, TEXT("file"))), Field(Wrong, TEXT("file")).EndsWith(TEXT("BrokenLibrary.dui")));
+		TestEqual(TEXT("at the style's line"), static_cast<int32>(Number(Wrong, TEXT("line"))), 4);
+	}
 	return true;
 }
 

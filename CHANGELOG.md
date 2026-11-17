@@ -555,6 +555,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A library's mistakes are reported in the library.** A wrong value on a line of an imported style -- a tuple of the
+  wrong length, a field its struct does not have -- was reported at that line number of the screen wearing the style.
+  It now names the library file.
 - **DUI8005 leaves icons drawn from shapes alone.** Inside a box no bigger than 128 px, the plain visuals (no text,
   nothing to press) are the parts of a drawing and are no longer compared; texts and controls there still are.
 - **A rect block's corner order is documented as it is.** `CornerRadius` runs bottom-right, top-right, top-left,
