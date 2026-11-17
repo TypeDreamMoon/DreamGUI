@@ -41,6 +41,18 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
   `compile` and `layout` from the command line for CI and agents with no DreamMCP server. They ship with the plugin.
   See [Working with AI agents](Docs/tools/ai-agents.md).
+- **Presets.** Four `.dui` libraries in the plugin's `DUI/Presets/` -- `Default`, `Ember`, `Signal` and `Paper` -- hold
+  the colours (three steps of surface and of text, one accent, states, rarities), type sizes, spacing, corners and a set
+  of styles (panels, cards, wells, HUD plates, text levels, buttons, tabs, meters). They declare the same names, so a
+  project names its preset once, in a one-line `DUI/Theme.dui`, and changes its whole look there. A library compiles
+  into nothing and writes no asset. See [Presets](Docs/language/presets.md); the static check `preset-names` keeps the
+  four in step.
+- **Building blocks and starter screens.** Two pages of whole `.dui` files to start from: the root that scales a
+  1920 x 1080 design canvas to any viewport, a panel, stat bars, tabs, list rows, item cards and slots, a HUD plate, key
+  prompts, menu lines and placeholder icons drawn from shapes; and a title menu, an inventory, a field HUD, a quest
+  journal and a results screen built from them. Both are reference pages DreamMCP serves, and
+  `DreamGUI.MCP.Reference.*` compiles and lays out every file on them under each of the four presets. See
+  [Building blocks](Docs/language/building-blocks.md) and [Starter screens](Docs/language/starter-screens.md).
 
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
@@ -536,6 +548,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **`check` reads a library as a library.** A file with no root node and no `class` line -- styles, resources and `use`
+  lines, such as a preset or `DUI/Theme.dui` -- was reported as DUI2006 by `check`, so `check all: true` (and
+  `dui.ps1 check -All`) failed on every library in a project. It is now read, imports included, and not built; a file with
+  a `class` line and no root is still DUI2006.
 - **Building a screen whose component is not compiled yet leaves nothing behind.** It tried to load the component's
   class from a package that did not exist, which left an empty package of that name in memory -- one the DreamMCP
   endpoint then took for an existing asset, refusing to create the component there until the engine restarted. A

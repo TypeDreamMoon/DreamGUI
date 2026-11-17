@@ -253,6 +253,7 @@ namespace DreamGUIMCP
 				FResult Result;
 				TArray<TSharedPtr<FJsonValue>> PerFile;
 				TArray<FString> Uncompiled;
+				int32 Libraries = 0;
 			};
 			TSharedRef<FState> State = MakeShared<FState>();
 			State->Files = MoveTemp(Files);
@@ -289,6 +290,7 @@ namespace DreamGUIMCP
 					State->Result.Diagnostics.Append(Check.Diagnostics);
 					State->Clean += Check.bClean ? 1 : 0;
 					State->Nodes += Check.Nodes;
+					State->Libraries += Check.bLibrary ? 1 : 0;
 					for (const FString& Component : Check.UncompiledComponents)
 					{
 						State->Uncompiled.AddUnique(Component);
@@ -297,6 +299,10 @@ namespace DreamGUIMCP
 					Entry->SetStringField(TEXT("file"), Rel(File));
 					Entry->SetStringField(TEXT("asset"), Check.AssetPath);
 					Entry->SetNumberField(TEXT("nodes"), Check.Nodes);
+					if (Check.bLibrary)
+					{
+						Entry->SetBoolField(TEXT("library"), true);
+					}
 					Entry->SetNumberField(TEXT("errors"), CountSeverity(Check.Diagnostics, TEXT("error")));
 					Entry->SetNumberField(TEXT("warnings"), CountSeverity(Check.Diagnostics, TEXT("warning")));
 					State->PerFile.Add(MakeShared<FJsonValueObject>(Entry));
@@ -329,7 +335,13 @@ namespace DreamGUIMCP
 					UncompiledNote = FString::Printf(TEXT("; %s not compiled yet (%s), which compile and layout build first"),
 						*Plural(State->Uncompiled.Num(), TEXT("component it places is"), TEXT("components it places are")), *FString::Join(State->Uncompiled, TEXT(", ")));
 				}
-				if (State->PerFile.Num() == 1)
+				if (State->PerFile.Num() == 1 && State->Libraries == 1)
+				{
+					// A library has no tree to count; its styles are checked where a screen wears them.
+					Result.Summary = FString::Printf(TEXT("Checked %s, a library (no root node, no class line): %s, %s. Nothing was built."),
+						*Rel(State->Files[0]), *Plural(Errors, TEXT("error"), TEXT("errors")), *Plural(Warnings, TEXT("warning"), TEXT("warnings")));
+				}
+				else if (State->PerFile.Num() == 1)
 				{
 					Result.Summary = FString::Printf(TEXT("Checked %s: %s, %s, %s%s. Nothing was built."), *Rel(State->Files[0]),
 						*Plural(Errors, TEXT("error"), TEXT("errors")), *Plural(Warnings, TEXT("warning"), TEXT("warnings")),
@@ -343,6 +355,10 @@ namespace DreamGUIMCP
 				if (Errors > 0)
 				{
 					Result.Next.Add(TEXT("Fix the errors at the lines given, then check again. Each code has its page at the doc link."));
+				}
+				else if (State->PerFile.Num() == 1 && State->Libraries == 1)
+				{
+					Result.Next.Add(TEXT("A library is checked through a screen that uses it: check or layout that screen, which applies these styles to its nodes."));
 				}
 				else if (State->Uncompiled.Num() > 0)
 				{

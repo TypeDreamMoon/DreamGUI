@@ -900,6 +900,20 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("which says how often it was raised"), Field(WornDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("raised 3 times by this one line")));
 	}
 	TestTrue(FString::Printf(TEXT("and is counted once: %s"), *Field(WornResult, TEXT("summary"))), Field(WornResult, TEXT("summary")).Contains(TEXT("1 error,")));
+
+	// A library -- styles and resources, no root, no class line -- is read and not built, and its having no root is no error.
+	const FString Library = Sources.Write(TEXT("Library"),
+		TEXT("resources {\n    Color Ink = #E6E9F0\n}\n\nstyle Body {\n    FontSize = 18\n    Color = @Ink\n}\n"), /*bClassLine*/ false);
+	const TSharedPtr<FJsonObject> LibraryResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Library)), TEXT("t-5"))));
+	TestEqual(FString::Printf(TEXT("a library checks ok: %s"), *Field(LibraryResult, TEXT("summary"))), Field(LibraryResult, TEXT("outcome")), FString(TEXT("ok")));
+	TestEqual(TEXT("with no diagnostic"), ArrayField(LibraryResult, TEXT("diagnostics")).Num(), 0);
+	TestTrue(TEXT("and is said to be a library"), Field(LibraryResult, TEXT("summary")).Contains(TEXT("a library")));
+	// A class line says the file is a screen: one with no root is still told so.
+	const FString Rootless = Sources.Write(TEXT("Rootless"), TEXT("style Body {\n    FontSize = 18\n}\n"));
+	const TSharedPtr<FJsonObject> RootlessResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Rootless)), TEXT("t-6"))));
+	TestTrue(TEXT("a file with a class line and no root is DUI2006"), Codes(RootlessResult).Contains(TEXT("DUI2006")));
 	return true;
 }
 
@@ -1688,9 +1702,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPReferenceExamplesTest,
 
 /**
  * The pages an agent is told to copy from (.skill/reference/, built from Docs/): every code block whose first line is
- * `// DUI/<path>.dui` is a whole file, and the files of one page are one example. Each is written out at its path, its
- * class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a class
- * line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * `// DUI/<path>.dui` is a whole file, and the files of all the pages are one project -- the starter screens place the
+ * building blocks, and both take their look from `DUI/Theme.dui` on the presets page. Each is written out at its path,
+ * its class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a
+ * class line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * When the files name a preset of the plugin's (`Plugin.DreamGUI:Presets/Default.dui`), they are written and checked
+ * again with each of the other presets named instead: every preset declares the same names, so every one must do.
  */
 bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 {
@@ -1726,13 +1743,15 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		return FString::Join(Out, TEXT("; "));
 	};
 
+	// Every page's files, in page order: one project. A path written on two pages must be the same file.
+	TArray<TPair<FString, FString>> Files;
+	TMap<FString, FString> PageOfFile;
 	for (const FString& Page : Pages)
 	{
 		FString Markdown;
 		FFileHelper::LoadFileToString(Markdown, *FPaths::Combine(ReferenceDir, Page));
 		TArray<FString> Lines;
 		Markdown.ParseIntoArrayLines(Lines, /*bCullEmpty*/ false);
-		TArray<TPair<FString, FString>> Files;
 		for (int32 Index = 0; Index < Lines.Num(); ++Index)
 		{
 			if (!Lines[Index].TrimStart().StartsWith(TEXT("```")))
@@ -1752,15 +1771,42 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 				{
 					Body += Lines[Line] + TEXT("\n");
 				}
-				Files.Emplace(First.RightChop(7), Body);
+				const FString Path = First.RightChop(7);
+				if (const FString* Earlier = PageOfFile.Find(Path))
+				{
+					const TPair<FString, FString>* Same = Files.FindByPredicate([&Path](const TPair<FString, FString>& InFile) { return InFile.Key == Path; });
+					TestTrue(FString::Printf(TEXT("DUI/%s on %s is the same file as on %s"), *Path, *Page, **Earlier), Same != nullptr && Same->Value == Body);
+				}
+				else
+				{
+					PageOfFile.Add(Path, Page);
+					Files.Emplace(Path, Body);
+				}
 			}
 			Index = End;
 		}
-		if (Files.IsEmpty())
-		{
-			continue;
-		}
+	}
 
+	// The presets the files can be checked under: the one they name, then every other preset of the plugin's.
+	const FString NamedPreset = TEXT("Plugin.DreamGUI:Presets/Default.dui");
+	TArray<FString> Presets = { FString() };
+	if (Files.ContainsByPredicate([&NamedPreset](const TPair<FString, FString>& InFile) { return InFile.Value.Contains(NamedPreset); }))
+	{
+		TArray<FString> PresetFiles;
+		IFileManager::Get().FindFiles(PresetFiles, *FPaths::Combine(Plugin->GetBaseDir(), TEXT("DUI"), TEXT("Presets"), TEXT("*.dui")), true, false);
+		PresetFiles.Sort();
+		TestTrue(TEXT("the plugin ships the preset the files name"), PresetFiles.Contains(TEXT("Default.dui")));
+		for (const FString& PresetFile : PresetFiles)
+		{
+			if (PresetFile != TEXT("Default.dui"))
+			{
+				Presets.Add(FPaths::GetBaseFilename(PresetFile));
+			}
+		}
+	}
+
+	for (const FString& Preset : Presets)
+	{
 		FScopedSources Sources;
 		TMap<FString, FString> Written;
 		for (const TPair<FString, FString>& File : Files)
@@ -1772,6 +1818,10 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		for (const TPair<FString, FString>& File : Files)
 		{
 			FString Body = File.Value.Replace(TEXT("\nclass /Game/"), *FString::Printf(TEXT("\nclass %s/"), *Sources.PackageRoot));
+			if (!Preset.IsEmpty())
+			{
+				Body = Body.Replace(*NamedPreset, *FString::Printf(TEXT("Plugin.DreamGUI:Presets/%s.dui"), *Preset));
+			}
 			if (Body.Contains(TEXT("\nclass ")))
 			{
 				WithClass.Add(File.Key);
@@ -1797,8 +1847,9 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 			{
 				continue;
 			}
-			++FileCount;
-			const FString What = FString::Printf(TEXT("%s: DUI/%s"), *Page, *File.Key);
+			FileCount += Preset.IsEmpty() ? 1 : 0;
+			const FString What = Preset.IsEmpty() ? FString::Printf(TEXT("%s: DUI/%s"), *PageOfFile[File.Key], *File.Key)
+				: FString::Printf(TEXT("%s: DUI/%s with the %s preset"), *PageOfFile[File.Key], *File.Key, *Preset);
 			const TSharedPtr<FJsonObject> Compiled = Run(TEXT("compile"), Written[File.Key]);
 			const FString CompileProblems = Problems(Compiled);
 			TestTrue(FString::Printf(TEXT("%s compiles (%s)"), *What, *Field(Compiled, TEXT("summary"))), Field(Compiled, TEXT("outcome")) == TEXT("ok"));

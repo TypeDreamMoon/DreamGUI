@@ -11,6 +11,9 @@
       dui.md        the language: Docs/language/*.md in reading order, as one page. A link to a section of another
                     language page becomes a link within this page.
       example.md    Docs/language/example.md
+      presets.md    Docs/language/presets.md: the four presets and every name they declare
+      blocks.md     Docs/language/building-blocks.md: whole files to build a screen from
+      screens.md    Docs/language/starter-screens.md: five whole screens to start from
       pitfalls.md   Docs/guides/pitfalls.md
       controls.md   Docs/controls/index.md
       diagnostics.md Docs/diagnostics/index.md: every DUInnnn code
@@ -107,6 +110,9 @@ foreach ($File in $LanguageFiles) {
 }
 $Pages['dui.md'] = $Body
 $Pages['example.md'] = (Get-Note 'A worked example' 'Docs/language/example.md') + (Convert-Page 'language/example.md' @())
+$Pages['presets.md'] = (Get-Note 'Presets' 'Docs/language/presets.md') + (Convert-Page 'language/presets.md' @())
+$Pages['blocks.md'] = (Get-Note 'Building blocks' 'Docs/language/building-blocks.md') + (Convert-Page 'language/building-blocks.md' @())
+$Pages['screens.md'] = (Get-Note 'Starter screens' 'Docs/language/starter-screens.md') + (Convert-Page 'language/starter-screens.md' @())
 $Pages['pitfalls.md'] = (Get-Note 'Common pitfalls' 'Docs/guides/pitfalls.md') + (Convert-Page 'guides/pitfalls.md' @())
 $Pages['controls.md'] = (Get-Note 'Controls' 'Docs/controls/index.md') + (Convert-Page 'controls/index.md' @())
 $Pages['diagnostics.md'] = (Get-Note 'Diagnostics' 'Docs/diagnostics/index.md') + (Convert-Page 'diagnostics/index.md' @())
