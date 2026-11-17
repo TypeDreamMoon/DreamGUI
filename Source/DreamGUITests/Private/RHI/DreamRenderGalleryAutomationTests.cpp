@@ -575,7 +575,8 @@ bool FDreamGalleryMultisamplingTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamRenderGalleryTestLocal;
 	// The same slanted edges twice: stepped without multisampling, and softened with four samples. The canvas draws
-	// into a multisampled target of its own and resolves it into this one, so the second picture is that path's.
+	// into a multisampled target of its own and resolves it into this one, so the second picture is that path's. The
+	// edge strip, which would smooth the first picture's edges too, is switched off on both: this is multisampling's.
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
@@ -587,6 +588,13 @@ bool FDreamGalleryMultisamplingTest::RunTest(const FString& Parameters)
 	Square->SetRelativeRotationEuler(FRotator(0.0, 0.0, 30.0));
 	UDreamWidget* Bar = Stage->AddBlock(TEXT("Bar"), FVector2D(200.0, 8.0), FVector2D(10.0, -70.0), FColor(255, 60, 60, 255));
 	Bar->SetRelativeRotationEuler(FRotator(0.0, 0.0, -20.0));
+	for (UDreamWidget* Block : { Square, Bar })
+	{
+		if (UDreamVisualBatchMesh* Visual = Block != nullptr ? Cast<UDreamVisualBatchMesh>(Block->GetVisual()) : nullptr)
+		{
+			Visual->SetEdgeAntiAliasing(EDreamEdgeAntiAliasing::Off);
+		}
+	}
 	EnqueuePictureCheck(Stage, TEXT("Gallery_Aliased"), 10000);
 	EnqueueDo([Stage]() { Stage->UseMultisampling(4); });
 	EnqueuePictureCheck(Stage, TEXT("Gallery_Multisampled"), 10000);

@@ -426,15 +426,18 @@ void UDreamImage::OnUpdateGeometry(FDreamUIGeometry& InMesh, bool InTriangleChan
 
 bool UDreamImage::WantsEdgeAntiAliasing()const
 {
-	// A rect's edges, sliced or tiled, sit on the pixel grid in an unrotated screen and are left as they are.
+	return Brush.DrawAs != EDreamUIImageBrushDrawType::None;
+}
+
+bool UDreamImage::HasRectilinearOutline()const
+{
 	if (Brush.DrawAs == EDreamUIImageBrushDrawType::RoundedBox)
 	{
-		return true;
+		return false;
 	}
-	return Brush.DrawAs == EDreamUIImageBrushDrawType::Filled
-		&& (Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial90
-			|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial180
-			|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial360);
+	return Brush.DrawAs != EDreamUIImageBrushDrawType::Filled
+		|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Horizontal
+		|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Vertical;
 }
 
 FDreamUISpriteInfo UDreamImage::GetBrushSpriteInfo()const

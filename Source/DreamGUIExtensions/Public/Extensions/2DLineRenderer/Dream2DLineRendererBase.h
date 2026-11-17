@@ -59,6 +59,8 @@ protected:
 	//Begin DreamVisualBatchMesh interface
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual bool WantsEdgeAntiAliasing()const override { return true; }
+	/** Its own outline, not the brush's rect: smoothed however it is turned. */
+	virtual bool HasRectilinearOutline()const override { return false; }
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	//End DreamVisualBatchMesh interface
 

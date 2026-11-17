@@ -56,6 +56,13 @@ protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	/** A quad's sides are smoothed once it is turned off the pixel grid, a radial fill's cut always. */
+	virtual bool WantsEdgeAntiAliasing()const override { return true; }
+	virtual bool HasRectilinearOutline()const override
+	{
+		return DrawType != EDreamUISpriteDrawType::Filled
+			|| FillMethod == EDreamUISpriteFillMethod::Horizontal || FillMethod == EDreamUISpriteFillMethod::Vertical;
+	}
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUISpriteDrawType GetDrawType()const { return DrawType; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") FDreamUISpriteInfo GetSpriteInfo()const { return SpriteInfo; }

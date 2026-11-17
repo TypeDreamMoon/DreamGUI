@@ -31,8 +31,13 @@ protected:
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-	/** A round corner and a radial fill's cut are outlines to smooth; a rect's edges sit on the pixel grid. */
+	/** Whatever it draws as. A round corner and a radial fill's cut are smoothed always, a rect's sides once it is turned. */
 	virtual bool WantsEdgeAntiAliasing()const override;
+	/**
+	 * The brush's: true for every rect it draws. A subclass that draws a geometry of its own in place of the brush's --
+	 * a shape, a polygon, a line -- says false, or its outline is smoothed only while it is turned.
+	 */
+	virtual bool HasRectilinearOutline()const override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual void PostInitProperties() override;
 	virtual void BeginDestroy() override;

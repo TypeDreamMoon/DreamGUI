@@ -27,7 +27,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   project settings), per element with `EdgeAntiAliasing` (`Default`, `On`, `Off`); screen-space and render-target
   canvases only, world-space canvases keep MSAA, and by default not while MSAA is on, which smooths these outlines
   already. These elements draw a few more vertices than before (two per outline
-  edge), and their edges are no longer stair-stepped where they were.
+  edge), and their edges are no longer stair-stepped where they were. A plain, nine-sliced, tiled or linearly filled
+  Image, Texture or Sprite gets the strip while a rotation or a tilt turns its sides off the pixel rows and columns, and
+  drops it once they are back on them; a widget clipping to such an image as the layer below reads the quad as it was
+  drawn, before the strip.
 
 - **A one-page cheat sheet and the diagnostics as JSON.** `Docs/cheatsheet.md` puts the `.dui` language on one page and
   ends with the codes that cost authors the most time; it is also the first reference page DreamMCP lists

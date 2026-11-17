@@ -8,8 +8,8 @@ class FDreamUIGeometry;
 
 /**
  * Anti-aliasing an element's outline through its own geometry: for the elements drawn as meshes, whose edges no shader
- * smooths -- polygons, shapes, rings, paths, lines, custom meshes, a round-cornered or radially filled image. Text and
- * RectBlock smooth theirs in the shader and do not come here.
+ * smooths -- polygons, shapes, rings, paths, lines, custom meshes, a round-cornered or radially filled image, and an
+ * image, texture or sprite turned off the pixel grid. Text and RectBlock smooth theirs in the shader and do not come here.
  *
  * The outline is read off the mesh: an edge only one triangle uses, vertices at the same place taken as one, so a seam
  * of duplicated vertices inside the mesh is not an outline. Along it goes a strip one device pixel wide, centred on the
@@ -32,7 +32,8 @@ namespace DreamUIEdgeAntiAliasing
 	/**
 	 * Anti-aliases InOutGeometry's outline, InPixel being one device pixel in its local units. Leaves the geometry as it
 	 * is when it cannot: no pixel, a mesh not flat on its local X = 0 plane, or one the strips would take past the
-	 * vertex budget.
+	 * vertex budget. A simple or nine-sliced quad stays one: its lines are kept first (FDreamUIGeometry::KeptQuadLines),
+	 * which a clip underlay reads in place of the moved corners.
 	 */
 	DREAMGUI_API FResult Apply(FDreamUIGeometry& InOutGeometry, float InPixel);
 }

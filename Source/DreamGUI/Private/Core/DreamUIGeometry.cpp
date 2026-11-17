@@ -14,6 +14,44 @@
 #include "Core/Components/DreamWidget.h"
 
 
+bool FDreamUIGeometry::ReadDrawnQuadLines(FDrawnQuadLines& OutLines) const
+{
+	if (DrawnQuad == EDrawnQuad::None)
+	{
+		return false;
+	}
+	const bool bSimple = DrawnQuad == EDrawnQuad::Simple;
+	const int32 Expected = bSimple ? 4 : 16;
+	if (OriginVertices.Num() < Expected || Vertices.Num() < Expected)
+	{
+		return false;
+	}
+	// The simple quad's corners run 0 bottom-left, 1 bottom-right, 2 top-left, 3 top-right; the nine-sliced one's sixteen
+	// vertices are four rows of four, bottom first (UpdateUIRectSimpleVertex, UpdateUIRectBorderVertex).
+	if (bSimple)
+	{
+		OutLines.X[0] = OutLines.X[1] = OriginVertices[0].Position.Y;
+		OutLines.X[2] = OutLines.X[3] = OriginVertices[1].Position.Y;
+		OutLines.Y[0] = OutLines.Y[1] = OriginVertices[0].Position.Z;
+		OutLines.Y[2] = OutLines.Y[3] = OriginVertices[2].Position.Z;
+		OutLines.U[0] = OutLines.U[1] = Vertices[0].TextureCoordinate[0].X;
+		OutLines.U[2] = OutLines.U[3] = Vertices[1].TextureCoordinate[0].X;
+		OutLines.V[0] = OutLines.V[1] = Vertices[0].TextureCoordinate[0].Y;
+		OutLines.V[2] = OutLines.V[3] = Vertices[2].TextureCoordinate[0].Y;
+	}
+	else
+	{
+		for (int32 Line = 0; Line < 4; ++Line)
+		{
+			OutLines.X[Line] = OriginVertices[Line].Position.Y;
+			OutLines.Y[Line] = OriginVertices[Line * 4].Position.Z;
+			OutLines.U[Line] = Vertices[Line].TextureCoordinate[0].X;
+			OutLines.V[Line] = Vertices[Line * 4].TextureCoordinate[0].Y;
+		}
+	}
+	return true;
+}
+
 bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared) const
 {
 	// The weak pointers are compared by what they point at, without resolving them.

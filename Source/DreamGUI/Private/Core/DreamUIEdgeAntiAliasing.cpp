@@ -227,6 +227,21 @@ DreamUIEdgeAntiAliasing::FResult DreamUIEdgeAntiAliasing::Apply(FDreamUIGeometry
 		InOffset[Welded] = Direction * FMath::Min(Half * Mitre, Corner.ShortestEdge * 0.25f);
 	}
 
+	// A simple or nine-sliced quad, as a clip underlay reads it (FDreamUIGeometry::DrawnQuad): its lines are kept as the
+	// rect writer made them, before its corners move. A quad whose lines cannot be read is no longer one.
+	if (InOutGeometry.DrawnQuad != FDreamUIGeometry::EDrawnQuad::None && !InOutGeometry.KeptQuadLines.IsSet())
+	{
+		FDreamUIGeometry::FDrawnQuadLines Lines;
+		if (InOutGeometry.ReadDrawnQuadLines(Lines))
+		{
+			InOutGeometry.KeptQuadLines = Lines;
+		}
+		else
+		{
+			InOutGeometry.DrawnQuad = FDreamUIGeometry::EDrawnQuad::None;
+		}
+	}
+
 	// What every vertex was, before the outline moves: the strips' outer copies take it, and the moved vertices read
 	// their new texture coordinate and colour off it.
 	TArray<FVector2f> OriginalPosition;
@@ -326,8 +341,6 @@ DreamUIEdgeAntiAliasing::FResult DreamUIEdgeAntiAliasing::Apply(FDreamUIGeometry
 		Triangles.Add((FDreamUIMeshIndex)OuterA);
 		Triangles.Add((FDreamUIMeshIndex)OuterB);
 	}
-	// No longer the quad a clip underlay reads corners off.
-	InOutGeometry.DrawnQuad = FDreamUIGeometry::EDrawnQuad::None;
 
 	Result.OutlineEdges = Outline.Num();
 	Result.bApplied = true;

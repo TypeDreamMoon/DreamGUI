@@ -185,8 +185,9 @@ public:
 		void SetEdgeAntiAliasing(EDreamEdgeAntiAliasing Value);
 	/**
 	 * One device pixel in this element's local units, when its outline is to be anti-aliased now, and 0 when it is not:
-	 * switched off, a kind of element that has no outline to smooth (WantsEdgeAntiAliasing), a world-space canvas (no
-	 * one size of pixel), pixel snapping (the outline is on the grid already), or a canvas with no viewport yet.
+	 * switched off, a kind of element that has no outline to smooth (WantsEdgeAntiAliasing), a rect whose sides lie along
+	 * the pixel rows and columns (HasRectilinearOutline), a world-space canvas (no one size of pixel), pixel snapping (the
+	 * outline is on the grid already), or a canvas with no viewport yet.
 	 */
 	float GetEdgeAntiAliasingPixel()const;
 
@@ -231,8 +232,8 @@ protected:
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 	/**
 	 * Whether the outline of an element drawn as a mesh -- a polygon, shape, ring, path, line, custom mesh, a
-	 * round-cornered or radially filled image -- is anti-aliased by a strip one pixel wide along it. Text and RectBlock
-	 * smooth their edges in the shader and a plain rect sits on the pixel grid, so on them this changes nothing.
+	 * round-cornered or radially filled image, an image, texture or sprite turned off the pixel grid -- is anti-aliased by
+	 * a strip one pixel wide along it. Text and RectBlock smooth their edges in the shader, so on them this changes nothing.
 	 */
 	UPROPERTY(EditAnywhere, Category = DreamGUI, AdvancedDisplay)
 	EDreamEdgeAntiAliasing EdgeAntiAliasing = EDreamEdgeAntiAliasing::Default;
@@ -240,10 +241,16 @@ protected:
 	float BuiltEdgeAntiAliasingPixel = 0.0f;
 	/**
 	 * Whether this kind of element draws an outline its geometry should anti-alias. False here: text and RectBlock smooth
-	 * theirs in the shader, and a rect's sit on the pixel grid. The mesh visuals say true; an image says true for its
-	 * round corners and radial fills.
+	 * theirs in the shader. The mesh visuals say true, and so do an image, a texture and a sprite.
 	 */
 	virtual bool WantsEdgeAntiAliasing()const { return false; }
+	/**
+	 * Whether the outline runs only along the sides of the element's rect, as a plain, nine-sliced, tiled or linearly
+	 * filled quad's does: those sides need no strip while they lie along the pixel rows and columns, as they do on an
+	 * element nothing turns, and get one once a rotation or a tilt turns them off. False here; a round corner, a radial
+	 * fill's cut and a mesh's slanted sides are smoothed however the element is turned.
+	 */
+	virtual bool HasRectilinearOutline()const { return false; }
 	/** See SetMaterialOverride. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UMaterialInterface> MaterialOverride = nullptr;

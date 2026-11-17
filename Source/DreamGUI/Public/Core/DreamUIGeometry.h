@@ -193,6 +193,32 @@ public:
 		SlicedFrame,
 	};
 	EDrawnQuad DrawnQuad = EDrawnQuad::None;
+	/** A drawn quad's lines: across, the four columns' x and u; up, the four rows' y and v. A simple quad's inner lines sit on its edges. */
+	struct FDrawnQuadLines
+	{
+		float X[4] = {};
+		float Y[4] = {};
+		float U[4] = {};
+		float V[4] = {};
+	};
+	/**
+	 * The lines DrawnQuad's vertices made, read off them before something moved them: the edge strip
+	 * (DreamUIEdgeAntiAliasing) moves the quad's outer vertices half a pixel in and reads them a texture coordinate from
+	 * there. Unset while nothing did, when the vertices still say it. Reset by Clear, and not copied.
+	 */
+	TOptional<FDrawnQuadLines> KeptQuadLines;
+	/** DrawnQuad's lines as its vertices are now; false while it is None, or while they are fewer than it has. */
+	bool ReadDrawnQuadLines(FDrawnQuadLines& OutLines) const;
+	/** DrawnQuad's lines as the rect writer made them: those kept, else those the vertices say now. */
+	bool GetDrawnQuadLines(FDrawnQuadLines& OutLines) const
+	{
+		if (DrawnQuad != EDrawnQuad::None && KeptQuadLines.IsSet())
+		{
+			OutLines = KeptQuadLines.GetValue();
+			return true;
+		}
+		return ReadDrawnQuadLines(OutLines);
+	}
 
 	void CopyDataForPrepare(const FDreamUIGeometry& Other)
 	{
@@ -253,6 +279,7 @@ public:
 		Triangles.Reset();
 		OriginVertices.Reset();
 		DrawnQuad = EDrawnQuad::None;
+		KeptQuadLines.Reset();
 	}
 
 	/**

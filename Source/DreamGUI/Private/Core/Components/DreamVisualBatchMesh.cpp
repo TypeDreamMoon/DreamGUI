@@ -480,39 +480,18 @@ bool UDreamVisualBatchMesh::GetClipUnderlay(FDreamClipUnderlay& OutUnderlay) con
 			return false;
 		}
 	}
-	const TArray<FDreamUIOriginVertexData>& Positions = Geometry->OriginVertices;
-	const TArray<FDreamUIMeshVertex>& Vertices = Geometry->Vertices;
-	const bool bSimple = Geometry->DrawnQuad == EDrawnQuad::Simple;
-	const int32 Expected = bSimple ? 4 : 16;
-	if (Positions.Num() < Expected || Vertices.Num() < Expected)
+	// As the rect writer made them: an edge strip moves the quad's outer vertices half a pixel in (KeptQuadLines).
+	FDreamUIGeometry::FDrawnQuadLines Lines;
+	if (!Geometry->GetDrawnQuadLines(Lines))
 	{
 		OutUnderlay.Unsupported = TEXT("the element under it has not drawn yet");
 		OutUnderlay.bPending = true;
 		return false;
 	}
-	// Across: the four columns' x and u; up: the four rows' y and v. A simple quad's inner lines sit on its edges.
-	float X[4], Y[4], U[4], V[4];
-	if (bSimple)
-	{
-		X[0] = X[1] = Positions[0].Position.Y;
-		X[2] = X[3] = Positions[1].Position.Y;
-		Y[0] = Y[1] = Positions[0].Position.Z;
-		Y[2] = Y[3] = Positions[2].Position.Z;
-		U[0] = U[1] = Vertices[0].TextureCoordinate[0].X;
-		U[2] = U[3] = Vertices[1].TextureCoordinate[0].X;
-		V[0] = V[1] = Vertices[0].TextureCoordinate[0].Y;
-		V[2] = V[3] = Vertices[2].TextureCoordinate[0].Y;
-	}
-	else
-	{
-		for (int32 Line = 0; Line < 4; ++Line)
-		{
-			X[Line] = Positions[Line].Position.Y;
-			Y[Line] = Positions[Line * 4].Position.Z;
-			U[Line] = Vertices[Line].TextureCoordinate[0].X;
-			V[Line] = Vertices[Line * 4].TextureCoordinate[0].Y;
-		}
-	}
+	const float (&X)[4] = Lines.X;
+	const float (&Y)[4] = Lines.Y;
+	const float (&U)[4] = Lines.U;
+	const float (&V)[4] = Lines.V;
 	OutUnderlay.Kind = FDreamClipUnderlay::EKind::Image;
 	OutUnderlay.Center = FVector2f((X[0] + X[3]) * 0.5f, (Y[0] + Y[3]) * 0.5f);
 	OutUnderlay.HalfSize = FVector2f(FMath::Abs(X[3] - X[0]) * 0.5f, FMath::Abs(Y[3] - Y[0]) * 0.5f);
@@ -589,22 +568,17 @@ float UDreamVisualBatchMesh::GetEdgeAntiAliasingPixel()const
 	{
 		return 0.0f;
 	}
-	// Snapped to the device pixel grid, the outline's vertices would collapse the strip onto it.
-	if (GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy())
-	{
-		return 0.0f;
-	}
 	const FIntPoint ViewportSize = RootCanvas->GetViewportSize();
 	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)
 	{
 		return 0.0f;
 	}
-	// A local unit along each axis of the element, as the canvas's own view projection puts it on the viewport.
-	const FMatrix ViewProjection = RootCanvas->GetViewProjectionMatrix();
-	const FTransform& WorldTransform = Widget->GetWorldTransform();
+	// Where a local point lands on the viewport, through the matrix the element is drawn with -- which folds in a
+	// perspective or a shear its transform does not describe -- and the canvas's own view projection.
+	const FMatrix LocalToClip = Widget->GetWorldMatrix() * RootCanvas->GetViewProjectionMatrix();
 	const auto ToPixel = [&](const FVector& InLocal, FVector2D& OutPixel)
 	{
-		const FVector4 Clip = ViewProjection.TransformFVector4(FVector4(WorldTransform.TransformPosition(InLocal), 1.0));
+		const FVector4 Clip = LocalToClip.TransformFVector4(FVector4(InLocal, 1.0));
 		if (Clip.W <= UE_KINDA_SMALL_NUMBER)
 		{
 			return false;
@@ -612,6 +586,41 @@ float UDreamVisualBatchMesh::GetEdgeAntiAliasingPixel()const
 		OutPixel = FVector2D((Clip.X / Clip.W * 0.5 + 0.5) * ViewportSize.X, (0.5 - Clip.Y / Clip.W * 0.5) * ViewportSize.Y);
 		return true;
 	};
+	// A rect's sides along the pixel rows and columns, as on an element nothing turns, have nothing to smooth. Asked
+	// before the snapping setting is looked up through the parents: most images on a screen are such rects.
+	if (HasRectilinearOutline())
+	{
+		const FVector2D Corners[4] = {
+			FVector2D(Widget->GetLocalSpaceLeft(), Widget->GetLocalSpaceBottom()),
+			FVector2D(Widget->GetLocalSpaceRight(), Widget->GetLocalSpaceBottom()),
+			FVector2D(Widget->GetLocalSpaceRight(), Widget->GetLocalSpaceTop()),
+			FVector2D(Widget->GetLocalSpaceLeft(), Widget->GetLocalSpaceTop()) };
+		FVector2D OnViewport[4];
+		for (int32 Corner = 0; Corner < 4; ++Corner)
+		{
+			if (!ToPixel(FVector(0.0, Corners[Corner].X, Corners[Corner].Y), OnViewport[Corner]))
+			{
+				return 0.0f;
+			}
+		}
+		// Off them once a side drifts across them by a sixteenth of a pixel over its length: less than that steps nowhere.
+		bool bTurned = false;
+		for (int32 Side = 0; Side < 4 && !bTurned; ++Side)
+		{
+			const FVector2D Along = OnViewport[(Side + 1) % 4] - OnViewport[Side];
+			bTurned = FMath::Min(FMath::Abs(Along.X), FMath::Abs(Along.Y)) > 1.0 / 16.0;
+		}
+		if (!bTurned)
+		{
+			return 0.0f;
+		}
+	}
+	// Snapped to the device pixel grid, the outline's vertices would collapse the strip onto it.
+	if (GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy())
+	{
+		return 0.0f;
+	}
+	// A local unit along each axis of the element, on the viewport.
 	FVector2D Origin, AlongY, AlongZ;
 	if (!ToPixel(FVector::ZeroVector, Origin) || !ToPixel(FVector(0.0, 1.0, 0.0), AlongY) || !ToPixel(FVector(0.0, 0.0, 1.0), AlongZ))
 	{

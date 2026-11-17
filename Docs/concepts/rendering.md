@@ -138,8 +138,13 @@ pixel out, so a pixel the edge cuts is drawn as partly covered while an edge lyi
 vertex colour, so every material and platform takes it, with no render target and no extra pass. It applies on
 screen-space and render-target canvases; a world-space canvas has no one size of pixel and keeps MSAA for its edges, and
 an element under pixel snapping is on the grid already. While MSAA is on (and the platform can multisample) the samples
-smooth these outlines and a strip would only soften them further, so `Default` leaves it off; `On` adds it anyway. A plain rect -- an image, a nine-slice, a tiled image -- is left
-as it is: its edges sit on the pixel grid until it is rotated.
+smooth these outlines and a strip would only soften them further, so `Default` leaves it off; `On` adds it anyway. A plain
+rect -- an Image, Texture or Sprite drawn plain, nine-sliced, tiled or linearly filled -- gets the strip only while its
+sides are off the pixel rows and columns: turned in the canvas plane, tilted in a perspective, or under a shear. Unturned,
+its sides lie along them and are left as sharp as they were; it takes the strip on, and lets it go, as its transform
+crosses that line. A widget clipping to such an image as the layer below reads the quad as the image drew it, before the
+strip moved its corners. An element kept in a render layer is given its strip, or none, by its transform when its
+vertices were last made: the layer's own move does not remake them.
 
 ## Render-target canvases
 
