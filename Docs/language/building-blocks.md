@@ -768,7 +768,7 @@ Widget Root : ui.FillParent {
                 AnchorData.AnchorMax = (0, 0.5)
                 AnchorData.Pivot = (0, 0.5)
                 AnchorData.AnchoredPosition = (120, 0)
-                AnchorData.SizeDelta = (560, 640)
+                AnchorData.SizeDelta = (560, 540)
 
                 Text Blurb : ui.Body {
                     Text = "Drawn from a single stave of seasoned ash. Light enough to carry all day."
@@ -793,7 +793,7 @@ Widget Root : ui.FillParent {
                 AnchorData.AnchorMax = (0, 0.5)
                 AnchorData.Pivot = (0, 0.5)
                 AnchorData.AnchoredPosition = (760, 0)
-                AnchorData.SizeDelta = (640, 640)
+                AnchorData.SizeDelta = (640, 540)
                 + Overlay { }
                 RectBlock JournalFace : ui.Panel : ui.FillSlot
                 VerticalBox JournalColumn : ui.FillSlot {
@@ -819,6 +819,14 @@ Widget Root : ui.FillParent {
                         ListRow Q3 : RowSlot {
                             Label = "Lanterns for the Pass";  Detail = "Greyhook Pass";  Value = "Lv 15"
                             slot Badge { RectBlock : Dot { BodyColor = @ui.Warn } }
+                        }
+                        ListRow Q4 : RowSlot {
+                            Label = "The Ferryman's Coin";  Detail = "Old ferry landing";  Value = "Lv 11"
+                            slot Badge { RectBlock : Dot { BodyColor = @ui.InkFaint } }
+                        }
+                        ListRow Q5 : RowSlot {
+                            Label = "Where the Herons Nest";  Detail = "Reedbank";  Value = "Lv 13"
+                            slot Badge { RectBlock : Dot { BodyColor = @ui.InkFaint } }
                         }
                     }
                 }
