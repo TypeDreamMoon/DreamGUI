@@ -52,6 +52,9 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 - **`@tag Trim` is a tag, `@tag Trim { }` is a node.** A name after `@tag` is a tag line unless a block, a `:` or a
   `(was: …)` follows it, which makes it the old `@Name` form of a node typed by a resource called `tag`. A tag line in a
   `style` or directly in a `for` body is DUI2024. [Tags](https://gui.toolchain.64hz.cn/en/docs/dui/nodes-and-values/#tags-tag).
+- **A glow meant to spill out of its card is still DUI8008 until it says so.** `layout` reports what draws past its
+  panel and what is drawn over a text. A decoration that does either on purpose takes `@tag Bleed`; one that does not
+  goes inside, or before the text in the file. [Going past the frame](https://gui.toolchain.64hz.cn/en/docs/tools/dreammcp/#going-past-the-frame-on-purpose-tag-bleed).
 - **A ring menu's items are written in the `.dui`.** `Items = [{ "Lamp", Tag: Lamp }, …]`: a map per item, the label
   first and without its key. A map written without a key anywhere else, or on a struct that has no primary field, is
   DUI4009. [Structs as field maps](https://gui.toolchain.64hz.cn/en/docs/dui/nodes-and-values/#structs-as-field-maps).

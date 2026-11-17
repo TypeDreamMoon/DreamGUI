@@ -26,9 +26,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   The endpoint listens on 127.0.0.1 only, with a token; *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸
   Enable DreamMCP Endpoint* and `-NoDreamMCP` decide whether the editor serves it. See
   [DreamMCP endpoint](Docs/tools/dreammcp.md).
-- **Layout diagnostics, DUI8001 to DUI8007.** The problems `layout` and `preview` report have codes of their own, a new
+- **Layout diagnostics, DUI8001 to DUI8010.** The problems `layout` and `preview` report have codes of their own, a new
   range that no compile raises: warnings and infos with the node, its line and a hint. See
   [Diagnostics](Docs/diagnostics/index.md).
+- **`layout` sees what draws outside its panel, over a text, or to one side.** DUI8008 reports a node drawn past the
+  panel or card it sits in (an overlay's plate counts as the panel), DUI8009 a decoration drawn over a text it is not
+  the backplate of, and DUI8010, an info, a panel whose content keeps to one side or spreads thin. They measure what is
+  drawn -- glyphs, a polygon's corners, a rect block's glow -- in the plane of the card, so a card turned in 3D is
+  judged as it is drawn. A glow or a bleed meant to go past takes `@tag Bleed`. A pressable control a fraction of a
+  pixel under 24 px now reads `198x23.7 px`, not `24x24 px; a pointer needs at least 24x24`, and one within 0.01 px of
+  it is not reported. See [DreamMCP endpoint](Docs/tools/dreammcp.md#the-layout-rules).
 - **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
   project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
