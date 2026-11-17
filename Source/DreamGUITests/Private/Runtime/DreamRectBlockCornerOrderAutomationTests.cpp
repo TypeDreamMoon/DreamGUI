@@ -11,6 +11,7 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Event/DreamPointerEventData.h"
 
 #include "Lifecycle/DreamLifecycleFixtures.h"
 
