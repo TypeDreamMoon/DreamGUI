@@ -624,7 +624,7 @@ namespace DreamGUIMCP
 				{ TEXT("RenderRotation"), TEXT("Turns it as drawn, about RenderTransformPivot: (Pitch, Yaw, Roll) in degrees; Yaw turns about the vertical axis (positive brings the right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is clockwise)") },
 				{ TEXT("RenderScale"), TEXT("Scales it as drawn, about RenderTransformPivot, without changing the size layout gives it") },
 				{ TEXT("RenderTransformPivot"), TEXT("The point of the node (0 to 1, Y up) the render transform turns and scales about") },
-				{ TEXT("CornerRadius"), TEXT("The four corners' radii. With CornerRadiusUnitMode = Percentage (the default) each is a fraction, 1 rounding the corner fully: (24, 24, 24, 24) makes a capsule, not 24 px corners; set CornerRadiusUnitMode = Value for pixels") },
+				{ TEXT("CornerRadius"), TEXT("The four corners' radii, in the order bottom-right, top-right, top-left, bottom-left (not CSS's). With CornerRadiusUnitMode = Percentage (the default) each is a fraction, 1 rounding the corner fully: (24, 24, 24, 24) makes a capsule, not 24 px corners; set CornerRadiusUnitMode = Value for pixels") },
 				{ TEXT("DreamRectBlock"), TEXT("A rectangle drawn as a distance field: rounded corners (CornerRadius), a border, gradients and shadows") },
 			};
 			for (const FNote& Note : Notes)

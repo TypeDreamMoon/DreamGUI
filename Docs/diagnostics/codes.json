@@ -1291,7 +1291,7 @@
       "severity": "info",
       "stage": "Layout",
       "title": "Siblings whose left, right, top or bottom edges or centres differ by more than 0.5 and at most 3 px, or a row or column of three or more whose gaps do.",
-      "meaning": "Siblings whose left, right, top or bottom edges or centres differ by more than 0.5 and at most 3 px, or a row or column of three or more whose gaps do. Most often: two hand-written positions or sizes a pixel or two apart.",
+      "meaning": "Siblings whose left, right, top or bottom edges or centres differ by more than 0.5 and at most 3 px, or a row or column of three or more whose gaps do. The plain visuals inside a box no bigger than 128 px (the parts of an icon drawn from shapes) are not compared. Most often: two hand-written positions or sizes a pixel or two apart.",
       "fix": "give them the same value, or let one box align them",
       "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005"
     },

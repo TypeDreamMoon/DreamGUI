@@ -11,6 +11,7 @@
 #include "MCP/DreamGUIMCPPreviewStats.h"
 #include "MCP/DreamGUIMCPResult.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "AssetCompilingManager.h"
 #include "Containers/Ticker.h"
@@ -914,6 +915,23 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 	const TSharedPtr<FJsonObject> RootlessResult = ResultOf(RunToEnd(*this, Test.Endpoint,
 		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Rootless)), TEXT("t-6"))));
 	TestTrue(TEXT("a file with a class line and no root is DUI2006"), Codes(RootlessResult).Contains(TEXT("DUI2006")));
+
+	// A value a library's style gets wrong is reported in the library, at the style's line -- not at that line number of
+	// the screen that wears the style.
+	const FString BadLibrary = Sources.Write(TEXT("BrokenLibrary"),
+		TEXT("// a library\n\nstyle Rounded {\n    CornerRadius = (4, 4)\n}\n"), /*bClassLine*/ false);
+	const FString Wearer = Sources.Write(TEXT("Wearer"), FString::Printf(TEXT("use \"%s\"\n\n%s"), *BadLibrary,
+		*Screen(TEXT("    RectBlock Face : Rounded { }"))));
+	const TSharedPtr<FJsonObject> WearerResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Wearer)), TEXT("t-7"))));
+	const TArray<TSharedPtr<FJsonValue>> WearerDiagnostics = ArrayField(WearerResult, TEXT("diagnostics"));
+	if (TestEqual(FString::Printf(TEXT("the style's wrong value is one error: %s"), *Field(WearerResult, TEXT("summary"))), WearerDiagnostics.Num(), 1))
+	{
+		const TSharedPtr<FJsonObject> Wrong = WearerDiagnostics[0]->AsObject();
+		TestEqual(TEXT("a tuple of the wrong length is DUI4004"), Field(Wrong, TEXT("code")), FString(TEXT("DUI4004")));
+		TestTrue(FString::Printf(TEXT("reported in the library (%s)"), *Field(Wrong, TEXT("file"))), Field(Wrong, TEXT("file")).EndsWith(TEXT("BrokenLibrary.dui")));
+		TestEqual(TEXT("at the style's line"), static_cast<int32>(Number(Wrong, TEXT("line"))), 4);
+	}
 	return true;
 }
 
@@ -970,6 +988,47 @@ bool FDreamMCPCompileTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("errors first"), Field(HeldDiagnostics[0]->AsObject(), TEXT("severity")), FString(TEXT("error")));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPHoldsTheWatcherTest,
+	"DreamGUI.MCP.Actions.TheSourceWatcherWaitsWhileAJobLooksAtAScreen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/**
+ * The source watcher rebuilds a .dui a moment after it changes. When a library a screen used had just changed, its
+ * rebuild landed in the frames a preview spent settling the screen it had put on its stage, reinstanced it there, and
+ * the picture came out empty ("draws almost nothing"); the next preview was fine. The endpoint now builds what the
+ * watcher has queued before a job starts and holds the watcher's queue until it is idle again.
+ */
+bool FDreamMCPHoldsTheWatcherTest::RunTest(const FString& Parameters)
+{
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Held"), Screen(TEXT("    Text Label { Text = \"Hello\" }")));
+	TestFalse(TEXT("idle, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
+
+	const FHttpReply Accepted = Send(Test.Endpoint, TEXT("POST"), TEXT("/call"),
+		CallBody(TEXT("layout"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File)), TEXT("held-1")));
+	if (!TestEqual(TEXT("the layout is accepted"), Accepted.Status, 202))
+	{
+		return false;
+	}
+	TestTrue(TEXT("with a job queued, the watcher's queue is held"), FDreamUISourceWatcher::IsQueueHeld());
+	const FString Job = Field(ParseReply(*this, Accepted), TEXT("job"));
+	FString State;
+	for (int32 Tick = 0; Tick < 2000; ++Tick)
+	{
+		State = Field(ParseJsonObject(Send(Test.Endpoint, TEXT("GET"), TEXT("/jobs/") + Job).Body), TEXT("state"));
+		if (State == TEXT("done") || State == TEXT("failed") || State == TEXT("cancelled"))
+		{
+			break;
+		}
+		TestTrue(TEXT("...and stays held while the job runs"), FDreamUISourceWatcher::IsQueueHeld());
+		Test.Endpoint.TickJobs();
+	}
+	TestEqual(TEXT("the layout finishes"), State, FString(TEXT("done")));
+	TestFalse(TEXT("idle again, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
 	return true;
 }
 
@@ -1315,6 +1374,28 @@ bool FDreamMCPLintAlignTest::RunTest(const FString& Parameters)
 	Gaps.Add(0, TEXT("C"), TEXT("Image"), 100, 234, 300, 50);
 	const TArray<FLayoutIssue> GapIssues = Gaps.Lint();
 	TestTrue(TEXT("a column with gaps of 16 and 18 is reported"), GapIssues.ContainsByPredicate([](const FLayoutIssue& I) { return I.Message.Contains(TEXT("gaps of 16, 18")); }));
+
+	// The parts of an icon drawn from shapes -- a coin and its rim, 2 px apart on purpose -- are not compared: in a box no
+	// bigger than an icon, plain visuals are a drawing. The same two in a card are, and so are two texts in the icon box.
+	FSnapshotBuilder Icon;
+	const int32 Glyph = Icon.Add(0, TEXT("Glyph"), TEXT("Widget"), 100, 100, 64, 64);
+	Icon.Add(Glyph, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Icon.Add(Glyph, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestEqual(TEXT("the parts of a 64 px icon are not reported"), CountCode(Icon.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned), 0);
+
+	FSnapshotBuilder Card;
+	const int32 Box = Card.Add(0, TEXT("Card"), TEXT("Widget"), 100, 100, 400, 200);
+	Card.Add(Box, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Card.Add(Box, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestTrue(TEXT("the same two in a 400 px card are"), CountCode(Card.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
+
+	FSnapshotBuilder Words;
+	const int32 Small = Words.Add(0, TEXT("Badge"), TEXT("Widget"), 100, 100, 120, 60);
+	const int32 First = Words.Add(Small, TEXT("Count"), TEXT("Text"), 108, 110, 40, 20);
+	const int32 Second = Words.Add(Small, TEXT("Unit"), TEXT("Text"), 110, 132, 40, 20);
+	Words.Snapshot.Nodes[First].bHasText = true;
+	Words.Snapshot.Nodes[Second].bHasText = true;
+	TestTrue(TEXT("two texts in a small box still are"), CountCode(Words.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
 	return true;
 }
 

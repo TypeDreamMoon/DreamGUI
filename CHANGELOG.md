@@ -555,6 +555,22 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
+  when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it
+  reinstanced the screen on the stage and the picture came out empty ("draws almost nothing"), the next one fine. The
+  endpoint now builds what the watcher has queued before it starts a job, and the watcher waits while the endpoint is
+  busy (`FDreamUISourceWatcher::HoldQueue`).
+- **Strings compare in bindings.** `Shown <- Kind == "Sword"` (and `!=`, and `+` of two strings) failed with DUI5011,
+  "math library has no 'EqualEqual_StrStr'": the string operators are the string library's, and only the math library
+  was asked.
+- **A library's mistakes are reported in the library.** A wrong value on a line of an imported style -- a tuple of the
+  wrong length, a field its struct does not have -- was reported at that line number of the screen wearing the style.
+  It now names the library file.
+- **DUI8005 leaves icons drawn from shapes alone.** Inside a box no bigger than 128 px, the plain visuals (no text,
+  nothing to press) are the parts of a drawing and are no longer compared; texts and controls there still are.
+- **A rect block's corner order is documented as it is.** `CornerRadius` runs bottom-right, top-right, top-left,
+  bottom-left, as `ClippingCornerRadius` does; the image brush's comment said a rect block shares CSS's order. The
+  behaviour is unchanged.
 - **A window being resized no longer draws its UI past the edge of its target.** In the frame a window is resized in,
   the target the view draws into already has its new size while the view still has the old one, and DreamGUI drew that
   frame at the view's size: the multisample resolve's scissor reached past the viewport (D3D12's `bScissorRectValid`

@@ -25,6 +25,7 @@
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "KismetCompilerMisc.h"
@@ -500,14 +501,21 @@ namespace DreamUIExpressionThunksLocal
 
 	FEmitted EmitExpression(const FDreamUIExpression& InExpression, FThunkContext& InContext);
 
-	/** A UKismetMathLibrary call with A/B-style inputs; returns its output pin emitted. */
+	/**
+	 * A library call with A/B-style inputs; returns its output pin emitted. The operators are UKismetMathLibrary's, except
+	 * the string ones (EqualEqual_StrStr, NotEqual_StrStr, Concat_StrStr), which are UKismetStringLibrary's.
+	 */
 	FEmitted EmitMathCall(const TCHAR* InFunctionName, std::initializer_list<TPair<const TCHAR*, const FEmitted*>> InArguments,
 		FThunkContext& InContext, const FDreamUISourceLocation& InLocation)
 	{
 		UFunction* Function = UKismetMathLibrary::StaticClass()->FindFunctionByName(FName(InFunctionName));
 		if (Function == nullptr)
 		{
-			InContext.Fail(InLocation, FString::Printf(TEXT("internal: math library has no '%s'"), InFunctionName));
+			Function = UKismetStringLibrary::StaticClass()->FindFunctionByName(FName(InFunctionName));
+		}
+		if (Function == nullptr)
+		{
+			InContext.Fail(InLocation, FString::Printf(TEXT("internal: neither the math nor the string library has '%s'"), InFunctionName));
 			return FEmitted();
 		}
 		FGraphNodeCreator<UK2Node_CallFunction> Creator(*InContext.Graph);
