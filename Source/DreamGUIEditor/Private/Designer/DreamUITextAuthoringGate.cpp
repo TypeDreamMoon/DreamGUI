@@ -679,6 +679,8 @@ namespace DreamUITextAuthoring
 		}
 	}
 
+	const FName EventRowsCategoryName(TEXT("Events"));
+
 	bool IsCustomRowReadOnly(const UObject* InOwner, const FName InRowName, const FName InCategoryName)
 	{
 		// A gradient's CSS box and stop editor write the gradient through its property handle, as the property rows beside
@@ -686,7 +688,17 @@ namespace DreamUITextAuthoring
 		// themselves, with the gradient's chain, for their enabled state (DreamGradientCustomization.cpp) -- a child row is
 		// not greyed out with its parent's. Judged by their category here, they would be refused on every text-authored
 		// widget even where the gradient itself has a spelling and is live.
-		if (InRowName == DreamGradientDetails::CssRowTag || InRowName == DreamGradientDetails::StopsRowTag)
+		//
+		// The Events rows are the same kind of row for the same reason, and the other half of this one: a route is
+		// not a value the write-back carries but a LINE the file gets. DreamWidgetEventRoutes::AddRouteWithHandler
+		// asks this namespace for that line before it creates the handler (ResolveStatementSite, then
+		// CheckStructuralEdit with the build verified) and says why when the file cannot take it, so the category
+		// rule below is the wrong question and the answer here is "the row asks itself". Judged by its category
+		// instead, every event row of every text-authored class came out grey -- the one place a route IS a line
+		// the panel writes -- while bInEnabled in DreamWidgetEventCustomization said the delegate had a template to
+		// route from. Two halves of one answer disagreeing, which is what this pairing exists to prevent.
+		if (InRowName == DreamGradientDetails::CssRowTag || InRowName == DreamGradientDetails::StopsRowTag
+			|| InCategoryName == EventRowsCategoryName)
 		{
 			return false;
 		}
