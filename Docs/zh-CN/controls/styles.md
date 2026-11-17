@@ -188,7 +188,7 @@ HorizontalBox Root {
 | `DrawAs` | `None`、`Box`、`Border`、`Image`、`Tiled`（按自身尺寸平铺）、`Filled`（只显示一部分，进度条那样）、`RoundedBox`（圆角轮廓） |
 | `ImageSize`、`Margin`、`UVRegion`、`PixelsPerUnitMultiplier` | 尺寸、0 到 1 的边距、UV 区域、像素密度 |
 | `FillAmount`、`FillMethod`、`FillOrigin`、`FillDirectionFlip` | 仅 `Filled`：显示多少、切割形状、从哪端开始、另一个方向 |
-| `CornerRadius`、`CornerSegments` | 仅 `RoundedBox`：每个角的半径（像素，从左上顺时针）和每段圆弧的点数 |
+| `CornerRadius`, `CornerSegments` | 仅 `RoundedBox`：每个角的半径（像素，从左上角开始顺时针），以及每段圆弧的点数（矩形块的 `CornerRadius` 则按右下、右上、左上、左下顺序） |
 
 `RoundedBox` 是从几何上切出来的轮廓：角的平滑程度取决于段数，且不自带抗锯齿。要精确、与分辨率无关、带边框或渐变的圆角矩形，用 `RectBlock`。
 

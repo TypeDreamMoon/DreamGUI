@@ -13,7 +13,7 @@ description: AI 智能体在编写 .dui 时可以借助的资源——DreamMCP �
 | --- | --- | --- |
 | DreamMCP | 通过 [DreamMCP 服务器](https://github.com/TypeDreamMoon/dream-mcp) 以 `dream_gui` 工具的形式访问的[端点](dreammcp.md) | `check`、`compile`、`diagnostics`、`lookup`、`layout`（每个节点的像素矩形和布局问题，用文字描述）、`preview`（一张图片及其数值）、`info`——在用户的编辑器或后台引擎中，只需几分之一秒 |
 | skills | `.skill/dream-gui-create`、`-verify`、`-diagnose`；由 `.skill/sync-skills.ps1` 发布到 `.claude/skills/` | 固定步骤，每步一条命令：查名称、编写、检查、布局、修复 |
-| 参考文档 | `.skill/reference/`：`dui.md`（整门语言浓缩于一页）、`example.md`、`pitfalls.md`、`controls.md`、`diagnostics.md` | 作者所需的内容，每页均可独立使用；DreamMCP 通过 `reference` 提供它们 |
+| 参考文档 | `.skill/reference/`：`dui.md`（整门语言浓缩于一页）、`example.md`、`presets.md`、`blocks.md`（构建块）、`screens.md`（入门界面）、`pitfalls.md`、`controls.md`、`diagnostics.md` | 作者所需的内容，每页均可独立使用；DreamMCP 通过 `reference` 提供它们 |
 | 智能体指南 | 插件根目录下的 `AGENTS.md`；`CLAUDE.md` 导入它 | 下文的循环流程，以及智能体容易出错的规则 |
 | `dui.ps1` | `.skill/dui.ps1` | 从命令行调用端点的 `check`、`compile` 和 `layout`，供 CI 和没有 DreamMCP 服务器的智能体使用 |
 | 符号文件 | `<Project>/DUI/.dui-symbols.json` | 每一种节点类型、属性、枚举值、事件和视图模型类（[符号文件](vscode.md#the-symbol-file-duidui-symbolsjson)）；`lookup` 读取同一张表 |

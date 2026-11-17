@@ -133,3 +133,6 @@
 | DUI8005 | LayoutNearlyAligned | 同级节点的边缘、中心或间距相差 1 到 3 px 而未对齐（信息）。 |
 | DUI8006 | LayoutBreaksAtSize | 在所要求的其他视口尺寸之一上出现布局问题，而在第一个尺寸上没有出现。 |
 | DUI8007 | LayoutLowContrast | 文本与背后内容的对比度低于 3 比 1（仅预览）。 |
+| DUI8008 | LayoutOutsideFrame | 绘制超出其所在面板或卡片的节点（标记为 `Bleed` 时除外）。 |
+| DUI8009 | LayoutCoversText | 绘制在并非其底板文本之上的、不接收指针的视觉元素（标记为 `Bleed` 时除外）。 |
+| DUI8010 | LayoutUnbalanced | 内容偏向一侧或留出大片空白区域的面板（信息级别）。 |

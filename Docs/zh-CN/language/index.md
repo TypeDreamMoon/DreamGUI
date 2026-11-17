@@ -261,3 +261,21 @@
 ## 完整示例
 
 [阅读本节](example.md#a-worked-example)。
+
+<a id="presets"></a>
+
+## 预设
+
+[阅读本节](presets.md#presets)。
+
+<a id="building-blocks"></a>
+
+## 构建块
+
+[阅读本节](building-blocks.md#building-blocks)。
+
+<a id="starter-screens"></a>
+
+## 起始界面
+
+[阅读本节](starter-screens.md#starter-screens)。

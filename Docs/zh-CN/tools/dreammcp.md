@@ -12,7 +12,7 @@ description: DreamMCP 服务器借以访问 DreamGUI 的 HTTP 端点——针对
 | 类型 | 编辑器服务，位于 `DreamGUIEditor` 模块（`Source/DreamGUIEditor/Private/MCP/`）中 |
 | 协议 | DreamMCP 协议 `1` |
 | 清单 | `<Plugin>/Resources/DreamMCP.json`：各操作、其以 JSON Schema 表示的参数、路由、宿主 commandlet |
-| 参考资料 | `.skill/reference/dui.md`、`example.md`、`pitfalls.md`、`controls.md`，由清单指定，随插件一起打包。每一份都独立成篇：其中的链接指向本手册，打不开它们的代理也不会错过任何必需的内容 |
+| 参考资料 | `.skill/reference/dui.md`、`example.md`、`presets.md`、`blocks.md`、`screens.md`、`pitfalls.md`、`controls.md`、`diagnostics.md`，由清单指定，随插件一起打包。每一份都独立成篇：其中的链接指向本手册，打不开它们的代理也不会错过任何必需的内容 |
 | 路由 | `http://127.0.0.1:<port>/dream/gui`，工具名 `dream_gui` |
 | 端口 | `47800`，或 `-DreamMCPPort=<n>`；无法绑定的端口会跳到下一个，最多 16 个。同一进程中的其他 Dream 插件共享它，各自在自己的路由下 |
 | 绑定地址 | 仅 `127.0.0.1`，在启动时验证 |
@@ -88,9 +88,29 @@ Widget Root  x=0 y=0 w=1920 h=1080  [Overlay]
 | [DUI8002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002) | 警告 | 文本被其溢出策略截短，或被布局到超出其盒子 | 文本自身的度量（`UDreamText::MeasureFit`） |
 | [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | 警告（对于带子级的普通控件为信息） | 会绘制、容纳子级或可被按下的节点没有宽度或高度；可按下控件小于指针所需 | 小于 1 px；小于 24 x 24 px（WCAG 2.2 的最小目标） |
 | [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | 警告 | 同一画布中的两个可按下控件在屏幕上重叠，无论它们在树中的位置如何（一个位于另一个内部的情况除外）：那里的按下只会到达上面那个。至少 95 % 落在面积至少为其四倍的控件上的小控件（可按下卡片上的按钮、点击外部关闭的背景上的对话框）是有意分层，不会被报告 | 两个轴上都达到 2 px 或更多 |
-| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | 信息 | 同级节点的左、右、上或下边缘或中心几乎对齐；一行或一列三个或更多节点具有近乎均匀的间距 | 相差超过 0.5 且至多 3 px |
-| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | 警告 | 在 `sizes` 之一处出现 DUI8001–8004，而在第一个视口处没有 | 与其重复的规则相同 |
+| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | 信息 | 同级节点的左、右、上或下边缘或中心几乎对齐；一行或一列三个或更多节点具有近乎均匀的间距。在任意一边都不超过 128 px 的框内，纯视觉元素（无文本、无可按压内容）属于绘图的一部分或由形状绘制的图标，不参与比较 | 相差超过 0.5 且至多 3 px |
+| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | 警告 | DUI8001–8004、DUI8008 或 DUI8009 在 `sizes` 的某一处出现，且不在第一个视口中 | 与其所重复的规则相同 |
 | [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | 警告 / 信息 | 在 `preview` 中：文本的颜色（按其 alpha）与其盒子内侧一圈一像素宽环上像素的中位数对比。控件自身某部分与背后内容的对比度在 1.1 : 1 以内（关闭状态的开关的勾选标记）属于有意隐藏，不会被报告 | WCAG 对比度低于 3 : 1 为警告；小于 24 px 的文本低于 4.5 : 1 为信息 |
+| [DUI8008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008) | 警告 | 节点绘制的内容超出其所在的面板或卡片：绘制盒子的最近祖先（非文本的视觉元素，每个方向至少 24 px），或者在覆盖层中，绘制内容填满父级的最后一个更早的兄弟节点——覆盖在阴影之上的表面。不报告：标记为 `Bleed` 的节点或位于其中的节点、会裁剪的框架（或介于其间的节点）、与屏幕同尺寸的框架（DUI8001 负责的情形）、每个方向至少占其框架 90 % 且覆盖其大部分区域的底板（覆盖在其阴影上的表面、卡片后面的光晕） | 超过 4 px，且至少达到节点自身在该侧宽度或高度的 5 % |
+| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | 警告 | 一个不接收指针的视觉元素，在同一画布中绘制在文本之后（在文件中更靠后，或位于更高层），覆盖了文本的字形——或者，不大于文本行且大部分位于其中。不报告：绘制在文本之前的内容（其背板）、文本的祖先或后代、控件（DUI8004）、没有主体的轮廓（`bEnableBody = false`）或比 40 / 255 更淡的轮廓、覆盖文本所在卡片 90 % 以上的蒙层、覆盖屏幕 60 % 以上的遮罩、标记为 `Bleed` 的节点、控件自身标签周围的控件自身部件。每个文本只产生一个发现 | 字形框的 12 %，或行内装饰的 30 %；且任一至少 4 px 厚 |
+| [DUI8010](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010) | 信息 | 面板（绘制盒子的节点，或覆盖层的底板，至少 240 x 120 px 且占屏幕 2 %，但小于屏幕的 60 %）内含文本和三个或更多内容，依据它们绘制的内容判断（忽略细于 6 px 的分隔线和强调条）：其内容偏居一侧，或在其中部横向留出一条空白带，或其行（列）分布稀疏。对于条形栏或侧边栏（长度是宽度的 2.5 倍），不检查其中部和分布 | 一侧空白 38 %，而相对一侧低于其三分之一，或在该轴 60 % 为空时一侧空白 20 %；中部条带为 38 %；项目之间的间隙占 60 % |
+
+两个节点会在其中之一的平面内进行比较——框架、文本或面板的平面——通过其控件的变换，因此在 3D 中翻转的卡片、旋转的徽章或处于透视中的屏幕，其边缘仍保持笔直；矩形为近似值的节点（某个角点位于视点之后）会被排除。节点绘制的内容是其视觉元素的几何形状：文本的字形、多边形的角点（旋转后的形状不按其包围盒测量）、图像的四边形、矩形块的主体，对于 DUI8009，还包括矩形块的外阴影或光晕，当其不透明度至少为 40 / 255 时。
+
+<a id="going-past-the-frame-on-purpose-tag-bleed"></a>
+
+### 有意超出框架：`@tag Bleed`
+
+光晕、投影、溢出其卡片的角标、覆盖在标题上的光泽：给节点标记 `Bleed`，DUI8008 和 DUI8009 便会忽略它及其内部的一切。标记为 `Bleed` 的框架也不参与这两项测量。
+
+```
+RectBlock CardGlow {
+    @tag Bleed
+    AnchorData.SizeDelta = (360, 520)
+}
+```
+
+会裁剪的容器（`Clipping = ClipToBounds`）不需要标记：它裁掉的内容不会被绘制。
 
 <a id="what-preview-measures"></a>
 
