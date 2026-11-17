@@ -81,8 +81,7 @@ Each entry says what you see, why, and what to do; the page it links to has the 
   Write the numbers, or give the whole value a name.
 - **A `Color` prop does not drive `BodyColor` (DUI5004).** A `props` colour is a linear colour, and a visual's
   `Color` and a rect block's `BodyColor` are not; neither can be bound to it. Show the right part instead: one node per
-  colour, each with `Shown <- Rarity == 2` on an `Integer` prop. Comparing strings in a binding does not compile yet
-  (DUI5011); compare an `Integer` or a `Bool`.
+  colour, each with `Shown <- Rarity == 2` on an `Integer` prop, or `Shown <- Kind == "Rare"` on a `String` one.
 
 ## Text and fonts
 

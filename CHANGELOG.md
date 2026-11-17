@@ -555,6 +555,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **Strings compare in bindings.** `Shown <- Kind == "Sword"` (and `!=`, and `+` of two strings) failed with DUI5011,
+  "math library has no 'EqualEqual_StrStr'": the string operators are the string library's, and only the math library
+  was asked.
 - **A library's mistakes are reported in the library.** A wrong value on a line of an imported style -- a tuple of the
   wrong length, a field its struct does not have -- was reported at that line number of the screen wearing the style.
   It now names the library file.
