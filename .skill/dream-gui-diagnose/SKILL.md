@@ -44,6 +44,9 @@ Every diagnostic has a code `DUInnnn`. The first digit is the stage that refused
 | DUI8005 nearly lined up (info) | two hand-written positions or sizes a pixel or two apart | give them the same value, or let one box align them |
 | DUI8006 breaks at another size | fixed positions from the centre, fixed widths wider than the smaller screen | anchors to edges, boxes that fill (`@slot SizeRule = Fill`), sizes that stretch |
 | DUI8007 low contrast (preview) | text colour close to what is behind it | a lighter text on a dark backdrop or the other way round, until the ratio is at least 4.5 to 1 |
+| DUI8008 outside its panel | a child bigger than its card, or placed past its edge; a key label hung under its icon's slot | make it smaller or move it in, or give the panel (or the slot) room; a glow or bleed meant to go past: `@tag Bleed` |
+| DUI8009 drawn over a text | an accent bar, a shape or a glow written after the text and overlapping it | move it off the text, or write it before the text so it is drawn under it; a sheen meant to lie over it: `@tag Bleed` |
+| DUI8010 unbalanced (info) | content in fixed positions at the top of a panel sized for more; rows spaced far apart | let the content fill (`@slot SizeRule = Fill`, anchors that stretch), spread it out, or make the panel smaller |
 
 When nothing is reported and the screen still looks wrong, `preview` draws it (if you can see images), and the tree in
 `layout` says where each node really is: compare it with where you meant it to be. Common surprises:
