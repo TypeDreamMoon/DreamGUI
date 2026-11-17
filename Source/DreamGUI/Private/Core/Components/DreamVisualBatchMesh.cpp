@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "Core/DreamUIEdgeAntiAliasing.h"
+#include "Core/DreamUISettings.h"
 #include "Core/DreamUIDetailTrace.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
@@ -30,6 +32,19 @@ static TAutoConsoleVariable<int32> CVarDreamUIAsyncVertexTransformMinVertices(
 
 namespace DreamVisualBatchMeshLocal
 {
+	/**
+	 * Whether two pixel sizes an outline was and would be anti-aliased with are the same strip: within a twentieth, so a
+	 * scale animation re-makes the strip now and then rather than on every frame, and 0 (no strip) only matches 0.
+	 */
+	bool IsSameEdgePixel(const float InA, const float InB)
+	{
+		if (InA <= 0.0f || InB <= 0.0f)
+		{
+			return InA <= 0.0f && InB <= 0.0f;
+		}
+		return FMath::Abs(InA - InB) <= 0.05f * FMath::Max(InA, InB);
+	}
+
 	/**
 	 * Say once per material when an override material does not shade through MF_DreamUI_Shade: clipping, clip masks, mask
 	 * transitions and the opacity of a group reach a draw only through that function, and a material without it draws its
@@ -283,10 +298,27 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	//text drawing small-text coverage glyphs -- says whether this move needs the same repaint (GetRepaintsOnTransformChange).
 	const bool pixelPerfectAffectTransform = bTransformChanged
 		&& ((this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy()) || GetRepaintsOnTransformChange());
+	// The outline's strip is a pixel wide in local units, so a pixel of another size -- the element or its canvas scaled, the
+	// viewport resized, the setting switched -- re-makes it. And while there is a strip, every update makes the vertices
+	// afresh: the strip moved the outline's vertices and rewrote their texture coordinates and colours, which an update of
+	// only some of them would otherwise take as their starting point and move again.
+	const float EdgeAntiAliasingPixel = GetEdgeAntiAliasingPixel();
+	if (!DreamVisualBatchMeshLocal::IsSameEdgePixel(EdgeAntiAliasingPixel, BuiltEdgeAntiAliasingPixel))
+	{
+		bLocalVertexPositionChanged = true;
+		bUVChanged = true;
+		bColorChanged = true;
+	}
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);
 		DREAMUI_DETAIL_SCOPE(DreamUI_OnUpdateGeometry);
+		if (EdgeAntiAliasingPixel > 0.0f || BuiltEdgeAntiAliasingPixel > 0.0f)
+		{
+			bLocalVertexPositionChanged = true;
+			bUVChanged = true;
+			bColorChanged = true;
+		}
 		UIGeometry->Clear();
 		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 		{
@@ -299,7 +331,14 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		}
 		OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 		ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
-		if (bTriangleChanged)//triangle change mostly means vertex count change, so we need to fill widget property
+		// Last, over what the modifiers made: the outline is that of the mesh as it is drawn.
+		const bool bEdgeStrips = EdgeAntiAliasingPixel > 0.0f
+			&& DreamUIEdgeAntiAliasing::Apply(*UIGeometry, EdgeAntiAliasingPixel).bApplied;
+		// The pixel it was tried with, strips or none: a mesh that cannot take them (not flat) is not tried again each update.
+		BuiltEdgeAntiAliasingPixel = EdgeAntiAliasingPixel;
+		// The strips' vertices are copies, so they carry the record position the copied ones had; but their number moves
+		// with the outline, and a moved vertex count is what a triangle change means here.
+		if (bTriangleChanged || bEdgeStrips)//triangle change mostly means vertex count change, so we need to fill widget property
 		{
 			bWidgetPropertyDataStartPositionChanged = true;
 		}
@@ -518,6 +557,68 @@ void UDreamVisualBatchMesh::RemoveMeshModifier(UDreamMeshModifierBase* InModifie
 {
 	MeshModifierArray.Remove(InModifier);
 	MarkVerticesDirty(true, true, true, true);
+}
+
+void UDreamVisualBatchMesh::SetEdgeAntiAliasing(EDreamEdgeAntiAliasing Value)
+{
+	if (EdgeAntiAliasing != Value)
+	{
+		EdgeAntiAliasing = Value;
+		// The next update compares the pixel it would use with the one it built with, and re-makes the outline.
+		if (GetWidget() != nullptr)
+		{
+			MarkVerticesDirty(false, true, true, true);
+		}
+	}
+}
+
+float UDreamVisualBatchMesh::GetEdgeAntiAliasingPixel()const
+{
+	// By default not under MSAA either: the samples smooth the outline already, and a strip on top only softens it.
+	if (EdgeAntiAliasing == EDreamEdgeAntiAliasing::Off
+		|| (EdgeAntiAliasing == EDreamEdgeAntiAliasing::Default
+			&& (!UDreamUISettings::GetEdgeAntiAliasing() || UDreamUISettings::GetMultisamplesInEffect() > 1))
+		|| !WantsEdgeAntiAliasing())
+	{
+		return 0.0f;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	const UDreamCanvas* RootCanvas = IsValid(Widget) ? Widget->GetRootCanvas() : nullptr;
+	// A world-space canvas has no one size of pixel: it is as large as the camera makes it, and MSAA is what smooths it.
+	if (!IsValid(RootCanvas) || RootCanvas->IsRenderToWorldSpace())
+	{
+		return 0.0f;
+	}
+	// Snapped to the device pixel grid, the outline's vertices would collapse the strip onto it.
+	if (GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy())
+	{
+		return 0.0f;
+	}
+	const FIntPoint ViewportSize = RootCanvas->GetViewportSize();
+	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)
+	{
+		return 0.0f;
+	}
+	// A local unit along each axis of the element, as the canvas's own view projection puts it on the viewport.
+	const FMatrix ViewProjection = RootCanvas->GetViewProjectionMatrix();
+	const FTransform& WorldTransform = Widget->GetWorldTransform();
+	const auto ToPixel = [&](const FVector& InLocal, FVector2D& OutPixel)
+	{
+		const FVector4 Clip = ViewProjection.TransformFVector4(FVector4(WorldTransform.TransformPosition(InLocal), 1.0));
+		if (Clip.W <= UE_KINDA_SMALL_NUMBER)
+		{
+			return false;
+		}
+		OutPixel = FVector2D((Clip.X / Clip.W * 0.5 + 0.5) * ViewportSize.X, (0.5 - Clip.Y / Clip.W * 0.5) * ViewportSize.Y);
+		return true;
+	};
+	FVector2D Origin, AlongY, AlongZ;
+	if (!ToPixel(FVector::ZeroVector, Origin) || !ToPixel(FVector(0.0, 1.0, 0.0), AlongY) || !ToPixel(FVector(0.0, 0.0, 1.0), AlongZ))
+	{
+		return 0.0f;
+	}
+	const double PixelsPerUnit = 0.5 * (FVector2D::Distance(Origin, AlongY) + FVector2D::Distance(Origin, AlongZ));
+	return PixelsPerUnit > UE_KINDA_SMALL_NUMBER && FMath::IsFinite(PixelsPerUnit) ? (float)(1.0 / PixelsPerUnit) : 0.0f;
 }
 
 void UDreamVisualBatchMesh::SetBlendMode(EDreamUIBlendMode Value)

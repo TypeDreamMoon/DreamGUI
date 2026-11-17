@@ -609,6 +609,8 @@ bool FDreamStabilityLineChildCountTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	Line->SetEndType(EDream2DLineRenderer_EndType::ConnectStartAndEnd);
+	// The strip itself is counted, two vertices a point; an edge anti-aliasing strip along its outline would add its own.
+	Line->SetEdgeAntiAliasing(EDreamEdgeAntiAliasing::Off);
 	Rig.PumpFrames(2);
 
 	// Two vertices a point, and a closed strip's six indices a point.

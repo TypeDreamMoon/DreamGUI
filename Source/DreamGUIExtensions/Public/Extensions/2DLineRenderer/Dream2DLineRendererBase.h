@@ -58,6 +58,7 @@ protected:
 
 	//Begin DreamVisualBatchMesh interface
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual bool WantsEdgeAntiAliasing()const override { return true; }
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	//End DreamVisualBatchMesh interface
 

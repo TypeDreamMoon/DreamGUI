@@ -13,6 +13,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **Edge Anti-Aliasing: the outline of a mesh element is smooth without MSAA.** A Polygon, Shape, Ring, Path, PolygonLine,
+  2D line or custom mesh, and an Image drawn as a RoundedBox or radially filled, now draws its outline with a strip one
+  device pixel wide made by its own geometry: the outline's vertices move half a pixel in, keeping the texture in place,
+  and transparent copies stand half a pixel out. A pixel the edge cuts is drawn partly covered; an edge on the pixel grid
+  stays sharp. No render target, no pass, every material and platform. On by default (`bEdgeAntiAliasing` in the
+  project settings), per element with `EdgeAntiAliasing` (`Default`, `On`, `Off`); screen-space and render-target
+  canvases only, world-space canvases keep MSAA, and by default not while MSAA is on, which smooths these outlines
+  already. These elements draw a few more vertices than before (two per outline
+  edge), and their edges are no longer stair-stepped where they were.
+
 - **A one-page cheat sheet and the diagnostics as JSON.** `Docs/cheatsheet.md` puts the `.dui` language on one page and
   ends with the codes that cost authors the most time; it is also the first reference page DreamMCP lists
   (`.skill/reference/cheatsheet.md`), so `DreamGUI.MCP.Reference.*` compiles and lays out its complete files.

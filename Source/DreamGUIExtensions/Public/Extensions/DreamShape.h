@@ -51,6 +51,7 @@ protected:
 	EDreamShapePointUnit PointUnit = EDreamShapePointUnit::Normalized;
 
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged) override;
+	virtual bool WantsEdgeAntiAliasing()const override { return true; }
 
 public:
 	virtual float GetPreferredWidth() const override;
