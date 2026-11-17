@@ -555,6 +555,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A rect block's corner order is documented as it is.** `CornerRadius` runs bottom-right, top-right, top-left,
+  bottom-left, as `ClippingCornerRadius` does; the image brush's comment said a rect block shares CSS's order. The
+  behaviour is unchanged.
 - **A window being resized no longer draws its UI past the edge of its target.** In the frame a window is resized in,
   the target the view draws into already has its new size while the view still has the old one, and DreamGUI drew that
   frame at the view's size: the multisample resolve's scissor reached past the viewport (D3D12's `bScissorRectValid`

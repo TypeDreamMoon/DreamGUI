@@ -200,6 +200,11 @@ protected:
 	// DreamGUI_Hidden on every *UnitMode below, the body's texture mode and texture, and bUniformSetCornerRadius: the
 	// details panel edits each on another property's row -- the unit button beside a value, the Texture/Sprite switch and
 	// picker heading the body's texture group, the lock on the corner radius (FDreamRectBlockCustomization).
+	/**
+	 * The four corners' radii, X bottom-right, Y top-right, Z top-left, W bottom-left -- the order of
+	 * UDreamWidget::ClippingCornerRadius, not CSS's clockwise from the top left. Fractions while
+	 * CornerRadiusUnitMode is Percentage (1 rounds a corner fully), pixels while it is Value.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		FVector4f CornerRadius = FVector4f(0.1f, 0.1f, 0.1f, 0.1f);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (DreamGUI_Hidden))
