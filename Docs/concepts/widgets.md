@@ -121,7 +121,7 @@ write `Raycastable = Disabled` on it, which its children follow through `Inherit
 | `.dui` tag | Class | Module | Draws |
 | --- | --- | --- | --- |
 | `Text` | `UDreamText` | `DreamGUI` | Text; see [Text](text.md) |
-| `Image` | `UDreamImage` | `DreamGUI` | An image brush |
+| `Image` | `UDreamImage` | `DreamGUI` | An image brush; `Tiled` repeats the full image in each complete row and crops the final partial row |
 | `RectBlock` | `UDreamRectBlock` | `DreamGUI` | A procedural block: corner radii, a body, a border, inner and outer shadows, the body and border optionally graded |
 | `Sprite` / `Texture` | `UDreamSprite` / `UDreamTexture` | `DreamGUI` | An atlas sprite / a whole texture |
 | `Empty` | `UDreamVisualEmpty` | `DreamGUI` | Nothing, but takes raycasts |
