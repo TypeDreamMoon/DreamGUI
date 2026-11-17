@@ -167,6 +167,38 @@ bool FDreamCanvasRenderScaleTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamCanvasViewRectFitsTheTargetTest,
+	"DreamGUI.Canvas.AViewIsDrawnWithinTheTargetEvenInTheFrameItsWindowIsResizedIn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamCanvasViewRectFitsTheTargetTest::RunTest(const FString& Parameters)
+{
+	// The ordinary frame: the view is the target, and stays exactly that.
+	FIntRect Fitted = FDreamUIRenderer::FitViewRectToTarget(FIntRect(0, 0, 1600, 900), FIntPoint(1600, 900));
+	TestEqual(TEXT("A view the size of its target is left alone"), Fitted, FIntRect(0, 0, 1600, 900));
+
+	// The frame a window shrinks in, as measured in a -game run: the view still 1600x900, the target already 1338x812.
+	// Unclipped, the resolve's scissor was 1600x900 on a 1338x812 viewport (D3D12's bScissorRectValid ensure).
+	Fitted = FDreamUIRenderer::FitViewRectToTarget(FIntRect(0, 0, 1600, 900), FIntPoint(1338, 812));
+	TestEqual(TEXT("A view larger than its target is cut to the target"), Fitted, FIntRect(0, 0, 1338, 812));
+
+	// A split-screen view sits at an offset in the family's target: cut on the sides past the target, kept on the rest.
+	Fitted = FDreamUIRenderer::FitViewRectToTarget(FIntRect(800, 0, 1600, 900), FIntPoint(1338, 812));
+	TestEqual(TEXT("An offset view keeps its offset and loses what is past the target"), Fitted, FIntRect(800, 0, 1338, 812));
+
+	// Growing is the other direction of the same frame: a view smaller than its target is not stretched to it.
+	Fitted = FDreamUIRenderer::FitViewRectToTarget(FIntRect(0, 0, 1338, 812), FIntPoint(1600, 900));
+	TestEqual(TEXT("A view smaller than its target keeps its own rect"), Fitted, FIntRect(0, 0, 1338, 812));
+
+	// Nothing of the view on the target: one empty answer, which PrepareTargets takes as "draw nothing".
+	TestTrue(TEXT("A view wholly off its target is empty"),
+		FDreamUIRenderer::FitViewRectToTarget(FIntRect(1400, 0, 1600, 900), FIntPoint(1338, 812)).IsEmpty());
+	TestTrue(TEXT("A target with no pixels leaves nothing of the view"),
+		FDreamUIRenderer::FitViewRectToTarget(FIntRect(0, 0, 1600, 900), FIntPoint(0, 0)).IsEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamMeshIndexBudgetTest,
 	"DreamGUI.Canvas.TheDrawCallVertexBudgetFitsTheIndexWidthItIsCompiledWith",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

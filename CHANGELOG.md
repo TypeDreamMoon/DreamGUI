@@ -555,6 +555,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A window being resized no longer draws its UI past the edge of its target.** In the frame a window is resized in,
+  the target the view draws into already has its new size while the view still has the old one, and DreamGUI drew that
+  frame at the view's size: the multisample resolve's scissor reached past the viewport (D3D12's `bScissorRectValid`
+  ensure, on every drag of a window's edge in a game), and a backdrop's copy region could reach past the texture it
+  copies from. A view's rect is now cut to its target before any pass is recorded, and a view with nothing on the target
+  draws nothing that frame.
 - **`check` reads a library as a library.** A file with no root node and no `class` line -- styles, resources and `use`
   lines, such as a preset or `DUI/Theme.dui` -- was reported as DUI2006 by `check`, so `check all: true` (and
   `dui.ps1 check -All`) failed on every library in a project. It is now read, imports included, and not built; a file with
