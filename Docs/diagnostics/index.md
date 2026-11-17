@@ -16,9 +16,9 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI3xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx) | Meaning | Grammatical, but the tree does not hold together: a duplicate id, an unknown type. | 25 |
 | [DUI4xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx) | Values | A value that does not fit the property it is written on. | 9 |
 | [DUI5xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx) | Building the tree | Reflection refused the write, or the target object does not exist. | 25 |
-| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | Compiling | The .dui could not be attached to its Blueprint. | 24 |
+| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | Compiling | The .dui could not be attached to its Blueprint. | 25 |
 | [DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx) | Write-back | The designer's edit could not be put into the text. | 5 |
-| [DUI8xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx) | Layout | A compiled screen, laid out at a viewport size, shows a problem. From DreamMCP's `layout` and `preview` only. | 7 |
+| [DUI8xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx) | Layout | A compiled screen, laid out at a viewport size, shows a problem. From DreamMCP's `layout` and `preview` only. | 10 |
 
 ## Every code
 
@@ -136,6 +136,7 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI6020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6020) | `TwoWayTargetReadOnly` | error | `<-> Path.Member` whose member cannot be written back: read-only, and no `Set<Member>`. |
 | [DUI6021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6021) | `LoopItemMemberNotFound` | error | `Item.Member` that the loop source's element class does not have. |
 | [DUI6022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6022) | `LoopItemRouteMismatch` | error | `-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event. |
+| [DUI6023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6023) | `SourceFileWritePending` | error | The document has edits that could not be written, so compiling the older file was refused. |
 | [DUI6024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6024) | `TranslationDoesNotFit` | warning | With DreamLoc in the project: a language's translation of a text, laid out in the text, is cut or runs past its box. |
 | [DUI6025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6025) | `TranslationGlyphsMissing` | warning | With DreamLoc in the project: a language's translation of a text has characters no face of the text's font has. |
 | [DUI7001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001) | `PatchTargetNotFound` | error | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
