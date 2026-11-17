@@ -127,7 +127,8 @@ foreach ($Name in $Pages.Keys) {
     $Path = Join-Path $Out $Name
     # The notes come from here-strings, whose line ends follow this script's; the pages are LF by now. CRLF for all.
     $Wanted = ($Pages[$Name] -replace "`r`n", "`n") -replace "`n", "`r`n"
-    $Current = if (Test-Path -LiteralPath $Path) { [System.IO.File]::ReadAllText($Path) } else { $null }
+    # Compared with its line ends made CRLF too: a checkout with LF (Linux CI, autocrlf off) is not drift.
+    $Current = if (Test-Path -LiteralPath $Path) { ([System.IO.File]::ReadAllText($Path) -replace "`r`n", "`n") -replace "`n", "`r`n" } else { $null }
     if ($Current -ceq $Wanted) {
         Write-Host "  = reference/$Name" -ForegroundColor DarkGray
         continue
