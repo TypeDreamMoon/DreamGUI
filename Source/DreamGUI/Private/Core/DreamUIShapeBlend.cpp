@@ -5,12 +5,11 @@
 #include "Core/DreamUIClipMask.h"
 #include "Core/Components/DreamRectBlock.h"
 
-using namespace DreamUIShapeBlendLayout;
 
 void FDreamUIShapeBlendMath::Pack(TConstArrayView<FDreamUIShapeBlendMember> InMembers, float InSmoothness, FDreamUIShapeBlendShape& OutShape)
 {
-	const int32 Count = FMath::Min(InMembers.Num(), MaxMembers);
-	OutShape.Texels.Reset(HeaderTexels + Count * MemberTexels);
+	const int32 Count = FMath::Min(InMembers.Num(), DreamUIShapeBlendLayout::MaxMembers);
+	OutShape.Texels.Reset(DreamUIShapeBlendLayout::HeaderTexels + Count * DreamUIShapeBlendLayout::MemberTexels);
 	OutShape.Texels.Add(FVector4f(static_cast<float>(Count), FMath::Max(InSmoothness, 0.0f), 0.0f, 0.0f));
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
@@ -29,7 +28,7 @@ void FDreamUIShapeBlendMath::Pack(TConstArrayView<FDreamUIShapeBlendMember> InMe
 
 float FDreamUIShapeBlendMath::Distance(const FVector4f* InTexels, FVector2f P, FVector4f* OutColor, int32* OutNearest)
 {
-	const int32 Count = FMath::Min(FMath::RoundToInt(InTexels[0].X), MaxMembers);
+	const int32 Count = FMath::Min(FMath::RoundToInt(InTexels[0].X), DreamUIShapeBlendLayout::MaxMembers);
 	const float K = FMath::Max(InTexels[0].Y, 1e-4f);
 	float D = 1e6f;
 	FVector4f Color(0.0f, 0.0f, 0.0f, 0.0f);
@@ -37,7 +36,7 @@ float FDreamUIShapeBlendMath::Distance(const FVector4f* InTexels, FVector2f P, F
 	int32 Nearest = -1;
 	for (int32 Member = 0; Member < Count; ++Member)
 	{
-		const FVector4f* T = InTexels + HeaderTexels + Member * MemberTexels;
+		const FVector4f* T = InTexels + DreamUIShapeBlendLayout::HeaderTexels + Member * DreamUIShapeBlendLayout::MemberTexels;
 		const FVector2f Offset = P - FVector2f(T[1].X, T[1].Y);
 		const FVector2f Local(T[0].X * Offset.X + T[0].Y * Offset.Y, T[0].Z * Offset.X + T[0].W * Offset.Y);
 		const float Di = FDreamUIClipMaskMath::SdRoundRect(Local, FVector2f(T[1].Z, T[1].W), T[2]);
