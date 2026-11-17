@@ -41,6 +41,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
   `compile` and `layout` from the command line for CI and agents with no DreamMCP server. They ship with the plugin.
   See [Working with AI agents](Docs/tools/ai-agents.md).
+- **Presets.** Four `.dui` libraries in the plugin's `DUI/Presets/` -- `Default`, `Ember`, `Signal` and `Paper` -- hold
+  the colours (three steps of surface and of text, one accent, states, rarities), type sizes, spacing, corners and a set
+  of styles (panels, cards, wells, HUD plates, text levels, buttons, tabs, meters). They declare the same names, so a
+  project names its preset once, in a one-line `DUI/Theme.dui`, and changes its whole look there. A library compiles
+  into nothing and writes no asset. See [Presets](Docs/language/presets.md); the static check `preset-names` keeps the
+  four in step.
 
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
