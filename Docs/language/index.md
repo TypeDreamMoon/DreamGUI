@@ -173,3 +173,15 @@ The language reference is organized by topic. These links preserve the section n
 ## A worked example
 
 [Read this section](example.md#a-worked-example).
+
+## Presets
+
+[Read this section](presets.md#presets).
+
+## Building blocks
+
+[Read this section](building-blocks.md#building-blocks).
+
+## Starter screens
+
+[Read this section](starter-screens.md#starter-screens).

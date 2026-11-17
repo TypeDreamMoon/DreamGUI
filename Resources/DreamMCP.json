@@ -10,11 +10,16 @@
   "extensions": [".dui"],
   "sourceRoots": ["DUI"],
   "reference": [
+    { "title": "Cheat sheet: the .dui language on one page (read first)", "path": ".skill/reference/cheatsheet.md" },
     { "title": "The .dui language: everything a screen is written with", "path": ".skill/reference/dui.md" },
     { "title": "A worked example: a settings screen in three files", "path": ".skill/reference/example.md" },
+    { "title": "Presets: the colours, sizes and styles a screen wears, in four looks switched by one line", "path": ".skill/reference/presets.md" },
+    { "title": "Building blocks: the root that fits every viewport, panels, cards, tabs, rows, bars, icons, HUD plates", "path": ".skill/reference/blocks.md" },
+    { "title": "Starter screens: a title menu, an inventory, a HUD, a journal and a results screen to start from", "path": ".skill/reference/screens.md" },
     { "title": "Pitfalls: what compiles and still comes out wrong", "path": ".skill/reference/pitfalls.md" },
     { "title": "Controls: every Native.* control and what it is for", "path": ".skill/reference/controls.md" },
-    { "title": "Diagnostics: every DUInnnn code, what it means and how to fix it", "path": ".skill/reference/diagnostics.md" }
+    { "title": "Diagnostics: every DUInnnn code, what it means and how to fix it", "path": ".skill/reference/diagnostics.md" },
+    { "title": "Diagnostics as JSON: every DUInnnn with its name, severity, stage, meaning, fix and doc link", "path": "Docs/diagnostics/codes.json" }
   ],
   "actions": [
     {

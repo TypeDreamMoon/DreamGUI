@@ -18,6 +18,10 @@ judge the result lives here, next to the tests it runs.
 
 Requirements: PowerShell 7.2 or later (`pwsh`), Python 3.8 or later on `PATH` as `python`, git.
 
+The runner has no machine-specific defaults: set `DREAMGUI_ENGINE` (the engine root) and
+`DREAMGUI_TEST_PROJECT` (the `.uproject` to test, usually the test host's) once, or pass `-Engine` and
+`-Project` on every run. With neither, it stops before doing anything and says which is missing.
+
 ## Running
 
 ```
@@ -29,7 +33,7 @@ pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1 -Project <ProjectDir>
 
 The steps, in order:
 
-1. **Pre-flight.** The engine (`-Engine`, default `F:\UnrealEngine\UE_Moon`) and the project exist;
+1. **Pre-flight.** The engine (`-Engine`, else `$env:DREAMGUI_ENGINE`) and the project exist;
    the report directory is not on drive C (it is nearly full); Python 3 answers; and no Unreal
    editor has this `.uproject` on its command line. An open editor would hold the DLLs the build
    has to replace (LNK1104) and share the project's `Saved` directory with the test run, so the
@@ -62,9 +66,9 @@ The steps, in order:
 
 ### Which project
 
-`-Project` names the `.uproject`. Without it: `$env:DREAMGUI_TEST_PROJECT`, else the test host
-project `I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\DreamGUITestHost.uproject` when it exists,
-else `I:\UnrealProject_Moon\DEV_58\DevTest\DevTest.uproject`. The plugin under test is the DreamGUI
+`-Project` names the `.uproject`. Without it: `$env:DREAMGUI_TEST_PROJECT`; with neither, the runner
+stops before doing anything and says which to pass. Point the variable at the test host's `.uproject`
+(see `Tools/TestHost/`) to make the host the default. The plugin under test is the DreamGUI
 inside that project's `Plugins` directory, which need not be the checkout the runner lives in; the
 banner prints its path, branch and commit.
 
@@ -233,6 +237,10 @@ gets its row in `module-owners.csv` in the same change.
 `engine-private-path` keeps the engine's `Private` and `Internal` folders off every module's include
 path. The renderer used to read the scene depth through the renderer's private headers; it reads it
 through the public scene-texture API now, and a `Build.cs` that adds such a folder again is an error.
+
+`preset-names` compares the preset libraries in `DUI/Presets/` with `Default.dui`: a screen changes its look by naming
+another preset, so a resource or a style one preset declares and another does not is an error in the one that differs.
+`DreamGUI.MCP.Reference.*` then compiles and lays out every reference example under each preset.
 
 `--fix-eol` rewrites the line endings of the files the branch touched to what `.gitattributes` asks
 for, or else to the repository's majority (CRLF: `core.autocrlf=true` keeps the index LF and checks

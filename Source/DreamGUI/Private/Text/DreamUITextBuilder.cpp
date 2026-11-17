@@ -262,6 +262,31 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/**
+	 * While a style's lines are written, everything the bag hears about them is stamped with the file that declares the
+	 * style. The value writers deep below (a tuple of the wrong length, a colour where a number goes, a field a struct does
+	 * not have) report through the bag's own name and cannot be told which file a line came from; without this a line of
+	 * an imported preset was reported at its line number in the screen that wears it. A style with no file of its own (a
+	 * hand-built AST, or one declared in the file being built) leaves the bag as it is.
+	 */
+	struct FScopedStyleSource
+	{
+		FScopedStyleSource(FDreamUIDiagnosticBag& InBag, const FDreamUIStyle* InStyle)
+			: Bag(InBag), Previous(InBag.SourceName)
+		{
+			if (InStyle != nullptr && !InStyle->SourceName.IsEmpty())
+			{
+				Bag.SourceName = InStyle->SourceName;
+			}
+		}
+		~FScopedStyleSource() { Bag.SourceName = Previous; }
+		FScopedStyleSource(const FScopedStyleSource&) = delete;
+		FScopedStyleSource& operator=(const FScopedStyleSource&) = delete;
+	private:
+		FDreamUIDiagnosticBag& Bag;
+		FString Previous;
+	};
+
+	/**
 	 * The built-in tags, and the UDreamVisual each one creates -- now asked of the registry the
 	 * DECLARE_DREAM_GUI_VISUAL macro fills, rather than kept as a list here.
 	 *
@@ -2301,6 +2326,7 @@ namespace DreamUITextBuilderLocal
 			{
 				const FDreamUIComponent& Line = *Entry.Lines[LineIndex];
 				const FString Description = FString::Printf(TEXT("behaviour '%s'"), *Line.ClassName);
+				FScopedStyleSource StyleSource(*InContext.Diagnostics, Entry.LineStyles.IsValidIndex(LineIndex) ? Entry.LineStyles[LineIndex] : nullptr);
 				for (const FDreamUIProperty& Property : Line.Properties)
 				{
 					ApplyProperty(InNode, Property, InWidget, { Candidate }, Description, InContext);
@@ -2373,6 +2399,7 @@ namespace DreamUITextBuilderLocal
 		};
 		for (const FDreamUIStyle* Style : InStyles)
 		{
+			FScopedStyleSource StyleSource(*InContext.Diagnostics, Style);
 			for (const FDreamUIProperty& Property : Style->SlotProperties)
 			{
 				Apply(Property, Style);
@@ -2450,6 +2477,7 @@ namespace DreamUITextBuilderLocal
 
 		for (const FDreamUIStyle* Style : InStyles)
 		{
+			FScopedStyleSource StyleSource(*InContext.Diagnostics, Style);
 			for (const FDreamUIProperty& Property : Style->Properties)
 			{
 				ApplyProperty(InNode, Property, InWidget, Candidates, Description, InContext, true);

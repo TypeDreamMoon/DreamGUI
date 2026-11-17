@@ -31,6 +31,8 @@ protected:
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	/** A round corner and a radial fill's cut are outlines to smooth; a rect's edges sit on the pixel grid. */
+	virtual bool WantsEdgeAntiAliasing()const override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual void PostInitProperties() override;
 	virtual void BeginDestroy() override;

@@ -167,6 +167,80 @@ bool FDreamUIExpressionThunkCompilesTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIExpressionStringCompareTest,
+	"DreamGUI.Text.Expression.StringsCompareWithTheStringLibrary",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/**
+ * `==` and `!=` between strings: their functions are UKismetStringLibrary's, not the math library's, where the thunk
+ * pass used to look for every operator -- so `Kind == "Sword"` was DUI5011, "math library has no EqualEqual_StrStr".
+ * Compiled over a String prop and called on the class default object, each answers what the prop's default says.
+ */
+bool FDreamUIExpressionStringCompareTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("StringCompareFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_StringCompare"),
+		TEXT("props {"),
+		TEXT("    String Kind = \"Sword\""),
+		TEXT("}"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Same {"),
+		TEXT("        bWidgetActive <- Kind == \"Sword\""),
+		TEXT("    }"),
+		TEXT("    Text Other {"),
+		TEXT("        bWidgetActive <- Kind != \"Shield\" && Kind == \"Sword\""),
+		TEXT("    }"),
+		TEXT("    Text Wrong {"),
+		TEXT("        bWidgetActive <- Kind == \"Shield\""),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_StringCompare"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	if (!TestEqual(TEXT("Comparing strings compiles with no error"), Results.NumErrors, 0))
+	{
+		return false;
+	}
+	UObject* Defaults = Fixture.Blueprint->GeneratedClass->GetDefaultObject();
+	const auto Answer = [this, &Fixture, Defaults](const TCHAR* InThunk, bool& OutValue)
+	{
+		UFunction* Thunk = Fixture.Blueprint->GeneratedClass->FindFunctionByName(FName(InThunk));
+		if (!TestTrue(FString::Printf(TEXT("%s exists"), InThunk), Thunk != nullptr && Thunk->GetReturnProperty() != nullptr))
+		{
+			return false;
+		}
+		TArray<uint8> Frame;
+		Frame.SetNumZeroed(Thunk->ParmsSize);
+		Defaults->ProcessEvent(Thunk, Frame.GetData());
+		OutValue = CastFieldChecked<FBoolProperty>(Thunk->GetReturnProperty())->GetPropertyValue_InContainer(Frame.GetData());
+		return true;
+	};
+	bool bSame = false;
+	bool bOther = false;
+	bool bWrong = true;
+	if (Answer(TEXT("__DreamBinding_Same_bWidgetActive"), bSame)
+		&& Answer(TEXT("__DreamBinding_Other_bWidgetActive"), bOther)
+		&& Answer(TEXT("__DreamBinding_Wrong_bWidgetActive"), bWrong))
+	{
+		TestTrue(TEXT("Kind == \"Sword\" is true"), bSame);
+		TestTrue(TEXT("Kind != \"Shield\" && Kind == \"Sword\" is true"), bOther);
+		TestFalse(TEXT("Kind == \"Shield\" is false"), bWrong);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIBindingNumericWidthTest,
 	"DreamGUI.Text.Binding.AFloatSourceBindsADoubleTargetAndAnEnumStillDoesNot",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

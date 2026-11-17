@@ -11,6 +11,7 @@
 #include "MCP/DreamGUIMCPPreviewStats.h"
 #include "MCP/DreamGUIMCPResult.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "AssetCompilingManager.h"
 #include "Containers/Ticker.h"
@@ -900,6 +901,37 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("which says how often it was raised"), Field(WornDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("raised 3 times by this one line")));
 	}
 	TestTrue(FString::Printf(TEXT("and is counted once: %s"), *Field(WornResult, TEXT("summary"))), Field(WornResult, TEXT("summary")).Contains(TEXT("1 error,")));
+
+	// A library -- styles and resources, no root, no class line -- is read and not built, and its having no root is no error.
+	const FString Library = Sources.Write(TEXT("Library"),
+		TEXT("resources {\n    Color Ink = #E6E9F0\n}\n\nstyle Body {\n    FontSize = 18\n    Color = @Ink\n}\n"), /*bClassLine*/ false);
+	const TSharedPtr<FJsonObject> LibraryResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Library)), TEXT("t-5"))));
+	TestEqual(FString::Printf(TEXT("a library checks ok: %s"), *Field(LibraryResult, TEXT("summary"))), Field(LibraryResult, TEXT("outcome")), FString(TEXT("ok")));
+	TestEqual(TEXT("with no diagnostic"), ArrayField(LibraryResult, TEXT("diagnostics")).Num(), 0);
+	TestTrue(TEXT("and is said to be a library"), Field(LibraryResult, TEXT("summary")).Contains(TEXT("a library")));
+	// A class line says the file is a screen: one with no root is still told so.
+	const FString Rootless = Sources.Write(TEXT("Rootless"), TEXT("style Body {\n    FontSize = 18\n}\n"));
+	const TSharedPtr<FJsonObject> RootlessResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Rootless)), TEXT("t-6"))));
+	TestTrue(TEXT("a file with a class line and no root is DUI2006"), Codes(RootlessResult).Contains(TEXT("DUI2006")));
+
+	// A value a library's style gets wrong is reported in the library, at the style's line -- not at that line number of
+	// the screen that wears the style.
+	const FString BadLibrary = Sources.Write(TEXT("BrokenLibrary"),
+		TEXT("// a library\n\nstyle Rounded {\n    CornerRadius = (4, 4)\n}\n"), /*bClassLine*/ false);
+	const FString Wearer = Sources.Write(TEXT("Wearer"), FString::Printf(TEXT("use \"%s\"\n\n%s"), *BadLibrary,
+		*Screen(TEXT("    RectBlock Face : Rounded { }"))));
+	const TSharedPtr<FJsonObject> WearerResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Wearer)), TEXT("t-7"))));
+	const TArray<TSharedPtr<FJsonValue>> WearerDiagnostics = ArrayField(WearerResult, TEXT("diagnostics"));
+	if (TestEqual(FString::Printf(TEXT("the style's wrong value is one error: %s"), *Field(WearerResult, TEXT("summary"))), WearerDiagnostics.Num(), 1))
+	{
+		const TSharedPtr<FJsonObject> Wrong = WearerDiagnostics[0]->AsObject();
+		TestEqual(TEXT("a tuple of the wrong length is DUI4004"), Field(Wrong, TEXT("code")), FString(TEXT("DUI4004")));
+		TestTrue(FString::Printf(TEXT("reported in the library (%s)"), *Field(Wrong, TEXT("file"))), Field(Wrong, TEXT("file")).EndsWith(TEXT("BrokenLibrary.dui")));
+		TestEqual(TEXT("at the style's line"), static_cast<int32>(Number(Wrong, TEXT("line"))), 4);
+	}
 	return true;
 }
 
@@ -956,6 +988,47 @@ bool FDreamMCPCompileTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("errors first"), Field(HeldDiagnostics[0]->AsObject(), TEXT("severity")), FString(TEXT("error")));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPHoldsTheWatcherTest,
+	"DreamGUI.MCP.Actions.TheSourceWatcherWaitsWhileAJobLooksAtAScreen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/**
+ * The source watcher rebuilds a .dui a moment after it changes. When a library a screen used had just changed, its
+ * rebuild landed in the frames a preview spent settling the screen it had put on its stage, reinstanced it there, and
+ * the picture came out empty ("draws almost nothing"); the next preview was fine. The endpoint now builds what the
+ * watcher has queued before a job starts and holds the watcher's queue until it is idle again.
+ */
+bool FDreamMCPHoldsTheWatcherTest::RunTest(const FString& Parameters)
+{
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Held"), Screen(TEXT("    Text Label { Text = \"Hello\" }")));
+	TestFalse(TEXT("idle, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
+
+	const FHttpReply Accepted = Send(Test.Endpoint, TEXT("POST"), TEXT("/call"),
+		CallBody(TEXT("layout"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File)), TEXT("held-1")));
+	if (!TestEqual(TEXT("the layout is accepted"), Accepted.Status, 202))
+	{
+		return false;
+	}
+	TestTrue(TEXT("with a job queued, the watcher's queue is held"), FDreamUISourceWatcher::IsQueueHeld());
+	const FString Job = Field(ParseReply(*this, Accepted), TEXT("job"));
+	FString State;
+	for (int32 Tick = 0; Tick < 2000; ++Tick)
+	{
+		State = Field(ParseJsonObject(Send(Test.Endpoint, TEXT("GET"), TEXT("/jobs/") + Job).Body), TEXT("state"));
+		if (State == TEXT("done") || State == TEXT("failed") || State == TEXT("cancelled"))
+		{
+			break;
+		}
+		TestTrue(TEXT("...and stays held while the job runs"), FDreamUISourceWatcher::IsQueueHeld());
+		Test.Endpoint.TickJobs();
+	}
+	TestEqual(TEXT("the layout finishes"), State, FString(TEXT("done")));
+	TestFalse(TEXT("idle again, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
 	return true;
 }
 
@@ -1301,6 +1374,28 @@ bool FDreamMCPLintAlignTest::RunTest(const FString& Parameters)
 	Gaps.Add(0, TEXT("C"), TEXT("Image"), 100, 234, 300, 50);
 	const TArray<FLayoutIssue> GapIssues = Gaps.Lint();
 	TestTrue(TEXT("a column with gaps of 16 and 18 is reported"), GapIssues.ContainsByPredicate([](const FLayoutIssue& I) { return I.Message.Contains(TEXT("gaps of 16, 18")); }));
+
+	// The parts of an icon drawn from shapes -- a coin and its rim, 2 px apart on purpose -- are not compared: in a box no
+	// bigger than an icon, plain visuals are a drawing. The same two in a card are, and so are two texts in the icon box.
+	FSnapshotBuilder Icon;
+	const int32 Glyph = Icon.Add(0, TEXT("Glyph"), TEXT("Widget"), 100, 100, 64, 64);
+	Icon.Add(Glyph, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Icon.Add(Glyph, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestEqual(TEXT("the parts of a 64 px icon are not reported"), CountCode(Icon.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned), 0);
+
+	FSnapshotBuilder Card;
+	const int32 Box = Card.Add(0, TEXT("Card"), TEXT("Widget"), 100, 100, 400, 200);
+	Card.Add(Box, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Card.Add(Box, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestTrue(TEXT("the same two in a 400 px card are"), CountCode(Card.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
+
+	FSnapshotBuilder Words;
+	const int32 Small = Words.Add(0, TEXT("Badge"), TEXT("Widget"), 100, 100, 120, 60);
+	const int32 First = Words.Add(Small, TEXT("Count"), TEXT("Text"), 108, 110, 40, 20);
+	const int32 Second = Words.Add(Small, TEXT("Unit"), TEXT("Text"), 110, 132, 40, 20);
+	Words.Snapshot.Nodes[First].bHasText = true;
+	Words.Snapshot.Nodes[Second].bHasText = true;
+	TestTrue(TEXT("two texts in a small box still are"), CountCode(Words.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
 	return true;
 }
 
@@ -1376,6 +1471,169 @@ bool FDreamMCPLintContrastTest::RunTest(const FString& Parameters)
 	TArray<FLayoutIssue> Hidden;
 	LintContrast(Toggle.Snapshot, Picture(FColor(47, 52, 63, 255)), FIntPoint(1000, 600), Hidden);
 	TestEqual(TEXT("a control's own part the colour of what is behind it is not reported"), Hidden.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintOutsideFrameTest,
+	"DreamGUI.MCP.Layout.ANodeDrawnOutsideItsPanelIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintOutsideFrameTest::RunTest(const FString& Parameters)
+{
+	FSnapshotBuilder Inside;
+	const int32 Panel = Inside.Add(0, TEXT("Panel"), TEXT("RectBlock"), 100, 100, 400, 300);
+	Inside.Add(Panel, TEXT("Icon"), TEXT("Image"), 120, 120, 100, 100);
+	TestEqual(TEXT("an image inside its panel is not reported"), CountCode(Inside.Lint(), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+
+	const auto Spilling = [](bool bBleed, bool bClip)
+	{
+		FSnapshotBuilder Build;
+		const int32 Card = Build.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 100, 400, 300);
+		Build.Snapshot.Nodes[Card].bClipsChildren = bClip;
+		const int32 Badge = Build.Add(Card, TEXT("Badge"), TEXT("Image"), 380, 120, 200, 100);
+		Build.Snapshot.Nodes[Badge].bBleed = bBleed;
+		return Build.Lint();
+	};
+	const TArray<FLayoutIssue> Issues = Spilling(false, false);
+	TestEqual(TEXT("an image 80 px past the right edge of its card is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutOutsideFrame), 1);
+	TestTrue(TEXT("as a warning that says which edge and how far"), Issues.Num() > 0 && Issues[0].Severity == TEXT("warning")
+		&& Issues[0].Message.Contains(TEXT("80 px past its right edge")) && Issues[0].Hint.Contains(TEXT("@tag Bleed")));
+	TestEqual(TEXT("the same image tagged Bleed is not reported"), CountCode(Spilling(true, false), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+	TestEqual(TEXT("nor inside a card that clips it"), CountCode(Spilling(false, true), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+
+	// An overlay of a plate and its content: the plate, an earlier sibling that fills the parent, is the frame.
+	FSnapshotBuilder Overlay;
+	const int32 Slot = Overlay.Add(0, TEXT("Slot"), TEXT("Widget"), 100, 100, 200, 200);
+	const int32 Plate = Overlay.Add(Slot, TEXT("Plate"), TEXT("RectBlock"), 100, 100, 200, 200);
+	Overlay.Add(Slot, TEXT("Portrait"), TEXT("Image"), 150, 110, 80, 230);
+	Overlay.Add(Slot, TEXT("Glow"), TEXT("RectBlock"), 90, 90, 220, 220);
+	const TArray<FLayoutIssue> Layers = Overlay.Lint();
+	TestEqual(TEXT("a portrait 40 px below the plate it sits on is reported, a glow the size of the plate is not"),
+		CountCode(Layers, EDreamUIDiagnosticCode::LayoutOutsideFrame), 1);
+	TestTrue(TEXT("against the plate"), Layers.Num() > 0 && Layers[0].Other == Plate && Layers[0].Message.Contains(TEXT("40 px below its bottom")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintCoversTextTest,
+	"DreamGUI.MCP.Layout.AVisualDrawnOverTextIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
+{
+	// A title, then what is drawn after it: Order is the index, so what is added later is drawn over.
+	const auto Title = [](FSnapshotBuilder& Build)
+	{
+		const int32 Text = Build.Add(0, TEXT("Title"), TEXT("Text"), 100, 100, 300, 40);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Text];
+		Node.bHasText = true;
+		Node.Text = TEXT("HALCYON");
+		Node.TextNeeded = FVector2f(200.0f, 40.0f);
+		Node.TextSpillX = 1;
+		Node.TextSpillY = 1;
+		return Text;
+	};
+	const auto Count = [](const FSnapshotBuilder& Build) { return CountCode(Build.Lint(), EDreamUIDiagnosticCode::LayoutCoversText); };
+
+	FSnapshotBuilder Over;
+	const int32 Text = Title(Over);
+	const int32 Block = Over.Add(0, TEXT("Accent"), TEXT("RectBlock"), 150, 105, 100, 30);
+	const TArray<FLayoutIssue> Issues = Over.Lint();
+	TestEqual(TEXT("a block drawn after a text, over its letters, is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("naming both"), Issues.Num() > 0 && Issues[0].Node == Block && Issues[0].Other == Text && Issues[0].Message.Contains(TEXT("HALCYON")));
+
+	FSnapshotBuilder Under;
+	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 150, 105, 100, 30);
+	Title(Under);
+	TestEqual(TEXT("the same block drawn before the text is its backplate"), Count(Under), 0);
+
+	FSnapshotBuilder Tagged;
+	Title(Tagged);
+	Tagged.Snapshot.Nodes[Tagged.Add(0, TEXT("Sheen"), TEXT("RectBlock"), 150, 105, 100, 30)].bBleed = true;
+	TestEqual(TEXT("one tagged Bleed is not reported"), Count(Tagged), 0);
+
+	FSnapshotBuilder Pressable;
+	Title(Pressable);
+	Pressable.Snapshot.Nodes[Pressable.Add(0, TEXT("Play"), TEXT("Native.Button"), 150, 105, 100, 30)].bInteractive = true;
+	TestEqual(TEXT("a control is DUI8004's business, not this rule's"), Count(Pressable), 0);
+
+	FSnapshotBuilder Outline;
+	Title(Outline);
+	Outline.Snapshot.Nodes[Outline.Add(0, TEXT("Ring"), TEXT("RectBlock"), 90, 90, 320, 60)].bHollow = true;
+	TestEqual(TEXT("an outline with no body hides nothing"), Count(Outline), 0);
+
+	FSnapshotBuilder Scrim;
+	Title(Scrim);
+	Scrim.Add(0, TEXT("Vignette"), TEXT("RectBlock"), 0, 0, 1000, 600);
+	TestEqual(TEXT("a scrim over the whole screen is about no text in particular"), Count(Scrim), 0);
+
+	FSnapshotBuilder Touching;
+	Title(Touching);
+	Touching.Add(0, TEXT("Rule"), TEXT("RectBlock"), 100, 138, 300, 2);
+	TestEqual(TEXT("a rule touching the text's bottom edge is two things touching"), Count(Touching), 0);
+
+	FSnapshotBuilder Crowding;
+	Title(Crowding);
+	Crowding.Add(0, TEXT("Underline"), TEXT("RectBlock"), 110, 126, 60, 8);
+	const TArray<FLayoutIssue> Crowded = Crowding.Lint();
+	TestEqual(TEXT("a small bar lying in the text's line is reported"), CountCode(Crowded, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("as over its line"), Crowded.Num() > 0 && Crowded[0].Message.Contains(TEXT("over the line of")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintUnbalancedTest,
+	"DreamGUI.MCP.Layout.APanelWithItsContentToOneSideIsAnInfo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintUnbalancedTest::RunTest(const FString& Parameters)
+{
+	const auto Row = [](FSnapshotBuilder& Build, int32 Parent, const TCHAR* Name, double X, double Y, double W, double H)
+	{
+		const int32 Index = Build.Add(Parent, Name, TEXT("Text"), X, Y, W, H);
+		Build.Snapshot.Nodes[Index].bHasText = true;
+		Build.Snapshot.Nodes[Index].Text = Name;
+		return Index;
+	};
+
+	FSnapshotBuilder Top;
+	const int32 Card = Top.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 50, 500, 400);
+	Row(Top, Card, TEXT("Heading"), 120, 70, 460, 40);
+	Row(Top, Card, TEXT("Line one"), 120, 120, 460, 24);
+	Row(Top, Card, TEXT("Line two"), 120, 150, 460, 24);
+	const TArray<FLayoutIssue> Issues = Top.Lint();
+	TestEqual(TEXT("a card whose rows keep to its top third is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutUnbalanced), 1);
+	TestTrue(TEXT("as an info that says where the room is"), Issues.Num() > 0 && Issues[0].Severity == TEXT("info") && Issues[0].Message.Contains(TEXT("bottom")));
+
+	FSnapshotBuilder Even;
+	const int32 Filled = Even.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 50, 500, 400);
+	Row(Even, Filled, TEXT("Heading"), 120, 70, 460, 100);
+	Row(Even, Filled, TEXT("Body"), 120, 190, 460, 100);
+	Row(Even, Filled, TEXT("Footer"), 120, 310, 460, 120);
+	TestEqual(TEXT("a card its rows fill is not reported"), CountCode(Even.Lint(), EDreamUIDiagnosticCode::LayoutUnbalanced), 0);
+
+	// A footer: hints at the left end, buttons at the right, nothing between -- what a bar along an edge looks like.
+	FSnapshotBuilder Bar;
+	const int32 Footer = Bar.Add(0, TEXT("Footer"), TEXT("RectBlock"), 20, 400, 960, 160);
+	Row(Bar, Footer, TEXT("Select"), 30, 460, 80, 40);
+	Row(Bar, Footer, TEXT("Back"), 120, 460, 80, 40);
+	Row(Bar, Footer, TEXT("Apply"), 800, 460, 170, 40);
+	TestEqual(TEXT("a footer with an empty middle is not reported"), CountCode(Bar.Lint(), EDreamUIDiagnosticCode::LayoutUnbalanced), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintSmallTargetWordingTest,
+	"DreamGUI.MCP.Layout.ASizeJustUnderTheMinimumDoesNotReadAsTheMinimum",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintSmallTargetWordingTest::RunTest(const FString& Parameters)
+{
+	FSnapshotBuilder Build;
+	const int32 Drop = Build.Add(0, TEXT("WindowDrop"), TEXT("Native.Dropdown"), 100, 100, 198, 23.7);
+	Build.Snapshot.Nodes[Drop].bInteractive = true;
+	const int32 Exact = Build.Add(0, TEXT("Exact"), TEXT("Native.Button"), 100, 200, 120, 23.995);
+	Build.Snapshot.Nodes[Exact].bInteractive = true;
+	const TArray<FLayoutIssue> Issues = Build.Lint();
+	TestEqual(TEXT("23.7 px is too small, a hair under 24 is not"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutTooSmall), 1);
+	TestTrue(TEXT("and 23.7 reads as 23.7, not as 24"), Issues.Num() > 0 && Issues[0].Message.Contains(TEXT("198x23.7 px")));
 	return true;
 }
 
@@ -1525,9 +1783,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPReferenceExamplesTest,
 
 /**
  * The pages an agent is told to copy from (.skill/reference/, built from Docs/): every code block whose first line is
- * `// DUI/<path>.dui` is a whole file, and the files of one page are one example. Each is written out at its path, its
- * class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a class
- * line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * `// DUI/<path>.dui` is a whole file, and the files of all the pages are one project -- the starter screens place the
+ * building blocks, and both take their look from `DUI/Theme.dui` on the presets page. Each is written out at its path,
+ * its class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a
+ * class line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * When the files name a preset of the plugin's (`Plugin.DreamGUI:Presets/Default.dui`), they are written and checked
+ * again with each of the other presets named instead: every preset declares the same names, so every one must do.
  */
 bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 {
@@ -1563,13 +1824,15 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		return FString::Join(Out, TEXT("; "));
 	};
 
+	// Every page's files, in page order: one project. A path written on two pages must be the same file.
+	TArray<TPair<FString, FString>> Files;
+	TMap<FString, FString> PageOfFile;
 	for (const FString& Page : Pages)
 	{
 		FString Markdown;
 		FFileHelper::LoadFileToString(Markdown, *FPaths::Combine(ReferenceDir, Page));
 		TArray<FString> Lines;
 		Markdown.ParseIntoArrayLines(Lines, /*bCullEmpty*/ false);
-		TArray<TPair<FString, FString>> Files;
 		for (int32 Index = 0; Index < Lines.Num(); ++Index)
 		{
 			if (!Lines[Index].TrimStart().StartsWith(TEXT("```")))
@@ -1589,15 +1852,42 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 				{
 					Body += Lines[Line] + TEXT("\n");
 				}
-				Files.Emplace(First.RightChop(7), Body);
+				const FString Path = First.RightChop(7);
+				if (const FString* Earlier = PageOfFile.Find(Path))
+				{
+					const TPair<FString, FString>* Same = Files.FindByPredicate([&Path](const TPair<FString, FString>& InFile) { return InFile.Key == Path; });
+					TestTrue(FString::Printf(TEXT("DUI/%s on %s is the same file as on %s"), *Path, *Page, **Earlier), Same != nullptr && Same->Value == Body);
+				}
+				else
+				{
+					PageOfFile.Add(Path, Page);
+					Files.Emplace(Path, Body);
+				}
 			}
 			Index = End;
 		}
-		if (Files.IsEmpty())
-		{
-			continue;
-		}
+	}
 
+	// The presets the files can be checked under: the one they name, then every other preset of the plugin's.
+	const FString NamedPreset = TEXT("Plugin.DreamGUI:Presets/Default.dui");
+	TArray<FString> Presets = { FString() };
+	if (Files.ContainsByPredicate([&NamedPreset](const TPair<FString, FString>& InFile) { return InFile.Value.Contains(NamedPreset); }))
+	{
+		TArray<FString> PresetFiles;
+		IFileManager::Get().FindFiles(PresetFiles, *FPaths::Combine(Plugin->GetBaseDir(), TEXT("DUI"), TEXT("Presets"), TEXT("*.dui")), true, false);
+		PresetFiles.Sort();
+		TestTrue(TEXT("the plugin ships the preset the files name"), PresetFiles.Contains(TEXT("Default.dui")));
+		for (const FString& PresetFile : PresetFiles)
+		{
+			if (PresetFile != TEXT("Default.dui"))
+			{
+				Presets.Add(FPaths::GetBaseFilename(PresetFile));
+			}
+		}
+	}
+
+	for (const FString& Preset : Presets)
+	{
 		FScopedSources Sources;
 		TMap<FString, FString> Written;
 		for (const TPair<FString, FString>& File : Files)
@@ -1609,6 +1899,10 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		for (const TPair<FString, FString>& File : Files)
 		{
 			FString Body = File.Value.Replace(TEXT("\nclass /Game/"), *FString::Printf(TEXT("\nclass %s/"), *Sources.PackageRoot));
+			if (!Preset.IsEmpty())
+			{
+				Body = Body.Replace(*NamedPreset, *FString::Printf(TEXT("Plugin.DreamGUI:Presets/%s.dui"), *Preset));
+			}
 			if (Body.Contains(TEXT("\nclass ")))
 			{
 				WithClass.Add(File.Key);
@@ -1634,8 +1928,9 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 			{
 				continue;
 			}
-			++FileCount;
-			const FString What = FString::Printf(TEXT("%s: DUI/%s"), *Page, *File.Key);
+			FileCount += Preset.IsEmpty() ? 1 : 0;
+			const FString What = Preset.IsEmpty() ? FString::Printf(TEXT("%s: DUI/%s"), *PageOfFile[File.Key], *File.Key)
+				: FString::Printf(TEXT("%s: DUI/%s with the %s preset"), *PageOfFile[File.Key], *File.Key, *Preset);
 			const TSharedPtr<FJsonObject> Compiled = Run(TEXT("compile"), Written[File.Key]);
 			const FString CompileProblems = Problems(Compiled);
 			TestTrue(FString::Printf(TEXT("%s compiles (%s)"), *What, *Field(Compiled, TEXT("summary"))), Field(Compiled, TEXT("outcome")) == TEXT("ok"));

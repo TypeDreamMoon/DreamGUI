@@ -28,6 +28,12 @@ namespace DreamGUIMCP
 		/** The `class` line's asset, `/Game/UI/WBP_X`; empty when the file has none. */
 		FString AssetPath;
 		int32 Nodes = 0;
+		/**
+		 * The file is a library: no root node and no `class` line, only styles, resources and `use` lines. It is read
+		 * (its imports included) and not built -- there is no tree -- and its having no root is no error: that is what a
+		 * library is, as for a file reached through `use`. Its styles are checked where a screen wears them.
+		 */
+		bool bLibrary = false;
 		TArray<FDiagnostic> Diagnostics;
 		/**
 		 * Component files the source places whose Blueprints have not been compiled yet, project-relative. Not an error of

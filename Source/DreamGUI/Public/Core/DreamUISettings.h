@@ -193,6 +193,17 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName="MSAA Sample Count"))
 		EDreamUIRendererMSAASampleCount MSAASampleCount = EDreamUIRendererMSAASampleCount::Four;
+	/**
+	 * Anti-alias the outline of every element drawn as a mesh -- polygons, shapes, rings, paths, lines, custom meshes, a
+	 * round-cornered or radially filled image -- with a strip one device pixel wide along it, made by the element's own
+	 * geometry: no render target, no extra pass, and every material and platform takes it. Text and RectBlock smooth
+	 * their edges in the shader already. On screen-space and render-target canvases; a world-space canvas has no one
+	 * size of pixel and is smoothed by MSAA (Anti-Aliasing Method). With MSAA on, the samples smooth these outlines
+	 * already and a strip would only soften them further, so it is left off. An element's own Edge Anti-Aliasing (On or
+	 * Off) overrides all of this.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName = "Edge Anti-Aliasing"))
+		bool bEdgeAntiAliasing = true;
 
 #if WITH_EDITORONLY_DATA
 	static float CacheAutoBatchThreshold;
@@ -211,6 +222,9 @@ public:
 	static int32 ConvertAtlasTextureSizeTypeToSize(const EDreamUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
 	static bool GetUseBuiltInUIShader();
+	static bool GetEdgeAntiAliasing();
+	/** The samples a DreamUI renderer draws with: the MSAA setting, or 1 where it is off or the platform cannot multisample. */
+	static int32 GetMultisamplesInEffect();
 	static bool GetAsyncGlyphRasterization();
 	static int32 GetAsyncGlyphSyncBudgetPerFrame();
 	/** CoverageGlyphSyncBudgetPerFrame, never negative. */

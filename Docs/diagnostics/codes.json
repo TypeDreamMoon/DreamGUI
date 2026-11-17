@@ -1,0 +1,1349 @@
+{
+  "schema": 1,
+  "plugin": "DreamGUI",
+  "prefix": "DUI",
+  "description": "Every DUI diagnostic DreamGUI can report. name is the EDreamUIDiagnosticCode entry; title is the first sentence of meaning, which is the documentation's; fix is given where the documentation has one (the layout codes); doc is the code on the documentation site.",
+  "generatedBy": ".skill/gen-knowledge.ps1 from Docs/diagnostics/index.md and .skill/dream-gui-diagnose/SKILL.md",
+  "stages": [
+    {
+      "range": "DUI1xxx",
+      "title": "Lexer",
+      "meaning": "A character sequence that is not a token.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx"
+    },
+    {
+      "range": "DUI2xxx",
+      "title": "Parser",
+      "meaning": "Tokens that do not form the grammar.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx"
+    },
+    {
+      "range": "DUI3xxx",
+      "title": "Meaning",
+      "meaning": "Grammatical, but the tree does not hold together: a duplicate id, an unknown type.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx"
+    },
+    {
+      "range": "DUI4xxx",
+      "title": "Values",
+      "meaning": "A value that does not fit the property it is written on.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx"
+    },
+    {
+      "range": "DUI5xxx",
+      "title": "Building the tree",
+      "meaning": "Reflection refused the write, or the target object does not exist.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx"
+    },
+    {
+      "range": "DUI6xxx",
+      "title": "Compiling",
+      "meaning": "The .dui could not be attached to its Blueprint.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx"
+    },
+    {
+      "range": "DUI7xxx",
+      "title": "Write-back",
+      "meaning": "The designer's edit could not be put into the text.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx"
+    },
+    {
+      "range": "DUI8xxx",
+      "title": "Layout",
+      "meaning": "A compiled screen, laid out at a viewport size, shows a problem. From DreamMCP's `layout` and `preview` only.",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx"
+    }
+  ],
+  "codes": [
+    {
+      "code": "DUI1001",
+      "name": "UnexpectedCharacter",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A character that cannot begin any token.",
+      "meaning": "A character that cannot begin any token.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1001"
+    },
+    {
+      "code": "DUI1002",
+      "name": "UnterminatedString",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A string that reaches the end of its line without its closing quote.",
+      "meaning": "A string that reaches the end of its line without its closing quote.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1002"
+    },
+    {
+      "code": "DUI1003",
+      "name": "UnterminatedComment",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A `/*` that never reaches `*/`.",
+      "meaning": "A `/*` that never reaches `*/`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1003"
+    },
+    {
+      "code": "DUI1004",
+      "name": "MalformedNumber",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A number that cannot be read",
+      "meaning": "A number that cannot be read: two decimal points, a trailing dot, a unit glued on (`24px`).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1004"
+    },
+    {
+      "code": "DUI1005",
+      "name": "MalformedHexColor",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A colour whose digit count is not 3, 4, 6 or 8.",
+      "meaning": "A colour whose digit count is not 3, 4, 6 or 8.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1005"
+    },
+    {
+      "code": "DUI1006",
+      "name": "IdentifierTooLong",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "A name longer than an `FName` holds.",
+      "meaning": "A name longer than an `FName` holds.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1006"
+    },
+    {
+      "code": "DUI1007",
+      "name": "AssetPathTooLong",
+      "severity": "error",
+      "stage": "Lexer",
+      "title": "An asset path longer than an `FName` holds.",
+      "meaning": "An asset path longer than an `FName` holds.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui1xxx#dui1007"
+    },
+    {
+      "code": "DUI2001",
+      "name": "UnexpectedToken",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A token where the grammar wants something else",
+      "meaning": "A token where the grammar wants something else; the message names both.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2001"
+    },
+    {
+      "code": "DUI2002",
+      "name": "UnclosedBlock",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `{` with no matching `}`.",
+      "meaning": "A `{` with no matching `}`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2002"
+    },
+    {
+      "code": "DUI2003",
+      "name": "UnclosedTuple",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `(` with no matching `)`.",
+      "meaning": "A `(` with no matching `)`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2003"
+    },
+    {
+      "code": "DUI2004",
+      "name": "MissingNodeId",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A node with neither an id nor a block, or an unnamed node with `(was",
+      "meaning": "A node with neither an id nor a block, or an unnamed node with `(was: …)`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2004"
+    },
+    {
+      "code": "DUI2005",
+      "name": "MissingPropertyValue",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A property with no `=` or arrow, or nothing after it.",
+      "meaning": "A property with no `=` or arrow, or nothing after it.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2005"
+    },
+    {
+      "code": "DUI2006",
+      "name": "MalformedRoot",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "No root node in a file compiled into a class, or more than one.",
+      "meaning": "No root node in a file compiled into a class, or more than one.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2006"
+    },
+    {
+      "code": "DUI2007",
+      "name": "MalformedClassDeclaration",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "`class` twice, with an empty path, or inside a node.",
+      "meaning": "`class` twice, with an empty path, or inside a node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2007"
+    },
+    {
+      "code": "DUI2008",
+      "name": "MalformedWasClause",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "`(was",
+      "meaning": "`(was: …)` holding something other than one id.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2008"
+    },
+    {
+      "code": "DUI2009",
+      "name": "MalformedKeyOverride",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "`@key(…)` holding something other than one string, or after a value that is not a string.",
+      "meaning": "`@key(…)` holding something other than one string, or after a value that is not a string.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2009"
+    },
+    {
+      "code": "DUI2010",
+      "name": "MalformedLoopHeader",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `for` / `each` header that is not `<keyword> Var in Source` or `Source()`.",
+      "meaning": "A `for` / `each` header that is not `<keyword> Var in Source` or `Source()`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2010"
+    },
+    {
+      "code": "DUI2011",
+      "name": "MalformedBindingExpression",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "The right side of `<-`, `<->` or an `emit`'s arguments that do not parse.",
+      "meaning": "The right side of `<-`, `<->` or an `emit`'s arguments that do not parse.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2011"
+    },
+    {
+      "code": "DUI2012",
+      "name": "ImportFailed",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `use` that could not be honoured",
+      "meaning": "A `use` that could not be honoured: no such file, unreadable, does not parse, or a cycle.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2012"
+    },
+    {
+      "code": "DUI2013",
+      "name": "NestingTooDeep",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "Blocks or parentheses nested deeper than 256.",
+      "meaning": "Blocks or parentheses nested deeper than 256.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2013"
+    },
+    {
+      "code": "DUI2014",
+      "name": "MalformedTimeline",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `timeline` block or line that is not the grammar.",
+      "meaning": "A `timeline` block or line that is not the grammar.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2014"
+    },
+    {
+      "code": "DUI2015",
+      "name": "MalformedUseDeclaration",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "`use … as` without a name, a keyword as the name, or a class path without `as`.",
+      "meaning": "`use … as` without a name, a keyword as the name, or a class path without `as`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2015"
+    },
+    {
+      "code": "DUI2016",
+      "name": "MalformedPropsBlock",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `props` line that is not `Type Name` or `Type Name = value`, or `props` inside a node.",
+      "meaning": "A `props` line that is not `Type Name` or `Type Name = value`, or `props` inside a node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2016"
+    },
+    {
+      "code": "DUI2017",
+      "name": "MalformedEventsBlock",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "An `events` entry that is not `Name` or `Name(Type Param, …)`, or `events` inside a node.",
+      "meaning": "An `events` entry that is not `Name` or `Name(Type Param, …)`, or `events` inside a node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2017"
+    },
+    {
+      "code": "DUI2018",
+      "name": "MalformedConditional",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "An `if` without its condition or block, an `else` with no `if`, or a branch holding something other than widgets.",
+      "meaning": "An `if` without its condition or block, an `else` with no `if`, or a branch holding something other than widgets.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2018"
+    },
+    {
+      "code": "DUI2019",
+      "name": "MalformedSlotDeclaration",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A slot with `default` twice, or a block that both declares and fills",
+      "meaning": "A slot with `default` twice, or a block that both declares and fills: a declaration holds components, properties, slot lines and `@tag` lines, and a fill holds widgets only (a `@tag` line beside them included).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019"
+    },
+    {
+      "code": "DUI2020",
+      "name": "MalformedRows",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `rows` table that does not read",
+      "meaning": "A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020"
+    },
+    {
+      "code": "DUI2021",
+      "name": "MalformedViewModelsBlock",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `viewmodels` line that is not `Type Name`, `= new`, `= global [\"Name\"]` or `= parent [\"Name\"]` (an empty `\"\"` name included), or a `viewmodels` block inside a node.",
+      "meaning": "A `viewmodels` line that is not `Type Name`, `= new`, `= global [\"Name\"]` or `= parent [\"Name\"]` (an empty `\"\"` name included), or a `viewmodels` block inside a node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021"
+    },
+    {
+      "code": "DUI2022",
+      "name": "MalformedTextAnnotation",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "`@note(…)` not holding one string, `@max(…)` not one whole number of at least 1, either after a value that is not a string, an annotation written twice, or `@noloc` with `@key`, `@note` or `@max`.",
+      "meaning": "`@note(…)` not holding one string, `@max(…)` not one whole number of at least 1, either after a value that is not a string, an annotation written twice, or `@noloc` with `@key`, `@note` or `@max`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2022"
+    },
+    {
+      "code": "DUI2023",
+      "name": "MalformedContainer",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A list (`[a, b]`) or a map (`{ key",
+      "meaning": "A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. A struct's first entry may go without a key.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023"
+    },
+    {
+      "code": "DUI2024",
+      "name": "MalformedTag",
+      "severity": "error",
+      "stage": "Parser",
+      "title": "A `@tag` line that does not read",
+      "meaning": "A `@tag` line that does not read: nothing after `@tag`, a number or a string, two names with no comma between them, a trailing comma. Also a `@tag` line in a `style`, or directly in a `for` / `each` body.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2024"
+    },
+    {
+      "code": "DUI3001",
+      "name": "DuplicateNodeId",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two nodes share an id.",
+      "meaning": "Two nodes share an id.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001"
+    },
+    {
+      "code": "DUI3002",
+      "name": "InvalidNodeId",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "An id that is not an identifier, starts with a digit, or is a keyword.",
+      "meaning": "An id that is not an identifier, starts with a digit, or is a keyword.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002"
+    },
+    {
+      "code": "DUI3003",
+      "name": "UnknownNodeType",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "A type that is no tag, container, alias, registered widget or path.",
+      "meaning": "A type that is no tag, container, alias, registered widget or path.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3003"
+    },
+    {
+      "code": "DUI3004",
+      "name": "UnknownStyle",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "`",
+      "meaning": "`: Name` naming no style this file sees; each unknown name in a clause is reported.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3004"
+    },
+    {
+      "code": "DUI3005",
+      "name": "DuplicateStyle",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two styles of one name in one file.",
+      "meaning": "Two styles of one name in one file.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3005"
+    },
+    {
+      "code": "DUI3006",
+      "name": "UnknownBehaviourClass",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "`+ Name` naming nothing a widget can carry.",
+      "meaning": "`+ Name` naming nothing a widget can carry.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3006"
+    },
+    {
+      "code": "DUI3008",
+      "name": "ShadowedLoopVariable",
+      "severity": "warning",
+      "stage": "Meaning",
+      "title": "A loop variable that hides an enclosing loop's (a warning).",
+      "meaning": "A loop variable that hides an enclosing loop's (a warning).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3008"
+    },
+    {
+      "code": "DUI3009",
+      "name": "ParentRefusedChild",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "A parent that will not take this child",
+      "meaning": "A parent that will not take this child: a full content widget, a named slot filled twice.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3009"
+    },
+    {
+      "code": "DUI3010",
+      "name": "RenameOldIdStillInUse",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "`(was",
+      "meaning": "`(was: X)` while X is still an id in the file.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3010"
+    },
+    {
+      "code": "DUI3011",
+      "name": "DuplicateWasId",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two nodes claim `(was",
+      "meaning": "Two nodes claim `(was: X)`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3011"
+    },
+    {
+      "code": "DUI3012",
+      "name": "SelfRename",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "`(was",
+      "meaning": "`(was: X)` on the node called X.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3012"
+    },
+    {
+      "code": "DUI3013",
+      "name": "RenameGraphReferenceAmbiguous",
+      "severity": "warning",
+      "stage": "Meaning",
+      "title": "The old id is also another member's name, so graph references are not moved (a warning).",
+      "meaning": "The old id is also another member's name, so graph references are not moved (a warning).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3013"
+    },
+    {
+      "code": "DUI3014",
+      "name": "DuplicateResource",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two resource entries of one name.",
+      "meaning": "Two resource entries of one name.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3014"
+    },
+    {
+      "code": "DUI3015",
+      "name": "StyleCycle",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "A style that inherits itself through its bases.",
+      "meaning": "A style that inherits itself through its bases.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3015"
+    },
+    {
+      "code": "DUI3016",
+      "name": "DuplicateTimeline",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two timelines of one name.",
+      "meaning": "Two timelines of one name.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3016"
+    },
+    {
+      "code": "DUI3017",
+      "name": "DuplicateComponentAlias",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two `use … as` lines give one name.",
+      "meaning": "Two `use … as` lines give one name.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3017"
+    },
+    {
+      "code": "DUI3018",
+      "name": "AliasShadowsBuiltIn",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "A `use … as` name that is a tag or a container.",
+      "meaning": "A `use … as` name that is a tag or a container.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3018"
+    },
+    {
+      "code": "DUI3019",
+      "name": "DuplicateProp",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two `props` lines declare one name.",
+      "meaning": "Two `props` lines declare one name.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3019"
+    },
+    {
+      "code": "DUI3020",
+      "name": "DuplicateEvent",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two `events` entries of one name, or one parameter twice.",
+      "meaning": "Two `events` entries of one name, or one parameter twice.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3020"
+    },
+    {
+      "code": "DUI3021",
+      "name": "UnknownNamespace",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "`ns.Name` whose `ns` no `use … as ns` declares.",
+      "meaning": "`ns.Name` whose `ns` no `use … as ns` declares.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3021"
+    },
+    {
+      "code": "DUI3022",
+      "name": "MultipleDefaultSlots",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "More than one `slot … default` in one file.",
+      "meaning": "More than one `slot … default` in one file.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3022"
+    },
+    {
+      "code": "DUI3023",
+      "name": "DuplicateRowKey",
+      "severity": "warning",
+      "stage": "Meaning",
+      "title": "Warning.",
+      "meaning": "Warning. Two rows of a `rows` table whose first values make the same id; the second's id then moves with the order.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3023"
+    },
+    {
+      "code": "DUI3024",
+      "name": "DuplicateViewModel",
+      "severity": "error",
+      "stage": "Meaning",
+      "title": "Two `viewmodels` entries of one name.",
+      "meaning": "Two `viewmodels` entries of one name.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3024"
+    },
+    {
+      "code": "DUI3025",
+      "name": "StyleAlreadyApplied",
+      "severity": "warning",
+      "stage": "Meaning",
+      "title": "Warning.",
+      "meaning": "Warning. A style named in a clause that an earlier name of the clause has already applied, as itself or as a base: naming it again changes nothing.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3025"
+    },
+    {
+      "code": "DUI4001",
+      "name": "UnknownProperty",
+      "severity": "error",
+      "stage": "Values",
+      "title": "No property of that name",
+      "meaning": "No property of that name; the nearest one is suggested. `@slot Size <- …` is one: `Size` is a shorthand for two properties, and a binding names `MinDesiredSize` and `MaxDesiredSize` separately.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4001"
+    },
+    {
+      "code": "DUI4002",
+      "name": "UnknownPropertyPathSegment",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A dotted path whose head resolves and whose tail does not, or a struct's field map naming a field the struct does not have.",
+      "meaning": "A dotted path whose head resolves and whose tail does not, or a struct's field map naming a field the struct does not have.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4002"
+    },
+    {
+      "code": "DUI4003",
+      "name": "ValueTypeMismatch",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A value whose shape cannot be the property's type.",
+      "meaning": "A value whose shape cannot be the property's type.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4003"
+    },
+    {
+      "code": "DUI4004",
+      "name": "TupleArityMismatch",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A tuple with the wrong number of elements.",
+      "meaning": "A tuple with the wrong number of elements.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4004"
+    },
+    {
+      "code": "DUI4005",
+      "name": "UnknownEnumValue",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A word the property's enum does not declare.",
+      "meaning": "A word the property's enum does not declare.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4005"
+    },
+    {
+      "code": "DUI4006",
+      "name": "PropertyNotWritable",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A property text cannot write",
+      "meaning": "A property text cannot write: transient, deprecated, part of the object graph, a delegate.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4006"
+    },
+    {
+      "code": "DUI4007",
+      "name": "UnknownResource",
+      "severity": "error",
+      "stage": "Values",
+      "title": "`@Name` naming no resource entry.",
+      "meaning": "`@Name` naming no resource entry.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4007"
+    },
+    {
+      "code": "DUI4008",
+      "name": "ResourceTypeMismatch",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A resource whose value is not its declared type, or a non-`Asset` resource used as a node type.",
+      "meaning": "A resource whose value is not its declared type, or a non-`Asset` resource used as a node type.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4008"
+    },
+    {
+      "code": "DUI4009",
+      "name": "ContainerTypeMismatch",
+      "severity": "error",
+      "stage": "Values",
+      "title": "A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids).",
+      "meaning": "A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids). A map entry with no key, on a real map or on a struct with no primary field, is one too.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4009"
+    },
+    {
+      "code": "DUI5001",
+      "name": "AssetNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An asset or class path that does not load.",
+      "meaning": "An asset or class path that does not load.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5001"
+    },
+    {
+      "code": "DUI5002",
+      "name": "NoVisualForProperty",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A property of a visual the node's type does not create.",
+      "meaning": "A property of a visual the node's type does not create.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5002"
+    },
+    {
+      "code": "DUI5003",
+      "name": "NoPanelSlotForProperty",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A slot line on a node whose parent lays out no panel.",
+      "meaning": "A slot line on a node whose parent lays out no panel.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5003"
+    },
+    {
+      "code": "DUI5004",
+      "name": "BindingFunctionNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A bound function the class does not have, or one that takes parameters.",
+      "meaning": "A bound function the class does not have, or one that takes parameters.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5004"
+    },
+    {
+      "code": "DUI5005",
+      "name": "BindingTargetHasNoSetter",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A bound property with no setter.",
+      "meaning": "A bound property with no setter.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5005"
+    },
+    {
+      "code": "DUI5006",
+      "name": "NotAUserWidgetClass",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A node typed by a class that is not a concrete DreamUI user widget.",
+      "meaning": "A node typed by a class that is not a concrete DreamUI user widget.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5006"
+    },
+    {
+      "code": "DUI5007",
+      "name": "LoopNotExpanded",
+      "severity": "warning",
+      "stage": "Building the tree",
+      "title": "A loop built by a caller with nowhere to record it, and skipped (a warning).",
+      "meaning": "A loop built by a caller with nowhere to record it, and skipped (a warning).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5007"
+    },
+    {
+      "code": "DUI5008",
+      "name": "BindingTargetNotSupported",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A binding on something no binding can name",
+      "meaning": "A binding on something no binding can name: a slot, a container, a field of a struct.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5008"
+    },
+    {
+      "code": "DUI5009",
+      "name": "NothingToBuild",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "The tree had no root",
+      "meaning": "The tree had no root; the parser said why.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5009"
+    },
+    {
+      "code": "DUI5010",
+      "name": "EventNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "`X -> …` where X is not an event of the destination.",
+      "meaning": "`X -> …` where X is not an event of the destination.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5010"
+    },
+    {
+      "code": "DUI5011",
+      "name": "BindingExpressionUnsupported",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An expression the compiler cannot turn into a function.",
+      "meaning": "An expression the compiler cannot turn into a function.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5011"
+    },
+    {
+      "code": "DUI5012",
+      "name": "EachMisplaced",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An `each` at the root, nested, without a list view, or without exactly one template.",
+      "meaning": "An `each` at the root, nested, without a list view, or without exactly one template.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5012"
+    },
+    {
+      "code": "DUI5013",
+      "name": "NodeReferenceNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A node id written as a value that names no node in the file.",
+      "meaning": "A node id written as a value that names no node in the file.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5013"
+    },
+    {
+      "code": "DUI5014",
+      "name": "LoopBodyBindingUnsupported",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An expression or a `<->` inside a loop body.",
+      "meaning": "An expression or a `<->` inside a loop body.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5014"
+    },
+    {
+      "code": "DUI5015",
+      "name": "TimelineTargetNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A track path that names no node.",
+      "meaning": "A track path that names no node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5015"
+    },
+    {
+      "code": "DUI5016",
+      "name": "TimelinePropertyNotAnimatable",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A track property no animation track can drive.",
+      "meaning": "A track property no animation track can drive.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5016"
+    },
+    {
+      "code": "DUI5017",
+      "name": "UnknownEaseName",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An `ease` name the tween library does not have.",
+      "meaning": "An `ease` name the tween library does not have.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5017"
+    },
+    {
+      "code": "DUI5018",
+      "name": "ComponentAliasUnresolved",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "An alias that names no class",
+      "meaning": "An alias that names no class: no `class` line and no Blueprint for the file, or a path that loads nothing.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5018"
+    },
+    {
+      "code": "DUI5019",
+      "name": "SlotFillOutsideComponent",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "`slot Name { … }` filling a slot under a node that is not a component instance.",
+      "meaning": "`slot Name { … }` filling a slot under a node that is not a component instance.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5019"
+    },
+    {
+      "code": "DUI5020",
+      "name": "UnknownSlotToFill",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A fill naming a slot the component does not declare.",
+      "meaning": "A fill naming a slot the component does not declare.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5020"
+    },
+    {
+      "code": "DUI5021",
+      "name": "ForMisplaced",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A `for` at the root, in another loop, in a host with fixed room, or without exactly one template.",
+      "meaning": "A `for` at the root, in another loop, in a host with fixed room, or without exactly one template.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5021"
+    },
+    {
+      "code": "DUI5022",
+      "name": "SecondLayoutContainer",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A second layout container on one node.",
+      "meaning": "A second layout container on one node.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5022"
+    },
+    {
+      "code": "DUI5023",
+      "name": "MemberPathNotFound",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A member path segment its class does not have, or does not show to Blueprint (an UnrealSharp property needs `BlueprintReadOnly` or `BlueprintReadWrite`).",
+      "meaning": "A member path segment its class does not have, or does not show to Blueprint (an UnrealSharp property needs `BlueprintReadOnly` or `BlueprintReadWrite`).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5023"
+    },
+    {
+      "code": "DUI5024",
+      "name": "MemberPathThroughNonObject",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "A member path that goes on past a value that is not an object.",
+      "meaning": "A member path that goes on past a value that is not an object.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5024"
+    },
+    {
+      "code": "DUI5025",
+      "name": "RouteOperatorMismatch",
+      "severity": "error",
+      "stage": "Building the tree",
+      "title": "`+=` on a single-cast delegate, or `=` on a multicast event.",
+      "meaning": "`+=` on a single-cast delegate, or `=` on a multicast event.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5025"
+    },
+    {
+      "code": "DUI6001",
+      "name": "SourceFileUnreadable",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "The Blueprint's Source File does not exist or cannot be read.",
+      "meaning": "The Blueprint's Source File does not exist or cannot be read.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6001"
+    },
+    {
+      "code": "DUI6002",
+      "name": "EmptyTree",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "The file parsed and produced no tree, and no other error says why.",
+      "meaning": "The file parsed and produced no tree, and no other error says why. It is not reported beside another error: a node naming a type nothing resolves fails with its own code, and that is the whole report.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6002"
+    },
+    {
+      "code": "DUI6003",
+      "name": "ClassPathMismatch",
+      "severity": "warning",
+      "stage": "Compiling",
+      "title": "The `class` line names another Blueprint than the one compiling (a warning).",
+      "meaning": "The `class` line names another Blueprint than the one compiling (a warning).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6003"
+    },
+    {
+      "code": "DUI6004",
+      "name": "EventHandlerNotFound",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`-> Handler` naming a function the class does not have.",
+      "meaning": "`-> Handler` naming a function the class does not have.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6004"
+    },
+    {
+      "code": "DUI6005",
+      "name": "EventHandlerSignatureMismatch",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A handler whose parameters are not the event's.",
+      "meaning": "A handler whose parameters are not the event's.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6005"
+    },
+    {
+      "code": "DUI6006",
+      "name": "EachSourceNotFound",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A loop source the class has neither as a function nor as a variable.",
+      "meaning": "A loop source the class has neither as a function nor as a variable.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6006"
+    },
+    {
+      "code": "DUI6007",
+      "name": "EachSourceNotObjectArray",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A loop source that is not an array of objects.",
+      "meaning": "A loop source that is not an array of objects.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6007"
+    },
+    {
+      "code": "DUI6008",
+      "name": "PropTypeUnknown",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A `props` or `events` type with no Blueprint pin.",
+      "meaning": "A `props` or `events` type with no Blueprint pin.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6008"
+    },
+    {
+      "code": "DUI6009",
+      "name": "PropNameTaken",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A `props` name another member already has with another type, or a widget's id.",
+      "meaning": "A `props` name another member already has with another type, or a widget's id.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6009"
+    },
+    {
+      "code": "DUI6010",
+      "name": "EmitUnknownEvent",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`emit Name` of an event this file does not declare.",
+      "meaning": "`emit Name` of an event this file does not declare.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6010"
+    },
+    {
+      "code": "DUI6011",
+      "name": "EmitArgumentMismatch",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`emit` arguments that are not the event's parameters.",
+      "meaning": "`emit` arguments that are not the event's parameters.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6011"
+    },
+    {
+      "code": "DUI6012",
+      "name": "EmitRouteUnsupported",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "An `emit` where no handler can be generated",
+      "meaning": "An `emit` where no handler can be generated: in a loop body, or for an event Blueprints cannot carry.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6012"
+    },
+    {
+      "code": "DUI6013",
+      "name": "PropDefaultInvalid",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A `props` default its type cannot hold.",
+      "meaning": "A `props` default its type cannot hold.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6013"
+    },
+    {
+      "code": "DUI6014",
+      "name": "EventNameTaken",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "An `events` name another member of the class already answers to.",
+      "meaning": "An `events` name another member of the class already answers to.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6014"
+    },
+    {
+      "code": "DUI6015",
+      "name": "ViewModelClassUnknown",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A `viewmodels` type that names no class, or two.",
+      "meaning": "A `viewmodels` type that names no class, or two.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6015"
+    },
+    {
+      "code": "DUI6016",
+      "name": "ViewModelNameTaken",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "A `viewmodels` name another member of the class already answers to.",
+      "meaning": "A `viewmodels` name another member of the class already answers to.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6016"
+    },
+    {
+      "code": "DUI6017",
+      "name": "ViewModelSourceInvalid",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`= new` of an abstract class.",
+      "meaning": "`= new` of an abstract class.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6017"
+    },
+    {
+      "code": "DUI6018",
+      "name": "RouteMemberFunctionNotFound",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`-> Path.Func` whose function the object's class does not have, or does not let Blueprint call.",
+      "meaning": "`-> Path.Func` whose function the object's class does not have, or does not let Blueprint call.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6018"
+    },
+    {
+      "code": "DUI6019",
+      "name": "RouteArgumentMismatch",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`-> Path.Func` whose arguments do not fit the function, or, without parentheses, whose function takes something other than nothing or what the event sends.",
+      "meaning": "`-> Path.Func` whose arguments do not fit the function, or, without parentheses, whose function takes something other than nothing or what the event sends.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6019"
+    },
+    {
+      "code": "DUI6020",
+      "name": "TwoWayTargetReadOnly",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`<-> Path.Member` whose member cannot be written back",
+      "meaning": "`<-> Path.Member` whose member cannot be written back: read-only, and no `Set<Member>`.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6020"
+    },
+    {
+      "code": "DUI6021",
+      "name": "LoopItemMemberNotFound",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`Item.Member` that the loop source's element class does not have.",
+      "meaning": "`Item.Member` that the loop source's element class does not have.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6021"
+    },
+    {
+      "code": "DUI6022",
+      "name": "LoopItemRouteMismatch",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "`-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event.",
+      "meaning": "`-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6022"
+    },
+    {
+      "code": "DUI6023",
+      "name": "SourceFileWritePending",
+      "severity": "error",
+      "stage": "Compiling",
+      "title": "The document has edits that could not be written, so compiling the older file was refused.",
+      "meaning": "The document has edits that could not be written, so compiling the older file was refused.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6023"
+    },
+    {
+      "code": "DUI6024",
+      "name": "TranslationDoesNotFit",
+      "severity": "warning",
+      "stage": "Compiling",
+      "title": "With DreamLoc in the project",
+      "meaning": "With DreamLoc in the project: a language's translation of a text, laid out in the text, is cut or runs past its box.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6024"
+    },
+    {
+      "code": "DUI6025",
+      "name": "TranslationGlyphsMissing",
+      "severity": "warning",
+      "stage": "Compiling",
+      "title": "With DreamLoc in the project",
+      "meaning": "With DreamLoc in the project: a language's translation of a text has characters no face of the text's font has.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6025"
+    },
+    {
+      "code": "DUI7001",
+      "name": "PatchTargetNotFound",
+      "severity": "error",
+      "stage": "Write-back",
+      "title": "A designer edit with no home in the file",
+      "meaning": "A designer edit with no home in the file: an unknown node, a bound property, a slot with no block.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001"
+    },
+    {
+      "code": "DUI7002",
+      "name": "SourceFileChangedUnderEdit",
+      "severity": "error",
+      "stage": "Write-back",
+      "title": "The file changed under a pending edit",
+      "meaning": "The file changed under a pending edit; nothing was written.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002"
+    },
+    {
+      "code": "DUI7003",
+      "name": "PatchValueNotRepresentable",
+      "severity": "error",
+      "stage": "Write-back",
+      "title": "A value the language cannot spell (a non-finite number)",
+      "meaning": "A value the language cannot spell (a non-finite number); its line is left alone.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003"
+    },
+    {
+      "code": "DUI7004",
+      "name": "PatchSyntaxNotWritable",
+      "severity": "error",
+      "stage": "Write-back",
+      "title": "An edit to something no line spells",
+      "meaning": "An edit to something no line spells: a visibility an `if` decides, a shorthand that cannot be rewritten, a change to `Tags` that no line can take (written both ways, or a name an `@tag` line cannot hold).",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004"
+    },
+    {
+      "code": "DUI7005",
+      "name": "PatchStyleComponentNotWritable",
+      "severity": "error",
+      "stage": "Write-back",
+      "title": "An edit to a value a style's `+` line gives the node, from a caller that writes no override.",
+      "meaning": "An edit to a value a style's `+` line gives the node, from a caller that writes no override. The designer writes it as a `+` line on the node instead; a script can add that line, or change the style.",
+      "fix": null,
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005"
+    },
+    {
+      "code": "DUI8001",
+      "name": "LayoutOffScreen",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "What can show of a node reaches more than 1 px past an edge of the viewport, or lies wholly outside it",
+      "meaning": "What can show of a node reaches more than 1 px past an edge of the viewport, or lies wholly outside it; or a text that does not fit its box spills off the screen where nothing clips it. A clipped part does not count; one finding per branch. Most often: a fixed `AnchoredPosition` measured from the centre, or a box with more children than room.",
+      "fix": "anchor the node to the edge it belongs to (`AnchorMin`/`AnchorMax`/`Pivot` 0 or 1) and keep its position small; or give the box room",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8001"
+    },
+    {
+      "code": "DUI8002",
+      "name": "LayoutTextOverflow",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "A text cut short by its overflow policy, or laid out past its box",
+      "meaning": "A text cut short by its overflow policy, or laid out past its box; the message gives the size it needs and the box it has. Most often: a fixed `SizeDelta` too small for the words; a text in a box that gives it no width.",
+      "fix": "a bigger box, `@slot SizeRule = Auto`, `WrapTextAt = <the width you want>`, or a smaller `FontSize`",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002"
+    },
+    {
+      "code": "DUI8003",
+      "name": "LayoutTooSmall",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "A node that draws or can be pressed under 1 px wide or high (an info for a plain widget with children), or a pressable control under 24 x 24 px.",
+      "meaning": "A node that draws or can be pressed under 1 px wide or high (an info for a plain widget with children), or a pressable control under 24 x 24 px. Most often: a node with no `SizeDelta` and point anchors; a button sized by its content only.",
+      "fix": "`AnchorData.SizeDelta = (w, h)`, anchors that stretch, `MinDesiredSize`; buttons at least 24 x 24 px (48 px tall reads well)",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003"
+    },
+    {
+      "code": "DUI8004",
+      "name": "LayoutOverlappingControls",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "Two pressable controls in one canvas overlapping on the screen by 2 px or more on both axes, wherever they are in the tree",
+      "meaning": "Two pressable controls in one canvas overlapping on the screen by 2 px or more on both axes, wherever they are in the tree: a press there reaches only the upper one. A small control lying on one four times its area or more is layered on purpose and not reported. Most often: positions written by hand.",
+      "fix": "put them in a `+ VerticalBox`/`+ HorizontalBox` with `Spacing`",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004"
+    },
+    {
+      "code": "DUI8005",
+      "name": "LayoutNearlyAligned",
+      "severity": "info",
+      "stage": "Layout",
+      "title": "Siblings whose left, right, top or bottom edges or centres differ by more than 0.5 and at most 3 px, or a row or column of three or more whose gaps do.",
+      "meaning": "Siblings whose left, right, top or bottom edges or centres differ by more than 0.5 and at most 3 px, or a row or column of three or more whose gaps do. The plain visuals inside a box no bigger than 128 px (the parts of an icon drawn from shapes) are not compared. Most often: two hand-written positions or sizes a pixel or two apart.",
+      "fix": "give them the same value, or let one box align them",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005"
+    },
+    {
+      "code": "DUI8006",
+      "name": "LayoutBreaksAtSize",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "DUI8001 to DUI8004, DUI8008 or DUI8009 at one of the further viewport sizes `layout` was given (`sizes`), and not at the first.",
+      "meaning": "DUI8001 to DUI8004, DUI8008 or DUI8009 at one of the further viewport sizes `layout` was given (`sizes`), and not at the first. Most often: fixed positions from the centre, fixed widths wider than the smaller screen.",
+      "fix": "anchors to edges, boxes that fill (`@slot SizeRule = Fill`), sizes that stretch",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006"
+    },
+    {
+      "code": "DUI8007",
+      "name": "LayoutLowContrast",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "In `preview`",
+      "meaning": "In `preview`: a text's colour against the median of the pixels just inside its box, under 3 to 1 (WCAG's contrast ratio); an info under 4.5 to 1 for text under 24 px. Most often: text colour close to what is behind it.",
+      "fix": "a lighter text on a dark backdrop or the other way round, until the ratio is at least 4.5 to 1",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007"
+    },
+    {
+      "code": "DUI8008",
+      "name": "LayoutOutsideFrame",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "A node that draws more than 4 px (and 5 % of its size) past the panel or card it sits in",
+      "meaning": "A node that draws more than 4 px (and 5 % of its size) past the panel or card it sits in: the nearest ancestor that draws a box, or the plate an overlay puts under it. What is measured is what it draws -- a text's glyphs, a shape's outline, a rect block's body. A node tagged `Bleed` (or inside one), a frame that clips, and a plate as large as its frame (a face over its shadow) are not reported. Most often: a child bigger than its card, or placed past its edge; a key label hung under its icon's slot.",
+      "fix": "make it smaller or move it in, or give the panel (or the slot) room; a glow or bleed meant to go past: `@tag Bleed`",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008"
+    },
+    {
+      "code": "DUI8009",
+      "name": "LayoutCoversText",
+      "severity": "warning",
+      "stage": "Layout",
+      "title": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line.",
+      "meaning": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line. Its backplate (drawn before it), an outline with no body, a veil over the whole card and a scrim over most of the screen are not reported, nor a node tagged `Bleed`. Most often: an accent bar, a shape or a glow written after the text and overlapping it.",
+      "fix": "move it off the text, or write it before the text so it is drawn under it; a sheen meant to lie over it: `@tag Bleed`",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009"
+    },
+    {
+      "code": "DUI8010",
+      "name": "LayoutUnbalanced",
+      "severity": "info",
+      "stage": "Layout",
+      "title": "A panel whose content keeps to one side (a band of 38 % or more empty), leaves a wide band empty across its middle, or spreads its rows thin",
+      "meaning": "A panel whose content keeps to one side (a band of 38 % or more empty), leaves a wide band empty across its middle, or spreads its rows thin; cautious, and never along a bar or a sidebar. Most often: content in fixed positions at the top of a panel sized for more; rows spaced far apart.",
+      "fix": "let the content fill (`@slot SizeRule = Fill`, anchors that stretch), spread it out, or make the panel smaller",
+      "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010"
+    }
+  ]
+}

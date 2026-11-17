@@ -86,6 +86,18 @@ enum class EDreamVisualPropertiesForMaterial :uint8
 };
 ENUM_CLASS_FLAGS(EDreamVisualPropertiesForMaterial);
 
+/** Whether an element drawn as a mesh anti-aliases its outline through its geometry (DreamUIEdgeAntiAliasing.h). */
+UENUM(BlueprintType)
+enum class EDreamEdgeAntiAliasing : uint8
+{
+	/** As the project's Edge Anti-Aliasing setting says, and not while MSAA smooths the outline already. */
+	Default,
+	/** Always, where it can: on a screen-space or render-target canvas, without pixel snapping, MSAA or not. */
+	On,
+	/** Never: the outline is drawn as its triangles fall on the pixels, as for pixel art. */
+	Off,
+};
+
 /** UI element which have render geometry, and can be batched and renderred by DreamGUICanvas */
 UCLASS(Abstract, Blueprintable, ClassGroup=(DreamGUI))
 class DREAMGUI_API UDreamVisualBatchMesh : public UDreamVisual
@@ -167,6 +179,18 @@ public:
 	virtual bool GetRepaintsOnTransformChange()const { return false; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		EDreamEdgeAntiAliasing GetEdgeAntiAliasing()const { return EdgeAntiAliasing; }
+	/** Whether this element anti-aliases its outline through its geometry; Default follows the project setting. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetEdgeAntiAliasing(EDreamEdgeAntiAliasing Value);
+	/**
+	 * One device pixel in this element's local units, when its outline is to be anti-aliased now, and 0 when it is not:
+	 * switched off, a kind of element that has no outline to smooth (WantsEdgeAntiAliasing), a world-space canvas (no
+	 * one size of pixel), pixel snapping (the outline is on the grid already), or a canvas with no viewport yet.
+	 */
+	float GetEdgeAntiAliasingPixel()const;
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamUIBlendMode GetBlendMode()const { return BlendMode; }
 	/**
 	 * How this element composites. Elements that composite differently never share a draw-call, so
@@ -205,6 +229,21 @@ protected:
 	// In the Layer section of the widget's details, with its opacity and mask, rather than with the visual's own rows.
 	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (DreamGUI_Section = "Layer", DreamGUI_Order = 20))
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/**
+	 * Whether the outline of an element drawn as a mesh -- a polygon, shape, ring, path, line, custom mesh, a
+	 * round-cornered or radially filled image -- is anti-aliased by a strip one pixel wide along it. Text and RectBlock
+	 * smooth their edges in the shader and a plain rect sits on the pixel grid, so on them this changes nothing.
+	 */
+	UPROPERTY(EditAnywhere, Category = DreamGUI, AdvancedDisplay)
+	EDreamEdgeAntiAliasing EdgeAntiAliasing = EDreamEdgeAntiAliasing::Default;
+	/** One device pixel in local units, as the outline was last anti-aliased with; 0 when it was not. */
+	float BuiltEdgeAntiAliasingPixel = 0.0f;
+	/**
+	 * Whether this kind of element draws an outline its geometry should anti-alias. False here: text and RectBlock smooth
+	 * theirs in the shader, and a rect's sit on the pixel grid. The mesh visuals say true; an image says true for its
+	 * round corners and radial fills.
+	 */
+	virtual bool WantsEdgeAntiAliasing()const { return false; }
 	/** See SetMaterialOverride. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UMaterialInterface> MaterialOverride = nullptr;

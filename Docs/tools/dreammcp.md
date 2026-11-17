@@ -19,7 +19,7 @@ a model that writes `.dui` cannot otherwise see: the laid-out screen, in words, 
 | Kind | editor service, in the `DreamGUIEditor` module (`Source/DreamGUIEditor/Private/MCP/`) |
 | Protocol | DreamMCP protocol `1` |
 | Manifest | `<Plugin>/Resources/DreamMCP.json`: the actions, their arguments as JSON Schema, the route, the host commandlet |
-| References | `.skill/reference/dui.md`, `example.md`, `pitfalls.md`, `controls.md`, named by the manifest and packaged with the plugin. Each stands alone: its links lead to this manual, and an agent that cannot open them misses nothing it needs |
+| References | `.skill/reference/dui.md`, `example.md`, `presets.md`, `blocks.md`, `screens.md`, `pitfalls.md`, `controls.md`, `diagnostics.md`, named by the manifest and packaged with the plugin. Each stands alone: its links lead to this manual, and an agent that cannot open them misses nothing it needs |
 | Route | `http://127.0.0.1:<port>/dream/gui`, tool name `dream_gui` |
 | Port | `47800`, or `-DreamMCPPort=<n>`; a port that cannot be bound is skipped for the next, up to 16. Other Dream plugins in the same process share it, each under its own route |
 | Bind address | `127.0.0.1` only, proven at startup |
@@ -115,9 +115,32 @@ entry, `(raised 3 times by this one line, once for each node that uses it)`, and
 | [DUI8002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002) | warning | a text is cut short by its overflow policy, or laid out past its box | the text's own measure (`UDreamText::MeasureFit`) |
 | [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | warning (info for a plain widget with children) | a node that draws, holds children or can be pressed has no width or height; a pressable control is smaller than a pointer needs | under 1 px; under 24 x 24 px (WCAG 2.2's minimum target) |
 | [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | warning | two pressable controls in the same canvas overlap on the screen, wherever they are in the tree (one inside the other aside): a press there reaches only the upper one. A small control lying at least 95 % on one at least four times its area (a button on a pressable card, a dialog on a click-away backdrop) is layered on purpose and not reported | 2 px or more on both axes |
-| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | info | siblings' left, right, top or bottom edges or centres nearly line up; a row or column of three or more has nearly even gaps | more than 0.5 and at most 3 px apart |
-| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | warning | DUI8001–8004 at one of `sizes` and not at the first viewport | as the rule it repeats |
+| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | info | siblings' left, right, top or bottom edges or centres nearly line up; a row or column of three or more has nearly even gaps. Inside a box no bigger than 128 px on either side, the plain visuals (no text, nothing to press) are the parts of a drawing, an icon drawn from shapes, and are not compared | more than 0.5 and at most 3 px apart |
+| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | warning | DUI8001–8004, DUI8008 or DUI8009 at one of `sizes` and not at the first viewport | as the rule it repeats |
 | [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | warning / info | in `preview`: a text's colour (at its alpha) against the median of the pixels on a one-pixel ring just inside its box. A control's own part painted within 1.1 : 1 of what is behind it (the tick of a toggle that is off) is hidden on purpose and not reported | WCAG contrast under 3 : 1 a warning; under 4.5 : 1 an info for text under 24 px |
+| [DUI8008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008) | warning | what a node draws reaches past the panel or card it sits in: the nearest ancestor that draws a box (a visual other than text, 24 px or more each way), or, in an overlay, the last earlier sibling whose drawing fills the parent -- the face over a shadow. Not reported: a node tagged `Bleed` or inside one, a frame (or a node between) that clips, a frame the size of the screen (DUI8001's business), a plate at least 90 % of its frame each way lying over most of it (a face over its shadow, a glow behind a card) | more than 4 px and at least 5 % of the node's own width or height on that side |
+| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | warning | a visual that takes no pointer, drawn after a text in the same canvas (later in the file, or in a higher layer), covers its glyphs -- or, no bigger than the text's line, lies mostly in it. Not reported: what is drawn before the text (its backplate), an ancestor or a descendant of it, a control (DUI8004), an outline with no body (`bEnableBody = false`) or one fainter than 40 / 255, a veil over 90 % of the card the text is on, a scrim over 60 % of the screen, a node tagged `Bleed`, a control's own parts around its own label. One finding a text | 12 % of the glyphs' box, or 30 % of the decoration in the line; either at least 4 px thick |
+| [DUI8010](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010) | info | a panel (a box-drawing node, or an overlay's plate, at least 240 x 120 px and 2 % of the screen, under 60 % of it) with text and three things or more in it, judged by what they draw (rules and accent bars under 6 px thin left out): its content keeps to one side, or leaves a band empty across its middle, or its rows (columns) are spread thin. The middle and the spread are not looked at along a bar or a sidebar (2.5 times longer than wide) | one side 38 % empty with the opposite under a third of that, or 20 % where 60 % of that axis is empty; a middle band of 38 %; gaps between items taking 60 % |
+
+Two nodes are compared in the plane of one of them -- the frame's, the text's, the panel's -- through their widgets'
+transforms, so a card turned in 3D, a rotated badge or a screen inside a perspective keeps its edges straight; a node
+whose rect is approximate (a corner behind the eye) is left out. What a node draws is its visual's geometry: a
+text's glyphs, a polygon's corners (a turned shape is not measured by its box), an image's quad, a rect block's body,
+and for DUI8009 a rect block's outer shadow or glow too when it is at least 40 / 255 opaque.
+
+### Going past the frame on purpose: `@tag Bleed`
+
+A glow, a drop shadow, a corner bracket that bleeds off its card, a sheen laid over a title: tag the node `Bleed` and
+DUI8008 and DUI8009 leave it, and everything inside it, alone. A frame tagged `Bleed` is not measured against either.
+
+```
+RectBlock CardGlow {
+    @tag Bleed
+    AnchorData.SizeDelta = (360, 520)
+}
+```
+
+A container that clips (`Clipping = ClipToBounds`) needs no tag: what it cuts away is not drawn.
 
 ## What `preview` measures
 

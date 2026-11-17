@@ -647,6 +647,55 @@ bool FDreamUIBoundPropertyIsShownReadOnlyTest::RunTest(const FString&)
 
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIEventRowsAreLiveTest,
+	"DreamGUI.Designer.TheEventRowsAreLiveOnATextAuthoredClass",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The Events rows of a text-authored class, asked the way the details panel asks them.
+ *
+ * A custom row is not a property: the view hands FIsCustomRowReadOnly two names -- the row and its category --
+ * so the gate can only answer per object and category. The events are the one category whose edits the file
+ * DOES take (a route is a line of the .dui), which is why the row asks this namespace at the click instead,
+ * and why judging them by the value rule left every event row of every .dui-backed class grey: an author
+ * meets a panel of buttons that do nothing and nothing that says why.
+ */
+bool FDreamUIEventRowsAreLiveTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	FScopedDuiFile Source(TEXT("GateEventRows.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    + CanvasPanel { }"),
+		TEXT("    Widget Button { }"),
+		TEXT("}")
+	})))
+	{
+		return false;
+	}
+
+	FScopedGatedDesigner Scoped(TEXT("BP_GateEventRows"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
+	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
+	if (!TestEqual(TEXT("and its .dui compiled clean"), Scoped.CompileErrors, 0)) return false;
+
+	UDreamWidget* Button = Scoped.FindTemplate(TEXT("Button"));
+	if (!TestNotNull(TEXT("the button node is in the asset"), Button)) return false;
+
+	TestFalse(TEXT("the Events rows are live on a text-authored class"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Button, NAME_None, DreamUITextAuthoring::EventRowsCategoryName));
+
+	// The neighbours, whose values the write-back would lose on the next compile, stay grey: a gate that
+	// unlocked everything once it let the events through would read the same from the outside as one that
+	// worked.
+	TestTrue(TEXT("a row whose value the file would lose stays grey"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Button, NAME_None, FName(TEXT("Interaction"))));
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUITextSetSourceFileTest,
 	"DreamGUI.WidgetBlueprint.TheSourceFileCanBeSetFromTheEditor",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

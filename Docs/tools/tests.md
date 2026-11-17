@@ -165,6 +165,7 @@ the suite to its own conventions.
 | `layering` | error | A lower layer that includes a higher one cannot be split from it |
 | `layering-stale` | error | The list of edges still to cut only shrinks: an edge that is gone comes off it |
 | `engine-private-path` | error | The engine's `Private` and `Internal` headers change between versions without notice; the plugin reads the engine through its public headers |
+| `preset-names` | error | A screen changes its look by naming another preset, so every preset in `DUI/Presets/` declares the resources and styles `Default.dui` does |
 
 A finding that is right to keep is allowed where it stands (on the line or the line above), or in
 `static-checks-allow.json` with a path glob, an optional regular expression and a reason:

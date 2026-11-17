@@ -437,7 +437,11 @@ namespace DreamGUIMCP
 		// The reader the compiler parses with: a `use` of a file reads it, as a compile would.
 		const bool bParsed = FDreamUISourceFile::Parse(Text, InAbsoluteFile, Ast, Bag, FDreamUISourceFile::MakeFileImportReader());
 		Outcome.AssetPath = PackageOf(Ast.ClassPath);
-		if (bParsed)
+		// No root and no class line: a library. The parser reports the missing root as it would for a screen, since it
+		// cannot tell a library from a screen whose root did not parse; with no class line nothing is ever compiled from
+		// this file, so the report is dropped and nothing is built.
+		Outcome.bLibrary = !Ast.bHasRoot && Ast.ClassPath.IsEmpty();
+		if (bParsed && !Outcome.bLibrary)
 		{
 			// Built as the write-back builds its reference tree: into the transient package, with the loop sink the real
 			// compile gives (a loop body is built and checked like any other node), the bindings dropped.
@@ -452,6 +456,15 @@ namespace DreamGUIMCP
 			}
 		}
 		AppendDiagnostics(Outcome.Diagnostics, Bag, InAbsoluteFile);
+		if (Outcome.bLibrary)
+		{
+			const FString RootCode = FormatDiagnosticCode(static_cast<int32>(EDreamUIDiagnosticCode::MalformedRoot));
+			// Only this file can say it: a file reached through `use` may have no root.
+			Outcome.Diagnostics.RemoveAll([&RootCode](const FDiagnostic& Diagnostic)
+			{
+				return Diagnostic.Code == RootCode && Diagnostic.Message == TEXT("this file declares no root node");
+			});
+		}
 
 		// A component placed by a file whose Blueprint is not compiled yet: the builder can only say its class loads
 		// nothing, but nothing in the source is wrong -- compile and layout compile the component first. An info, not an

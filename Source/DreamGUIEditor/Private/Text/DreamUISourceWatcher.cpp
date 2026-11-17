@@ -57,6 +57,9 @@ namespace DreamUISourceWatcherLocal
 	 */
 	constexpr float DebounceSeconds = 0.4f;
 
+	/** FDreamUISourceWatcher::HoldQueue's count: the queue rebuilds nothing while it is above zero. Game thread only. */
+	int32 QueueHolds = 0;
+
 	/**
 	 * How long after a .dui event or a bridge request the editor is kept out of background throttling.
 	 * An editor behind the author's text editor runs at 3 FPS otherwise, and the save the author just made
@@ -1429,8 +1432,9 @@ namespace DreamUISourceWatcherLocal
 		{
 			return true;
 		}
-		// The queue waits when a compile would be unsafe; the next tick asks again.
-		if (!CanCompileNow())
+		// The queue waits when a compile would be unsafe, or while someone looking at the classes holds it
+		// (FDreamUISourceWatcher::HoldQueue); the next tick asks again.
+		if (!CanCompileNow() || QueueHolds > 0)
 		{
 			return true;
 		}
@@ -1716,6 +1720,23 @@ bool FDreamUISourceWatcher::CanCompileNow()
 {
 	// Qualified: the unqualified name is this function.
 	return DreamUISourceWatcherLocal::CanCompileNow();
+}
+
+void FDreamUISourceWatcher::HoldQueue()
+{
+	check(IsInGameThread());
+	++DreamUISourceWatcherLocal::QueueHolds;
+}
+
+void FDreamUISourceWatcher::ReleaseQueue()
+{
+	check(IsInGameThread());
+	DreamUISourceWatcherLocal::QueueHolds = FMath::Max(DreamUISourceWatcherLocal::QueueHolds - 1, 0);
+}
+
+bool FDreamUISourceWatcher::IsQueueHeld()
+{
+	return DreamUISourceWatcherLocal::QueueHolds > 0;
 }
 
 void FDreamUISourceWatcher::NotifyBusy()

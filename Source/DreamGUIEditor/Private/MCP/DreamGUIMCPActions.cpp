@@ -253,6 +253,7 @@ namespace DreamGUIMCP
 				FResult Result;
 				TArray<TSharedPtr<FJsonValue>> PerFile;
 				TArray<FString> Uncompiled;
+				int32 Libraries = 0;
 			};
 			TSharedRef<FState> State = MakeShared<FState>();
 			State->Files = MoveTemp(Files);
@@ -289,6 +290,7 @@ namespace DreamGUIMCP
 					State->Result.Diagnostics.Append(Check.Diagnostics);
 					State->Clean += Check.bClean ? 1 : 0;
 					State->Nodes += Check.Nodes;
+					State->Libraries += Check.bLibrary ? 1 : 0;
 					for (const FString& Component : Check.UncompiledComponents)
 					{
 						State->Uncompiled.AddUnique(Component);
@@ -297,6 +299,10 @@ namespace DreamGUIMCP
 					Entry->SetStringField(TEXT("file"), Rel(File));
 					Entry->SetStringField(TEXT("asset"), Check.AssetPath);
 					Entry->SetNumberField(TEXT("nodes"), Check.Nodes);
+					if (Check.bLibrary)
+					{
+						Entry->SetBoolField(TEXT("library"), true);
+					}
 					Entry->SetNumberField(TEXT("errors"), CountSeverity(Check.Diagnostics, TEXT("error")));
 					Entry->SetNumberField(TEXT("warnings"), CountSeverity(Check.Diagnostics, TEXT("warning")));
 					State->PerFile.Add(MakeShared<FJsonValueObject>(Entry));
@@ -329,7 +335,13 @@ namespace DreamGUIMCP
 					UncompiledNote = FString::Printf(TEXT("; %s not compiled yet (%s), which compile and layout build first"),
 						*Plural(State->Uncompiled.Num(), TEXT("component it places is"), TEXT("components it places are")), *FString::Join(State->Uncompiled, TEXT(", ")));
 				}
-				if (State->PerFile.Num() == 1)
+				if (State->PerFile.Num() == 1 && State->Libraries == 1)
+				{
+					// A library has no tree to count; its styles are checked where a screen wears them.
+					Result.Summary = FString::Printf(TEXT("Checked %s, a library (no root node, no class line): %s, %s. Nothing was built."),
+						*Rel(State->Files[0]), *Plural(Errors, TEXT("error"), TEXT("errors")), *Plural(Warnings, TEXT("warning"), TEXT("warnings")));
+				}
+				else if (State->PerFile.Num() == 1)
 				{
 					Result.Summary = FString::Printf(TEXT("Checked %s: %s, %s, %s%s. Nothing was built."), *Rel(State->Files[0]),
 						*Plural(Errors, TEXT("error"), TEXT("errors")), *Plural(Warnings, TEXT("warning"), TEXT("warnings")),
@@ -343,6 +355,10 @@ namespace DreamGUIMCP
 				if (Errors > 0)
 				{
 					Result.Next.Add(TEXT("Fix the errors at the lines given, then check again. Each code has its page at the doc link."));
+				}
+				else if (State->PerFile.Num() == 1 && State->Libraries == 1)
+				{
+					Result.Next.Add(TEXT("A library is checked through a screen that uses it: check or layout that screen, which applies these styles to its nodes."));
 				}
 				else if (State->Uncompiled.Num() > 0)
 				{
@@ -608,7 +624,7 @@ namespace DreamGUIMCP
 				{ TEXT("RenderRotation"), TEXT("Turns it as drawn, about RenderTransformPivot: (Pitch, Yaw, Roll) in degrees; Yaw turns about the vertical axis (positive brings the right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is clockwise)") },
 				{ TEXT("RenderScale"), TEXT("Scales it as drawn, about RenderTransformPivot, without changing the size layout gives it") },
 				{ TEXT("RenderTransformPivot"), TEXT("The point of the node (0 to 1, Y up) the render transform turns and scales about") },
-				{ TEXT("CornerRadius"), TEXT("The four corners' radii. With CornerRadiusUnitMode = Percentage (the default) each is a fraction, 1 rounding the corner fully: (24, 24, 24, 24) makes a capsule, not 24 px corners; set CornerRadiusUnitMode = Value for pixels") },
+				{ TEXT("CornerRadius"), TEXT("The four corners' radii, in the order bottom-right, top-right, top-left, bottom-left (not CSS's). With CornerRadiusUnitMode = Percentage (the default) each is a fraction, 1 rounding the corner fully: (24, 24, 24, 24) makes a capsule, not 24 px corners; set CornerRadiusUnitMode = Value for pixels") },
 				{ TEXT("DreamRectBlock"), TEXT("A rectangle drawn as a distance field: rounded corners (CornerRadius), a border, gradients and shadows") },
 			};
 			for (const FNote& Note : Notes)
@@ -1111,7 +1127,9 @@ namespace DreamGUIMCP
 			{
 				for (const FLayoutIssue& Issue : Issues[Size])
 				{
-					if (Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutNearlyAligned) || BaseKeys.Contains(Issue.Key))
+					// Near misses and balance are infos about the design, not about a size.
+					if (Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutNearlyAligned)
+						|| Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutUnbalanced) || BaseKeys.Contains(Issue.Key))
 					{
 						continue;
 					}

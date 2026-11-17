@@ -209,6 +209,17 @@ public:
 	static void FlushPending();
 
 	/**
+	 * Keep the queue from rebuilding anything until ReleaseQueue, holds counted; what changes meanwhile waits in it.
+	 *
+	 * For work that compiles and then looks at the classes over several frames -- the DreamMCP endpoint's layout and
+	 * preview -- which a rebuild in between would reinstance under it: a preview drew an empty frame when the queue
+	 * rebuilt the screen it had just instanced. Only the queue waits; RebuildAll and the bridge are not held.
+	 */
+	static void HoldQueue();
+	static void ReleaseQueue();
+	static bool IsQueueHeld();
+
+	/**
 	 * Whether a Blueprint compile may start now: not during play, not while a package is saving or the
 	 * collector runs, and not in the middle of a drag or an open transaction. The queue waits on exactly this,
 	 * and every other path that compiles unasked (the bridge's `compile`, the Rebuild menu) asks the same
