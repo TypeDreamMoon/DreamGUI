@@ -900,6 +900,20 @@ bool FDreamMCPCheckTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("which says how often it was raised"), Field(WornDiagnostics[0]->AsObject(), TEXT("message")).Contains(TEXT("raised 3 times by this one line")));
 	}
 	TestTrue(FString::Printf(TEXT("and is counted once: %s"), *Field(WornResult, TEXT("summary"))), Field(WornResult, TEXT("summary")).Contains(TEXT("1 error,")));
+
+	// A library -- styles and resources, no root, no class line -- is read and not built, and its having no root is no error.
+	const FString Library = Sources.Write(TEXT("Library"),
+		TEXT("resources {\n    Color Ink = #E6E9F0\n}\n\nstyle Body {\n    FontSize = 18\n    Color = @Ink\n}\n"), /*bClassLine*/ false);
+	const TSharedPtr<FJsonObject> LibraryResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Library)), TEXT("t-5"))));
+	TestEqual(FString::Printf(TEXT("a library checks ok: %s"), *Field(LibraryResult, TEXT("summary"))), Field(LibraryResult, TEXT("outcome")), FString(TEXT("ok")));
+	TestEqual(TEXT("with no diagnostic"), ArrayField(LibraryResult, TEXT("diagnostics")).Num(), 0);
+	TestTrue(TEXT("and is said to be a library"), Field(LibraryResult, TEXT("summary")).Contains(TEXT("a library")));
+	// A class line says the file is a screen: one with no root is still told so.
+	const FString Rootless = Sources.Write(TEXT("Rootless"), TEXT("style Body {\n    FontSize = 18\n}\n"));
+	const TSharedPtr<FJsonObject> RootlessResult = ResultOf(RunToEnd(*this, Test.Endpoint,
+		CallBody(TEXT("check"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(Rootless)), TEXT("t-6"))));
+	TestTrue(TEXT("a file with a class line and no root is DUI2006"), Codes(RootlessResult).Contains(TEXT("DUI2006")));
 	return true;
 }
 

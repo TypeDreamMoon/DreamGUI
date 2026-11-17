@@ -536,6 +536,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **`check` reads a library as a library.** A file with no root node and no `class` line -- styles, resources and `use`
+  lines, such as a preset or `DUI/Theme.dui` -- was reported as DUI2006 by `check`, so `check all: true` (and
+  `dui.ps1 check -All`) failed on every library in a project. It is now read, imports included, and not built; a file with
+  a `class` line and no root is still DUI2006.
 - **Building a screen whose component is not compiled yet leaves nothing behind.** It tried to load the component's
   class from a package that did not exist, which left an empty package of that name in memory -- one the DreamMCP
   endpoint then took for an existing asset, refusing to create the component there until the engine restarted. A
