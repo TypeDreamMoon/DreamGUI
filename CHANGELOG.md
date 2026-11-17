@@ -555,6 +555,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
+  when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it
+  reinstanced the screen on the stage and the picture came out empty ("draws almost nothing"), the next one fine. The
+  endpoint now builds what the watcher has queued before it starts a job, and the watcher waits while the endpoint is
+  busy (`FDreamUISourceWatcher::HoldQueue`).
 - **Strings compare in bindings.** `Shown <- Kind == "Sword"` (and `!=`, and `+` of two strings) failed with DUI5011,
   "math library has no 'EqualEqual_StrStr'": the string operators are the string library's, and only the math library
   was asked.

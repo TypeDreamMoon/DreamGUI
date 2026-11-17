@@ -11,6 +11,7 @@
 #include "MCP/DreamGUIMCPPreviewStats.h"
 #include "MCP/DreamGUIMCPResult.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "AssetCompilingManager.h"
 #include "Containers/Ticker.h"
@@ -987,6 +988,47 @@ bool FDreamMCPCompileTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("errors first"), Field(HeldDiagnostics[0]->AsObject(), TEXT("severity")), FString(TEXT("error")));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPHoldsTheWatcherTest,
+	"DreamGUI.MCP.Actions.TheSourceWatcherWaitsWhileAJobLooksAtAScreen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/**
+ * The source watcher rebuilds a .dui a moment after it changes. When a library a screen used had just changed, its
+ * rebuild landed in the frames a preview spent settling the screen it had put on its stage, reinstanced it there, and
+ * the picture came out empty ("draws almost nothing"); the next preview was fine. The endpoint now builds what the
+ * watcher has queued before a job starts and holds the watcher's queue until it is idle again.
+ */
+bool FDreamMCPHoldsTheWatcherTest::RunTest(const FString& Parameters)
+{
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Held"), Screen(TEXT("    Text Label { Text = \"Hello\" }")));
+	TestFalse(TEXT("idle, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
+
+	const FHttpReply Accepted = Send(Test.Endpoint, TEXT("POST"), TEXT("/call"),
+		CallBody(TEXT("layout"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File)), TEXT("held-1")));
+	if (!TestEqual(TEXT("the layout is accepted"), Accepted.Status, 202))
+	{
+		return false;
+	}
+	TestTrue(TEXT("with a job queued, the watcher's queue is held"), FDreamUISourceWatcher::IsQueueHeld());
+	const FString Job = Field(ParseReply(*this, Accepted), TEXT("job"));
+	FString State;
+	for (int32 Tick = 0; Tick < 2000; ++Tick)
+	{
+		State = Field(ParseJsonObject(Send(Test.Endpoint, TEXT("GET"), TEXT("/jobs/") + Job).Body), TEXT("state"));
+		if (State == TEXT("done") || State == TEXT("failed") || State == TEXT("cancelled"))
+		{
+			break;
+		}
+		TestTrue(TEXT("...and stays held while the job runs"), FDreamUISourceWatcher::IsQueueHeld());
+		Test.Endpoint.TickJobs();
+	}
+	TestEqual(TEXT("the layout finishes"), State, FString(TEXT("done")));
+	TestFalse(TEXT("idle again, the watcher's queue is free"), FDreamUISourceWatcher::IsQueueHeld());
 	return true;
 }
 
