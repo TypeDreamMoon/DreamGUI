@@ -1315,6 +1315,28 @@ bool FDreamMCPLintAlignTest::RunTest(const FString& Parameters)
 	Gaps.Add(0, TEXT("C"), TEXT("Image"), 100, 234, 300, 50);
 	const TArray<FLayoutIssue> GapIssues = Gaps.Lint();
 	TestTrue(TEXT("a column with gaps of 16 and 18 is reported"), GapIssues.ContainsByPredicate([](const FLayoutIssue& I) { return I.Message.Contains(TEXT("gaps of 16, 18")); }));
+
+	// The parts of an icon drawn from shapes -- a coin and its rim, 2 px apart on purpose -- are not compared: in a box no
+	// bigger than an icon, plain visuals are a drawing. The same two in a card are, and so are two texts in the icon box.
+	FSnapshotBuilder Icon;
+	const int32 Glyph = Icon.Add(0, TEXT("Glyph"), TEXT("Widget"), 100, 100, 64, 64);
+	Icon.Add(Glyph, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Icon.Add(Glyph, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestEqual(TEXT("the parts of a 64 px icon are not reported"), CountCode(Icon.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned), 0);
+
+	FSnapshotBuilder Card;
+	const int32 Box = Card.Add(0, TEXT("Card"), TEXT("Widget"), 100, 100, 400, 200);
+	Card.Add(Box, TEXT("Disc"), TEXT("RectBlock"), 109, 109, 46, 46);
+	Card.Add(Box, TEXT("Rim"), TEXT("Ring"), 111, 111, 42, 42);
+	TestTrue(TEXT("the same two in a 400 px card are"), CountCode(Card.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
+
+	FSnapshotBuilder Words;
+	const int32 Small = Words.Add(0, TEXT("Badge"), TEXT("Widget"), 100, 100, 120, 60);
+	const int32 First = Words.Add(Small, TEXT("Count"), TEXT("Text"), 108, 110, 40, 20);
+	const int32 Second = Words.Add(Small, TEXT("Unit"), TEXT("Text"), 110, 132, 40, 20);
+	Words.Snapshot.Nodes[First].bHasText = true;
+	Words.Snapshot.Nodes[Second].bHasText = true;
+	TestTrue(TEXT("two texts in a small box still are"), CountCode(Words.Lint(), EDreamUIDiagnosticCode::LayoutNearlyAligned) >= 1);
 	return true;
 }
 

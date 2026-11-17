@@ -44,6 +44,11 @@ namespace DreamGUIMCP
 		/** Edges or gaps differing by more than the first and at most the second, in pixels, nearly line up (DUI8005). */
 		inline constexpr double NearMissLow = 0.5;
 		inline constexpr double NearMissHigh = 3.0;
+		/**
+		 * A box no longer than this on either side, in pixels, is the size of an icon: the plain visuals in it (no text,
+		 * nothing to press) are the parts of a drawing, and DUI8005 does not compare them.
+		 */
+		inline constexpr double GlyphBoxSize = 128.0;
 		/** Text against what is behind it: below the first ratio a warning, below the second an info for text under LargeText px (DUI8007). */
 		inline constexpr double ContrastPoor = 3.0;
 		inline constexpr double ContrastLow = 4.5;

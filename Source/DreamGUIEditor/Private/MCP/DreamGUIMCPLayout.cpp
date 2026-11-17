@@ -974,11 +974,17 @@ namespace DreamGUIMCP
 		// DUI8005: siblings whose edges or gaps nearly, but not quite, line up.
 		for (int32 Parent = 0; Parent < Nodes.Num(); ++Parent)
 		{
+			// Inside a box no bigger than an icon, the plain visuals -- no text, nothing to press -- are the parts of a
+			// drawing (a blade and its guard, a coin and its rim), offset from one another on purpose, and some of them
+			// turned, whose rects are only the bounds of what they draw. Their edges a pixel or three apart are the
+			// drawing, not a slip, and are not reported. Texts and controls in the same box still are.
+			const bool bGlyphBox = FMath::Max(Nodes[Parent].W, Nodes[Parent].H) <= GlyphBoxSize;
 			TArray<int32> Siblings;
 			for (const int32 Child : Nodes[Parent].Children)
 			{
 				const FLayoutNode& Node = Nodes[Child];
-				if (Node.IsDrawn() && Node.W > ZeroSize && Node.H > ZeroSize && !Node.b3D)
+				const bool bDrawingPart = bGlyphBox && !Node.Visual.IsEmpty() && !Node.bHasText && !Node.bInteractive;
+				if (Node.IsDrawn() && Node.W > ZeroSize && Node.H > ZeroSize && !Node.b3D && !bDrawingPart)
 				{
 					Siblings.Add(Child);
 				}

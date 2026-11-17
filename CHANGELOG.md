@@ -555,6 +555,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **DUI8005 leaves icons drawn from shapes alone.** Inside a box no bigger than 128 px, the plain visuals (no text,
+  nothing to press) are the parts of a drawing and are no longer compared; texts and controls there still are.
 - **A rect block's corner order is documented as it is.** `CornerRadius` runs bottom-right, top-right, top-left,
   bottom-left, as `ClippingCornerRadius` does; the image brush's comment said a rect block shares CSS's order. The
   behaviour is unchanged.
