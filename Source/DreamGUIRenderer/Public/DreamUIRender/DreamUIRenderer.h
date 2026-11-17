@@ -115,6 +115,15 @@ public:
 	 * drift by a rounding error.
 	 */
 	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
+	/**
+	 * The part of InViewRect that lies on a target of InTargetSize: what every pass of a view is drawn, scissored,
+	 * copied and resolved within. Empty when nothing of the view is on the target.
+	 *
+	 * The two disagree in the frame a window is resized in: the target already has its new size, while the view still
+	 * has the rect of the size the viewport had when the frame began. Unclipped, the passes of that frame reach past
+	 * the target -- the resolve's scissor, a backdrop's copy region.
+	 */
+	static FIntRect FitViewRectToTarget(const FIntRect& InViewRect, const FIntPoint& InTargetSize);
 #if WITH_EDITOR
 	/**
 	 * How the renderer learns that the editor is simulating (SIE), when screen-space UI must not draw. The

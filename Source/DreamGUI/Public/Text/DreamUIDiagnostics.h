@@ -566,6 +566,12 @@ enum class EDreamUIDiagnosticCode : int32
 	LayoutBreaksAtSize = 8006,
 	/** A text that stands out from the pixels behind it less than 3 to 1 (an info under 4.5 to 1 for small text). */
 	LayoutLowContrast = 8007,
+	/** A node drawn past the panel or card that frames it (unless tagged Bleed, or the frame clips). */
+	LayoutOutsideFrame = 8008,
+	/** A visual that takes no pointer drawn over a text that it is not the backplate of (unless tagged Bleed). */
+	LayoutCoversText = 8009,
+	/** A panel whose content sits to one side or leaves a wide empty band. An info, and a cautious one. */
+	LayoutUnbalanced = 8010,
 };
 
 /**

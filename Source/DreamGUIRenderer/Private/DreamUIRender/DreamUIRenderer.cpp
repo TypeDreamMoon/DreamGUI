@@ -101,6 +101,19 @@ FIntPoint FDreamUIRenderer::CalculateRenderScaledSize(const FIntPoint& InViewpor
 	return ScaledSize;
 }
 
+FIntRect FDreamUIRenderer::FitViewRectToTarget(const FIntRect& InViewRect, const FIntPoint& InTargetSize)
+{
+	const FIntRect Target(FIntPoint::ZeroValue, FIntPoint(FMath::Max(InTargetSize.X, 0), FMath::Max(InTargetSize.Y, 0)));
+	FIntRect Fitted = InViewRect;
+	Fitted.Clip(Target);
+	// Clip leaves a rect wholly off the target inverted rather than empty; one empty answer is easier to ask.
+	if (Fitted.Width() <= 0 || Fitted.Height() <= 0)
+	{
+		return FIntRect();
+	}
+	return Fitted;
+}
+
 void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
 {
 	if (!World.IsValid())return;
@@ -1228,6 +1241,16 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 		ScreenColorRenderTargetTexture = InTargetOverride.IsValid() ? InTargetOverride : InView.Family->RenderTarget->GetRenderTargetTexture();
 		if (ScreenColorRenderTargetTexture == nullptr)return false;//invalid render target
 
+		// Clamp against the actual output before preparing the equally sized HDR working target.
+		// A resize can leave this frame's view larger than the target it will draw into.
+		ViewRect = FitViewRectToTarget(
+			InTargetOverride.IsValid() ? FIntRect(FIntPoint::ZeroValue, InTargetOverride->GetSizeXY()) : InView.UnscaledViewRect,
+			ScreenColorRenderTargetTexture->GetSizeXY());
+		if (ViewRect.IsEmpty())
+		{
+			return false;
+		}
+
 		if (bIsMainViewport)
 		{
 			Targets.HDROutput=DreamUIHDR::FromTarget(*InView.Family->RenderTarget);
@@ -1264,7 +1287,6 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 			ScreenColorRenderTargetTexture = MSAARenderTarget->GetRHI();
 		}
 
-		ViewRect = InTargetOverride.IsValid() ? FIntRect(FIntPoint::ZeroValue, InTargetOverride->GetSizeXY()) : InView.UnscaledViewRect;
 		float ScreenPercentage = 1.0f;//this can affect scale on depth texture
 		if (InView.bIsViewInfo)
 		{

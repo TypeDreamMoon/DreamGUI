@@ -18,6 +18,7 @@ namespace DreamHDRTest
     {
     public:
         FTextureRHIRef Texture;
+        FIntPoint ViewSize=FIntPoint(64,64);
         EDisplayOutputFormat Format=EDisplayOutputFormat::HDR_ACES_1000nit_ST2084;
         float White=200;
         bool HDR=true;
@@ -59,7 +60,7 @@ struct FDreamUIHDRTestAccess
         FRDGBuilder Graph(RHICmdList,RDG_EVENT_NAME("DreamUI HDR pixel acceptance"));
         auto* Family=Graph.AllocObject<FSceneViewFamily>(FSceneViewFamily::ConstructionValues(&Target,nullptr,FEngineShowFlags(ESFIM_Game)).SetTime(FGameTime::GetTimeSinceAppStart()));
         FSceneViewInitOptions Options;
-        Options.ViewFamily=Family; Options.SetViewRectangle(FIntRect(FIntPoint::ZeroValue,Target.GetSizeXY()));
+        Options.ViewFamily=Family; Options.SetViewRectangle(FIntRect(FIntPoint::ZeroValue,Target.ViewSize));
         Options.ViewOrigin=SavedView.ViewOrigin; Options.ViewRotationMatrix=SavedView.ViewRotationMatrix;
         Options.ProjectionMatrix=SavedView.ProjectionMatrix;
         auto* View=Graph.AllocObject<FSceneView>(Options); View->bIsGameView=true;
@@ -110,6 +111,7 @@ bool FDreamHDRPixelTest::RunTest(const FString&)
             if (!TestTrue(TEXT("Real canvas renderer exists"),Renderer.IsValid())) return;
             for (auto Format:{EDisplayOutputFormat::HDR_ACES_1000nit_ST2084,EDisplayOutputFormat::HDR_ACES_1000nit_ScRGB})
             for (float White:{200.f,300.f})
+            for (bool ResizedView:{false,true})
             {
                 const float EncodedScene=Format==EDisplayOutputFormat::HDR_ACES_1000nit_ST2084 ? .7518271f : 12.5f; // 1000 nits
                 TStrongObjectPtr<UTextureRenderTarget2D> Texture(NewObject<UTextureRenderTarget2D>());
@@ -117,9 +119,11 @@ bool FDreamHDRPixelTest::RunTest(const FString&)
                 Texture->InitCustomFormat(64,64,PF_FloatRGBA,true); Texture->UpdateResourceImmediate(true);
                 auto* Resource=Texture->GameThread_GetRenderTargetResource();
                 TArray<FFloat16Color> Pixels,Before;
-                ENQUEUE_RENDER_COMMAND(DreamHDRDrawAndRead)([Renderer,Resource,Format,White,&Pixels,&Before](FRHICommandListImmediate& RHICmdList)
+                ENQUEUE_RENDER_COMMAND(DreamHDRDrawAndRead)([Renderer,Resource,Format,White,ResizedView,&Pixels,&Before](FRHICommandListImmediate& RHICmdList)
                 {
                     DreamHDRTest::FTarget Target; Target.Texture=Resource->GetRenderTargetTexture(); Target.Format=Format; Target.White=White;
+                    // During a resize the view may still describe the previous, larger window.
+                    if (ResizedView) Target.ViewSize=FIntPoint(128,128);
                     RHICmdList.ReadSurfaceFloatData(Target.Texture,FIntRect(0,0,64,64),Before,FReadSurfaceDataFlags(RCM_MinMax));
                     FDreamUIHDRTestAccess::Draw(*Renderer,RHICmdList,Target);
                     RHICmdList.ReadSurfaceFloatData(Target.Texture,FIntRect(0,0,64,64),Pixels,FReadSurfaceDataFlags(RCM_MinMax));
@@ -135,7 +139,7 @@ bool FDreamHDRPixelTest::RunTest(const FString&)
                 TArray<FLinearColor> Scene{FLinearColor(Before[0])};
                 ConvertPixelDataToSCRGB(Scene,Format);
                 const FLinearColor SceneNits=Scene[0]*80.f;
-                const FString Case=FString::Printf(TEXT("%s %dx format%d white%.0f"),BuiltIn ? TEXT("builtin") : TEXT("material"),Samples,int32(Format),White);
+                const FString Case=FString::Printf(TEXT("%s %dx format%d white%.0f %s"),BuiltIn ? TEXT("builtin") : TEXT("material"),Samples,int32(Format),White,ResizedView ? TEXT("resized view") : TEXT("matching view"));
                 TestTrue(Case+TEXT(" input retains the 1000-nit reference within FP16 precision"),FMath::IsNearlyEqual(SceneNits.R,1000.f,5.f));
                 AddInfo(FString::Printf(TEXT("%s scene input %.6f output %.6f; decoded input %.2f output %.2f nits"),*Case,float(Before[0].R),float(Pixels[4*64+4].R),SceneNits.R,Linear[4*64+4].R*80.f));
                 auto Check=[&](int32 X,int32 Y,FLinearColor Expected,const TCHAR* Label)

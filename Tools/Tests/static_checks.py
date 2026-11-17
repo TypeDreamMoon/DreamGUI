@@ -38,6 +38,9 @@ Rules (--list-rules prints them with their reasons):
                          edge comes off it
   The engine:
     engine-private-path  a Build.cs putting a Private or Internal folder of the engine on the include path
+  The presets:
+    preset-names         a preset library in DUI/Presets/ that does not declare the same resources and
+                         styles as Default.dui
 
 A finding can be allowed where it stands, with a comment on its line or the line above:
 
@@ -110,6 +113,7 @@ RULES = collections.OrderedDict([
     ('layering', 'A lower layer that includes a higher one cannot be split from it; every new edge is one more to cut.'),
     ('layering-stale', 'The list of edges still to cut only shrinks: an edge that is gone comes off it.'),
     ('engine-private-path', "The engine's Private and Internal headers change between versions without notice; the plugin reads the engine through its public headers."),
+    ('preset-names', "A screen changes its look by naming another preset, so every preset has to answer to every name the others declare."),
 ])
 WARNING_RULES = frozenset(['eol'])
 
@@ -856,6 +860,38 @@ def check_engine_paths(root, findings, want):
                                     % m.group(1)))
 
 
+PRESET_RESOURCE = re.compile(r'^\s*(Color|Number|Vector2|String|Asset)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=', re.M)
+PRESET_STYLE = re.compile(r'^\s*style\s+([A-Za-z_][A-Za-z0-9_]*)', re.M)
+
+
+def preset_names(path):
+    """The resources (with their types) and styles a preset declares; comments are dropped first."""
+    with open(path, encoding='utf-8-sig', errors='ignore') as f:
+        text = re.sub(r'//[^\n]*', '', f.read())
+    return ({'%s %s' % m.groups() for m in PRESET_RESOURCE.finditer(text)},
+            {m.group(1) for m in PRESET_STYLE.finditer(text)})
+
+
+def check_presets(root, findings, want):
+    if 'preset-names' not in want:
+        return
+    folder = os.path.join(root, 'DUI', 'Presets')
+    base = os.path.join(folder, 'Default.dui')
+    if not os.path.isfile(base):
+        return
+    resources, styles = preset_names(base)
+    for path in sorted(glob.glob(os.path.join(folder, '*.dui'))):
+        if os.path.samefile(path, base):
+            continue
+        rel = os.path.relpath(path, root).replace(os.sep, '/')
+        theirs, their_styles = preset_names(path)
+        for kind, mine, other in (('resource', resources, theirs), ('style', styles, their_styles)):
+            for name in sorted(mine - other):
+                findings.append(Finding('preset-names', rel, 1, 'declares no %s %s, which Default.dui does' % (kind, name)))
+            for name in sorted(other - mine):
+                findings.append(Finding('preset-names', rel, 1, 'declares the %s %s, which Default.dui does not' % (kind, name)))
+
+
 def main(argv=None):
     sourcescan.console_safe()
     ap = argparse.ArgumentParser(description='Static checks over the plugin source (see the module docstring).')
@@ -897,6 +933,7 @@ def main(argv=None):
         check_eol(root, git, findings, want)
         check_layering(root, findings, want)
         check_engine_paths(root, findings, want)
+        check_presets(root, findings, want)
         allow = load_allow(ns.allow)
     except Exception:  # noqa: BLE001 -- a crash here must read as "could not run", not as findings
         import traceback

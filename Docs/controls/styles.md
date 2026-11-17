@@ -219,7 +219,7 @@ control face, and draws more ways:
 | `DrawAs` | `None`, `Box`, `Border`, `Image`, `Tiled` (repeat at its own size), `Filled` (show part of it, as a progress bar does), `RoundedBox` (a rounded outline) |
 | `ImageSize`, `Margin`, `UVRegion`, `PixelsPerUnitMultiplier` | Size, a 0-to-1 margin, the UV region, pixel density |
 | `FillAmount`, `FillMethod`, `FillOrigin`, `FillDirectionFlip` | `Filled` only: how much is shown, the shape of the cut, which end it starts from, the other direction |
-| `CornerRadius`, `CornerSegments` | `RoundedBox` only: each corner's radius in pixels, clockwise from the top left, and points per arc |
+| `CornerRadius`, `CornerSegments` | `RoundedBox` only: each corner's radius in pixels, clockwise from the top left (a rect block's `CornerRadius` runs bottom-right, top-right, top-left, bottom-left instead), and points per arc |
 
 `RoundedBox` is an outline cut out of geometry: its corners are as smooth as the segment count and do not
 antialias themselves. For an exact, resolution-independent rounded rect with a border or gradients, use a

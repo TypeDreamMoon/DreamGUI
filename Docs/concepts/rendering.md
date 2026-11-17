@@ -128,6 +128,19 @@ Anti-aliasing is `AntiAliasingMethod` (`None` or MSAA) and `MSAASampleCount`, fo
 the RHI reports no MSAA support the renderer falls back to none and warns once rather than pretending. Win64 is the only
 platform built and run; see [Platforms](../guides/platforms.md).
 
+Without MSAA most of what DreamGUI draws is smooth already: text and RectBlock compute their edges in the shader, and a
+clip's edge is soft by its own width. What is left is the outline of an element drawn as a mesh -- a Polygon, Shape, Ring,
+Path, PolygonLine, a 2D line, a custom mesh, an Image drawn as a RoundedBox or radially filled -- and that is what
+**Edge Anti-Aliasing** (`bEdgeAntiAliasing` in the project settings, on by default, and `EdgeAntiAliasing` on each
+element: `Default`, `On`, `Off`) smooths. The element's geometry gets a strip one device pixel wide along its outline: the
+outline's vertices move half a pixel in, keeping the texture where it was, and transparent copies of them stand half a
+pixel out, so a pixel the edge cuts is drawn as partly covered while an edge lying on the pixel grid stays sharp. It is
+vertex colour, so every material and platform takes it, with no render target and no extra pass. It applies on
+screen-space and render-target canvases; a world-space canvas has no one size of pixel and keeps MSAA for its edges, and
+an element under pixel snapping is on the grid already. While MSAA is on (and the platform can multisample) the samples
+smooth these outlines and a strip would only soften them further, so `Default` leaves it off; `On` adds it anyway. A plain rect -- an image, a nine-slice, a tiled image -- is left
+as it is: its edges sit on the pixel grid until it is rotated.
+
 ## Render-target canvases
 
 A render-target canvas is drawn by **a render command of its own**, with a graph of its own, after its sections change —

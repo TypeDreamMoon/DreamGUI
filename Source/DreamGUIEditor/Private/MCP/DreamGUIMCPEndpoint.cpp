@@ -3,6 +3,7 @@
 #include "MCP/DreamGUIMCPEndpoint.h"
 
 #include "MCP/DreamGUIMCPLog.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "Async/Async.h"
 #include "HAL/FileManager.h"
@@ -1380,6 +1381,20 @@ namespace DreamGUIMCP
 		{
 			BusyEndpoints::Add(bBusy ? 1 : -1);
 			bCountedBusy = bBusy;
+			// The source watcher rebuilds a .dui a moment after it changes. A job that compiles a screen and then looks
+			// at it over several frames (layout, preview) must not have it rebuilt under it -- a preview drew an empty
+			// frame when the watcher reinstanced the screen it had just put on its stage. So what the watcher already
+			// has queued is built first, before the job compiles on top of it, and the watcher then waits until this
+			// endpoint is idle again.
+			if (bBusy)
+			{
+				FDreamUISourceWatcher::FlushPending();
+				FDreamUISourceWatcher::HoldQueue();
+			}
+			else
+			{
+				FDreamUISourceWatcher::ReleaseQueue();
+			}
 		}
 	}
 

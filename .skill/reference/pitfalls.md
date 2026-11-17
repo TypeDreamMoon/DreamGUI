@@ -52,6 +52,9 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 - **`@tag Trim` is a tag, `@tag Trim { }` is a node.** A name after `@tag` is a tag line unless a block, a `:` or a
   `(was: …)` follows it, which makes it the old `@Name` form of a node typed by a resource called `tag`. A tag line in a
   `style` or directly in a `for` body is DUI2024. [Tags](https://gui.toolchain.64hz.cn/en/docs/dui/nodes-and-values/#tags-tag).
+- **A glow meant to spill out of its card is still DUI8008 until it says so.** `layout` reports what draws past its
+  panel and what is drawn over a text. A decoration that does either on purpose takes `@tag Bleed`; one that does not
+  goes inside, or before the text in the file. [Going past the frame](https://gui.toolchain.64hz.cn/en/docs/tools/dreammcp/#going-past-the-frame-on-purpose-tag-bleed).
 - **A ring menu's items are written in the `.dui`.** `Items = [{ "Lamp", Tag: Lamp }, …]`: a map per item, the label
   first and without its key. A map written without a key anywhere else, or on a struct that has no primary field, is
   DUI4009. [Structs as field maps](https://gui.toolchain.64hz.cn/en/docs/dui/nodes-and-values/#structs-as-field-maps).
@@ -68,6 +71,17 @@ Each entry says what you see, why, and what to do; the page it links to has the 
   names the right one.
 - **`CornerRadius = (24, 24, 24, 24)` draws a capsule, not 24 px corners.** The radii are fractions by default
   (`CornerRadiusUnitMode = Percentage`, 1 rounding a corner fully); write `CornerRadiusUnitMode = Value` for pixels.
+- **A rect block's corners come out in the wrong places.** Its `CornerRadius` runs bottom-right, top-right, top-left,
+  bottom-left (as `ClippingCornerRadius` does), not clockwise from the top left: a shield with round bottom corners is
+  `(22, 6, 6, 22)`.
+- **`Text = "Hello"  @slot HorizontalAlignment = Fill` on one line is DUI2001.** An `@` right after a value is read as
+  that value's annotation (`@key`, `@note`, `@max`, `@noloc`). End the value with `;` or start a new line:
+  `Text = "Hello";  @slot HorizontalAlignment = Fill`.
+- **`Padding = (@Gap, 0, @Gap, 0)` is DUI4003.** A resource stands for a whole value, never for one part of a tuple.
+  Write the numbers, or give the whole value a name.
+- **A `Color` prop does not drive `BodyColor` (DUI5004).** A `props` colour is a linear colour, and a visual's
+  `Color` and a rect block's `BodyColor` are not; neither can be bound to it. Show the right part instead: one node per
+  colour, each with `Shown <- Rarity == 2` on an `Integer` prop, or `Shown <- Kind == "Rare"` on a `String` one.
 
 ## Text and fonts
 
@@ -82,6 +96,14 @@ Each entry says what you see, why, and what to do; the page it links to has the 
 
 ## Layout and world space
 
+- **The whole screen is drawn several times too large, or off the screen, at 1280 x 720.** A `ScaleBox` around a
+  1920 x 1080 design canvas measures the canvas by what is inside it, not by its `SizeDelta`, and scales that up. Give the
+  canvas `@slot Size = (1920, 1080)` as well. [The root of a screen](https://gui.toolchain.64hz.cn/en/docs/dui/building-blocks/#the-root-of-a-screen).
+- **A short label, a chip or a key cap is 100 px wide.** Every node starts 100 x 100 (`AnchorData.SizeDelta`), and a box
+  or an overlay that sizes itself to its children counts that size -- a backdrop filling an overlay included. Give the
+  nodes it should measure by their content `AnchorData.SizeDelta = (0, 0)`; the presets' `ui.FillSlot` does.
+- **What a host puts in a component's slot spills out of it.** A slot with no layout box (`slot Badge { }`) places what
+  is put in it by its anchors, at its own size. Give that widget `ui.FillParent` (anchors at the four corners).
 - **The text of a row in a vertical box stands one letter to a line.** A vertical box gives a child the width the child
   measures, and a node whose `SizeDelta` width is 0 measures 0, so its text wraps after every character. Write
   `@slot HorizontalAlignment = Fill` on the row (or in its style), or give it a width.

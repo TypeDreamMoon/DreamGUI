@@ -130,6 +130,9 @@ Image TrimLeft {
 - **A name said twice is one tag**, on one line or on two.
 - **They land in `Tags`**, the `TArray<FName>` every widget has. A `Tags = [Trim, Glow]` line on the same node works
   too, and the two add up.
+- **`Bleed` is read by the layout check.** A node tagged `Bleed` -- a glow, a shadow, a decoration meant to go past
+  its card or over a text -- and everything inside it is left out of DUI8008 and DUI8009
+  ([DreamMCP: going past the frame](https://gui.toolchain.64hz.cn/en/docs/tools/dreammcp/#going-past-the-frame-on-purpose-tag-bleed)).
 
 `@tag` is also how a node typed by an `Asset` resource is written (`@Name Id { }`, see [Node types](#node-types)),
 so a resource that is called `tag` has to be told apart. A node, not a tag line, is `@tag` followed by a name and then

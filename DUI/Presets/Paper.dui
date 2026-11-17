@@ -1,0 +1,356 @@
+// DreamGUI preset: Paper. Warm off-white paper, dark ink and one vermilion accent: a light theme for menus, journals and maps.
+//
+// A library: resources and styles, no root node and no class line, so it compiles into nothing on its own. A screen
+// takes it with one line, and changes its look by changing that line to another preset:
+//
+//     use "Plugin.DreamGUI:Presets/Paper.dui" as ui
+//
+// The four presets (Default, Ember, Signal, Paper) declare the same names; only the values differ. The manual's
+// "Presets" page lists every name and what it is for.
+
+resources {
+    // Surfaces, darkest to lightest in the dark presets: the screen behind everything, a panel, a card on a panel,
+    // and a well sunk into a panel (a bar's track, an empty slot).
+    Color Base       = #E8E3DA
+    Color Surface    = #F3EFE7
+    Color Raised     = #FAF7F1
+    Color Sunken     = #E3DDD2
+    // Lines: a panel's edge and a divider; a stronger edge for what is focused or framed.
+    Color Edge       = #CEC6B7
+    Color EdgeStrong = #B3A997
+    // Text in three steps: what to read first, what supports it, what can be skipped.
+    Color Ink        = #25221E
+    Color InkSoft    = #5C564D
+    Color InkFaint   = #625D54
+    // The one accent, a weak fill of it (a selected row, a tab), a glow of it, a see-through edge of it, and the
+    // text that sits on it.
+    Color Accent     = #9C412C
+    Color AccentSoft = #EAD5CB
+    Color AccentGlow = #A2452F30
+    Color AccentEdge = #9C412CA0
+    Color OnAccent   = #FBF8F2
+    // States.
+    Color Good       = #386942
+    Color Bad        = #94322A
+    Color Warn       = #785814
+    // Item rarity, common to legendary.
+    Color Common     = #625D55
+    Color Uncommon   = #386942
+    Color Rare       = #325C88
+    Color Epic       = #684585
+    Color Legendary  = #7E5011
+    // A see-through plate that keeps a HUD readable over any scene, and the shadow under a panel.
+    Color Scrim      = #F3EFE7F0
+    Color Shadow     = #3A2E1E30
+
+    // Type sizes, in pixels at the 1920 x 1080 design size.
+    Number SizeCaption = 16
+    Number SizeBody    = 20
+    Number SizeLead    = 24
+    Number SizeTitle   = 30
+    Number SizeHeading = 44
+    Number SizeDisplay = 72
+    // Spacing steps, for Spacing and Padding.
+    Number Gap1 = 4
+    Number Gap2 = 8
+    Number Gap3 = 12
+    Number Gap4 = 16
+    Number Gap5 = 24
+    Number Gap6 = 32
+    Number Gap7 = 48
+    Number Gap8 = 64
+    // Corners and lines, in pixels.
+    Number RadiusSmall = 2
+    Number Radius      = 4
+    Number RadiusLarge = 8
+    Number EdgeWidth   = 1
+
+    Asset FontRegular = /DreamGUI/DefaultFont_DistanceField
+    Asset FontBold    = /DreamGUI/DefaultFont_DistanceField_Bold
+}
+
+// ---------------------------------------------------------------------------------------------------------- text
+
+style Display {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeDisplay
+    Color = @Ink
+}
+style Heading {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeHeading
+    Color = @Ink
+}
+style Title {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeTitle
+    Color = @Ink
+}
+style Lead {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeLead
+    Color = @Ink
+}
+style Body {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeBody
+    Color = @InkSoft
+    LineHeightPercentage = 1.15
+}
+style Caption {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeCaption
+    Color = @InkFaint
+}
+// A small label over a group, spaced out and in capitals: SECTION, SLOT, OBJECTIVE.
+style Overline {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeCaption
+    Color = @InkFaint
+    TextTransform = ToUpper
+    FontSpace = (2, 0)
+}
+// A number that is the point of its box: a level, a price, a count.
+style Figure {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeTitle
+    Color = @Ink
+}
+style AccentText {
+    HAlign = Left
+    Font = @FontBold
+    FontSize = @SizeBody
+    Color = @Accent
+}
+style GoodText {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeBody
+    Color = @Good
+}
+style BadText {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeBody
+    Color = @Bad
+}
+style WarnText {
+    HAlign = Left
+    Font = @FontRegular
+    FontSize = @SizeBody
+    Color = @Warn
+}
+// The label inside a button, a tab or a key cap.
+style Label {
+    Font = @FontBold
+    FontSize = @SizeBody
+    Color = @Ink
+    HAlign = Center
+    VAlign = Middle
+}
+style LabelOnAccent : Label {
+    Color = @OnAccent
+}
+style LabelQuiet : Label {
+    Color = @InkSoft
+}
+
+// ------------------------------------------------------------------------------------------------------ surfaces
+
+// What a full screen sits on: the base colour, lighter where the eye lands.
+style ScreenBackdrop {
+    CornerRadius = (0, 0, 0, 0)
+    bEnableBodyGradient = true
+    BodyGradient = "radial-gradient(ellipse 95% 85% at 50% 40%, #EEE9E0, #E6E1D7 65%, #D9D3C7)"
+}
+// A panel: a body a step above the base, a hairline edge, rounded corners and a soft shadow under it.
+style Panel {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (8, 8, 8, 8)
+    bEnableBodyGradient = true
+    BodyGradient = "linear-gradient(180deg, #F6F2EB, #F0EBE2)"
+    bEnableBorder = true
+    BorderWidthUnitMode = Value
+    BorderWidth = @EdgeWidth
+    BorderColor = @Edge
+    bEnableOuterShadow = true
+    OuterShadowColor = @Shadow
+    OuterShadowSizeUnitMode = Value
+    OuterShadowSize = 0
+    OuterShadowBlurUnitMode = Value
+    OuterShadowBlur = 28
+    OuterShadowDistanceUnitMode = Value
+    OuterShadowDistance = 10
+    OuterShadowAngle = 90
+}
+// A card on a panel: one step lighter, a smaller corner, no shadow of its own.
+style Card {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (4, 4, 4, 4)
+    bEnableBodyGradient = true
+    BodyGradient = "linear-gradient(180deg, #FCFAF5, #F6F2EA)"
+    bEnableBorder = true
+    BorderWidthUnitMode = Value
+    BorderWidth = @EdgeWidth
+    BorderColor = @Edge
+}
+// The same card picked: a weak accent fill and an accent edge.
+style CardSelected : Card {
+    bEnableBodyGradient = false
+    BodyColor = @AccentSoft
+    BorderColor = @AccentEdge
+}
+// Sunk into a panel: an empty slot, a track, an inset list.
+style Well {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (4, 4, 4, 4)
+    BodyColor = @Sunken
+    bEnableBorder = true
+    BorderWidthUnitMode = Value
+    BorderWidth = @EdgeWidth
+    BorderColor = @Edge
+}
+// The see-through plate under a HUD element, readable over any scene.
+style Plate {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (4, 4, 4, 4)
+    BodyColor = @Scrim
+    bEnableBorder = true
+    BorderWidthUnitMode = Value
+    BorderWidth = @EdgeWidth
+    BorderColor = @Edge
+}
+// A small rounded tag: a count, a NEW, a rarity.
+style Chip {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (2, 2, 2, 2)
+    BodyColor = @AccentSoft
+}
+// A key or button prompt's cap.
+style KeyCap {
+    CornerRadiusUnitMode = Value
+    CornerRadius = (2, 2, 2, 2)
+    BodyColor = @Raised
+    bEnableBorder = true
+    BorderWidthUnitMode = Value
+    BorderWidth = @EdgeWidth
+    BorderColor = @EdgeStrong
+}
+// A hairline between groups. Give it a height of 2 (or a width of 2, standing): at 1280 x 720 that is still
+// more than one pixel. This and the two below have no size of their own: their slot sizes them (@slot Size), or
+// your own SizeDelta does.
+style Divider {
+    AnchorData.SizeDelta = (0, 0)
+    CornerRadius = (0, 0, 0, 0)
+    BodyColor = @Edge
+}
+// A short solid bar of the accent: beside a selected row, under a heading.
+style AccentBar {
+    AnchorData.SizeDelta = (0, 0)
+    CornerRadiusUnitMode = Value
+    CornerRadius = (1, 1, 1, 1)
+    BodyColor = @Accent
+}
+// The accent fading out to the right: the top edge of a header, a selected row's wash.
+style AccentFade {
+    AnchorData.SizeDelta = (0, 0)
+    CornerRadius = (0, 0, 0, 0)
+    bEnableBodyGradient = true
+    BodyGradient = "linear-gradient(90deg, #A2452F, #A2452F00)"
+}
+// A soft round light of the accent, for behind a figure or an icon. Never put it over text.
+style Glow {
+    CornerRadiusUnitMode = Percentage
+    CornerRadius = (1, 1, 1, 1)
+    bEnableBodyGradient = true
+    BodyGradient = "radial-gradient(circle closest-side at 50% 50%, #A2452F30, #9C412C12 45%, #9C412C00 100%)"
+}
+
+// ------------------------------------------------------------------------------------------------------ controls
+
+// The one action a screen wants most. Holds a Text : ui.LabelOnAccent.
+style ButtonPrimary {
+    StyleSource = Inline
+    Style.Normal = @Accent
+    Style.Hovered = #8C3A27
+    Style.Pressed = #77311F
+    Style.Focused = #8C3A27
+    Style.Disabled = @Raised
+    Style.CornerRadius = @Radius
+    Style.ContentPadding = (24, 8, 24, 8)
+    Style.Height = 48
+}
+// Every other action. Holds a Text : ui.Label.
+style ButtonSecondary {
+    StyleSource = Inline
+    Style.Normal = @Raised
+    Style.Hovered = #EFEAE0
+    Style.Pressed = #E3DDD1
+    Style.Focused = @EdgeStrong
+    Style.Disabled = @Sunken
+    Style.CornerRadius = @Radius
+    Style.ContentPadding = (24, 8, 24, 8)
+    Style.Height = 48
+}
+// A tab: the selected one has a weak accent fill, the others none until hovered. Hold a Text : ui.Label or
+// ui.LabelQuiet; put a ui.AccentBar under the selected one.
+style TabOn {
+    StyleSource = Inline
+    Style.Normal = @AccentSoft
+    Style.Hovered = @AccentSoft
+    Style.Pressed = @AccentSoft
+    Style.Focused = @AccentSoft
+    Style.CornerRadius = @RadiusSmall
+    Style.ContentPadding = (20, 6, 20, 6)
+    Style.Height = 44
+}
+style TabOff {
+    StyleSource = Inline
+    Style.Normal = #00000000
+    Style.Hovered = #EFEAE0
+    Style.Pressed = #E3DDD1
+    Style.Focused = #EFEAE0
+    Style.CornerRadius = @RadiusSmall
+    Style.ContentPadding = (20, 6, 20, 6)
+    Style.Height = 44
+}
+// A meter: health, experience, a stat. Set Percent; give it a height in its slot.
+style Meter {
+    StyleSource = Inline
+    Style.TrackColor = @Edge
+    Style.FillColor = @Accent
+    Style.CornerRadius = @RadiusSmall
+    Style.Height = 8
+}
+style MeterGood : Meter {
+    Style.FillColor = @Good
+}
+style MeterBad : Meter {
+    Style.FillColor = @Bad
+}
+style MeterWarn : Meter {
+    Style.FillColor = @Warn
+}
+
+// -------------------------------------------------------------------------------------------------------- layout
+
+// Anchored to the four corners of its parent with no inset: the node fills it.
+style FillParent {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+}
+// In a panel (an overlay, a box): fill the slot both ways, with no size of its own -- a node is 100 x 100 until told
+// otherwise, and a panel that sizes itself to its children counts that 100 too.
+style FillSlot {
+    AnchorData.SizeDelta = (0, 0)
+    @slot { HorizontalAlignment = Fill  VerticalAlignment = Fill }
+}

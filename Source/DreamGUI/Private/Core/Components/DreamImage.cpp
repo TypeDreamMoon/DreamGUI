@@ -424,6 +424,19 @@ void UDreamImage::OnUpdateGeometry(FDreamUIGeometry& InMesh, bool InTriangleChan
 	}
 }
 
+bool UDreamImage::WantsEdgeAntiAliasing()const
+{
+	// A rect's edges, sliced or tiled, sit on the pixel grid in an unrotated screen and are left as they are.
+	if (Brush.DrawAs == EDreamUIImageBrushDrawType::RoundedBox)
+	{
+		return true;
+	}
+	return Brush.DrawAs == EDreamUIImageBrushDrawType::Filled
+		&& (Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial90
+			|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial180
+			|| Brush.FillMethod == EDreamUIImageBrushFillMethod::Radial360);
+}
+
 FDreamUISpriteInfo UDreamImage::GetBrushSpriteInfo()const
 {
 	// What the geometry builders need to know about the resource: its authored size and the rectangle

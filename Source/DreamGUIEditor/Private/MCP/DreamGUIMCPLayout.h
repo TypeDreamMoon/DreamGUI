@@ -4,9 +4,10 @@
 // whether it shows, what it says and whether that fits -- and the problems a person sees at a glance and a model that
 // cannot see the picture does not: something off the screen, a text that is cut, a button too small to hit or under
 // another, edges that miss each other by a pixel or two, a size of the viewport that breaks what another size kept,
-// text that does not stand out from what is behind it.
+// text that does not stand out from what is behind it, something drawn outside its panel or over a text, a panel whose
+// content keeps to one side.
 //
-// The rules have codes of their own, DUI8001 to DUI8007 (EDreamUIDiagnosticCode, the 8xxx layout range), and their
+// The rules have codes of their own, DUI8001 to DUI8010 (EDreamUIDiagnosticCode, the 8xxx layout range), and their
 // thresholds are below and in Docs/tools/dreammcp.md. They never fail a compile: they come out of `layout` and
 // `preview` alone, as warnings and infos.
 
@@ -43,12 +44,54 @@ namespace DreamGUIMCP
 		/** Edges or gaps differing by more than the first and at most the second, in pixels, nearly line up (DUI8005). */
 		inline constexpr double NearMissLow = 0.5;
 		inline constexpr double NearMissHigh = 3.0;
+		/**
+		 * A box no longer than this on either side, in pixels, is the size of an icon: the plain visuals in it (no text,
+		 * nothing to press) are the parts of a drawing, and DUI8005 does not compare them.
+		 */
+		inline constexpr double GlyphBoxSize = 128.0;
 		/** Text against what is behind it: below the first ratio a warning, below the second an info for text under LargeText px (DUI8007). */
 		inline constexpr double ContrastPoor = 3.0;
 		inline constexpr double ContrastLow = 4.5;
 		inline constexpr double LargeText = 24.0;
 		/** A control's own part (not a node the file writes) below this ratio is hidden on purpose, not hard to read. */
 		inline constexpr double HiddenByControl = 1.1;
+		/** A shape of at most this many vertices is kept point by point, so a turned one is measured as drawn, not by its box. */
+		inline constexpr int32 ShapePoints = 256;
+		/** A node reaching more than this (pixels) past the panel or card that frames it is outside it (DUI8008)... */
+		inline constexpr double OutsideFrameTolerance = 4.0;
+		/** ...and by at least this share of its own size on that axis, so a hairline outline is not a finding. */
+		inline constexpr double OutsideFrameShare = 0.05;
+		/**
+		 * A plate at least this share of its frame's width and height, lying over most of it, is another layer of the same
+		 * panel (a face over its shadow, a glow behind it), not content in it.
+		 */
+		inline constexpr double PeerPlateShare = 0.9;
+		/** A visual over a text covers it when it hides at least this share of the text's glyph box (DUI8009)... */
+		inline constexpr double CoversTextShare = 0.12;
+		/** ...over a part at least this thick (pixels; a sliver along an edge is two things touching)... */
+		inline constexpr double CoversTextThickness = 4.0;
+		/** ...is at least this opaque (its colour's alpha, 0-255)... */
+		inline constexpr int32 CoversTextAlpha = 40;
+		/** ...or, a decoration no bigger than the text's line, lies at least this share of itself inside that line... */
+		inline constexpr double CrowdsTextShare = 0.3;
+		/** ...and covers less than this share of the viewport (a full-screen scrim or vignette is not about one text). */
+		inline constexpr double ScrimShare = 0.6;
+		/** DUI8010 looks at panels at least this big (pixels on each side, and share of the viewport)... */
+		inline constexpr double UnbalancedMinSide = 240.0;
+		inline constexpr double UnbalancedMinShare = 0.02;
+		/** ...and reports content that leaves an empty band this wide (share of the panel) on one side or across the middle... */
+		inline constexpr double UnbalancedEmptyShare = 0.38;
+		/** ...or one this wide on a side while items reach less than UnbalancedSparse of that axis... */
+		inline constexpr double UnbalancedSideShare = 0.2;
+		inline constexpr double UnbalancedSparse = 0.6;
+		/** ...(either way the opposite side keeping less than a third of that band: room on one side only, not a centred block)... */
+		inline constexpr double UnbalancedOppositeRatio = 0.33;
+		/** ...or gaps between its items that take this share of its height (width): rows spread thin. */
+		inline constexpr double UnbalancedVerySparse = 0.6;
+		/** A panel this many times longer than it is wide is a bar or a sidebar: its middle is not looked at along its length. */
+		inline constexpr double UnbalancedElongated = 2.5;
+		/** An item thinner than this (pixels) is a rule, a divider or an accent bar: it frames the content, it is not content. */
+		inline constexpr double UnbalancedThinItem = 6.0;
 	}
 
 	/** One widget of the screen as it was laid out. */
@@ -115,6 +158,32 @@ namespace DreamGUIMCP
 		int8 TextSpillX = 0;
 		int8 TextSpillY = 0;
 
+		/** Tagged Bleed (`@tag Bleed`): a decoration that draws past its frame or over text on purpose. */
+		bool bBleed = false;
+		/**
+		 * What it draws, in viewport pixels, cut to its clipping ancestors: its shape (the glyphs of a text, the outline of
+		 * a polygon, a rect block's body), and that with a shadow or glow that shows. Its rect when there is no geometry.
+		 */
+		FBox2D Body = FBox2D(ForceInit);
+		FBox2D Drawn = FBox2D(ForceInit);
+		/** Body came from the visual's geometry rather than from the rect. */
+		bool bBodyMeasured = false;
+		/** A rect block that draws no body (an outline) or one too faint to hide what is under it. */
+		bool bHollow = false;
+		/**
+		 * The same in the widget's own plane, local units with Y up, and where that plane is: the rules compare two nodes
+		 * in the plane of one of them, so a card turned in 3D keeps its edges straight. Invalid when not captured.
+		 */
+		FTransform World = FTransform::Identity;
+		double PxPerUnit = 1.0;
+		FBox2D LocalRect = FBox2D(ForceInit);
+		FBox2D LocalBody = FBox2D(ForceInit);
+		FBox2D LocalDrawn = FBox2D(ForceInit);
+		/** The line a text takes: what it needs, placed by its alignment. */
+		FBox2D LocalLine = FBox2D(ForceInit);
+		/** The points of the shape it draws (a polygon's corners), local, when there are few enough to keep: a turned shape's box is bigger than the shape. */
+		TArray<FVector2D> LocalShape;
+
 		bool IsDrawn() const { return bActive && bShown && Opacity > 0.0f; }
 	};
 
@@ -148,7 +217,7 @@ namespace DreamGUIMCP
 		double Weight = 0.0;
 	};
 
-	/** Rules 1 to 5 on one snapshot. */
+	/** Rules 1 to 5 and 8 to 10 on one snapshot. */
 	DREAMGUIEDITOR_API void LintLayout(const FLayoutSnapshot& InSnapshot, TArray<FLayoutIssue>& OutIssues);
 
 	/** Rule 7 on a picture of the snapshot: each text against the pixels around it. */

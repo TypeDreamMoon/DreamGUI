@@ -343,7 +343,7 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 	// itself claims, and it is right: these rows are about the Blueprint, not about configuring the
 	// object, and one place to look beats five.
 	IDetailCategoryBuilder& EventCategory = DetailBuilder.EditCategory(
-		TEXT("Events"), LOCTEXT("EventsCategory", "Events"), ECategoryPriority::Uncommon);
+		DreamUITextAuthoring::EventRowsCategoryName, LOCTEXT("EventsCategory", "Events"), ECategoryPriority::Uncommon);
 	for (const FProperty* Event : Events)
 	{
 		// Per row, on top of the whole-panel reasons above: an event whose value no Blueprint pin can

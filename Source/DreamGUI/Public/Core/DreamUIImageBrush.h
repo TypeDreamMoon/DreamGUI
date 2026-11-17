@@ -101,8 +101,9 @@ public:
 
 	/**
 	 * RoundedBox only: corner radius in pixels, X top-left, Y top-right, Z bottom-right, W
-	 * bottom-left -- clockwise from the top left, the order CSS and UDreamRectBlock both use. Each is
-	 * clamped to half the shorter side, so a big enough radius gives a capsule rather than an error.
+	 * bottom-left -- clockwise from the top left, as CSS has it. (UDreamRectBlock::CornerRadius runs another
+	 * way: bottom-right, top-right, top-left, bottom-left.) Each is clamped to half the shorter side, so a big
+	 * enough radius gives a capsule rather than an error.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (EditCondition = "DrawAs==EDreamUIImageBrushDrawType::RoundedBox", EditConditionHides))
 	FVector4f CornerRadius = FVector4f(8, 8, 8, 8);

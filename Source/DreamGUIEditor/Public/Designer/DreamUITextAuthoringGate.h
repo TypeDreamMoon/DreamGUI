@@ -335,6 +335,17 @@ namespace DreamUITextAuthoring
 	DREAMGUIEDITOR_API bool IsCustomRowReadOnly(const UObject* InOwner, FName InRowName, FName InCategoryName);
 
 	/**
+	 * The details category the Events rows are added to (DreamWidgetEventCustomization), and the one the gate
+	 * above waves through: a route is a line the file takes, so the row judges itself at the click, with the
+	 * line in hand, and a category that refused it refused every event row on every text-authored class.
+	 *
+	 * Shared rather than spelled twice. Two literals that have to agree are two literals that stop agreeing --
+	 * which is how the panel came to show a text-authored class's events all grey while the row's own button,
+	 * asking whether the delegate has a template to route from, said yes.
+	 */
+	DREAMGUIEDITOR_API extern const FName EventRowsCategoryName;
+
+	/**
 	 * Whether a binding may be AUTHORED from the details panel on this object.
 	 *
 	 * True for a text-authored class too, now that a binding there is written as its `<-` line: the compiler REPLACES

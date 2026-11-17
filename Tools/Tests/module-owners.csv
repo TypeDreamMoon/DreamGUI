@@ -96,6 +96,7 @@ Source/DreamGUI/Private/Core/DreamUIFontData_Bitmap.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontData_DistanceField.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontData_FreeTypeRender.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontEmojiData.cpp,DreamGUI,core
+Source/DreamGUI/Private/Core/DreamUIEdgeAntiAliasing.cpp,DreamGUI,anti-aliasing a mesh outline by its geometry
 Source/DreamGUI/Private/Core/DreamUIGeometry.cpp,DreamGUI,CPU geometry of a visual + builders (needs sprites/text/canvas)
 Source/DreamGUI/Private/Core/DreamUIImageBrush.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIInputServices.cpp,DreamGUI,the core's one channel to the input system: an abstract world subsystem Input implements
@@ -347,6 +348,7 @@ Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h,DreamGUI,core
+Source/DreamGUI/Public/Core/DreamUIEdgeAntiAliasing.h,DreamGUI,anti-aliasing a mesh outline by its geometry
 Source/DreamGUI/Public/Core/DreamUIGeometry.h,DreamGUI,CPU geometry of a visual + builders (needs sprites/text/canvas)
 Source/DreamGUI/Public/Core/DreamUIImageBrush.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIInputServices.h,DreamGUI,the core's one channel to the input system: an abstract world subsystem Input implements
