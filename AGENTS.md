@@ -19,8 +19,9 @@ UMG or CSS habits. A screen that compiles can still be laid out wrong: it is don
 **If you have the `dream_gui` tool, a DreamMCP server is connected: use it for every step.** It answers in the user's
 editor or in an engine it keeps running, in a fraction of a second. `help` gives each action's arguments.
 
-1. Read: the `reference` action lists the pages (the language, a worked example, pitfalls, controls, diagnostics).
-   Without the tool: `Plugins/DreamGUI/.skill/reference/dui.md`, `example.md` and `pitfalls.md`.
+1. Read: the `reference` action lists the pages (the cheat sheet first, then the language, a worked example, pitfalls,
+   controls, diagnostics). Without the tool: `Plugins/DreamGUI/.skill/reference/cheatsheet.md`, `dui.md`, `example.md`
+   and `pitfalls.md`.
 2. Look up every node type and property before writing it: `lookup` (`Text`, `Text.FontSize`, `VerticalBox`, `Widget`,
    `slot`). Without the tool: `<Project>/DUI/.dui-symbols.json`, which the editor writes when `<Project>/DUI/` exists.
 3. Write the source under `<Project>/DUI/` (or `<Plugin>/DUI/`), never under `Content/`. The file's `class` line
@@ -36,7 +37,8 @@ Without the tool, the same verbs from the command line (each run starts an engin
 `pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check|compile|layout <file>`, `check -All` for every file.
 The skills `dream-gui-create`, `-verify` and `-diagnose` in `Plugins/DreamGUI/.skill/` walk these steps;
 `pwsh -NoProfile -File Plugins/DreamGUI/.skill/sync-skills.ps1` publishes them into `.claude/skills/`. A diagnostic reads
-`File.dui(line,col): error DUI3001: …`; every code is in `Plugins/DreamGUI/Docs/diagnostics/index.md`. More:
+`File.dui(line,col): error DUI3001: …`; every code is in `Plugins/DreamGUI/Docs/diagnostics/index.md`, and as data in
+`Plugins/DreamGUI/Docs/diagnostics/codes.json`. More:
 `Plugins/DreamGUI/Docs/tools/dreammcp.md`. The commandlet `-run=DreamUICompileWidgets -Manifest=DUI/widgets.json`
 (`Docs/tools/scripting.md`) compiles a list of widgets with no endpoint, components listed first.
 
@@ -110,8 +112,9 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
   `Docs/guides/property-meta.md`.
 - Diagnostic codes are stable. Never renumber or reuse one. A new code goes into `EDreamUIDiagnosticCode`
   (`Source/DreamGUI/Public/Text/DreamUIDiagnostics.h`) and into `Docs/diagnostics/index.md` and
-  `Docs/diagnostics/codes.md`.
-- `.skill/reference/` is built from `Docs/` (the language, the worked example, pitfalls, controls, diagnostics). After
+  `Docs/diagnostics/codes.md`. Then run `pwsh -File .skill/gen-knowledge.ps1`: it checks the three agree and writes
+  `Docs/diagnostics/codes.json`, and `Docs/cheatsheet.md` from `.skill/cheatsheet/`. CI runs it with `-Check`.
+- `.skill/reference/` is built from `Docs/` (the cheat sheet, the language, the worked example, pitfalls, controls, diagnostics). After
   editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift. A code block whose
   first line is `// DUI/<path>.dui` is a whole file that agents copy: `DreamGUI.MCP.Reference.*` compiles and lays out
   every one and fails on any error or warning, so keep them self-contained (no handler the class must supply).
