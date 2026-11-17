@@ -1111,7 +1111,9 @@ namespace DreamGUIMCP
 			{
 				for (const FLayoutIssue& Issue : Issues[Size])
 				{
-					if (Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutNearlyAligned) || BaseKeys.Contains(Issue.Key))
+					// Near misses and balance are infos about the design, not about a size.
+					if (Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutNearlyAligned)
+						|| Issue.Code == static_cast<int32>(EDreamUIDiagnosticCode::LayoutUnbalanced) || BaseKeys.Contains(Issue.Key))
 					{
 						continue;
 					}

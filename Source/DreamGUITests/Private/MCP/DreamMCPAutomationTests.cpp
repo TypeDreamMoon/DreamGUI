@@ -1379,6 +1379,152 @@ bool FDreamMCPLintContrastTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintOutsideFrameTest,
+	"DreamGUI.MCP.Layout.ANodeDrawnOutsideItsPanelIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintOutsideFrameTest::RunTest(const FString& Parameters)
+{
+	FSnapshotBuilder Inside;
+	const int32 Panel = Inside.Add(0, TEXT("Panel"), TEXT("RectBlock"), 100, 100, 400, 300);
+	Inside.Add(Panel, TEXT("Icon"), TEXT("Image"), 120, 120, 100, 100);
+	TestEqual(TEXT("an image inside its panel is not reported"), CountCode(Inside.Lint(), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+
+	const auto Spilling = [](bool bBleed, bool bClip)
+	{
+		FSnapshotBuilder Build;
+		const int32 Card = Build.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 100, 400, 300);
+		Build.Snapshot.Nodes[Card].bClipsChildren = bClip;
+		const int32 Badge = Build.Add(Card, TEXT("Badge"), TEXT("Image"), 380, 120, 200, 100);
+		Build.Snapshot.Nodes[Badge].bBleed = bBleed;
+		return Build.Lint();
+	};
+	const TArray<FLayoutIssue> Issues = Spilling(false, false);
+	TestEqual(TEXT("an image 80 px past the right edge of its card is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutOutsideFrame), 1);
+	TestTrue(TEXT("as a warning that says which edge and how far"), Issues.Num() > 0 && Issues[0].Severity == TEXT("warning")
+		&& Issues[0].Message.Contains(TEXT("80 px past its right edge")) && Issues[0].Hint.Contains(TEXT("@tag Bleed")));
+	TestEqual(TEXT("the same image tagged Bleed is not reported"), CountCode(Spilling(true, false), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+	TestEqual(TEXT("nor inside a card that clips it"), CountCode(Spilling(false, true), EDreamUIDiagnosticCode::LayoutOutsideFrame), 0);
+
+	// An overlay of a plate and its content: the plate, an earlier sibling that fills the parent, is the frame.
+	FSnapshotBuilder Overlay;
+	const int32 Slot = Overlay.Add(0, TEXT("Slot"), TEXT("Widget"), 100, 100, 200, 200);
+	const int32 Plate = Overlay.Add(Slot, TEXT("Plate"), TEXT("RectBlock"), 100, 100, 200, 200);
+	Overlay.Add(Slot, TEXT("Portrait"), TEXT("Image"), 150, 110, 80, 230);
+	Overlay.Add(Slot, TEXT("Glow"), TEXT("RectBlock"), 90, 90, 220, 220);
+	const TArray<FLayoutIssue> Layers = Overlay.Lint();
+	TestEqual(TEXT("a portrait 40 px below the plate it sits on is reported, a glow the size of the plate is not"),
+		CountCode(Layers, EDreamUIDiagnosticCode::LayoutOutsideFrame), 1);
+	TestTrue(TEXT("against the plate"), Layers.Num() > 0 && Layers[0].Other == Plate && Layers[0].Message.Contains(TEXT("40 px below its bottom")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintCoversTextTest,
+	"DreamGUI.MCP.Layout.AVisualDrawnOverTextIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
+{
+	// A title, then what is drawn after it: Order is the index, so what is added later is drawn over.
+	const auto Title = [](FSnapshotBuilder& Build)
+	{
+		const int32 Text = Build.Add(0, TEXT("Title"), TEXT("Text"), 100, 100, 300, 40);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Text];
+		Node.bHasText = true;
+		Node.Text = TEXT("HALCYON");
+		Node.TextNeeded = FVector2f(200.0f, 40.0f);
+		Node.TextSpillX = 1;
+		Node.TextSpillY = 1;
+		return Text;
+	};
+	const auto Count = [](const FSnapshotBuilder& Build) { return CountCode(Build.Lint(), EDreamUIDiagnosticCode::LayoutCoversText); };
+
+	FSnapshotBuilder Over;
+	const int32 Text = Title(Over);
+	const int32 Block = Over.Add(0, TEXT("Accent"), TEXT("RectBlock"), 150, 105, 100, 30);
+	const TArray<FLayoutIssue> Issues = Over.Lint();
+	TestEqual(TEXT("a block drawn after a text, over its letters, is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("naming both"), Issues.Num() > 0 && Issues[0].Node == Block && Issues[0].Other == Text && Issues[0].Message.Contains(TEXT("HALCYON")));
+
+	FSnapshotBuilder Under;
+	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 150, 105, 100, 30);
+	Title(Under);
+	TestEqual(TEXT("the same block drawn before the text is its backplate"), Count(Under), 0);
+
+	FSnapshotBuilder Tagged;
+	Title(Tagged);
+	Tagged.Snapshot.Nodes[Tagged.Add(0, TEXT("Sheen"), TEXT("RectBlock"), 150, 105, 100, 30)].bBleed = true;
+	TestEqual(TEXT("one tagged Bleed is not reported"), Count(Tagged), 0);
+
+	FSnapshotBuilder Pressable;
+	Title(Pressable);
+	Pressable.Snapshot.Nodes[Pressable.Add(0, TEXT("Play"), TEXT("Native.Button"), 150, 105, 100, 30)].bInteractive = true;
+	TestEqual(TEXT("a control is DUI8004's business, not this rule's"), Count(Pressable), 0);
+
+	FSnapshotBuilder Outline;
+	Title(Outline);
+	Outline.Snapshot.Nodes[Outline.Add(0, TEXT("Ring"), TEXT("RectBlock"), 90, 90, 320, 60)].bHollow = true;
+	TestEqual(TEXT("an outline with no body hides nothing"), Count(Outline), 0);
+
+	FSnapshotBuilder Scrim;
+	Title(Scrim);
+	Scrim.Add(0, TEXT("Vignette"), TEXT("RectBlock"), 0, 0, 1000, 600);
+	TestEqual(TEXT("a scrim over the whole screen is about no text in particular"), Count(Scrim), 0);
+
+	FSnapshotBuilder Touching;
+	Title(Touching);
+	Touching.Add(0, TEXT("Rule"), TEXT("RectBlock"), 100, 138, 300, 2);
+	TestEqual(TEXT("a rule touching the text's bottom edge is two things touching"), Count(Touching), 0);
+
+	FSnapshotBuilder Crowding;
+	Title(Crowding);
+	Crowding.Add(0, TEXT("Underline"), TEXT("RectBlock"), 110, 126, 60, 8);
+	const TArray<FLayoutIssue> Crowded = Crowding.Lint();
+	TestEqual(TEXT("a small bar lying in the text's line is reported"), CountCode(Crowded, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("as over its line"), Crowded.Num() > 0 && Crowded[0].Message.Contains(TEXT("over the line of")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintUnbalancedTest,
+	"DreamGUI.MCP.Layout.APanelWithItsContentToOneSideIsAnInfo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintUnbalancedTest::RunTest(const FString& Parameters)
+{
+	const auto Row = [](FSnapshotBuilder& Build, int32 Parent, const TCHAR* Name, double X, double Y, double W, double H)
+	{
+		const int32 Index = Build.Add(Parent, Name, TEXT("Text"), X, Y, W, H);
+		Build.Snapshot.Nodes[Index].bHasText = true;
+		Build.Snapshot.Nodes[Index].Text = Name;
+		return Index;
+	};
+
+	FSnapshotBuilder Top;
+	const int32 Card = Top.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 50, 500, 400);
+	Row(Top, Card, TEXT("Heading"), 120, 70, 460, 40);
+	Row(Top, Card, TEXT("Line one"), 120, 120, 460, 24);
+	Row(Top, Card, TEXT("Line two"), 120, 150, 460, 24);
+	const TArray<FLayoutIssue> Issues = Top.Lint();
+	TestEqual(TEXT("a card whose rows keep to its top third is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutUnbalanced), 1);
+	TestTrue(TEXT("as an info that says where the room is"), Issues.Num() > 0 && Issues[0].Severity == TEXT("info") && Issues[0].Message.Contains(TEXT("bottom")));
+
+	FSnapshotBuilder Even;
+	const int32 Filled = Even.Add(0, TEXT("Card"), TEXT("RectBlock"), 100, 50, 500, 400);
+	Row(Even, Filled, TEXT("Heading"), 120, 70, 460, 100);
+	Row(Even, Filled, TEXT("Body"), 120, 190, 460, 100);
+	Row(Even, Filled, TEXT("Footer"), 120, 310, 460, 120);
+	TestEqual(TEXT("a card its rows fill is not reported"), CountCode(Even.Lint(), EDreamUIDiagnosticCode::LayoutUnbalanced), 0);
+
+	// A footer: hints at the left end, buttons at the right, nothing between -- what a bar along an edge looks like.
+	FSnapshotBuilder Bar;
+	const int32 Footer = Bar.Add(0, TEXT("Footer"), TEXT("RectBlock"), 20, 400, 960, 160);
+	Row(Bar, Footer, TEXT("Select"), 30, 460, 80, 40);
+	Row(Bar, Footer, TEXT("Back"), 120, 460, 80, 40);
+	Row(Bar, Footer, TEXT("Apply"), 800, 460, 170, 40);
+	TestEqual(TEXT("a footer with an empty middle is not reported"), CountCode(Bar.Lint(), EDreamUIDiagnosticCode::LayoutUnbalanced), 0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintSmallTargetWordingTest,
 	"DreamGUI.MCP.Layout.ASizeJustUnderTheMinimumDoesNotReadAsTheMinimum",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
