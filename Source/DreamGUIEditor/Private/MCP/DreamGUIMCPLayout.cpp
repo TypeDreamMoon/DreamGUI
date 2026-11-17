@@ -497,6 +497,17 @@ namespace DreamGUIMCP
 			};
 			return 0.2126 * Channel(InColor.R) + 0.7152 * Channel(InColor.G) + 0.0722 * Channel(InColor.B);
 		}
+
+		/** A size the way a message says it: whole pixels, unless rounding would make it read as the very threshold it misses. */
+		FString PxBelow(double InValue, double InThreshold)
+		{
+			if (InValue >= InThreshold || FMath::RoundToInt(InValue) < FMath::RoundToInt(InThreshold))
+			{
+				return FString::Printf(TEXT("%d"), FMath::RoundToInt(InValue));
+			}
+			const double Tenths = FMath::FloorToDouble(InValue * 10.0) / 10.0;
+			return Tenths < InThreshold ? FString::Printf(TEXT("%.1f"), Tenths) : FString::Printf(TEXT("%.2f"), FMath::FloorToDouble(InValue * 100.0) / 100.0);
+		}
 	}
 
 	int32 FLayoutSnapshot::FindByPath(const FString& InPathOrName) const
@@ -687,13 +698,14 @@ namespace DreamGUIMCP
 				Issue.Weight = 2.2;
 				continue;
 			}
-			if (Node.bInteractive && (Node.W < MinTargetSize || Node.H < MinTargetSize))
+			// A hair under the minimum is the minimum: layout works in fractions of a pixel.
+			if (Node.bInteractive && (Node.W < MinTargetSize - 0.01 || Node.H < MinTargetSize - 0.01))
 			{
 				FLayoutIssue& Issue = OutIssues.AddDefaulted_GetRef();
 				Issue.Code = static_cast<int32>(EDreamUIDiagnosticCode::LayoutTooSmall);
 				Issue.Node = Index;
 				Issue.Message = FString::Printf(TEXT("%s can be pressed but is only %sx%s px; a pointer needs at least %dx%d"),
-					*Who(InSnapshot, Index), *Px(Node.W), *Px(Node.H), FMath::RoundToInt(MinTargetSize), FMath::RoundToInt(MinTargetSize));
+					*Who(InSnapshot, Index), *PxBelow(Node.W, MinTargetSize), *PxBelow(Node.H, MinTargetSize), FMath::RoundToInt(MinTargetSize), FMath::RoundToInt(MinTargetSize));
 				Issue.Hint = TEXT("Make the control (not only what it draws) bigger: AnchorData.SizeDelta, MinDesiredSize, or padding around its content.");
 				Issue.Key = FString::Printf(TEXT("8003|%s|small"), *Node.Path);
 				Issue.Weight = 1.5;

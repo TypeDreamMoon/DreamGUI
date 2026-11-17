@@ -1379,6 +1379,23 @@ bool FDreamMCPLintContrastTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintSmallTargetWordingTest,
+	"DreamGUI.MCP.Layout.ASizeJustUnderTheMinimumDoesNotReadAsTheMinimum",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintSmallTargetWordingTest::RunTest(const FString& Parameters)
+{
+	FSnapshotBuilder Build;
+	const int32 Drop = Build.Add(0, TEXT("WindowDrop"), TEXT("Native.Dropdown"), 100, 100, 198, 23.7);
+	Build.Snapshot.Nodes[Drop].bInteractive = true;
+	const int32 Exact = Build.Add(0, TEXT("Exact"), TEXT("Native.Button"), 100, 200, 120, 23.995);
+	Build.Snapshot.Nodes[Exact].bInteractive = true;
+	const TArray<FLayoutIssue> Issues = Build.Lint();
+	TestEqual(TEXT("23.7 px is too small, a hair under 24 is not"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutTooSmall), 1);
+	TestTrue(TEXT("and 23.7 reads as 23.7, not as 24"), Issues.Num() > 0 && Issues[0].Message.Contains(TEXT("198x23.7 px")));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPDuplicateDiagnosticsTest,
 	"DreamGUI.MCP.Protocol.TheSameFindingIsListedOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
