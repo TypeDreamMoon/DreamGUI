@@ -1702,9 +1702,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPReferenceExamplesTest,
 
 /**
  * The pages an agent is told to copy from (.skill/reference/, built from Docs/): every code block whose first line is
- * `// DUI/<path>.dui` is a whole file, and the files of one page are one example. Each is written out at its path, its
- * class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a class
- * line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * `// DUI/<path>.dui` is a whole file, and the files of all the pages are one project -- the starter screens place the
+ * building blocks, and both take their look from `DUI/Theme.dui` on the presets page. Each is written out at its path,
+ * its class lines moved under the test's own root and its `use` lines pointed at the files written; each file with a
+ * class line compiles with no error and no warning, and each that no other file places as a component lays out with none.
+ * When the files name a preset of the plugin's (`Plugin.DreamGUI:Presets/Default.dui`), they are written and checked
+ * again with each of the other presets named instead: every preset declares the same names, so every one must do.
  */
 bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 {
@@ -1740,13 +1743,15 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		return FString::Join(Out, TEXT("; "));
 	};
 
+	// Every page's files, in page order: one project. A path written on two pages must be the same file.
+	TArray<TPair<FString, FString>> Files;
+	TMap<FString, FString> PageOfFile;
 	for (const FString& Page : Pages)
 	{
 		FString Markdown;
 		FFileHelper::LoadFileToString(Markdown, *FPaths::Combine(ReferenceDir, Page));
 		TArray<FString> Lines;
 		Markdown.ParseIntoArrayLines(Lines, /*bCullEmpty*/ false);
-		TArray<TPair<FString, FString>> Files;
 		for (int32 Index = 0; Index < Lines.Num(); ++Index)
 		{
 			if (!Lines[Index].TrimStart().StartsWith(TEXT("```")))
@@ -1766,15 +1771,42 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 				{
 					Body += Lines[Line] + TEXT("\n");
 				}
-				Files.Emplace(First.RightChop(7), Body);
+				const FString Path = First.RightChop(7);
+				if (const FString* Earlier = PageOfFile.Find(Path))
+				{
+					const TPair<FString, FString>* Same = Files.FindByPredicate([&Path](const TPair<FString, FString>& InFile) { return InFile.Key == Path; });
+					TestTrue(FString::Printf(TEXT("DUI/%s on %s is the same file as on %s"), *Path, *Page, **Earlier), Same != nullptr && Same->Value == Body);
+				}
+				else
+				{
+					PageOfFile.Add(Path, Page);
+					Files.Emplace(Path, Body);
+				}
 			}
 			Index = End;
 		}
-		if (Files.IsEmpty())
-		{
-			continue;
-		}
+	}
 
+	// The presets the files can be checked under: the one they name, then every other preset of the plugin's.
+	const FString NamedPreset = TEXT("Plugin.DreamGUI:Presets/Default.dui");
+	TArray<FString> Presets = { FString() };
+	if (Files.ContainsByPredicate([&NamedPreset](const TPair<FString, FString>& InFile) { return InFile.Value.Contains(NamedPreset); }))
+	{
+		TArray<FString> PresetFiles;
+		IFileManager::Get().FindFiles(PresetFiles, *FPaths::Combine(Plugin->GetBaseDir(), TEXT("DUI"), TEXT("Presets"), TEXT("*.dui")), true, false);
+		PresetFiles.Sort();
+		TestTrue(TEXT("the plugin ships the preset the files name"), PresetFiles.Contains(TEXT("Default.dui")));
+		for (const FString& PresetFile : PresetFiles)
+		{
+			if (PresetFile != TEXT("Default.dui"))
+			{
+				Presets.Add(FPaths::GetBaseFilename(PresetFile));
+			}
+		}
+	}
+
+	for (const FString& Preset : Presets)
+	{
 		FScopedSources Sources;
 		TMap<FString, FString> Written;
 		for (const TPair<FString, FString>& File : Files)
@@ -1786,6 +1818,10 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 		for (const TPair<FString, FString>& File : Files)
 		{
 			FString Body = File.Value.Replace(TEXT("\nclass /Game/"), *FString::Printf(TEXT("\nclass %s/"), *Sources.PackageRoot));
+			if (!Preset.IsEmpty())
+			{
+				Body = Body.Replace(*NamedPreset, *FString::Printf(TEXT("Plugin.DreamGUI:Presets/%s.dui"), *Preset));
+			}
 			if (Body.Contains(TEXT("\nclass ")))
 			{
 				WithClass.Add(File.Key);
@@ -1811,8 +1847,9 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 			{
 				continue;
 			}
-			++FileCount;
-			const FString What = FString::Printf(TEXT("%s: DUI/%s"), *Page, *File.Key);
+			FileCount += Preset.IsEmpty() ? 1 : 0;
+			const FString What = Preset.IsEmpty() ? FString::Printf(TEXT("%s: DUI/%s"), *PageOfFile[File.Key], *File.Key)
+				: FString::Printf(TEXT("%s: DUI/%s with the %s preset"), *PageOfFile[File.Key], *File.Key, *Preset);
 			const TSharedPtr<FJsonObject> Compiled = Run(TEXT("compile"), Written[File.Key]);
 			const FString CompileProblems = Problems(Compiled);
 			TestTrue(FString::Printf(TEXT("%s compiles (%s)"), *What, *Field(Compiled, TEXT("summary"))), Field(Compiled, TEXT("outcome")) == TEXT("ok"));

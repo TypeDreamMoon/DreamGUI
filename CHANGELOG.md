@@ -47,6 +47,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   project names its preset once, in a one-line `DUI/Theme.dui`, and changes its whole look there. A library compiles
   into nothing and writes no asset. See [Presets](Docs/language/presets.md); the static check `preset-names` keeps the
   four in step.
+- **Building blocks and starter screens.** Two pages of whole `.dui` files to start from: the root that scales a
+  1920 x 1080 design canvas to any viewport, a panel, stat bars, tabs, list rows, item cards and slots, a HUD plate, key
+  prompts, menu lines and placeholder icons drawn from shapes; and a title menu, an inventory, a field HUD, a quest
+  journal and a results screen built from them. Both are reference pages DreamMCP serves, and
+  `DreamGUI.MCP.Reference.*` compiles and lays out every file on them under each of the four presets. See
+  [Building blocks](Docs/language/building-blocks.md) and [Starter screens](Docs/language/starter-screens.md).
 
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or

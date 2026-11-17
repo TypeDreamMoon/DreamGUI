@@ -19,7 +19,7 @@ a model that writes `.dui` cannot otherwise see: the laid-out screen, in words, 
 | Kind | editor service, in the `DreamGUIEditor` module (`Source/DreamGUIEditor/Private/MCP/`) |
 | Protocol | DreamMCP protocol `1` |
 | Manifest | `<Plugin>/Resources/DreamMCP.json`: the actions, their arguments as JSON Schema, the route, the host commandlet |
-| References | `.skill/reference/dui.md`, `example.md`, `pitfalls.md`, `controls.md`, named by the manifest and packaged with the plugin. Each stands alone: its links lead to this manual, and an agent that cannot open them misses nothing it needs |
+| References | `.skill/reference/dui.md`, `example.md`, `presets.md`, `blocks.md`, `screens.md`, `pitfalls.md`, `controls.md`, `diagnostics.md`, named by the manifest and packaged with the plugin. Each stands alone: its links lead to this manual, and an agent that cannot open them misses nothing it needs |
 | Route | `http://127.0.0.1:<port>/dream/gui`, tool name `dream_gui` |
 | Port | `47800`, or `-DreamMCPPort=<n>`; a port that cannot be bound is skipped for the next, up to 16. Other Dream plugins in the same process share it, each under its own route |
 | Bind address | `127.0.0.1` only, proven at startup |

@@ -24,7 +24,9 @@ editor or in an engine it keeps running, in a fraction of a second. `help` gives
 2. Look up every node type and property before writing it: `lookup` (`Text`, `Text.FontSize`, `VerticalBox`, `Widget`,
    `slot`). Without the tool: `<Project>/DUI/.dui-symbols.json`, which the editor writes when `<Project>/DUI/` exists.
 3. Write the source under `<Project>/DUI/` (or `<Plugin>/DUI/`), never under `Content/`. The file's `class` line
-   names the Blueprint it is the source of, for example `class /Game/UI/WBP_Hello`.
+   names the Blueprint it is the source of, for example `class /Game/UI/WBP_Hello`. Start from a starter screen or the
+   building blocks (`screens.md`, `blocks.md`) and take every colour, size and look from a preset (`presets.md`):
+   `use "Theme.dui" as ui`, where `DUI/Theme.dui` is the one line `use "Plugin.DreamGUI:Presets/Default.dui"`.
 4. `check` the file (it writes nothing), fix every error at its line, and check again.
 5. `layout` it at the sizes that matter (`sizes: "1280x720, 2560x1440"`): it compiles the screen (components it places
    first), lists every node's rect and text, and reports what is off the screen, cut, too small or on top of another

@@ -14,7 +14,7 @@ see what it made. All of it is in the plugin.
 | --- | --- | --- |
 | DreamMCP | the [endpoint](dreammcp.md), reached through a [DreamMCP server](https://github.com/TypeDreamMoon/dream-mcp) as the `dream_gui` tool | `check`, `compile`, `diagnostics`, `lookup`, `layout` (every node's rect in pixels and the layout problems, in words), `preview` (a picture and its figures), `info` — in the user's editor or a background engine, in a fraction of a second |
 | The skills | `.skill/dream-gui-create`, `-verify`, `-diagnose`; published into `.claude/skills/` by `.skill/sync-skills.ps1` | Fixed steps, one command each: look names up, write, check, lay out, fix |
-| The references | `.skill/reference/`: `dui.md` (the whole language on one page), `example.md`, `pitfalls.md`, `controls.md`, `diagnostics.md` | What an author needs, each page standing alone; DreamMCP serves them through `reference` |
+| The references | `.skill/reference/`: `dui.md` (the whole language on one page), `example.md`, `presets.md`, `blocks.md` (building blocks), `screens.md` (starter screens), `pitfalls.md`, `controls.md`, `diagnostics.md` | What an author needs, each page standing alone; DreamMCP serves them through `reference` |
 | The agent guide | `AGENTS.md` at the plugin's root; `CLAUDE.md` imports it | The loop below and the rules agents get wrong |
 | `dui.ps1` | `.skill/dui.ps1` | The endpoint's `check`, `compile` and `layout` from the command line, for CI and agents with no DreamMCP server |
 | The symbols file | `<Project>/DUI/.dui-symbols.json` | Every node type, property, enum value, event and view model class ([the symbol file](vscode.md#the-symbol-file-duidui-symbolsjson)); `lookup` reads the same table |
