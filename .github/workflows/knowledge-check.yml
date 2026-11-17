@@ -1,0 +1,25 @@
+name: Check generated knowledge files
+
+# Docs/diagnostics/codes.json, Docs/cheatsheet.md and .skill/reference/ are generated from Docs/ and the
+# diagnostic enum. This fails when a change forgot to regenerate them, or when the enum, Docs/diagnostics/index.md
+# and codes.md list different codes. No engine is needed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Diagnostics JSON and cheat sheet match their sources
+        shell: pwsh
+        run: ./.skill/gen-knowledge.ps1 -Check
+      - name: The reference pages match Docs/
+        shell: pwsh
+        run: ./.skill/build-reference.ps1 -Check
