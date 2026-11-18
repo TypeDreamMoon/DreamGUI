@@ -204,7 +204,7 @@ Text Title {
 | 资源 | `@Accent` |
 | 列表/映射/结构体 | `[1, 2]` · `{ Hover: #FFCC00 }` · `{ Distance: 12, Angle: 45 }` |
 
-**位置：** 在盒子之外，节点由 `AnchorData` 放置——`AnchorMin`/`AnchorMax` 为 0 到 1，**(0, 0) 为左下角**、`Pivot`、`AnchoredPosition`（正 Y 为**向上**）、`SizeDelta`。`AnchorMin = (0, 0)`、`AnchorMax = (1, 1)`、`SizeDelta = (0, 0)` 填满父级。在盒子内部，盒子通过 `@slot` 行来放置它。`RenderTranslation = (X, Y, Z)`：X 是深度（负值更近），Y 向右，Z 向上。
+**位置：** 在盒子之外，节点由 `AnchorData` 放置——`AnchorMin`/`AnchorMax` 为 0 到 1，**(0, 0) 为左下角**、`Pivot`、`AnchoredPosition`（正 Y 为**向上**）、`SizeDelta`。`AnchorMin = (0, 0)`、`AnchorMax = (1, 1)`、`SizeDelta = (0, 0)` 填满父级。在盒子内部，盒子通过 `@slot` 行来放置它。`RenderTranslation = (X, Y, Z)`：X 是深度（负值更近），Y 向右，Z 向上。`RenderRotation = (Pitch, Yaw, Roll)`：正的 Yaw 会让右边缘更近，因此位于左侧的面板用负的 Yaw 朝向中间，位于右侧的面板用正的 Yaw；负的 Pitch 会让平面向后倾倒（上边缘更远）。`layout` 说明每个转过方向的面朝向哪边。
 
 <a id="slots-and-components"></a>
 

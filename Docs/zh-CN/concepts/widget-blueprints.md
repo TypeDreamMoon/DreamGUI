@@ -63,8 +63,8 @@ DreamGUI 中的 UI 树是一个**类**，而不是你实例化的资产。编写
 | `NativeOnDrop` / `NativeOnDragCancelled` | 名称相同 |
 | `NativeOnTouchGesture` | `NativeOnPointerPinch` 和 `NativeOnPointerSwipe` |
 | `NativeOnKeyDown` / `NativeOnKeyUp` / `NativeOnKeyChar` / `NativeOnAnalogValueChanged` | 名称相同，参数为一个 `UDreamKeyEventData` |
-| `NativeOnFocusReceived` / `NativeOnFocusLost` | 名称相同，参数为用户与指针索引（返回 void） |
-| `NativeOnNavigation` | `NativeOnNavigate(Direction, OutNextWidget)` |
+
+调用 `SetWantsTick(false)` 取消临时交互，也可以从 `NativeOnDisable` 中取消。在该回调期间退出会立即移除管理器注册；它不会让已禁用的控件继续 tick，也不会在控件再次激活时恢复已取消的交互。 | `NativeOnFocusReceived` / `NativeOnFocusLost` | 名称相同，参数为用户与指针索引（返回 void） | | `NativeOnNavigation` | `NativeOnNavigate(Direction, OutNextWidget)` |
 
 蓝图事件在有对应 UMG 事件时沿用其名称（`On Mouse Wheel`、`On Mouse Move`、`On Double Click`），但不带 `Native` 前缀。在蓝图中实现的 `On Tick` 或 `On Mouse Move` 会自动开启 `bWantsTick`。
 

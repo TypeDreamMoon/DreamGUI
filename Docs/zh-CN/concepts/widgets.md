@@ -104,7 +104,7 @@ Widget Root {
 | `.dui` 标签 | 类 | 模块 | 绘制 |
 | --- | --- | --- | --- |
 | `Text` | `UDreamText` | `DreamGUI` | 文本；见[文本](text.md) |
-| `Image` | `UDreamImage` | `DreamGUI` | 一个图像 brush |
+| `Image` | `UDreamImage` | `DreamGUI` | 一个图像 brush；`Tiled` 在每个完整行中重复整幅图像，并裁剪最后不完整的一行 |
 | `RectBlock` | `UDreamRectBlock` | `DreamGUI` | 程序化块：圆角、主体、边框、内外阴影，主体和边框可选渐变 |
 | `Sprite` / `Texture` | `UDreamSprite` / `UDreamTexture` | `DreamGUI` | 一个图集精灵 / 整张纹理 |
 | `Empty` | `UDreamVisualEmpty` | `DreamGUI` | 不绘制任何东西，但接收射线检测 |
