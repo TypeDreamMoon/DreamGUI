@@ -67,6 +67,7 @@ Image TrimLeft {
 - **读不通的行**——`@tag` 之后什么都没有、数字或字符串、两个名字之间没有逗号、末尾多一个逗号——是 DUI2024，报在 `@` 处。
 - **同一个名字写两次仍是一个标签**，无论在同一行还是两行。
 - **它们落在 `Tags` 里**，即每个控件都有的 `TArray<FName>`。同一节点上的 `Tags = [Trim, Glow]` 行同样有效，两者会叠加。
+- **`Bleed` 会被布局检查读取。** 标记为 `Bleed` 的节点——光晕、阴影，或旨在超出其卡片或覆盖在文本上的装饰——以及它内部的所有内容，都会被排除在 DUI8008 和 DUI8009 之外（[DreamMCP：超出框架](../tools/dreammcp.md#going-past-the-frame-on-purpose-tag-bleed)）。
 
 `@tag` 也是写出由 `Asset` 资源指定类型的节点的方式（`@Name Id { }`，见[节点类型](#node-types)），所以名为 `tag` 的资源必须加以区分。节点而不是标签行，是 `@tag` 后跟一个名字，然后是 `{`、`:` 或 `(was: …)`——`@tag Trim { }`、`@tag Trim : Style`——或者直接跟 `{` 或 `.`：`@tag { }` 和 `@tag.Something`。`@tag` 之后的其它一切内容都是标签行。
 

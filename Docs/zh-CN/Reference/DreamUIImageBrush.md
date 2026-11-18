@@ -25,6 +25,6 @@ Dream UIImage Brush
 | `FillMethod` | `EDreamUIImageBrushFillMethod` | ImageBrush | 是 | 读取 / 写入 | 仅限 Filled：切口的形状。 |
 | `FillOrigin` | `uint8` | ImageBrush | 是 | 读取 / 写入 | 仅限 Filled：径向填充从哪个角或哪条边开始。以字节形式保存，原因与 UDreamSprite 以字节形式保存相同：它表示哪个枚举取决于 FillMethod（EDreamUISpriteFillOriginType_Radial90 / _Radial180 / _Radial360），且同一时间只会有其中一个适用。水平和垂直方法会忽略此项。 |
 | `FillDirectionFlip` | `bool` | ImageBrush | 是 | 读取 / 写入 | 仅限 Filled：从另一端开始填充。 |
-| `CornerRadius` | `FVector4f` | ImageBrush | 是 | 读取 / 写入 | 仅限 RoundedBox：圆角半径，以像素为单位，X 为左上角，Y 为右上角，Z 为右下角，W 为左下角——从左上角开始按顺时针方向，这也是 CSS 和 UDreamRectBlock 使用的顺序。每个值都会被限制为较短边的一半，因此足够大的半径会形成胶囊形状，而不是报错。 |
+| `CornerRadius` | `FVector4f` | ImageBrush | 是 | 读取 / 写入 | 仅限 RoundedBox：圆角半径，以像素为单位，X 为左上角，Y 为右上角，Z 为右下角，W 为左下角——从左上角开始按顺时针方向，与 CSS 一致。（UDreamRectBlock::CornerRadius 采用另一种顺序：右下角、右上角、左上角、左下角。）每个值都会被限制为较短边的一半，因此足够大的半径会形成胶囊形状，而不是报错。 |
 | `CornerSegments` | `int32` | ImageBrush | 是 | 读取 / 写入 | 仅限 RoundedBox：每条圆角弧线上的点数。越多越平滑，每个点消耗两个三角形。 |
 

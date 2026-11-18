@@ -18,9 +18,9 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI3xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx) | 含义 | 语法正确，但树不成立：重复的 id、未知的类型。 | 25 |
 | [DUI4xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx) | 值 | 值与它所写入的属性不匹配。 | 9 |
 | [DUI5xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx) | 构建树 | 反射拒绝了写入，或目标对象不存在。 | 25 |
-| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | 编译 | .dui 无法附加到其 Blueprint。 | 24 |
+| [DUI6xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx) | 编译 | .dui 无法附加到其蓝图。 | 25 |
 | [DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx) | 写回 | 设计器的编辑无法写入文本。 | 5 |
-| [DUI8xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx) | 布局 | 编译通过的屏幕在某个视口尺寸下布局后显示出问题。仅来自 DreamMCP 的 `layout` 和 `preview`。 | 7 |
+| [DUI8xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx) | 布局 | 编译通过的屏幕在某个视口尺寸下布局后显示出问题。仅来自 DreamMCP 的 `layout` 和 `preview`。 | 10 |
 
 <a id="every-code"></a>
 
@@ -140,6 +140,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI6020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6020) | `TwoWayTargetReadOnly` | 错误 | `<-> Path.Member` 其成员写不回去：只读，且没有 `Set<Member>`。 |
 | [DUI6021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6021) | `LoopItemMemberNotFound` | 错误 | `Item.Member` 循环来源的元素类上没有。 |
 | [DUI6022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6022) | `LoopItemRouteMismatch` | 错误 | `-> Item.Func` 元素类上没有，或者其参数既不是什么都不接收、也不是事件的那些。 |
+| [DUI6023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6023) | `SourceFileWritePending` | 错误 | 文档中存在无法写入的编辑，因此拒绝编译较旧的文件。 |
 | [DUI6024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6024) | `TranslationDoesNotFit` | 警告 | 工程里有 DreamLoc 时：某个语言的译文放进文字控件里排版后被截断，或排出了控件的框。 |
 | [DUI6025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6025) | `TranslationGlyphsMissing` | 警告 | 工程里有 DreamLoc 时：某个语言的译文里有字符，文字控件字体的所有字面都没有。 |
 | [DUI7001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001) | `PatchTargetNotFound` | 错误 | 设计器的一次编辑在文件里找不到落脚处：未知的节点、被绑定的属性、没有块的 slot。 |
@@ -151,6 +152,9 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI8002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8002) | `LayoutTextOverflow` | 警告 | 文本被其溢出策略截断，或布局超出其框；消息给出它需要的尺寸和它拥有的框。 |
 | [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | `LayoutTooSmall` | 警告 | 会绘制或可被按下的节点宽或高小于 1 px（对带有子控件的普通控件为信息级），或可按下控件小于 24 x 24 px。 |
 | [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | `LayoutOverlappingControls` | 警告 | 同一画布中的两个可按下控件在屏幕上于两个轴上都重叠 2 px 或更多，无论它们在树中的位置如何：此处的按下只会到达上面那个控件。落在面积为其四倍或以上的控件上的小控件属于刻意分层，不予报告。 |
-| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | `LayoutNearlyAligned` | 信息 | 兄弟节点的左、右、上或下边缘或中心相差超过 0.5 且最多 3 px，或者三个及以上的行或列其间距相差如此。 |
-| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | `LayoutBreaksAtSize` | 警告 | 在 `layout` 所获得的某个后续视口尺寸（`sizes`）下出现 DUI8001 到 DUI8004，而在第一个尺寸下没有。 |
+| [DUI8005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8005) | `LayoutNearlyAligned` | 信息 | 兄弟节点的左、右、上或下边缘或中心相差超过 0.5 且最多 3 px，或者三个及以上的行或列其间距相差如此。尺寸不超过 128 px 的盒子内部的纯视觉元素（由形状绘制的图标部件）不参与比较。 |
+| [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | `LayoutBreaksAtSize` | 警告 | 在 `layout` 所获得的某个后续视口尺寸（`sizes`）下出现 DUI8001 到 DUI8004、DUI8008 或 DUI8009，而在第一个尺寸下没有。 |
 | [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | `LayoutLowContrast` | 警告 | 在 `preview` 中：文本颜色与其框内紧邻像素中位数的对比度低于 3 比 1（WCAG 的对比度）；对于小于 24 px 的文本，低于 4.5 比 1 的为信息级。 |
+| [DUI8008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008) | `LayoutOutsideFrame` | 警告 | 一个节点，其绘制超出所在的面板或卡片超过 4 px（且超过自身尺寸的 5 %）：最近一个绘制盒子的祖先，或覆盖层置于其下的底板。所测量的是它绘制的内容——文本的字形、图形的轮廓、矩形块的主体。带 `Bleed` 标记的节点（或位于其内部）、会裁剪的框架，以及与框架同样大的底板（阴影之上的面）均不予报告。 |
+| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | `LayoutCoversText` | 警告 | 一个不接收指针的视觉元素，在其画布中绘制于某段文本之后，覆盖其字形 12 % 或更多——或一个大部分位于该文本行内的小装饰。其背板（绘制于其之前）、没有主体的轮廓、覆盖整张卡片的蒙层以及覆盖大部分屏幕的遮罩均不予报告，带 `Bleed` 标记的节点也不予报告。 |
+| [DUI8010](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010) | `LayoutUnbalanced` | 信息 | 一个面板，其内容偏居一侧（有 38 % 或更多的区域为空）、在其中部留下一片宽阔的空白区域，或各行分布稀疏；属于提示性检查，且从不在栏或侧边栏上报告。 |
