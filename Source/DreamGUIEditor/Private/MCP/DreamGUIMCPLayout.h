@@ -76,6 +76,12 @@ namespace DreamGUIMCP
 		inline constexpr double CrowdsTextShare = 0.3;
 		/** ...and covers less than this share of the viewport (a full-screen scrim or vignette is not about one text). */
 		inline constexpr double ScrimShare = 0.6;
+		/**
+		 * A text drawn across the edge of a shape under it (DUI8009 too): CoversTextShare to 1 - CoversTextShare of its
+		 * glyph box on the shape, where the shape is no more than this many times that box's area -- a badge, an icon, the
+		 * next item's picture, not a backdrop shape or a glow the text is laid over.
+		 */
+		inline constexpr double UnderShapeRatio = 8.0;
 		/** DUI8010 looks at panels at least this big (pixels on each side, and share of the viewport)... */
 		inline constexpr double UnbalancedMinSide = 240.0;
 		inline constexpr double UnbalancedMinShare = 0.02;
@@ -93,6 +99,34 @@ namespace DreamGUIMCP
 		/** An item thinner than this (pixels) is a rule, a divider or an accent bar: it frames the content, it is not content. */
 		inline constexpr double UnbalancedThinItem = 6.0;
 	}
+
+	/** How `layout` words the faces turned in 3D. Facts, not rules: nothing here is a problem. */
+	namespace LayoutFacing
+	{
+		/** A face whose plane leans at least this far (degrees) from the plane it sits in is turned, and is listed. */
+		inline constexpr double MinAngle = 2.0;
+		/** ...and is at least this big on the screen, both ways (pixels). */
+		inline constexpr double MinSide = 24.0;
+		/** A face whose centre is within this share of the viewport's width from its middle is in the middle: it faces left or right, not toward or away from the centre. */
+		inline constexpr double CentreBand = 0.08;
+		/** Two edges drawn within this share of each other's length are the same length: which is farther is read from depth instead. */
+		inline constexpr double SameLength = 0.01;
+		/** At most this many faces are listed; the rest are counted. */
+		inline constexpr int32 MaxFaces = 12;
+	}
+
+	/** Where a node's outline is drawn, by the side of the screen each edge faces: what tells which edge is farther. */
+	struct FLayoutFacing
+	{
+		enum ESide : int32 { Left = 0, Right = 1, Top = 2, Bottom = 3 };
+		bool bValid = false;
+		/** Each edge's drawn length, in viewport pixels: the farther of two opposite edges is drawn shorter. */
+		double Length[4] = { 0.0, 0.0, 0.0, 0.0 };
+		/** How far each edge's middle stands behind the screen's plane (pixels, positive away from the viewer). */
+		double Depth[4] = { 0.0, 0.0, 0.0, 0.0 };
+		/** The outline's centre as drawn, viewport pixels. */
+		FVector2D Centre = FVector2D::ZeroVector;
+	};
 
 	/** One widget of the screen as it was laid out. */
 	struct FLayoutNode
@@ -184,6 +218,11 @@ namespace DreamGUIMCP
 		/** The points of the shape it draws (a polygon's corners), local, when there are few enough to keep: a turned shape's box is bigger than the shape. */
 		TArray<FVector2D> LocalShape;
 
+		/** Its plane's normal in the screen's frame (X away from the viewer, Y right, Z up): (1, 0, 0) for a node flat on the screen. */
+		FVector Normal = FVector::ForwardVector;
+		/** Its outline as drawn, edge by edge, when it is turned in 3D. */
+		FLayoutFacing Facing;
+
 		bool IsDrawn() const { return bActive && bShown && Opacity > 0.0f; }
 	};
 
@@ -234,6 +273,49 @@ namespace DreamGUIMCP
 
 	/** The same tree as data: nested objects, the same depth. */
 	DREAMGUIEDITOR_API TSharedRef<FJsonObject> LayoutTreeToJson(const FLayoutSnapshot& InSnapshot, int32 InMaxDepth);
+
+	/**
+	 * A face turned in 3D -- a panel, a card, a plane whose own plane leans away from the one it sits in -- and which way
+	 * it faces as drawn: how far it is turned and tilted, which edge is farther, whether it faces the screen's centre.
+	 */
+	struct FLayoutFace
+	{
+		int32 Node = INDEX_NONE;
+		/** How it is named: its type and id, as the file writes them. */
+		FString Name;
+		/** Where its centre is drawn: `left`, `right` or `middle` (within LayoutFacing::CentreBand of the viewport's middle). */
+		FString Side;
+		/** Turned about the vertical axis, degrees from the screen's plane; 0 when it is not. */
+		int32 Turn = 0;
+		/** The edge drawn farther for the turn (`left`, `right`), which is the way it faces. */
+		FString TurnFarther;
+		/** 1 faces the screen's centre, -1 faces away from it, 0 in the middle or not turned. */
+		int32 TowardCentre = 0;
+		/** Tilted about the horizontal axis, degrees; 0 when it is not. */
+		int32 Tilt = 0;
+		/** The edge drawn farther for the tilt (`top`: tilted back, `bottom`: tilted forward). */
+		FString TiltFarther;
+		/** The farther edge is drawn narrower than the nearer one (foreshortened). */
+		bool bNarrower = false;
+		/** Turned past 90 degrees: its back is toward the viewer, drawn mirrored. */
+		bool bBack = false;
+		/** In words, after the name: `turned 14 degrees: faces toward the screen centre (right edge farther)`. */
+		FString Words;
+		/** The same, a few words, for a summary: `faces toward the centre`, `tilted back`. */
+		FString Short;
+	};
+
+	/** Every face of the snapshot turned in 3D, outermost first: a node coplanar with a listed face is part of it and is not listed. */
+	DREAMGUIEDITOR_API void DescribeFaces(const FLayoutSnapshot& InSnapshot, TArray<FLayoutFace>& OutFaces);
+
+	/** One line a face (at most LayoutFacing::MaxFaces), `  Widget RosterLeft, on the left: turned 14 degrees: ...`; empty without faces. */
+	DREAMGUIEDITOR_API FString FormatFaces(const FLayoutSnapshot& InSnapshot, const TArray<FLayoutFace>& InFaces);
+
+	/** A sentence for a summary, ` In 3D: RosterLeft faces toward the centre, Board tilted back.`; empty without faces. */
+	DREAMGUIEDITOR_API FString SummarizeFaces(const TArray<FLayoutFace>& InFaces);
+
+	/** The faces as data. */
+	DREAMGUIEDITOR_API TArray<TSharedPtr<FJsonValue>> FacesToJson(const FLayoutSnapshot& InSnapshot, const TArray<FLayoutFace>& InFaces);
 
 	/** How the node's text reads in a line: `"Hello, DreamGUI"`, shortened past 40 characters. */
 	DREAMGUIEDITOR_API FString QuoteText(const FString& InText);

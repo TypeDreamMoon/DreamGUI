@@ -215,6 +215,9 @@ may leave the id out if a block or a style follows: `Text : Caption { Text = "Re
 bottom-left**, `Pivot`, `AnchoredPosition` (positive Y is **up**), `SizeDelta`. `AnchorMin = (0, 0)`,
 `AnchorMax = (1, 1)`, `SizeDelta = (0, 0)` fills the parent. Inside a box the box places it through `@slot` lines.
 `RenderTranslation = (X, Y, Z)`: X is depth (negative is nearer), Y right, Z up.
+`RenderRotation = (Pitch, Yaw, Roll)`: a positive Yaw brings the right edge nearer, so a panel on the left faces the
+middle with a negative Yaw and one on the right with a positive Yaw; a negative Pitch lays a plane back (top edge farther).
+`layout` says which way each turned face looks.
 
 ## Slots and components
 
@@ -309,7 +312,7 @@ timeline Celebrate external
 | [DUI8003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8003) | warning | A node that draws or can be pressed under 1 px wide or high (an info for a plain widget with children), or a pressable control under 24 x 24 px. |
 | [DUI8004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8004) | warning | Two pressable controls in one canvas overlapping on the screen by 2 px or more on both axes, wherever they are in the tree |
 | [DUI8008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008) | warning | A node that draws more than 4 px (and 5 % of its size) past the panel or card it sits in |
-| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | warning | A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line. |
+| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | warning | A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line |
 | [DUI8010](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010) | info | A panel whose content keeps to one side (a band of 38 % or more empty), leaves a wide band empty across its middle, or spreads its rows thin |
 
 - A `Style.X = v` line changes nothing while the project has a style sheet: write `StyleSource = Inline` first.

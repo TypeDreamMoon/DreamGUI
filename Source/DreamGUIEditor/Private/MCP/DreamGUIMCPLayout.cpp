@@ -335,6 +335,50 @@ namespace DreamGUIMCP
 				Node.W = Box.Max.X - Box.Min.X;
 				Node.H = Box.Max.Y - Box.Min.Y;
 
+				// Which way it faces: its plane's normal in the screen's frame, and, turned in 3D, its edges as drawn -- the
+				// farther of two opposite edges is the shorter one on the screen, which is what a person sees.
+				Node.Normal = RootTransform.InverseTransformVectorNoScale(InWidget->GetWorldTransform().TransformVectorNoScale(FVector::ForwardVector)).GetSafeNormal();
+				if (Node.b3D && !Node.bApproximate && StageCanvas != nullptr)
+				{
+					const double MidX = (Left + Right) * 0.5;
+					const double MidY = (Bottom + Top) * 0.5;
+					FVector2D BL, BR, TL, TR, ML, MR, MT, MB, MC;
+					if (Project(InWidget, FVector2D(Left, Bottom), BL) && Project(InWidget, FVector2D(Right, Bottom), BR) && Project(InWidget, FVector2D(Left, Top), TL)
+						&& Project(InWidget, FVector2D(Right, Top), TR) && Project(InWidget, FVector2D(Left, MidY), ML) && Project(InWidget, FVector2D(Right, MidY), MR)
+						&& Project(InWidget, FVector2D(MidX, Top), MT) && Project(InWidget, FVector2D(MidX, Bottom), MB) && Project(InWidget, FVector2D(MidX, MidY), MC))
+					{
+						// The widget's own edges -- left, right, top, bottom -- then which side of the screen each one faces: a
+						// node rolled a quarter turn has its top edge on the screen's right.
+						double EdgeDepth[4] = { 0.0, 0.0, 0.0, 0.0 };
+						ToPixels(InWidget, FVector2D(Left, MidY), EdgeDepth[0]);
+						ToPixels(InWidget, FVector2D(Right, MidY), EdgeDepth[1]);
+						ToPixels(InWidget, FVector2D(MidX, Top), EdgeDepth[2]);
+						ToPixels(InWidget, FVector2D(MidX, Bottom), EdgeDepth[3]);
+						const double EdgeLength[4] = { FVector2D::Distance(TL, BL), FVector2D::Distance(TR, BR), FVector2D::Distance(TL, TR), FVector2D::Distance(BL, BR) };
+						int32 Map[4] = { 0, 1, 2, 3 };
+						const FVector2D Across = MR - ML;
+						if (FMath::Abs(Across.X) >= FMath::Abs(Across.Y))
+						{
+							if (Across.X < 0.0) { Swap(Map[0], Map[1]); }
+							if (MT.Y > MB.Y) { Swap(Map[2], Map[3]); }
+						}
+						else
+						{
+							Map[0] = MT.X <= MB.X ? 2 : 3;
+							Map[1] = Map[0] == 2 ? 3 : 2;
+							Map[2] = ML.Y <= MR.Y ? 0 : 1;
+							Map[3] = Map[2] == 0 ? 1 : 0;
+						}
+						for (int32 Side = 0; Side < 4; ++Side)
+						{
+							Node.Facing.Length[Side] = EdgeLength[Map[Side]];
+							Node.Facing.Depth[Side] = EdgeDepth[Map[Side]];
+						}
+						Node.Facing.Centre = MC;
+						Node.Facing.bValid = true;
+					}
+				}
+
 				// What of it can show: cut to every clipping ancestor's rect.
 				FBox2D Visible = Box;
 				if (InClip.bIsValid)
@@ -708,6 +752,114 @@ namespace DreamGUIMCP
 				Add(Corner);
 			}
 			return Result;
+		}
+
+		/**
+		 * How much of a box what a node draws covers, in the plane of another, the bound of that part, and the area of all
+		 * it draws there: a shape kept point by point by its convex outline (a hexagon's corners are not its box), anything
+		 * else by its body's four corners (a thin bar turned 40 degrees is not its box either).
+		 */
+		double CoveredBy(const FLayoutNode& InNode, const FLayoutNode& InPlaneOf, const FBox2D& InBox, FBox2D& OutPart, double& OutWhole)
+		{
+			OutPart = FBox2D(ForceInit);
+			OutWhole = 0.0;
+			if (!InNode.LocalBody.bIsValid || !InPlaneOf.LocalRect.bIsValid)
+			{
+				OutPart = Intersect(BodyOf(InNode), InBox);
+				OutWhole = Area(BodyOf(InNode));
+				return Area(OutPart);
+			}
+			TArray<FVector2D> Local = InNode.LocalShape;
+			if (Local.Num() < 3)
+			{
+				const FBox2D& Body = InNode.LocalBody;
+				Local = { Body.Min, FVector2D(Body.Max.X, Body.Min.Y), Body.Max, FVector2D(Body.Min.X, Body.Max.Y) };
+			}
+			TArray<FVector2D> Points;
+			for (const FVector2D& Point : Local)
+			{
+				const FVector There = InPlaneOf.World.InverseTransformPosition(InNode.World.TransformPosition(FVector(0.0, Point.X, Point.Y)));
+				Points.Emplace(There.Y * InPlaneOf.PxPerUnit, -There.Z * InPlaneOf.PxPerUnit);
+			}
+			// The convex outline (monotone chain), counter-clockwise.
+			Points.Sort([](const FVector2D& A, const FVector2D& B) { return A.X < B.X || (A.X == B.X && A.Y < B.Y); });
+			const auto Cross = [](const FVector2D& O, const FVector2D& A, const FVector2D& B) { return (A.X - O.X) * (B.Y - O.Y) - (A.Y - O.Y) * (B.X - O.X); };
+			TArray<FVector2D> Hull;
+			for (int32 Pass = 0; Pass < 2; ++Pass)
+			{
+				const int32 Start = Hull.Num();
+				for (int32 I = 0; I < Points.Num(); ++I)
+				{
+					const FVector2D& P = Points[Pass == 0 ? I : Points.Num() - 1 - I];
+					while (Hull.Num() >= Start + 2 && Cross(Hull[Hull.Num() - 2], Hull.Last(), P) <= 0.0)
+					{
+						Hull.Pop();
+					}
+					Hull.Add(P);
+				}
+				Hull.Pop();
+			}
+			if (Hull.Num() < 3)
+			{
+				return 0.0;
+			}
+			const auto PolygonArea = [](const TArray<FVector2D>& InPoly)
+			{
+				double Twice = 0.0;
+				for (int32 I = 0; I < InPoly.Num(); ++I)
+				{
+					Twice += InPoly[I].X * InPoly[(I + 1) % InPoly.Num()].Y - InPoly[(I + 1) % InPoly.Num()].X * InPoly[I].Y;
+				}
+				return FMath::Abs(Twice) * 0.5;
+			};
+			OutWhole = PolygonArea(Hull);
+			// Cut to the box, one edge of it at a time.
+			TArray<FVector2D> Poly = MoveTemp(Hull);
+			for (int32 Edge = 0; Edge < 4 && Poly.Num() > 0; ++Edge)
+			{
+				const auto Inside = [&](const FVector2D& P)
+				{
+					return Edge == 0 ? P.X >= InBox.Min.X : Edge == 1 ? P.X <= InBox.Max.X : Edge == 2 ? P.Y >= InBox.Min.Y : P.Y <= InBox.Max.Y;
+				};
+				const auto Cut = [&](const FVector2D& A, const FVector2D& B)
+				{
+					const double T = Edge == 0 ? (InBox.Min.X - A.X) / (B.X - A.X) : Edge == 1 ? (InBox.Max.X - A.X) / (B.X - A.X)
+						: Edge == 2 ? (InBox.Min.Y - A.Y) / (B.Y - A.Y) : (InBox.Max.Y - A.Y) / (B.Y - A.Y);
+					return A + (B - A) * T;
+				};
+				TArray<FVector2D> Kept;
+				for (int32 I = 0; I < Poly.Num(); ++I)
+				{
+					const FVector2D& A = Poly[I];
+					const FVector2D& B = Poly[(I + 1) % Poly.Num()];
+					if (Inside(A))
+					{
+						Kept.Add(A);
+						if (!Inside(B)) { Kept.Add(Cut(A, B)); }
+					}
+					else if (Inside(B))
+					{
+						Kept.Add(Cut(A, B));
+					}
+				}
+				Poly = MoveTemp(Kept);
+			}
+			for (const FVector2D& Point : Poly)
+			{
+				OutPart += Point;
+			}
+			return PolygonArea(Poly);
+		}
+
+		/** The branch a node belongs to, seen from another: its ancestor (or itself) whose parent holds both. */
+		int32 BranchOf(const FLayoutSnapshot& InSnapshot, int32 InNode, int32 InFrom)
+		{
+			int32 Walk = InNode;
+			while (InSnapshot.Nodes[Walk].Parent != INDEX_NONE && !IsAncestor(InSnapshot, InSnapshot.Nodes[Walk].Parent, InFrom))
+			{
+				Walk = InSnapshot.Nodes[Walk].Parent;
+			}
+			return Walk;
 		}
 	}
 
@@ -1211,7 +1363,8 @@ namespace DreamGUIMCP
 			{
 				continue;
 			}
-			for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+			bool bCovered = false;
+			for (int32 Index = 0; Index < Nodes.Num() && !bCovered; ++Index)
 			{
 				const FLayoutNode& Over = Nodes[Index];
 				if (Over.Order <= TextNode.Order || !Over.IsDrawn() || Over.Visual.IsEmpty() || Over.Visual == TEXT("Text") || Over.Visual == TEXT("Empty")
@@ -1273,7 +1426,114 @@ namespace DreamGUIMCP
 				Issue.Hint = TEXT("Move it off the text, or put it before the text in the file (or in a lower layer) so it is drawn under it. A decoration meant to lie over text: write @tag Bleed on it.");
 				Issue.Key = FString::Printf(TEXT("8009|%s|%s"), *Over.Path, *TextNode.Path);
 				Issue.Weight = 1.75;
-				break; // one finding a text: the first thing drawn over it
+				bCovered = true; // one finding a text: the first thing drawn over it
+			}
+			if (bCovered || IsBleed(InSnapshot, TextIndex))
+			{
+				continue;
+			}
+
+			// A text laid across the edge of a shape drawn under it that is not its plate: some of its letters on the
+			// shape, the rest off it, so it reads over two backgrounds at once (a label slid onto the next badge). What is
+			// drawn before a text is its plate when it holds the text, or when the text's own plate is drawn over it; a
+			// backplate of a panel the text is in, its frame and its ancestors never count.
+			// What the text is on: an ancestor that draws, or a plate an ancestor holds under it, that holds the whole text.
+			// A shape drawn before that is behind the panel the text is on -- see-through or not, frosted glass over a busy
+			// backdrop -- not next to the text.
+			const auto HoldsText = [&](int32 InIndex)
+			{
+				const FLayoutNode& Plate = Nodes[InIndex];
+				return Plate.IsDrawn() && !Plate.Visual.IsEmpty() && Plate.Visual != TEXT("Text") && Plate.Visual != TEXT("Empty") && Plate.Color.A >= 13
+					&& Area(Intersect(InPlane(Plate, EPart::Body, TextNode), Glyphs)) >= (1.0 - CoversTextShare) * GlyphArea;
+			};
+			int32 PlateOrder = INDEX_NONE;
+			for (int32 Child = TextIndex, Walk = TextNode.Parent; Walk != INDEX_NONE; Child = Walk, Walk = Nodes[Walk].Parent)
+			{
+				if (HoldsText(Walk))
+				{
+					PlateOrder = FMath::Max(PlateOrder, Nodes[Walk].Order);
+				}
+				for (const int32 Sibling : Nodes[Walk].Children)
+				{
+					if (Sibling == Child)
+					{
+						break;
+					}
+					if (HoldsText(Sibling))
+					{
+						PlateOrder = FMath::Max(PlateOrder, Nodes[Sibling].Order);
+					}
+				}
+			}
+			for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+			{
+				const FLayoutNode& Under = Nodes[Index];
+				if (Under.Order >= TextNode.Order || !Under.IsDrawn() || Under.Visual.IsEmpty() || Under.Visual == TEXT("Text") || Under.Visual == TEXT("Empty")
+					|| Under.Visual == TEXT("Ring") || Under.Visual == TEXT("Line") || Under.bInteractive || Under.Canvas != TextNode.Canvas || Under.bApproximate
+					|| Under.VisW <= ZeroSize || Under.VisH <= ZeroSize || Under.bHollow || Under.Color.A < CoversTextAlpha)
+				{
+					continue; // a ring or a line is an outline: its box is not what it draws
+				}
+				if (Index == TextFrame || IsAncestor(InSnapshot, Index, TextIndex) || IsAncestor(InSnapshot, TextIndex, Index) || IsBleed(InSnapshot, Index))
+				{
+					continue;
+				}
+				if (Under.Parent != INDEX_NONE && IsAncestor(InSnapshot, Under.Parent, TextIndex) && IsBackplateOf(Index, Under.Parent))
+				{
+					continue; // the plate of a panel the text is in
+				}
+				if (Under.Order < PlateOrder)
+				{
+					continue; // the panel or plate the text is on lies between them
+				}
+				if (!Under.bAuthored)
+				{
+					int32 Owner = Under.Parent;
+					while (Owner != INDEX_NONE && !Nodes[Owner].bAuthored)
+					{
+						Owner = Nodes[Owner].Parent;
+					}
+					if (Owner != INDEX_NONE && (Owner == TextIndex || IsAncestor(InSnapshot, Owner, TextIndex)))
+					{
+						continue;
+					}
+				}
+				if (Area(BodyOf(Under)) >= ScrimShare * ViewportArea)
+				{
+					continue;
+				}
+				// On the screen first, cut to what clips each of them: a shape a frame crops short of the text is not under it.
+				const FBox2D OnScreen = Intersect(BodyOf(Under), BodyOf(TextNode));
+				if (FMath::Min(OnScreen.Max.X - OnScreen.Min.X, OnScreen.Max.Y - OnScreen.Min.Y) < CoversTextThickness)
+				{
+					continue;
+				}
+				FBox2D Part;
+				double Whole = 0.0;
+				const double CoveredArea = CoveredBy(Under, TextNode, Glyphs, Part, Whole);
+				// The shape as drawn in the text's plane, no more than what shows of it on the screen.
+				const double Share = FMath::Min(CoveredArea / GlyphArea, Area(OnScreen) / FMath::Max(1.0, Area(BodyOf(TextNode))));
+				if (Whole > UnderShapeRatio * GlyphArea)
+				{
+					continue; // a backdrop shape, a glow, a stripe the text is laid over: not one thing the text is on the edge of
+				}
+				if (Share < CoversTextShare || Share > 1.0 - CoversTextShare || !Part.bIsValid
+					|| FMath::Min(Part.Max.X - Part.Min.X, Part.Max.Y - Part.Min.Y) < CoversTextThickness)
+				{
+					continue; // clear of it, a sliver, or on it all but an edge: then it is the text's plate
+				}
+				const int32 Branch = BranchOf(InSnapshot, Index, TextIndex);
+				const FString Belongs = Branch != Index ? FString::Printf(TEXT(" (in %s)"), *Who(InSnapshot, Branch)) : FString();
+				FLayoutIssue& Issue = OutIssues.AddDefaulted_GetRef();
+				Issue.Code = static_cast<int32>(EDreamUIDiagnosticCode::LayoutCoversText);
+				Issue.Node = TextIndex;
+				Issue.Other = Index;
+				Issue.Message = FString::Printf(TEXT("the text of %s, %s, lies across the edge of %s%s, drawn under it: %d%% of its letters are on that shape and the rest off it"),
+					*Who(InSnapshot, TextIndex), *QuoteText(TextNode.Text), *Who(InSnapshot, Index), *Belongs, FMath::RoundToInt(100.0 * Share));
+				Issue.Hint = TEXT("Move the text clear of the shape, or give the text a plate of its own. A text meant to lie across it: write @tag Bleed on the shape.");
+				Issue.Key = FString::Printf(TEXT("8009|under|%s|%s"), *Under.Path, *TextNode.Path);
+				Issue.Weight = 1.7;
+				break;
 			}
 		}
 
@@ -1582,6 +1842,204 @@ namespace DreamGUIMCP
 				Out.Line = InSnapshot.Nodes[Walk].Line;
 				Out.Column = InSnapshot.Nodes[Walk].Column;
 			}
+		}
+		return Out;
+	}
+
+	void DescribeFaces(const FLayoutSnapshot& InSnapshot, TArray<FLayoutFace>& OutFaces)
+	{
+		using namespace LayoutFacing;
+		OutFaces.Reset();
+		const TArray<FLayoutNode>& Nodes = InSnapshot.Nodes;
+		const double VW = FMath::Max(1, InSnapshot.Viewport.X);
+		// The plane each node sits in: the nearest listed face above it, or the screen's. Nodes come parent first.
+		TArray<FVector> PlaneOf;
+		PlaneOf.Init(FVector::ForwardVector, Nodes.Num());
+		for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+		{
+			const FLayoutNode& Node = Nodes[Index];
+			const FVector Around = Node.Parent != INDEX_NONE ? PlaneOf[Node.Parent] : FVector::ForwardVector;
+			PlaneOf[Index] = Around;
+			if (!Node.Facing.bValid || !Node.IsDrawn() || Node.W < MinSide || Node.H < MinSide)
+			{
+				continue;
+			}
+			const double Lean = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(FVector::DotProduct(Node.Normal, Around), -1.0, 1.0)));
+			if (Lean < MinAngle)
+			{
+				continue; // on the face it sits in: part of it
+			}
+			PlaneOf[Index] = Node.Normal;
+
+			// How far it leans from the screen's plane, about the vertical axis (turn) and the horizontal one (tilt).
+			const FVector N = Node.Normal;
+			const double TurnDegrees = FMath::RadiansToDegrees(FMath::Atan2(FMath::Abs(N.Y), FMath::Abs(N.X)));
+			const double TiltDegrees = FMath::RadiansToDegrees(FMath::Atan2(FMath::Abs(N.Z), FMath::Abs(N.X)));
+			const FLayoutFacing& F = Node.Facing;
+			// Of two opposite edges, the one drawn shorter is the farther; drawn alike (no perspective), the deeper one.
+			const auto Farther = [&F](int32 A, int32 B)
+			{
+				const double LA = F.Length[A];
+				const double LB = F.Length[B];
+				if (FMath::Abs(LA - LB) > SameLength * FMath::Max(LA, LB))
+				{
+					return LA < LB ? A : B;
+				}
+				return F.Depth[A] >= F.Depth[B] ? A : B;
+			};
+
+			FLayoutFace& Face = OutFaces.AddDefaulted_GetRef();
+			Face.Node = Index;
+			Face.Name = Who(InSnapshot, Index);
+			const double FromMiddle = F.Centre.X - VW * 0.5;
+			Face.Side = FromMiddle < -CentreBand * VW ? TEXT("left") : FromMiddle > CentreBand * VW ? TEXT("right") : TEXT("middle");
+			Face.bBack = N.X < 0.0;
+			TArray<FString> Words;
+			TArray<FString> Short;
+			if (Face.bBack)
+			{
+				Words.Add(TEXT("its back is toward the viewer (turned past 90 degrees), drawn mirrored"));
+				Short.Add(TEXT("shows its back"));
+			}
+			if (TurnDegrees >= MinAngle)
+			{
+				Face.Turn = FMath::RoundToInt(TurnDegrees);
+				Face.TurnFarther = Farther(FLayoutFacing::Left, FLayoutFacing::Right) == FLayoutFacing::Left ? TEXT("left") : TEXT("right");
+				// A face looks the way of its farther edge: the right edge pushed back turns its front to the right.
+				if (Face.Side == TEXT("middle"))
+				{
+					Words.Add(FString::Printf(TEXT("turned %d degrees: faces %s (%s edge farther)"), Face.Turn, *Face.TurnFarther, *Face.TurnFarther));
+					Short.Add(FString::Printf(TEXT("faces %s"), *Face.TurnFarther));
+				}
+				else
+				{
+					Face.TowardCentre = (Face.Side == TEXT("left")) == (Face.TurnFarther == TEXT("right")) ? 1 : -1;
+					Words.Add(FString::Printf(TEXT("turned %d degrees: faces %s the screen centre (%s edge farther)"), Face.Turn,
+						Face.TowardCentre > 0 ? TEXT("toward") : TEXT("away from"), *Face.TurnFarther));
+					Short.Add(Face.TowardCentre > 0 ? TEXT("faces toward the centre") : TEXT("faces away from the centre"));
+				}
+			}
+			if (TiltDegrees >= MinAngle)
+			{
+				Face.Tilt = FMath::RoundToInt(TiltDegrees);
+				const int32 Far = Farther(FLayoutFacing::Top, FLayoutFacing::Bottom);
+				const int32 Near = Far == FLayoutFacing::Top ? FLayoutFacing::Bottom : FLayoutFacing::Top;
+				Face.TiltFarther = Far == FLayoutFacing::Top ? TEXT("top") : TEXT("bottom");
+				Face.bNarrower = F.Length[Far] < F.Length[Near] * (1.0 - SameLength);
+				const bool bBackward = Far == FLayoutFacing::Top;
+				Words.Add(FString::Printf(TEXT("tilted %s %d degrees: %s edge farther%s"), bBackward ? TEXT("back") : TEXT("forward"), Face.Tilt,
+					*Face.TiltFarther, Face.bNarrower ? TEXT(" and narrower") : TEXT("")));
+				Short.Add(bBackward ? TEXT("tilted back") : TEXT("tilted forward"));
+			}
+			if (Words.Num() == 0)
+			{
+				// Leans from the face it sits in, yet square to the screen: a card turned back flat on a turned panel.
+				Words.Add(TEXT("flat to the screen, on a face that is turned"));
+				Short.Add(TEXT("flat to the screen"));
+			}
+			Face.Words = FString::Join(Words, TEXT("; "));
+			Face.Short = FString::Join(Short, TEXT(", "));
+		}
+	}
+
+	FString FormatFaces(const FLayoutSnapshot& InSnapshot, const TArray<FLayoutFace>& InFaces)
+	{
+		if (InFaces.Num() == 0)
+		{
+			return FString();
+		}
+		TArray<FString> Lines;
+		Lines.Add(TEXT("Turned in 3D, as drawn (one line a face; the farther edge is drawn shorter):"));
+		for (int32 Index = 0; Index < InFaces.Num() && Index < LayoutFacing::MaxFaces; ++Index)
+		{
+			const FLayoutFace& Face = InFaces[Index];
+			const TCHAR* Where = Face.Side == TEXT("left") ? TEXT("on the left") : Face.Side == TEXT("right") ? TEXT("on the right") : TEXT("in the middle");
+			Lines.Add(FString::Printf(TEXT("  %s, %s: %s"), *Face.Name, Where, *Face.Words));
+		}
+		if (InFaces.Num() > LayoutFacing::MaxFaces)
+		{
+			Lines.Add(FString::Printf(TEXT("  ...and %d more (in data.faces)"), InFaces.Num() - LayoutFacing::MaxFaces));
+		}
+		return FString::Join(Lines, TEXT("\n"));
+	}
+
+	FString SummarizeFaces(const TArray<FLayoutFace>& InFaces)
+	{
+		if (InFaces.Num() == 0)
+		{
+			return FString();
+		}
+		constexpr int32 Named = 4;
+		TArray<FString> Parts;
+		for (int32 Index = 0; Index < InFaces.Num() && Index < Named; ++Index)
+		{
+			FString Id = InFaces[Index].Name;
+			int32 Space = INDEX_NONE;
+			if (Id.FindChar(TEXT(' '), Space))
+			{
+				Id.RightChopInline(Space + 1); // the id alone: `RosterLeft`, not `Widget RosterLeft`
+			}
+			Parts.Add(FString::Printf(TEXT("%s %s"), *Id, *InFaces[Index].Short));
+		}
+		FString Sentence = FString::Join(Parts, TEXT(", "));
+		if (InFaces.Num() > Named)
+		{
+			Sentence += FString::Printf(TEXT(", and %d more"), InFaces.Num() - Named);
+		}
+		return FString::Printf(TEXT(" In 3D: %s."), *Sentence);
+	}
+
+	TArray<TSharedPtr<FJsonValue>> FacesToJson(const FLayoutSnapshot& InSnapshot, const TArray<FLayoutFace>& InFaces)
+	{
+		TArray<TSharedPtr<FJsonValue>> Out;
+		for (const FLayoutFace& Face : InFaces)
+		{
+			const FLayoutNode& Node = InSnapshot.Nodes[Face.Node];
+			TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+			Object->SetStringField(TEXT("name"), Face.Name);
+			Object->SetStringField(TEXT("path"), Node.Path);
+			int32 Walk = Face.Node;
+			while (Walk != INDEX_NONE && !InSnapshot.Nodes[Walk].bAuthored)
+			{
+				Walk = InSnapshot.Nodes[Walk].Parent;
+			}
+			if (Walk != INDEX_NONE && InSnapshot.Nodes[Walk].Line > 0)
+			{
+				Object->SetStringField(TEXT("file"), InSnapshot.Nodes[Walk].File);
+				Object->SetNumberField(TEXT("line"), InSnapshot.Nodes[Walk].Line);
+			}
+			TSharedRef<FJsonObject> Centre = MakeShared<FJsonObject>();
+			Centre->SetNumberField(TEXT("x"), FMath::RoundToInt(Node.Facing.Centre.X));
+			Centre->SetNumberField(TEXT("y"), FMath::RoundToInt(Node.Facing.Centre.Y));
+			Object->SetObjectField(TEXT("centre"), Centre);
+			Object->SetStringField(TEXT("side"), Face.Side);
+			if (Face.Turn > 0)
+			{
+				TSharedRef<FJsonObject> Turn = MakeShared<FJsonObject>();
+				Turn->SetNumberField(TEXT("degrees"), Face.Turn);
+				Turn->SetStringField(TEXT("fartherEdge"), Face.TurnFarther);
+				Turn->SetStringField(TEXT("faces"), Face.TurnFarther);
+				if (Face.TowardCentre != 0)
+				{
+					Turn->SetBoolField(TEXT("towardCentre"), Face.TowardCentre > 0);
+				}
+				Object->SetObjectField(TEXT("turn"), Turn);
+			}
+			if (Face.Tilt > 0)
+			{
+				TSharedRef<FJsonObject> Tilt = MakeShared<FJsonObject>();
+				Tilt->SetNumberField(TEXT("degrees"), Face.Tilt);
+				Tilt->SetStringField(TEXT("fartherEdge"), Face.TiltFarther);
+				Tilt->SetStringField(TEXT("leans"), Face.TiltFarther == TEXT("top") ? TEXT("back") : TEXT("forward"));
+				Tilt->SetBoolField(TEXT("fartherEdgeNarrower"), Face.bNarrower);
+				Object->SetObjectField(TEXT("tilt"), Tilt);
+			}
+			if (Face.bBack)
+			{
+				Object->SetBoolField(TEXT("back"), true);
+			}
+			Object->SetStringField(TEXT("text"), Face.Words);
+			Out.Add(MakeShared<FJsonValueObject>(Object));
 		}
 		return Out;
 	}

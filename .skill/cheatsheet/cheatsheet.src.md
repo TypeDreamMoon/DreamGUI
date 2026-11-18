@@ -207,6 +207,9 @@ may leave the id out if a block or a style follows: `Text : Caption { Text = "Re
 bottom-left**, `Pivot`, `AnchoredPosition` (positive Y is **up**), `SizeDelta`. `AnchorMin = (0, 0)`,
 `AnchorMax = (1, 1)`, `SizeDelta = (0, 0)` fills the parent. Inside a box the box places it through `@slot` lines.
 `RenderTranslation = (X, Y, Z)`: X is depth (negative is nearer), Y right, Z up.
+`RenderRotation = (Pitch, Yaw, Roll)`: a positive Yaw brings the right edge nearer, so a panel on the left faces the
+middle with a negative Yaw and one on the right with a positive Yaw; a negative Pitch lays a plane back (top edge farther).
+`layout` says which way each turned face looks.
 
 ## Slots and components
 

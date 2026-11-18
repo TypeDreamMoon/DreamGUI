@@ -1542,9 +1542,9 @@ bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("naming both"), Issues.Num() > 0 && Issues[0].Node == Block && Issues[0].Other == Text && Issues[0].Message.Contains(TEXT("HALCYON")));
 
 	FSnapshotBuilder Under;
-	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 150, 105, 100, 30);
+	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 90, 95, 320, 50);
 	Title(Under);
-	TestEqual(TEXT("the same block drawn before the text is its backplate"), Count(Under), 0);
+	TestEqual(TEXT("a block drawn before the text that holds it is its backplate"), Count(Under), 0);
 
 	FSnapshotBuilder Tagged;
 	Title(Tagged);
@@ -1577,6 +1577,182 @@ bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
 	const TArray<FLayoutIssue> Crowded = Crowding.Lint();
 	TestEqual(TEXT("a small bar lying in the text's line is reported"), CountCode(Crowded, EDreamUIDiagnosticCode::LayoutCoversText), 1);
 	TestTrue(TEXT("as over its line"), Crowded.Num() > 0 && Crowded[0].Message.Contains(TEXT("over the line of")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintTextAcrossAShapeTest,
+	"DreamGUI.MCP.Layout.ATextLaidAcrossTheEdgeOfAShapeUnderItIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintTextAcrossAShapeTest::RunTest(const FString& Parameters)
+{
+	// A label, its glyphs 200 x 40 at (100, 100); what is added before it is drawn under it.
+	const auto Label = [](FSnapshotBuilder& Build, int32 InParent)
+	{
+		const int32 Text = Build.Add(InParent, TEXT("Name"), TEXT("Text"), 100, 100, 300, 40);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Text];
+		Node.bHasText = true;
+		Node.Text = TEXT("Cinder Lance");
+		Node.TextNeeded = FVector2f(200.0f, 40.0f);
+		Node.TextSpillX = 1;
+		Node.TextSpillY = 1;
+		return Text;
+	};
+	const auto Count = [](const FSnapshotBuilder& Build) { return CountCode(Build.Lint(), EDreamUIDiagnosticCode::LayoutCoversText); };
+
+	// The next node's badge, drawn before the label, under the lower half of its letters.
+	FSnapshotBuilder Across;
+	const int32 Seal = Across.Add(0, TEXT("SealB1"), TEXT("Widget"), 150, 120, 100, 100);
+	const int32 Shell = Across.Add(Seal, TEXT("Shell"), TEXT("Polygon"), 150, 120, 100, 100);
+	const int32 Text = Label(Across, 0);
+	const TArray<FLayoutIssue> Issues = Across.Lint();
+	TestEqual(TEXT("a text half on the next node's badge, drawn under it, is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("on the text, naming the shape and the node it belongs to"), Issues.Num() > 0 && Issues[0].Node == Text && Issues[0].Other == Shell
+		&& Issues[0].Message.Contains(TEXT("lies across the edge of Polygon Shell (in Widget SealB1)")) && Issues[0].Message.Contains(TEXT("25%")));
+
+	FSnapshotBuilder Holds;
+	Holds.Add(0, TEXT("Chip"), TEXT("RectBlock"), 90, 95, 320, 50);
+	Label(Holds, 0);
+	TestEqual(TEXT("a shape that holds the whole text is its plate"), Count(Holds), 0);
+
+	FSnapshotBuilder Backdrop;
+	Backdrop.Add(0, TEXT("Glow"), TEXT("RectBlock"), 200, 0, 600, 300);
+	Label(Backdrop, 0);
+	TestEqual(TEXT("a backdrop shape far bigger than the text is what the text is laid over"), Count(Backdrop), 0);
+
+	FSnapshotBuilder Plated;
+	Plated.Add(0, TEXT("Badge"), TEXT("Polygon"), 150, 120, 100, 100);
+	const int32 Tag = Plated.Add(0, TEXT("Tag"), TEXT("Widget"), 90, 95, 320, 50);
+	Plated.Add(Tag, TEXT("TagFace"), TEXT("RectBlock"), 90, 95, 320, 50);
+	Label(Plated, Tag);
+	TestEqual(TEXT("a text on a plate of its own, drawn over the shape, reads on its plate"), Count(Plated), 0);
+
+	FSnapshotBuilder Tagged;
+	Tagged.Snapshot.Nodes[Tagged.Add(0, TEXT("Swash"), TEXT("Polygon"), 150, 120, 100, 100)].bBleed = true;
+	Label(Tagged, 0);
+	TestEqual(TEXT("a shape tagged Bleed is meant to run under the text"), Count(Tagged), 0);
+
+	FSnapshotBuilder Lines;
+	Lines.Add(0, TEXT("Link"), TEXT("Line"), 150, 120, 100, 100);
+	Lines.Add(0, TEXT("Halo"), TEXT("Ring"), 150, 120, 100, 100);
+	Label(Lines, 0);
+	TestEqual(TEXT("a line or a ring is an outline: its box is not what it draws"), Count(Lines), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPFacesWordsTest,
+	"DreamGUI.MCP.Layout.TurnedFacesSayWhichWayTheyFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPFacesWordsTest::RunTest(const FString& Parameters)
+{
+	// Faces as the capture leaves them: a normal in the screen's frame and the drawn length of each edge.
+	FSnapshotBuilder Build;
+	const auto Turned = [&Build](int32 InParent, const TCHAR* Name, double X, double W, const FVector& Normal, double LeftEdge, double RightEdge, double TopEdge, double BottomEdge)
+	{
+		const int32 Index = Build.Add(InParent, Name, TEXT("RectBlock"), X, 100, W, 400);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Index];
+		Node.b3D = true;
+		Node.Normal = Normal.GetSafeNormal();
+		Node.Facing.bValid = true;
+		Node.Facing.Length[FLayoutFacing::Left] = LeftEdge;
+		Node.Facing.Length[FLayoutFacing::Right] = RightEdge;
+		Node.Facing.Length[FLayoutFacing::Top] = TopEdge;
+		Node.Facing.Length[FLayoutFacing::Bottom] = BottomEdge;
+		Node.Facing.Centre = FVector2D(X + W * 0.5, 300);
+		return Index;
+	};
+	const FVector Yaw20(FMath::Cos(FMath::DegreesToRadians(20.0)), FMath::Sin(FMath::DegreesToRadians(20.0)), 0.0);
+	const int32 RosterLeft = Turned(0, TEXT("RosterLeft"), 40, 260, Yaw20, 400, 360, 250, 250);
+	Turned(RosterLeft, TEXT("Row"), 60, 200, Yaw20, 60, 54, 190, 190); // on the roster's face: part of it
+	Turned(0, TEXT("RosterRight"), 700, 260, Yaw20, 400, 360, 250, 250);
+	const FVector Pitch30(FMath::Cos(FMath::DegreesToRadians(30.0)), 0.0, FMath::Sin(FMath::DegreesToRadians(30.0)));
+	Turned(0, TEXT("Board"), 380, 240, Pitch30, 380, 380, 200, 240);
+	Build.Add(0, TEXT("Flat"), TEXT("RectBlock"), 400, 520, 200, 40);
+
+	TArray<FLayoutFace> Faces;
+	DescribeFaces(Build.Snapshot, Faces);
+	TestEqual(TEXT("three faces turned: a node on a listed face, and a flat one, are not listed"), Faces.Num(), 3);
+	if (Faces.Num() == 3)
+	{
+		TestEqual(TEXT("the left roster, its right edge drawn shorter, faces the centre"), Faces[0].Words,
+			FString(TEXT("turned 20 degrees: faces toward the screen centre (right edge farther)")));
+		TestEqual(TEXT("the right roster turned the same way faces away from it"), Faces[1].Words,
+			FString(TEXT("turned 20 degrees: faces away from the screen centre (right edge farther)")));
+		TestTrue(TEXT("and says so as data"), Faces[1].TowardCentre == -1 && Faces[1].TurnFarther == TEXT("right") && Faces[1].Side == TEXT("right"));
+		TestEqual(TEXT("the board, its top edge drawn narrower, is tilted back"), Faces[2].Words,
+			FString(TEXT("tilted back 30 degrees: top edge farther and narrower")));
+	}
+	const FString Lines = FormatFaces(Build.Snapshot, Faces);
+	TestTrue(TEXT("one line a face, with where it is"), Lines.Contains(TEXT("\n  RectBlock RosterLeft, on the left: turned 20 degrees")));
+	TestEqual(TEXT("the summary names each face in a few words"), SummarizeFaces(Faces),
+		FString(TEXT(" In 3D: RosterLeft faces toward the centre, RosterRight faces away from the centre, Board tilted back.")));
+	TestEqual(TEXT("as data, one entry a face"), FacesToJson(Build.Snapshot, Faces).Num(), 3);
+
+	// Drawn alike (no perspective): which edge is farther comes from depth.
+	FSnapshotBuilder Flat;
+	const int32 Card = Flat.Add(0, TEXT("Card"), TEXT("RectBlock"), 420, 100, 160, 300);
+	FLayoutNode& CardNode = Flat.Snapshot.Nodes[Card];
+	CardNode.Normal = Yaw20.GetSafeNormal();
+	CardNode.Facing.bValid = true;
+	for (double& Length : CardNode.Facing.Length) { Length = 300.0; }
+	CardNode.Facing.Depth[FLayoutFacing::Left] = 30.0;
+	CardNode.Facing.Centre = FVector2D(500, 250);
+	DescribeFaces(Flat.Snapshot, Faces);
+	TestTrue(TEXT("a card in the middle with its left edge deeper faces left"), Faces.Num() == 1 && Faces[0].Words == TEXT("turned 20 degrees: faces left (left edge farther)"));
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FDreamMCPLayoutFacesTest,
+	FQuietTestBase,
+	"DreamGUI.MCP.Layout.TurnedFacesAreToldAsTheCanvasDrawsThem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLayoutFacesTest::RunTest(const FString& Parameters)
+{
+	// The signs as the canvas draws them: a negative yaw pushes the right edge back, a negative pitch the top edge.
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Faces"), Screen(TEXT(
+		"    RectBlock RosterLeft {\n"
+		"        AnchorData.AnchorMin = (0, 0.5)\n"
+		"        AnchorData.AnchorMax = (0, 0.5)\n"
+		"        AnchorData.Pivot = (0, 0.5)\n"
+		"        AnchorData.AnchoredPosition = (80, 0)\n"
+		"        AnchorData.SizeDelta = (360, 480)\n"
+		"        RenderRotation = (0, -20, 0)\n"
+		"        RectBlock Row { AnchorData.SizeDelta = (240, 48) }\n"
+		"    }\n"
+		"    RectBlock RosterRight {\n"
+		"        AnchorData.AnchorMin = (1, 0.5)\n"
+		"        AnchorData.AnchorMax = (1, 0.5)\n"
+		"        AnchorData.Pivot = (1, 0.5)\n"
+		"        AnchorData.AnchoredPosition = (-80, 0)\n"
+		"        AnchorData.SizeDelta = (360, 480)\n"
+		"        RenderRotation = (0, 20, 0)\n"
+		"    }\n"
+		"    RectBlock Board {\n"
+		"        AnchorData.SizeDelta = (600, 400)\n"
+		"        RenderRotation = (-30, 0, 0)\n"
+		"    }")));
+	const TSharedPtr<FJsonObject> Laid = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("layout"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File)))));
+	TestEqual(TEXT("the screen lays out"), Field(Laid, TEXT("outcome")), FString(TEXT("ok")));
+	const FString Text = Field(Laid, TEXT("text"));
+	TestTrue(TEXT("a negative yaw on the left faces the centre"), Text.Contains(TEXT("RectBlock RosterLeft, on the left: turned 20 degrees: faces toward the screen centre (right edge farther)")));
+	TestTrue(TEXT("a positive yaw on the right faces it too"), Text.Contains(TEXT("RectBlock RosterRight, on the right: turned 20 degrees: faces toward the screen centre (left edge farther)")));
+	TestTrue(TEXT("a negative pitch tilts back"), Text.Contains(TEXT("RectBlock Board, in the middle: tilted back 30 degrees: top edge farther and narrower")));
+	TestFalse(TEXT("a row on the roster's face is part of it"), Text.Contains(TEXT("RectBlock Row,")));
+	TestTrue(TEXT("the summary says it in a few words"), Field(Laid, TEXT("summary")).Contains(TEXT(" In 3D: RosterLeft faces toward the centre, RosterRight faces toward the centre, Board tilted back.")));
+	const TArray<TSharedPtr<FJsonValue>> Faces = ArrayField(ObjectField(Laid, TEXT("data")), TEXT("faces"));
+	TestEqual(TEXT("data.faces has one entry a face"), Faces.Num(), 3);
+	if (Faces.Num() == 3)
+	{
+		const TSharedPtr<FJsonObject> Turn = ObjectField(Faces[0]->AsObject(), TEXT("turn"));
+		bool bToward = false;
+		TestTrue(TEXT("the turn as data"), Turn.IsValid() && Number(Turn, TEXT("degrees")) == 20 && Field(Turn, TEXT("fartherEdge")) == TEXT("right")
+			&& Turn->TryGetBoolField(TEXT("towardCentre"), bToward) && bToward);
+		TestEqual(TEXT("the tilt as data"), Field(ObjectField(Faces[2]->AsObject(), TEXT("tilt")), TEXT("leans")), FString(TEXT("back")));
+	}
 	return true;
 }
 

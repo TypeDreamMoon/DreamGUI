@@ -62,6 +62,22 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   judged as it is drawn. A glow or a bleed meant to go past takes `@tag Bleed`. A pressable control a fraction of a
   pixel under 24 px now reads `198x23.7 px`, not `24x24 px; a pointer needs at least 24x24`, and one within 0.01 px of
   it is not reported. See [DreamMCP endpoint](Docs/tools/dreammcp.md#the-layout-rules).
+- **`layout` and `preview` say which way each face turned in 3D looks.** A panel, card or board whose plane leans
+  from the one it sits in gets a line before the tree -- `Panel RosterLeft, on the left: turned 14 degrees: faces
+  toward the screen centre (right edge farther)`, `Widget Board, in the middle: tilted back 35 degrees: top edge farther
+  and narrower` -- a few words at the end of the summary, and an entry in `data.faces`. Which edge is farther is read
+  off the picture (the edge drawn shorter), so a model that cannot see the preview can tell a panel that faces the
+  middle from one that faces away. Facts, not warnings. See
+  [DreamMCP endpoint](Docs/tools/dreammcp.md#which-way-a-turned-face-looks).
+- **DUI8009 also reports a text laid across the edge of a shape under it.** A label drawn after the next node's badge,
+  some of its letters on the badge and the rest off it, was taken for a text on its backplate. A shape drawn before a
+  text is now its plate only when it holds the text (or the panel the text is on is drawn over it); a shape no more than 8
+  times the text's size that it straddles is reported. Backdrop shapes, glows, rings, lines and what a frame crops away
+  are not.
+- **Building blocks turned in 3D.** Two panels that face the middle of the screen, a plane laid back like a table, and
+  a row of cards that curves toward the player, with the signs that turn each the right way, checked against the
+  picture; the pitfalls page and the cheat sheet give the signs too. See
+  [Turned in 3D](Docs/language/building-blocks.md#turned-in-3d).
 - **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
   project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
@@ -595,6 +611,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 - `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.
 
+- **The starter screens' turned cards face the middle, as they say.** The title menu's save card (on the right)
+  and the results screen's rank card (on the left) were turned with the wrong sign and faced away from the middle of the
+  screen; a screen copied from them turned its panels outward. They now take `RenderRotation = (0, 14, 0)` and
+  `(0, -16, 0)`.
 - **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
   when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it
   reinstanced the screen on the stage and the picture came out empty ("draws almost nothing"), the next one fine. The

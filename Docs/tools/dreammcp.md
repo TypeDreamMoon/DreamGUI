@@ -97,6 +97,38 @@ its geometry is drawn with and the canvas's view projection -- so its rect is wh
 `turned in 3D, rect as drawn in perspective`. When a corner is behind the eye it says `rect approximate` and gives the
 outline seen straight on (`approximate` in `data.tree`).
 
+### Which way a turned face looks
+
+A reader that cannot see the picture cannot tell a panel that faces the middle of the screen from one that faces away,
+so `layout` says it in words. Each face turned in 3D -- a panel, a card, a board whose own plane leans 2 degrees or more
+from the face it sits in (or from the screen), 24 px or more each way -- gets a line before the tree; what lies on that
+face leans with it and is not listed again. The summary ends with a few words on each (`In 3D: RosterLeft faces toward
+the centre, Board tilted back.`):
+
+```text
+Turned in 3D, as drawn (one line a face; the farther edge is drawn shorter):
+  Panel RosterLeft, on the left: turned 14 degrees: faces toward the screen centre (right edge farther)
+  Panel RosterRight, on the right: turned 14 degrees: faces away from the screen centre (right edge farther)
+  Widget Board, in the middle: tilted back 35 degrees: top edge farther and narrower
+```
+
+- **The degrees** are the face's plane against the screen's: about the vertical axis (`turned`) and about the
+  horizontal one (`tilted`).
+- **Which edge is farther** is read off the picture, not off the properties: of two opposite edges, the one the canvas
+  draws shorter, through the widget's drawn matrix (a `Perspective` folded in) and the canvas's camera; drawn alike,
+  the deeper one. `narrower` says the farther edge is drawn narrower than the nearer.
+- **Which way it faces** is the way of its farther edge: right edge back, it faces right. A face whose centre is more
+  than 8 % of the viewport's width left or right of the middle faces `toward the screen centre` or `away from` it;
+  nearer the middle it faces `left` or `right`. Tilted back is the top edge farther, tilted forward the bottom one. A
+  face turned past 90 degrees says its back is toward the viewer.
+
+These are facts, not findings: no warning and no info, and whether a turn is the one the screen wants is the reader's
+call. At most 12 faces are listed; `data.faces` holds them all, per face `name`, `path`, `file`, `line`, `centre`
+(`x`, `y`), `side` (`left`, `right`, `middle`), `turn` (`degrees`, `fartherEdge`, `faces`, `towardCentre`), `tilt`
+(`degrees`, `fartherEdge`, `leans`: `back` or `forward`, `fartherEdgeNarrower`), `back`, and `text`, the line.
+`preview` gives the same lines as its `text`, the same words at the end of its summary, and `data.faces`. The signs
+that turn a face the way a screen usually wants are in [Turned in 3D](../language/building-blocks.md#turned-in-3d).
+
 `sizes` lays the screen out at more viewports (`"1280x720, 2560x1440, 1080x1920"`, up to five). A problem found at one of
 them and not at `width` x `height` is reported as DUI8006, naming the size.
 
@@ -119,14 +151,16 @@ entry, `(raised 3 times by this one line, once for each node that uses it)`, and
 | [DUI8006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8006) | warning | DUI8001–8004, DUI8008 or DUI8009 at one of `sizes` and not at the first viewport | as the rule it repeats |
 | [DUI8007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8007) | warning / info | in `preview`: a text's colour (at its alpha) against the median of the pixels on a one-pixel ring just inside its box. A control's own part painted within 1.1 : 1 of what is behind it (the tick of a toggle that is off) is hidden on purpose and not reported | WCAG contrast under 3 : 1 a warning; under 4.5 : 1 an info for text under 24 px |
 | [DUI8008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8008) | warning | what a node draws reaches past the panel or card it sits in: the nearest ancestor that draws a box (a visual other than text, 24 px or more each way), or, in an overlay, the last earlier sibling whose drawing fills the parent -- the face over a shadow. Not reported: a node tagged `Bleed` or inside one, a frame (or a node between) that clips, a frame the size of the screen (DUI8001's business), a plate at least 90 % of its frame each way lying over most of it (a face over its shadow, a glow behind a card) | more than 4 px and at least 5 % of the node's own width or height on that side |
-| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | warning | a visual that takes no pointer, drawn after a text in the same canvas (later in the file, or in a higher layer), covers its glyphs -- or, no bigger than the text's line, lies mostly in it. Not reported: what is drawn before the text (its backplate), an ancestor or a descendant of it, a control (DUI8004), an outline with no body (`bEnableBody = false`) or one fainter than 40 / 255, a veil over 90 % of the card the text is on, a scrim over 60 % of the screen, a node tagged `Bleed`, a control's own parts around its own label. One finding a text | 12 % of the glyphs' box, or 30 % of the decoration in the line; either at least 4 px thick |
+| [DUI8009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009) | warning | a visual that takes no pointer, drawn after a text in the same canvas (later in the file, or in a higher layer), covers its glyphs -- or, no bigger than the text's line, lies mostly in it. Not reported: what is drawn before the text (its backplate), an ancestor or a descendant of it, a control (DUI8004), an outline with no body (`bEnableBody = false`) or one fainter than 40 / 255, a veil over 90 % of the card the text is on, a scrim over 60 % of the screen, a node tagged `Bleed`, a control's own parts around its own label. Also a text laid across the edge of a shape drawn before it, some of its letters on the shape and the rest off it (a label slid onto the next badge), where the shape is no more than 8 times the glyphs' box -- a badge, an icon, the next item's picture, not a backdrop shape or a glow. Not reported: a shape that holds the text (its plate), one behind the panel or plate the text is on (drawn after the shape, see-through or not), the backplate of a panel the text is in, a ring or a line (outlines), a control, a node tagged `Bleed`. One finding a text | 12 % of the glyphs' box, or 30 % of the decoration in the line; either at least 4 px thick. Across an edge: 12 % to 88 % of the glyphs' box on the shape, at least 4 px thick |
 | [DUI8010](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8010) | info | a panel (a box-drawing node, or an overlay's plate, at least 240 x 120 px and 2 % of the screen, under 60 % of it) with text and three things or more in it, judged by what they draw (rules and accent bars under 6 px thin left out): its content keeps to one side, or leaves a band empty across its middle, or its rows (columns) are spread thin. The middle and the spread are not looked at along a bar or a sidebar (2.5 times longer than wide) | one side 38 % empty with the opposite under a third of that, or 20 % where 60 % of that axis is empty; a middle band of 38 %; gaps between items taking 60 % |
 
 Two nodes are compared in the plane of one of them -- the frame's, the text's, the panel's -- through their widgets'
 transforms, so a card turned in 3D, a rotated badge or a screen inside a perspective keeps its edges straight; a node
 whose rect is approximate (a corner behind the eye) is left out. What a node draws is its visual's geometry: a
 text's glyphs, a polygon's corners (a turned shape is not measured by its box), an image's quad, a rect block's body,
-and for DUI8009 a rect block's outer shadow or glow too when it is at least 40 / 255 opaque.
+and for DUI8009 a rect block's outer shadow or glow too when it is at least 40 / 255 opaque. A shape a text lies
+across is measured by its convex outline (a polygon's corners, any other visual's four), and no more than what its
+clipping ancestors let show.
 
 ### Going past the frame on purpose: `@tag Bleed`
 

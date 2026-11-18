@@ -92,7 +92,7 @@ Widget Root : ui.FillParent {
                 AnchorData.Pivot = (1, 0.5)
                 AnchorData.AnchoredPosition = (-200, 20)
                 AnchorData.SizeDelta = (600, 360)
-                RenderRotation = (0, -14, 0)
+                RenderRotation = (0, 14, 0)
                 + Overlay { }
                 RectBlock SaveFace : ui.Panel : ui.FillSlot
                 RectBlock SaveEdge : ui.AccentFade {
@@ -885,7 +885,7 @@ Widget Root : ui.FillParent {
                 AnchorData.AnchorMax = (0, 0.5)
                 AnchorData.AnchoredPosition = (380, -20)
                 AnchorData.SizeDelta = (360, 460)
-                RenderRotation = (0, 16, 0)
+                RenderRotation = (0, -16, 0)
                 RectBlock RankFace : ui.Panel : ui.FillSlot
                 RectBlock RankEdge : ui.AccentFade {
                     @slot { HorizontalAlignment = Fill  VerticalAlignment = Top  Padding = (16, 0, 16, 0)  Size = (0, 2) }
