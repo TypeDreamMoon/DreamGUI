@@ -13,6 +13,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **A widget's parts, from its own pin.** Dragging off an authored widget's pin now lists what its visual, layout
+  container, layout self and behaviours can do -- their functions, and their properties as Get and Set -- filed under the
+  widget and the part. Picking *Set Text* off `PlayerLabel` places one node whose target is the widget: no Get Visual, no
+  Cast, no failure branch. The compile checks it against the hierarchy it builds: a `.dui` that turns that `Text` into a
+  `RectBlock` fails at the node, naming the widget and what it is now, instead of doing nothing at run time. *Get <part>*
+  returns the part itself, typed, for handing on. Nothing changes at run time and visuals stay swappable. C++ gets
+  `GetVisual<T>()`, `GetLayoutContainer<T>()` and `GetLayoutSelf<T>()` beside `GetComponent<T>()`.
+
 - HDR display targets composite screen UI in linear light at the display paper white, then encode to PQ/Rec2020 or scRGB. SDR and linear capture targets retain their existing rendering path.
 
 - Navigation indicators expose `GetAnimDuration` / `SetAnimDuration`. Zero snaps native focus movement and fades immediately, including an in-progress transition, for host accessibility policies.
