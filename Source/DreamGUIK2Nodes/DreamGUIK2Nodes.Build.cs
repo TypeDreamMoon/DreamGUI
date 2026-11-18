@@ -29,7 +29,8 @@ public class DreamGUIK2Nodes : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-
+				"DreamGUIEditor",//UDreamWidgetBlueprint: the Part node checks against the authored hierarchy
+				"SlateCore",//FSlateIcon
             }
 			);
 		
