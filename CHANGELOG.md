@@ -62,6 +62,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   judged as it is drawn. A glow or a bleed meant to go past takes `@tag Bleed`. A pressable control a fraction of a
   pixel under 24 px now reads `198x23.7 px`, not `24x24 px; a pointer needs at least 24x24`, and one within 0.01 px of
   it is not reported. See [DreamMCP endpoint](Docs/tools/dreammcp.md#the-layout-rules).
+- **`layout` and `preview` say which way each face turned in 3D looks.** A panel, card or board whose plane leans
+  from the one it sits in gets a line before the tree -- `Panel RosterLeft, on the left: turned 14 degrees: faces
+  toward the screen centre (right edge farther)`, `Widget Board, in the middle: tilted back 35 degrees: top edge farther
+  and narrower` -- a few words at the end of the summary, and an entry in `data.faces`. Which edge is farther is read
+  off the picture (the edge drawn shorter), so a model that cannot see the preview can tell a panel that faces the
+  middle from one that faces away. Facts, not warnings. See
+  [DreamMCP endpoint](Docs/tools/dreammcp.md#which-way-a-turned-face-looks).
 - **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
   project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,

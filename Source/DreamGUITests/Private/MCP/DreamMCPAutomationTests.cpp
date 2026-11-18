@@ -1580,6 +1580,122 @@ bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPFacesWordsTest,
+	"DreamGUI.MCP.Layout.TurnedFacesSayWhichWayTheyFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPFacesWordsTest::RunTest(const FString& Parameters)
+{
+	// Faces as the capture leaves them: a normal in the screen's frame and the drawn length of each edge.
+	FSnapshotBuilder Build;
+	const auto Turned = [&Build](int32 InParent, const TCHAR* Name, double X, double W, const FVector& Normal, double LeftEdge, double RightEdge, double TopEdge, double BottomEdge)
+	{
+		const int32 Index = Build.Add(InParent, Name, TEXT("RectBlock"), X, 100, W, 400);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Index];
+		Node.b3D = true;
+		Node.Normal = Normal.GetSafeNormal();
+		Node.Facing.bValid = true;
+		Node.Facing.Length[FLayoutFacing::Left] = LeftEdge;
+		Node.Facing.Length[FLayoutFacing::Right] = RightEdge;
+		Node.Facing.Length[FLayoutFacing::Top] = TopEdge;
+		Node.Facing.Length[FLayoutFacing::Bottom] = BottomEdge;
+		Node.Facing.Centre = FVector2D(X + W * 0.5, 300);
+		return Index;
+	};
+	const FVector Yaw20(FMath::Cos(FMath::DegreesToRadians(20.0)), FMath::Sin(FMath::DegreesToRadians(20.0)), 0.0);
+	const int32 RosterLeft = Turned(0, TEXT("RosterLeft"), 40, 260, Yaw20, 400, 360, 250, 250);
+	Turned(RosterLeft, TEXT("Row"), 60, 200, Yaw20, 60, 54, 190, 190); // on the roster's face: part of it
+	Turned(0, TEXT("RosterRight"), 700, 260, Yaw20, 400, 360, 250, 250);
+	const FVector Pitch30(FMath::Cos(FMath::DegreesToRadians(30.0)), 0.0, FMath::Sin(FMath::DegreesToRadians(30.0)));
+	Turned(0, TEXT("Board"), 380, 240, Pitch30, 380, 380, 200, 240);
+	Build.Add(0, TEXT("Flat"), TEXT("RectBlock"), 400, 520, 200, 40);
+
+	TArray<FLayoutFace> Faces;
+	DescribeFaces(Build.Snapshot, Faces);
+	TestEqual(TEXT("three faces turned: a node on a listed face, and a flat one, are not listed"), Faces.Num(), 3);
+	if (Faces.Num() == 3)
+	{
+		TestEqual(TEXT("the left roster, its right edge drawn shorter, faces the centre"), Faces[0].Words,
+			FString(TEXT("turned 20 degrees: faces toward the screen centre (right edge farther)")));
+		TestEqual(TEXT("the right roster turned the same way faces away from it"), Faces[1].Words,
+			FString(TEXT("turned 20 degrees: faces away from the screen centre (right edge farther)")));
+		TestTrue(TEXT("and says so as data"), Faces[1].TowardCentre == -1 && Faces[1].TurnFarther == TEXT("right") && Faces[1].Side == TEXT("right"));
+		TestEqual(TEXT("the board, its top edge drawn narrower, is tilted back"), Faces[2].Words,
+			FString(TEXT("tilted back 30 degrees: top edge farther and narrower")));
+	}
+	const FString Lines = FormatFaces(Build.Snapshot, Faces);
+	TestTrue(TEXT("one line a face, with where it is"), Lines.Contains(TEXT("\n  RectBlock RosterLeft, on the left: turned 20 degrees")));
+	TestEqual(TEXT("the summary names each face in a few words"), SummarizeFaces(Faces),
+		FString(TEXT(" In 3D: RosterLeft faces toward the centre, RosterRight faces away from the centre, Board tilted back.")));
+	TestEqual(TEXT("as data, one entry a face"), FacesToJson(Build.Snapshot, Faces).Num(), 3);
+
+	// Drawn alike (no perspective): which edge is farther comes from depth.
+	FSnapshotBuilder Flat;
+	const int32 Card = Flat.Add(0, TEXT("Card"), TEXT("RectBlock"), 420, 100, 160, 300);
+	FLayoutNode& CardNode = Flat.Snapshot.Nodes[Card];
+	CardNode.Normal = Yaw20.GetSafeNormal();
+	CardNode.Facing.bValid = true;
+	for (double& Length : CardNode.Facing.Length) { Length = 300.0; }
+	CardNode.Facing.Depth[FLayoutFacing::Left] = 30.0;
+	CardNode.Facing.Centre = FVector2D(500, 250);
+	DescribeFaces(Flat.Snapshot, Faces);
+	TestTrue(TEXT("a card in the middle with its left edge deeper faces left"), Faces.Num() == 1 && Faces[0].Words == TEXT("turned 20 degrees: faces left (left edge farther)"));
+	return true;
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FDreamMCPLayoutFacesTest,
+	FQuietTestBase,
+	"DreamGUI.MCP.Layout.TurnedFacesAreToldAsTheCanvasDrawsThem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLayoutFacesTest::RunTest(const FString& Parameters)
+{
+	// The signs as the canvas draws them: a negative yaw pushes the right edge back, a negative pitch the top edge.
+	FTestEndpoint Test(*this, EEndpointMode::Editor);
+	FScopedSources Sources;
+	const FString File = Sources.Write(TEXT("Faces"), Screen(TEXT(
+		"    RectBlock RosterLeft {\n"
+		"        AnchorData.AnchorMin = (0, 0.5)\n"
+		"        AnchorData.AnchorMax = (0, 0.5)\n"
+		"        AnchorData.Pivot = (0, 0.5)\n"
+		"        AnchorData.AnchoredPosition = (80, 0)\n"
+		"        AnchorData.SizeDelta = (360, 480)\n"
+		"        RenderRotation = (0, -20, 0)\n"
+		"        RectBlock Row { AnchorData.SizeDelta = (240, 48) }\n"
+		"    }\n"
+		"    RectBlock RosterRight {\n"
+		"        AnchorData.AnchorMin = (1, 0.5)\n"
+		"        AnchorData.AnchorMax = (1, 0.5)\n"
+		"        AnchorData.Pivot = (1, 0.5)\n"
+		"        AnchorData.AnchoredPosition = (-80, 0)\n"
+		"        AnchorData.SizeDelta = (360, 480)\n"
+		"        RenderRotation = (0, 20, 0)\n"
+		"    }\n"
+		"    RectBlock Board {\n"
+		"        AnchorData.SizeDelta = (600, 400)\n"
+		"        RenderRotation = (-30, 0, 0)\n"
+		"    }")));
+	const TSharedPtr<FJsonObject> Laid = ResultOf(RunToEnd(*this, Test.Endpoint, CallBody(TEXT("layout"), FString::Printf(TEXT("{\"file\":\"%s\"}"), *JsonString(File)))));
+	TestEqual(TEXT("the screen lays out"), Field(Laid, TEXT("outcome")), FString(TEXT("ok")));
+	const FString Text = Field(Laid, TEXT("text"));
+	TestTrue(TEXT("a negative yaw on the left faces the centre"), Text.Contains(TEXT("RectBlock RosterLeft, on the left: turned 20 degrees: faces toward the screen centre (right edge farther)")));
+	TestTrue(TEXT("a positive yaw on the right faces it too"), Text.Contains(TEXT("RectBlock RosterRight, on the right: turned 20 degrees: faces toward the screen centre (left edge farther)")));
+	TestTrue(TEXT("a negative pitch tilts back"), Text.Contains(TEXT("RectBlock Board, in the middle: tilted back 30 degrees: top edge farther and narrower")));
+	TestFalse(TEXT("a row on the roster's face is part of it"), Text.Contains(TEXT("RectBlock Row,")));
+	TestTrue(TEXT("the summary says it in a few words"), Field(Laid, TEXT("summary")).Contains(TEXT(" In 3D: RosterLeft faces toward the centre, RosterRight faces toward the centre, Board tilted back.")));
+	const TArray<TSharedPtr<FJsonValue>> Faces = ArrayField(ObjectField(Laid, TEXT("data")), TEXT("faces"));
+	TestEqual(TEXT("data.faces has one entry a face"), Faces.Num(), 3);
+	if (Faces.Num() == 3)
+	{
+		const TSharedPtr<FJsonObject> Turn = ObjectField(Faces[0]->AsObject(), TEXT("turn"));
+		bool bToward = false;
+		TestTrue(TEXT("the turn as data"), Turn.IsValid() && Number(Turn, TEXT("degrees")) == 20 && Field(Turn, TEXT("fartherEdge")) == TEXT("right")
+			&& Turn->TryGetBoolField(TEXT("towardCentre"), bToward) && bToward);
+		TestEqual(TEXT("the tilt as data"), Field(ObjectField(Faces[2]->AsObject(), TEXT("tilt")), TEXT("leans")), FString(TEXT("back")));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintUnbalancedTest,
 	"DreamGUI.MCP.Layout.APanelWithItsContentToOneSideIsAnInfo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

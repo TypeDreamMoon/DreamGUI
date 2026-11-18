@@ -1311,8 +1311,14 @@ namespace DreamGUIMCP
 				{
 					Headline += FString::Printf(TEXT(" The compile also warned %d time(s)."), CompileWarnings);
 				}
+				// Which way each face turned in 3D looks, as drawn: a fact for a reader without the picture, not a problem.
+				TArray<FLayoutFace> Faces;
+				DescribeFaces(Base, Faces);
+				Headline += SummarizeFaces(Faces);
 				Result.Summary = Headline;
-				Result.Text = TEXT("The screen, one node a line (x, y from the top left of the viewport, in pixels):\n") + Tree;
+				const FString FacesText = FormatFaces(Base, Faces);
+				Result.Text = (FacesText.IsEmpty() ? FString() : FacesText + TEXT("\n\n"))
+					+ TEXT("The screen, one node a line (x, y from the top left of the viewport, in pixels):\n") + Tree;
 
 				Result.Data = MakeShared<FJsonObject>();
 				Result.Data->SetStringField(TEXT("file"), Rel(State->File));
@@ -1325,6 +1331,7 @@ namespace DreamGUIMCP
 				Result.Data->SetNumberField(TEXT("warnings"), Warnings);
 				Result.Data->SetNumberField(TEXT("infos"), Infos);
 				Result.Data->SetObjectField(TEXT("tree"), LayoutTreeToJson(Base, Depth));
+				Result.Data->SetArrayField(TEXT("faces"), FacesToJson(Base, Faces));
 				if (State->Snapshots.Num() > 1)
 				{
 					TArray<TSharedPtr<FJsonValue>> SizeValues;
@@ -1725,8 +1732,12 @@ namespace DreamGUIMCP
 					Sentence += FString::Printf(TEXT(". %s hard to read against what is behind %s"),
 						*Plural(Contrast.Num(), TEXT("text is"), TEXT("texts are")), Contrast.Num() == 1 ? TEXT("it") : TEXT("them"));
 				}
-				Result.Summary = FString::Printf(TEXT("%s. Image: %s (%dx%d%s)."), *Sentence, *Rel(ImagePath), W, H,
-					N > 1 ? *FString::Printf(TEXT(", %d frames side by side"), N) : TEXT(""));
+				// Which way each face turned in 3D looks: the picture says it, and a reader that cannot see it needs the words.
+				TArray<FLayoutFace> Faces;
+				DescribeFaces(State->Snapshot, Faces);
+				Result.Summary = FString::Printf(TEXT("%s. Image: %s (%dx%d%s).%s"), *Sentence, *Rel(ImagePath), W, H,
+					N > 1 ? *FString::Printf(TEXT(", %d frames side by side"), N) : TEXT(""), *SummarizeFaces(Faces));
+				Result.Text = FormatFaces(State->Snapshot, Faces);
 				FArtifact Artifact;
 				Artifact.Kind = TEXT("image");
 				Artifact.Path = Rel(ImagePath);
@@ -1765,6 +1776,7 @@ namespace DreamGUIMCP
 					Result.Data->SetObjectField(TEXT("animation"), Animation);
 				}
 				Result.Data->SetNumberField(TEXT("lowContrastTexts"), Contrast.Num());
+				Result.Data->SetArrayField(TEXT("faces"), FacesToJson(State->Snapshot, Faces));
 				Result.Data->SetNumberField(TEXT("seconds"), FMath::RoundToDouble((FPlatformTime::Seconds() - State->StartedAt) * 100.0) / 100.0);
 				OutResult = Result;
 				return true;

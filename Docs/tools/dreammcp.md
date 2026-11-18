@@ -97,6 +97,38 @@ its geometry is drawn with and the canvas's view projection -- so its rect is wh
 `turned in 3D, rect as drawn in perspective`. When a corner is behind the eye it says `rect approximate` and gives the
 outline seen straight on (`approximate` in `data.tree`).
 
+### Which way a turned face looks
+
+A reader that cannot see the picture cannot tell a panel that faces the middle of the screen from one that faces away,
+so `layout` says it in words. Each face turned in 3D -- a panel, a card, a board whose own plane leans 2 degrees or more
+from the face it sits in (or from the screen), 24 px or more each way -- gets a line before the tree; what lies on that
+face leans with it and is not listed again. The summary ends with a few words on each (`In 3D: RosterLeft faces toward
+the centre, Board tilted back.`):
+
+```text
+Turned in 3D, as drawn (one line a face; the farther edge is drawn shorter):
+  Panel RosterLeft, on the left: turned 14 degrees: faces toward the screen centre (right edge farther)
+  Panel RosterRight, on the right: turned 14 degrees: faces away from the screen centre (right edge farther)
+  Widget Board, in the middle: tilted back 35 degrees: top edge farther and narrower
+```
+
+- **The degrees** are the face's plane against the screen's: about the vertical axis (`turned`) and about the
+  horizontal one (`tilted`).
+- **Which edge is farther** is read off the picture, not off the properties: of two opposite edges, the one the canvas
+  draws shorter, through the widget's drawn matrix (a `Perspective` folded in) and the canvas's camera; drawn alike,
+  the deeper one. `narrower` says the farther edge is drawn narrower than the nearer.
+- **Which way it faces** is the way of its farther edge: right edge back, it faces right. A face whose centre is more
+  than 8 % of the viewport's width left or right of the middle faces `toward the screen centre` or `away from` it;
+  nearer the middle it faces `left` or `right`. Tilted back is the top edge farther, tilted forward the bottom one. A
+  face turned past 90 degrees says its back is toward the viewer.
+
+These are facts, not findings: no warning and no info, and whether a turn is the one the screen wants is the reader's
+call. At most 12 faces are listed; `data.faces` holds them all, per face `name`, `path`, `file`, `line`, `centre`
+(`x`, `y`), `side` (`left`, `right`, `middle`), `turn` (`degrees`, `fartherEdge`, `faces`, `towardCentre`), `tilt`
+(`degrees`, `fartherEdge`, `leans`: `back` or `forward`, `fartherEdgeNarrower`), `back`, and `text`, the line.
+`preview` gives the same lines as its `text`, the same words at the end of its summary, and `data.faces`. The signs
+that turn a face the way a screen usually wants are in [Turned in 3D](../language/building-blocks.md#turned-in-3d).
+
 `sizes` lays the screen out at more viewports (`"1280x720, 2560x1440, 1080x1920"`, up to five). A problem found at one of
 them and not at `width` x `height` is reported as DUI8006, naming the size.
 
