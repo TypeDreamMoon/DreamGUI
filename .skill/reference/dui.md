@@ -275,8 +275,9 @@ The render transform moves where a node is drawn and leaves layout alone:
   larger, positive pushes it back -- Y is right and Z is up. `(0, -40, 0)` is 40 px to the left; `(-40, 0, 0)` is 40
   nearer.
 - `RenderRotation = (Pitch, Yaw, Roll)`, in degrees, about `RenderTransformPivot`: Yaw turns the node about its vertical
-  axis (positive brings its right edge nearer), Pitch about the horizontal one, Roll in the screen's plane (positive is
-  clockwise).
+  axis (positive brings its right edge nearer), Pitch about the horizontal one (positive brings its top edge nearer;
+  negative lays it back), Roll in the screen's plane (positive is clockwise). A panel on the left of the screen faces
+  the middle with a negative Yaw, one on the right with a positive Yaw.
 - `RenderScale = (X, Y, Z)` scales it as drawn.
 
 A list on a property that is not an array or a set, a map on one that is not a map, or a set or map of nodes, is

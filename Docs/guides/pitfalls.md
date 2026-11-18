@@ -112,6 +112,63 @@ Each entry says what you see, why, and what to do; the page it links to has the 
   ClipToBounds`. [The panels](../concepts/layout.md#the-panels).
 - **A world-space panel sits off its actor.** The component's `Pivot` and size go on the user widget; give the class's root
   node anchors from `(0, 0)` to `(1, 1)` and no size of its own. [World-space UI](../concepts/world-space.md).
+- **A panel meant to face the middle of the screen faces away from it.** A positive Yaw brings a node's right edge
+  nearer and a positive Pitch its top edge, so the signs run the other way from what a first guess gives: a panel on
+  the left faces the middle with a negative Yaw, one on the right with a positive Yaw; a plane laid back like a table
+  takes a negative Pitch; a row of cards that curves toward the player goes from a negative Yaw on the left to a positive
+  one on the right, largest at the ends. `layout` and `preview` say which way each turned face looks as drawn
+  (`Panel RosterLeft, on the left: turned 14 degrees: faces toward the screen centre (right edge farther)`); read that
+  line after every turn. [Turned in 3D](../language/building-blocks.md#turned-in-3d).
+
+```
+// DUI/Pitfalls/Facing.dui
+class /Game/UI/Pitfalls/WBP_Facing
+use "Theme.dui" as ui
+
+// The three turns, with their signs: a positive Yaw brings a node's right edge nearer, a positive Pitch its top edge.
+style Side {
+    AnchorData.AnchorMin = (0.5, 0.5)
+    AnchorData.AnchorMax = (0.5, 0.5)
+    AnchorData.Pivot = (0.5, 0.5)
+    AnchorData.SizeDelta = (360, 280)
+}
+style ArcCard : ui.Card {
+    @slot Size = (100, 150)
+}
+
+Widget Root : ui.FillParent {
+    RectBlock Backdrop : ui.ScreenBackdrop : ui.FillParent
+
+    // Two panels that face the middle: on the left a negative Yaw, on the right a positive one.
+    RectBlock FacingLeft : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (-620, 160)
+        RenderRotation = (0, -16, 0)
+    }
+    RectBlock FacingRight : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (620, 160)
+        RenderRotation = (0, 16, 0)
+    }
+
+    // A plane laid back, its far (top) edge narrower: a negative Pitch.
+    RectBlock Table : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (0, -250)
+        AnchorData.SizeDelta = (720, 300)
+        RenderRotation = (-35, 0, 0)
+    }
+
+    // Cards that curve toward the player: negative left of the middle, positive right of it, the ends turned most.
+    HorizontalBox Arc : Side {
+        Spacing = 20
+        AnchorData.AnchoredPosition = (0, 160)
+        AnchorData.SizeDelta = (580, 150)
+        RectBlock CardA : ArcCard { RenderRotation = (0, -24, 0) }
+        RectBlock CardB : ArcCard { RenderRotation = (0, -12, 0) }
+        RectBlock CardC : ArcCard { RenderTranslation = (-20, 0, 0) }
+        RectBlock CardD : ArcCard { RenderRotation = (0, 12, 0) }
+        RectBlock CardE : ArcCard { RenderRotation = (0, 24, 0) }
+    }
+}
+```
 
 ## Rendering
 

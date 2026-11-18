@@ -74,6 +74,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   text is now its plate only when it holds the text (or the panel the text is on is drawn over it); a shape no more than 8
   times the text's size that it straddles is reported. Backdrop shapes, glows, rings, lines and what a frame crops away
   are not.
+- **Building blocks turned in 3D.** Two panels that face the middle of the screen, a plane laid back like a table, and
+  a row of cards that curves toward the player, with the signs that turn each the right way, checked against the
+  picture; the pitfalls page and the cheat sheet give the signs too. See
+  [Turned in 3D](Docs/language/building-blocks.md#turned-in-3d).
 - **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
   project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,
