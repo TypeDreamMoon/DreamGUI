@@ -13,6 +13,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- HDR display targets composite screen UI in linear light at the display paper white, then encode to PQ/Rec2020 or scRGB. SDR and linear capture targets retain their existing rendering path.
 - **Edge Anti-Aliasing: the outline of a mesh element is smooth without MSAA.** A Polygon, Shape, Ring, Path, PolygonLine,
   2D line or custom mesh, and an Image drawn as a RoundedBox or radially filled, now draws its outline with a strip one
   device pixel wide made by its own geometry: the outline's vertices move half a pixel in, keeping the texture in place,

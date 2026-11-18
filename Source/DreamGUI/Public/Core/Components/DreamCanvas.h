@@ -940,6 +940,7 @@ private:
 	mutable uint32 bIsViewProjectionMatrixDirty : 1 = true;
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
 	friend class FDreamCanvasHierarchyOrderTest;
+	friend class FDreamHDRPixelTest;
 	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;
 	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
 	friend class FDreamRenderLayerManyOnOneCanvasTest;
