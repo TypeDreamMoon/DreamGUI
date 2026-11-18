@@ -212,7 +212,7 @@
 
 ### 服务器
 
-UI 管理器不会在专用服务器的世界中启动，包含 play-in-editor 服务器（`UDreamUIManagerWorldSubsystem::ShouldRunForNetMode`）：服务器像 commandlet 一样，在没有管理器的情况下构建其关卡所持有的控件树，不绘制任何内容，也不产生渲染器行或绘制行。你在那里请求管理器的自有代码会得到 null，正如每个 DreamGUI 调用方所预期的那样。
+UI 管理器不会在专用服务器的世界中启动，包含 play-in-editor 服务器（`UDreamUIManagerWorldSubsystem::ShouldRunForNetMode`）：服务器像 commandlet 一样，在没有管理器的情况下构建其关卡所持有的控件树，不绘制任何内容，也不产生渲染器行或绘制行。你在那里请求管理器的自有代码会得到 null，正如每个 DreamGUI 调用方所预期的那样。在这样的世界中创建的控件会针对该世界报告一次警告；应改为在哪里构建 UI，参见 [Networking and multiplayer](networking.md)。
 
 <a id="c-of-your-own"></a>
 

@@ -67,6 +67,57 @@ description: 那些看起来像 bug 其实并不是、或者能白白耗掉一�
 - **垂直框中某一行的文本会每行只显示一个字母。** 垂直框会按子节点自身测量的宽度为其分配宽度，而 `SizeDelta` 宽度为 0 的节点测量结果就是 0，因此它的文本会在每个字符之后换行。在该行上（或它的样式中）写 `@slot HorizontalAlignment = Fill`，或者给它指定一个宽度。[位置、尺寸和轴](../language/nodes-and-values.md#positions-sizes-and-axes)。
 - **展开或增长的列表绘制到面板之外。** 面板不会裁剪。请使用 `ScrollBox`，或 `Clipping = ClipToBounds`。[面板](../concepts/layout.md#the-panels)。
 - **世界空间面板偏离了它的 actor。** 组件的 `Pivot` 和尺寸应设置在用户控件上；给该类的根节点设置从 `(0, 0)` 到 `(1, 1)` 的锚点，并且不要给它自身的尺寸。[世界空间 UI](../concepts/world-space.md)。
+- **本应朝向屏幕中央的面板却背向中央。**正的 Yaw 会使节点的右边缘更近，正的 Pitch 会使节点的上边缘更近，因此符号方向与第一直觉相反：左侧的面板用负 Yaw 朝向中央，右侧的面板用正 Yaw 朝向中央；像桌面一样后仰的平面使用负 Pitch；一排朝玩家弯曲的卡片，其 Yaw 从左侧的负值过渡到右侧的正值，两端处最大。`layout` 和 `preview` 说明每个旋转后的面在绘制时朝向哪边（`Panel RosterLeft, on the left: turned 14 degrees: faces toward the screen centre (right edge farther)`）；每次旋转后都要读取该行。[在 3D 中旋转](../language/building-blocks.md#turned-in-3d)。
+
+```
+// DUI/Pitfalls/Facing.dui
+class /Game/UI/Pitfalls/WBP_Facing
+use "Theme.dui" as ui
+
+// The three turns, with their signs: a positive Yaw brings a node's right edge nearer, a positive Pitch its top edge.
+style Side {
+    AnchorData.AnchorMin = (0.5, 0.5)
+    AnchorData.AnchorMax = (0.5, 0.5)
+    AnchorData.Pivot = (0.5, 0.5)
+    AnchorData.SizeDelta = (360, 280)
+}
+style ArcCard : ui.Card {
+    @slot Size = (100, 150)
+}
+
+Widget Root : ui.FillParent {
+    RectBlock Backdrop : ui.ScreenBackdrop : ui.FillParent
+
+    // Two panels that face the middle: on the left a negative Yaw, on the right a positive one.
+    RectBlock FacingLeft : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (-620, 160)
+        RenderRotation = (0, -16, 0)
+    }
+    RectBlock FacingRight : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (620, 160)
+        RenderRotation = (0, 16, 0)
+    }
+
+    // A plane laid back, its far (top) edge narrower: a negative Pitch.
+    RectBlock Table : ui.Panel : Side {
+        AnchorData.AnchoredPosition = (0, -250)
+        AnchorData.SizeDelta = (720, 300)
+        RenderRotation = (-35, 0, 0)
+    }
+
+    // Cards that curve toward the player: negative left of the middle, positive right of it, the ends turned most.
+    HorizontalBox Arc : Side {
+        Spacing = 20
+        AnchorData.AnchoredPosition = (0, 160)
+        AnchorData.SizeDelta = (580, 150)
+        RectBlock CardA : ArcCard { RenderRotation = (0, -24, 0) }
+        RectBlock CardB : ArcCard { RenderRotation = (0, -12, 0) }
+        RectBlock CardC : ArcCard { RenderTranslation = (-20, 0, 0) }
+        RectBlock CardD : ArcCard { RenderRotation = (0, 12, 0) }
+        RectBlock CardE : ArcCard { RenderRotation = (0, 24, 0) }
+    }
+}
+```
 
 <a id="rendering"></a>
 

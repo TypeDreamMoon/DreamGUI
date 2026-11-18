@@ -1,4 +1,4 @@
-#dreamdocs-align 1	source=Docs/tools/dreammcp.md	rev=4ac86e8f9b55	model=deepseek-v4.1-flash	page=aa4d4ef8b6f8
+#dreamdocs-align 1	source=Docs/tools/dreammcp.md	rev=81ab704076de	model=deepseek-v4.1-flash	page=debbfcfa0ac5
 meta:title	41c79b51e402	87ade766	m
 meta:description	7d948d51301b	e65ce900	m
 p	15d6cafe713b	3836c919	m
@@ -38,6 +38,12 @@ p	2b517e0f266d	7b4eb9a8	m
 p	9b8a2725c825	0a8a5711	m
 p	e4fb9b7c913a	0f1047e9	m
 p	f71bf1cbd79b	54cb1ab2	m
+h3	9776b04947c3	24176f09	m
+p	4a69710e9a0b	1228fad0	m
+li	68c70fd7d25e	d866c7e0	m
+li	78d54b300089	180f002e	m
+li	5c0a349cb9b8	6a82791a	m
+p	f2502ca00911	aeb66471	m
 p	ac664520ae81	df249d02	m
 h2	cdc420e1f1de	b38b0552	m
 p	afc1b9fbe53e	aecc4b1b	m
@@ -50,9 +56,9 @@ row4	d6d3b651899e	0649ed0d	m
 row4	9b0645cc6fd1	702f0aa3	m
 row4	3e3892434080	3461a729	m
 row4	e225de480e16	f039cb44	m
-row4	77471d7ea686	815a105a	m
+row4	360a6f3eb1ff	f6b1cb51	m
 row4	aa8345881f0b	4c0cd0a1	m
-p	90ff3e2c33fa	de560c94	m
+p	ad46badd7296	148c074d	m
 h3	c28854ff3c57	278060a8	m
 p	0c6ae9f456e2	3b53b75e	m
 p	80a81bdbc8eb	85c234e6	m

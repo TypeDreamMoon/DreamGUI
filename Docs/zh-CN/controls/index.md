@@ -95,9 +95,13 @@ description: DreamGUIControls 中有什么——按类别划分的 Dream* 控件
 
 每个控件的基类是 [`UDreamUIControl`](../Reference/DreamUIControl.md)，它是抽象的，没有标签。
 
+原生滚动框在测量内容时使用视口实际的交叉轴尺寸，且沿滚动轴方向不设限制。因此，自动换行的文本和嵌套的 Fill 槽位会贡献它们在该视口中所需的高度（或宽度）。调整尺寸以及已提交的内容布局变更会重新测量范围；作者设置的内容内边距仍然可滚动。重复行和条件行、移除以及变化的文本都会更新范围，即使视口保持相同尺寸。内容范围跟随内部视口的大小通知，此时其缓存尺寸已经失效。因此，窗口和父布局的尺寸调整会更新内容的交叉轴尺寸，无需再次点击、重新应用样式或手动调用 `RefreshContentExtent`。
+
 <a id="placing-a-control-from-dui"></a>
 
 ## 在 .dui 里放控件
+
+文本字段 `UUITextInput` 的原生使用方可以订阅 `GetOnInputActivateEvent()`，以便与 `GetOnValueChangedEvent()` 和 `GetOnSubmitEvent()` 一同观察开始/结束编辑。激活事件在编辑开始时携带 `true`，在编辑结束时携带 `false`。
 
 在 `.dui` 里，控件是由其**注册表标签**作类型的节点：`Scope.Name`，插件的控件都在 `Native` 下。
 

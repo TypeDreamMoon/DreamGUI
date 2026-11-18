@@ -5,6 +5,8 @@ description: 布局引擎如何工作——测量是 const 的并与布置分离
 
 一个控件自身的 `AnchorData` 决定它的矩形——直到它的父级带有布局容器。带有布局容器的控件就是一个**面板**：它测量子级、决定它们的矩形，并把结果写回它们的 `AnchoredPosition` 和 `SizeDelta`。这里的面板不是单独的类，而是控件的子对象（`LayoutContainer`），因此一个控件可以按一种方式布局、按另一种方式绘制。子级上的 `bIgnoreLayout` 会使其脱离父级的布局。
 
+原生 C++ 使用方可订阅 `UDreamPanelLayoutBase::GetOnLayoutCommittedEvent()`，以便在脏面板提交其子项之后做出响应，包括空列表的情况。仅进行测量不会发出该事件。原生滚动框使用此事件在动态内容发生变化而视口未调整大小时刷新其范围；未发生变化的布局无需逐帧扫描。
+
 <a id="rebuilt-along-the-lines-of-blink-and-yoga"></a>
 
 ## 按 Blink 和 Yoga 的思路重建

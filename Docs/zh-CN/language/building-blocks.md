@@ -7,7 +7,7 @@ description: "用于作为屏幕起点的完整 .dui 文件：将 1920 x 1080 �
 
 ## 构建块
 
-下列每个块都是一个完整文件：将其复制到项目的 `DUI/` 文件夹中，路径以其第一行为准。它们通过 `DUI/Theme.dui` 套用[预设](presets.md)，因此外观会随其变化；该文件也要一并复制。每个块在每种预设下编译和布局时都没有错误和警告，而末尾的两个演示屏幕会把它们全部摆出来。[起始屏幕](starter-screens.md) 由它们构建。
+下列每个块都是一个完整文件：将其复制到项目的 `DUI/` 文件夹中，路径以其第一行为准。它们通过 `DUI/Theme.dui` 套用[预设](presets.md)，因此外观会随其变化；该文件也要一并复制。每个块在每种预设下编译和布局时都没有错误和警告，而末尾的两个演示屏幕会把它们全部摆出来；三个旋转到 3D 的屏幕各自独立。 [起始屏幕](starter-screens.md) 由它们构建。
 
 除自身之外，它们还展示了：
 
@@ -726,6 +726,253 @@ Widget Root : ui.FillParent {
             Color = @ui.InkSoft
             HAlign = Right
             @slot VerticalAlignment = Center
+        }
+    }
+}
+```
+
+<a id="turned-in-3d"></a>
+
+### 旋转到 3D
+
+游戏屏幕反复需要的三种旋转，每种都是一个完整屏幕。旋转的方向很容易弄反，本来要朝向中间的面板反而背对它。以下是这些正负号，已对照图片核对：
+
+| 旋转 | 写法 | 图片所示 |
+| --- | --- | --- |
+| 左侧朝向中间的面板 | `RenderRotation = (0, -14, 0)` | 其右边缘（内侧边缘）更远且绘制得更短 |
+| 右侧朝向中间的面板 | `RenderRotation = (0, 14, 0)` | 其左边缘（内侧边缘）更远且绘制得更短 |
+| 像从上方俯视的桌面一样向后倾斜的平面 | `RenderRotation = (-35, 0, 0)` | 其上边缘更远且更窄 |
+| 朝玩家弯曲的一排卡片 | 中间左侧为负 Yaw，右侧为正 Yaw，两端最大；中间的卡片为 `0` | 每张卡片的内侧边缘更远；中间那张正对玩家 |
+
+正 Yaw 会使节点的右边缘更近，正 Pitch 则使其上边缘更近。`layout` 和 `preview` 用文字说明每个旋转后的面按绘制方向朝向哪里——`Panel RosterLeft, on the left: turned 14 degrees: faces toward the screen centre (right edge farther)`——因此每次旋转后都要读取那一行。
+
+```
+// DUI/Blocks/FacingPanels.dui
+class /Game/UI/Blocks/WBP_FacingPanels
+use "Theme.dui" as ui
+use "Blocks/Panel.dui" as Panel
+use "Blocks/ListRow.dui" as ListRow
+
+// Two panels that face the middle of the screen, as two team rosters do. A positive Yaw brings a node's right edge
+// nearer, so the panel on the left takes a negative Yaw (its inner, right edge goes back) and the panel on the right a
+// positive one (its inner, left edge goes back). Each turns about its own centre.
+style RowSlot {
+    @slot { HorizontalAlignment = Fill  MinDesiredSize = (0, 64) }
+}
+style Dot : ui.FillParent {
+    CornerRadius = (1, 1, 1, 1)
+}
+
+Widget Root : ui.FillParent {
+    + Overlay { }
+    RectBlock Backdrop : ui.ScreenBackdrop : ui.FillSlot
+    ScaleBox Fit : ui.FillSlot {
+        Stretch = ScaleToFit
+        Widget Design {
+            AnchorData.SizeDelta = (1920, 1080)
+            @slot Size = (1920, 1080)
+
+            Panel RosterLeft {
+                Kicker = "Team one"
+                Heading = "Aurora"
+                AnchorData.AnchorMin = (0, 0.5)
+                AnchorData.AnchorMax = (0, 0.5)
+                AnchorData.Pivot = (0, 0.5)
+                AnchorData.AnchoredPosition = (120, 0)
+                AnchorData.SizeDelta = (440, 480)
+                RenderRotation = (0, -14, 0)
+
+                ListRow A1 : RowSlot {
+                    Label = "Wren Halloway";  Detail = "Vanguard";  Value = "Lv 31"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+                ListRow A2 : RowSlot {
+                    Label = "Ossian Marr";  Detail = "Marksman";  Value = "Lv 27"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+                ListRow A3 : RowSlot {
+                    Label = "Tamsin Vey";  Detail = "Medic";  Value = "Lv 29"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.InkFaint } }
+                }
+                ListRow A4 : RowSlot {
+                    Label = "Bram Hollis";  Detail = "Sapper";  Value = "Lv 24"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+            }
+
+            Panel RosterRight {
+                Kicker = "Team two"
+                Heading = "Vesper"
+                AnchorData.AnchorMin = (1, 0.5)
+                AnchorData.AnchorMax = (1, 0.5)
+                AnchorData.Pivot = (1, 0.5)
+                AnchorData.AnchoredPosition = (-120, 0)
+                AnchorData.SizeDelta = (440, 480)
+                RenderRotation = (0, 14, 0)
+
+                ListRow B1 : RowSlot {
+                    Label = "Kestrel Dune";  Detail = "Vanguard";  Value = "Lv 30"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+                ListRow B2 : RowSlot {
+                    Label = "Ilse Corran";  Detail = "Scout";  Value = "Lv 26"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.InkFaint } }
+                }
+                ListRow B3 : RowSlot {
+                    Label = "Maro Quill";  Detail = "Marksman";  Value = "Lv 28"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+                ListRow B4 : RowSlot {
+                    Label = "Sable Arkwright";  Detail = "Engineer";  Value = "Lv 25"
+                    slot Badge { RectBlock : Dot { BodyColor = @ui.Good } }
+                }
+            }
+        }
+    }
+}
+```
+
+```
+// DUI/Blocks/TableTop.dui
+class /Game/UI/Blocks/WBP_TableTop
+use "Theme.dui" as ui
+
+// A plane laid back like a table seen from above at an angle. A negative Pitch takes the top edge away, so the far
+// rows recede and draw narrower; a positive one would tip the top edge toward the player. Everything on the board is
+// in its plane and leans with it.
+style Region {
+    AnchorData.AnchorMin = (0.5, 0.5)
+    AnchorData.AnchorMax = (0.5, 0.5)
+    AnchorData.Pivot = (0.5, 0.5)
+    AnchorData.SizeDelta = (240, 132)
+    + Overlay { }
+}
+style RegionName : ui.Lead {
+    HAlign = Center
+    @slot { HorizontalAlignment = Fill  VerticalAlignment = Center  Padding = (12, 0, 12, 0) }
+}
+
+Widget Root : ui.FillParent {
+    + Overlay { }
+    RectBlock Backdrop : ui.ScreenBackdrop : ui.FillSlot
+    ScaleBox Fit : ui.FillSlot {
+        Stretch = ScaleToFit
+        Widget Design {
+            AnchorData.SizeDelta = (1920, 1080)
+            @slot Size = (1920, 1080)
+
+            Text Heading : ui.Heading {
+                Text = "Campaign Table"
+                AnchorData.AnchorMin = (0, 1)
+                AnchorData.AnchorMax = (0, 1)
+                AnchorData.Pivot = (0, 1)
+                AnchorData.AnchoredPosition = (112, -72)
+                AnchorData.SizeDelta = (800, 56)
+            }
+
+            Widget Board {
+                AnchorData.SizeDelta = (1240, 680)
+                AnchorData.AnchoredPosition = (0, -60)
+                RenderRotation = (-35, 0, 0)
+
+                RectBlock Table : ui.Panel : ui.FillParent
+                Widget Saltmarsh : Region {
+                    AnchorData.AnchoredPosition = (-380, 150)
+                    RectBlock SaltmarshFace : ui.Card : ui.FillSlot
+                    Text SaltmarshName : RegionName { Text = "Saltmarsh" }
+                }
+                Widget Greyhook : Region {
+                    AnchorData.AnchoredPosition = (0, 150)
+                    RectBlock GreyhookFace : ui.CardSelected : ui.FillSlot
+                    Text GreyhookName : RegionName { Text = "Greyhook Pass" }
+                }
+                Widget Reedbank : Region {
+                    AnchorData.AnchoredPosition = (380, 150)
+                    RectBlock ReedbankFace : ui.Card : ui.FillSlot
+                    Text ReedbankName : RegionName { Text = "Reedbank" }
+                }
+                Widget Ferry : Region {
+                    AnchorData.AnchoredPosition = (-380, -150)
+                    RectBlock FerryFace : ui.Card : ui.FillSlot
+                    Text FerryName : RegionName { Text = "Old Ferry" }
+                }
+                Widget Ironmonger : Region {
+                    AnchorData.AnchoredPosition = (0, -150)
+                    RectBlock IronmongerFace : ui.Card : ui.FillSlot
+                    Text IronmongerName : RegionName { Text = "Ironmonger's Row" }
+                }
+                Widget HeronFen : Region {
+                    AnchorData.AnchoredPosition = (380, -150)
+                    RectBlock HeronFenFace : ui.Card : ui.FillSlot
+                    Text HeronFenName : RegionName { Text = "Heron Fen" }
+                }
+            }
+        }
+    }
+}
+```
+
+```
+// DUI/Blocks/CardArc.dui
+class /Game/UI/Blocks/WBP_CardArc
+use "Theme.dui" as ui
+use "Blocks/ItemCard.dui" as ItemCard
+
+// A row of cards that curves toward the player: every card faces the middle, the outer ones turned the most, and the
+// middle card square to the player and a little nearer. Left of the middle the Yaw is negative (a card's inner, right
+// edge goes back), right of it positive. A positive RenderTranslation X sets the outer cards back; a negative one
+// brings the middle card forward.
+style CardSlot {
+    @slot Size = (200, 250)
+}
+
+Widget Root : ui.FillParent {
+    + Overlay { }
+    RectBlock Backdrop : ui.ScreenBackdrop : ui.FillSlot
+    ScaleBox Fit : ui.FillSlot {
+        Stretch = ScaleToFit
+        Widget Design {
+            AnchorData.SizeDelta = (1920, 1080)
+            @slot Size = (1920, 1080)
+
+            Text Heading : ui.Heading {
+                Text = "Choose a Relic"
+                HAlign = Center
+                AnchorData.AnchorMin = (0.5, 1)
+                AnchorData.AnchorMax = (0.5, 1)
+                AnchorData.Pivot = (0.5, 1)
+                AnchorData.AnchoredPosition = (0, -120)
+                AnchorData.SizeDelta = (800, 56)
+            }
+
+            HorizontalBox Arc {
+                Spacing = 40
+                AnchorData.SizeDelta = (1160, 250)
+                ItemCard FarLeft : CardSlot {
+                    Name = "Tidecaller";  Kind = "Relic";  Glyph = 3
+                    RenderRotation = (0, -24, 0)
+                    RenderTranslation = (60, 0, 0)
+                }
+                ItemCard Left : CardSlot {
+                    Name = "Ashen Crown";  Kind = "Relic";  Glyph = 4
+                    RenderRotation = (0, -12, 0)
+                    RenderTranslation = (20, 0, 0)
+                }
+                ItemCard Middle : CardSlot {
+                    Name = "Heron Lantern";  Kind = "Relic";  Glyph = 6;  Selected = true
+                    RenderTranslation = (-40, 0, 0)
+                }
+                ItemCard Right : CardSlot {
+                    Name = "Ferryman's Coin";  Kind = "Relic";  Glyph = 5
+                    RenderRotation = (0, 12, 0)
+                    RenderTranslation = (20, 0, 0)
+                }
+                ItemCard FarRight : CardSlot {
+                    Name = "Saltglass Eye";  Kind = "Relic";  Glyph = 2
+                    RenderRotation = (0, 24, 0)
+                    RenderTranslation = (60, 0, 0)
+                }
+            }
         }
     }
 }

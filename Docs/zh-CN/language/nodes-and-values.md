@@ -174,7 +174,7 @@ AnchorData.SizeDelta = (400, 240)
 渲染变换会移动节点的绘制位置，而不影响布局：
 
 - `RenderTranslation = (X, Y, Z)`，单位为像素：**X 是深度**——负值将节点拉向观察者并绘制得更大，正值将其推远——Y 向右，Z 向上。`(0, -40, 0)` 向左 40 px；`(-40, 0, 0)` 靠近 40。
-- `RenderRotation = (Pitch, Yaw, Roll)`，单位为度，围绕 `RenderTransformPivot`：Yaw 绕节点的垂直轴转动（正值使其右边缘靠近），Pitch 绕水平轴转动，Roll 在屏幕平面内转动（正值为顺时针）。
+- `RenderRotation = (Pitch, Yaw, Roll)`，单位为度，围绕`RenderTransformPivot`：Yaw 绕节点的垂直轴转动（正值使其右边缘靠近），Pitch 绕水平轴转动（正值使其上边缘靠近；负值使其向后仰），Roll 在屏幕平面内转动（正值为顺时针）。位于屏幕左侧的面板以负 Yaw 朝向中间，位于右侧的面板以正 Yaw 朝向中间。
 - `RenderScale = (X, Y, Z)` 会按绘制时的效果缩放该节点。
 
 把列表写在不是数组或 Set 的属性上、把 Map 写在不是 Map 的属性上，或者节点的 Set/Map，都是 DUI4009；读不通的列表或 Map（括号没有闭合、Map 条目缺少 `:`，但 struct 的第一个条目除外，它可以不带键）是 DUI2023。

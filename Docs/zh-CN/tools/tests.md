@@ -25,6 +25,8 @@ UnrealEditor-Cmd.exe <project>.uproject -ExecCmds="Automation RunTests DreamGUI"
 
 在 `-nullrhi` 下，引擎会自行丢弃所有标记为 `NonNullRHI` 的测试（即读取像素的那些），因此这些测试需要 `-RenderOffScreen`：一个没有窗口的真实 RHI。
 
+没有活动作用域的导航测试夹具必须显式选择所需的输入模式，并在之后恢复它。宿主可以合法地设置 `InputModeWithoutScope=Game`；在该模式下，内置方向键和翻页键不会操作未限定作用域的 HUD。菜单集成测试应创建其实际作用域，而不是更改宿主回退设置。
+
 <a id="the-runner-invoke-dreamguitestsps1"></a>
 
 ## 运行器：Invoke-DreamGUITests.ps1
