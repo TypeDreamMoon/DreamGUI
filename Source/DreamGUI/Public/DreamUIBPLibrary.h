@@ -405,6 +405,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = DreamGUI, meta = (DisplayName = "Get", CompactNodeTitle = ".", BlueprintInternalUseOnly = "true"))
 		static void K2_DreamUICompRef_GetComponent(const FDreamUIComponentReference& InDreamUICompRef, UActorComponent*& OutResult);
 
+	/**
+	 * Widget's part (its visual, layout container, layout self or a behaviour) that is a PartClass, or None when it has none.
+	 * What the "Part" node compiles to; see FDreamWidgetParts::Find for which part answers.
+	 */
+	UFUNCTION(BlueprintPure, Category = DreamGUI, meta = (BlueprintInternalUseOnly = "true"))
+		static UObject* K2_GetWidgetPart(const UDreamWidget* Widget, UClass* PartClass);
+
 #pragma region DreamTween
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)

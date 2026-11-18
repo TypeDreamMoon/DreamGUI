@@ -15,6 +15,7 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamWidgetParts.h"
 
 
 namespace DreamUICreateLocal
@@ -451,6 +452,11 @@ AActor* UDreamUIBPLibrary::DreamUICompRef_GetActor(const FDreamUIComponentRefere
 void UDreamUIBPLibrary::K2_DreamUICompRef_GetComponent(const FDreamUIComponentReference& InDreamUICompRef, UActorComponent*& OutResult)
 {
 	OutResult = InDreamUICompRef.GetComponent();
+}
+
+UObject* UDreamUIBPLibrary::K2_GetWidgetPart(const UDreamWidget* Widget, UClass* PartClass)
+{
+	return FDreamWidgetParts::Find(Widget, PartClass);
 }
 
 
