@@ -24,12 +24,26 @@ DreamAdjustmentLayer:EffectBlendMode {
     state machine
 }
 
+DreamAdjustmentLayer:GetAdjustments {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetAdjustments
+    src   "Get Adjustments"
+    text  "获取调整"
+    state machine
+}
+
 DreamAdjustmentLayer:GetAdjustments:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetAdjustments:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamAdjustmentLayer:GetEffectBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetEffectBlendMode
+    src   "Get Effect Blend Mode"
+    text  "获取效果混合模式"
+    state machine
 }
 
 DreamAdjustmentLayer:GetEffectBlendMode:ReturnValue {
@@ -40,11 +54,26 @@ DreamAdjustmentLayer:GetEffectBlendMode:ReturnValue {
     state draft
 }
 
+DreamAdjustmentLayer:GetOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetOpacity
+    src   "Get Opacity"
+    text  "获取不透明度"
+    state machine
+}
+
 DreamAdjustmentLayer:GetOpacity:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamAdjustmentLayer:GetTarget {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:GetTarget
+    src   "Get Target"
+    // from the engine's zh-Hans
+    text  "Get Target"
     state draft
 }
 
@@ -64,12 +93,26 @@ DreamAdjustmentLayer:Opacity {
     state draft
 }
 
+DreamAdjustmentLayer:SetAdjustments {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetAdjustments
+    src   "Set Adjustments"
+    text  "设置调整"
+    state machine
+}
+
 DreamAdjustmentLayer:SetAdjustments:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetAdjustments:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamAdjustmentLayer:SetEffectBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetEffectBlendMode
+    src   "Set Effect Blend Mode"
+    text  "设置效果混合模式"
+    state machine
 }
 
 DreamAdjustmentLayer:SetEffectBlendMode:Value {
@@ -80,11 +123,27 @@ DreamAdjustmentLayer:SetEffectBlendMode:Value {
     state draft
 }
 
+DreamAdjustmentLayer:SetOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetOpacity
+    src   "Set Opacity"
+    // from the engine's zh-Hans
+    text  "设置不透明度"
+    state draft
+}
+
 DreamAdjustmentLayer:SetOpacity:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetOpacity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamAdjustmentLayer:SetTarget {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamAdjustmentLayer.h#DreamAdjustmentLayer:SetTarget
+    src   "Set Target"
+    // from the engine's zh-Hans
+    text  "设置目标"
     state draft
 }
 

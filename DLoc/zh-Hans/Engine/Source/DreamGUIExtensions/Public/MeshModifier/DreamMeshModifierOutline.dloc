@@ -24,12 +24,26 @@ DreamMeshModifierOutline:bUse8Direction {
     state machine
 }
 
+DreamMeshModifierOutline:GetMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetMultiplySourceAlpha
+    src   "Get Multiply Source Alpha"
+    text  "获取是否混合源 Alpha"
+    state machine
+}
+
 DreamMeshModifierOutline:GetMultiplySourceAlpha:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetMultiplySourceAlpha:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierOutline:GetOutlineColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetOutlineColor
+    src   "Get Outline Color"
+    text  "获取轮廓颜色"
+    state machine
 }
 
 DreamMeshModifierOutline:GetOutlineColor:ReturnValue {
@@ -40,12 +54,26 @@ DreamMeshModifierOutline:GetOutlineColor:ReturnValue {
     state draft
 }
 
+DreamMeshModifierOutline:GetOutlineSize {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetOutlineSize
+    src   "Get Outline Size"
+    text  "获取轮廓大小"
+    state machine
+}
+
 DreamMeshModifierOutline:GetOutlineSize:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetOutlineSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierOutline:GetUse8Direction {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:GetUse8Direction
+    src   "Get Use 8Direction"
+    text  "获取八向移动"
+    state machine
 }
 
 DreamMeshModifierOutline:GetUse8Direction:ReturnValue {
@@ -72,12 +100,26 @@ DreamMeshModifierOutline:OutlineSize {
     state draft
 }
 
+DreamMeshModifierOutline:SetMultiplySourceAlpha {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetMultiplySourceAlpha
+    src   "Set Multiply Source Alpha"
+    text  "设置是否混合源 Alpha"
+    state machine
+}
+
 DreamMeshModifierOutline:SetMultiplySourceAlpha:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetMultiplySourceAlpha:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierOutline:SetOutlineColor {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetOutlineColor
+    src   "Set Outline Color"
+    text  "设置轮廓颜色"
+    state machine
 }
 
 DreamMeshModifierOutline:SetOutlineColor:Value {
@@ -88,12 +130,26 @@ DreamMeshModifierOutline:SetOutlineColor:Value {
     state draft
 }
 
+DreamMeshModifierOutline:SetOutlineSize {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetOutlineSize
+    src   "Set Outline Size"
+    text  "设置轮廓大小"
+    state machine
+}
+
 DreamMeshModifierOutline:SetOutlineSize:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetOutlineSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierOutline:SetUse8Direction {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h#DreamMeshModifierOutline:SetUse8Direction
+    src   "Set Use 8Direction"
+    text  "设置八向移动"
+    state machine
 }
 
 DreamMeshModifierOutline:SetUse8Direction:Value {

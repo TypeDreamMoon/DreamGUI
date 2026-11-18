@@ -16,10 +16,24 @@ DreamBaseInputModule:EventSystem {
     state machine
 }
 
+DreamBaseInputModule:RegisterInputModuleToEventSystem {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:RegisterInputModuleToEventSystem
+    src   "Register Input Module to Event System"
+    text  "把输入模块注册到事件系统"
+    state machine
+}
+
 DreamBaseInputModule:RegisterInputModuleToEventSystem:TargetEventSystem {
     at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:RegisterInputModuleToEventSystem:TargetEventSystem
     src   "Target Event System"
     text  "目标事件系统"
+    state machine
+}
+
+DreamBaseInputModule:UnregisterInputModuleFromEventSystem {
+    at    Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h#DreamBaseInputModule:UnregisterInputModuleFromEventSystem
+    src   "Unregister Input Module from Event System"
+    text  "把输入模块从事件系统注销"
     state machine
 }
 

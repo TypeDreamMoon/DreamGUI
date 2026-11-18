@@ -24,6 +24,13 @@ DreamRing:EndAngle {
     state draft
 }
 
+DreamRing:EndAngleTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo
+    src   "End Angle To"
+    text  "结束角度终点"
+    state machine
+}
+
 DreamRing:EndAngleTo:delay {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngleTo:delay
     src   "Delay"
@@ -63,11 +70,26 @@ DreamRing:EndAngleTo:ReturnValue {
     state draft
 }
 
+DreamRing:GetEndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetEndAngle
+    src   "Get End Angle"
+    text  "获取结束角"
+    state machine
+}
+
 DreamRing:GetEndAngle:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetEndAngle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamRing:GetSegment {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetSegment
+    src   "Get Segment"
+    // from the engine's zh-Hans
+    text  "获取片段"
     state draft
 }
 
@@ -77,6 +99,13 @@ DreamRing:GetSegment:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRing:GetStartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:GetStartAngle
+    src   "Get Start Angle"
+    text  "获取开始角"
+    state machine
 }
 
 DreamRing:GetStartAngle:ReturnValue {
@@ -95,6 +124,13 @@ DreamRing:Segment {
     state draft
 }
 
+DreamRing:SetEndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetEndAngle
+    src   "Set End Angle"
+    text  "设置结束角"
+    state machine
+}
+
 DreamRing:SetEndAngle:newValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetEndAngle:newValue
     src   "New Value"
@@ -103,12 +139,26 @@ DreamRing:SetEndAngle:newValue {
     state draft
 }
 
+DreamRing:SetSegment {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetSegment
+    src   "Set Segment"
+    text  "设置分段"
+    state machine
+}
+
 DreamRing:SetSegment:newValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetSegment:newValue
     src   "New Value"
     // from the engine's zh-Hans
     text  "新值"
     state draft
+}
+
+DreamRing:SetStartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:SetStartAngle
+    src   "Set Start Angle"
+    text  "设置开始角"
+    state machine
 }
 
 DreamRing:SetStartAngle:newValue {
@@ -125,6 +175,13 @@ DreamRing:StartAngle {
     // from the engine's zh-Hans
     text  "开始角"
     state draft
+}
+
+DreamRing:StartAngleTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngleTo
+    src   "Start Angle To"
+    text  "起始角度终点"
+    state machine
 }
 
 DreamRing:StartAngleTo:delay {
@@ -168,9 +225,23 @@ DreamRing:StartAngleTo:ReturnValue {
 
 namespace UObjectToolTips
 
+DreamRing:EndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:EndAngle
+    src   "Degrees, in the same convention as StartAngle: from three o'clock, counter-clockwise. The arc runs counter-clockwise from StartAngle when this is the greater, clockwise when it is the smaller."
+    text  "度数，与 StartAngle 同一约定：从三点钟方向起，逆时针。本值更大时弧从 StartAngle 逆时针走，更小时顺时针走。"
+    state machine
+}
+
 DreamRing:Segment {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:Segment
     src   "line segment"
     text  "线段"
+    state machine
+}
+
+DreamRing:StartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRing.h#DreamRing:StartAngle
+    src   "Degrees from three o'clock, counter-clockwise: 0 is the right, 90 the top. Native.RingMenu and a text on a path measure\nfrom twelve o'clock, clockwise instead. A progress ring running clockwise from the top is\nStartAngle = 90, EndAngle = 90 - 360 * progress."
+    text  "以三点钟方向为 0、逆时针计的度数：0 是右方，90 是上方。Native.RingMenu 和沿路径的文字改为\n从十二点钟方向、顺时针计。从顶部顺时针走的进度环是\nStartAngle = 90，EndAngle = 90 - 360 * progress。"
     state machine
 }

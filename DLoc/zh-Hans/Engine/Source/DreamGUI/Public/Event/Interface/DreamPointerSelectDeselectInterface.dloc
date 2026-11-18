@@ -9,6 +9,13 @@ DreamPointerSelectDeselectInterface {
     state machine
 }
 
+DreamPointerSelectDeselectInterface:OnPointerDeselect {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerDeselect
+    src   "On Pointer Deselect"
+    text  "指针取消选中时"
+    state machine
+}
+
 DreamPointerSelectDeselectInterface:OnPointerDeselect:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerDeselect:EventData
     src   "Event Data"
@@ -23,6 +30,13 @@ DreamPointerSelectDeselectInterface:OnPointerDeselect:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerSelectDeselectInterface:OnPointerSelect {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h#DreamPointerSelectDeselectInterface:OnPointerSelect
+    src   "On Pointer Select"
+    text  "指针选中时"
+    state machine
 }
 
 DreamPointerSelectDeselectInterface:OnPointerSelect:EventData {

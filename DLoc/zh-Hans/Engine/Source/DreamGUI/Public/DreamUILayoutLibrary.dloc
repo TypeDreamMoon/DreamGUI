@@ -9,6 +9,14 @@ DreamUILayoutLibrary {
     state machine
 }
 
+DreamUILayoutLibrary:GetMousePositionOnPlatform {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform
+    src   "Get Mouse Position on Platform"
+    // from the engine's zh-Hans
+    text  "获取平台上的鼠标位置"
+    state draft
+}
+
 DreamUILayoutLibrary:GetMousePositionOnPlatform:OutMousePosition {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnPlatform:OutMousePosition
     src   "Out Mouse Position"
@@ -21,6 +29,14 @@ DreamUILayoutLibrary:GetMousePositionOnPlatform:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetMousePositionOnViewport {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionOnViewport
+    src   "Get Mouse Position on Viewport"
+    // from the engine's zh-Hans
+    text  "获取视口上的鼠标位置"
     state draft
 }
 
@@ -47,6 +63,14 @@ DreamUILayoutLibrary:GetMousePositionOnViewport:WorldContextObject {
     state draft
 }
 
+DreamUILayoutLibrary:GetMousePositionScaledByDPI {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI
+    src   "Get Mouse Position Scaled by DPI"
+    // from the engine's zh-Hans
+    text  "获取按DPI缩放的鼠标位置"
+    state draft
+}
+
 DreamUILayoutLibrary:GetMousePositionScaledByDPI:InPlayer {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetMousePositionScaledByDPI:InPlayer
     src   "In Player"
@@ -66,6 +90,14 @@ DreamUILayoutLibrary:GetMousePositionScaledByDPI:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry
+    src   "Get Player Screen Widget Geometry"
+    // from the engine's zh-Hans
+    text  "获取玩家屏幕控件几何体"
     state draft
 }
 
@@ -92,6 +124,14 @@ DreamUILayoutLibrary:GetPlayerScreenWidgetGeometry:WorldContextObject {
     state draft
 }
 
+DreamUILayoutLibrary:GetViewportScale {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportScale
+    src   "Get Viewport Scale"
+    // from the engine's zh-Hans
+    text  "获取视口缩放"
+    state draft
+}
+
 DreamUILayoutLibrary:GetViewportScale:ReturnValue {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportScale:ReturnValue
     src   "Return Value"
@@ -108,6 +148,14 @@ DreamUILayoutLibrary:GetViewportScale:WorldContextObject {
     state draft
 }
 
+DreamUILayoutLibrary:GetViewportSize {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportSize
+    src   "Get Viewport Size"
+    // from the engine's zh-Hans
+    text  "获取视口大小"
+    state draft
+}
+
 DreamUILayoutLibrary:GetViewportSize:ReturnValue {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:GetViewportSize:ReturnValue
     src   "Return Value"
@@ -121,6 +169,14 @@ DreamUILayoutLibrary:GetViewportSize:WorldContextObject {
     src   "World Context Object"
     // from the engine's zh-Hans
     text  "场景情境对象"
+    state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition
+    src   "Project World Location to Widget Position"
+    // from the engine's zh-Hans
+    text  "项目场景位置到控件位置"
     state draft
 }
 
@@ -160,6 +216,13 @@ DreamUILayoutLibrary:ProjectWorldLocationToWidgetPosition:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance
+    src   "Project World Location to Widget Position with Distance"
+    text  "把世界位置投影为控件位置（带距离）"
+    state machine
 }
 
 DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:bPlayerViewportRelative {
@@ -208,12 +271,27 @@ DreamUILayoutLibrary:ProjectWorldLocationToWidgetPositionWithDistance:ReturnValu
     state draft
 }
 
+DreamUILayoutLibrary:RemoveAllWidgets {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:RemoveAllWidgets
+    src   "Remove All Widgets"
+    // from the engine's zh-Hans
+    text  "移除所有控件"
+    state draft
+}
+
 DreamUILayoutLibrary:RemoveAllWidgets:WorldContextObject {
     at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:RemoveAllWidgets:WorldContextObject
     src   "World Context Object"
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamUILayoutLibrary:SlotAsPanelSlot {
+    at    Source/DreamGUI/Public/DreamUILayoutLibrary.h#DreamUILayoutLibrary:SlotAsPanelSlot
+    src   "Slot as Panel Slot"
+    text  "作为面板插槽的插槽"
+    state machine
 }
 
 DreamUILayoutLibrary:SlotAsPanelSlot:InWidget {

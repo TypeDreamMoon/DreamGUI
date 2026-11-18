@@ -16,11 +16,34 @@ UIToggleGroup:bAllowNoneSelected {
     state machine
 }
 
+UIToggleGroup:ClearSelection {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:ClearSelection
+    src   "Clear Selection"
+    // from the engine's zh-Hans
+    text  "清除选择"
+    state draft
+}
+
+UIToggleGroup:GetAllowNoneSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetAllowNoneSelected
+    src   "Get Allow None Selected"
+    text  "获取允许无选定项"
+    state machine
+}
+
 UIToggleGroup:GetAllowNoneSelected:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetAllowNoneSelected:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIToggleGroup:GetSelectedItem {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetSelectedItem
+    src   "Get Selected Item"
+    // from the engine's zh-Hans
+    text  "获取选定项目"
     state draft
 }
 
@@ -30,6 +53,13 @@ UIToggleGroup:GetSelectedItem:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIToggleGroup:GetToggleByIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleByIndex
+    src   "Get Toggle by Index"
+    text  "按索引获取开关"
+    state machine
 }
 
 UIToggleGroup:GetToggleByIndex:InIndex {
@@ -46,6 +76,13 @@ UIToggleGroup:GetToggleByIndex:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIToggleGroup:GetToggleIndex {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:GetToggleIndex
+    src   "Get Toggle Index"
+    text  "获取开关索引"
+    state machine
 }
 
 UIToggleGroup:GetToggleIndex:InComp {
@@ -85,11 +122,26 @@ UIToggleGroup:OnValueChangedBP {
     state machine
 }
 
+UIToggleGroup:SetAllowNoneSelected {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:SetAllowNoneSelected
+    src   "Set Allow None Selected"
+    text  "设置允许无选定项"
+    state machine
+}
+
 UIToggleGroup:SetAllowNoneSelected:InBool {
     at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:SetAllowNoneSelected:InBool
     src   "In Bool"
     // from the engine's zh-Hans
     text  "在布尔中"
+    state draft
+}
+
+UIToggleGroup:SetSelection {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h#UIToggleGroup:SetSelection
+    src   "Set Selection"
+    // from the engine's zh-Hans
+    text  "Set Selection"
     state draft
 }
 

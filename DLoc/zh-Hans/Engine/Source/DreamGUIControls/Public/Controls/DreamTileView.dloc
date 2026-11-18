@@ -17,11 +17,26 @@ DreamTileView:bWrapHorizontalNavigation {
     state draft
 }
 
+DreamTileView:GetColumnCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetColumnCount
+    src   "Get Column Count"
+    text  "获取列数"
+    state machine
+}
+
 DreamTileView:GetColumnCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetColumnCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTileView:GetEntryHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryHeight
+    src   "Get Entry Height"
+    // from the engine's zh-Hans
+    text  "获取条目高度"
     state draft
 }
 
@@ -33,12 +48,27 @@ DreamTileView:GetEntryHeight:ReturnValue {
     state draft
 }
 
+DreamTileView:GetEntryWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryWidth
+    src   "Get Entry Width"
+    // from the engine's zh-Hans
+    text  "获取条目宽度"
+    state draft
+}
+
 DreamTileView:GetEntryWidth:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetEntryWidth:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTileView:GetNavigationTarget {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetNavigationTarget
+    src   "Get Navigation Target"
+    text  "获取导航目标"
+    state machine
 }
 
 DreamTileView:GetNavigationTarget:InDirection {
@@ -64,12 +94,26 @@ DreamTileView:GetNavigationTarget:ReturnValue {
     state draft
 }
 
+DreamTileView:GetRowLineCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetRowLineCount
+    src   "Get Row Line Count"
+    text  "获取行内行数"
+    state machine
+}
+
 DreamTileView:GetRowLineCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetRowLineCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTileView:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamTileView:GetStyle:ReturnValue {
@@ -80,6 +124,13 @@ DreamTileView:GetStyle:ReturnValue {
     state draft
 }
 
+DreamTileView:GetTileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetTileAlignment
+    src   "Get Tile Alignment"
+    text  "获取瓦片对齐"
+    state machine
+}
+
 DreamTileView:GetTileAlignment:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetTileAlignment:ReturnValue
     src   "Return Value"
@@ -88,11 +139,26 @@ DreamTileView:GetTileAlignment:ReturnValue {
     state draft
 }
 
+DreamTileView:GetWrapHorizontalNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetWrapHorizontalNavigation
+    src   "Get Wrap Horizontal Navigation"
+    text  "获取包裹水平导航"
+    state machine
+}
+
 DreamTileView:GetWrapHorizontalNavigation:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:GetWrapHorizontalNavigation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTileView:SetEntryHeight {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryHeight
+    src   "Set Entry Height"
+    // from the engine's zh-Hans
+    text  "设置条目高度"
     state draft
 }
 
@@ -104,11 +170,27 @@ DreamTileView:SetEntryHeight:InHeight {
     state draft
 }
 
+DreamTileView:SetEntryWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryWidth
+    src   "Set Entry Width"
+    // from the engine's zh-Hans
+    text  "设置条目宽度"
+    state draft
+}
+
 DreamTileView:SetEntryWidth:InWidth {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetEntryWidth:InWidth
     src   "In Width"
     // from the engine's zh-Hans
     text  "In Width"
+    state draft
+}
+
+DreamTileView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
     state draft
 }
 
@@ -120,12 +202,26 @@ DreamTileView:SetStyle:InStyle {
     state draft
 }
 
+DreamTileView:SetTileAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetTileAlignment
+    src   "Set Tile Alignment"
+    text  "设置瓦片对齐"
+    state machine
+}
+
 DreamTileView:SetTileAlignment:InAlignment {
     at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetTileAlignment:InAlignment
     src   "In Alignment"
     // from the engine's zh-Hans
     text  "在对齐中"
     state draft
+}
+
+DreamTileView:SetWrapHorizontalNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTileView.h#DreamTileView:SetWrapHorizontalNavigation
+    src   "Set Wrap Horizontal Navigation"
+    text  "设置包裹水平导航"
+    state machine
 }
 
 DreamTileView:SetWrapHorizontalNavigation:bInWrap {

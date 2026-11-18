@@ -9,12 +9,26 @@ DreamStaticMesh {
     state machine
 }
 
+DreamStaticMesh:GetMeshCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetMeshCache
+    src   "Get Mesh Cache"
+    text  "获取网格体缓存"
+    state machine
+}
+
 DreamStaticMesh:GetMeshCache:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetMeshCache:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamStaticMesh:GetOrCreateDynamicMaterialInstance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetOrCreateDynamicMaterialInstance
+    src   "Get or Create Dynamic Material Instance"
+    text  "获取或创建动态材质实例"
+    state machine
 }
 
 DreamStaticMesh:GetOrCreateDynamicMaterialInstance:ReturnValue {
@@ -25,6 +39,13 @@ DreamStaticMesh:GetOrCreateDynamicMaterialInstance:ReturnValue {
     state draft
 }
 
+DreamStaticMesh:GetRenderMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetRenderMaterial
+    src   "Get Render Material"
+    text  "获取渲染材质"
+    state machine
+}
+
 DreamStaticMesh:GetRenderMaterial:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetRenderMaterial:ReturnValue
     src   "Return Value"
@@ -33,12 +54,26 @@ DreamStaticMesh:GetRenderMaterial:ReturnValue {
     state draft
 }
 
+DreamStaticMesh:GetReplaceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetReplaceMaterial
+    src   "Get Replace Material"
+    text  "获取替换材质"
+    state machine
+}
+
 DreamStaticMesh:GetReplaceMaterial:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetReplaceMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamStaticMesh:GetVertexColorType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:GetVertexColorType
+    src   "Get Vertex Color Type"
+    text  "获取顶点颜色类型"
+    state machine
 }
 
 DreamStaticMesh:GetVertexColorType:ReturnValue {
@@ -63,6 +98,14 @@ DreamStaticMesh:ReplaceMaterial {
     state machine
 }
 
+DreamStaticMesh:SetMesh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetMesh
+    src   "Set Mesh"
+    // from the engine's zh-Hans
+    text  "设置网格体"
+    state draft
+}
+
 DreamStaticMesh:SetMesh:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetMesh:Value
     src   "Value"
@@ -71,12 +114,26 @@ DreamStaticMesh:SetMesh:Value {
     state draft
 }
 
+DreamStaticMesh:SetReplaceMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetReplaceMaterial
+    src   "Set Replace Material"
+    text  "设置替换材质"
+    state machine
+}
+
 DreamStaticMesh:SetReplaceMaterial:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetReplaceMaterial:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamStaticMesh:SetVertexColorType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h#DreamStaticMesh:SetVertexColorType
+    src   "Set Vertex Color Type"
+    text  "设置顶点颜色类型"
+    state machine
 }
 
 DreamStaticMesh:SetVertexColorType:Value {

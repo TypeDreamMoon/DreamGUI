@@ -9,12 +9,26 @@ DreamUISpriteData_BaseObject {
     state machine
 }
 
+DreamUISpriteData_BaseObject:GetAtlasTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:GetAtlasTexture
+    src   "Get Atlas Texture"
+    text  "获取图集纹理"
+    state machine
+}
+
 DreamUISpriteData_BaseObject:GetAtlasTexture:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:GetAtlasTexture:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUISpriteData_BaseObject:GetSpriteInfo {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:GetSpriteInfo
+    src   "Get Sprite Info"
+    text  "获取Sprite信息"
+    state machine
 }
 
 DreamUISpriteData_BaseObject:GetSpriteInfo:ReturnValue {
@@ -25,12 +39,26 @@ DreamUISpriteData_BaseObject:GetSpriteInfo:ReturnValue {
     state draft
 }
 
+DreamUISpriteData_BaseObject:IsIndividual {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:IsIndividual
+    src   "Is Individual"
+    text  "是否独立"
+    state machine
+}
+
 DreamUISpriteData_BaseObject:IsIndividual:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:IsIndividual:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUISpriteData_BaseObject:ReadPixel {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData_BaseObject.h#DreamUISpriteData_BaseObject:ReadPixel
+    src   "Read Pixel"
+    text  "读取像素"
+    state machine
 }
 
 DreamUISpriteData_BaseObject:ReadPixel:InUV {

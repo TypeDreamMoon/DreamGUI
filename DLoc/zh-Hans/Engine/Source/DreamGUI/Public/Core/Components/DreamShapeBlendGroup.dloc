@@ -16,6 +16,13 @@ DreamShapeBlendGroup:bBlendEnabled {
     state machine
 }
 
+DreamShapeBlendGroup:GetBlendEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetBlendEnabled
+    src   "Get Blend Enabled"
+    text  "获取启用混合"
+    state machine
+}
+
 DreamShapeBlendGroup:GetBlendEnabled:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetBlendEnabled:ReturnValue
     src   "Return Value"
@@ -24,11 +31,26 @@ DreamShapeBlendGroup:GetBlendEnabled:ReturnValue {
     state draft
 }
 
+DreamShapeBlendGroup:GetSmoothness {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetSmoothness
+    src   "Get Smoothness"
+    text  "获取光滑度"
+    state machine
+}
+
 DreamShapeBlendGroup:GetSmoothness:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:GetSmoothness:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamShapeBlendGroup:IsActive {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:IsActive
+    src   "Is Active"
+    // from the engine's zh-Hans
+    text  "为激活"
     state draft
 }
 
@@ -40,12 +62,26 @@ DreamShapeBlendGroup:IsActive:ReturnValue {
     state draft
 }
 
+DreamShapeBlendGroup:SetBlendEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetBlendEnabled
+    src   "Set Blend Enabled"
+    text  "设置启用混合"
+    state machine
+}
+
 DreamShapeBlendGroup:SetBlendEnabled:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetBlendEnabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamShapeBlendGroup:SetSmoothness {
+    at    Source/DreamGUI/Public/Core/Components/DreamShapeBlendGroup.h#DreamShapeBlendGroup:SetSmoothness
+    src   "Set Smoothness"
+    text  "设置光滑度"
+    state machine
 }
 
 DreamShapeBlendGroup:SetSmoothness:Value {

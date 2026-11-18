@@ -9,6 +9,13 @@ DreamPointerDragInterface {
     state machine
 }
 
+DreamPointerDragInterface:OnPointerBeginDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag
+    src   "On Pointer Begin Drag"
+    text  "指针开始拖拽时"
+    state machine
+}
+
 DreamPointerDragInterface:OnPointerBeginDrag:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerBeginDrag:EventData
     src   "Event Data"
@@ -25,6 +32,13 @@ DreamPointerDragInterface:OnPointerBeginDrag:ReturnValue {
     state draft
 }
 
+DreamPointerDragInterface:OnPointerDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerDrag
+    src   "On Pointer Drag"
+    text  "指针拖拽时"
+    state machine
+}
+
 DreamPointerDragInterface:OnPointerDrag:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerDrag:EventData
     src   "Event Data"
@@ -39,6 +53,13 @@ DreamPointerDragInterface:OnPointerDrag:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerDragInterface:OnPointerEndDrag {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragInterface.h#DreamPointerDragInterface:OnPointerEndDrag
+    src   "On Pointer End Drag"
+    text  "指针结束拖拽时"
+    state machine
 }
 
 DreamPointerDragInterface:OnPointerEndDrag:EventData {

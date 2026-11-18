@@ -115,6 +115,13 @@ DreamUIManagerWorldSubsystem:RectBlockDataRows {
     state machine
 }
 
+DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent
+    src   "Register Dream UICulture Changed Event"
+    text  "注册 DreamUI 语言变更事件"
+    state machine
+}
+
 DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent:InItem {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:RegisterDreamUICultureChangedEvent:InItem
     src   "In Item"
@@ -145,6 +152,13 @@ DreamUIManagerWorldSubsystem:Selection {
     state draft
 }
 
+DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent
+    src   "Unregister Dream UICulture Changed Event"
+    text  "注销 DreamUI 语言变更事件"
+    state machine
+}
+
 DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent:InItem {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUIManagerWorldSubsystem:UnregisterDreamUICultureChangedEvent:InItem
     src   "In Item"
@@ -160,11 +174,26 @@ DreamUISelection {
     state machine
 }
 
+DreamUISelection:DeselectWidget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:DeselectWidget
+    src   "Deselect Widget"
+    text  "取消选中控件"
+    state machine
+}
+
 DreamUISelection:DeselectWidget:Widget {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:DeselectWidget:Widget
     src   "Widget"
     // from the engine's zh-Hans
     text  "控件"
+    state draft
+}
+
+DreamUISelection:GetInstance {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:GetInstance
+    src   "Get Instance"
+    // from the engine's zh-Hans
+    text  "Get Instance"
     state draft
 }
 
@@ -195,6 +224,21 @@ DreamUISelection:SelectedWidgetArray {
     at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectedWidgetArray
     src   "Selected Widget Array"
     text  "所选控件数组"
+    state machine
+}
+
+DreamUISelection:SelectNone {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectNone
+    src   "Select None"
+    // from the engine's zh-Hans
+    text  "不选"
+    state draft
+}
+
+DreamUISelection:SelectWidget {
+    at    Source/DreamGUI/Public/Core/DreamUIManager.h#DreamUISelection:SelectWidget
+    src   "Select Widget"
+    text  "选中控件"
     state machine
 }
 

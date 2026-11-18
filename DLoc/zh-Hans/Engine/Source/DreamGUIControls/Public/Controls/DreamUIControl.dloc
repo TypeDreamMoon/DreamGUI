@@ -9,10 +9,24 @@ DreamUIControl {
     state machine
 }
 
+DreamUIControl:ApplyStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:ApplyStyle
+    src   "Apply Style"
+    text  "应用样式"
+    state machine
+}
+
 DreamUIControl:bStateFacePaddingStated {
     at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:bStateFacePaddingStated
     src   "State Face Padding Stated"
     text  "状态面填充已设置"
+    state machine
+}
+
+DreamUIControl:FindPart {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:FindPart
+    src   "Find Part"
+    text  "查找部件"
     state machine
 }
 
@@ -32,12 +46,26 @@ DreamUIControl:FindPart:ReturnValue {
     state draft
 }
 
+DreamUIControl:GetStyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetStyleSource
+    src   "Get Style Source"
+    text  "获取样式源"
+    state machine
+}
+
 DreamUIControl:GetStyleSource:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetStyleSource:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIControl:GetStyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetStyleVariant
+    src   "Get Style Variant"
+    text  "获取样式变体"
+    state machine
 }
 
 DreamUIControl:GetStyleVariant:ReturnValue {
@@ -48,6 +76,13 @@ DreamUIControl:GetStyleVariant:ReturnValue {
     state draft
 }
 
+DreamUIControl:GetUnboundRequiredParts {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetUnboundRequiredParts
+    src   "Get Unbound Required Parts"
+    text  "获取未绑定的必需部件"
+    state machine
+}
+
 DreamUIControl:GetUnboundRequiredParts:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:GetUnboundRequiredParts:ReturnValue
     src   "Return Value"
@@ -56,10 +91,31 @@ DreamUIControl:GetUnboundRequiredParts:ReturnValue {
     state draft
 }
 
+DreamUIControl:OnControlReady {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:OnControlReady
+    src   "On Control Ready"
+    text  "控件就绪时"
+    state machine
+}
+
+DreamUIControl:SetStyleSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleSource
+    src   "Set Style Source"
+    text  "设置样式源"
+    state machine
+}
+
 DreamUIControl:SetStyleSource:InStyleSource {
     at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleSource:InStyleSource
     src   "In Style Source"
     text  "样式源"
+    state machine
+}
+
+DreamUIControl:SetStyleVariant {
+    at    Source/DreamGUIControls/Public/Controls/DreamUIControl.h#DreamUIControl:SetStyleVariant
+    src   "Set Style Variant"
+    text  "设置样式变体"
     state machine
 }
 

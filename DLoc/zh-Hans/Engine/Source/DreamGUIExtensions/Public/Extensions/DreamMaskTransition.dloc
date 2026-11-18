@@ -71,6 +71,13 @@ DreamMaskTransition:Count {
     state draft
 }
 
+DreamMaskTransition:CrossFade {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade
+    src   "Cross Fade"
+    text  "交叉淡入淡出"
+    state machine
+}
+
 DreamMaskTransition:CrossFade:InDuration {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:CrossFade:InDuration
     src   "In Duration"
@@ -116,6 +123,13 @@ DreamMaskTransition:CrossFade:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:FindOrAdd {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:FindOrAdd
+    src   "Find or Add"
+    text  "查找或添加"
+    state machine
+}
+
 DreamMaskTransition:FindOrAdd:InWidget {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:FindOrAdd:InWidget
     src   "In Widget"
@@ -132,12 +146,26 @@ DreamMaskTransition:FindOrAdd:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:GetAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetAngle
+    src   "Get Angle"
+    text  "获取角度"
+    state machine
+}
+
 DreamMaskTransition:GetAngle:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetAngle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:GetCentre {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetCentre
+    src   "Get Centre"
+    text  "获取中心"
+    state machine
 }
 
 DreamMaskTransition:GetCentre:ReturnValue {
@@ -148,12 +176,26 @@ DreamMaskTransition:GetCentre:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:GetCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetCount
+    src   "Get Count"
+    text  "获取数量"
+    state machine
+}
+
 DreamMaskTransition:GetCount:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:GetGrain {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetGrain
+    src   "Get Grain"
+    text  "获取颗粒"
+    state machine
 }
 
 DreamMaskTransition:GetGrain:ReturnValue {
@@ -164,12 +206,26 @@ DreamMaskTransition:GetGrain:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:GetInvert {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetInvert
+    src   "Get Invert"
+    text  "获取反转"
+    state machine
+}
+
 DreamMaskTransition:GetInvert:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetInvert:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:GetPreset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetPreset
+    src   "Get Preset"
+    text  "获取预设"
+    state machine
 }
 
 DreamMaskTransition:GetPreset:ReturnValue {
@@ -180,12 +236,26 @@ DreamMaskTransition:GetPreset:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:GetProgress {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetProgress
+    src   "Get Progress"
+    text  "获取进度"
+    state machine
+}
+
 DreamMaskTransition:GetProgress:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetProgress:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:GetReverse {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetReverse
+    src   "Get Reverse"
+    text  "获取倒回"
+    state machine
 }
 
 DreamMaskTransition:GetReverse:ReturnValue {
@@ -196,12 +266,26 @@ DreamMaskTransition:GetReverse:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:GetSeed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetSeed
+    src   "Get Seed"
+    text  "获取种子"
+    state machine
+}
+
 DreamMaskTransition:GetSeed:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetSeed:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:GetSoftness {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:GetSoftness
+    src   "Get Softness"
+    text  "获取柔软度"
+    state machine
 }
 
 DreamMaskTransition:GetSoftness:ReturnValue {
@@ -220,6 +304,14 @@ DreamMaskTransition:Grain {
     state draft
 }
 
+DreamMaskTransition:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
 DreamMaskTransition:IsEnabled:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsEnabled:ReturnValue
     src   "Return Value"
@@ -228,12 +320,26 @@ DreamMaskTransition:IsEnabled:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:IsFullyHidden {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyHidden
+    src   "Is Fully Hidden"
+    text  "是否完全隐藏"
+    state machine
+}
+
 DreamMaskTransition:IsFullyHidden:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyHidden:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:IsFullyShown {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:IsFullyShown
+    src   "Is Fully Shown"
+    text  "是否完全显示"
+    state machine
 }
 
 DreamMaskTransition:IsFullyShown:ReturnValue {
@@ -248,6 +354,13 @@ DreamMaskTransition:OrderTexture {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:OrderTexture
     src   "Order Texture"
     text  "纹理排序"
+    state machine
+}
+
+DreamMaskTransition:PlayBackward {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayBackward
+    src   "Play Backward"
+    text  "倒放"
     state machine
 }
 
@@ -274,6 +387,14 @@ DreamMaskTransition:PlayBackward:ReturnValue {
     state draft
 }
 
+DreamMaskTransition:PlayForward {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward
+    src   "Play Forward"
+    // from the engine's zh-Hans
+    text  "向前播放"
+    state draft
+}
+
 DreamMaskTransition:PlayForward:InDuration {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayForward:InDuration
     src   "In Duration"
@@ -295,6 +416,13 @@ DreamMaskTransition:PlayForward:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:PlayFromTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayFromTo
+    src   "Play from To"
+    text  "从起点播放到终点"
+    state machine
 }
 
 DreamMaskTransition:PlayFromTo:InDuration {
@@ -332,6 +460,13 @@ DreamMaskTransition:PlayFromTo:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMaskTransition:PlayScreenTransition {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:PlayScreenTransition
+    src   "Play Screen Transition"
+    text  "播放屏幕转场"
+    state machine
 }
 
 DreamMaskTransition:PlayScreenTransition:InColour {
@@ -424,12 +559,27 @@ DreamMaskTransition:Progress {
     state draft
 }
 
+DreamMaskTransition:Refresh {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Refresh
+    src   "Refresh"
+    // from the engine's zh-Hans
+    text  "Refresh"
+    state draft
+}
+
 DreamMaskTransition:Seed {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Seed
     src   "Seed"
     // from the engine's zh-Hans
     text  "种子"
     state draft
+}
+
+DreamMaskTransition:SetAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetAngle
+    src   "Set Angle"
+    text  "设置角度"
+    state machine
 }
 
 DreamMaskTransition:SetAngle:Value {
@@ -440,6 +590,13 @@ DreamMaskTransition:SetAngle:Value {
     state draft
 }
 
+DreamMaskTransition:SetCentre {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCentre
+    src   "Set Centre"
+    text  "设置中心"
+    state machine
+}
+
 DreamMaskTransition:SetCentre:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCentre:Value
     src   "Value"
@@ -448,11 +605,26 @@ DreamMaskTransition:SetCentre:Value {
     state draft
 }
 
+DreamMaskTransition:SetCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCount
+    src   "Set Count"
+    text  "设置数量"
+    state machine
+}
+
 DreamMaskTransition:SetCount:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetCount:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
     state draft
 }
 
@@ -464,12 +636,26 @@ DreamMaskTransition:SetEnabled:Value {
     state draft
 }
 
+DreamMaskTransition:SetGrain {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetGrain
+    src   "Set Grain"
+    text  "设置颗粒"
+    state machine
+}
+
 DreamMaskTransition:SetGrain:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetGrain:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMaskTransition:SetInvert {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetInvert
+    src   "Set Invert"
+    text  "设置反转"
+    state machine
 }
 
 DreamMaskTransition:SetInvert:Value {
@@ -480,6 +666,13 @@ DreamMaskTransition:SetInvert:Value {
     state draft
 }
 
+DreamMaskTransition:SetPreset {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetPreset
+    src   "Set Preset"
+    text  "设置预设"
+    state machine
+}
+
 DreamMaskTransition:SetPreset:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetPreset:Value
     src   "Value"
@@ -488,11 +681,26 @@ DreamMaskTransition:SetPreset:Value {
     state draft
 }
 
+DreamMaskTransition:SetProgress {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetProgress
+    src   "Set Progress"
+    text  "设置进度"
+    state machine
+}
+
 DreamMaskTransition:SetProgress:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetProgress:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetReverse {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetReverse
+    src   "Set Reverse"
+    // from the engine's zh-Hans
+    text  "设置逆向播放"
     state draft
 }
 
@@ -504,6 +712,13 @@ DreamMaskTransition:SetReverse:Value {
     state draft
 }
 
+DreamMaskTransition:SetSeed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSeed
+    src   "Set Seed"
+    text  "设置种子"
+    state machine
+}
+
 DreamMaskTransition:SetSeed:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSeed:Value
     src   "Value"
@@ -512,11 +727,26 @@ DreamMaskTransition:SetSeed:Value {
     state draft
 }
 
+DreamMaskTransition:SetSoftness {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSoftness
+    src   "Set Softness"
+    text  "设置柔软度"
+    state machine
+}
+
 DreamMaskTransition:SetSoftness:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetSoftness:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMaskTransition:SetTexture {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:SetTexture
+    src   "Set Texture"
+    // from the engine's zh-Hans
+    text  "设置纹理"
     state draft
 }
 
@@ -541,6 +771,14 @@ DreamMaskTransition:Softness {
     src   "Softness"
     // from the engine's zh-Hans
     text  "柔软度"
+    state draft
+}
+
+DreamMaskTransition:Stop {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamMaskTransition.h#DreamMaskTransition:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "停止"
     state draft
 }
 

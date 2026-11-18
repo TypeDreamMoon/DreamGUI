@@ -9,6 +9,13 @@ DreamPointerDragDropInterface {
     state machine
 }
 
+DreamPointerDragDropInterface:OnPointerDragDrop {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragDropInterface.h#DreamPointerDragDropInterface:OnPointerDragDrop
+    src   "On Pointer Drag Drop"
+    text  "指针拖放时"
+    state machine
+}
+
 DreamPointerDragDropInterface:OnPointerDragDrop:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerDragDropInterface.h#DreamPointerDragDropInterface:OnPointerDragDrop:EventData
     src   "Event Data"

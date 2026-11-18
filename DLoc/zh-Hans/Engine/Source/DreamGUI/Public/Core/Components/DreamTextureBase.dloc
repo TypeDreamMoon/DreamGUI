@@ -9,11 +9,26 @@ DreamTextureBase {
     state machine
 }
 
+DreamTextureBase:GetOverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:GetOverrideMaterial
+    src   "Get Override Material"
+    text  "获取重载材质"
+    state machine
+}
+
 DreamTextureBase:GetOverrideMaterial:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:GetOverrideMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTextureBase:GetTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:GetTexture
+    src   "Get Texture"
+    // from the engine's zh-Hans
+    text  "获取纹理"
     state draft
 }
 
@@ -33,11 +48,33 @@ DreamTextureBase:OverrideMaterial {
     state draft
 }
 
+DreamTextureBase:SetOverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetOverrideMaterial
+    src   "Set Override Material"
+    text  "设置重载材质"
+    state machine
+}
+
 DreamTextureBase:SetOverrideMaterial:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetOverrideMaterial:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamTextureBase:SetSizeFromTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetSizeFromTexture
+    src   "Set Size from Texture"
+    text  "从纹理设置尺寸"
+    state machine
+}
+
+DreamTextureBase:SetTexture {
+    at    Source/DreamGUI/Public/Core/Components/DreamTextureBase.h#DreamTextureBase:SetTexture
+    src   "Set Texture"
+    // from the engine's zh-Hans
+    text  "设置纹理"
     state draft
 }
 

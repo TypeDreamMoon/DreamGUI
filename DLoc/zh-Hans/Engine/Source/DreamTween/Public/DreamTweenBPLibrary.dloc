@@ -9,6 +9,13 @@ DreamTweenBPLibrary {
     state machine
 }
 
+DreamTweenBPLibrary:ArrayKillIfIsTweening {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:ArrayKillIfIsTweening
+    src   "Kill If Is Tweening (Array)"
+    text  "补间中则终止（数组）"
+    state machine
+}
+
 DreamTweenBPLibrary:ArrayKillIfIsTweening:callComplete {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:ArrayKillIfIsTweening:callComplete
     src   "Call Complete"
@@ -29,6 +36,13 @@ DreamTweenBPLibrary:ArrayKillIfIsTweening:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:ColorTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:ColorTo
+    src   "Color To"
+    text  "颜色终点"
+    state machine
 }
 
 DreamTweenBPLibrary:ColorTo:delay {
@@ -95,6 +109,13 @@ DreamTweenBPLibrary:ColorTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:CreateSequence {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:CreateSequence
+    src   "Create Sequence"
+    text  "创建序列"
+    state machine
+}
+
 DreamTweenBPLibrary:CreateSequence:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:CreateSequence:ReturnValue
     src   "Return Value"
@@ -109,6 +130,13 @@ DreamTweenBPLibrary:CreateSequence:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:DelayCall {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:DelayCall
+    src   "Delay Call"
+    text  "延迟调用"
+    state machine
 }
 
 DreamTweenBPLibrary:DelayCall:affectByGamePause {
@@ -156,6 +184,13 @@ DreamTweenBPLibrary:DelayCall:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:DelayFrameCall {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:DelayFrameCall
+    src   "Delay Frame Call"
+    text  "延迟帧调用"
+    state machine
+}
+
 DreamTweenBPLibrary:DelayFrameCall:affectByGamePause {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:DelayFrameCall:affectByGamePause
     src   "Affect by Game Pause"
@@ -192,6 +227,13 @@ DreamTweenBPLibrary:DelayFrameCall:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:DoubleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:DoubleTo
+    src   "Double To"
+    text  "双精度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:DoubleTo:delay {
@@ -258,6 +300,13 @@ DreamTweenBPLibrary:DoubleTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:FloatTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:FloatTo
+    src   "Float To"
+    text  "浮点数终点"
+    state machine
+}
+
 DreamTweenBPLibrary:FloatTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:FloatTo:delay
     src   "Delay"
@@ -320,6 +369,13 @@ DreamTweenBPLibrary:FloatTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:IntTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:IntTo
+    src   "Int To"
+    text  "整数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:IntTo:delay {
@@ -386,6 +442,13 @@ DreamTweenBPLibrary:IntTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:IsTweening {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:IsTweening
+    src   "Is Tweening"
+    text  "是否补间中"
+    state machine
+}
+
 DreamTweenBPLibrary:IsTweening:inTweener {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:IsTweening:inTweener
     src   "In Tweener"
@@ -407,6 +470,13 @@ DreamTweenBPLibrary:IsTweening:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:KillAllTweensOnTarget {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:KillAllTweensOnTarget
+    src   "Kill All Tweens on Target"
+    text  "终止目标上的所有补间"
+    state machine
 }
 
 DreamTweenBPLibrary:KillAllTweensOnTarget:callComplete {
@@ -432,6 +502,13 @@ DreamTweenBPLibrary:KillAllTweensOnTarget:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:KillIfIsTweening {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:KillIfIsTweening
+    src   "Kill if Is Tweening"
+    text  "补间中则终止"
+    state machine
+}
+
 DreamTweenBPLibrary:KillIfIsTweening:callComplete {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:KillIfIsTweening:callComplete
     src   "Call Complete"
@@ -452,6 +529,13 @@ DreamTweenBPLibrary:KillIfIsTweening:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:LinearColorTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LinearColorTo
+    src   "Linear Color To"
+    text  "线性颜色终点"
+    state machine
 }
 
 DreamTweenBPLibrary:LinearColorTo:delay {
@@ -518,6 +602,13 @@ DreamTweenBPLibrary:LinearColorTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:LocalPositionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionTo
+    src   "Local Position To"
+    text  "局部位置终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalPositionTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionTo:delay
     src   "Delay"
@@ -564,6 +655,13 @@ DreamTweenBPLibrary:LocalPositionTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalPositionTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionTo_Sweep
+    src   "Local Position To (Sweep)"
+    text  "局部位置终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionTo_Sweep:delay {
@@ -630,6 +728,13 @@ DreamTweenBPLibrary:LocalPositionTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalPositionXTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionXTo
+    src   "Local Position X To"
+    text  "局部位置 X 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalPositionXTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionXTo:delay
     src   "Delay"
@@ -676,6 +781,13 @@ DreamTweenBPLibrary:LocalPositionXTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalPositionXTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionXTo_Sweep
+    src   "Local Position X To (Sweep)"
+    text  "局部位置 X 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionXTo_Sweep:delay {
@@ -742,6 +854,13 @@ DreamTweenBPLibrary:LocalPositionXTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalPositionYTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionYTo
+    src   "Local Position Y To"
+    text  "局部位置 Y 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalPositionYTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionYTo:delay
     src   "Delay"
@@ -788,6 +907,13 @@ DreamTweenBPLibrary:LocalPositionYTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalPositionYTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionYTo_Sweep
+    src   "Local Position Y To (Sweep)"
+    text  "局部位置 Y 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionYTo_Sweep:delay {
@@ -854,6 +980,13 @@ DreamTweenBPLibrary:LocalPositionYTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalPositionZTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionZTo
+    src   "Local Position Z To"
+    text  "局部位置 Z 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalPositionZTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionZTo:delay
     src   "Delay"
@@ -900,6 +1033,13 @@ DreamTweenBPLibrary:LocalPositionZTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalPositionZTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalPositionZTo_Sweep
+    src   "Local Position Z To (Sweep)"
+    text  "局部位置 Z 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalPositionZTo_Sweep:delay {
@@ -966,6 +1106,13 @@ DreamTweenBPLibrary:LocalPositionZTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalRotateEulerAngleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotateEulerAngleTo
+    src   "Local Rotate Euler Angle To"
+    text  "局部旋转欧拉角终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalRotateEulerAngleTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotateEulerAngleTo:delay
     src   "Delay"
@@ -1011,6 +1158,13 @@ DreamTweenBPLibrary:LocalRotateEulerAngleTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep
+    src   "Local Rotate Euler Angle To (Sweep)"
+    text  "局部旋转欧拉角终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep:delay {
@@ -1076,6 +1230,13 @@ DreamTweenBPLibrary:LocalRotateEulerAngleTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalRotationQuaternionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotationQuaternionTo
+    src   "Local Rotation Quaternion To"
+    text  "局部旋转四元数终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalRotationQuaternionTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotationQuaternionTo:delay
     src   "Delay"
@@ -1122,6 +1283,13 @@ DreamTweenBPLibrary:LocalRotationQuaternionTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep
+    src   "Local Rotation Quaternion To (Sweep)"
+    text  "局部旋转四元数终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep:delay {
@@ -1188,6 +1356,13 @@ DreamTweenBPLibrary:LocalRotationQuaternionTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalRotatorTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotatorTo
+    src   "Local Rotator To"
+    text  "局部旋转体终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalRotatorTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotatorTo:delay
     src   "Delay"
@@ -1242,6 +1417,13 @@ DreamTweenBPLibrary:LocalRotatorTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:LocalRotatorTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalRotatorTo_Sweep
+    src   "Local Rotator To (Sweep)"
+    text  "局部旋转体终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:LocalRotatorTo_Sweep:delay {
@@ -1316,6 +1498,13 @@ DreamTweenBPLibrary:LocalRotatorTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:LocalScaleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalScaleTo
+    src   "Local Scale To"
+    text  "局部缩放终点"
+    state machine
+}
+
 DreamTweenBPLibrary:LocalScaleTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:LocalScaleTo:delay
     src   "Delay"
@@ -1362,6 +1551,13 @@ DreamTweenBPLibrary:LocalScaleTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:MaterialScalarParameterTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MaterialScalarParameterTo
+    src   "Material Scalar Parameter To"
+    text  "材质标量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MaterialScalarParameterTo:delay {
@@ -1428,6 +1624,13 @@ DreamTweenBPLibrary:MaterialScalarParameterTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:MaterialVectorParameterTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MaterialVectorParameterTo
+    src   "Material Vector Parameter To"
+    text  "材质向量参数终点"
+    state machine
+}
+
 DreamTweenBPLibrary:MaterialVectorParameterTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MaterialVectorParameterTo:delay
     src   "Delay"
@@ -1490,6 +1693,13 @@ DreamTweenBPLibrary:MaterialVectorParameterTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:MeshMaterialScalarParameterTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MeshMaterialScalarParameterTo
+    src   "Mesh Material Scalar Parameter To"
+    text  "网格体材质标量参数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:MeshMaterialScalarParameterTo:delay {
@@ -1556,6 +1766,13 @@ DreamTweenBPLibrary:MeshMaterialScalarParameterTo:target {
     state draft
 }
 
+DreamTweenBPLibrary:MeshMaterialVectorParameterTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MeshMaterialVectorParameterTo
+    src   "Mesh Material Vector Parameter To"
+    text  "网格体材质向量参数终点"
+    state machine
+}
+
 DreamTweenBPLibrary:MeshMaterialVectorParameterTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:MeshMaterialVectorParameterTo:delay
     src   "Delay"
@@ -1618,6 +1835,13 @@ DreamTweenBPLibrary:MeshMaterialVectorParameterTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:QuaternionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:QuaternionTo
+    src   "Quaternion To"
+    text  "四元数终点"
+    state machine
 }
 
 DreamTweenBPLibrary:QuaternionTo:delay {
@@ -1684,6 +1908,13 @@ DreamTweenBPLibrary:QuaternionTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:RepeatCall {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:RepeatCall
+    src   "Repeat Call"
+    text  "重复调用"
+    state machine
+}
+
 DreamTweenBPLibrary:RepeatCall:callFunction {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:RepeatCall:callFunction
     src   "Call Function"
@@ -1730,6 +1961,13 @@ DreamTweenBPLibrary:RepeatCall:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:RotatorTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:RotatorTo
+    src   "Rotator To"
+    text  "旋转体终点"
+    state machine
 }
 
 DreamTweenBPLibrary:RotatorTo:delay {
@@ -1796,6 +2034,13 @@ DreamTweenBPLibrary:RotatorTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:SpringFloat {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:SpringFloat
+    src   "Spring Float"
+    text  "弹簧浮点"
+    state machine
+}
+
 DreamTweenBPLibrary:SpringFloat:params {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:SpringFloat:params
     src   "Params"
@@ -1842,6 +2087,13 @@ DreamTweenBPLibrary:SpringFloat:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo
+    src   "UMG Border Content Color and Opacity To"
+    text  "UMG 边框内容颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo:delay {
@@ -1900,6 +2152,13 @@ DreamTweenBPLibrary:UMG_Border_ContentColorAndOpacityTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo
+    src   "UMG Border Slot Padding To"
+    text  "UMG 边框插槽填充终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo:delay
     src   "Delay"
@@ -1954,6 +2213,13 @@ DreamTweenBPLibrary:UMG_BorderSlot_PaddingTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo
+    src   "UMG Button Color and Opacity To"
+    text  "UMG 按钮颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo:delay {
@@ -2012,6 +2278,13 @@ DreamTweenBPLibrary:UMG_Button_ColorAndOpacityTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo
+    src   "UMG Button Slot Padding To"
+    text  "UMG 按钮插槽填充终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo:delay
     src   "Delay"
@@ -2066,6 +2339,13 @@ DreamTweenBPLibrary:UMG_ButtonSlot_PaddingTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo
+    src   "UMG Canvas Panel Slot Position To"
+    text  "UMG 画布面板插槽位置终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo:delay {
@@ -2124,6 +2404,13 @@ DreamTweenBPLibrary:UMG_CanvasPanelSlot_PositionTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo
+    src   "UMG Canvas Panel Slot Size To"
+    text  "UMG 画布面板插槽尺寸终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo:delay
     src   "Delay"
@@ -2178,6 +2465,13 @@ DreamTweenBPLibrary:UMG_CanvasPanelSlot_SizeTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo
+    src   "UMG Horizontal Box Slot Padding To"
+    text  "UMG 水平框插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo:delay {
@@ -2236,6 +2530,13 @@ DreamTweenBPLibrary:UMG_HorizontalBoxSlot_PaddingTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo
+    src   "UMG Image Color and Opacity To"
+    text  "UMG 图像颜色与不透明度终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo:delay
     src   "Delay"
@@ -2290,6 +2591,13 @@ DreamTweenBPLibrary:UMG_Image_ColorAndOpacityTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo
+    src   "UMG Overlay Slot Padding To"
+    text  "UMG 叠加插槽填充终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo:delay {
@@ -2348,6 +2656,13 @@ DreamTweenBPLibrary:UMG_OverlaySlot_PaddingTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_RenderOpacityTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderOpacityTo
+    src   "UMG Render Opacity To"
+    text  "UMG 渲染不透明度终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_RenderOpacityTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderOpacityTo:delay
     src   "Delay"
@@ -2402,6 +2717,13 @@ DreamTweenBPLibrary:UMG_RenderOpacityTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_RenderTransform_AngleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_AngleTo
+    src   "UMG Render Transform Angle To"
+    text  "UMG 渲染变换角度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_AngleTo:delay {
@@ -2460,6 +2782,13 @@ DreamTweenBPLibrary:UMG_RenderTransform_AngleTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo
+    src   "UMG Render Transform Scale To"
+    text  "UMG 渲染变换缩放终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo:delay
     src   "Delay"
@@ -2514,6 +2843,13 @@ DreamTweenBPLibrary:UMG_RenderTransform_ScaleTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_RenderTransform_ShearTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_ShearTo
+    src   "UMG Render Transform Shear To"
+    text  "UMG 渲染变换切变终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_RenderTransform_ShearTo:delay {
@@ -2572,6 +2908,13 @@ DreamTweenBPLibrary:UMG_RenderTransform_ShearTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo
+    src   "UMG Render Transform Translation To"
+    text  "UMG 渲染变换平移终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo:delay
     src   "Delay"
@@ -2626,6 +2969,13 @@ DreamTweenBPLibrary:UMG_RenderTransform_TranslationTo:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo
+    src   "UMG User Widget Color and Opacity To"
+    text  "UMG 用户控件颜色与不透明度终点"
+    state machine
 }
 
 DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo:delay {
@@ -2684,6 +3034,13 @@ DreamTweenBPLibrary:UMG_UserWidget_ColorAndOpacityTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo
+    src   "UMG Vertical Box Slot Padding To"
+    text  "UMG 垂直框插槽填充终点"
+    state machine
+}
+
 DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo:delay
     src   "Delay"
@@ -2740,6 +3097,13 @@ DreamTweenBPLibrary:UMG_VerticalBoxSlot_PaddingTo:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:UpdateCall {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UpdateCall
+    src   "Update Call"
+    text  "更新调用"
+    state machine
+}
+
 DreamTweenBPLibrary:UpdateCall:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:UpdateCall:ReturnValue
     src   "Return Value"
@@ -2762,6 +3126,13 @@ DreamTweenBPLibrary:UpdateCall:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:Vector2To {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:Vector2To
+    src   "Vector 2To"
+    text  "二维向量终点"
+    state machine
 }
 
 DreamTweenBPLibrary:Vector2To:delay {
@@ -2828,6 +3199,13 @@ DreamTweenBPLibrary:Vector2To:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:Vector3To {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:Vector3To
+    src   "Vector 3To"
+    text  "三维向量终点"
+    state machine
+}
+
 DreamTweenBPLibrary:Vector3To:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:Vector3To:delay
     src   "Delay"
@@ -2890,6 +3268,13 @@ DreamTweenBPLibrary:Vector3To:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenBPLibrary:Vector4To {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:Vector4To
+    src   "Vector 4To"
+    text  "四维向量终点"
+    state machine
 }
 
 DreamTweenBPLibrary:Vector4To:delay {
@@ -2956,6 +3341,13 @@ DreamTweenBPLibrary:Vector4To:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:VirtualCall {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:VirtualCall
+    src   "Virtual Call"
+    text  "虚拟调用"
+    state machine
+}
+
 DreamTweenBPLibrary:VirtualCall:complete {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:VirtualCall:complete
     src   "Complete"
@@ -3012,6 +3404,13 @@ DreamTweenBPLibrary:VirtualCall:WorldContextObject {
     state draft
 }
 
+DreamTweenBPLibrary:WorldPositionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionTo
+    src   "World Position To"
+    text  "世界位置终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldPositionTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionTo:delay
     src   "Delay"
@@ -3058,6 +3457,13 @@ DreamTweenBPLibrary:WorldPositionTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldPositionTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionTo_Sweep
+    src   "World Position To (Sweep)"
+    text  "世界位置终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionTo_Sweep:delay {
@@ -3124,6 +3530,13 @@ DreamTweenBPLibrary:WorldPositionTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldPositionXTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionXTo
+    src   "World Position X To"
+    text  "世界位置 X 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldPositionXTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionXTo:delay
     src   "Delay"
@@ -3170,6 +3583,13 @@ DreamTweenBPLibrary:WorldPositionXTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldPositionXTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionXTo_Sweep
+    src   "World Position X To (Sweep)"
+    text  "世界位置 X 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionXTo_Sweep:delay {
@@ -3236,6 +3656,13 @@ DreamTweenBPLibrary:WorldPositionXTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldPositionYTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionYTo
+    src   "World Position Y To"
+    text  "世界位置 Y 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldPositionYTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionYTo:delay
     src   "Delay"
@@ -3282,6 +3709,13 @@ DreamTweenBPLibrary:WorldPositionYTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldPositionYTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionYTo_Sweep
+    src   "World Position Y To (Sweep)"
+    text  "世界位置 Y 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionYTo_Sweep:delay {
@@ -3348,6 +3782,13 @@ DreamTweenBPLibrary:WorldPositionYTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldPositionZTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionZTo
+    src   "World Position Z To"
+    text  "世界位置 Z 终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldPositionZTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionZTo:delay
     src   "Delay"
@@ -3394,6 +3835,13 @@ DreamTweenBPLibrary:WorldPositionZTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldPositionZTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldPositionZTo_Sweep
+    src   "World Position Z To (Sweep)"
+    text  "世界位置 Z 终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldPositionZTo_Sweep:delay {
@@ -3460,6 +3908,13 @@ DreamTweenBPLibrary:WorldPositionZTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldRotateEulerAngleTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotateEulerAngleTo
+    src   "World Rotate Euler Angle To"
+    text  "世界旋转欧拉角终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldRotateEulerAngleTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotateEulerAngleTo:delay
     src   "Delay"
@@ -3505,6 +3960,13 @@ DreamTweenBPLibrary:WorldRotateEulerAngleTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep
+    src   "World Rotate Euler Angle To (Sweep)"
+    text  "世界旋转欧拉角终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep:delay {
@@ -3570,6 +4032,13 @@ DreamTweenBPLibrary:WorldRotateEulerAngleTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldRotationQuaternionTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotationQuaternionTo
+    src   "World Rotation Quaternion To"
+    text  "世界旋转四元数终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldRotationQuaternionTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotationQuaternionTo:delay
     src   "Delay"
@@ -3616,6 +4085,13 @@ DreamTweenBPLibrary:WorldRotationQuaternionTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep
+    src   "World Rotation Quaternion To (Sweep)"
+    text  "世界旋转四元数终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep:delay {
@@ -3682,6 +4158,13 @@ DreamTweenBPLibrary:WorldRotationQuaternionTo_Sweep:teleport {
     state draft
 }
 
+DreamTweenBPLibrary:WorldRotatorTo {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotatorTo
+    src   "World Rotator To"
+    text  "世界旋转体终点"
+    state machine
+}
+
 DreamTweenBPLibrary:WorldRotatorTo:delay {
     at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotatorTo:delay
     src   "Delay"
@@ -3736,6 +4219,13 @@ DreamTweenBPLibrary:WorldRotatorTo:target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamTweenBPLibrary:WorldRotatorTo_Sweep {
+    at    Source/DreamTween/Public/DreamTweenBPLibrary.h#DreamTweenBPLibrary:WorldRotatorTo_Sweep
+    src   "World Rotator To (Sweep)"
+    text  "世界旋转体终点（扫掠）"
+    state machine
 }
 
 DreamTweenBPLibrary:WorldRotatorTo_Sweep:delay {

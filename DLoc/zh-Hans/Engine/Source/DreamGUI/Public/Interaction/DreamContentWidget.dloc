@@ -9,6 +9,13 @@ DreamContentWidget {
     state machine
 }
 
+DreamContentWidget:CanAcceptChild {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:CanAcceptChild
+    src   "Can Accept Child"
+    text  "可接受子项"
+    state machine
+}
+
 DreamContentWidget:CanAcceptChild:Child {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:CanAcceptChild:Child
     src   "Child"
@@ -23,6 +30,13 @@ DreamContentWidget:CanAcceptChild:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamContentWidget:ClearContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:ClearContent
+    src   "Clear Content"
+    text  "清空内容"
+    state machine
 }
 
 DreamContentWidget:ClearContent:bDetach {
@@ -41,6 +55,14 @@ DreamContentWidget:Content {
     state draft
 }
 
+DreamContentWidget:GetContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContent
+    src   "Get Content"
+    // from the engine's zh-Hans
+    text  "获取内容"
+    state draft
+}
+
 DreamContentWidget:GetContent:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContent:ReturnValue
     src   "Return Value"
@@ -49,11 +71,27 @@ DreamContentWidget:GetContent:ReturnValue {
     state draft
 }
 
+DreamContentWidget:GetContentSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContentSlot
+    src   "Get Content Slot"
+    // from the engine's zh-Hans
+    text  "获取内容槽"
+    state draft
+}
+
 DreamContentWidget:GetContentSlot:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:GetContentSlot:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamContentWidget:SetContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamContentWidget:SetContent
+    src   "Set Content"
+    // from the engine's zh-Hans
+    text  "设置内容"
     state draft
 }
 
@@ -93,6 +131,13 @@ DreamNamedSlot:bIsDefaultSlot {
     state machine
 }
 
+DreamNamedSlot:GetSlotContent {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:GetSlotContent
+    src   "Get Slot Content"
+    text  "获取插槽内容"
+    state machine
+}
+
 DreamNamedSlot:GetSlotContent:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlot:GetSlotContent:ReturnValue
     src   "Return Value"
@@ -105,6 +150,13 @@ DreamNamedSlotHost {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost
     src   "Dream Named Slot Host"
     text  "Dream命名插槽宿主"
+    state machine
+}
+
+DreamNamedSlotHost:ClearSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:ClearSlot
+    src   "Clear Slot"
+    text  "清除插槽"
     state machine
 }
 
@@ -124,6 +176,13 @@ DreamNamedSlotHost:ClearSlot:SlotName {
     state draft
 }
 
+DreamNamedSlotHost:GetContentForSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetContentForSlot
+    src   "Get Content for Slot"
+    text  "获取插槽内容"
+    state machine
+}
+
 DreamNamedSlotHost:GetContentForSlot:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetContentForSlot:ReturnValue
     src   "Return Value"
@@ -140,6 +199,13 @@ DreamNamedSlotHost:GetContentForSlot:SlotName {
     state draft
 }
 
+DreamNamedSlotHost:GetSlotNames {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetSlotNames
+    src   "Get Slot Names"
+    text  "获取插槽名称"
+    state machine
+}
+
 DreamNamedSlotHost:GetSlotNames:ReturnValue {
     at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:GetSlotNames:ReturnValue
     src   "Return Value"
@@ -154,6 +220,13 @@ DreamNamedSlotHost:NamedSlots {
     // from the engine's zh-Hans
     text  "命名的插槽"
     state draft
+}
+
+DreamNamedSlotHost:SetContentForSlot {
+    at    Source/DreamGUI/Public/Interaction/DreamContentWidget.h#DreamNamedSlotHost:SetContentForSlot
+    src   "Set Content for Slot"
+    text  "设置插槽内容"
+    state machine
 }
 
 DreamNamedSlotHost:SetContentForSlot:Content {

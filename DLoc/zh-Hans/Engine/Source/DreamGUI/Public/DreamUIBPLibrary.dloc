@@ -9,6 +9,13 @@ DreamUIBPLibrary {
     state machine
 }
 
+DreamUIBPLibrary:AddWidgetOfClassToScreen {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen
+    src   "Add Widget Of Class to Screen"
+    text  "按类把控件添加到屏幕"
+    state machine
+}
+
 DreamUIBPLibrary:AddWidgetOfClassToScreen:InCallbackBeforeAlive {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToScreen:InCallbackBeforeAlive
     src   "In Callback Before Alive"
@@ -48,6 +55,13 @@ DreamUIBPLibrary:AddWidgetOfClassToScreen:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:AddWidgetOfClassToViewport {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport
+    src   "Add Widget Of Class to Viewport"
+    text  "按类把控件添加到视口"
+    state machine
+}
+
 DreamUIBPLibrary:AddWidgetOfClassToViewport:InWidgetClass {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AddWidgetOfClassToViewport:InWidgetClass
     src   "In Widget Class"
@@ -80,6 +94,13 @@ DreamUIBPLibrary:AddWidgetOfClassToViewport:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:AttachWidgetToSceneComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent
+    src   "Attach Widget to Scene Component"
+    text  "把控件附加到场景组件"
+    state machine
+}
+
 DreamUIBPLibrary:AttachWidgetToSceneComponent:InRoot {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:AttachWidgetToSceneComponent:InRoot
     src   "In Root"
@@ -101,6 +122,13 @@ DreamUIBPLibrary:AttachWidgetToSceneComponent:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIBPLibrary:BeginDeferredCreateDreamWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:BeginDeferredCreateDreamWidget
+    src   "Begin Deferred Create Dream Widget"
+    text  "开始延迟创建 Dream 控件"
+    state machine
 }
 
 DreamUIBPLibrary:BeginDeferredCreateDreamWidget:OwningPlayer {
@@ -135,6 +163,13 @@ DreamUIBPLibrary:BeginDeferredCreateDreamWidget:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:ConstructWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget
+    src   "Construct Widget"
+    text  "构造控件"
+    state machine
+}
+
 DreamUIBPLibrary:ConstructWidget:DisplayName {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget:DisplayName
     src   "Display Name"
@@ -166,6 +201,13 @@ DreamUIBPLibrary:ConstructWidget:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:CreateDreamWidgetOfClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass
+    src   "Create Dream Widget Of Class"
+    text  "按类创建 Dream 控件"
+    state machine
+}
+
 DreamUIBPLibrary:CreateDreamWidgetOfClass:InWidgetClass {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:CreateDreamWidgetOfClass:InWidgetClass
     src   "In Widget Class"
@@ -190,6 +232,13 @@ DreamUIBPLibrary:CreateDreamWidgetOfClass:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:DreamGUIExecuteControllerInputAction {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamGUIExecuteControllerInputAction
+    src   "Dream GUIExecute Controller Input Action"
+    text  "DreamGUI 执行控制器输入动作"
+    state machine
+}
+
 DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:inputKey {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:inputKey
     src   "Input Key"
@@ -205,6 +254,14 @@ DreamUIBPLibrary:DreamGUIExecuteControllerInputAction:pressOrRelease {
     state machine
 }
 
+DreamUIBPLibrary:DreamUICompRef_GetActor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetActor
+    src   "Get Actor"
+    // from the engine's zh-Hans
+    text  "获取Actor"
+    state draft
+}
+
 DreamUIBPLibrary:DreamUICompRef_GetActor:InDreamUIComponentReference {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetActor:InDreamUIComponentReference
     src   "In Dream UIComponent Reference"
@@ -217,6 +274,14 @@ DreamUIBPLibrary:DreamUICompRef_GetActor:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUICompRef_GetComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUICompRef_GetComponent
+    src   "Get Component"
+    // from the engine's zh-Hans
+    text  "获取组件"
     state draft
 }
 
@@ -239,6 +304,14 @@ DreamUIBPLibrary:DreamUICompRef_GetComponent:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
     state draft
 }
 
@@ -266,6 +339,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Asset_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -278,6 +358,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Asset_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -294,6 +382,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Bool_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:InDelegate {
@@ -320,6 +416,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Bool_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -332,6 +435,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Bool_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -348,6 +459,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Class_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:InDelegate {
@@ -374,6 +493,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Class_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -386,6 +512,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Class_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -402,6 +536,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Color_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:InDelegate {
@@ -428,6 +570,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Color_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -440,6 +589,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Color_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -456,6 +613,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Double_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:InDelegate {
@@ -482,6 +647,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Double_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -494,6 +666,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Double_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -510,6 +690,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:InDelegate {
@@ -536,6 +724,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -551,11 +746,27 @@ DreamUIBPLibrary:DreamUIEventDelegate_DreamWidget_Unregister:InEvent {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
+    state draft
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Execute:InEvent
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
     state draft
 }
 
@@ -583,6 +794,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Empty_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -595,6 +813,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Empty_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -611,6 +837,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Float_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:InDelegate {
@@ -637,6 +871,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Float_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -649,6 +890,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Float_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -665,6 +914,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int32_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:InDelegate {
@@ -691,6 +948,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int32_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -703,6 +967,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int32_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -719,6 +991,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int64_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:InDelegate {
@@ -745,6 +1025,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int64_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -757,6 +1044,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Int64_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -773,6 +1068,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:InDelegate {
@@ -799,6 +1102,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -811,6 +1121,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_LinearColor_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -827,6 +1145,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Name_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:InDelegate {
@@ -853,6 +1179,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Name_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -865,6 +1198,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Name_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -883,6 +1224,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Object_Execute:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
+    state draft
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InEvent
     src   "In Event"
@@ -896,6 +1245,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:InDelegate {
@@ -922,6 +1279,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -934,6 +1298,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_PointerEvent_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -950,6 +1322,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:InDelegate {
@@ -976,6 +1356,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -988,6 +1375,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Quaternion_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1004,6 +1399,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:InDelegate {
@@ -1030,6 +1433,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1042,6 +1452,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Rotator_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1058,6 +1476,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_String_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_String_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_String_Register:InDelegate {
@@ -1084,6 +1510,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_String_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1096,6 +1529,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_String_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1112,6 +1553,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Text_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:InDelegate {
@@ -1138,6 +1587,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Text_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1150,6 +1606,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Text_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1166,6 +1630,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:InDelegate {
@@ -1192,6 +1664,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1204,6 +1683,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_UInt8_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1220,6 +1707,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:InDelegate {
@@ -1246,6 +1741,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1258,6 +1760,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector2_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1274,6 +1784,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:InDelegate {
@@ -1300,6 +1818,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1312,6 +1837,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector3_Unregister:InEvent {
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
+    state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute
+    src   "Execute"
+    // from the engine's zh-Hans
+    text  "执行"
     state draft
 }
 
@@ -1328,6 +1861,14 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Execute:InParameter {
     src   "In Parameter"
     text  "参数"
     state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register
+    src   "Register"
+    // from the engine's zh-Hans
+    text  "注册"
+    state draft
 }
 
 DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:InDelegate {
@@ -1354,6 +1895,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Register:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister
+    src   "Unregister"
+    text  "注销"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InDelegateHandle {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InDelegateHandle
     src   "In Delegate Handle"
@@ -1369,6 +1917,13 @@ DreamUIBPLibrary:DreamUIEventDelegate_Vector4_Unregister:InEvent {
     state draft
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteActor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor
+    src   "Dream UIEvent Delegate Execute Actor"
+    text  "DreamUI 事件委托执行（Actor）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InEvent
     src   "In Event"
@@ -1381,6 +1936,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteActor:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteBool {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteBool
+    src   "Dream UIEvent Delegate Execute Bool"
+    text  "DreamUI 事件委托执行（布尔）"
     state machine
 }
 
@@ -1399,6 +1961,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteBool:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteClass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass
+    src   "Dream UIEvent Delegate Execute Class"
+    text  "DreamUI 事件委托执行（类）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InEvent
     src   "In Event"
@@ -1411,6 +1980,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteClass:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteColor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteColor
+    src   "Dream UIEvent Delegate Execute Color"
+    text  "DreamUI 事件委托执行（颜色）"
     state machine
 }
 
@@ -1429,12 +2005,26 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteColor:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty
+    src   "Dream UIEvent Delegate Execute Empty"
+    text  "DreamUI 事件委托执行（无参）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteEmpty:InEvent
     src   "In Event"
     // from the engine's zh-Hans
     text  "输入事件"
     state draft
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat
+    src   "Dream UIEvent Delegate Execute Float"
+    text  "DreamUI 事件委托执行（浮点）"
+    state machine
 }
 
 DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InEvent {
@@ -1449,6 +2039,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteFloat:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32
+    src   "Dream UIEvent Delegate Execute Int 32"
+    text  "DreamUI 事件委托执行（32 位整数）"
     state machine
 }
 
@@ -1467,6 +2064,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteInt32:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor
+    src   "Dream UIEvent Delegate Execute Linear Color"
+    text  "DreamUI 事件委托执行（线性颜色）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InEvent
     src   "In Event"
@@ -1479,6 +2083,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteLinearColor:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteName {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteName
+    src   "Dream UIEvent Delegate Execute Name"
+    text  "DreamUI 事件委托执行（名称）"
     state machine
 }
 
@@ -1497,6 +2108,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteName:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteObject {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject
+    src   "Dream UIEvent Delegate Execute Object"
+    text  "DreamUI 事件委托执行（对象）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InEvent
     src   "In Event"
@@ -1509,6 +2127,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteObject:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent
+    src   "Dream UIEvent Delegate Execute Pointer Event"
+    text  "DreamUI 事件委托执行（指针事件）"
     state machine
 }
 
@@ -1527,6 +2152,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecutePointerEvent:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion
+    src   "Dream UIEvent Delegate Execute Quaternion"
+    text  "DreamUI 事件委托执行（四元数）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InEvent
     src   "In Event"
@@ -1539,6 +2171,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteQuaternion:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator
+    src   "Dream UIEvent Delegate Execute Rotator"
+    text  "DreamUI 事件委托执行（旋转体）"
     state machine
 }
 
@@ -1557,6 +2196,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteRotator:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteString {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString
+    src   "Dream UIEvent Delegate Execute String"
+    text  "DreamUI 事件委托执行（字符串）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InEvent
     src   "In Event"
@@ -1569,6 +2215,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteString:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteText {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteText
+    src   "Dream UIEvent Delegate Execute Text"
+    text  "DreamUI 事件委托执行（文本）"
     state machine
 }
 
@@ -1587,6 +2240,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteText:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8
+    src   "Dream UIEvent Delegate Execute UInt 8"
+    text  "DreamUI 事件委托执行（8 位无符号整数）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InEvent
     src   "In Event"
@@ -1599,6 +2259,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteUInt8:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2
+    src   "Dream UIEvent Delegate Execute Vector 2"
+    text  "DreamUI 事件委托执行（二维向量）"
     state machine
 }
 
@@ -1617,6 +2284,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector2:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3
+    src   "Dream UIEvent Delegate Execute Vector 3"
+    text  "DreamUI 事件委托执行（三维向量）"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InEvent {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InEvent
     src   "In Event"
@@ -1629,6 +2303,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InParameter {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector3:InParameter
     src   "In Parameter"
     text  "参数"
+    state machine
+}
+
+DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4 {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4
+    src   "Dream UIEvent Delegate Execute Vector 4"
+    text  "DreamUI 事件委托执行（四维向量）"
     state machine
 }
 
@@ -1647,6 +2328,13 @@ DreamUIBPLibrary:DreamUIEventDelegateExecuteVector4:InParameter {
     state machine
 }
 
+DreamUIBPLibrary:DreamUIExecuteControllerInputAxis {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIExecuteControllerInputAxis
+    src   "Dream UIExecute Controller Input Axis"
+    text  "DreamUI 执行控制器输入轴"
+    state machine
+}
+
 DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:inputKey {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:inputKey
     src   "Input Key"
@@ -1661,6 +2349,13 @@ DreamUIBPLibrary:DreamUIExecuteControllerInputAxis:value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIBPLibrary:DuplicateWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidget
+    src   "Duplicate Widget"
+    text  "复制控件"
+    state machine
 }
 
 DreamUIBPLibrary:DuplicateWidget:Parent {
@@ -1695,6 +2390,13 @@ DreamUIBPLibrary:DuplicateWidget:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:DuplicateWidgetWithPreparedData {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData
+    src   "Duplicate Widget with Prepared Data"
+    text  "用已准备的数据复制控件"
+    state machine
+}
+
 DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Data {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:DuplicateWidgetWithPreparedData:Data
     src   "Data"
@@ -1727,6 +2429,13 @@ DreamUIBPLibrary:DuplicateWidgetWithPreparedData:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:FinishDeferredCreateDreamWidget {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget
+    src   "Finish Deferred Create Dream Widget"
+    text  "完成延迟创建的 Dream 控件"
+    state machine
+}
+
 DreamUIBPLibrary:FinishDeferredCreateDreamWidget:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:FinishDeferredCreateDreamWidget:ReturnValue
     src   "Return Value"
@@ -1743,12 +2452,27 @@ DreamUIBPLibrary:FinishDeferredCreateDreamWidget:Widget {
     state draft
 }
 
+DreamUIBPLibrary:ForceLayoutPrepass {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ForceLayoutPrepass
+    src   "Force Layout Prepass"
+    // from the engine's zh-Hans
+    text  "强制布局通道"
+    state draft
+}
+
 DreamUIBPLibrary:ForceLayoutPrepass:InWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ForceLayoutPrepass:InWidget
     src   "In Widget"
     // from the engine's zh-Hans
     text  "输入控件"
     state draft
+}
+
+DreamUIBPLibrary:GetComponentInChildren {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInChildren
+    src   "Get Component in Children"
+    text  "在子项中获取组件"
+    state machine
 }
 
 DreamUIBPLibrary:GetComponentInChildren:ComponentClass {
@@ -1790,6 +2514,13 @@ DreamUIBPLibrary:GetComponentInChildren:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:GetComponentInParent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent
+    src   "Get Component in Parent"
+    text  "在父项中获取组件"
+    state machine
+}
+
 DreamUIBPLibrary:GetComponentInParent:ComponentClass {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentInParent:ComponentClass
     src   "Component Class"
@@ -1827,6 +2558,13 @@ DreamUIBPLibrary:GetComponentInParent:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIBPLibrary:GetComponentsInChildren {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetComponentsInChildren
+    src   "Get Components in Children"
+    text  "在子项中获取组件集合"
+    state machine
 }
 
 DreamUIBPLibrary:GetComponentsInChildren:ComponentClass {
@@ -1868,6 +2606,13 @@ DreamUIBPLibrary:GetComponentsInChildren:ReturnValue {
     state draft
 }
 
+DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot
+    src   "Get or Create Screen Space UIRoot"
+    text  "获取或创建屏幕空间 UI 根"
+    state machine
+}
+
 DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:ReturnValue
     src   "Return Value"
@@ -1882,6 +2627,13 @@ DreamUIBPLibrary:GetOrCreateScreenSpaceUIRoot:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamUIBPLibrary:GetSpriteBorderSize {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderSize
+    src   "Get Sprite Border Size"
+    text  "获取精灵边框尺寸"
+    state machine
 }
 
 DreamUIBPLibrary:GetSpriteBorderSize:borderBottom {
@@ -1920,6 +2672,13 @@ DreamUIBPLibrary:GetSpriteBorderSize:SpriteInfo {
     state draft
 }
 
+DreamUIBPLibrary:GetSpriteBorderUV {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV
+    src   "Get Sprite Border UV"
+    text  "获取精灵边框 UV"
+    state machine
+}
+
 DreamUIBPLibrary:GetSpriteBorderUV:borderUV0X {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteBorderUV:borderUV0X
     src   "Border UV0X"
@@ -1956,6 +2715,13 @@ DreamUIBPLibrary:GetSpriteBorderUV:SpriteInfo {
     state draft
 }
 
+DreamUIBPLibrary:GetSpriteSize {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteSize
+    src   "Get Sprite Size"
+    text  "获取精灵尺寸"
+    state machine
+}
+
 DreamUIBPLibrary:GetSpriteSize:height {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteSize:height
     src   "Height"
@@ -1978,6 +2744,13 @@ DreamUIBPLibrary:GetSpriteSize:width {
     // from the engine's zh-Hans
     text  "宽度"
     state draft
+}
+
+DreamUIBPLibrary:GetSpriteUV {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:GetSpriteUV
+    src   "Get Sprite UV"
+    text  "获取精灵 UV"
+    state machine
 }
 
 DreamUIBPLibrary:GetSpriteUV:SpriteInfo {
@@ -2016,11 +2789,26 @@ DreamUIBPLibrary:GetSpriteUV:UV3Y {
     state machine
 }
 
+DreamUIBPLibrary:InvalidateLayout {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:InvalidateLayout
+    src   "Invalidate Layout"
+    text  "使布局失效"
+    state machine
+}
+
 DreamUIBPLibrary:InvalidateLayout:InWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:InvalidateLayout:InWidget
     src   "In Widget"
     // from the engine's zh-Hans
     text  "输入控件"
+    state draft
+}
+
+DreamUIBPLibrary:IsInViewport {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsInViewport
+    src   "Is in Viewport"
+    // from the engine's zh-Hans
+    text  "Is in Viewport"
     state draft
 }
 
@@ -2047,6 +2835,13 @@ DreamUIBPLibrary:IsInViewport:WorldContextObject {
     state draft
 }
 
+DreamUIBPLibrary:IsWidgetParked {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsWidgetParked
+    src   "Is Widget Parked"
+    text  "控件是否暂存"
+    state machine
+}
+
 DreamUIBPLibrary:IsWidgetParked:InWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:IsWidgetParked:InWidget
     src   "In Widget"
@@ -2060,6 +2855,14 @@ DreamUIBPLibrary:IsWidgetParked:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIBPLibrary:K2_DreamUICompRef_GetComponent {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:K2_DreamUICompRef_GetComponent
+    src   "Get"
+    // from the engine's zh-Hans
+    text  "获取"
     state draft
 }
 
@@ -2078,6 +2881,13 @@ DreamUIBPLibrary:K2_DreamUICompRef_GetComponent:OutResult {
     state draft
 }
 
+DreamUIBPLibrary:PrepareDuplicateData {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:PrepareDuplicateData
+    src   "Prepare Duplicate Data"
+    text  "准备复制数据"
+    state machine
+}
+
 DreamUIBPLibrary:PrepareDuplicateData:Data {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:PrepareDuplicateData:Data
     src   "Data"
@@ -2091,6 +2901,14 @@ DreamUIBPLibrary:PrepareDuplicateData:Target {
     src   "Target"
     // from the engine's zh-Hans
     text  "目标"
+    state draft
+}
+
+DreamUIBPLibrary:RemoveFromViewport {
+    at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:RemoveFromViewport
+    src   "Remove from Viewport"
+    // from the engine's zh-Hans
+    text  "从视口中移除"
     state draft
 }
 
@@ -2157,6 +2975,8 @@ DreamUIBPLibrary:BeginDeferredCreateDreamWidget {
 DreamUIBPLibrary:ConstructWidget {
     at    Source/DreamGUI/Public/DreamUIBPLibrary.h#DreamUIBPLibrary:ConstructWidget
     src   "Make a widget that exists but is not on screen -- the counterpart of UMG's\nWidgetTree::ConstructWidget<T>(). It draws nothing and its behaviours do not run until you\nhand it to AddChild or AddToViewport; until then it is held by the DreamUI manager, so it will\nnot be collected out from under you while you configure it.\n\nVisualClass is what the widget looks like (DreamImage, DreamText, ...). Leave it null for a bare\nwidget, which is what a pure container is. Give it a layout container afterwards to make it a\npanel -- in this fork \"panel\" is a subobject, not a separate class."
+    text  "创建一个已经存在、但还不在屏幕上的控件——对应 UMG 的\nWidgetTree::ConstructWidget<T>()。它什么都不画，它的行为在你把它交给 AddChild 或 AddToViewport 之前\n也不会运行；在那之前它由 DreamUI 管理器持有，所以在你配置它的过程中不会被回收。\n\nVisualClass 决定控件长什么样（DreamImage、DreamText……）。纯容器就把它留空，得到一个\n裸控件。之后给它一个布局容器，它就变成面板——在这个分叉里\"panel\"是一个子对象，不是单独的类。"
+    state draft
 }
 
 DreamUIBPLibrary:CreateDreamWidgetOfClass {

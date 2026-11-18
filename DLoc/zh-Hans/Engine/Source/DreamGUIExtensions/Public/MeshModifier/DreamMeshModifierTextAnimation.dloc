@@ -9,12 +9,27 @@ DreamMeshModifierTextAnimation {
     state machine
 }
 
+DreamMeshModifierTextAnimation:GetProperties {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperties
+    src   "Get Properties"
+    // from the engine's zh-Hans
+    text  "Get Properties"
+    state draft
+}
+
 DreamMeshModifierTextAnimation:GetProperties:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperties:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation:GetProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetProperty
+    src   "Get Property"
+    text  "获取属性们"
+    state machine
 }
 
 DreamMeshModifierTextAnimation:GetProperty:Index {
@@ -33,12 +48,26 @@ DreamMeshModifierTextAnimation:GetProperty:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation:GetSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetSelector
+    src   "Get Selector"
+    text  "获取选择器"
+    state machine
+}
+
 DreamMeshModifierTextAnimation:GetSelector:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetSelector:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation:GetSelectorOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:GetSelectorOffset
+    src   "Get Selector Offset"
+    text  "获取选择器偏移量"
+    state machine
 }
 
 DreamMeshModifierTextAnimation:GetSelectorOffset:ReturnValue {
@@ -72,11 +101,27 @@ DreamMeshModifierTextAnimation:SelectorOffset {
     state machine
 }
 
+DreamMeshModifierTextAnimation:SetProperties {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperties
+    src   "Set Properties"
+    // from the engine's zh-Hans
+    text  "Set Properties"
+    state draft
+}
+
 DreamMeshModifierTextAnimation:SetProperties:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperties:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation:SetProperty {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetProperty
+    src   "Set Property"
+    // from the engine's zh-Hans
+    text  "Set Property"
     state draft
 }
 
@@ -96,12 +141,26 @@ DreamMeshModifierTextAnimation:SetProperty:Value {
     state draft
 }
 
+DreamMeshModifierTextAnimation:SetSelector {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetSelector
+    src   "Set Selector"
+    text  "设置选择器"
+    state machine
+}
+
 DreamMeshModifierTextAnimation:SetSelector:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetSelector:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierTextAnimation:SetSelectorOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation:SetSelectorOffset
+    src   "Set Selector Offset"
+    text  "设置选择器偏移量"
+    state machine
 }
 
 DreamMeshModifierTextAnimation:SetSelectorOffset:Value {
@@ -133,6 +192,13 @@ DreamMeshModifierTextAnimation_Selector {
     state machine
 }
 
+DreamMeshModifierTextAnimation_Selector:GetOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:GetOffset
+    src   "Get Offset"
+    text  "获取偏移"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_Selector:GetOffset:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:GetOffset:ReturnValue
     src   "Return Value"
@@ -147,6 +213,13 @@ DreamMeshModifierTextAnimation_Selector:Offset {
     // from the engine's zh-Hans
     text  "偏移"
     state draft
+}
+
+DreamMeshModifierTextAnimation_Selector:SetOffset {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h#DreamMeshModifierTextAnimation_Selector:SetOffset
+    src   "Set Offset"
+    text  "设置偏移"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_Selector:SetOffset:Value {

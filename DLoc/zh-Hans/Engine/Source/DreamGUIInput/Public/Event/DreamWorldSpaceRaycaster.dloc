@@ -30,12 +30,26 @@ DreamWorldSpaceRaycaster:DragThreshold {
     state machine
 }
 
+DreamWorldSpaceRaycaster:GetDragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetDragThreshold
+    src   "Get Drag Threshold"
+    text  "获取拖动阈值"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:GetDragThreshold:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetDragThreshold:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:GetHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetHoldToDrag
+    src   "Get Hold to Drag"
+    text  "获取按住拖动"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:GetHoldToDrag:ReturnValue {
@@ -46,12 +60,26 @@ DreamWorldSpaceRaycaster:GetHoldToDrag:ReturnValue {
     state draft
 }
 
+DreamWorldSpaceRaycaster:GetHoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetHoldToDragTime
+    src   "Get Hold to Drag Time"
+    text  "获取按住拖动时间"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:GetHoldToDragTime:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetHoldToDragTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:GetOccludeByWorld {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetOccludeByWorld
+    src   "Get Occlude by World"
+    text  "获取由世界遮挡"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:GetOccludeByWorld:ReturnValue {
@@ -62,12 +90,26 @@ DreamWorldSpaceRaycaster:GetOccludeByWorld:ReturnValue {
     state draft
 }
 
+DreamWorldSpaceRaycaster:GetPointerSource {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetPointerSource
+    src   "Get Pointer Source"
+    text  "获取指针来源"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:GetPointerSource:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetPointerSource:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:GetTraceChannel {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:GetTraceChannel
+    src   "Get Trace Channel"
+    text  "获取检测通道"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:GetTraceChannel:ReturnValue {
@@ -100,12 +142,26 @@ DreamWorldSpaceRaycaster:RayLength {
     state draft
 }
 
+DreamWorldSpaceRaycaster:SetDragThreshold {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetDragThreshold
+    src   "Set Drag Threshold"
+    text  "设置拖动阈值"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:SetDragThreshold:Value {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetDragThreshold:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:SetHoldToDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetHoldToDrag
+    src   "Set Hold to Drag"
+    text  "设置按住拖动"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:SetHoldToDrag:Value {
@@ -116,12 +172,26 @@ DreamWorldSpaceRaycaster:SetHoldToDrag:Value {
     state draft
 }
 
+DreamWorldSpaceRaycaster:SetHoldToDragTime {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetHoldToDragTime
+    src   "Set Hold to Drag Time"
+    text  "设置按住拖动时间"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:SetHoldToDragTime:Value {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetHoldToDragTime:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:SetOccludeByWorld {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetOccludeByWorld
+    src   "Set Occlude by World"
+    text  "设置由世界遮挡"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:SetOccludeByWorld:Value {
@@ -132,6 +202,13 @@ DreamWorldSpaceRaycaster:SetOccludeByWorld:Value {
     state draft
 }
 
+DreamWorldSpaceRaycaster:SetPointerSource {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetPointerSource
+    src   "Set Pointer Source"
+    text  "设置指针来源"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:SetPointerSource:Value {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetPointerSource:Value
     src   "Value"
@@ -140,12 +217,26 @@ DreamWorldSpaceRaycaster:SetPointerSource:Value {
     state draft
 }
 
+DreamWorldSpaceRaycaster:SetRayLength {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetRayLength
+    src   "Set Ray Length"
+    text  "设置光线长度"
+    state machine
+}
+
 DreamWorldSpaceRaycaster:SetRayLength:Value {
     at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetRayLength:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamWorldSpaceRaycaster:SetTraceChannel {
+    at    Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h#DreamWorldSpaceRaycaster:SetTraceChannel
+    src   "Set Trace Channel"
+    text  "设置检测通道"
+    state machine
 }
 
 DreamWorldSpaceRaycaster:SetTraceChannel:Value {

@@ -9,6 +9,13 @@ DreamUINavigationStack {
     state machine
 }
 
+DreamUINavigationStack:GetActiveScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetActiveScope
+    src   "Get Active Scope"
+    text  "获取当前作用域"
+    state machine
+}
+
 DreamUINavigationStack:GetActiveScope:InUserIndex {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetActiveScope:InUserIndex
     src   "In User Index"
@@ -24,6 +31,13 @@ DreamUINavigationStack:GetActiveScope:ReturnValue {
     state draft
 }
 
+DreamUINavigationStack:GetEffectiveInputMode {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode
+    src   "Get Effective Input Mode"
+    text  "获取有效输入模式"
+    state machine
+}
+
 DreamUINavigationStack:GetEffectiveInputMode:InUserIndex {
     at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:GetEffectiveInputMode:InUserIndex
     src   "In User Index"
@@ -37,6 +51,13 @@ DreamUINavigationStack:GetEffectiveInputMode:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUINavigationStack:HandleBack {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h#DreamUINavigationStack:HandleBack
+    src   "Handle Back"
+    text  "处理返回"
+    state machine
 }
 
 DreamUINavigationStack:HandleBack:InUserIndex {

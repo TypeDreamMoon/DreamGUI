@@ -100,6 +100,13 @@ DreamKeyEventData:KeyEventType {
     state machine
 }
 
+DreamKeyEventData:SetHandled {
+    at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:SetHandled
+    src   "Set Handled"
+    text  "设置已处理"
+    state machine
+}
+
 DreamKeyEventData:UserIndex {
     at    Source/DreamGUI/Public/Event/DreamKeyEventData.h#DreamKeyEventData:UserIndex
     src   "User Index"

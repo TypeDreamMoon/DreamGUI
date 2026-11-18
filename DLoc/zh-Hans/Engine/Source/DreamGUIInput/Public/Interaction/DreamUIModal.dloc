@@ -24,6 +24,13 @@ DreamUIModalSubsystem {
     state machine
 }
 
+DreamUIModalSubsystem:CloseAllModals {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals
+    src   "Close All Modals"
+    text  "关闭所有模态"
+    state machine
+}
+
 DreamUIModalSubsystem:CloseAllModals:InResult {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseAllModals:InResult
     src   "In Result"
@@ -38,6 +45,13 @@ DreamUIModalSubsystem:CloseAllModals:InUserIndex {
     state machine
 }
 
+DreamUIModalSubsystem:CloseTopModal {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal
+    src   "Close Top Modal"
+    text  "关闭顶层模态"
+    state machine
+}
+
 DreamUIModalSubsystem:CloseTopModal:InResult {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal:InResult
     src   "In Result"
@@ -49,6 +63,13 @@ DreamUIModalSubsystem:CloseTopModal:InUserIndex {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:CloseTopModal:InUserIndex
     src   "In User Index"
     text  "用户索引"
+    state machine
+}
+
+DreamUIModalSubsystem:Get {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:Get
+    src   "Get DreamUI Modal Subsystem"
+    text  "获取 DreamUI 模态子系统"
     state machine
 }
 
@@ -68,6 +89,13 @@ DreamUIModalSubsystem:Get:WorldContextObject {
     state draft
 }
 
+DreamUIModalSubsystem:GetActiveModalWidget {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget
+    src   "Get Active Modal Widget"
+    text  "获取当前活动模态控件"
+    state machine
+}
+
 DreamUIModalSubsystem:GetActiveModalWidget:InUserIndex {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetActiveModalWidget:InUserIndex
     src   "In User Index"
@@ -81,6 +109,13 @@ DreamUIModalSubsystem:GetActiveModalWidget:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIModalSubsystem:GetModalDepth {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:GetModalDepth
+    src   "Get Modal Depth"
+    text  "获取模态深度"
+    state machine
 }
 
 DreamUIModalSubsystem:GetModalDepth:InUserIndex {
@@ -98,12 +133,26 @@ DreamUIModalSubsystem:GetModalDepth:ReturnValue {
     state draft
 }
 
+DreamUIModalSubsystem:IsAnyModalActive {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsAnyModalActive
+    src   "Is Any Modal Active"
+    text  "是否有模态激活"
+    state machine
+}
+
 DreamUIModalSubsystem:IsAnyModalActive:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsAnyModalActive:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIModalSubsystem:IsModalActive {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:IsModalActive
+    src   "Is Modal Active"
+    text  "模态是否激活"
+    state machine
 }
 
 DreamUIModalSubsystem:IsModalActive:InUserIndex {
@@ -119,6 +168,13 @@ DreamUIModalSubsystem:IsModalActive:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIModalSubsystem:ShowModal {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIModal.h#DreamUIModalSubsystem:ShowModal
+    src   "Show Modal"
+    text  "显示模态"
+    state machine
 }
 
 DreamUIModalSubsystem:ShowModal:InDialogClass {

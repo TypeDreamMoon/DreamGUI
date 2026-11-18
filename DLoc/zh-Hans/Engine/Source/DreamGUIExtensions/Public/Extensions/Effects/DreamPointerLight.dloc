@@ -52,6 +52,13 @@ DreamPointerLight:FollowSharpness {
     state machine
 }
 
+DreamPointerLight:GetCurrentIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentIntensity
+    src   "Get Current Intensity"
+    text  "获取当前强度"
+    state machine
+}
+
 DreamPointerLight:GetCurrentIntensity:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentIntensity:ReturnValue
     src   "Return Value"
@@ -60,12 +67,26 @@ DreamPointerLight:GetCurrentIntensity:ReturnValue {
     state draft
 }
 
+DreamPointerLight:GetCurrentPosition {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentPosition
+    src   "Get Current Position"
+    text  "获取当前位置"
+    state machine
+}
+
 DreamPointerLight:GetCurrentPosition:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetCurrentPosition:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerLight:GetLightPosition {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:GetLightPosition
+    src   "Get Light Position"
+    text  "获取光源位置"
+    state machine
 }
 
 DreamPointerLight:GetLightPosition:ReturnValue {
@@ -89,6 +110,14 @@ DreamPointerLight:Intensity {
     src   "Intensity"
     // from the engine's zh-Hans
     text  "强度"
+    state draft
+}
+
+DreamPointerLight:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
     state draft
 }
 
@@ -130,6 +159,14 @@ DreamPointerLight:Radius {
     state draft
 }
 
+DreamPointerLight:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
+    state draft
+}
+
 DreamPointerLight:SetEnabled:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetEnabled:Value
     src   "Value"
@@ -138,11 +175,26 @@ DreamPointerLight:SetEnabled:Value {
     state draft
 }
 
+DreamPointerLight:SetFollowPointer {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetFollowPointer
+    src   "Set Follow Pointer"
+    text  "设置跟随指针"
+    state machine
+}
+
 DreamPointerLight:SetFollowPointer:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetFollowPointer:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPointerLight:SetHeight {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetHeight
+    src   "Set Height"
+    // from the engine's zh-Hans
+    text  "设置高度"
     state draft
 }
 
@@ -154,11 +206,27 @@ DreamPointerLight:SetHeight:Value {
     state draft
 }
 
+DreamPointerLight:SetIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetIntensity
+    src   "Set Intensity"
+    // from the engine's zh-Hans
+    text  "设置强度"
+    state draft
+}
+
 DreamPointerLight:SetIntensity:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetIntensity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPointerLight:SetLightColor {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetLightColor
+    src   "Set Light Color"
+    // from the engine's zh-Hans
+    text  "设置光源颜色"
     state draft
 }
 
@@ -170,11 +238,26 @@ DreamPointerLight:SetLightColor:Value {
     state draft
 }
 
+DreamPointerLight:SetLightPosition {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetLightPosition
+    src   "Set Light Position"
+    text  "设置光源位置"
+    state machine
+}
+
 DreamPointerLight:SetLightPosition:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetLightPosition:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPointerLight:SetRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPointerLight.h#DreamPointerLight:SetRadius
+    src   "Set Radius"
+    // from the engine's zh-Hans
+    text  "设置半径"
     state draft
 }
 

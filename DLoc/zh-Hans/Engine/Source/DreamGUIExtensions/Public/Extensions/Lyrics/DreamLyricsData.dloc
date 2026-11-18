@@ -85,6 +85,13 @@ DreamLyricsLibrary {
     state machine
 }
 
+DreamLyricsLibrary:ParseLRC {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC
+    src   "Parse LRC"
+    text  "解析 LRC"
+    state machine
+}
+
 DreamLyricsLibrary:ParseLRC:OutLyrics {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC:OutLyrics
     src   "Out Lyrics"
@@ -106,6 +113,13 @@ DreamLyricsLibrary:ParseLRC:Text {
     // from the engine's zh-Hans
     text  "文本"
     state draft
+}
+
+DreamLyricsLibrary:ParseTTML {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML
+    src   "Parse TTML"
+    text  "解析 TTML"
+    state machine
 }
 
 DreamLyricsLibrary:ParseTTML:OutError {
@@ -209,11 +223,15 @@ DreamLyricLine:Translation {
 DreamLyricsLibrary:ParseLRC {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseLRC
     src   "Parse LRC: \"[mm:ss.xx]text\" lines, with inline <mm:ss.xx> word times when present (enhanced LRC).\nLine ends are the next line's start."
+    text  "解析 LRC：\"[mm:ss.xx]文本\" 形式的行，存在时带上行内的 <mm:ss.xx> 逐字时间（增强型 LRC）。\n一行的结束是下一行的开始。"
+    state draft
 }
 
 DreamLyricsLibrary:ParseTTML {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h#DreamLyricsLibrary:ParseTTML
     src   "Parse TTML of the kind Apple Music and AMLL use: <p begin end> lines of <span begin end> words,\nwith ttm:agent for the second voice, ttm:role=\"x-bg\" spans for backing vocals and\nttm:role=\"x-translation\" / \"x-roman\" spans for the secondary texts. A <p> without word spans\nbecomes one word spanning the line."
+    text  "解析 Apple Music 与 AMLL 使用的那种 TTML：<p begin end> 表示行，其中 <span begin end> 表示字，\nttm:agent 表示第二声部，ttm:role=\"x-bg\" 的 span 是伴唱，\nttm:role=\"x-translation\" / \"x-roman\" 的 span 是副文本。没有逐字 span 的 <p>\n会变成覆盖整行的一个字。"
+    state draft
 }
 
 DreamLyricWord {

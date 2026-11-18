@@ -9,6 +9,13 @@ DreamPointerClickInterface {
     state machine
 }
 
+DreamPointerClickInterface:OnPointerClick {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface:OnPointerClick
+    src   "On Pointer Click"
+    text  "指针点击时"
+    state machine
+}
+
 DreamPointerClickInterface:OnPointerClick:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h#DreamPointerClickInterface:OnPointerClick:EventData
     src   "Event Data"

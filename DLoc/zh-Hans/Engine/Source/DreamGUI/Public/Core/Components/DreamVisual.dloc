@@ -9,6 +9,13 @@ DreamVisual {
     state machine
 }
 
+DreamVisual:AlphaFrom {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom
+    src   "Alpha From"
+    text  "透明度起点"
+    state machine
+}
+
 DreamVisual:AlphaFrom:delay {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaFrom:delay
     src   "Delay"
@@ -47,6 +54,13 @@ DreamVisual:AlphaFrom:startValue {
     // from the engine's zh-Hans
     text  "Start Value"
     state draft
+}
+
+DreamVisual:AlphaTo {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:AlphaTo
+    src   "Alpha To"
+    text  "透明度终点"
+    state machine
 }
 
 DreamVisual:AlphaTo:delay {
@@ -104,6 +118,13 @@ DreamVisual:Color {
     state draft
 }
 
+DreamVisual:ColorFrom {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom
+    src   "Color From"
+    text  "颜色起点"
+    state machine
+}
+
 DreamVisual:ColorFrom:delay {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorFrom:delay
     src   "Delay"
@@ -142,6 +163,13 @@ DreamVisual:ColorFrom:startValue {
     // from the engine's zh-Hans
     text  "Start Value"
     state draft
+}
+
+DreamVisual:ColorTo {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:ColorTo
+    src   "Color To"
+    text  "颜色终点"
+    state machine
 }
 
 DreamVisual:ColorTo:delay {
@@ -191,12 +219,27 @@ DreamVisual:CustomRaycastObject {
     state machine
 }
 
+DreamVisual:GetAlpha {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetAlpha
+    src   "Get Alpha"
+    // from the engine's zh-Hans
+    text  "Get Alpha"
+    state draft
+}
+
 DreamVisual:GetAlpha:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetAlpha:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisual:GetColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetColor
+    src   "Get Color"
+    text  "获取颜色"
+    state machine
 }
 
 DreamVisual:GetColor:ReturnValue {
@@ -207,12 +250,26 @@ DreamVisual:GetColor:ReturnValue {
     state draft
 }
 
+DreamVisual:GetColorMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetColorMultiplier
+    src   "Get Color Multiplier"
+    text  "获取颜色倍增"
+    state machine
+}
+
 DreamVisual:GetColorMultiplier:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetColorMultiplier:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisual:GetCustomRaycastObject {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetCustomRaycastObject
+    src   "Get Custom Raycast Object"
+    text  "获取自定义射线投射对象"
+    state machine
 }
 
 DreamVisual:GetCustomRaycastObject:ReturnValue {
@@ -223,12 +280,26 @@ DreamVisual:GetCustomRaycastObject:ReturnValue {
     state draft
 }
 
+DreamVisual:GetFinalAlpha01 {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalAlpha01
+    src   "Get Final Alpha 01"
+    text  "获取最终不透明度（0-1）"
+    state machine
+}
+
 DreamVisual:GetFinalAlpha01:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalAlpha01:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisual:GetFinalColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetFinalColor
+    src   "Get Final Color"
+    text  "获取最终颜色"
+    state machine
 }
 
 DreamVisual:GetFinalColor:ReturnValue {
@@ -239,12 +310,26 @@ DreamVisual:GetFinalColor:ReturnValue {
     state draft
 }
 
+DreamVisual:GetRaycastTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetRaycastTarget
+    src   "Get Raycast Target"
+    text  "获取射线投射目标"
+    state machine
+}
+
 DreamVisual:GetRaycastTarget:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetRaycastTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisual:GetRaycastType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetRaycastType
+    src   "Get Raycast Type"
+    text  "获取射线投射类型"
+    state machine
 }
 
 DreamVisual:GetRaycastType:ReturnValue {
@@ -255,12 +340,26 @@ DreamVisual:GetRaycastType:ReturnValue {
     state draft
 }
 
+DreamVisual:GetVisualType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetVisualType
+    src   "Get Visual Type"
+    text  "获取视觉类型"
+    state machine
+}
+
 DreamVisual:GetVisualType:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:GetVisualType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisual:LineTraceUI {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:LineTraceUI
+    src   "Line Trace UI"
+    text  "对 UI 做射线检测"
+    state machine
 }
 
 DreamVisual:LineTraceUI:End {
@@ -302,11 +401,27 @@ DreamVisual:RaycastType {
     state machine
 }
 
+DreamVisual:SetAlpha {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetAlpha
+    src   "Set Alpha"
+    // from the engine's zh-Hans
+    text  "Set Alpha"
+    state draft
+}
+
 DreamVisual:SetAlpha:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetAlpha:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamVisual:SetColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColor
+    src   "Set Color"
+    // from the engine's zh-Hans
+    text  "设置颜色"
     state draft
 }
 
@@ -318,12 +433,26 @@ DreamVisual:SetColor:Value {
     state draft
 }
 
+DreamVisual:SetColorMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColorMultiplier
+    src   "Set Color Multiplier"
+    text  "设置颜色倍增"
+    state machine
+}
+
 DreamVisual:SetColorMultiplier:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetColorMultiplier:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisual:SetCustomRaycastObject {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetCustomRaycastObject
+    src   "Set Custom Raycast Object"
+    text  "设置自定义射线投射对象"
+    state machine
 }
 
 DreamVisual:SetCustomRaycastObject:Value {
@@ -334,12 +463,26 @@ DreamVisual:SetCustomRaycastObject:Value {
     state draft
 }
 
+DreamVisual:SetRaycastTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetRaycastTarget
+    src   "Set Raycast Target"
+    text  "设置射线投射目标"
+    state machine
+}
+
 DreamVisual:SetRaycastTarget:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetRaycastTarget:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisual:SetRaycastType {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisual:SetRaycastType
+    src   "Set Raycast Type"
+    text  "设置射线投射类型"
+    state machine
 }
 
 DreamVisual:SetRaycastType:Value {
@@ -361,6 +504,13 @@ DreamVisualCustomRaycast {
     at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast
     src   "Dream Visual Custom Raycast"
     text  "Dream Visual 自定义射线投射"
+    state machine
+}
+
+DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual
+    src   "Get Raycast Pixel from UIBatch Mesh Visual"
+    text  "从 UI 合批网格视觉获取射线命中像素"
     state machine
 }
 
@@ -418,6 +568,14 @@ DreamVisualCustomRaycast:GetRaycastPixelFromUIBatchMeshVisual:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamVisualCustomRaycast:ReceiveRaycast {
+    at    Source/DreamGUI/Public/Core/Components/DreamVisual.h#DreamVisualCustomRaycast:ReceiveRaycast
+    src   "Raycast"
+    // from the engine's zh-Hans
+    text  "光线投射"
     state draft
 }
 

@@ -9,6 +9,13 @@ DreamWidgetSubObjectBehaviour {
     state machine
 }
 
+DreamWidgetSubObjectBehaviour:GetPathDisplayName {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetPathDisplayName
+    src   "Get Path Display Name"
+    text  "获取路径显示名"
+    state machine
+}
+
 DreamWidgetSubObjectBehaviour:GetPathDisplayName:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetPathDisplayName:ReturnValue
     src   "Return Value"
@@ -22,6 +29,14 @@ DreamWidgetSubObjectBehaviour:GetPathDisplayName:StopOuter {
     src   "Stop Outer"
     text  "停止外部"
     state machine
+}
+
+DreamWidgetSubObjectBehaviour:GetWidget {
+    at    Source/DreamGUI/Public/Core/Components/DreamWidgetSubObjectBehaviour.h#DreamWidgetSubObjectBehaviour:GetWidget
+    src   "Get Widget"
+    // from the engine's zh-Hans
+    text  "获取控件"
+    state draft
 }
 
 DreamWidgetSubObjectBehaviour:GetWidget:ReturnValue {

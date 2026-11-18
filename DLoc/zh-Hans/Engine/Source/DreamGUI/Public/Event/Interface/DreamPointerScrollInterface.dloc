@@ -9,6 +9,13 @@ DreamPointerScrollInterface {
     state machine
 }
 
+DreamPointerScrollInterface:OnPointerScroll {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface:OnPointerScroll
+    src   "On Pointer Scroll"
+    text  "指针滚动时"
+    state machine
+}
+
 DreamPointerScrollInterface:OnPointerScroll:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h#DreamPointerScrollInterface:OnPointerScroll:EventData
     src   "Event Data"

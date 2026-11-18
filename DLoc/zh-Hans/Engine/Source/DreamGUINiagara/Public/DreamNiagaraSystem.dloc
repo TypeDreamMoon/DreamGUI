@@ -80,12 +80,27 @@ DreamNiagaraSystem {
     state draft
 }
 
+DreamNiagaraSystem:Activate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Activate
+    src   "Activate"
+    // from the engine's zh-Hans
+    text  "激活"
+    state draft
+}
+
 DreamNiagaraSystem:Activate:bReset {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Activate:bReset
     src   "Reset"
     // from the engine's zh-Hans
     text  "重设"
     state draft
+}
+
+DreamNiagaraSystem:Advance {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Advance
+    src   "Advance"
+    text  "推进"
+    state machine
 }
 
 DreamNiagaraSystem:Advance:InSeconds {
@@ -150,6 +165,13 @@ DreamNiagaraSystem:bTickWhenGamePaused {
     state machine
 }
 
+DreamNiagaraSystem:BurstAt {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstAt
+    src   "Burst At"
+    text  "在指定处爆发"
+    state machine
+}
+
 DreamNiagaraSystem:BurstAt:InLocalPosition {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstAt:InLocalPosition
     src   "In Local Position"
@@ -169,6 +191,13 @@ DreamNiagaraSystem:BurstComponents {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstComponents
     src   "Burst Components"
     text  "爆炸组件"
+    state machine
+}
+
+DreamNiagaraSystem:BurstTo {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:BurstTo
+    src   "Burst To"
+    text  "向指定处爆发"
     state machine
 }
 
@@ -202,11 +231,26 @@ DreamNiagaraSystem:bWriteUIParameters {
     state machine
 }
 
+DreamNiagaraSystem:ClearPointerPositionOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:ClearPointerPositionOverride
+    src   "Clear Pointer Position Override"
+    text  "清除指针位置覆盖"
+    state machine
+}
+
 DreamNiagaraSystem:Component {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Component
     src   "Component"
     // from the engine's zh-Hans
     text  "组件"
+    state draft
+}
+
+DreamNiagaraSystem:Deactivate {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:Deactivate
+    src   "Deactivate"
+    // from the engine's zh-Hans
+    text  "停用"
     state draft
 }
 
@@ -232,11 +276,27 @@ DreamNiagaraSystem:FlightSystem {
     state machine
 }
 
+DreamNiagaraSystem:GetNiagaraComponent {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetNiagaraComponent
+    src   "Get Niagara Component"
+    // from the engine's zh-Hans
+    text  "Get Niagara Component"
+    state draft
+}
+
 DreamNiagaraSystem:GetNiagaraComponent:ReturnValue {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetNiagaraComponent:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:GetSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetSystem
+    src   "Get System"
+    // from the engine's zh-Hans
+    text  "获取系统"
     state draft
 }
 
@@ -248,6 +308,13 @@ DreamNiagaraSystem:GetSystem:ReturnValue {
     state draft
 }
 
+DreamNiagaraSystem:GetTimeDilation {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetTimeDilation
+    src   "Get Time Dilation"
+    text  "获取时间膨胀"
+    state machine
+}
+
 DreamNiagaraSystem:GetTimeDilation:ReturnValue {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:GetTimeDilation:ReturnValue
     src   "Return Value"
@@ -256,11 +323,27 @@ DreamNiagaraSystem:GetTimeDilation:ReturnValue {
     state draft
 }
 
+DreamNiagaraSystem:IsActive {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:IsActive
+    src   "Is Active"
+    // from the engine's zh-Hans
+    text  "为激活"
+    state draft
+}
+
 DreamNiagaraSystem:IsActive:ReturnValue {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:IsActive:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamNiagaraSystem:IsPaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:IsPaused
+    src   "Is Paused"
+    // from the engine's zh-Hans
+    text  "已暂停"
     state draft
 }
 
@@ -318,6 +401,21 @@ DreamNiagaraSystem:RendererOverrides {
     state machine
 }
 
+DreamNiagaraSystem:ResetSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:ResetSystem
+    src   "Reset System"
+    // from the engine's zh-Hans
+    text  "重置系统"
+    state draft
+}
+
+DreamNiagaraSystem:SetBlendModeOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride
+    src   "Set Blend Mode Override"
+    text  "设置混合模式覆盖"
+    state machine
+}
+
 DreamNiagaraSystem:SetBlendModeOverride:bInOverride {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetBlendModeOverride:bInOverride
     src   "In Override"
@@ -334,10 +432,24 @@ DreamNiagaraSystem:SetBlendModeOverride:InBlendMode {
     state draft
 }
 
+DreamNiagaraSystem:SetDefaultShading {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetDefaultShading
+    src   "Set Default Shading"
+    text  "设置默认着色"
+    state machine
+}
+
 DreamNiagaraSystem:SetDefaultShading:InShading {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetDefaultShading:InShading
     src   "In Shading"
     text  "着色参数"
+    state machine
+}
+
+DreamNiagaraSystem:SetMaterialMap {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetMaterialMap
+    src   "Set Material Map"
+    text  "设置材质贴图"
     state machine
 }
 
@@ -349,12 +461,27 @@ DreamNiagaraSystem:SetMaterialMap:InMap {
     state draft
 }
 
+DreamNiagaraSystem:SetPaused {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPaused
+    src   "Set Paused"
+    // from the engine's zh-Hans
+    text  "设置暂停"
+    state draft
+}
+
 DreamNiagaraSystem:SetPaused:bInPaused {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPaused:bInPaused
     src   "In Paused"
     // from the engine's zh-Hans
     text  "在已暂停中"
     state draft
+}
+
+DreamNiagaraSystem:SetPixelsPerUnit {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPixelsPerUnit
+    src   "Set Pixels Per Unit"
+    text  "设置逐单元像素"
+    state machine
 }
 
 DreamNiagaraSystem:SetPixelsPerUnit:InPixelsPerUnit {
@@ -364,12 +491,26 @@ DreamNiagaraSystem:SetPixelsPerUnit:InPixelsPerUnit {
     state machine
 }
 
+DreamNiagaraSystem:SetPlane {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPlane
+    src   "Set Plane"
+    text  "设置平面"
+    state machine
+}
+
 DreamNiagaraSystem:SetPlane:InPlane {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPlane:InPlane
     src   "In Plane"
     // from the engine's zh-Hans
     text  "输入平面"
     state draft
+}
+
+DreamNiagaraSystem:SetPointerPositionOverride {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetPointerPositionOverride
+    src   "Set Pointer Position Override"
+    text  "设置指针位置覆盖"
+    state machine
 }
 
 DreamNiagaraSystem:SetPointerPositionOverride:bInInside {
@@ -386,11 +527,26 @@ DreamNiagaraSystem:SetPointerPositionOverride:InLocalPosition {
     state machine
 }
 
+DreamNiagaraSystem:SetRendererOverrides {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetRendererOverrides
+    src   "Set Renderer Overrides"
+    text  "设置渲染器覆盖"
+    state machine
+}
+
 DreamNiagaraSystem:SetRendererOverrides:InOverrides {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetRendererOverrides:InOverrides
     src   "In Overrides"
     text  "输入重载"
     state machine
+}
+
+DreamNiagaraSystem:SetSystem {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetSystem
+    src   "Set System"
+    // from the engine's zh-Hans
+    text  "设置系统"
+    state draft
 }
 
 DreamNiagaraSystem:SetSystem:InSystem {
@@ -401,10 +557,24 @@ DreamNiagaraSystem:SetSystem:InSystem {
     state draft
 }
 
+DreamNiagaraSystem:SetTimeDilation {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetTimeDilation
+    src   "Set Time Dilation"
+    text  "设置时间膨胀"
+    state machine
+}
+
 DreamNiagaraSystem:SetTimeDilation:InTimeDilation {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetTimeDilation:InTimeDilation
     src   "In Time Dilation"
     text  "输入时间膨胀"
+    state machine
+}
+
+DreamNiagaraSystem:SetVariableBool {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableBool
+    src   "Set Variable Bool"
+    text  "设置布尔变量"
     state machine
 }
 
@@ -424,6 +594,13 @@ DreamNiagaraSystem:SetVariableBool:InName {
     state draft
 }
 
+DreamNiagaraSystem:SetVariableFloat {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableFloat
+    src   "Set Variable Float"
+    text  "设置浮点变量"
+    state machine
+}
+
 DreamNiagaraSystem:SetVariableFloat:InName {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableFloat:InName
     src   "In Name"
@@ -438,6 +615,13 @@ DreamNiagaraSystem:SetVariableFloat:InValue {
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamNiagaraSystem:SetVariableInt {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableInt
+    src   "Set Variable Int"
+    text  "设置整数变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableInt:InName {
@@ -456,6 +640,13 @@ DreamNiagaraSystem:SetVariableInt:InValue {
     state draft
 }
 
+DreamNiagaraSystem:SetVariableLinearColor {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableLinearColor
+    src   "Set Variable Linear Color"
+    text  "设置线性颜色变量"
+    state machine
+}
+
 DreamNiagaraSystem:SetVariableLinearColor:InName {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableLinearColor:InName
     src   "In Name"
@@ -470,6 +661,13 @@ DreamNiagaraSystem:SetVariableLinearColor:InValue {
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamNiagaraSystem:SetVariableObject {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableObject
+    src   "Set Variable Object"
+    text  "设置对象变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableObject:InName {
@@ -488,6 +686,13 @@ DreamNiagaraSystem:SetVariableObject:InValue {
     state draft
 }
 
+DreamNiagaraSystem:SetVariableVec2 {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec2
+    src   "Set Variable Vec 2"
+    text  "设置二维向量变量"
+    state machine
+}
+
 DreamNiagaraSystem:SetVariableVec2:InName {
     at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec2:InName
     src   "In Name"
@@ -502,6 +707,13 @@ DreamNiagaraSystem:SetVariableVec2:InValue {
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamNiagaraSystem:SetVariableVec3 {
+    at    Source/DreamGUINiagara/Public/DreamNiagaraSystem.h#DreamNiagaraSystem:SetVariableVec3
+    src   "Set Variable Vec 3"
+    text  "设置三维向量变量"
+    state machine
 }
 
 DreamNiagaraSystem:SetVariableVec3:InName {

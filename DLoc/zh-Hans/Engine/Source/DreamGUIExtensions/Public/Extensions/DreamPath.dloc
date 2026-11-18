@@ -34,12 +34,26 @@ DreamPath:Curve {
     state draft
 }
 
+DreamPath:GetClosed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetClosed
+    src   "Get Closed"
+    text  "获取已关闭"
+    state machine
+}
+
 DreamPath:GetClosed:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetClosed:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPath:GetCurveType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetCurveType
+    src   "Get Curve Type"
+    text  "获取曲线类型"
+    state machine
 }
 
 DreamPath:GetCurveType:ReturnValue {
@@ -50,11 +64,26 @@ DreamPath:GetCurveType:ReturnValue {
     state draft
 }
 
+DreamPath:GetDrawLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetDrawLine
+    src   "Get Draw Line"
+    text  "获取绘制线条"
+    state machine
+}
+
 DreamPath:GetDrawLine:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetDrawLine:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPath:GetLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetLength
+    src   "Get Length"
+    // from the engine's zh-Hans
+    text  "获取长度"
     state draft
 }
 
@@ -64,6 +93,13 @@ DreamPath:GetLength:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPath:GetPointAtDistance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPointAtDistance
+    src   "Get Point at Distance"
+    text  "按距离获取点"
+    state machine
 }
 
 DreamPath:GetPointAtDistance:InDistance {
@@ -90,12 +126,26 @@ DreamPath:GetPointAtDistance:OutPoint {
     state draft
 }
 
+DreamPath:GetPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPoints
+    src   "Get Points"
+    text  "获取点"
+    state machine
+}
+
 DreamPath:GetPoints:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetPoints:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPath:GetSegmentsPerSpan {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:GetSegmentsPerSpan
+    src   "Get Segments Per Span"
+    text  "获取每段的线段数"
+    state machine
 }
 
 DreamPath:GetSegmentsPerSpan:ReturnValue {
@@ -121,12 +171,26 @@ DreamPath:SegmentsPerSpan {
     state machine
 }
 
+DreamPath:SetClosed {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetClosed
+    src   "Set Closed"
+    text  "设置已关闭"
+    state machine
+}
+
 DreamPath:SetClosed:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetClosed:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPath:SetCurveType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetCurveType
+    src   "Set Curve Type"
+    text  "设置曲线类型"
+    state machine
 }
 
 DreamPath:SetCurveType:Value {
@@ -137,12 +201,26 @@ DreamPath:SetCurveType:Value {
     state draft
 }
 
+DreamPath:SetDrawLine {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetDrawLine
+    src   "Set Draw Line"
+    text  "设置绘制线条"
+    state machine
+}
+
 DreamPath:SetDrawLine:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetDrawLine:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPath:SetPoint {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoint
+    src   "Set Point"
+    text  "设置点"
+    state machine
 }
 
 DreamPath:SetPoint:InIndex {
@@ -161,12 +239,26 @@ DreamPath:SetPoint:InPoint {
     state draft
 }
 
+DreamPath:SetPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoints
+    src   "Set Points"
+    text  "设置点"
+    state machine
+}
+
 DreamPath:SetPoints:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetPoints:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPath:SetSegmentsPerSpan {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPath.h#DreamPath:SetSegmentsPerSpan
+    src   "Set Segments Per Span"
+    text  "设置每段的线段数"
+    state machine
 }
 
 DreamPath:SetSegmentsPerSpan:Value {

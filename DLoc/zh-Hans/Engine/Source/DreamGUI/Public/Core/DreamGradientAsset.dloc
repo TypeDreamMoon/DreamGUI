@@ -9,6 +9,13 @@ DreamGradientAsset {
     state machine
 }
 
+DreamGradientAsset:GetGradient {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:GetGradient
+    src   "Get Gradient"
+    text  "获取渐变"
+    state machine
+}
+
 DreamGradientAsset:GetGradient:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:GetGradient:ReturnValue
     src   "Return Value"
@@ -23,6 +30,13 @@ DreamGradientAsset:Gradient {
     // from the engine's zh-Hans
     text  "Gradient"
     state draft
+}
+
+DreamGradientAsset:SetGradient {
+    at    Source/DreamGUI/Public/Core/DreamGradientAsset.h#DreamGradientAsset:SetGradient
+    src   "Set Gradient"
+    text  "设置渐变"
+    state machine
 }
 
 DreamGradientAsset:SetGradient:InGradient {

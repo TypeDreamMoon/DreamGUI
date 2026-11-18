@@ -175,12 +175,26 @@ DreamWidgetNavigation:Down {
     state draft
 }
 
+DreamWidgetNavigation:HasAnyRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasAnyRule
+    src   "Has Any Rule"
+    text  "是否有任何规则"
+    state machine
+}
+
 DreamWidgetNavigation:HasAnyRule:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasAnyRule:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWidgetNavigation:HasRuleFor {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:HasRuleFor
+    src   "Has Rule For"
+    text  "是否有对应规则"
+    state machine
 }
 
 DreamWidgetNavigation:HasRuleFor:InDirection {
@@ -231,6 +245,14 @@ DreamWidgetNavigation:Right {
     state draft
 }
 
+DreamWidgetNavigation:SetAllNavigationRules {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetAllNavigationRules
+    src   "Set All Navigation Rules"
+    // from the engine's zh-Hans
+    text  "设置所有导航规则"
+    state draft
+}
+
 DreamWidgetNavigation:SetAllNavigationRules:InRule {
     at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetAllNavigationRules:InRule
     src   "In Rule"
@@ -245,6 +267,13 @@ DreamWidgetNavigation:SetAllNavigationRules:InWidgetToFocus {
     // from the engine's zh-Hans
     text  "在要聚焦的控件中"
     state draft
+}
+
+DreamWidgetNavigation:SetCustomDelegate {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetCustomDelegate
+    src   "Set Custom Delegate"
+    text  "设置自定义委托"
+    state machine
 }
 
 DreamWidgetNavigation:SetCustomDelegate:InDelegate {
@@ -263,6 +292,13 @@ DreamWidgetNavigation:SetCustomDelegate:InDirection {
     state draft
 }
 
+DreamWidgetNavigation:SetExplicitTarget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetExplicitTarget
+    src   "Set Explicit Target"
+    text  "设置显式目标"
+    state machine
+}
+
 DreamWidgetNavigation:SetExplicitTarget:InDirection {
     at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetExplicitTarget:InDirection
     src   "In Direction"
@@ -276,6 +312,14 @@ DreamWidgetNavigation:SetExplicitTarget:InTarget {
     src   "In Target"
     // from the engine's zh-Hans
     text  "In Target"
+    state draft
+}
+
+DreamWidgetNavigation:SetNavigationRuleCustomBoundary {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetNavigationRuleCustomBoundary
+    src   "Set Navigation Rule Custom Boundary"
+    // from the engine's zh-Hans
+    text  "设置导航规则自定义边界"
     state draft
 }
 
@@ -293,6 +337,13 @@ DreamWidgetNavigation:SetNavigationRuleCustomBoundary:InDirection {
     // from the engine's zh-Hans
     text  "输入方向"
     state draft
+}
+
+DreamWidgetNavigation:SetRule {
+    at    Source/DreamGUI/Public/Core/DreamWidgetNavigation.h#DreamWidgetNavigation:SetRule
+    src   "Set Rule"
+    text  "设置规则"
+    state machine
 }
 
 DreamWidgetNavigation:SetRule:InDirection {

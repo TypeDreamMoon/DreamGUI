@@ -9,6 +9,28 @@ DreamTweenManager {
     state machine
 }
 
+DreamTweenManager:DisableTick {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:DisableTick
+    src   "Disable Tick"
+    // from the engine's zh-Hans
+    text  "禁用Tick"
+    state draft
+}
+
+DreamTweenManager:EnableTick {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:EnableTick
+    src   "Enable Tick"
+    text  "启用 Tick"
+    state machine
+}
+
+DreamTweenManager:GetDreamTweenInstance {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:GetDreamTweenInstance
+    src   "Get DreamTween Instance"
+    text  "获取 DreamTween 实例"
+    state machine
+}
+
 DreamTweenManager:GetDreamTweenInstance:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:GetDreamTweenInstance:ReturnValue
     src   "Return Value"
@@ -25,10 +47,24 @@ DreamTweenManager:GetDreamTweenInstance:WorldContextObject {
     state draft
 }
 
+DreamTweenManager:KillAllTweens {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweens
+    src   "Kill All Tweens"
+    text  "终止所有补间"
+    state machine
+}
+
 DreamTweenManager:KillAllTweens:callComplete {
     at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweens:callComplete
     src   "Call Complete"
     text  "Call Complete"
+    state machine
+}
+
+DreamTweenManager:KillAllTweensOnTarget {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:KillAllTweensOnTarget
+    src   "Kill All Tweens on Target"
+    text  "终止目标上的所有补间"
     state machine
 }
 
@@ -52,6 +88,14 @@ DreamTweenManager:KillAllTweensOnTarget:WorldContextObject {
     src   "World Context Object"
     // from the engine's zh-Hans
     text  "场景情境对象"
+    state draft
+}
+
+DreamTweenManager:ManualTick {
+    at    Source/DreamTween/Public/DreamTweenManager.h#DreamTweenManager:ManualTick
+    src   "Manual Tick"
+    // from the engine's zh-Hans
+    text  "手动tick"
     state draft
 }
 

@@ -54,11 +54,26 @@ DreamToggle:ClickMethod {
     state draft
 }
 
+DreamToggle:GetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetAcceptedMouseButtons
+    src   "Get Accepted Mouse Buttons"
+    text  "获取接受的鼠标按键"
+    state machine
+}
+
 DreamToggle:GetAcceptedMouseButtons:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetAcceptedMouseButtons:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamToggle:GetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetCheckedState
+    src   "Get Checked State"
+    // from the engine's zh-Hans
+    text  "获取已勾选状态"
     state draft
 }
 
@@ -70,12 +85,26 @@ DreamToggle:GetCheckedState:ReturnValue {
     state draft
 }
 
+DreamToggle:GetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetClickMethod
+    src   "Get Click Method"
+    text  "获取点击方法"
+    state machine
+}
+
 DreamToggle:GetClickMethod:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetClickMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamToggle:GetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetIsOn
+    src   "Get Is On"
+    text  "获取是否开启"
+    state machine
 }
 
 DreamToggle:GetIsOn:ReturnValue {
@@ -86,12 +115,26 @@ DreamToggle:GetIsOn:ReturnValue {
     state draft
 }
 
+DreamToggle:GetPressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetPressMethod
+    src   "Get Press Method"
+    text  "获取按压方法"
+    state machine
+}
+
 DreamToggle:GetPressMethod:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetPressMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamToggle:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamToggle:GetStyle:ReturnValue {
@@ -102,6 +145,13 @@ DreamToggle:GetStyle:ReturnValue {
     state draft
 }
 
+DreamToggle:GetTouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetTouchMethod
+    src   "Get Touch Method"
+    text  "获取触控方法"
+    state machine
+}
+
 DreamToggle:GetTouchMethod:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:GetTouchMethod:ReturnValue
     src   "Return Value"
@@ -110,11 +160,27 @@ DreamToggle:GetTouchMethod:ReturnValue {
     state draft
 }
 
+DreamToggle:IsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsChecked
+    src   "Is Checked"
+    // from the engine's zh-Hans
+    text  "已勾选"
+    state draft
+}
+
 DreamToggle:IsChecked:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsChecked:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamToggle:IsPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:IsPressed
+    src   "Is Pressed"
+    // from the engine's zh-Hans
+    text  "是否按下"
     state draft
 }
 
@@ -195,11 +261,26 @@ DreamToggle:PressMethod {
     state draft
 }
 
+DreamToggle:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetAcceptedMouseButtons
+    src   "Set Accepted Mouse Buttons"
+    text  "设置接受的鼠标按键"
+    state machine
+}
+
 DreamToggle:SetAcceptedMouseButtons:InAcceptedMouseButtons {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetAcceptedMouseButtons:InAcceptedMouseButtons
     src   "In Accepted Mouse Buttons"
     text  "传入的可接受鼠标按键"
     state machine
+}
+
+DreamToggle:SetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetCheckedState
+    src   "Set Checked State"
+    // from the engine's zh-Hans
+    text  "设置已勾选状态"
+    state draft
 }
 
 DreamToggle:SetCheckedState:InCheckedState {
@@ -210,11 +291,27 @@ DreamToggle:SetCheckedState:InCheckedState {
     state draft
 }
 
+DreamToggle:SetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetClickMethod
+    src   "Set Click Method"
+    // from the engine's zh-Hans
+    text  "设置点击方法"
+    state draft
+}
+
 DreamToggle:SetClickMethod:InMethod {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetClickMethod:InMethod
     src   "In Method"
     text  "传入的方法"
     state machine
+}
+
+DreamToggle:SetIsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsChecked
+    src   "Set Is Checked"
+    // from the engine's zh-Hans
+    text  "设置已勾选"
+    state draft
 }
 
 DreamToggle:SetIsChecked:bInIsChecked {
@@ -225,11 +322,26 @@ DreamToggle:SetIsChecked:bInIsChecked {
     state draft
 }
 
+DreamToggle:SetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsOn
+    src   "Set Is On"
+    text  "设置是否开启"
+    state machine
+}
+
 DreamToggle:SetIsOn:bInIsOn {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetIsOn:bInIsOn
     src   "In Is On"
     text  "输入是否开启"
     state machine
+}
+
+DreamToggle:SetPressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetPressMethod
+    src   "Set Press Method"
+    // from the engine's zh-Hans
+    text  "设置按压方法"
+    state draft
 }
 
 DreamToggle:SetPressMethod:InMethod {
@@ -239,11 +351,27 @@ DreamToggle:SetPressMethod:InMethod {
     state machine
 }
 
+DreamToggle:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamToggle:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamToggle:SetTouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamToggle.h#DreamToggle:SetTouchMethod
+    src   "Set Touch Method"
+    // from the engine's zh-Hans
+    text  "设置触控方法"
     state draft
 }
 

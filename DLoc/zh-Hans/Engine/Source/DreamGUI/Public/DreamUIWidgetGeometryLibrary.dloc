@@ -53,6 +53,13 @@ DreamUIWidgetGeometryLibrary {
     state machine
 }
 
+DreamUIWidgetGeometryLibrary:AbsoluteToLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal
+    src   "Absolute to Local"
+    text  "绝对转局部"
+    state machine
+}
+
 DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InAbsoluteCoordinate {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToLocal:InAbsoluteCoordinate
     src   "In Absolute Coordinate"
@@ -79,6 +86,14 @@ DreamUIWidgetGeometryLibrary:AbsoluteToLocal:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:AbsoluteToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:AbsoluteToViewport
+    src   "Absolute to Viewport"
+    // from the engine's zh-Hans
+    text  "绝对到视口"
     state draft
 }
 
@@ -119,6 +134,14 @@ DreamUIWidgetGeometryLibrary:AbsoluteToViewport:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:GetAbsoluteSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize
+    src   "Get Absolute Size"
+    // from the engine's zh-Hans
+    text  "获取绝对大小"
+    state draft
+}
+
 DreamUIWidgetGeometryLibrary:GetAbsoluteSize:InGeometry {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetAbsoluteSize:InGeometry
     src   "In Geometry"
@@ -141,6 +164,14 @@ DreamUIWidgetGeometryLibrary:GetAbsoluteSize:ReturnValue {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:GetLocalSize {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalSize
+    src   "Get Local Size"
+    // from the engine's zh-Hans
+    text  "获取本地大小"
+    state draft
+}
+
 DreamUIWidgetGeometryLibrary:GetLocalSize:InGeometry {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalSize:InGeometry
     src   "In Geometry"
@@ -153,6 +184,14 @@ DreamUIWidgetGeometryLibrary:GetLocalSize:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:GetLocalTopLeft {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetLocalTopLeft
+    src   "Get Local Top Left"
+    // from the engine's zh-Hans
+    text  "获取本地左上"
     state draft
 }
 
@@ -171,6 +210,13 @@ DreamUIWidgetGeometryLibrary:GetLocalTopLeft:ReturnValue {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:GetWidgetGeometry {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetWidgetGeometry
+    src   "Get Widget Geometry"
+    text  "获取控件几何"
+    state machine
+}
+
 DreamUIWidgetGeometryLibrary:GetWidgetGeometry:InWidget {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:GetWidgetGeometry:InWidget
     src   "In Widget"
@@ -184,6 +230,14 @@ DreamUIWidgetGeometryLibrary:GetWidgetGeometry:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:IsUnderLocation {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:IsUnderLocation
+    src   "Is Under Location"
+    // from the engine's zh-Hans
+    text  "为下位置"
     state draft
 }
 
@@ -207,6 +261,13 @@ DreamUIWidgetGeometryLibrary:IsUnderLocation:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIWidgetGeometryLibrary:LocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToAbsolute
+    src   "Local to Absolute"
+    text  "局部转绝对"
+    state machine
 }
 
 DreamUIWidgetGeometryLibrary:LocalToAbsolute:InGeometry {
@@ -235,6 +296,14 @@ DreamUIWidgetGeometryLibrary:LocalToAbsolute:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:LocalToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:LocalToViewport
+    src   "Local to Viewport"
+    // from the engine's zh-Hans
+    text  "本地到视口"
     state draft
 }
 
@@ -282,6 +351,14 @@ DreamUIWidgetGeometryLibrary:LocalToViewport:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:ScreenToViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport
+    src   "Screen to Viewport"
+    // from the engine's zh-Hans
+    text  "屏幕到视口"
+    state draft
+}
+
 DreamUIWidgetGeometryLibrary:ScreenToViewport:InScreenPosition {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToViewport:InScreenPosition
     src   "In Screen Position"
@@ -313,6 +390,13 @@ DreamUIWidgetGeometryLibrary:ScreenToViewport:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute
+    src   "Screen to Widget Absolute"
+    text  "屏幕坐标转控件绝对坐标"
+    state machine
+}
+
 DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:InScreenPosition {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:InScreenPosition
     src   "In Screen Position"
@@ -334,6 +418,13 @@ DreamUIWidgetGeometryLibrary:ScreenToWidgetAbsolute:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal
+    src   "Screen to Widget Local"
+    text  "屏幕坐标转控件局部坐标"
+    state machine
 }
 
 DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:InGeometry {
@@ -366,6 +457,14 @@ DreamUIWidgetGeometryLibrary:ScreenToWidgetLocal:ReturnValue {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal
+    src   "Transform Scalar Absolute to Local"
+    // from the engine's zh-Hans
+    text  "变换标量绝对到本地"
+    state draft
+}
+
 DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InAbsoluteScalar {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:InAbsoluteScalar
     src   "In Absolute Scalar"
@@ -392,6 +491,14 @@ DreamUIWidgetGeometryLibrary:TransformScalarAbsoluteToLocal:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute
+    src   "Transform Scalar Local to Absolute"
+    // from the engine's zh-Hans
+    text  "变换标量本地到绝对"
     state draft
 }
 
@@ -424,6 +531,14 @@ DreamUIWidgetGeometryLibrary:TransformScalarLocalToAbsolute:ReturnValue {
     state draft
 }
 
+DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal
+    src   "Transform Vector Absolute to Local"
+    // from the engine's zh-Hans
+    text  "变换向量绝对到本地"
+    state draft
+}
+
 DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InAbsoluteVector {
     at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:InAbsoluteVector
     src   "In Absolute Vector"
@@ -450,6 +565,14 @@ DreamUIWidgetGeometryLibrary:TransformVectorAbsoluteToLocal:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute {
+    at    Source/DreamGUI/Public/DreamUIWidgetGeometryLibrary.h#DreamUIWidgetGeometryLibrary:TransformVectorLocalToAbsolute
+    src   "Transform Vector Local to Absolute"
+    // from the engine's zh-Hans
+    text  "变换向量本地到绝对"
     state draft
 }
 

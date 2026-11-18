@@ -39,10 +39,33 @@ DreamMenuAnchor:bPopupElevated {
     state machine
 }
 
+DreamMenuAnchor:Close {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Close
+    src   "Close"
+    // from the engine's zh-Hans
+    text  "Close"
+    state draft
+}
+
+DreamMenuAnchor:FitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:FitInWindow
+    src   "Fit in Window"
+    // from the engine's zh-Hans
+    text  "适应窗口"
+    state draft
+}
+
 DreamMenuAnchor:FitInWindow:bInFitInWindow {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:FitInWindow:bInFitInWindow
     src   "In Fit in Window"
     text  "是否适应窗口"
+    state machine
+}
+
+DreamMenuAnchor:GetCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetCloseOnClickOutside
+    src   "Get Close on Click Outside"
+    text  "获取点击外部区域关闭"
     state machine
 }
 
@@ -54,6 +77,13 @@ DreamMenuAnchor:GetCloseOnClickOutside:ReturnValue {
     state draft
 }
 
+DreamMenuAnchor:GetFitInWindow {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetFitInWindow
+    src   "Get Fit in Window"
+    text  "获取适应窗口"
+    state machine
+}
+
 DreamMenuAnchor:GetFitInWindow:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetFitInWindow:ReturnValue
     src   "Return Value"
@@ -62,11 +92,26 @@ DreamMenuAnchor:GetFitInWindow:ReturnValue {
     state draft
 }
 
+DreamMenuAnchor:GetMenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuClass
+    src   "Get Menu Class"
+    text  "获取菜单类"
+    state machine
+}
+
 DreamMenuAnchor:GetMenuClass:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuClass:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:GetMenuPosition {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuPosition
+    src   "Get Menu Position"
+    // from the engine's zh-Hans
+    text  "获取菜单位置"
     state draft
 }
 
@@ -78,12 +123,26 @@ DreamMenuAnchor:GetMenuPosition:ReturnValue {
     state draft
 }
 
+DreamMenuAnchor:GetMenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuSize
+    src   "Get Menu Size"
+    text  "获取菜单大小"
+    state machine
+}
+
 DreamMenuAnchor:GetMenuSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetMenuSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMenuAnchor:GetPlacement {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetPlacement
+    src   "Get Placement"
+    text  "获取放置"
+    state machine
 }
 
 DreamMenuAnchor:GetPlacement:ReturnValue {
@@ -94,6 +153,13 @@ DreamMenuAnchor:GetPlacement:ReturnValue {
     state draft
 }
 
+DreamMenuAnchor:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamMenuAnchor:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:GetStyle:ReturnValue
     src   "Return Value"
@@ -102,11 +168,27 @@ DreamMenuAnchor:GetStyle:ReturnValue {
     state draft
 }
 
+DreamMenuAnchor:HasOpenSubMenus {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:HasOpenSubMenus
+    src   "Has Open Sub Menus"
+    // from the engine's zh-Hans
+    text  "已打开子菜单"
+    state draft
+}
+
 DreamMenuAnchor:HasOpenSubMenus:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:HasOpenSubMenus:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamMenuAnchor:IsOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:IsOpen
+    src   "Is Open"
+    // from the engine's zh-Hans
+    text  "已打开"
     state draft
 }
 
@@ -163,6 +245,14 @@ DreamMenuAnchor:OnMenuOpenChanged {
     state draft
 }
 
+DreamMenuAnchor:Open {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Open
+    src   "Open"
+    // from the engine's zh-Hans
+    text  "打开"
+    state draft
+}
+
 DreamMenuAnchor:Open:bFocusMenu {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:Open:bFocusMenu
     src   "Focus Menu"
@@ -185,10 +275,24 @@ DreamMenuAnchor:ProvidedMenuContent {
     state machine
 }
 
+DreamMenuAnchor:SetCloseOnClickOutside {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetCloseOnClickOutside
+    src   "Set Close on Click Outside"
+    text  "设置点击外部区域关闭"
+    state machine
+}
+
 DreamMenuAnchor:SetCloseOnClickOutside:bInCloseOnClickOutside {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetCloseOnClickOutside:bInCloseOnClickOutside
     src   "In Close on Click Outside"
     text  "是否在点击外部区域时关闭"
+    state machine
+}
+
+DreamMenuAnchor:SetMenuClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuClass
+    src   "Set Menu Class"
+    text  "设置菜单类"
     state machine
 }
 
@@ -199,11 +303,26 @@ DreamMenuAnchor:SetMenuClass:InMenuClass {
     state machine
 }
 
+DreamMenuAnchor:SetMenuSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuSize
+    src   "Set Menu Size"
+    text  "设置菜单大小"
+    state machine
+}
+
 DreamMenuAnchor:SetMenuSize:InMenuSize {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetMenuSize:InMenuSize
     src   "In Menu Size"
     text  "菜单大小"
     state machine
+}
+
+DreamMenuAnchor:SetPlacement {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetPlacement
+    src   "Set Placement"
+    // from the engine's zh-Hans
+    text  "设置放置"
+    state draft
 }
 
 DreamMenuAnchor:SetPlacement:InPlacement {
@@ -214,11 +333,27 @@ DreamMenuAnchor:SetPlacement:InPlacement {
     state draft
 }
 
+DreamMenuAnchor:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamMenuAnchor:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamMenuAnchor:ShouldOpenDueToClick {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ShouldOpenDueToClick
+    src   "Should Open Due to Click"
+    // from the engine's zh-Hans
+    text  "应在点击时打开"
     state draft
 }
 
@@ -235,6 +370,14 @@ DreamMenuAnchor:Style {
     src   "Style"
     // from the engine's zh-Hans
     text  "样式"
+    state draft
+}
+
+DreamMenuAnchor:ToggleOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h#DreamMenuAnchor:ToggleOpen
+    src   "Toggle Open"
+    // from the engine's zh-Hans
+    text  "切换开启"
     state draft
 }
 

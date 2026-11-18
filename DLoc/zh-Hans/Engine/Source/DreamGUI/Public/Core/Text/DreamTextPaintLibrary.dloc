@@ -9,6 +9,13 @@ DreamTextPaintLibrary {
     state machine
 }
 
+DreamTextPaintLibrary:PaintAngleTo {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo
+    src   "Paint Angle To"
+    text  "绘制角度终点"
+    state machine
+}
+
 DreamTextPaintLibrary:PaintAngleTo:Delay {
     at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintAngleTo:Delay
     src   "Delay"
@@ -55,6 +62,13 @@ DreamTextPaintLibrary:PaintAngleTo:To {
     // from the engine's zh-Hans
     text  "到"
     state draft
+}
+
+DreamTextPaintLibrary:PaintPhaseTo {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PaintPhaseTo
+    src   "Paint Phase To"
+    text  "绘制相位终点"
+    state machine
 }
 
 DreamTextPaintLibrary:PaintPhaseTo:Delay {
@@ -111,6 +125,13 @@ DreamTextPaintLibrary:PaintPhaseTo:To {
     // from the engine's zh-Hans
     text  "到"
     state draft
+}
+
+DreamTextPaintLibrary:PlayShimmer {
+    at    Source/DreamGUI/Public/Core/Text/DreamTextPaintLibrary.h#DreamTextPaintLibrary:PlayShimmer
+    src   "Play Shimmer"
+    text  "播放微光"
+    state machine
 }
 
 DreamTextPaintLibrary:PlayShimmer:Delay {

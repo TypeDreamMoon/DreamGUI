@@ -1308,6 +1308,13 @@ DreamListRowDropTarget {
     state machine
 }
 
+DreamListRowDropTarget:HandleDragEnter {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragEnter
+    src   "Handle Drag Enter"
+    text  "处理拖拽进入"
+    state machine
+}
+
 DreamListRowDropTarget:HandleDragEnter:InOperation {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragEnter:InOperation
     src   "In Operation"
@@ -1316,12 +1323,26 @@ DreamListRowDropTarget:HandleDragEnter:InOperation {
     state draft
 }
 
+DreamListRowDropTarget:HandleDragLeave {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragLeave
+    src   "Handle Drag Leave"
+    text  "处理拖拽离开"
+    state machine
+}
+
 DreamListRowDropTarget:HandleDragLeave:InOperation {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragLeave:InOperation
     src   "In Operation"
     // from the engine's zh-Hans
     text  "输入运算"
     state draft
+}
+
+DreamListRowDropTarget:HandleDragOver {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListRowDropTarget:HandleDragOver
+    src   "Handle Drag Over"
+    text  "处理拖拽悬停"
+    state machine
 }
 
 DreamListRowDropTarget:HandleDragOver:InOperation {
@@ -1400,11 +1421,26 @@ DreamListView {
     state machine
 }
 
+DreamListView:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamListView:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListView:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
     state draft
 }
 
@@ -1438,11 +1474,27 @@ DreamListViewBase:ActiveDragOperation {
     state machine
 }
 
+DreamListViewBase:AddItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItem
+    src   "Add Item"
+    // from the engine's zh-Hans
+    text  "添加项目"
+    state draft
+}
+
 DreamListViewBase:AddItem:InItem {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItem:InItem
     src   "In Item"
     // from the engine's zh-Hans
     text  "输入项目"
+    state draft
+}
+
+DreamListViewBase:AddItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemAt
+    src   "Add Item At"
+    // from the engine's zh-Hans
+    text  "Add Item At"
     state draft
 }
 
@@ -1461,11 +1513,27 @@ DreamListViewBase:AddItemAt:InItemIndex {
     state machine
 }
 
+DreamListViewBase:AddItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItems
+    src   "Add Items"
+    // from the engine's zh-Hans
+    text  "添加项目"
+    state draft
+}
+
 DreamListViewBase:AddItems:InItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItems:InItems
     src   "In Items"
     // from the engine's zh-Hans
     text  "输入项"
+    state draft
+}
+
+DreamListViewBase:AddItemsAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddItemsAt
+    src   "Add Items At"
+    // from the engine's zh-Hans
+    text  "Add Items At"
     state draft
 }
 
@@ -1482,6 +1550,13 @@ DreamListViewBase:AddItemsAt:InItems {
     // from the engine's zh-Hans
     text  "输入项"
     state draft
+}
+
+DreamListViewBase:AddTextItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:AddTextItem
+    src   "Add Text Item"
+    text  "添加文本条目"
+    state machine
 }
 
 DreamListViewBase:AddTextItem:InItem {
@@ -1640,11 +1715,35 @@ DreamListViewBase:bVirtualizing {
     state machine
 }
 
+DreamListViewBase:CancelListViewDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:CancelListViewDragDrop
+    src   "Cancel List View Drag Drop"
+    // from the engine's zh-Hans
+    text  "Cancel List View Drag Drop"
+    state draft
+}
+
 DreamListViewBase:CancelListViewDragDrop:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:CancelListViewDragDrop:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:ClearListItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ClearListItems
+    src   "Clear List Items"
+    // from the engine's zh-Hans
+    text  "清除列出项目"
+    state draft
+}
+
+DreamListViewBase:ClearSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ClearSelection
+    src   "Clear Selection"
+    // from the engine's zh-Hans
+    text  "清除选择"
     state draft
 }
 
@@ -1716,6 +1815,14 @@ DreamListViewBase:DragOperationTag {
     state machine
 }
 
+DreamListViewBase:EndInertialScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:EndInertialScrolling
+    src   "End Inertial Scrolling"
+    // from the engine's zh-Hans
+    text  "End Inertial Scrolling"
+    state draft
+}
+
 DreamListViewBase:FaceNode {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FaceNode
     src   "Face Node"
@@ -1738,12 +1845,26 @@ DreamListViewBase:FixedLineScrollOffset {
     state draft
 }
 
+DreamListViewBase:FocusSelectedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FocusSelectedRow
+    src   "Focus Selected Row"
+    text  "聚焦选中行"
+    state machine
+}
+
 DreamListViewBase:FocusSelectedRow:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:FocusSelectedRow:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragDrop
+    src   "Get Allow Drag Drop"
+    text  "获取允许拖放"
+    state machine
 }
 
 DreamListViewBase:GetAllowDragDrop:ReturnValue {
@@ -1754,12 +1875,26 @@ DreamListViewBase:GetAllowDragDrop:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetAllowDragging {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragging
+    src   "Get Allow Dragging"
+    text  "获取允许拖动"
+    state machine
+}
+
 DreamListViewBase:GetAllowDragging:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowDragging:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetAllowKeepPreselectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowKeepPreselectedItems
+    src   "Get Allow Keep Preselected Items"
+    text  "获取允许保留预选项"
+    state machine
 }
 
 DreamListViewBase:GetAllowKeepPreselectedItems:ReturnValue {
@@ -1770,12 +1905,26 @@ DreamListViewBase:GetAllowKeepPreselectedItems:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowOverscroll
+    src   "Get Allow Overscroll"
+    text  "获取允许过度滚动"
+    state machine
+}
+
 DreamListViewBase:GetAllowOverscroll:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAllowOverscroll:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetAlternatingRowColors {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetAlternatingRowColors
+    src   "Get Alternating Row Colors"
+    text  "获取交替行颜色"
+    state machine
 }
 
 DreamListViewBase:GetAlternatingRowColors:ReturnValue {
@@ -1786,12 +1935,26 @@ DreamListViewBase:GetAlternatingRowColors:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetClearScrollVelocityOnSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetClearScrollVelocityOnSelection
+    src   "Get Clear Scroll Velocity on Selection"
+    text  "获取清除选择时的滚动速度"
+    state machine
+}
+
 DreamListViewBase:GetClearScrollVelocityOnSelection:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetClearScrollVelocityOnSelection:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetConsumeMouseWheel
+    src   "Get Consume Mouse Wheel"
+    text  "获取消耗鼠标滚轮"
+    state machine
 }
 
 DreamListViewBase:GetConsumeMouseWheel:ReturnValue {
@@ -1802,12 +1965,26 @@ DreamListViewBase:GetConsumeMouseWheel:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetDragEdgeScrollBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDragEdgeScrollBandSize
+    src   "Get Drag Edge Scroll Band Size"
+    text  "获取拖动边缘滚动条大小"
+    state machine
+}
+
 DreamListViewBase:GetDragEdgeScrollBandSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDragEdgeScrollBandSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetDragEdgeScrollSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDragEdgeScrollSpeed
+    src   "Get Drag Edge Scroll Speed"
+    text  "获取拖动边缘滚动速度"
+    state machine
 }
 
 DreamListViewBase:GetDragEdgeScrollSpeed:ReturnValue {
@@ -1818,12 +1995,26 @@ DreamListViewBase:GetDragEdgeScrollSpeed:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetDraggedItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDraggedItemIndex
+    src   "Get Dragged Item Index"
+    text  "获取拖拽条目索引"
+    state machine
+}
+
 DreamListViewBase:GetDraggedItemIndex:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetDraggedItemIndex:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetEnableDragEdgeScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableDragEdgeScrolling
+    src   "Get Enable Drag Edge Scrolling"
+    text  "获取启用边缘滚动"
+    state machine
 }
 
 DreamListViewBase:GetEnableDragEdgeScrolling:ReturnValue {
@@ -1834,12 +2025,26 @@ DreamListViewBase:GetEnableDragEdgeScrolling:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetEnableFixedLineOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableFixedLineOffset
+    src   "Get Enable Fixed Line Offset"
+    text  "获取启用固定行偏移"
+    state machine
+}
+
 DreamListViewBase:GetEnableFixedLineOffset:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableFixedLineOffset:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetEnableRightClickScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableRightClickScrolling
+    src   "Get Enable Right Click Scrolling"
+    text  "获取启用右键点击滚动"
+    state machine
 }
 
 DreamListViewBase:GetEnableRightClickScrolling:ReturnValue {
@@ -1850,12 +2055,26 @@ DreamListViewBase:GetEnableRightClickScrolling:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetEnableScrollAnimation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableScrollAnimation
+    src   "Get Enable Scroll Animation"
+    text  "获取启用滚动动画"
+    state machine
+}
+
 DreamListViewBase:GetEnableScrollAnimation:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableScrollAnimation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetEnableShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableShadowBrush
+    src   "Get Enable Shadow Brush"
+    text  "获取启用阴影笔刷"
+    state machine
 }
 
 DreamListViewBase:GetEnableShadowBrush:ReturnValue {
@@ -1866,12 +2085,26 @@ DreamListViewBase:GetEnableShadowBrush:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetEnableTouchAnimatedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableTouchAnimatedScrolling
+    src   "Get Enable Touch Animated Scrolling"
+    text  "获取启用触摸带动画的滚动"
+    state machine
+}
+
 DreamListViewBase:GetEnableTouchAnimatedScrolling:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableTouchAnimatedScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetEnableTouchScrolling
+    src   "Get Enable Touch Scrolling"
+    text  "获取启用触摸滚动"
+    state machine
 }
 
 DreamListViewBase:GetEnableTouchScrolling:ReturnValue {
@@ -1882,6 +2115,13 @@ DreamListViewBase:GetEnableTouchScrolling:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetFingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFingerDrag
+    src   "Get Finger Drag"
+    text  "获取手指拖动"
+    state machine
+}
+
 DreamListViewBase:GetFingerDrag:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFingerDrag:ReturnValue
     src   "Return Value"
@@ -1890,11 +2130,26 @@ DreamListViewBase:GetFingerDrag:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetFixedLineScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFixedLineScrollOffset
+    src   "Get Fixed Line Scroll Offset"
+    text  "获取固定行滚动偏移"
+    state machine
+}
+
 DreamListViewBase:GetFixedLineScrollOffset:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetFixedLineScrollOffset:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetIndexForItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIndexForItem
+    src   "Get Index for Item"
+    // from the engine's zh-Hans
+    text  "获取项目的索引"
     state draft
 }
 
@@ -1914,12 +2169,27 @@ DreamListViewBase:GetIndexForItem:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetIsDraggingListItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsDraggingListItem
+    src   "Get Is Dragging List Item"
+    // from the engine's zh-Hans
+    text  "Get Is Dragging List Item"
+    state draft
+}
+
 DreamListViewBase:GetIsDraggingListItem:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsDraggingListItem:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsGamepadScrollingEnabled
+    src   "Get Is Gamepad Scrolling Enabled"
+    text  "获取是否游戏手柄滚动已启用"
+    state machine
 }
 
 DreamListViewBase:GetIsGamepadScrollingEnabled:ReturnValue {
@@ -1930,11 +2200,26 @@ DreamListViewBase:GetIsGamepadScrollingEnabled:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsPointerScrollingEnabled
+    src   "Get Is Pointer Scrolling Enabled"
+    text  "获取是否启用指针滚动"
+    state machine
+}
+
 DreamListViewBase:GetIsPointerScrollingEnabled:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetIsPointerScrollingEnabled:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemAt
+    src   "Get Item At"
+    // from the engine's zh-Hans
+    text  "获取此处项目"
     state draft
 }
 
@@ -1953,6 +2238,13 @@ DreamListViewBase:GetItemAt:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetItemCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemCount
+    src   "Get Item Count"
+    text  "获取条目数"
+    state machine
+}
+
 DreamListViewBase:GetItemCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItemCount:ReturnValue
     src   "Return Value"
@@ -1961,11 +2253,26 @@ DreamListViewBase:GetItemCount:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItems
+    src   "Get Items"
+    text  "获取项目"
+    state machine
+}
+
 DreamListViewBase:GetItems:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetItems:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetListItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetListItems
+    src   "Get List Items"
+    // from the engine's zh-Hans
+    text  "获取列出项目"
     state draft
 }
 
@@ -1977,11 +2284,27 @@ DreamListViewBase:GetListItems:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetNumItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItems
+    src   "Get Num Items"
+    // from the engine's zh-Hans
+    text  "获取项目数"
+    state draft
+}
+
 DreamListViewBase:GetNumItems:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItems:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetNumItemsSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetNumItemsSelected
+    src   "Get Num Items Selected"
+    // from the engine's zh-Hans
+    text  "获取选定项目数"
     state draft
 }
 
@@ -1993,11 +2316,26 @@ DreamListViewBase:GetNumItemsSelected:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOrientation
+    src   "Get Orientation"
+    text  "获取朝向"
+    state machine
+}
+
 DreamListViewBase:GetOrientation:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOrientation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetOverscroll
+    src   "Get Overscroll"
+    // from the engine's zh-Hans
+    text  "Get Overscroll"
     state draft
 }
 
@@ -2009,12 +2347,26 @@ DreamListViewBase:GetOverscroll:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetRealizedRowCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRealizedRowCount
+    src   "Get Realized Row Count"
+    text  "获取已实现行数"
+    state machine
+}
+
 DreamListViewBase:GetRealizedRowCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRealizedRowCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetReturnFocusToSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetReturnFocusToSelection
+    src   "Get Return Focus to Selection"
+    text  "获取将聚焦返回选项"
+    state machine
 }
 
 DreamListViewBase:GetReturnFocusToSelection:ReturnValue {
@@ -2025,12 +2377,26 @@ DreamListViewBase:GetReturnFocusToSelection:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetRowCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowCount
+    src   "Get Row Count"
+    text  "获取行数"
+    state machine
+}
+
 DreamListViewBase:GetRowCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetRowItemIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowItemIndex
+    src   "Get Row Item Index"
+    text  "获取行条目索引"
+    state machine
 }
 
 DreamListViewBase:GetRowItemIndex:InPoolIndex {
@@ -2048,12 +2414,26 @@ DreamListViewBase:GetRowItemIndex:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetRowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowTemplateClass
+    src   "Get Row Template Class"
+    text  "获取行模板类"
+    state machine
+}
+
 DreamListViewBase:GetRowTemplateClass:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowTemplateClass:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetRowWidget {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetRowWidget
+    src   "Get Row Widget"
+    text  "获取行控件"
+    state machine
 }
 
 DreamListViewBase:GetRowWidget:InItemIndex {
@@ -2071,12 +2451,26 @@ DreamListViewBase:GetRowWidget:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollBarVisibility
+    src   "Get Scroll Bar Visibility"
+    text  "获取滚动条可视性"
+    state machine
+}
+
 DreamListViewBase:GetScrollBarVisibility:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollBarVisibility:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetScrollingAnimationInterpolationSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollingAnimationInterpolationSpeed
+    src   "Get Scrolling Animation Interpolation Speed"
+    text  "获取滚动动画插值速度"
+    state machine
 }
 
 DreamListViewBase:GetScrollingAnimationInterpolationSpeed:ReturnValue {
@@ -2087,11 +2481,26 @@ DreamListViewBase:GetScrollingAnimationInterpolationSpeed:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetScrollIntoViewDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollIntoViewDestination
+    src   "Get Scroll Into View Destination"
+    text  "获取滚动目标位置"
+    state machine
+}
+
 DreamListViewBase:GetScrollIntoViewDestination:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollIntoViewDestination:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetScrollOffset
+    src   "Get Scroll Offset"
+    // from the engine's zh-Hans
+    text  "Get Scroll Offset"
     state draft
 }
 
@@ -2103,12 +2512,27 @@ DreamListViewBase:GetScrollOffset:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndex
+    src   "Get Selected Index"
+    // from the engine's zh-Hans
+    text  "获取选定索引"
+    state draft
+}
+
 DreamListViewBase:GetSelectedIndex:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndex:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetSelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedIndices
+    src   "Get Selected Indices"
+    text  "获取选定索引"
+    state machine
 }
 
 DreamListViewBase:GetSelectedIndices:ReturnValue {
@@ -2119,12 +2543,26 @@ DreamListViewBase:GetSelectedIndices:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetSelectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedItems
+    src   "Get Selected Items"
+    text  "获取选定项目"
+    state machine
+}
+
 DreamListViewBase:GetSelectedItems:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectedItems:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetSelectionMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectionMode
+    src   "Get Selection Mode"
+    text  "获取选择模式"
+    state machine
 }
 
 DreamListViewBase:GetSelectionMode:ReturnValue {
@@ -2135,12 +2573,26 @@ DreamListViewBase:GetSelectionMode:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetSelectItemOnNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectItemOnNavigation
+    src   "Get Select Item on Navigation"
+    text  "获取导航时选择项"
+    state machine
+}
+
 DreamListViewBase:GetSelectItemOnNavigation:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetSelectItemOnNavigation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetShadowBrushThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetShadowBrushThickness
+    src   "Get Shadow Brush Thickness"
+    text  "获取阴影笔刷粗细"
+    state machine
 }
 
 DreamListViewBase:GetShadowBrushThickness:ReturnValue {
@@ -2151,11 +2603,26 @@ DreamListViewBase:GetShadowBrushThickness:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetShowScrollBar
+    src   "Get Show Scroll Bar"
+    text  "获取显示滚动条"
+    state machine
+}
+
 DreamListViewBase:GetShowScrollBar:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetShowScrollBar:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:GetViewFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetViewFraction
+    src   "Get View Fraction"
+    // from the engine's zh-Hans
+    text  "Get View Fraction"
     state draft
 }
 
@@ -2167,12 +2634,26 @@ DreamListViewBase:GetViewFraction:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetVirtualizationOverscan {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetVirtualizationOverscan
+    src   "Get Virtualization Overscan"
+    text  "获取虚拟化溢出范围"
+    state machine
+}
+
 DreamListViewBase:GetVirtualizationOverscan:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetVirtualizationOverscan:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:GetVirtualizationThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetVirtualizationThreshold
+    src   "Get Virtualization Threshold"
+    text  "获取虚拟化阈值"
+    state machine
 }
 
 DreamListViewBase:GetVirtualizationThreshold:ReturnValue {
@@ -2183,12 +2664,26 @@ DreamListViewBase:GetVirtualizationThreshold:ReturnValue {
     state draft
 }
 
+DreamListViewBase:GetWheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetWheelScrollMultiplier
+    src   "Get Wheel Scroll Multiplier"
+    text  "获取滚轮滚动乘数"
+    state machine
+}
+
 DreamListViewBase:GetWheelScrollMultiplier:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:GetWheelScrollMultiplier:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:IsItemSelectableOrNavigable {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelectableOrNavigable
+    src   "Is Item Selectable or Navigable"
+    text  "条目是否可选或可导航"
+    state machine
 }
 
 DreamListViewBase:IsItemSelectableOrNavigable:InItemIndex {
@@ -2206,6 +2701,13 @@ DreamListViewBase:IsItemSelectableOrNavigable:ReturnValue {
     state draft
 }
 
+DreamListViewBase:IsItemSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelected
+    src   "Is Item Selected"
+    text  "条目是否选中"
+    state machine
+}
+
 DreamListViewBase:IsItemSelected:InItemIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemSelected:InItemIndex
     src   "In Item Index"
@@ -2218,6 +2720,14 @@ DreamListViewBase:IsItemSelected:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:IsItemVisible {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsItemVisible
+    src   "Is Item Visible"
+    // from the engine's zh-Hans
+    text  "项目可视"
     state draft
 }
 
@@ -2234,6 +2744,13 @@ DreamListViewBase:IsItemVisible:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamListViewBase:IsVirtualizing {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:IsVirtualizing
+    src   "Is Virtualizing"
+    text  "是否虚拟化"
+    state machine
 }
 
 DreamListViewBase:IsVirtualizing:ReturnValue {
@@ -2256,6 +2773,14 @@ DreamListViewBase:Items {
     src   "Items"
     // from the engine's zh-Hans
     text  "项目"
+    state draft
+}
+
+DreamListViewBase:NavigateToIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:NavigateToIndex
+    src   "Navigate to Index"
+    // from the engine's zh-Hans
+    text  "导航至索引"
     state draft
 }
 
@@ -2451,12 +2976,34 @@ DreamListViewBase:PoolRowTemplateClass {
     state machine
 }
 
+DreamListViewBase:RebuildRows {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RebuildRows
+    src   "Rebuild Rows"
+    text  "重建行"
+    state machine
+}
+
+DreamListViewBase:RemoveItem {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItem
+    src   "Remove Item"
+    // from the engine's zh-Hans
+    text  "移除项目"
+    state draft
+}
+
 DreamListViewBase:RemoveItem:InItem {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItem:InItem
     src   "In Item"
     // from the engine's zh-Hans
     text  "输入项目"
     state draft
+}
+
+DreamListViewBase:RemoveItemAt {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItemAt
+    src   "Remove Item At"
+    text  "移除指定条目"
+    state machine
 }
 
 DreamListViewBase:RemoveItemAt:InItemIndex {
@@ -2466,12 +3013,27 @@ DreamListViewBase:RemoveItemAt:InItemIndex {
     state machine
 }
 
+DreamListViewBase:RemoveItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItems
+    src   "Remove Items"
+    // from the engine's zh-Hans
+    text  "移除项目"
+    state draft
+}
+
 DreamListViewBase:RemoveItems:InItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:RemoveItems:InItems
     src   "In Items"
     // from the engine's zh-Hans
     text  "输入项"
     state draft
+}
+
+DreamListViewBase:ResolveDropZone {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ResolveDropZone
+    src   "Resolve Drop Zone"
+    text  "解析放置区域"
+    state machine
 }
 
 DreamListViewBase:ResolveDropZone:InEdgeFraction {
@@ -2553,6 +3115,14 @@ DreamListViewBase:ScrollBehaviour {
     state machine
 }
 
+DreamListViewBase:ScrollIndexIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIndexIntoView
+    src   "Scroll Index Into View"
+    // from the engine's zh-Hans
+    text  "将索引滚动到视图中"
+    state draft
+}
+
 DreamListViewBase:ScrollIndexIntoView:InItemIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollIndexIntoView:InItemIndex
     src   "In Item Index"
@@ -2575,6 +3145,14 @@ DreamListViewBase:ScrollIntoViewDestination {
     state machine
 }
 
+DreamListViewBase:ScrollItemIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView
+    src   "Scroll Item Into View"
+    // from the engine's zh-Hans
+    text  "将项目滚动到视图中"
+    state draft
+}
+
 DreamListViewBase:ScrollItemIntoView:bInAnimate {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollItemIntoView:bInAnimate
     src   "In Animate"
@@ -2594,6 +3172,22 @@ DreamListViewBase:ScrollItemIntoView:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamListViewBase:ScrollToBottom {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollToBottom
+    src   "Scroll to Bottom"
+    // from the engine's zh-Hans
+    text  "滚动到底部"
+    state draft
+}
+
+DreamListViewBase:ScrollToTop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:ScrollToTop
+    src   "Scroll to Top"
+    // from the engine's zh-Hans
+    text  "滚动到顶部"
     state draft
 }
 
@@ -2621,12 +3215,27 @@ DreamListViewBase:SelectionMode {
     state draft
 }
 
+DreamListViewBase:SetAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowDragDrop
+    src   "Set Allow Drag Drop"
+    // from the engine's zh-Hans
+    text  "Set Allow Drag Drop"
+    state draft
+}
+
 DreamListViewBase:SetAllowDragDrop:bInAllow {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowDragDrop:bInAllow
     src   "In Allow"
     // from the engine's zh-Hans
     text  "在允许中"
     state draft
+}
+
+DreamListViewBase:SetAllowDragging {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowDragging
+    src   "Set Allow Dragging"
+    text  "设置允许拖动"
+    state machine
 }
 
 DreamListViewBase:SetAllowDragging:bInAllow {
@@ -2637,11 +3246,26 @@ DreamListViewBase:SetAllowDragging:bInAllow {
     state draft
 }
 
+DreamListViewBase:SetAllowKeepPreselectedItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowKeepPreselectedItems
+    src   "Set Allow Keep Preselected Items"
+    text  "设置允许保留预选项"
+    state machine
+}
+
 DreamListViewBase:SetAllowKeepPreselectedItems:bInAllow {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowKeepPreselectedItems:bInAllow
     src   "In Allow"
     // from the engine's zh-Hans
     text  "在允许中"
+    state draft
+}
+
+DreamListViewBase:SetAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAllowOverscroll
+    src   "Set Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "设置允许过度滚动"
     state draft
 }
 
@@ -2653,10 +3277,24 @@ DreamListViewBase:SetAllowOverscroll:bInAllow {
     state draft
 }
 
+DreamListViewBase:SetAlternatingRowColors {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAlternatingRowColors
+    src   "Set Alternating Row Colors"
+    text  "设置交替行颜色"
+    state machine
+}
+
 DreamListViewBase:SetAlternatingRowColors:bInAlternating {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetAlternatingRowColors:bInAlternating
     src   "In Alternating"
     text  "是否交替颜色"
+    state machine
+}
+
+DreamListViewBase:SetClearScrollVelocityOnSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetClearScrollVelocityOnSelection
+    src   "Set Clear Scroll Velocity on Selection"
+    text  "设置清除选择时的滚动速度"
     state machine
 }
 
@@ -2667,10 +3305,25 @@ DreamListViewBase:SetClearScrollVelocityOnSelection:bInClear {
     state machine
 }
 
+DreamListViewBase:SetConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetConsumeMouseWheel
+    src   "Set Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "设置消耗鼠标滚轮"
+    state draft
+}
+
 DreamListViewBase:SetConsumeMouseWheel:InConsume {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetConsumeMouseWheel:InConsume
     src   "In Consume"
     text  "是否消费鼠标滚轮"
+    state machine
+}
+
+DreamListViewBase:SetDragDropOperationClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropOperationClass
+    src   "Set Drag Drop Operation Class"
+    text  "设置拖放操作类"
     state machine
 }
 
@@ -2681,10 +3334,24 @@ DreamListViewBase:SetDragDropOperationClass:InOperationClass {
     state machine
 }
 
+DreamListViewBase:SetDragDropVisualEntryClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualEntryClass
+    src   "Set Drag Drop Visual Entry Class"
+    text  "设置拖放视觉条目类"
+    state machine
+}
+
 DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualEntryClass:InEntryClass
     src   "In Entry Class"
     text  "拖拽时使用的条目类"
+    state machine
+}
+
+DreamListViewBase:SetDragDropVisualOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualOffset
+    src   "Set Drag Drop Visual Offset"
+    text  "设置拖放视觉偏移"
     state machine
 }
 
@@ -2696,12 +3363,26 @@ DreamListViewBase:SetDragDropVisualOffset:InOffset {
     state draft
 }
 
+DreamListViewBase:SetDragDropVisualPivot {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualPivot
+    src   "Set Drag Drop Visual Pivot"
+    text  "设置拖放视觉枢轴点"
+    state machine
+}
+
 DreamListViewBase:SetDragDropVisualPivot:InPivot {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragDropVisualPivot:InPivot
     src   "In Pivot"
     // from the engine's zh-Hans
     text  "输入枢轴"
     state draft
+}
+
+DreamListViewBase:SetDragEdgeScrollBandSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollBandSize
+    src   "Set Drag Edge Scroll Band Size"
+    text  "设置拖动边缘滚动条大小"
+    state machine
 }
 
 DreamListViewBase:SetDragEdgeScrollBandSize:InBandSize {
@@ -2711,10 +3392,24 @@ DreamListViewBase:SetDragEdgeScrollBandSize:InBandSize {
     state machine
 }
 
+DreamListViewBase:SetDragEdgeScrollSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollSpeed
+    src   "Set Drag Edge Scroll Speed"
+    text  "设置拖动边缘滚动速度"
+    state machine
+}
+
 DreamListViewBase:SetDragEdgeScrollSpeed:InSpeed {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragEdgeScrollSpeed:InSpeed
     src   "In Speed"
     text  "边缘滚动速度"
+    state machine
+}
+
+DreamListViewBase:SetDragOperationTag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetDragOperationTag
+    src   "Set Drag Operation Tag"
+    text  "设置拖动操作标签"
     state machine
 }
 
@@ -2726,12 +3421,26 @@ DreamListViewBase:SetDragOperationTag:InTag {
     state draft
 }
 
+DreamListViewBase:SetEnableDragEdgeScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableDragEdgeScrolling
+    src   "Set Enable Drag Edge Scrolling"
+    text  "设置启用边缘滚动"
+    state machine
+}
+
 DreamListViewBase:SetEnableDragEdgeScrolling:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableDragEdgeScrolling:bInEnable
     src   "In Enable"
     // from the engine's zh-Hans
     text  "输入启用"
     state draft
+}
+
+DreamListViewBase:SetEnableFixedLineOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableFixedLineOffset
+    src   "Set Enable Fixed Line Offset"
+    text  "设置启用固定行偏移"
+    state machine
 }
 
 DreamListViewBase:SetEnableFixedLineOffset:bInEnable {
@@ -2742,12 +3451,26 @@ DreamListViewBase:SetEnableFixedLineOffset:bInEnable {
     state draft
 }
 
+DreamListViewBase:SetEnableRightClickScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableRightClickScrolling
+    src   "Set Enable Right Click Scrolling"
+    text  "设置启用右键点击滚动"
+    state machine
+}
+
 DreamListViewBase:SetEnableRightClickScrolling:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableRightClickScrolling:bInEnable
     src   "In Enable"
     // from the engine's zh-Hans
     text  "输入启用"
     state draft
+}
+
+DreamListViewBase:SetEnableScrollAnimation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableScrollAnimation
+    src   "Set Enable Scroll Animation"
+    text  "设置启用滚动动画"
+    state machine
 }
 
 DreamListViewBase:SetEnableScrollAnimation:bInEnable {
@@ -2758,12 +3481,26 @@ DreamListViewBase:SetEnableScrollAnimation:bInEnable {
     state draft
 }
 
+DreamListViewBase:SetEnableShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableShadowBrush
+    src   "Set Enable Shadow Brush"
+    text  "设置启用阴影笔刷"
+    state machine
+}
+
 DreamListViewBase:SetEnableShadowBrush:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableShadowBrush:bInEnable
     src   "In Enable"
     // from the engine's zh-Hans
     text  "输入启用"
     state draft
+}
+
+DreamListViewBase:SetEnableTouchAnimatedScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableTouchAnimatedScrolling
+    src   "Set Enable Touch Animated Scrolling"
+    text  "设置启用触摸带动画的滚动"
+    state machine
 }
 
 DreamListViewBase:SetEnableTouchAnimatedScrolling:bInEnable {
@@ -2774,6 +3511,13 @@ DreamListViewBase:SetEnableTouchAnimatedScrolling:bInEnable {
     state draft
 }
 
+DreamListViewBase:SetEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableTouchScrolling
+    src   "Set Enable Touch Scrolling"
+    text  "设置启用触摸滚动"
+    state machine
+}
+
 DreamListViewBase:SetEnableTouchScrolling:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetEnableTouchScrolling:bInEnable
     src   "In Enable"
@@ -2782,10 +3526,24 @@ DreamListViewBase:SetEnableTouchScrolling:bInEnable {
     state draft
 }
 
+DreamListViewBase:SetFingerDrag {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFingerDrag
+    src   "Set Finger Drag"
+    text  "设置手指拖动"
+    state machine
+}
+
 DreamListViewBase:SetFingerDrag:InFingerDrag {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFingerDrag:InFingerDrag
     src   "In Finger Drag"
     text  "是否支持手指拖动"
+    state machine
+}
+
+DreamListViewBase:SetFixedLineScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetFixedLineScrollOffset
+    src   "Set Fixed Line Scroll Offset"
+    text  "设置固定行滚动偏移"
     state machine
 }
 
@@ -2797,11 +3555,27 @@ DreamListViewBase:SetFixedLineScrollOffset:InOffset {
     state draft
 }
 
+DreamListViewBase:SetIsGamepadScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetIsGamepadScrollingEnabled
+    src   "Set Is Gamepad Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "Set Is Gamepad Scrolling Enabled"
+    state draft
+}
+
 DreamListViewBase:SetIsGamepadScrollingEnabled:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetIsGamepadScrollingEnabled:bInEnable
     src   "In Enable"
     // from the engine's zh-Hans
     text  "输入启用"
+    state draft
+}
+
+DreamListViewBase:SetIsPointerScrollingEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetIsPointerScrollingEnabled
+    src   "Set Is Pointer Scrolling Enabled"
+    // from the engine's zh-Hans
+    text  "Set Is Pointer Scrolling Enabled"
     state draft
 }
 
@@ -2813,6 +3587,13 @@ DreamListViewBase:SetIsPointerScrollingEnabled:bInEnable {
     state draft
 }
 
+DreamListViewBase:SetItemObjects {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemObjects
+    src   "Set Item Objects"
+    text  "设置项目对象"
+    state machine
+}
+
 DreamListViewBase:SetItemObjects:InItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemObjects:InItems
     src   "In Items"
@@ -2821,11 +3602,27 @@ DreamListViewBase:SetItemObjects:InItems {
     state draft
 }
 
+DreamListViewBase:SetItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItems
+    src   "Set Items"
+    // from the engine's zh-Hans
+    text  "Set Items"
+    state draft
+}
+
 DreamListViewBase:SetItems:InItems {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItems:InItems
     src   "In Items"
     // from the engine's zh-Hans
     text  "输入项"
+    state draft
+}
+
+DreamListViewBase:SetItemSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetItemSelection
+    src   "Set Item Selection"
+    // from the engine's zh-Hans
+    text  "设置项目选项"
     state draft
 }
 
@@ -2851,6 +3648,14 @@ DreamListViewBase:SetItemSelection:InItemIndex {
     state machine
 }
 
+DreamListViewBase:SetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetOrientation
+    src   "Set Orientation"
+    // from the engine's zh-Hans
+    text  "设置朝向"
+    state draft
+}
+
 DreamListViewBase:SetOrientation:InOrientation {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetOrientation:InOrientation
     src   "In Orientation"
@@ -2859,10 +3664,25 @@ DreamListViewBase:SetOrientation:InOrientation {
     state draft
 }
 
+DreamListViewBase:SetReturnFocusToSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetReturnFocusToSelection
+    src   "Set Return Focus to Selection"
+    // from the engine's zh-Hans
+    text  "Set Return Focus to Selection"
+    state draft
+}
+
 DreamListViewBase:SetReturnFocusToSelection:bInReturn {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetReturnFocusToSelection:bInReturn
     src   "In Return"
     text  "是否返回到选中项"
+    state machine
+}
+
+DreamListViewBase:SetRowTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetRowTemplateClass
+    src   "Set Row Template Class"
+    text  "设置行模板类"
     state machine
 }
 
@@ -2874,6 +3694,14 @@ DreamListViewBase:SetRowTemplateClass:InClass {
     state draft
 }
 
+DreamListViewBase:SetScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollBarVisibility
+    src   "Set Scroll Bar Visibility"
+    // from the engine's zh-Hans
+    text  "设置滚动条可视性"
+    state draft
+}
+
 DreamListViewBase:SetScrollBarVisibility:InVisibility {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollBarVisibility:InVisibility
     src   "In Visibility"
@@ -2882,10 +3710,24 @@ DreamListViewBase:SetScrollBarVisibility:InVisibility {
     state draft
 }
 
+DreamListViewBase:SetScrollingAnimationInterpolationSpeed {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollingAnimationInterpolationSpeed
+    src   "Set Scrolling Animation Interpolation Speed"
+    text  "设置滚动动画插值速度"
+    state machine
+}
+
 DreamListViewBase:SetScrollingAnimationInterpolationSpeed:InSpeed {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollingAnimationInterpolationSpeed:InSpeed
     src   "In Speed"
     text  "边缘滚动速度"
+    state machine
+}
+
+DreamListViewBase:SetScrollIntoViewDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollIntoViewDestination
+    src   "Set Scroll Into View Destination"
+    text  "设置滚动目标位置"
     state machine
 }
 
@@ -2897,11 +3739,27 @@ DreamListViewBase:SetScrollIntoViewDestination:InDestination {
     state draft
 }
 
+DreamListViewBase:SetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollOffset
+    src   "Set Scroll Offset"
+    // from the engine's zh-Hans
+    text  "设置滚动偏移"
+    state draft
+}
+
 DreamListViewBase:SetScrollOffset:InOffset {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetScrollOffset:InOffset
     src   "In Offset"
     // from the engine's zh-Hans
     text  "输入偏移"
+    state draft
+}
+
+DreamListViewBase:SetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndex
+    src   "Set Selected Index"
+    // from the engine's zh-Hans
+    text  "设置选定索引"
     state draft
 }
 
@@ -2913,6 +3771,13 @@ DreamListViewBase:SetSelectedIndex:InIndex {
     state draft
 }
 
+DreamListViewBase:SetSelectedIndexWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndexWithoutNotify
+    src   "Set Selected Index Without Notify"
+    text  "设置选中索引（不通知）"
+    state machine
+}
+
 DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex
     src   "In Index"
@@ -2921,11 +3786,26 @@ DreamListViewBase:SetSelectedIndexWithoutNotify:InIndex {
     state draft
 }
 
+DreamListViewBase:SetSelectedIndices {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndices
+    src   "Set Selected Indices"
+    text  "设置选定索引"
+    state machine
+}
+
 DreamListViewBase:SetSelectedIndices:InIndices {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectedIndices:InIndices
     src   "In Indices"
     text  "索引 (输入)"
     state machine
+}
+
+DreamListViewBase:SetSelectionMode {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectionMode
+    src   "Set Selection Mode"
+    // from the engine's zh-Hans
+    text  "设置选择模式"
+    state draft
 }
 
 DreamListViewBase:SetSelectionMode:InMode {
@@ -2936,6 +3816,13 @@ DreamListViewBase:SetSelectionMode:InMode {
     state draft
 }
 
+DreamListViewBase:SetSelectItemOnNavigation {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectItemOnNavigation
+    src   "Set Select Item on Navigation"
+    text  "设置导航时选择项"
+    state machine
+}
+
 DreamListViewBase:SetSelectItemOnNavigation:bInSelect {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetSelectItemOnNavigation:bInSelect
     src   "In Select"
@@ -2943,10 +3830,24 @@ DreamListViewBase:SetSelectItemOnNavigation:bInSelect {
     state machine
 }
 
+DreamListViewBase:SetShadowBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrush
+    src   "Set Shadow Brush"
+    text  "设置阴影笔刷"
+    state machine
+}
+
 DreamListViewBase:SetShadowBrush:InShadowBrush {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrush:InShadowBrush
     src   "In Shadow Brush"
     text  "阴影笔刷"
+    state machine
+}
+
+DreamListViewBase:SetShadowBrushThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShadowBrushThickness
+    src   "Set Shadow Brush Thickness"
+    text  "设置阴影笔刷粗细"
     state machine
 }
 
@@ -2958,10 +3859,24 @@ DreamListViewBase:SetShadowBrushThickness:InThickness {
     state draft
 }
 
+DreamListViewBase:SetShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShowScrollBar
+    src   "Set Show Scroll Bar"
+    text  "设置显示滚动条"
+    state machine
+}
+
 DreamListViewBase:SetShowScrollBar:bInShowScrollBar {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetShowScrollBar:bInShowScrollBar
     src   "In Show Scroll Bar"
     text  "是否显示滚动条"
+    state machine
+}
+
+DreamListViewBase:SetVirtualizationOverscan {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationOverscan
+    src   "Set Virtualization Overscan"
+    text  "设置虚拟化溢出范围"
     state machine
 }
 
@@ -2973,11 +3888,26 @@ DreamListViewBase:SetVirtualizationOverscan:InOverscan {
     state draft
 }
 
+DreamListViewBase:SetVirtualizationThreshold {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationThreshold
+    src   "Set Virtualization Threshold"
+    text  "设置虚拟化阈值"
+    state machine
+}
+
 DreamListViewBase:SetVirtualizationThreshold:InThreshold {
     at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetVirtualizationThreshold:InThreshold
     src   "In Threshold"
     // from the engine's zh-Hans
     text  "输入阈值"
+    state draft
+}
+
+DreamListViewBase:SetWheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamListView.h#DreamListViewBase:SetWheelScrollMultiplier
+    src   "Set Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "设置滚轮滚动乘数"
     state draft
 }
 

@@ -17,12 +17,33 @@ DreamTweener:curveFloat {
     state draft
 }
 
+DreamTweener:ForceComplete {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:ForceComplete
+    src   "Force Complete"
+    text  "强制完成"
+    state machine
+}
+
+DreamTweener:GetAffectByGamePause {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetAffectByGamePause
+    src   "Get Affect by Game Pause"
+    text  "获取受游戏暂停影响"
+    state machine
+}
+
 DreamTweener:GetAffectByGamePause:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetAffectByGamePause:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweener:GetAffectByTimeDilation {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetAffectByTimeDilation
+    src   "Get Affect by Time Dilation"
+    text  "获取受时间缩放影响"
+    state machine
 }
 
 DreamTweener:GetAffectByTimeDilation:ReturnValue {
@@ -33,11 +54,26 @@ DreamTweener:GetAffectByTimeDilation:ReturnValue {
     state draft
 }
 
+DreamTweener:GetAutoKill {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetAutoKill
+    src   "Get Auto Kill"
+    text  "获取自动结束"
+    state machine
+}
+
 DreamTweener:GetAutoKill:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetAutoKill:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTweener:GetDuration {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetDuration
+    src   "Get Duration"
+    // from the engine's zh-Hans
+    text  "获取时长"
     state draft
 }
 
@@ -49,12 +85,27 @@ DreamTweener:GetDuration:ReturnValue {
     state draft
 }
 
+DreamTweener:GetElapsedTime {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetElapsedTime
+    src   "Get Elapsed Time"
+    // from the engine's zh-Hans
+    text  "Get Elapsed Time"
+    state draft
+}
+
 DreamTweener:GetElapsedTime:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetElapsedTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweener:GetLoopCycleCount {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetLoopCycleCount
+    src   "Get Loop Cycle Count"
+    text  "获取循环圈数"
+    state machine
 }
 
 DreamTweener:GetLoopCycleCount:ReturnValue {
@@ -65,12 +116,41 @@ DreamTweener:GetLoopCycleCount:ReturnValue {
     state draft
 }
 
+DreamTweener:GetProgress {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetProgress
+    src   "Get Progress"
+    text  "获取进度"
+    state machine
+}
+
 DreamTweener:GetProgress:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetProgress:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweener:GetReplacesEarlierTweens {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetReplacesEarlierTweens
+    src   "Get Replaces Earlier Tweens"
+    text  "获取是否替换先前补间"
+    state machine
+}
+
+DreamTweener:GetReplacesEarlierTweens:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetReplacesEarlierTweens:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweener:GetTickType {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetTickType
+    src   "Get Tick Type"
+    text  "获取 Tick 类型"
+    state machine
 }
 
 DreamTweener:GetTickType:ReturnValue {
@@ -81,12 +161,26 @@ DreamTweener:GetTickType:ReturnValue {
     state draft
 }
 
+DreamTweener:GetTimeScale {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetTimeScale
+    src   "Get Time Scale"
+    text  "获取时间缩放"
+    state machine
+}
+
 DreamTweener:GetTimeScale:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:GetTimeScale:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweener:Goto {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Goto
+    src   "Goto"
+    text  "跳转到"
+    state machine
 }
 
 DreamTweener:Goto:timePoint {
@@ -96,11 +190,27 @@ DreamTweener:Goto:timePoint {
     state machine
 }
 
+DreamTweener:Kill {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Kill
+    src   "Kill"
+    // from the engine's zh-Hans
+    text  "摧毁"
+    state draft
+}
+
 DreamTweener:Kill:callComplete {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Kill:callComplete
     src   "Call Complete"
     text  "Call Complete"
     state machine
+}
+
+DreamTweener:OnComplete {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnComplete
+    src   "On Complete"
+    // from the engine's zh-Hans
+    text  "On Complete"
+    state draft
 }
 
 DreamTweener:OnComplete:newComplete {
@@ -118,6 +228,13 @@ DreamTweener:OnComplete:ReturnValue {
     state draft
 }
 
+DreamTweener:OnCycleComplete {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnCycleComplete
+    src   "On Cycle Complete"
+    text  "循环完成时"
+    state machine
+}
+
 DreamTweener:OnCycleComplete:newCycleComplete {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnCycleComplete:newCycleComplete
     src   "New Cycle Complete"
@@ -131,6 +248,13 @@ DreamTweener:OnCycleComplete:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweener:OnCycleStart {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnCycleStart
+    src   "On Cycle Start"
+    text  "循环开始时"
+    state machine
 }
 
 DreamTweener:OnCycleStart:newCycleStart {
@@ -148,6 +272,13 @@ DreamTweener:OnCycleStart:ReturnValue {
     state draft
 }
 
+DreamTweener:OnKill {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnKill
+    src   "On Kill"
+    text  "终止时"
+    state machine
+}
+
 DreamTweener:OnKill:newKill {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnKill:newKill
     src   "New Kill"
@@ -163,6 +294,13 @@ DreamTweener:OnKill:ReturnValue {
     state draft
 }
 
+DreamTweener:OnStart {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnStart
+    src   "On Start"
+    text  "开始时"
+    state machine
+}
+
 DreamTweener:OnStart:newStart {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnStart:newStart
     src   "New Start"
@@ -175,6 +313,14 @@ DreamTweener:OnStart:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTweener:OnUpdate {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:OnUpdate
+    src   "On Update"
+    // from the engine's zh-Hans
+    text  "更新时"
     state draft
 }
 
@@ -193,10 +339,49 @@ DreamTweener:OnUpdate:ReturnValue {
     state draft
 }
 
+DreamTweener:Pause {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Pause
+    src   "Pause"
+    // from the engine's zh-Hans
+    text  "暂停"
+    state draft
+}
+
+DreamTweener:Play {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Play
+    src   "Play"
+    // from the engine's zh-Hans
+    text  "播放"
+    state draft
+}
+
+DreamTweener:Restart {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Restart
+    src   "Restart"
+    // from the engine's zh-Hans
+    text  "重启"
+    state draft
+}
+
+DreamTweener:Resume {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:Resume
+    src   "Resume"
+    // from the engine's zh-Hans
+    text  "继续"
+    state draft
+}
+
 DreamTweener:runtimeExternalCurve {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:runtimeExternalCurve
     src   "Runtime External Curve"
     text  "运行时外部曲线"
+    state machine
+}
+
+DreamTweener:SetAffectByGamePause {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAffectByGamePause
+    src   "Set Affect by Game Pause"
+    text  "设置受游戏暂停影响"
     state machine
 }
 
@@ -216,6 +401,13 @@ DreamTweener:SetAffectByGamePause:value {
     state draft
 }
 
+DreamTweener:SetAffectByTimeDilation {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAffectByTimeDilation
+    src   "Set Affect by Time Dilation"
+    text  "设置受时间缩放影响"
+    state machine
+}
+
 DreamTweener:SetAffectByTimeDilation:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAffectByTimeDilation:ReturnValue
     src   "Return Value"
@@ -230,6 +422,13 @@ DreamTweener:SetAffectByTimeDilation:value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTweener:SetAutoKill {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAutoKill
+    src   "Set Auto Kill"
+    text  "设置自动结束"
+    state machine
 }
 
 DreamTweener:SetAutoKill:ReturnValue {
@@ -248,6 +447,13 @@ DreamTweener:SetAutoKill:value {
     state draft
 }
 
+DreamTweener:SetAutoPlay {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAutoPlay
+    src   "Set Auto Play"
+    text  "设置自动播放"
+    state machine
+}
+
 DreamTweener:SetAutoPlay:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetAutoPlay:ReturnValue
     src   "Return Value"
@@ -264,6 +470,13 @@ DreamTweener:SetAutoPlay:value {
     state draft
 }
 
+DreamTweener:SetCurveFloat {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetCurveFloat
+    src   "Set Curve Float"
+    text  "设置曲线浮点"
+    state machine
+}
+
 DreamTweener:SetCurveFloat:newCurveFloat {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetCurveFloat:newCurveFloat
     src   "New Curve Float"
@@ -276,6 +489,14 @@ DreamTweener:SetCurveFloat:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTweener:SetDelay {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetDelay
+    src   "Set Delay"
+    // from the engine's zh-Hans
+    text  "设置延迟"
     state draft
 }
 
@@ -294,6 +515,13 @@ DreamTweener:SetDelay:ReturnValue {
     state draft
 }
 
+DreamTweener:SetEase {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetEase
+    src   "Set Ease"
+    text  "设置缓动"
+    state machine
+}
+
 DreamTweener:SetEase:easetype {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetEase:easetype
     src   "Easetype"
@@ -310,6 +538,13 @@ DreamTweener:SetEase:ReturnValue {
     state draft
 }
 
+DreamTweener:SetFrom {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetFrom
+    src   "Set From"
+    text  "设置自"
+    state machine
+}
+
 DreamTweener:SetFrom:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetFrom:ReturnValue
     src   "Return Value"
@@ -323,6 +558,14 @@ DreamTweener:SetFrom:value {
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamTweener:SetLoop {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetLoop
+    src   "Set Loop"
+    // from the engine's zh-Hans
+    text  "Set Loop"
     state draft
 }
 
@@ -348,6 +591,36 @@ DreamTweener:SetLoop:ReturnValue {
     state draft
 }
 
+DreamTweener:SetReplacesEarlierTweens {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens
+    src   "Set Replaces Earlier Tweens"
+    text  "设置是否替换先前补间"
+    state machine
+}
+
+DreamTweener:SetReplacesEarlierTweens:ReturnValue {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamTweener:SetReplacesEarlierTweens:value {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens:value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamTweener:SetRuntimeFloatCurve {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetRuntimeFloatCurve
+    src   "Set Runtime Float Curve"
+    text  "设置运行时浮点曲线"
+    state machine
+}
+
 DreamTweener:SetRuntimeFloatCurve:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetRuntimeFloatCurve:ReturnValue
     src   "Return Value"
@@ -362,6 +635,13 @@ DreamTweener:SetRuntimeFloatCurve:Value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTweener:SetSpeedBased {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetSpeedBased
+    src   "Set Speed Based"
+    text  "设置为按速度"
+    state machine
 }
 
 DreamTweener:SetSpeedBased:ReturnValue {
@@ -380,6 +660,13 @@ DreamTweener:SetSpeedBased:value {
     state draft
 }
 
+DreamTweener:SetTickType {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetTickType
+    src   "Set Tick Type"
+    text  "设置 Tick 类型"
+    state machine
+}
+
 DreamTweener:SetTickType:ReturnValue {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetTickType:ReturnValue
     src   "Return Value"
@@ -394,6 +681,13 @@ DreamTweener:SetTickType:value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamTweener:SetTimeScale {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetTimeScale
+    src   "Set Time Scale"
+    text  "设置时间缩放"
+    state machine
 }
 
 DreamTweener:SetTimeScale:ReturnValue {
@@ -921,6 +1215,13 @@ DreamTweener:SetLoop {
     at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetLoop
     src   "Set loop of tween.\nHas no effect if the Tween has already started.\n@param newLoopType   loop type\n@param newLoopCount  number of cycles to play (-1 for infinite)"
     text  "设置补间的循环。\n如果补间已经开始，则此设置无效。\n@param newLoopType   循环类型\n@param newLoopCount  播放的循环次数（-1表示无限）"
+    state machine
+}
+
+DreamTweener:SetReplacesEarlierTweens {
+    at    Source/DreamTween/Public/DreamTweener.h#DreamTweener:SetReplacesEarlierTweens
+    src   "Does this tween stop the earlier tweens of the same properties when it starts? On for the tweens the property\nverbs make (UDreamWidget::RenderOpacityTo, RenderOffsetTo, a visual's ColorTo and the rest); off lets two of them\nrun on one property at once, as before. Means nothing for a tween made with UDreamTweenManager::To directly."
+    text  "这个补间开始时，是否中止同一属性上更早的补间？对属性动词创建的补间\n（UDreamWidget::RenderOpacityTo、RenderOffsetTo，视觉的 ColorTo 等）默认为开；关掉就让两个补间\n同时作用于一个属性，与以前一样。对直接用 UDreamTweenManager::To 创建的补间没有意义。"
     state machine
 }
 

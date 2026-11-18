@@ -16,12 +16,26 @@ DreamUIRichTextCustomStyleData:DataMap {
     state machine
 }
 
+DreamUIRichTextCustomStyleData:GetDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:GetDataMap
+    src   "Get Data Map"
+    text  "获取数据映射"
+    state machine
+}
+
 DreamUIRichTextCustomStyleData:GetDataMap:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:GetDataMap:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIRichTextCustomStyleData:SetDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#DreamUIRichTextCustomStyleData:SetDataMap
+    src   "Set Data Map"
+    text  "设置数据映射"
+    state machine
 }
 
 DreamUIRichTextCustomStyleData:SetDataMap:InDataMap {
@@ -344,6 +358,8 @@ EDreamUIRichTextCustomStyleData_BoolType {
 EDreamUIRichTextCustomStyleData_PaintType {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType
     src   "What a custom style does to the paint of the text it encloses (FDreamTextStyle::FacePaint, `<gradient>`)."
+    text  "自定义样式对它包住的文字的绘制做什么（FDreamTextStyle::FacePaint、`<gradient>`）。"
+    state draft
 }
 
 EDreamUIRichTextCustomStyleData_PaintType.KeepOrigin {
@@ -363,4 +379,6 @@ EDreamUIRichTextCustomStyleData_PaintType.None {
 EDreamUIRichTextCustomStyleData_PaintType.Set {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextCustomStyleData.h#EDreamUIRichTextCustomStyleData_PaintType:Set
     src   "Paint with the entry's paint, measured across the run -- and `<gradient=ThisEntrysName>` anywhere finds it too."
+    text  "用该条目的绘制方式绘制，并按整个 run 度量——在任何位置写 `<gradient=该条目名>` 也能找到它。"
+    state draft
 }

@@ -17,12 +17,26 @@ DreamPixelSort:bDescending {
     state draft
 }
 
+DreamPixelSort:GetDescending {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetDescending
+    src   "Get Descending"
+    text  "获取降序"
+    state machine
+}
+
 DreamPixelSort:GetDescending:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetDescending:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPixelSort:GetIntervalLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetIntervalLength
+    src   "Get Interval Length"
+    text  "获取间隔长度"
+    state machine
 }
 
 DreamPixelSort:GetIntervalLength:ReturnValue {
@@ -33,12 +47,26 @@ DreamPixelSort:GetIntervalLength:ReturnValue {
     state draft
 }
 
+DreamPixelSort:GetIntervalMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetIntervalMode
+    src   "Get Interval Mode"
+    text  "获取间隔模式"
+    state machine
+}
+
 DreamPixelSort:GetIntervalMode:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetIntervalMode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPixelSort:GetMaxSortPasses {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetMaxSortPasses
+    src   "Get Max Sort Passes"
+    text  "获取最大排序次数"
+    state machine
 }
 
 DreamPixelSort:GetMaxSortPasses:ReturnValue {
@@ -49,12 +77,26 @@ DreamPixelSort:GetMaxSortPasses:ReturnValue {
     state draft
 }
 
+DreamPixelSort:GetRandomness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetRandomness
+    src   "Get Randomness"
+    text  "获取随机性"
+    state machine
+}
+
 DreamPixelSort:GetRandomness:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetRandomness:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPixelSort:GetSortAxis {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortAxis
+    src   "Get Sort Axis"
+    text  "获取排序轴"
+    state machine
 }
 
 DreamPixelSort:GetSortAxis:ReturnValue {
@@ -65,12 +107,26 @@ DreamPixelSort:GetSortAxis:ReturnValue {
     state draft
 }
 
+DreamPixelSort:GetSortKey {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortKey
+    src   "Get Sort Key"
+    text  "获取排序键"
+    state machine
+}
+
 DreamPixelSort:GetSortKey:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortKey:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPixelSort:GetSortStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetSortStrength
+    src   "Get Sort Strength"
+    text  "获取排序强度"
+    state machine
 }
 
 DreamPixelSort:GetSortStrength:ReturnValue {
@@ -81,12 +137,26 @@ DreamPixelSort:GetSortStrength:ReturnValue {
     state draft
 }
 
+DreamPixelSort:GetThresholdMax {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetThresholdMax
+    src   "Get Threshold Max"
+    text  "获取阈值上限"
+    state machine
+}
+
 DreamPixelSort:GetThresholdMax:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetThresholdMax:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPixelSort:GetThresholdMin {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:GetThresholdMin
+    src   "Get Threshold Min"
+    text  "获取阈值下限"
+    state machine
 }
 
 DreamPixelSort:GetThresholdMin:ReturnValue {
@@ -126,12 +196,26 @@ DreamPixelSort:Randomness {
     state draft
 }
 
+DreamPixelSort:SetDescending {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetDescending
+    src   "Set Descending"
+    text  "设置降序"
+    state machine
+}
+
 DreamPixelSort:SetDescending:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetDescending:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPixelSort:SetIntervalLength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetIntervalLength
+    src   "Set Interval Length"
+    text  "设置间隔长度"
+    state machine
 }
 
 DreamPixelSort:SetIntervalLength:Value {
@@ -142,12 +226,26 @@ DreamPixelSort:SetIntervalLength:Value {
     state draft
 }
 
+DreamPixelSort:SetIntervalMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetIntervalMode
+    src   "Set Interval Mode"
+    text  "设置间隔模式"
+    state machine
+}
+
 DreamPixelSort:SetIntervalMode:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetIntervalMode:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPixelSort:SetMaxSortPasses {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetMaxSortPasses
+    src   "Set Max Sort Passes"
+    text  "设置最大排序次数"
+    state machine
 }
 
 DreamPixelSort:SetMaxSortPasses:Value {
@@ -158,12 +256,26 @@ DreamPixelSort:SetMaxSortPasses:Value {
     state draft
 }
 
+DreamPixelSort:SetRandomness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetRandomness
+    src   "Set Randomness"
+    text  "设置随机性"
+    state machine
+}
+
 DreamPixelSort:SetRandomness:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetRandomness:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPixelSort:SetSortAxis {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortAxis
+    src   "Set Sort Axis"
+    text  "设置排序轴"
+    state machine
 }
 
 DreamPixelSort:SetSortAxis:Value {
@@ -174,12 +286,26 @@ DreamPixelSort:SetSortAxis:Value {
     state draft
 }
 
+DreamPixelSort:SetSortKey {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortKey
+    src   "Set Sort Key"
+    text  "设置排序键"
+    state machine
+}
+
 DreamPixelSort:SetSortKey:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortKey:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPixelSort:SetSortStrength {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetSortStrength
+    src   "Set Sort Strength"
+    text  "设置排序强度"
+    state machine
 }
 
 DreamPixelSort:SetSortStrength:Value {
@@ -190,12 +316,26 @@ DreamPixelSort:SetSortStrength:Value {
     state draft
 }
 
+DreamPixelSort:SetThresholdMax {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetThresholdMax
+    src   "Set Threshold Max"
+    text  "设置阈值上限"
+    state machine
+}
+
 DreamPixelSort:SetThresholdMax:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetThresholdMax:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPixelSort:SetThresholdMin {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamPixelSort.h#DreamPixelSort:SetThresholdMin
+    src   "Set Threshold Min"
+    text  "设置阈值下限"
+    state machine
 }
 
 DreamPixelSort:SetThresholdMin:Value {

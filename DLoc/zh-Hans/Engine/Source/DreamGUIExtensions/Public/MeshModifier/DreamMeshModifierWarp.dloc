@@ -33,11 +33,26 @@ DreamMeshModifierWarp:CellLength {
     state machine
 }
 
+DreamMeshModifierWarp:GetBend {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetBend
+    src   "Get Bend"
+    text  "获取弯曲"
+    state machine
+}
+
 DreamMeshModifierWarp:GetBend:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetBend:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamMeshModifierWarp:GetBounds {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetBounds
+    src   "Get Bounds"
+    // from the engine's zh-Hans
+    text  "获取边界"
     state draft
 }
 
@@ -49,12 +64,26 @@ DreamMeshModifierWarp:GetBounds:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetCellLength {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetCellLength
+    src   "Get Cell Length"
+    text  "获取单元格长度"
+    state machine
+}
+
 DreamMeshModifierWarp:GetCellLength:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetCellLength:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierWarp:GetHorizontalDistortion {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetHorizontalDistortion
+    src   "Get Horizontal Distortion"
+    text  "获取水平扭曲"
+    state machine
 }
 
 DreamMeshModifierWarp:GetHorizontalDistortion:ReturnValue {
@@ -65,12 +94,26 @@ DreamMeshModifierWarp:GetHorizontalDistortion:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetLatticeColumns {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetLatticeColumns
+    src   "Get Lattice Columns"
+    text  "获取晶格列"
+    state machine
+}
+
 DreamMeshModifierWarp:GetLatticeColumns:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetLatticeColumns:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierWarp:GetLatticePoints {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetLatticePoints
+    src   "Get Lattice Points"
+    text  "获取晶格点"
+    state machine
 }
 
 DreamMeshModifierWarp:GetLatticePoints:ReturnValue {
@@ -81,6 +124,13 @@ DreamMeshModifierWarp:GetLatticePoints:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetLatticeRows {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetLatticeRows
+    src   "Get Lattice Rows"
+    text  "获取晶格行"
+    state machine
+}
+
 DreamMeshModifierWarp:GetLatticeRows:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetLatticeRows:ReturnValue
     src   "Return Value"
@@ -89,11 +139,26 @@ DreamMeshModifierWarp:GetLatticeRows:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetMaxVertices {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetMaxVertices
+    src   "Get Max Vertices"
+    text  "获取最大顶点数"
+    state machine
+}
+
 DreamMeshModifierWarp:GetMaxVertices:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetMaxVertices:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamMeshModifierWarp:GetMode {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetMode
+    src   "Get Mode"
+    // from the engine's zh-Hans
+    text  "Get Mode"
     state draft
 }
 
@@ -105,12 +170,26 @@ DreamMeshModifierWarp:GetMode:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetOrientation {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetOrientation
+    src   "Get Orientation"
+    text  "获取朝向"
+    state machine
+}
+
 DreamMeshModifierWarp:GetOrientation:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetOrientation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierWarp:GetPhase {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetPhase
+    src   "Get Phase"
+    text  "获取相位"
+    state machine
 }
 
 DreamMeshModifierWarp:GetPhase:ReturnValue {
@@ -121,6 +200,13 @@ DreamMeshModifierWarp:GetPhase:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetPhaseSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetPhaseSpeed
+    src   "Get Phase Speed"
+    text  "获取相位速度"
+    state machine
+}
+
 DreamMeshModifierWarp:GetPhaseSpeed:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetPhaseSpeed:ReturnValue
     src   "Return Value"
@@ -129,12 +215,26 @@ DreamMeshModifierWarp:GetPhaseSpeed:ReturnValue {
     state draft
 }
 
+DreamMeshModifierWarp:GetStyle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamMeshModifierWarp:GetStyle:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierWarp:GetVerticalDistortion {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:GetVerticalDistortion
+    src   "Get Vertical Distortion"
+    text  "获取垂直扭曲"
+    state machine
 }
 
 DreamMeshModifierWarp:GetVerticalDistortion:ReturnValue {
@@ -149,6 +249,13 @@ DreamMeshModifierWarp:HorizontalDistortion {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:HorizontalDistortion
     src   "Horizontal Distortion"
     text  "水平扭曲"
+    state machine
+}
+
+DreamMeshModifierWarp:IsAtRest {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:IsAtRest
+    src   "Is at Rest"
+    text  "是否静止"
     state machine
 }
 
@@ -219,11 +326,33 @@ DreamMeshModifierWarp:PhaseSpeed {
     state machine
 }
 
+DreamMeshModifierWarp:ResetLattice {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:ResetLattice
+    src   "Reset Lattice"
+    text  "重置网格"
+    state machine
+}
+
+DreamMeshModifierWarp:SetBend {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetBend
+    src   "Set Bend"
+    text  "设置弯曲"
+    state machine
+}
+
 DreamMeshModifierWarp:SetBend:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetBend:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMeshModifierWarp:SetBounds {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetBounds
+    src   "Set Bounds"
+    // from the engine's zh-Hans
+    text  "设置边界"
     state draft
 }
 
@@ -235,6 +364,13 @@ DreamMeshModifierWarp:SetBounds:Value {
     state draft
 }
 
+DreamMeshModifierWarp:SetCellLength {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetCellLength
+    src   "Set Cell Length"
+    text  "设置单元格长度"
+    state machine
+}
+
 DreamMeshModifierWarp:SetCellLength:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetCellLength:Value
     src   "Value"
@@ -243,12 +379,26 @@ DreamMeshModifierWarp:SetCellLength:Value {
     state draft
 }
 
+DreamMeshModifierWarp:SetHorizontalDistortion {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetHorizontalDistortion
+    src   "Set Horizontal Distortion"
+    text  "设置水平扭曲"
+    state machine
+}
+
 DreamMeshModifierWarp:SetHorizontalDistortion:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetHorizontalDistortion:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierWarp:SetLatticePoint {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetLatticePoint
+    src   "Set Lattice Point"
+    text  "设置网格点"
+    state machine
 }
 
 DreamMeshModifierWarp:SetLatticePoint:InColumn {
@@ -275,12 +425,26 @@ DreamMeshModifierWarp:SetLatticePoint:InRow {
     state draft
 }
 
+DreamMeshModifierWarp:SetLatticePoints {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetLatticePoints
+    src   "Set Lattice Points"
+    text  "设置晶格点"
+    state machine
+}
+
 DreamMeshModifierWarp:SetLatticePoints:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetLatticePoints:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierWarp:SetLatticeSize {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetLatticeSize
+    src   "Set Lattice Size"
+    text  "设置网格尺寸"
+    state machine
 }
 
 DreamMeshModifierWarp:SetLatticeSize:InColumns {
@@ -297,6 +461,13 @@ DreamMeshModifierWarp:SetLatticeSize:InRows {
     state machine
 }
 
+DreamMeshModifierWarp:SetMaxVertices {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetMaxVertices
+    src   "Set Max Vertices"
+    text  "设置最大顶点数"
+    state machine
+}
+
 DreamMeshModifierWarp:SetMaxVertices:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetMaxVertices:Value
     src   "Value"
@@ -305,11 +476,26 @@ DreamMeshModifierWarp:SetMaxVertices:Value {
     state draft
 }
 
+DreamMeshModifierWarp:SetMode {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetMode
+    src   "Set Mode"
+    text  "设置模式"
+    state machine
+}
+
 DreamMeshModifierWarp:SetMode:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetMode:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMeshModifierWarp:SetOrientation {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetOrientation
+    src   "Set Orientation"
+    // from the engine's zh-Hans
+    text  "设置朝向"
     state draft
 }
 
@@ -321,12 +507,26 @@ DreamMeshModifierWarp:SetOrientation:Value {
     state draft
 }
 
+DreamMeshModifierWarp:SetPhase {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetPhase
+    src   "Set Phase"
+    text  "设置相位"
+    state machine
+}
+
 DreamMeshModifierWarp:SetPhase:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetPhase:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierWarp:SetPhaseSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetPhaseSpeed
+    src   "Set Phase Speed"
+    text  "设置相位速度"
+    state machine
 }
 
 DreamMeshModifierWarp:SetPhaseSpeed:Value {
@@ -337,12 +537,27 @@ DreamMeshModifierWarp:SetPhaseSpeed:Value {
     state draft
 }
 
+DreamMeshModifierWarp:SetStyle {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamMeshModifierWarp:SetStyle:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetStyle:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamMeshModifierWarp:SetVerticalDistortion {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierWarp.h#DreamMeshModifierWarp:SetVerticalDistortion
+    src   "Set Vertical Distortion"
+    text  "设置垂直扭曲"
+    state machine
 }
 
 DreamMeshModifierWarp:SetVerticalDistortion:Value {

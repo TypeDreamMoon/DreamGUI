@@ -9,6 +9,14 @@ DreamDropdown {
     state machine
 }
 
+DreamDropdown:AddOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:AddOption
+    src   "Add Option"
+    // from the engine's zh-Hans
+    text  "Add Option"
+    state draft
+}
+
 DreamDropdown:AddOption:InOption {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:AddOption:InOption
     src   "In Option"
@@ -45,6 +53,22 @@ DreamDropdown:CaptionNode {
     state machine
 }
 
+DreamDropdown:ClearOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ClearOptions
+    src   "Clear Options"
+    // from the engine's zh-Hans
+    text  "Clear Options"
+    state draft
+}
+
+DreamDropdown:ClearSelection {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:ClearSelection
+    src   "Clear Selection"
+    // from the engine's zh-Hans
+    text  "清除选择"
+    state draft
+}
+
 DreamDropdown:DropdownBehaviour {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:DropdownBehaviour
     src   "Dropdown Behaviour"
@@ -57,6 +81,14 @@ DreamDropdown:FaceNode {
     src   "Face Node"
     text  "表面节点"
     state machine
+}
+
+DreamDropdown:FindOptionIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:FindOptionIndex
+    src   "Find Option Index"
+    // from the engine's zh-Hans
+    text  "找到选项索引"
+    state draft
 }
 
 DreamDropdown:FindOptionIndex:InOption {
@@ -74,12 +106,26 @@ DreamDropdown:FindOptionIndex:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetHasDownArrow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetHasDownArrow
+    src   "Get Has Down Arrow"
+    text  "获取拥有向下箭头"
+    state machine
+}
+
 DreamDropdown:GetHasDownArrow:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetHasDownArrow:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamDropdown:GetItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetItemTemplateClass
+    src   "Get Item Template Class"
+    text  "获取项目模板类"
+    state machine
 }
 
 DreamDropdown:GetItemTemplateClass:ReturnValue {
@@ -90,11 +136,26 @@ DreamDropdown:GetItemTemplateClass:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetMaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetMaxVisibleItems
+    src   "Get Max Visible Items"
+    text  "获取最大显示项数"
+    state machine
+}
+
 DreamDropdown:GetMaxVisibleItems:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetMaxVisibleItems:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetOptionAtIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionAtIndex
+    src   "Get Option at Index"
+    // from the engine's zh-Hans
+    text  "获取索引处的选项"
     state draft
 }
 
@@ -114,11 +175,27 @@ DreamDropdown:GetOptionAtIndex:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetOptionCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionCount
+    src   "Get Option Count"
+    // from the engine's zh-Hans
+    text  "获取选项数"
+    state draft
+}
+
 DreamDropdown:GetOptionCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptionCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetOptions
+    src   "Get Options"
+    // from the engine's zh-Hans
+    text  "获取选项"
     state draft
 }
 
@@ -130,11 +207,27 @@ DreamDropdown:GetOptions:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedIndex
+    src   "Get Selected Index"
+    // from the engine's zh-Hans
+    text  "获取选定索引"
+    state draft
+}
+
 DreamDropdown:GetSelectedIndex:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedIndex:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamDropdown:GetSelectedOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetSelectedOption
+    src   "Get Selected Option"
+    // from the engine's zh-Hans
+    text  "获取选定选项"
     state draft
 }
 
@@ -146,6 +239,13 @@ DreamDropdown:GetSelectedOption:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamDropdown:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetStyle:ReturnValue
     src   "Return Value"
@@ -154,11 +254,26 @@ DreamDropdown:GetStyle:ReturnValue {
     state draft
 }
 
+DreamDropdown:GetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetTabCommitsHighlightedRow
+    src   "Get Tab Commits Highlighted Row"
+    text  "获取选项卡选中项高亮"
+    state machine
+}
+
 DreamDropdown:GetTabCommitsHighlightedRow:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:GetTabCommitsHighlightedRow:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamDropdown:IsOpen {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:IsOpen
+    src   "Is Open"
+    // from the engine's zh-Hans
+    text  "已打开"
     state draft
 }
 
@@ -251,6 +366,22 @@ DreamDropdown:Options {
     state draft
 }
 
+DreamDropdown:RefreshOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RefreshOptions
+    src   "Refresh Options"
+    // from the engine's zh-Hans
+    text  "刷新选项"
+    state draft
+}
+
+DreamDropdown:RemoveOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RemoveOption
+    src   "Remove Option"
+    // from the engine's zh-Hans
+    text  "Remove Option"
+    state draft
+}
+
 DreamDropdown:RemoveOption:InOption {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:RemoveOption:InOption
     src   "In Option"
@@ -274,10 +405,24 @@ DreamDropdown:SelectedIndex {
     state draft
 }
 
+DreamDropdown:SetHasDownArrow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetHasDownArrow
+    src   "Set Has Down Arrow"
+    text  "设置拥有向下箭头"
+    state machine
+}
+
 DreamDropdown:SetHasDownArrow:bInHasDownArrow {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetHasDownArrow:bInHasDownArrow
     src   "In Has Down Arrow"
     text  "输入是否有下箭头"
+    state machine
+}
+
+DreamDropdown:SetItemTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetItemTemplateClass
+    src   "Set Item Template Class"
+    text  "设置项目模板类"
     state machine
 }
 
@@ -288,6 +433,13 @@ DreamDropdown:SetItemTemplateClass:InItemTemplateClass {
     state machine
 }
 
+DreamDropdown:SetMaxVisibleItems {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetMaxVisibleItems
+    src   "Set Max Visible Items"
+    text  "设置最大显示项数"
+    state machine
+}
+
 DreamDropdown:SetMaxVisibleItems:InMaxVisibleItems {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetMaxVisibleItems:InMaxVisibleItems
     src   "In Max Visible Items"
@@ -295,10 +447,24 @@ DreamDropdown:SetMaxVisibleItems:InMaxVisibleItems {
     state machine
 }
 
+DreamDropdown:SetOptionIcons {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptionIcons
+    src   "Set Option Icons"
+    text  "设置选项图标"
+    state machine
+}
+
 DreamDropdown:SetOptionIcons:InIcons {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptionIcons:InIcons
     src   "In Icons"
     text  "输入图标"
+    state machine
+}
+
+DreamDropdown:SetOptions {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetOptions
+    src   "Set Options"
+    text  "设置选项"
     state machine
 }
 
@@ -310,11 +476,27 @@ DreamDropdown:SetOptions:InOptions {
     state draft
 }
 
+DreamDropdown:SetSelectedIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedIndex
+    src   "Set Selected Index"
+    // from the engine's zh-Hans
+    text  "设置选定索引"
+    state draft
+}
+
 DreamDropdown:SetSelectedIndex:InIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedIndex:InIndex
     src   "In Index"
     // from the engine's zh-Hans
     text  "输入索引"
+    state draft
+}
+
+DreamDropdown:SetSelectedOption {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetSelectedOption
+    src   "Set Selected Option"
+    // from the engine's zh-Hans
+    text  "Set Selected Option"
     state draft
 }
 
@@ -325,12 +507,27 @@ DreamDropdown:SetSelectedOption:InOption {
     state machine
 }
 
+DreamDropdown:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamDropdown:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
     state draft
+}
+
+DreamDropdown:SetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Controls/DreamDropdown.h#DreamDropdown:SetTabCommitsHighlightedRow
+    src   "Set Tab Commits Highlighted Row"
+    text  "设置选项卡选中项高亮"
+    state machine
 }
 
 DreamDropdown:SetTabCommitsHighlightedRow:bInTabCommitsHighlightedRow {

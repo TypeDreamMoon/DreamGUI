@@ -30,6 +30,13 @@ DreamDragDropOperation:DragVisualOffset {
     state machine
 }
 
+DreamDragDropOperation:NotifyDragCancelled {
+    at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:NotifyDragCancelled
+    src   "Notify Drag Cancelled"
+    text  "通知拖拽取消"
+    state machine
+}
+
 DreamDragDropOperation:OnDragCancelled {
     at    Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h#DreamDragDropOperation:OnDragCancelled
     src   "On Drag Cancelled"

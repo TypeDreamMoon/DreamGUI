@@ -63,6 +63,14 @@ DreamUIActionRouter {
     state machine
 }
 
+DreamUIActionRouter:ExecuteAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:ExecuteAction
+    src   "Execute Action"
+    // from the engine's zh-Hans
+    text  "执行操作"
+    state draft
+}
+
 DreamUIActionRouter:ExecuteAction:InHandle {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:ExecuteAction:InHandle
     src   "In Handle"
@@ -77,6 +85,13 @@ DreamUIActionRouter:ExecuteAction:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIActionRouter:GetDisplayBindings {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetDisplayBindings
+    src   "Get Display Bindings"
+    text  "获取显示绑定"
+    state machine
 }
 
 DreamUIActionRouter:GetDisplayBindings:InUserIndex {
@@ -94,6 +109,13 @@ DreamUIActionRouter:GetDisplayBindings:OutBindings {
     state draft
 }
 
+DreamUIActionRouter:GetHoldProgress {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetHoldProgress
+    src   "Get Hold Progress"
+    text  "获取按住进度"
+    state machine
+}
+
 DreamUIActionRouter:GetHoldProgress:InHandle {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:GetHoldProgress:InHandle
     src   "In Handle"
@@ -108,6 +130,13 @@ DreamUIActionRouter:GetHoldProgress:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIActionRouter:HandleKey {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKey
+    src   "Handle Key"
+    text  "处理按键"
+    state machine
 }
 
 DreamUIActionRouter:HandleKey:bPressed {
@@ -139,6 +168,13 @@ DreamUIActionRouter:HandleKey:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIActionRouter:HandleKeyWithModifiers {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:HandleKeyWithModifiers
+    src   "Handle Key with Modifiers"
+    text  "处理带修饰键的按键"
+    state machine
 }
 
 DreamUIActionRouter:HandleKeyWithModifiers:bAltDown {
@@ -203,6 +239,20 @@ DreamUIActionRouter:HandleKeyWithModifiers:ReturnValue {
     state draft
 }
 
+DreamUIActionRouter:RefreshInputActionKeys {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RefreshInputActionKeys
+    src   "Refresh Input Action Keys"
+    text  "刷新输入动作按键"
+    state machine
+}
+
+DreamUIActionRouter:RegisterAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction
+    src   "Register Action"
+    text  "注册动作"
+    state machine
+}
+
 DreamUIActionRouter:RegisterAction:bDisplayInActionBar {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:RegisterAction:bDisplayInActionBar
     src   "Display in Action Bar"
@@ -249,12 +299,26 @@ DreamUIActionRouter:RegisterAction:ReturnValue {
     state draft
 }
 
+DreamUIActionRouter:UnregisterAction {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterAction
+    src   "Unregister Action"
+    text  "注销动作"
+    state machine
+}
+
 DreamUIActionRouter:UnregisterAction:InHandle {
     at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterAction:InHandle
     src   "In Handle"
     // from the engine's zh-Hans
     text  "在柄中"
     state draft
+}
+
+DreamUIActionRouter:UnregisterScope {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h#DreamUIActionRouter:UnregisterScope
+    src   "Unregister Scope"
+    text  "注销作用域"
+    state machine
 }
 
 DreamUIActionRouter:UnregisterScope:InScope {

@@ -16,6 +16,13 @@ DreamLayoutAnimation {
     state machine
 }
 
+DreamLayoutAnimation:GetLayoutContainer {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:GetLayoutContainer
+    src   "Get Layout Container"
+    text  "获取布局容器"
+    state machine
+}
+
 DreamLayoutAnimation:GetLayoutContainer:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:GetLayoutContainer:ReturnValue
     src   "Return Value"
@@ -28,6 +35,13 @@ DreamLayoutAnimation:OwnerLayoutContainer {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:OwnerLayoutContainer
     src   "LayoutContainer"
     text  "布局容器"
+    state machine
+}
+
+DreamLayoutAnimation:ReceiveOnApplyLayoutResults {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutAnimation:ReceiveOnApplyLayoutResults
+    src   "OnApplyLayoutResults"
+    text  "应用布局结果时"
     state machine
 }
 
@@ -158,6 +172,13 @@ DreamLayoutContainer:Children {
     state draft
 }
 
+DreamLayoutContainer:CreateNewLayoutAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:CreateNewLayoutAnimation
+    src   "Create New Layout Animation"
+    text  "新建布局动画"
+    state machine
+}
+
 DreamLayoutContainer:CreateNewLayoutAnimation:Class {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:CreateNewLayoutAnimation:Class
     src   "Class"
@@ -174,12 +195,26 @@ DreamLayoutContainer:CreateNewLayoutAnimation:ReturnValue {
     state draft
 }
 
+DreamLayoutContainer:GetUseAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:GetUseAnimation
+    src   "Get Use Animation"
+    text  "获取使用动画"
+    state machine
+}
+
 DreamLayoutContainer:GetUseAnimation:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:GetUseAnimation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainer:SetAnimationHandler {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetAnimationHandler
+    src   "Set Animation Handler"
+    text  "设置动画处理器"
+    state machine
 }
 
 DreamLayoutContainer:SetAnimationHandler:InAnimationHandler {
@@ -189,12 +224,26 @@ DreamLayoutContainer:SetAnimationHandler:InAnimationHandler {
     state machine
 }
 
+DreamLayoutContainer:SetLayoutAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetLayoutAnimation
+    src   "Set Layout Animation"
+    text  "设置布局动画"
+    state machine
+}
+
 DreamLayoutContainer:SetLayoutAnimation:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetLayoutAnimation:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainer:SetUseAnimation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayout.h#DreamLayoutContainer:SetUseAnimation
+    src   "Set Use Animation"
+    text  "设置使用动画"
+    state machine
 }
 
 DreamLayoutContainer:SetUseAnimation:Value {

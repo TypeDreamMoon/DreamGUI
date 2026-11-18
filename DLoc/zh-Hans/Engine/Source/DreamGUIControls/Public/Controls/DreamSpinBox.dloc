@@ -80,11 +80,51 @@ DreamSpinBox:bSliderMoving {
     state machine
 }
 
+DreamSpinBox:ClearMaxSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:ClearMaxSliderValue
+    src   "Clear Max Slider Value"
+    // from the engine's zh-Hans
+    text  "清除最大滑条值"
+    state draft
+}
+
+DreamSpinBox:ClearMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:ClearMaxValue
+    src   "Clear Max Value"
+    // from the engine's zh-Hans
+    text  "清除最大值"
+    state draft
+}
+
+DreamSpinBox:ClearMinSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:ClearMinSliderValue
+    src   "Clear Min Slider Value"
+    // from the engine's zh-Hans
+    text  "清除最小滑条值"
+    state draft
+}
+
+DreamSpinBox:ClearMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:ClearMinValue
+    src   "Clear Min Value"
+    // from the engine's zh-Hans
+    text  "清除最小值"
+    state draft
+}
+
 DreamSpinBox:ClipNode {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:ClipNode
     src   "Clip Node"
     text  "裁剪节点"
     state machine
+}
+
+DreamSpinBox:Decrement {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:Decrement
+    src   "Decrement"
+    // from the engine's zh-Hans
+    text  "Decrement"
+    state draft
 }
 
 DreamSpinBox:DecrementBehaviour {
@@ -116,6 +156,14 @@ DreamSpinBox:FieldNode {
     state draft
 }
 
+DreamSpinBox:GetAlwaysUsesDeltaSnap {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetAlwaysUsesDeltaSnap
+    src   "Get Always Uses Delta Snap"
+    // from the engine's zh-Hans
+    text  "获取固定使用差量对齐"
+    state draft
+}
+
 DreamSpinBox:GetAlwaysUsesDeltaSnap:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetAlwaysUsesDeltaSnap:ReturnValue
     src   "Return Value"
@@ -124,11 +172,26 @@ DreamSpinBox:GetAlwaysUsesDeltaSnap:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetClearKeyboardFocusOnCommit
+    src   "Get Clear Keyboard Focus on Commit"
+    text  "获取提交时清除键盘聚焦"
+    state machine
+}
+
 DreamSpinBox:GetClearKeyboardFocusOnCommit:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetClearKeyboardFocusOnCommit:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetDelta {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetDelta
+    src   "Get Delta"
+    // from the engine's zh-Hans
+    text  "获取差量"
     state draft
 }
 
@@ -140,11 +203,26 @@ DreamSpinBox:GetDelta:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetEnableSlider {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetEnableSlider
+    src   "Get Enable Slider"
+    text  "获取启用滑条"
+    state machine
+}
+
 DreamSpinBox:GetEnableSlider:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetEnableSlider:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetFont
+    src   "Get Font"
+    // from the engine's zh-Hans
+    text  "Get Font"
     state draft
 }
 
@@ -156,6 +234,14 @@ DreamSpinBox:GetFont:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetJustification
+    src   "Get Justification"
+    // from the engine's zh-Hans
+    text  "Get Justification"
+    state draft
+}
+
 DreamSpinBox:GetJustification:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetJustification:ReturnValue
     src   "Return Value"
@@ -164,11 +250,26 @@ DreamSpinBox:GetJustification:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetKeyboardType {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetKeyboardType
+    src   "Get Keyboard Type"
+    text  "获取键盘类型"
+    state machine
+}
+
 DreamSpinBox:GetKeyboardType:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetKeyboardType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetMaxFractionalDigits {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMaxFractionalDigits
+    src   "Get Max Fractional Digits"
+    // from the engine's zh-Hans
+    text  "获取最大小数位数"
     state draft
 }
 
@@ -180,11 +281,27 @@ DreamSpinBox:GetMaxFractionalDigits:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetMaxSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMaxSliderValue
+    src   "Get Max Slider Value"
+    // from the engine's zh-Hans
+    text  "获取最大滑条值"
+    state draft
+}
+
 DreamSpinBox:GetMaxSliderValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMaxSliderValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMaxValue
+    src   "Get Max Value"
+    // from the engine's zh-Hans
+    text  "获取最大值"
     state draft
 }
 
@@ -196,11 +313,26 @@ DreamSpinBox:GetMaxValue:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinDesiredWidth
+    src   "Get Min Desired Width"
+    text  "获取所需最小宽度"
+    state machine
+}
+
 DreamSpinBox:GetMinDesiredWidth:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinDesiredWidth:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetMinFractionalDigits {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinFractionalDigits
+    src   "Get Min Fractional Digits"
+    // from the engine's zh-Hans
+    text  "获取最小小数位数"
     state draft
 }
 
@@ -212,11 +344,27 @@ DreamSpinBox:GetMinFractionalDigits:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetMinSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinSliderValue
+    src   "Get Min Slider Value"
+    // from the engine's zh-Hans
+    text  "获取最小滑条值"
+    state draft
+}
+
 DreamSpinBox:GetMinSliderValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinSliderValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetMinValue
+    src   "Get Min Value"
+    // from the engine's zh-Hans
+    text  "获取最小值"
     state draft
 }
 
@@ -228,12 +376,26 @@ DreamSpinBox:GetMinValue:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSelectAllTextOnCommit
+    src   "Get Select All Text on Commit"
+    text  "获取提交时选择所有文本"
+    state machine
+}
+
 DreamSpinBox:GetSelectAllTextOnCommit:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSelectAllTextOnCommit:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSpinBox:GetSliderExponent {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderExponent
+    src   "Get Slider Exponent"
+    text  "获取滑条指数"
+    state machine
 }
 
 DreamSpinBox:GetSliderExponent:ReturnValue {
@@ -244,6 +406,13 @@ DreamSpinBox:GetSliderExponent:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetSliderMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMaxValue
+    src   "Get Slider Max Value"
+    text  "获取滑条最大值"
+    state machine
+}
+
 DreamSpinBox:GetSliderMaxValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMaxValue:ReturnValue
     src   "Return Value"
@@ -252,11 +421,26 @@ DreamSpinBox:GetSliderMaxValue:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetSliderMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMinValue
+    src   "Get Slider Min Value"
+    text  "获取滑条最小值"
+    state machine
+}
+
 DreamSpinBox:GetSliderMinValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetSliderMinValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetStepSize
+    src   "Get Step Size"
+    // from the engine's zh-Hans
+    text  "Get Step Size"
     state draft
 }
 
@@ -268,11 +452,26 @@ DreamSpinBox:GetStepSize:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamSpinBox:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:GetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -284,6 +483,13 @@ DreamSpinBox:GetValue:ReturnValue {
     state draft
 }
 
+DreamSpinBox:GetVirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetVirtualKeyboardDismissAction
+    src   "Get Virtual Keyboard Dismiss Action"
+    text  "获取虚拟键盘取消操作"
+    state machine
+}
+
 DreamSpinBox:GetVirtualKeyboardDismissAction:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:GetVirtualKeyboardDismissAction:ReturnValue
     src   "Return Value"
@@ -292,11 +498,26 @@ DreamSpinBox:GetVirtualKeyboardDismissAction:ReturnValue {
     state draft
 }
 
+DreamSpinBox:HasFiniteSliderRange {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:HasFiniteSliderRange
+    src   "Has Finite Slider Range"
+    text  "是否有有限滑条范围"
+    state machine
+}
+
 DreamSpinBox:HasFiniteSliderRange:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:HasFiniteSliderRange:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpinBox:Increment {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:Increment
+    src   "Increment"
+    // from the engine's zh-Hans
+    text  "Increment"
     state draft
 }
 
@@ -325,6 +546,13 @@ DreamSpinBox:InputBehaviour {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:InputBehaviour
     src   "Input Behaviour"
     text  "输入行为"
+    state machine
+}
+
+DreamSpinBox:IsSliderMoving {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:IsSliderMoving
+    src   "Is Slider Moving"
+    text  "滑条是否移动中"
     state machine
 }
 
@@ -452,10 +680,25 @@ DreamSpinBox:ScrubStartTravel {
     state machine
 }
 
+DreamSpinBox:SetAlwaysUsesDeltaSnap {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetAlwaysUsesDeltaSnap
+    src   "Set Always Uses Delta Snap"
+    // from the engine's zh-Hans
+    text  "设置固定使用差量对齐"
+    state draft
+}
+
 DreamSpinBox:SetAlwaysUsesDeltaSnap:bInAlwaysUsesDeltaSnap {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetAlwaysUsesDeltaSnap:bInAlwaysUsesDeltaSnap
     src   "In Always Uses Delta Snap"
     text  "始终使用增量对齐"
+    state machine
+}
+
+DreamSpinBox:SetClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetClearKeyboardFocusOnCommit
+    src   "Set Clear Keyboard Focus on Commit"
+    text  "设置提交时清除键盘聚焦"
     state machine
 }
 
@@ -466,10 +709,25 @@ DreamSpinBox:SetClearKeyboardFocusOnCommit:bInClearKeyboardFocusOnCommit {
     state machine
 }
 
+DreamSpinBox:SetDelta {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetDelta
+    src   "Set Delta"
+    // from the engine's zh-Hans
+    text  "设置差量"
+    state draft
+}
+
 DreamSpinBox:SetDelta:InDelta {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetDelta:InDelta
     src   "In Delta"
     text  "步进高亮增量"
+    state machine
+}
+
+DreamSpinBox:SetEnableSlider {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetEnableSlider
+    src   "Set Enable Slider"
+    text  "设置启用滑条"
     state machine
 }
 
@@ -480,11 +738,27 @@ DreamSpinBox:SetEnableSlider:bInEnableSlider {
     state machine
 }
 
+DreamSpinBox:SetFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetFont
+    src   "Set Font"
+    // from the engine's zh-Hans
+    text  "Set Font"
+    state draft
+}
+
 DreamSpinBox:SetFont:InFont {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetFont:InFont
     src   "In Font"
     // from the engine's zh-Hans
     text  "在字体中"
+    state draft
+}
+
+DreamSpinBox:SetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetJustification
+    src   "Set Justification"
+    // from the engine's zh-Hans
+    text  "设置对齐"
     state draft
 }
 
@@ -496,11 +770,26 @@ DreamSpinBox:SetJustification:InJustification {
     state draft
 }
 
+DreamSpinBox:SetKeyboardType {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetKeyboardType
+    src   "Set Keyboard Type"
+    text  "设置键盘类型"
+    state machine
+}
+
 DreamSpinBox:SetKeyboardType:InKeyboardType {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetKeyboardType:InKeyboardType
     src   "In Keyboard Type"
     text  "键盘类型"
     state machine
+}
+
+DreamSpinBox:SetMaxFractionalDigits {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMaxFractionalDigits
+    src   "Set Max Fractional Digits"
+    // from the engine's zh-Hans
+    text  "设置最大小数位数"
+    state draft
 }
 
 DreamSpinBox:SetMaxFractionalDigits:InMaxFractionalDigits {
@@ -510,6 +799,14 @@ DreamSpinBox:SetMaxFractionalDigits:InMaxFractionalDigits {
     state machine
 }
 
+DreamSpinBox:SetMaxSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMaxSliderValue
+    src   "Set Max Slider Value"
+    // from the engine's zh-Hans
+    text  "设置最大滑条值"
+    state draft
+}
+
 DreamSpinBox:SetMaxSliderValue:InMaxSliderValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMaxSliderValue:InMaxSliderValue
     src   "In Max Slider Value"
@@ -517,11 +814,27 @@ DreamSpinBox:SetMaxSliderValue:InMaxSliderValue {
     state machine
 }
 
+DreamSpinBox:SetMaxValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMaxValue
+    src   "Set Max Value"
+    // from the engine's zh-Hans
+    text  "设置最大值"
+    state draft
+}
+
 DreamSpinBox:SetMaxValue:InMaxValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMaxValue:InMaxValue
     src   "In Max Value"
     text  "最大值"
     state machine
+}
+
+DreamSpinBox:SetMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinDesiredWidth
+    src   "Set Min Desired Width"
+    // from the engine's zh-Hans
+    text  "设置所需最小宽度"
+    state draft
 }
 
 DreamSpinBox:SetMinDesiredWidth:InMinDesiredWidth {
@@ -532,11 +845,27 @@ DreamSpinBox:SetMinDesiredWidth:InMinDesiredWidth {
     state draft
 }
 
+DreamSpinBox:SetMinFractionalDigits {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinFractionalDigits
+    src   "Set Min Fractional Digits"
+    // from the engine's zh-Hans
+    text  "设置最小小数位数"
+    state draft
+}
+
 DreamSpinBox:SetMinFractionalDigits:InMinFractionalDigits {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinFractionalDigits:InMinFractionalDigits
     src   "In Min Fractional Digits"
     text  "最小小数位数"
     state machine
+}
+
+DreamSpinBox:SetMinSliderValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinSliderValue
+    src   "Set Min Slider Value"
+    // from the engine's zh-Hans
+    text  "设置最小滑条值"
+    state draft
 }
 
 DreamSpinBox:SetMinSliderValue:InMinSliderValue {
@@ -546,10 +875,25 @@ DreamSpinBox:SetMinSliderValue:InMinSliderValue {
     state machine
 }
 
+DreamSpinBox:SetMinValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinValue
+    src   "Set Min Value"
+    // from the engine's zh-Hans
+    text  "设置最小值"
+    state draft
+}
+
 DreamSpinBox:SetMinValue:InMinValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetMinValue:InMinValue
     src   "In Min Value"
     text  "最小值"
+    state machine
+}
+
+DreamSpinBox:SetSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetSelectAllTextOnCommit
+    src   "Set Select All Text on Commit"
+    text  "设置提交时选择所有文本"
     state machine
 }
 
@@ -560,6 +904,13 @@ DreamSpinBox:SetSelectAllTextOnCommit:bInSelectAllTextOnCommit {
     state machine
 }
 
+DreamSpinBox:SetSliderExponent {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetSliderExponent
+    src   "Set Slider Exponent"
+    text  "设置滑条指数"
+    state machine
+}
+
 DreamSpinBox:SetSliderExponent:InSliderExponent {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetSliderExponent:InSliderExponent
     src   "In Slider Exponent"
@@ -567,11 +918,27 @@ DreamSpinBox:SetSliderExponent:InSliderExponent {
     state machine
 }
 
+DreamSpinBox:SetStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetStepSize
+    src   "Set Step Size"
+    // from the engine's zh-Hans
+    text  "Set Step Size"
+    state draft
+}
+
 DreamSpinBox:SetStepSize:InStepSize {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetStepSize:InStepSize
     src   "In Step Size"
     text  "步进大小"
     state machine
+}
+
+DreamSpinBox:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamSpinBox:SetStyle:InStyle {
@@ -582,12 +949,27 @@ DreamSpinBox:SetStyle:InStyle {
     state draft
 }
 
+DreamSpinBox:SetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
+    state draft
+}
+
 DreamSpinBox:SetValue:InValue {
     at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetValue:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamSpinBox:SetVirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Controls/DreamSpinBox.h#DreamSpinBox:SetVirtualKeyboardDismissAction
+    src   "Set Virtual Keyboard Dismiss Action"
+    text  "设置虚拟键盘取消操作"
+    state machine
 }
 
 DreamSpinBox:SetVirtualKeyboardDismissAction:InDismissAction {

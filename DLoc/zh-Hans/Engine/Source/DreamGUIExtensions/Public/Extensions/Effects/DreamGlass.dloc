@@ -53,12 +53,26 @@ DreamGlass:Frost {
     state machine
 }
 
+DreamGlass:GetShape {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GetShape
+    src   "Get Shape"
+    text  "获取形状"
+    state machine
+}
+
 DreamGlass:GetShape:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GetShape:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamGlass:GetShapeBlendGroup {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:GetShapeBlendGroup
+    src   "Get Shape Blend Group"
+    text  "获取形状混合组"
+    state machine
 }
 
 DreamGlass:GetShapeBlendGroup:ReturnValue {
@@ -136,11 +150,27 @@ DreamGlass:Saturation {
     state draft
 }
 
+DreamGlass:SetBrightness {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetBrightness
+    src   "Set Brightness"
+    // from the engine's zh-Hans
+    text  "设置亮度"
+    state draft
+}
+
 DreamGlass:SetBrightness:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetBrightness:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamGlass:SetCornerRadius {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetCornerRadius
+    src   "Set Corner Radius"
+    // from the engine's zh-Hans
+    text  "Set Corner Radius"
     state draft
 }
 
@@ -152,12 +182,26 @@ DreamGlass:SetCornerRadius:Value {
     state draft
 }
 
+DreamGlass:SetCornerRadiusUnitMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetCornerRadiusUnitMode
+    src   "Set Corner Radius Unit Mode"
+    text  "设置角半径单位"
+    state machine
+}
+
 DreamGlass:SetCornerRadiusUnitMode:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetCornerRadiusUnitMode:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamGlass:SetDispersion {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetDispersion
+    src   "Set Dispersion"
+    text  "设置色散"
+    state machine
 }
 
 DreamGlass:SetDispersion:Value {
@@ -168,6 +212,13 @@ DreamGlass:SetDispersion:Value {
     state draft
 }
 
+DreamGlass:SetEdgeWidth {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetEdgeWidth
+    src   "Set Edge Width"
+    text  "设置边缘宽度"
+    state machine
+}
+
 DreamGlass:SetEdgeWidth:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetEdgeWidth:Value
     src   "Value"
@@ -176,12 +227,26 @@ DreamGlass:SetEdgeWidth:Value {
     state draft
 }
 
+DreamGlass:SetFrost {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetFrost
+    src   "Set Frost"
+    text  "设置冰霜"
+    state machine
+}
+
 DreamGlass:SetFrost:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetFrost:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamGlass:SetGlassTint {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetGlassTint
+    src   "Set Glass Tint"
+    text  "设置玻璃着色"
+    state machine
 }
 
 DreamGlass:SetGlassTint:InColor {
@@ -198,6 +263,13 @@ DreamGlass:SetGlassTint:InStrength {
     // from the engine's zh-Hans
     text  "输入强度"
     state draft
+}
+
+DreamGlass:SetHighlight {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetHighlight
+    src   "Set Highlight"
+    text  "设置高亮"
+    state machine
 }
 
 DreamGlass:SetHighlight:InColor {
@@ -231,6 +303,13 @@ DreamGlass:SetHighlight:InWidth {
     state draft
 }
 
+DreamGlass:SetInnerShadow {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetInnerShadow
+    src   "Set Inner Shadow"
+    text  "设置内阴影"
+    state machine
+}
+
 DreamGlass:SetInnerShadow:InStrength {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetInnerShadow:InStrength
     src   "In Strength"
@@ -247,12 +326,26 @@ DreamGlass:SetInnerShadow:InWidth {
     state draft
 }
 
+DreamGlass:SetProfile {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetProfile
+    src   "Set Profile"
+    text  "设置描述文件"
+    state machine
+}
+
 DreamGlass:SetProfile:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetProfile:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamGlass:SetRefraction {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetRefraction
+    src   "Set Refraction"
+    text  "设置折射"
+    state machine
 }
 
 DreamGlass:SetRefraction:Value {
@@ -263,6 +356,13 @@ DreamGlass:SetRefraction:Value {
     state draft
 }
 
+DreamGlass:SetSaturation {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetSaturation
+    src   "Set Saturation"
+    text  "设置饱和度"
+    state machine
+}
+
 DreamGlass:SetSaturation:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetSaturation:Value
     src   "Value"
@@ -271,12 +371,26 @@ DreamGlass:SetSaturation:Value {
     state draft
 }
 
+DreamGlass:SetShape {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShape
+    src   "Set Shape"
+    text  "设置形状"
+    state machine
+}
+
 DreamGlass:SetShape:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShape:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamGlass:SetShapeBlendGroup {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamGlass.h#DreamGlass:SetShapeBlendGroup
+    src   "Set Shape Blend Group"
+    text  "设置形状混合组"
+    state machine
 }
 
 DreamGlass:SetShapeBlendGroup:Value {

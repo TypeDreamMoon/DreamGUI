@@ -9,11 +9,33 @@ DreamLayerStyle {
     state machine
 }
 
+DreamLayerStyle:DetachFromPreset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:DetachFromPreset
+    src   "Detach from Preset"
+    text  "与预设分离"
+    state machine
+}
+
+DreamLayerStyle:GetEffectiveStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetEffectiveStyle
+    src   "Get Effective Style"
+    text  "获取有效样式"
+    state machine
+}
+
 DreamLayerStyle:GetEffectiveStyle:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetEffectiveStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayerStyle:GetPath {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPath
+    src   "Get Path"
+    // from the engine's zh-Hans
+    text  "获取路径"
     state draft
 }
 
@@ -25,12 +47,26 @@ DreamLayerStyle:GetPath:ReturnValue {
     state draft
 }
 
+DreamLayerStyle:GetPreset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPreset
+    src   "Get Preset"
+    text  "获取预设"
+    state machine
+}
+
 DreamLayerStyle:GetPreset:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetPreset:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerStyle:GetStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamLayerStyle:GetStyle:ReturnValue {
@@ -49,11 +85,26 @@ DreamLayerStyle:Preset {
     state draft
 }
 
+DreamLayerStyle:SetPreset {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:SetPreset
+    src   "Set Preset"
+    text  "设置预设"
+    state machine
+}
+
 DreamLayerStyle:SetPreset:InPreset {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:SetPreset:InPreset
     src   "In Preset"
     // from the engine's zh-Hans
     text  "在预设中"
+    state draft
+}
+
+DreamLayerStyle:SetStyle {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerStyle.h#DreamLayerStyle:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
     state draft
 }
 

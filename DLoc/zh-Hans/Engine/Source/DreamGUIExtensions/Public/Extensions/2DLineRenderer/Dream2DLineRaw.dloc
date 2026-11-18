@@ -17,6 +17,13 @@ Dream2DLineRaw:PointArray {
     state draft
 }
 
+Dream2DLineRaw:SetPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h#Dream2DLineRaw:SetPoints
+    src   "Set Points"
+    text  "设置点"
+    state machine
+}
+
 Dream2DLineRaw:SetPoints:InPoints {
     at    Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h#Dream2DLineRaw:SetPoints:InPoints
     src   "In Points"

@@ -690,12 +690,26 @@ UISelectable:FocusedImageBrush {
     state machine
 }
 
+UISelectable:GetAcceptedMouseButtons {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetAcceptedMouseButtons
+    src   "Get Accepted Mouse Buttons"
+    text  "获取接受的鼠标按键"
+    state machine
+}
+
 UISelectable:GetAcceptedMouseButtons:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetAcceptedMouseButtons:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetAnimDuration {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetAnimDuration
+    src   "Get Anim Duration"
+    text  "获取动画持续时间"
+    state machine
 }
 
 UISelectable:GetAnimDuration:ReturnValue {
@@ -706,12 +720,26 @@ UISelectable:GetAnimDuration:ReturnValue {
     state draft
 }
 
+UISelectable:GetCanNavigateHere {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetCanNavigateHere
+    src   "Get Can Navigate Here"
+    text  "获取能否导航至此"
+    state machine
+}
+
 UISelectable:GetCanNavigateHere:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetCanNavigateHere:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetClickedSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetClickedSound
+    src   "Get Clicked Sound"
+    text  "获取点击音效"
+    state machine
 }
 
 UISelectable:GetClickedSound:ReturnValue {
@@ -722,11 +750,26 @@ UISelectable:GetClickedSound:ReturnValue {
     state draft
 }
 
+UISelectable:GetClickMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetClickMethod
+    src   "Get Click Method"
+    text  "获取点击方法"
+    state machine
+}
+
 UISelectable:GetClickMethod:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetClickMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISelectable:GetCurrentSelectionState {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetCurrentSelectionState
+    src   "Get Current Selection State"
+    // from the engine's zh-Hans
+    text  "获取当前选择状态"
     state draft
 }
 
@@ -738,12 +781,26 @@ UISelectable:GetCurrentSelectionState:ReturnValue {
     state draft
 }
 
+UISelectable:GetDisabledColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetDisabledColor
+    src   "Get Disabled Color"
+    text  "获取禁用颜色"
+    state machine
+}
+
 UISelectable:GetDisabledColor:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetDisabledColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetDisabledImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetDisabledImageBrush
+    src   "Get Disabled Image Brush"
+    text  "获取禁用图像笔刷"
+    state machine
 }
 
 UISelectable:GetDisabledImageBrush:ReturnValue {
@@ -754,12 +811,26 @@ UISelectable:GetDisabledImageBrush:ReturnValue {
     state draft
 }
 
+UISelectable:GetFocusedColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetFocusedColor
+    src   "Get Focused Color"
+    text  "获取聚焦颜色"
+    state machine
+}
+
 UISelectable:GetFocusedColor:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetFocusedColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetFocusedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetFocusedImageBrush
+    src   "Get Focused Image Brush"
+    text  "获取聚焦图像笔刷"
+    state machine
 }
 
 UISelectable:GetFocusedImageBrush:ReturnValue {
@@ -770,12 +841,26 @@ UISelectable:GetFocusedImageBrush:ReturnValue {
     state draft
 }
 
+UISelectable:GetHoveredColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetHoveredColor
+    src   "Get Hovered Color"
+    text  "获取悬停颜色"
+    state machine
+}
+
 UISelectable:GetHoveredColor:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetHoveredColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetHoveredImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetHoveredImageBrush
+    src   "Get Hovered Image Brush"
+    text  "获取悬停图像笔刷"
+    state machine
 }
 
 UISelectable:GetHoveredImageBrush:ReturnValue {
@@ -786,12 +871,26 @@ UISelectable:GetHoveredImageBrush:ReturnValue {
     state draft
 }
 
+UISelectable:GetHoveredSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetHoveredSound
+    src   "Get Hovered Sound"
+    text  "获取悬停音效"
+    state machine
+}
+
 UISelectable:GetHoveredSound:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetHoveredSound:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetInteractable {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetInteractable
+    src   "Get Interactable"
+    text  "获取可交互"
+    state machine
 }
 
 UISelectable:GetInteractable:ReturnValue {
@@ -802,12 +901,26 @@ UISelectable:GetInteractable:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationDown {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationDown
+    src   "Get Navigation Down"
+    text  "获取向下导航"
+    state machine
+}
+
 UISelectable:GetNavigationDown:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationDown:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationDownExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationDownExplicit
+    src   "Get Navigation Down Explicit"
+    text  "获取显式导航（下）"
+    state machine
 }
 
 UISelectable:GetNavigationDownExplicit:ReturnValue {
@@ -818,12 +931,26 @@ UISelectable:GetNavigationDownExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationLeft {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationLeft
+    src   "Get Navigation Left"
+    text  "获取向左导航"
+    state machine
+}
+
 UISelectable:GetNavigationLeft:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationLeft:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationLeftExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationLeftExplicit
+    src   "Get Navigation Left Explicit"
+    text  "获取显式导航（左）"
+    state machine
 }
 
 UISelectable:GetNavigationLeftExplicit:ReturnValue {
@@ -834,12 +961,26 @@ UISelectable:GetNavigationLeftExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationNext {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationNext
+    src   "Get Navigation Next"
+    text  "获取向右导航"
+    state machine
+}
+
 UISelectable:GetNavigationNext:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationNext:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationNextExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationNextExplicit
+    src   "Get Navigation Next Explicit"
+    text  "获取显式导航（下一个）"
+    state machine
 }
 
 UISelectable:GetNavigationNextExplicit:ReturnValue {
@@ -850,12 +991,26 @@ UISelectable:GetNavigationNextExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationPrev {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationPrev
+    src   "Get Navigation Prev"
+    text  "获取导航：上一个"
+    state machine
+}
+
 UISelectable:GetNavigationPrev:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationPrev:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationPrevExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationPrevExplicit
+    src   "Get Navigation Prev Explicit"
+    text  "获取显式导航（上一个）"
+    state machine
 }
 
 UISelectable:GetNavigationPrevExplicit:ReturnValue {
@@ -866,12 +1021,26 @@ UISelectable:GetNavigationPrevExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationRight {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationRight
+    src   "Get Navigation Right"
+    text  "获取导航：下一个"
+    state machine
+}
+
 UISelectable:GetNavigationRight:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationRight:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationRightExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationRightExplicit
+    src   "Get Navigation Right Explicit"
+    text  "获取显式导航（右）"
+    state machine
 }
 
 UISelectable:GetNavigationRightExplicit:ReturnValue {
@@ -882,12 +1051,26 @@ UISelectable:GetNavigationRightExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNavigationUp {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationUp
+    src   "Get Navigation Up"
+    text  "获取导航：向上"
+    state machine
+}
+
 UISelectable:GetNavigationUp:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationUp:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNavigationUpExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNavigationUpExplicit
+    src   "Get Navigation Up Explicit"
+    text  "获取显式导航（上）"
+    state machine
 }
 
 UISelectable:GetNavigationUpExplicit:ReturnValue {
@@ -898,12 +1081,26 @@ UISelectable:GetNavigationUpExplicit:ReturnValue {
     state draft
 }
 
+UISelectable:GetNormalColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNormalColor
+    src   "Get Normal Color"
+    text  "获取正常颜色"
+    state machine
+}
+
 UISelectable:GetNormalColor:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNormalColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetNormalImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetNormalImageBrush
+    src   "Get Normal Image Brush"
+    text  "获取正常图像笔刷"
+    state machine
 }
 
 UISelectable:GetNormalImageBrush:ReturnValue {
@@ -914,12 +1111,26 @@ UISelectable:GetNormalImageBrush:ReturnValue {
     state draft
 }
 
+UISelectable:GetPressedColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressedColor
+    src   "Get Pressed Color"
+    text  "获取按下颜色"
+    state machine
+}
+
 UISelectable:GetPressedColor:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressedColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetPressedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressedImageBrush
+    src   "Get Pressed Image Brush"
+    text  "获取按下图像笔刷"
+    state machine
 }
 
 UISelectable:GetPressedImageBrush:ReturnValue {
@@ -930,12 +1141,26 @@ UISelectable:GetPressedImageBrush:ReturnValue {
     state draft
 }
 
+UISelectable:GetPressedSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressedSound
+    src   "Get Pressed Sound"
+    text  "获取按压音效"
+    state machine
+}
+
 UISelectable:GetPressedSound:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressedSound:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetPressMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetPressMethod
+    src   "Get Press Method"
+    text  "获取按压方法"
+    state machine
 }
 
 UISelectable:GetPressMethod:ReturnValue {
@@ -946,12 +1171,26 @@ UISelectable:GetPressMethod:ReturnValue {
     state draft
 }
 
+UISelectable:GetSelectionState {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetSelectionState
+    src   "Get Selection State"
+    text  "获取选择状态"
+    state machine
+}
+
 UISelectable:GetSelectionState:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetSelectionState:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetStyle {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 UISelectable:GetStyle:ReturnValue {
@@ -962,12 +1201,26 @@ UISelectable:GetStyle:ReturnValue {
     state draft
 }
 
+UISelectable:GetTouchMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetTouchMethod
+    src   "Get Touch Method"
+    text  "获取触控方法"
+    state machine
+}
+
 UISelectable:GetTouchMethod:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetTouchMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetTransitionTarget {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetTransitionTarget
+    src   "Get Transition Target"
+    text  "获取过渡目标"
+    state machine
 }
 
 UISelectable:GetTransitionTarget:ReturnValue {
@@ -978,12 +1231,26 @@ UISelectable:GetTransitionTarget:ReturnValue {
     state draft
 }
 
+UISelectable:GetUseFocusedVisuals {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetUseFocusedVisuals
+    src   "Get Use Focused Visuals"
+    text  "获取使用聚焦视觉效果"
+    state machine
+}
+
 UISelectable:GetUseFocusedVisuals:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetUseFocusedVisuals:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISelectable:GetUseFocusRing {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:GetUseFocusRing
+    src   "Get Use Focus Ring"
+    text  "获取使用焦点高亮"
+    state machine
 }
 
 UISelectable:GetUseFocusRing:ReturnValue {
@@ -1017,11 +1284,26 @@ UISelectable:HoveredSound {
     state draft
 }
 
+UISelectable:IsFocused {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:IsFocused
+    src   "Is Focused"
+    text  "是否聚焦"
+    state machine
+}
+
 UISelectable:IsFocused:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:IsFocused:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISelectable:IsInteractable {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:IsInteractable
+    src   "Is Interactable"
+    // from the engine's zh-Hans
+    text  "为可交互"
     state draft
 }
 
@@ -1161,12 +1443,26 @@ UISelectable:PressMethod {
     state draft
 }
 
+UISelectable:SetAcceptedMouseButtons {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetAcceptedMouseButtons
+    src   "Set Accepted Mouse Buttons"
+    text  "设置接受的鼠标按键"
+    state machine
+}
+
 UISelectable:SetAcceptedMouseButtons:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetAcceptedMouseButtons:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetAnimDuration {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetAnimDuration
+    src   "Set Anim Duration"
+    text  "设置动画持续时间"
+    state machine
 }
 
 UISelectable:SetAnimDuration:Value {
@@ -1177,6 +1473,13 @@ UISelectable:SetAnimDuration:Value {
     state draft
 }
 
+UISelectable:SetCanNavigateHere {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetCanNavigateHere
+    src   "Set Can Navigate Here"
+    text  "设置能否导航至此"
+    state machine
+}
+
 UISelectable:SetCanNavigateHere:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetCanNavigateHere:Value
     src   "Value"
@@ -1185,11 +1488,26 @@ UISelectable:SetCanNavigateHere:Value {
     state draft
 }
 
+UISelectable:SetClickedSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetClickedSound
+    src   "Set Clicked Sound"
+    text  "设置点击音效"
+    state machine
+}
+
 UISelectable:SetClickedSound:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetClickedSound:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+UISelectable:SetClickMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetClickMethod
+    src   "Set Click Method"
+    // from the engine's zh-Hans
+    text  "设置点击方法"
     state draft
 }
 
@@ -1201,12 +1519,26 @@ UISelectable:SetClickMethod:Value {
     state draft
 }
 
+UISelectable:SetDisabledColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetDisabledColor
+    src   "Set Disabled Color"
+    text  "设置禁用颜色"
+    state machine
+}
+
 UISelectable:SetDisabledColor:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetDisabledColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetDisabledImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetDisabledImageBrush
+    src   "Set Disabled Image Brush"
+    text  "设置禁用图像笔刷"
+    state machine
 }
 
 UISelectable:SetDisabledImageBrush:Value {
@@ -1217,12 +1549,26 @@ UISelectable:SetDisabledImageBrush:Value {
     state draft
 }
 
+UISelectable:SetFocusedColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetFocusedColor
+    src   "Set Focused Color"
+    text  "设置聚焦颜色"
+    state machine
+}
+
 UISelectable:SetFocusedColor:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetFocusedColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetFocusedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetFocusedImageBrush
+    src   "Set Focused Image Brush"
+    text  "设置聚焦图像笔刷"
+    state machine
 }
 
 UISelectable:SetFocusedImageBrush:Value {
@@ -1233,12 +1579,26 @@ UISelectable:SetFocusedImageBrush:Value {
     state draft
 }
 
+UISelectable:SetHoveredColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetHoveredColor
+    src   "Set Hovered Color"
+    text  "设置悬停颜色"
+    state machine
+}
+
 UISelectable:SetHoveredColor:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetHoveredColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetHoveredImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetHoveredImageBrush
+    src   "Set Hovered Image Brush"
+    text  "设置悬停图像笔刷"
+    state machine
 }
 
 UISelectable:SetHoveredImageBrush:Value {
@@ -1249,12 +1609,26 @@ UISelectable:SetHoveredImageBrush:Value {
     state draft
 }
 
+UISelectable:SetHoveredSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetHoveredSound
+    src   "Set Hovered Sound"
+    text  "设置悬停音效"
+    state machine
+}
+
 UISelectable:SetHoveredSound:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetHoveredSound:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetInteractable {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetInteractable
+    src   "Set Interactable"
+    text  "设置可交互"
+    state machine
 }
 
 UISelectable:SetInteractable:Value {
@@ -1265,12 +1639,26 @@ UISelectable:SetInteractable:Value {
     state draft
 }
 
+UISelectable:SetNavigationDown {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationDown
+    src   "Set Navigation Down"
+    text  "设置向下导航"
+    state machine
+}
+
 UISelectable:SetNavigationDown:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationDown:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationDownExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationDownExplicit
+    src   "Set Navigation Down Explicit"
+    text  "设置显式导航（下）"
+    state machine
 }
 
 UISelectable:SetNavigationDownExplicit:Value {
@@ -1281,12 +1669,26 @@ UISelectable:SetNavigationDownExplicit:Value {
     state draft
 }
 
+UISelectable:SetNavigationLeft {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationLeft
+    src   "Set Navigation Left"
+    text  "设置向左导航"
+    state machine
+}
+
 UISelectable:SetNavigationLeft:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationLeft:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationLeftExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationLeftExplicit
+    src   "Set Navigation Left Explicit"
+    text  "设置显式导航（左）"
+    state machine
 }
 
 UISelectable:SetNavigationLeftExplicit:Value {
@@ -1297,12 +1699,26 @@ UISelectable:SetNavigationLeftExplicit:Value {
     state draft
 }
 
+UISelectable:SetNavigationNext {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationNext
+    src   "Set Navigation Next"
+    text  "设置向右导航"
+    state machine
+}
+
 UISelectable:SetNavigationNext:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationNext:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationNextExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationNextExplicit
+    src   "Set Navigation Next Explicit"
+    text  "设置显式导航（下一个）"
+    state machine
 }
 
 UISelectable:SetNavigationNextExplicit:Value {
@@ -1313,12 +1729,26 @@ UISelectable:SetNavigationNextExplicit:Value {
     state draft
 }
 
+UISelectable:SetNavigationPrev {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationPrev
+    src   "Set Navigation Prev"
+    text  "设置导航：上一个"
+    state machine
+}
+
 UISelectable:SetNavigationPrev:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationPrev:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationPrevExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationPrevExplicit
+    src   "Set Navigation Prev Explicit"
+    text  "设置显式导航（上一个）"
+    state machine
 }
 
 UISelectable:SetNavigationPrevExplicit:Value {
@@ -1329,12 +1759,26 @@ UISelectable:SetNavigationPrevExplicit:Value {
     state draft
 }
 
+UISelectable:SetNavigationRight {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationRight
+    src   "Set Navigation Right"
+    text  "设置导航：下一个"
+    state machine
+}
+
 UISelectable:SetNavigationRight:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationRight:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationRightExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationRightExplicit
+    src   "Set Navigation Right Explicit"
+    text  "设置显式导航（右）"
+    state machine
 }
 
 UISelectable:SetNavigationRightExplicit:Value {
@@ -1345,12 +1789,26 @@ UISelectable:SetNavigationRightExplicit:Value {
     state draft
 }
 
+UISelectable:SetNavigationUp {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationUp
+    src   "Set Navigation Up"
+    text  "设置导航：向上"
+    state machine
+}
+
 UISelectable:SetNavigationUp:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationUp:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNavigationUpExplicit {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNavigationUpExplicit
+    src   "Set Navigation Up Explicit"
+    text  "设置显式导航（上）"
+    state machine
 }
 
 UISelectable:SetNavigationUpExplicit:Value {
@@ -1361,12 +1819,26 @@ UISelectable:SetNavigationUpExplicit:Value {
     state draft
 }
 
+UISelectable:SetNormalColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNormalColor
+    src   "Set Normal Color"
+    text  "设置正常颜色"
+    state machine
+}
+
 UISelectable:SetNormalColor:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNormalColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetNormalImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetNormalImageBrush
+    src   "Set Normal Image Brush"
+    text  "设置正常图像笔刷"
+    state machine
 }
 
 UISelectable:SetNormalImageBrush:Value {
@@ -1377,12 +1849,26 @@ UISelectable:SetNormalImageBrush:Value {
     state draft
 }
 
+UISelectable:SetPressedColor {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressedColor
+    src   "Set Pressed Color"
+    text  "设置按下颜色"
+    state machine
+}
+
 UISelectable:SetPressedColor:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressedColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetPressedImageBrush {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressedImageBrush
+    src   "Set Pressed Image Brush"
+    text  "设置按下图像笔刷"
+    state machine
 }
 
 UISelectable:SetPressedImageBrush:Value {
@@ -1393,11 +1879,26 @@ UISelectable:SetPressedImageBrush:Value {
     state draft
 }
 
+UISelectable:SetPressedSound {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressedSound
+    src   "Set Pressed Sound"
+    text  "设置按压音效"
+    state machine
+}
+
 UISelectable:SetPressedSound:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressedSound:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+UISelectable:SetPressMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetPressMethod
+    src   "Set Press Method"
+    // from the engine's zh-Hans
+    text  "设置按压方法"
     state draft
 }
 
@@ -1409,11 +1910,26 @@ UISelectable:SetPressMethod:Value {
     state draft
 }
 
+UISelectable:SetSelectionState {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetSelectionState
+    src   "Set Selection State"
+    text  "设置选择状态"
+    state machine
+}
+
 UISelectable:SetSelectionState:NewState {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetSelectionState:NewState
     src   "New State"
     // from the engine's zh-Hans
     text  "新状态"
+    state draft
+}
+
+UISelectable:SetStyle {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
     state draft
 }
 
@@ -1425,12 +1941,27 @@ UISelectable:SetStyle:Value {
     state draft
 }
 
+UISelectable:SetTouchMethod {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetTouchMethod
+    src   "Set Touch Method"
+    // from the engine's zh-Hans
+    text  "设置触控方法"
+    state draft
+}
+
 UISelectable:SetTouchMethod:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetTouchMethod:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetTransitionTarget {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetTransitionTarget
+    src   "Set Transition Target"
+    text  "设置过渡目标"
+    state machine
 }
 
 UISelectable:SetTransitionTarget:Value {
@@ -1441,12 +1972,26 @@ UISelectable:SetTransitionTarget:Value {
     state draft
 }
 
+UISelectable:SetUseFocusedVisuals {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetUseFocusedVisuals
+    src   "Set Use Focused Visuals"
+    text  "设置使用聚焦视觉效果"
+    state machine
+}
+
 UISelectable:SetUseFocusedVisuals:Value {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetUseFocusedVisuals:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UISelectable:SetUseFocusRing {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectable:SetUseFocusRing
+    src   "Set Use Focus Ring"
+    text  "设置使用焦点高亮"
+    state machine
 }
 
 UISelectable:SetUseFocusRing:Value {
@@ -1502,6 +2047,13 @@ UISelectableTransition {
     state machine
 }
 
+UISelectableTransition:GetSelectableComponent {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:GetSelectableComponent
+    src   "Get Selectable Component"
+    text  "获取可选组件"
+    state machine
+}
+
 UISelectableTransition:GetSelectableComponent:ReturnValue {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:GetSelectableComponent:ReturnValue
     src   "Return Value"
@@ -1510,10 +2062,24 @@ UISelectableTransition:GetSelectableComponent:ReturnValue {
     state draft
 }
 
+UISelectableTransition:ReceiveOnDisabled {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnDisabled
+    src   "OnDisabled"
+    text  "禁用后时"
+    state machine
+}
+
 UISelectableTransition:ReceiveOnDisabled:InImmediateSet {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnDisabled:InImmediateSet
     src   "In Immediate Set"
     text  "立即设置"
+    state machine
+}
+
+UISelectableTransition:ReceiveOnFocused {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnFocused
+    src   "OnFocused"
+    text  "聚焦时"
     state machine
 }
 
@@ -1524,6 +2090,13 @@ UISelectableTransition:ReceiveOnFocused:InImmediateSet {
     state machine
 }
 
+UISelectableTransition:ReceiveOnHovered {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnHovered
+    src   "OnHovered"
+    text  "悬停时"
+    state machine
+}
+
 UISelectableTransition:ReceiveOnHovered:InImmediateSet {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnHovered:InImmediateSet
     src   "In Immediate Set"
@@ -1531,10 +2104,24 @@ UISelectableTransition:ReceiveOnHovered:InImmediateSet {
     state machine
 }
 
+UISelectableTransition:ReceiveOnNormal {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnNormal
+    src   "OnNormal"
+    text  "法线时"
+    state machine
+}
+
 UISelectableTransition:ReceiveOnNormal:InImmediateSet {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnNormal:InImmediateSet
     src   "In Immediate Set"
     text  "立即设置"
+    state machine
+}
+
+UISelectableTransition:ReceiveOnPressed {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UISelectableTransition:ReceiveOnPressed
+    src   "OnPressed"
+    text  "按下时"
     state machine
 }
 
@@ -1559,6 +2146,13 @@ UITransition {
     state machine
 }
 
+UITransition:CollectTweener {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UITransition:CollectTweener
+    src   "Collect Tweener"
+    text  "收集补间器"
+    state machine
+}
+
 UITransition:CollectTweener:InItem {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UITransition:CollectTweener:InItem
     src   "In Item"
@@ -1567,12 +2161,26 @@ UITransition:CollectTweener:InItem {
     state draft
 }
 
+UITransition:CollectTweeners {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UITransition:CollectTweeners
+    src   "Collect Tweeners"
+    text  "收集补间器集合"
+    state machine
+}
+
 UITransition:CollectTweeners:InItems {
     at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UITransition:CollectTweeners:InItems
     src   "In Items"
     // from the engine's zh-Hans
     text  "输入项"
     state draft
+}
+
+UITransition:StopTransition {
+    at    Source/DreamGUIInput/Public/Interaction/UISelectable.h#UITransition:StopTransition
+    src   "Stop Transition"
+    text  "停止转场"
+    state machine
 }
 
 UITransition:TweenerCollection {

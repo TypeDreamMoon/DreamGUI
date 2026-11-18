@@ -30,6 +30,13 @@ DreamUISpriteData:bUseEdgePixelPadding {
     state machine
 }
 
+DreamUISpriteData:CreateDreamUISpriteData {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData
+    src   "Create Dream UISprite Data"
+    text  "创建 DreamUI 精灵数据"
+    state machine
+}
+
 DreamUISpriteData:CreateDreamUISpriteData:InBorder {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:CreateDreamUISpriteData:InBorder
     src   "In Border"
@@ -67,6 +74,13 @@ DreamUISpriteData:CreateDreamUISpriteData:ReturnValue {
     state draft
 }
 
+DreamUISpriteData:GetPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetPackingTag
+    src   "Get Packing Tag"
+    text  "获取打包标记"
+    state machine
+}
+
 DreamUISpriteData:GetPackingTag:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetPackingTag:ReturnValue
     src   "Return Value"
@@ -75,12 +89,26 @@ DreamUISpriteData:GetPackingTag:ReturnValue {
     state draft
 }
 
+DreamUISpriteData:GetSpriteTexture {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetSpriteTexture
+    src   "Get Sprite Texture"
+    text  "获取Sprite纹理"
+    state machine
+}
+
 DreamUISpriteData:GetSpriteTexture:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:GetSpriteTexture:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUISpriteData:HavePackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUISpriteData.h#DreamUISpriteData:HavePackingTag
+    src   "Have Packing Tag"
+    text  "是否有打包标签"
+    state machine
 }
 
 DreamUISpriteData:HavePackingTag:ReturnValue {

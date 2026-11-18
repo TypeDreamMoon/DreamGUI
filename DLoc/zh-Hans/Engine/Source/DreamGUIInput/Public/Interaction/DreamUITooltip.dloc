@@ -2,10 +2,39 @@ dloc 1
 culture zh-Hans
 namespace UObjectDisplayNames
 
+DreamUITooltipContent {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent
+    src   "Dream UITooltip Content"
+    text  "DreamUI 提示框内容"
+    state machine
+}
+
+DreamUITooltipContent:SetTooltipSource {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent:SetTooltipSource
+    src   "Set Tooltip Source"
+    text  "设置提示框来源"
+    state machine
+}
+
+DreamUITooltipContent:SetTooltipSource:Source {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent:SetTooltipSource:Source
+    src   "Source"
+    // from the engine's zh-Hans
+    text  "源"
+    state draft
+}
+
 DreamUITooltipSourceInterface {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface
     src   "Dream UITooltip Source Interface"
     text  "Dream UITooltip源接口"
+    state machine
+}
+
+DreamUITooltipSourceInterface:GetTooltipWidgetClass {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface:GetTooltipWidgetClass
+    src   "Get Tooltip Widget Class"
+    text  "获取提示框控件类"
     state machine
 }
 
@@ -21,6 +50,13 @@ DreamUITooltipSubsystem {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem
     src   "Dream UITooltip Subsystem"
     text  "Dream UITooltip子系统"
+    state machine
+}
+
+DreamUITooltipSubsystem:Get {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:Get
+    src   "Get DreamUI Tooltip Subsystem"
+    text  "获取 DreamUI 提示框子系统"
     state machine
 }
 
@@ -40,10 +76,31 @@ DreamUITooltipSubsystem:Get:WorldContextObject {
     state draft
 }
 
+DreamUITooltipSubsystem:HideTooltip {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltip
+    src   "Hide Tooltip"
+    text  "隐藏提示框"
+    state machine
+}
+
+DreamUITooltipSubsystem:HideTooltipForUser {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltipForUser
+    src   "Hide Tooltip for User"
+    text  "为玩家隐藏提示框"
+    state machine
+}
+
 DreamUITooltipSubsystem:HideTooltipForUser:InUserIndex {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:HideTooltipForUser:InUserIndex
     src   "In User Index"
     text  "用户索引"
+    state machine
+}
+
+DreamUITooltipSubsystem:ShowTooltipFor {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSubsystem:ShowTooltipFor
+    src   "Show Tooltip For"
+    text  "为此项显示提示框"
     state machine
 }
 
@@ -91,6 +148,13 @@ DreamUITooltipUserState:TooltipHolder {
 }
 
 namespace UObjectToolTips
+
+DreamUITooltipContent:SetTooltipSource {
+    at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipContent:SetTooltipSource
+    src   "The widget whose tooltip this is: the one the pointer rests on, or its ancestor that offered the tooltip."
+    text  "这个提示框属于哪个控件：指针停留的那个，或者提供了该提示框的它的祖先。"
+    state machine
+}
 
 DreamUITooltipSourceInterface:GetTooltipWidgetClass {
     at    Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h#DreamUITooltipSourceInterface:GetTooltipWidgetClass

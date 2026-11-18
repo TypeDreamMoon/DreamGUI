@@ -9,6 +9,14 @@ DreamTweenerSequence {
     state machine
 }
 
+DreamTweenerSequence:Append {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append
+    src   "Append"
+    // from the engine's zh-Hans
+    text  "附加"
+    state draft
+}
+
 DreamTweenerSequence:Append:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Append:ReturnValue
     src   "Return Value"
@@ -32,6 +40,13 @@ DreamTweenerSequence:Append:WorldContextObject {
     state draft
 }
 
+DreamTweenerSequence:AppendCallback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendCallback
+    src   "Append Callback"
+    text  "追加回调"
+    state machine
+}
+
 DreamTweenerSequence:AppendCallback:callback {
     at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendCallback:callback
     src   "Callback"
@@ -46,6 +61,13 @@ DreamTweenerSequence:AppendCallback:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTweenerSequence:AppendInterval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:AppendInterval
+    src   "Append Interval"
+    text  "追加间隔"
+    state machine
 }
 
 DreamTweenerSequence:AppendInterval:interval {
@@ -79,6 +101,14 @@ DreamTweenerSequence:finishedTweenerList {
     state machine
 }
 
+DreamTweenerSequence:Insert {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert
+    src   "Insert"
+    // from the engine's zh-Hans
+    text  "Insert"
+    state draft
+}
+
 DreamTweenerSequence:Insert:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Insert:ReturnValue
     src   "Return Value"
@@ -109,6 +139,13 @@ DreamTweenerSequence:Insert:WorldContextObject {
     state draft
 }
 
+DreamTweenerSequence:InsertCallback {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback
+    src   "Insert Callback"
+    text  "插入回调"
+    state machine
+}
+
 DreamTweenerSequence:InsertCallback:callback {
     at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:InsertCallback:callback
     src   "Callback"
@@ -130,6 +167,14 @@ DreamTweenerSequence:InsertCallback:timePosition {
     src   "Time Position"
     text  "时间位置"
     state machine
+}
+
+DreamTweenerSequence:Join {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Join
+    src   "Join"
+    // from the engine's zh-Hans
+    text  "Join"
+    state draft
 }
 
 DreamTweenerSequence:Join:ReturnValue {
@@ -155,6 +200,13 @@ DreamTweenerSequence:Join:WorldContextObject {
     state draft
 }
 
+DreamTweenerSequence:Prepend {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend
+    src   "Prepend"
+    text  "前插"
+    state machine
+}
+
 DreamTweenerSequence:Prepend:ReturnValue {
     at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:Prepend:ReturnValue
     src   "Return Value"
@@ -176,6 +228,13 @@ DreamTweenerSequence:Prepend:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamTweenerSequence:PrependInterval {
+    at    Source/DreamTween/Public/DreamTweenerSequence.h#DreamTweenerSequence:PrependInterval
+    src   "Prepend Interval"
+    text  "前插间隔"
+    state machine
 }
 
 DreamTweenerSequence:PrependInterval:interval {

@@ -16,6 +16,13 @@ DreamTabView:ActiveTabIndex {
     state machine
 }
 
+DreamTabView:AddPage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:AddPage
+    src   "Add Page"
+    text  "添加页面"
+    state machine
+}
+
 DreamTabView:AddPage:InPage {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:AddPage:InPage
     src   "In Page"
@@ -58,6 +65,14 @@ DreamTabView:bTabsDraggable {
     state machine
 }
 
+DreamTabView:CloseTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:CloseTab
+    src   "Close Tab"
+    // from the engine's zh-Hans
+    text  "关闭选项卡"
+    state draft
+}
+
 DreamTabView:CloseTab:InIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:CloseTab:InIndex
     src   "In Index"
@@ -73,6 +88,13 @@ DreamTabView:DraggingTabIndex {
     state machine
 }
 
+DreamTabView:GetActivePage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActivePage
+    src   "Get Active Page"
+    text  "获取当前页面"
+    state machine
+}
+
 DreamTabView:GetActivePage:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActivePage:ReturnValue
     src   "Return Value"
@@ -81,12 +103,26 @@ DreamTabView:GetActivePage:ReturnValue {
     state draft
 }
 
+DreamTabView:GetActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActiveTabIndex
+    src   "Get Active Tab Index"
+    text  "获取活动标签索引"
+    state machine
+}
+
 DreamTabView:GetActiveTabIndex:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetActiveTabIndex:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTabView:GetPage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPage
+    src   "Get Page"
+    text  "获取页面"
+    state machine
 }
 
 DreamTabView:GetPage:InIndex {
@@ -105,6 +141,13 @@ DreamTabView:GetPage:ReturnValue {
     state draft
 }
 
+DreamTabView:GetPageCount {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPageCount
+    src   "Get Page Count"
+    text  "获取页面数"
+    state machine
+}
+
 DreamTabView:GetPageCount:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:GetPageCount:ReturnValue
     src   "Return Value"
@@ -117,6 +160,13 @@ DreamTabView:IndicatorNode {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IndicatorNode
     src   "Indicator Node"
     text  "指示器节点"
+    state machine
+}
+
+DreamTabView:IsTabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:IsTabEnabled
+    src   "Is Tab Enabled"
+    text  "标签是否启用"
     state machine
 }
 
@@ -134,6 +184,13 @@ DreamTabView:IsTabEnabled:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTabView:MoveTab {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:MoveTab
+    src   "Move Tab"
+    text  "移动标签"
+    state machine
 }
 
 DreamTabView:MoveTab:InFromIndex {
@@ -199,12 +256,26 @@ DreamTabView:PageSwitcher {
     state machine
 }
 
+DreamTabView:SetActiveTabIndex {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndex
+    src   "Set Active Tab Index"
+    text  "设置活动标签索引"
+    state machine
+}
+
 DreamTabView:SetActiveTabIndex:InIndex {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndex:InIndex
     src   "In Index"
     // from the engine's zh-Hans
     text  "输入索引"
     state draft
+}
+
+DreamTabView:SetActiveTabIndexWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetActiveTabIndexWithoutNotify
+    src   "Set Active Tab Index Without Notify"
+    text  "设置活动标签索引（不通知）"
+    state machine
 }
 
 DreamTabView:SetActiveTabIndexWithoutNotify:InIndex {
@@ -215,11 +286,26 @@ DreamTabView:SetActiveTabIndexWithoutNotify:InIndex {
     state draft
 }
 
+DreamTabView:SetFocusPageOnTabChange {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetFocusPageOnTabChange
+    src   "Set Focus Page on Tab Change"
+    text  "设置切换标签时聚焦页面"
+    state machine
+}
+
 DreamTabView:SetFocusPageOnTabChange:bInFocusPageOnTabChange {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetFocusPageOnTabChange:bInFocusPageOnTabChange
     src   "In Focus Page on Tab Change"
     text  "切换选项卡时设置焦点页面"
     state machine
+}
+
+DreamTabView:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamTabView:SetStyle:InStyle {
@@ -228,6 +314,13 @@ DreamTabView:SetStyle:InStyle {
     // from the engine's zh-Hans
     text  "输入风格"
     state draft
+}
+
+DreamTabView:SetTabEnabled {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabled
+    src   "Set Tab Enabled"
+    text  "设置选项卡启用"
+    state machine
 }
 
 DreamTabView:SetTabEnabled:bInEnabled {
@@ -246,10 +339,24 @@ DreamTabView:SetTabEnabled:InIndex {
     state draft
 }
 
+DreamTabView:SetTabEnabledStates {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabledStates
+    src   "Set Tab Enabled States"
+    text  "设置标签启用状态"
+    state machine
+}
+
 DreamTabView:SetTabEnabledStates:InTabEnabled {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabEnabledStates:InTabEnabled
     src   "In Tab Enabled"
     text  "选项卡启用状态"
+    state machine
+}
+
+DreamTabView:SetTabLabels {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabLabels
+    src   "Set Tab Labels"
+    text  "设置选项卡标签"
     state machine
 }
 
@@ -260,6 +367,13 @@ DreamTabView:SetTabLabels:InLabels {
     state machine
 }
 
+DreamTabView:SetTabsClosable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsClosable
+    src   "Set Tabs Closable"
+    text  "设置标签可关闭"
+    state machine
+}
+
 DreamTabView:SetTabsClosable:bInTabsClosable {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsClosable:bInTabsClosable
     src   "In Tabs Closable"
@@ -267,10 +381,24 @@ DreamTabView:SetTabsClosable:bInTabsClosable {
     state machine
 }
 
+DreamTabView:SetTabsDraggable {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsDraggable
+    src   "Set Tabs Draggable"
+    text  "设置标签可拖动"
+    state machine
+}
+
 DreamTabView:SetTabsDraggable:bInTabsDraggable {
     at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabsDraggable:bInTabsDraggable
     src   "In Tabs Draggable"
     text  "是否可拖动选项卡"
+    state machine
+}
+
+DreamTabView:SetTabTemplateClass {
+    at    Source/DreamGUIControls/Public/Controls/DreamTabView.h#DreamTabView:SetTabTemplateClass
+    src   "Set Tab Template Class"
+    text  "设置选项卡模板类"
     state machine
 }
 

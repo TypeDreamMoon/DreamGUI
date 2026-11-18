@@ -9,6 +9,13 @@ DreamSpringLibrary {
     state machine
 }
 
+DreamSpringLibrary:IsSpringAtRest {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest
+    src   "Is Spring at Rest"
+    text  "弹簧是否静止"
+    state machine
+}
+
 DreamSpringLibrary:IsSpringAtRest:Params {
     at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:IsSpringAtRest:Params
     src   "Params"
@@ -31,6 +38,13 @@ DreamSpringLibrary:IsSpringAtRest:State {
     // from the engine's zh-Hans
     text  "状态"
     state draft
+}
+
+DreamSpringLibrary:StepSpring {
+    at    Source/DreamTween/Public/DreamSpring.h#DreamSpringLibrary:StepSpring
+    src   "Step Spring"
+    text  "步进弹簧"
+    state machine
 }
 
 DreamSpringLibrary:StepSpring:DeltaTime {

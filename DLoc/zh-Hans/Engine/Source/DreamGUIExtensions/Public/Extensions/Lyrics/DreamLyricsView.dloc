@@ -96,6 +96,13 @@ DreamLyricsView:FontSize {
     state draft
 }
 
+DreamLyricsView:GetActiveLineIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetActiveLineIndex
+    src   "Get Active Line Index"
+    text  "获取当前活动行索引"
+    state machine
+}
+
 DreamLyricsView:GetActiveLineIndex:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetActiveLineIndex:ReturnValue
     src   "Return Value"
@@ -104,12 +111,26 @@ DreamLyricsView:GetActiveLineIndex:ReturnValue {
     state draft
 }
 
+DreamLyricsView:GetLineCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineCount
+    src   "Get Line Count"
+    text  "获取行数"
+    state machine
+}
+
 DreamLyricsView:GetLineCount:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineCount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLyricsView:GetLineText {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetLineText
+    src   "Get Line Text"
+    text  "获取行文本"
+    state machine
 }
 
 DreamLyricsView:GetLineText:LineIndex {
@@ -124,6 +145,14 @@ DreamLyricsView:GetLineText:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLyricsView:GetTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:GetTime
+    src   "Get Time"
+    // from the engine's zh-Hans
+    text  "获取时间"
     state draft
 }
 
@@ -165,6 +194,13 @@ DreamLyricsView:LineSpacing {
     state draft
 }
 
+DreamLyricsView:LoadLRC {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadLRC
+    src   "Load LRC"
+    text  "加载 LRC"
+    state machine
+}
+
 DreamLyricsView:LoadLRC:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadLRC:ReturnValue
     src   "Return Value"
@@ -179,6 +215,13 @@ DreamLyricsView:LoadLRC:Text {
     // from the engine's zh-Hans
     text  "文本"
     state draft
+}
+
+DreamLyricsView:LoadTTML {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:LoadTTML
+    src   "Load TTML"
+    text  "加载 TTML"
+    state machine
 }
 
 DreamLyricsView:LoadTTML:ReturnValue {
@@ -210,6 +253,22 @@ DreamLyricsView:OnActiveLineChanged {
     state machine
 }
 
+DreamLyricsView:Pause {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Pause
+    src   "Pause"
+    // from the engine's zh-Hans
+    text  "暂停"
+    state draft
+}
+
+DreamLyricsView:Play {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Play
+    src   "Play"
+    // from the engine's zh-Hans
+    text  "播放"
+    state draft
+}
+
 DreamLyricsView:PlaybackRate {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:PlaybackRate
     src   "Playback Rate"
@@ -225,11 +284,26 @@ DreamLyricsView:PositionSpring {
     state machine
 }
 
+DreamLyricsView:RebuildLines {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:RebuildLines
+    src   "Rebuild Lines"
+    text  "重建行"
+    state machine
+}
+
 DreamLyricsView:ScaleSpring {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:ScaleSpring
     src   "Scale Spring"
     text  "缩放弹簧"
     state machine
+}
+
+DreamLyricsView:Seek {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:Seek
+    src   "Seek"
+    // from the engine's zh-Hans
+    text  "Seek"
+    state draft
 }
 
 DreamLyricsView:Seek:Seconds {
@@ -240,11 +314,26 @@ DreamLyricsView:Seek:Seconds {
     state draft
 }
 
+DreamLyricsView:SetLyrics {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetLyrics
+    src   "Set Lyrics"
+    text  "设置歌词"
+    state machine
+}
+
 DreamLyricsView:SetLyrics:InLyrics {
     at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetLyrics:InLyrics
     src   "In Lyrics"
     text  "输入歌词"
     state machine
+}
+
+DreamLyricsView:SetTime {
+    at    Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h#DreamLyricsView:SetTime
+    src   "Set Time"
+    // from the engine's zh-Hans
+    text  "设置时间"
+    state draft
 }
 
 DreamLyricsView:SetTime:Seconds {

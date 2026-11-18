@@ -40,11 +40,27 @@ DreamUMGWidgetInteraction:bIsHoveredWidgetInteractable {
     state draft
 }
 
+DreamUMGWidgetInteraction:Get2DHitLocation {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:Get2DHitLocation
+    src   "Get 2DHit Location"
+    // from the engine's zh-Hans
+    text  "获取2D命中位置"
+    state draft
+}
+
 DreamUMGWidgetInteraction:Get2DHitLocation:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:Get2DHitLocation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverFocusableWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverFocusableWidget
+    src   "Is Over Focusable Widget"
+    // from the engine's zh-Hans
+    text  "在可聚焦控件上方"
     state draft
 }
 
@@ -56,11 +72,27 @@ DreamUMGWidgetInteraction:IsOverFocusableWidget:ReturnValue {
     state draft
 }
 
+DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget
+    src   "Is Over Hit Test Visible Widget"
+    // from the engine's zh-Hans
+    text  "在命中测试可视控件上方"
+    state draft
+}
+
 DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverHitTestVisibleWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:IsOverInteractableWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:IsOverInteractableWidget
+    src   "Is Over Interactable Widget"
+    // from the engine's zh-Hans
+    text  "在可交互控件上方"
     state draft
 }
 
@@ -88,6 +120,14 @@ DreamUMGWidgetInteraction:LocalHitLocation {
     state draft
 }
 
+DreamUMGWidgetInteraction:PressAndReleaseKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressAndReleaseKey
+    src   "Press and Release Key"
+    // from the engine's zh-Hans
+    text  "按下和松开键"
+    state draft
+}
+
 DreamUMGWidgetInteraction:PressAndReleaseKey:Key {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressAndReleaseKey:Key
     src   "Key"
@@ -101,6 +141,14 @@ DreamUMGWidgetInteraction:PressAndReleaseKey:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:PressKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressKey
+    src   "Press Key"
+    // from the engine's zh-Hans
+    text  "按下键"
     state draft
 }
 
@@ -128,11 +176,27 @@ DreamUMGWidgetInteraction:PressKey:ReturnValue {
     state draft
 }
 
+DreamUMGWidgetInteraction:PressPointerKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressPointerKey
+    src   "Press Pointer Key"
+    // from the engine's zh-Hans
+    text  "按下指针键"
+    state draft
+}
+
 DreamUMGWidgetInteraction:PressPointerKey:Key {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:PressPointerKey:Key
     src   "Key"
     // from the engine's zh-Hans
     text  "键"
+    state draft
+}
+
+DreamUMGWidgetInteraction:ReleaseKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleaseKey
+    src   "Release Key"
+    // from the engine's zh-Hans
+    text  "松开键"
     state draft
 }
 
@@ -152,6 +216,14 @@ DreamUMGWidgetInteraction:ReleaseKey:ReturnValue {
     state draft
 }
 
+DreamUMGWidgetInteraction:ReleasePointerKey {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleasePointerKey
+    src   "Release Pointer Key"
+    // from the engine's zh-Hans
+    text  "松开指针键"
+    state draft
+}
+
 DreamUMGWidgetInteraction:ReleasePointerKey:Key {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ReleasePointerKey:Key
     src   "Key"
@@ -160,11 +232,27 @@ DreamUMGWidgetInteraction:ReleasePointerKey:Key {
     state draft
 }
 
+DreamUMGWidgetInteraction:ScrollWheel {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ScrollWheel
+    src   "Scroll Wheel"
+    // from the engine's zh-Hans
+    text  "滚轮"
+    state draft
+}
+
 DreamUMGWidgetInteraction:ScrollWheel:ScrollDelta {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:ScrollWheel:ScrollDelta
     src   "Scroll Delta"
     // from the engine's zh-Hans
     text  "滚动差量"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SendKeyChar {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SendKeyChar
+    src   "Send Key Char"
+    // from the engine's zh-Hans
+    text  "发送键字符"
     state draft
 }
 
@@ -189,6 +277,14 @@ DreamUMGWidgetInteraction:SendKeyChar:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidgetInteraction:SetFocus {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidgetInteraction.h#DreamUMGWidgetInteraction:SetFocus
+    src   "Set Focus"
+    // from the engine's zh-Hans
+    text  "设置聚焦"
     state draft
 }
 

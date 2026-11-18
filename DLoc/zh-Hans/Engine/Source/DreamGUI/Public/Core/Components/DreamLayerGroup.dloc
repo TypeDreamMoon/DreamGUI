@@ -17,12 +17,26 @@ DreamLayerGroup:bEnabled {
     state draft
 }
 
+DreamLayerGroup:GetGroupBlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupBlendMode
+    src   "Get Group Blend Mode"
+    text  "获取组混合模式"
+    state machine
+}
+
 DreamLayerGroup:GetGroupBlendMode:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupBlendMode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerGroup:GetGroupMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupMask
+    src   "Get Group Mask"
+    text  "获取组遮罩"
+    state machine
 }
 
 DreamLayerGroup:GetGroupMask:ReturnValue {
@@ -33,12 +47,26 @@ DreamLayerGroup:GetGroupMask:ReturnValue {
     state draft
 }
 
+DreamLayerGroup:GetGroupOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupOpacity
+    src   "Get Group Opacity"
+    text  "获取组不透明度"
+    state machine
+}
+
 DreamLayerGroup:GetGroupOpacity:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetGroupOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerGroup:GetIsolation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:GetIsolation
+    src   "Get Isolation"
+    text  "获取隔离"
+    state machine
 }
 
 DreamLayerGroup:GetIsolation:ReturnValue {
@@ -71,12 +99,27 @@ DreamLayerGroup:GroupOpacity {
     state machine
 }
 
+DreamLayerGroup:IsEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
+    state draft
+}
+
 DreamLayerGroup:IsEnabled:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsEnabled:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayerGroup:IsIsolated {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:IsIsolated
+    src   "Is Isolated"
+    text  "是否隔离"
+    state machine
 }
 
 DreamLayerGroup:IsIsolated:ReturnValue {
@@ -94,12 +137,27 @@ DreamLayerGroup:Isolation {
     state machine
 }
 
+DreamLayerGroup:SetEnabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
+    state draft
+}
+
 DreamLayerGroup:SetEnabled:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetEnabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayerGroup:SetGroupBlendMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupBlendMode
+    src   "Set Group Blend Mode"
+    text  "设置组混合模式"
+    state machine
 }
 
 DreamLayerGroup:SetGroupBlendMode:Value {
@@ -110,6 +168,13 @@ DreamLayerGroup:SetGroupBlendMode:Value {
     state draft
 }
 
+DreamLayerGroup:SetGroupMask {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupMask
+    src   "Set Group Mask"
+    text  "设置组遮罩"
+    state machine
+}
+
 DreamLayerGroup:SetGroupMask:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupMask:Value
     src   "Value"
@@ -118,12 +183,26 @@ DreamLayerGroup:SetGroupMask:Value {
     state draft
 }
 
+DreamLayerGroup:SetGroupOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupOpacity
+    src   "Set Group Opacity"
+    text  "设置组不透明度"
+    state machine
+}
+
 DreamLayerGroup:SetGroupOpacity:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetGroupOpacity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayerGroup:SetIsolation {
+    at    Source/DreamGUI/Public/Core/Components/DreamLayerGroup.h#DreamLayerGroup:SetIsolation
+    src   "Set Isolation"
+    text  "设置隔离"
+    state machine
 }
 
 DreamLayerGroup:SetIsolation:Value {

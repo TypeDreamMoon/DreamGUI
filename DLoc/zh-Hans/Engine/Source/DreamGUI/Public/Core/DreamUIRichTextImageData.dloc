@@ -16,6 +16,20 @@ DreamUIRichTextImageData:AnimationFps {
     state machine
 }
 
+DreamUIRichTextImageData:BroadcastOnDataChange {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:BroadcastOnDataChange
+    src   "Broadcast on Data Change"
+    text  "数据变更时广播"
+    state machine
+}
+
+DreamUIRichTextImageData:GetAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetAnimationFps
+    src   "Get Animation Fps"
+    text  "获取动画帧率"
+    state machine
+}
+
 DreamUIRichTextImageData:GetAnimationFps:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetAnimationFps:ReturnValue
     src   "Return Value"
@@ -24,12 +38,26 @@ DreamUIRichTextImageData:GetAnimationFps:ReturnValue {
     state draft
 }
 
+DreamUIRichTextImageData:GetImageMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetImageMap
+    src   "Get Image Map"
+    text  "获取图像映射"
+    state machine
+}
+
 DreamUIRichTextImageData:GetImageMap:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetImageMap:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIRichTextImageData:GetMutableImageMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:GetMutableImageMap
+    src   "Get Mutable Image Map"
+    text  "获取可变图像映射"
+    state machine
 }
 
 DreamUIRichTextImageData:GetMutableImageMap:ReturnValue {
@@ -47,12 +75,26 @@ DreamUIRichTextImageData:ImageMap {
     state machine
 }
 
+DreamUIRichTextImageData:SetAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:SetAnimationFps
+    src   "Set Animation Fps"
+    text  "设置动画帧率"
+    state machine
+}
+
 DreamUIRichTextImageData:SetAnimationFps:value {
     at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:SetAnimationFps:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIRichTextImageData:SetImageMap {
+    at    Source/DreamGUI/Public/Core/DreamUIRichTextImageData.h#DreamUIRichTextImageData:SetImageMap
+    src   "Set Image Map"
+    text  "设置图像映射"
+    state machine
 }
 
 DreamUIRichTextImageData:SetImageMap:value {

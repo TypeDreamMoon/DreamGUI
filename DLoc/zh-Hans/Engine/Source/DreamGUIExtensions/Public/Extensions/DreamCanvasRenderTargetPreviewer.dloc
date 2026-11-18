@@ -17,12 +17,26 @@ DreamCanvasRenderTargetPreviewer:Canvas {
     state draft
 }
 
+DreamCanvasRenderTargetPreviewer:GetPreviewCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:GetPreviewCanvas
+    src   "Get Preview Canvas"
+    text  "获取预览画布"
+    state machine
+}
+
 DreamCanvasRenderTargetPreviewer:GetPreviewCanvas:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:GetPreviewCanvas:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamCanvasRenderTargetPreviewer:GetPreviewMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:GetPreviewMaterial
+    src   "Get Preview Material"
+    text  "获取预览材质"
+    state machine
 }
 
 DreamCanvasRenderTargetPreviewer:GetPreviewMaterial:ReturnValue {
@@ -41,12 +55,26 @@ DreamCanvasRenderTargetPreviewer:Material {
     state draft
 }
 
+DreamCanvasRenderTargetPreviewer:SetPreviewCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewCanvas
+    src   "Set Preview Canvas"
+    text  "设置预览画布"
+    state machine
+}
+
 DreamCanvasRenderTargetPreviewer:SetPreviewCanvas:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewCanvas:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamCanvasRenderTargetPreviewer:SetPreviewMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h#DreamCanvasRenderTargetPreviewer:SetPreviewMaterial
+    src   "Set Preview Material"
+    text  "设置预览材质"
+    state machine
 }
 
 DreamCanvasRenderTargetPreviewer:SetPreviewMaterial:Value {

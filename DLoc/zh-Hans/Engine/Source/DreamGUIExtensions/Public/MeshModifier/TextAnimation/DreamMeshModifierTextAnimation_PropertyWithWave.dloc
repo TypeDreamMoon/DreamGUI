@@ -9,6 +9,14 @@ DreamMeshModifierTextAnimation_PositionWaveProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition
+    src   "Get Position"
+    // from the engine's zh-Hans
+    text  "Get Position"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:GetPosition:ReturnValue
     src   "Return Value"
@@ -22,6 +30,14 @@ DreamMeshModifierTextAnimation_PositionWaveProperty:Position {
     src   "Position"
     // from the engine's zh-Hans
     text  "位置"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PositionWaveProperty:SetPosition {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PositionWaveProperty:SetPosition
+    src   "Set Position"
+    // from the engine's zh-Hans
+    text  "设置位置"
     state draft
 }
 
@@ -55,12 +71,26 @@ DreamMeshModifierTextAnimation_PropertyWithWave:Frequency {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency
+    src   "Get Frequency"
+    text  "获取频率"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetFrequency:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed
+    src   "Get Speed"
+    text  "获取速度"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed:ReturnValue {
@@ -71,11 +101,27 @@ DreamMeshModifierTextAnimation_PropertyWithWave:GetSpeed:ReturnValue {
     state draft
 }
 
+DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency
+    src   "Set Frequency"
+    // from the engine's zh-Hans
+    text  "设置频率"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency:Value {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:SetFrequency:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_PropertyWithWave:SetSpeed {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_PropertyWithWave:SetSpeed
+    src   "Set Speed"
+    // from the engine's zh-Hans
+    text  "设置速度"
     state draft
 }
 
@@ -109,6 +155,14 @@ DreamMeshModifierTextAnimation_RotationWaveProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator
+    src   "Get Rotator"
+    // from the engine's zh-Hans
+    text  "Get Rotator"
+    state draft
+}
+
 DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:GetRotator:ReturnValue
     src   "Return Value"
@@ -123,6 +177,13 @@ DreamMeshModifierTextAnimation_RotationWaveProperty:Rotator {
     // from the engine's zh-Hans
     text  "旋转"
     state draft
+}
+
+DreamMeshModifierTextAnimation_RotationWaveProperty:SetRotator {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_RotationWaveProperty:SetRotator
+    src   "Set Rotator"
+    text  "设置旋转"
+    state machine
 }
 
 DreamMeshModifierTextAnimation_RotationWaveProperty:SetRotator:Value {
@@ -140,6 +201,13 @@ DreamMeshModifierTextAnimation_ScaleWaveProperty {
     state machine
 }
 
+DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale
+    src   "Get Scale"
+    text  "获取缩放"
+    state machine
+}
+
 DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale:ReturnValue {
     at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:GetScale:ReturnValue
     src   "Return Value"
@@ -153,6 +221,14 @@ DreamMeshModifierTextAnimation_ScaleWaveProperty:Scale {
     src   "Scale"
     // from the engine's zh-Hans
     text  "缩放"
+    state draft
+}
+
+DreamMeshModifierTextAnimation_ScaleWaveProperty:SetScale {
+    at    Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h#DreamMeshModifierTextAnimation_ScaleWaveProperty:SetScale
+    src   "Set Scale"
+    // from the engine's zh-Hans
+    text  "设置缩放"
     state draft
 }
 

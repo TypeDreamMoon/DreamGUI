@@ -1,0 +1,19 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamUICompileWidgetsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUICompileWidgetsCommandlet.h#DreamUICompileWidgetsCommandlet
+    src   "Dream UICompile Widgets Commandlet"
+    text  "DreamUI 编译控件 Commandlet"
+    state machine
+}
+
+namespace UObjectToolTips
+
+DreamUICompileWidgetsCommandlet {
+    at    Source/DreamGUIEditor/Private/Commandlets/DreamUICompileWidgetsCommandlet.h#DreamUICompileWidgetsCommandlet
+    src   "Creates and compiles text-authored DreamUI Widget Blueprints from their `.dui` files without opening the editor --\nthe headless half of Tools > Rebuild DUI, for build scripts and CI.\n\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=<file.json> [-Only=WBP_A,WBP_B]\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]\n\nThe manifest lists the widgets in the order they must be compiled -- a component before the screens that place it:\n\n    { \"widgets\": [\n        { \"asset\": \"/Game/UI/WBP_Row\",    \"parent\": \"/Script/MyGame.MyRow\",    \"source\": \"UI/Row.dui\" },\n        { \"asset\": \"/Game/UI/WBP_Screen\", \"parent\": \"/Script/DreamGUI.DreamTextUserWidget\", \"source\": \"UI/Screen.dui\" } ] }\n\nA missing Blueprint is created with that parent; an existing one is reparented when its parent differs, pointed at the\nsource, compiled and saved. \"parent\" may be omitted (UDreamTextUserWidget). -All recompiles every text-authored\nWidget Blueprint already in the project instead (optionally under -Path). Every compiler message is logged, and the\ncommandlet exits non-zero when any widget failed to load, compile or save."
+    text  "不打开编辑器，就从 `.dui` 文件创建并编译文本编写的 DreamUI 控件蓝图——\n即 Tools > Rebuild DUI 的无头版本，供构建脚本和 CI 使用。\n\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=<file.json> [-Only=WBP_A,WBP_B]\n    UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -All [-Path=/Game/UI]\n\n清单按必须编译的顺序列出控件——组件先于引用它的界面：\n\n    { \"widgets\": [\n        { \"asset\": \"/Game/UI/WBP_Row\",    \"parent\": \"/Script/MyGame.MyRow\",    \"source\": \"UI/Row.dui\" },\n        { \"asset\": \"/Game/UI/WBP_Screen\", \"parent\": \"/Script/DreamGUI.DreamTextUserWidget\", \"source\": \"UI/Screen.dui\" } ] }\n\n不存在的蓝图会用该父类创建；已存在的若父类不同则改父类、指向该源文件、编译并保存。\"parent\" 可以省略\n（默认 UDreamTextUserWidget）。-All 改为重新编译项目中所有已存在的文本编写控件蓝图（可再用 -Path 限定）。\n每条编译消息都会记录；有任何控件加载、编译或保存失败时，命令以非零码退出。"
+    state machine
+}

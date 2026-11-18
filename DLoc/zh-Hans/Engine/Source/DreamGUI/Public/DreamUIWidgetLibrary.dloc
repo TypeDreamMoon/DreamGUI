@@ -9,6 +9,13 @@ DreamUIWidgetLibrary {
     state machine
 }
 
+DreamUIWidgetLibrary:BeginDragWithOperation {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:BeginDragWithOperation
+    src   "Begin Drag with Operation"
+    text  "用操作开始拖拽"
+    state machine
+}
+
 DreamUIWidgetLibrary:BeginDragWithOperation:InOperation {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:BeginDragWithOperation:InOperation
     src   "In Operation"
@@ -32,6 +39,14 @@ DreamUIWidgetLibrary:BeginDragWithOperation:ReturnValue {
     state draft
 }
 
+DreamUIWidgetLibrary:CancelDragDrop {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:CancelDragDrop
+    src   "Cancel Drag Drop"
+    // from the engine's zh-Hans
+    text  "取消拖放"
+    state draft
+}
+
 DreamUIWidgetLibrary:CancelDragDrop:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:CancelDragDrop:ReturnValue
     src   "Return Value"
@@ -45,6 +60,14 @@ DreamUIWidgetLibrary:CancelDragDrop:WorldContextObject {
     src   "World Context Object"
     // from the engine's zh-Hans
     text  "场景情境对象"
+    state draft
+}
+
+DreamUIWidgetLibrary:CreateDragDropOperation {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:CreateDragDropOperation
+    src   "Create Drag Drop Operation"
+    // from the engine's zh-Hans
+    text  "Create Drag Drop Operation"
     state draft
 }
 
@@ -63,6 +86,14 @@ DreamUIWidgetLibrary:CreateDragDropOperation:ReturnValue {
     state draft
 }
 
+DreamUIWidgetLibrary:DismissAllMenus {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:DismissAllMenus
+    src   "Dismiss All Menus"
+    // from the engine's zh-Hans
+    text  "取消所有菜单"
+    state draft
+}
+
 DreamUIWidgetLibrary:DismissAllMenus:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:DismissAllMenus:ReturnValue
     src   "Return Value"
@@ -77,6 +108,13 @@ DreamUIWidgetLibrary:DismissAllMenus:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush
+    src   "Equal (Dream UI Image Brush)"
+    text  "相等（DreamUI 图像笔刷）"
+    state machine
 }
 
 DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush:A {
@@ -100,6 +138,14 @@ DreamUIWidgetLibrary:EqualEqual_DreamUIImageBrush:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:GetAllWidgetsOfClass {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetAllWidgetsOfClass
+    src   "Get All Widgets Of Class"
+    // from the engine's zh-Hans
+    text  "获取类的所有控件"
     state draft
 }
 
@@ -134,6 +180,14 @@ DreamUIWidgetLibrary:GetAllWidgetsOfClass:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetLibrary:GetAllWidgetsWithInterface {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetAllWidgetsWithInterface
+    src   "Get All Widgets with Interface"
+    // from the engine's zh-Hans
+    text  "获取有接口的所有控件"
+    state draft
+}
+
 DreamUIWidgetLibrary:GetAllWidgetsWithInterface:bTopLevelOnly {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetAllWidgetsWithInterface:bTopLevelOnly
     src   "Top Level Only"
@@ -164,6 +218,14 @@ DreamUIWidgetLibrary:GetAllWidgetsWithInterface:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetLibrary:GetBrushResource {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetBrushResource
+    src   "Get Brush Resource"
+    // from the engine's zh-Hans
+    text  "获取笔刷资产"
+    state draft
+}
+
 DreamUIWidgetLibrary:GetBrushResource:InBrush {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetBrushResource:InBrush
     src   "In Brush"
@@ -177,6 +239,14 @@ DreamUIWidgetLibrary:GetBrushResource:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:GetBrushResourceAsMaterial {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetBrushResourceAsMaterial
+    src   "Get Brush Resource as Material"
+    // from the engine's zh-Hans
+    text  "将笔刷资产获取为材质"
     state draft
 }
 
@@ -196,6 +266,14 @@ DreamUIWidgetLibrary:GetBrushResourceAsMaterial:ReturnValue {
     state draft
 }
 
+DreamUIWidgetLibrary:GetBrushResourceAsTexture2D {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetBrushResourceAsTexture2D
+    src   "Get Brush Resource as Texture 2D"
+    // from the engine's zh-Hans
+    text  "将笔刷资产获取为纹理2D"
+    state draft
+}
+
 DreamUIWidgetLibrary:GetBrushResourceAsTexture2D:InBrush {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetBrushResourceAsTexture2D:InBrush
     src   "In Brush"
@@ -209,6 +287,14 @@ DreamUIWidgetLibrary:GetBrushResourceAsTexture2D:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:GetDragDroppingContent {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetDragDroppingContent
+    src   "Get Drag Dropping Content"
+    // from the engine's zh-Hans
+    text  "获取拖放内容"
     state draft
 }
 
@@ -235,6 +321,14 @@ DreamUIWidgetLibrary:GetDragDroppingContent:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetLibrary:GetDynamicMaterial {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetDynamicMaterial
+    src   "Get Dynamic Material"
+    // from the engine's zh-Hans
+    text  "获取动态材质"
+    state draft
+}
+
 DreamUIWidgetLibrary:GetDynamicMaterial:InBrush {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetDynamicMaterial:InBrush
     src   "In Brush"
@@ -248,6 +342,14 @@ DreamUIWidgetLibrary:GetDynamicMaterial:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:GetSafeZonePadding {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:GetSafeZonePadding
+    src   "Get Safe Zone Padding"
+    // from the engine's zh-Hans
+    text  "获取安全区填充"
     state draft
 }
 
@@ -281,6 +383,14 @@ DreamUIWidgetLibrary:GetSafeZonePadding:WorldContextObject {
     state draft
 }
 
+DreamUIWidgetLibrary:IsDragDropping {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:IsDragDropping
+    src   "Is Drag Dropping"
+    // from the engine's zh-Hans
+    text  "正在拖放"
+    state draft
+}
+
 DreamUIWidgetLibrary:IsDragDropping:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:IsDragDropping:ReturnValue
     src   "Return Value"
@@ -294,6 +404,14 @@ DreamUIWidgetLibrary:IsDragDropping:WorldContextObject {
     src   "World Context Object"
     // from the engine's zh-Hans
     text  "场景情境对象"
+    state draft
+}
+
+DreamUIWidgetLibrary:MakeBrushFromAsset {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:MakeBrushFromAsset
+    src   "Make Brush from Asset"
+    // from the engine's zh-Hans
+    text  "使用资产创建笔刷"
     state draft
 }
 
@@ -329,6 +447,14 @@ DreamUIWidgetLibrary:MakeBrushFromAsset:ReturnValue {
     state draft
 }
 
+DreamUIWidgetLibrary:MakeBrushFromMaterial {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:MakeBrushFromMaterial
+    src   "Make Brush from Material"
+    // from the engine's zh-Hans
+    text  "使用材质创建笔刷"
+    state draft
+}
+
 DreamUIWidgetLibrary:MakeBrushFromMaterial:InHeight {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:MakeBrushFromMaterial:InHeight
     src   "In Height"
@@ -358,6 +484,14 @@ DreamUIWidgetLibrary:MakeBrushFromMaterial:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:MakeBrushFromTexture {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:MakeBrushFromTexture
+    src   "Make Brush from Texture"
+    // from the engine's zh-Hans
+    text  "使用纹理创建笔刷"
     state draft
 }
 
@@ -393,11 +527,27 @@ DreamUIWidgetLibrary:MakeBrushFromTexture:ReturnValue {
     state draft
 }
 
+DreamUIWidgetLibrary:NoResourceBrush {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:NoResourceBrush
+    src   "No Resource Brush"
+    // from the engine's zh-Hans
+    text  "无资产笔刷"
+    state draft
+}
+
 DreamUIWidgetLibrary:NoResourceBrush:ReturnValue {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:NoResourceBrush:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIWidgetLibrary:SetBrushResourceToMaterial {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:SetBrushResourceToMaterial
+    src   "Set Brush Resource to Material"
+    // from the engine's zh-Hans
+    text  "将笔刷资产设置为材质"
     state draft
 }
 
@@ -417,6 +567,14 @@ DreamUIWidgetLibrary:SetBrushResourceToMaterial:InMaterial {
     state draft
 }
 
+DreamUIWidgetLibrary:SetBrushResourceToTexture {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:SetBrushResourceToTexture
+    src   "Set Brush Resource to Texture"
+    // from the engine's zh-Hans
+    text  "将笔刷资产设置为纹理"
+    state draft
+}
+
 DreamUIWidgetLibrary:SetBrushResourceToTexture:InBrush {
     at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:SetBrushResourceToTexture:InBrush
     src   "In Brush"
@@ -430,6 +588,22 @@ DreamUIWidgetLibrary:SetBrushResourceToTexture:InTexture {
     src   "In Texture"
     // from the engine's zh-Hans
     text  "输入纹理"
+    state draft
+}
+
+DreamUIWidgetLibrary:SetFocusToGameViewport {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:SetFocusToGameViewport
+    src   "Set Focus to Game Viewport"
+    // from the engine's zh-Hans
+    text  "将聚焦设置到游戏视口"
+    state draft
+}
+
+DreamUIWidgetLibrary:SetMousePosition {
+    at    Source/DreamGUI/Public/DreamUIWidgetLibrary.h#DreamUIWidgetLibrary:SetMousePosition
+    src   "Set Mouse Position"
+    // from the engine's zh-Hans
+    text  "设置鼠标位置"
     state draft
 }
 

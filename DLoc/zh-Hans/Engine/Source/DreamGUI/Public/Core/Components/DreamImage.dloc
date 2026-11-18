@@ -17,11 +17,26 @@ DreamImage:Brush {
     state draft
 }
 
+DreamImage:GetBrush {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:GetBrush
+    src   "Get Brush"
+    text  "获取笔刷"
+    state machine
+}
+
 DreamImage:GetBrush:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:GetBrush:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamImage:SetBrush {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush
+    src   "Set Brush"
+    // from the engine's zh-Hans
+    text  "设置笔刷"
     state draft
 }
 
@@ -33,12 +48,26 @@ DreamImage:SetBrush:Value {
     state draft
 }
 
+DreamImage:SetBrush_DreamUISprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_DreamUISprite
+    src   "Set Brush Dream UISprite"
+    text  "设置笔刷为 DreamUI 精灵"
+    state machine
+}
+
 DreamImage:SetBrush_DreamUISprite:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_DreamUISprite:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamImage:SetBrush_Material {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_Material
+    src   "Set Brush Material"
+    text  "设置笔刷材质"
+    state machine
 }
 
 DreamImage:SetBrush_Material:Value {
@@ -49,12 +78,26 @@ DreamImage:SetBrush_Material:Value {
     state draft
 }
 
+DreamImage:SetBrush_SlateSprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_SlateSprite
+    src   "Set Brush Slate Sprite"
+    text  "设置笔刷为 Slate 精灵"
+    state machine
+}
+
 DreamImage:SetBrush_SlateSprite:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_SlateSprite:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamImage:SetBrush_Texture {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrush_Texture
+    src   "Set Brush Texture"
+    text  "设置笔刷纹理"
+    state machine
 }
 
 DreamImage:SetBrush_Texture:Value {
@@ -65,6 +108,13 @@ DreamImage:SetBrush_Texture:Value {
     state draft
 }
 
+DreamImage:SetBrushFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFillAmount
+    src   "Set Brush Fill Amount"
+    text  "设置笔刷填充量"
+    state machine
+}
+
 DreamImage:SetBrushFillAmount:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFillAmount:Value
     src   "Value"
@@ -73,11 +123,27 @@ DreamImage:SetBrushFillAmount:Value {
     state draft
 }
 
+DreamImage:SetBrushFromMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFromMaterial
+    src   "Set Brush from Material"
+    // from the engine's zh-Hans
+    text  "设置来自材质的笔刷"
+    state draft
+}
+
 DreamImage:SetBrushFromMaterial:InMaterial {
     at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushFromMaterial:InMaterial
     src   "In Material"
     // from the engine's zh-Hans
     text  "输入材质"
+    state draft
+}
+
+DreamImage:SetBrushTintColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamImage.h#DreamImage:SetBrushTintColor
+    src   "Set Brush Tint Color"
+    // from the engine's zh-Hans
+    text  "设置笔刷着色颜色"
     state draft
 }
 

@@ -67,6 +67,13 @@ UIProgressBar:FillWidget {
     state machine
 }
 
+UIProgressBar:GetFillType {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:GetFillType
+    src   "Get Fill Type"
+    text  "获取填充类型"
+    state machine
+}
+
 UIProgressBar:GetFillType:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:GetFillType:ReturnValue
     src   "Return Value"
@@ -75,12 +82,26 @@ UIProgressBar:GetFillType:ReturnValue {
     state draft
 }
 
+UIProgressBar:GetFillWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:GetFillWidget
+    src   "Get Fill Widget"
+    text  "获取填充控件"
+    state machine
+}
+
 UIProgressBar:GetFillWidget:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:GetFillWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIProgressBar:GetPercent {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:GetPercent
+    src   "Get Percent"
+    text  "获取百分比"
+    state machine
 }
 
 UIProgressBar:GetPercent:ReturnValue {
@@ -120,12 +141,26 @@ UIProgressBar:Percent {
     state draft
 }
 
+UIProgressBar:SetFillType {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetFillType
+    src   "Set Fill Type"
+    text  "设置填充类型"
+    state machine
+}
+
 UIProgressBar:SetFillType:Value {
     at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetFillType:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UIProgressBar:SetFillWidget {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetFillWidget
+    src   "Set Fill Widget"
+    text  "设置填充控件"
+    state machine
 }
 
 UIProgressBar:SetFillWidget:Value {
@@ -136,11 +171,27 @@ UIProgressBar:SetFillWidget:Value {
     state draft
 }
 
+UIProgressBar:SetIsMarquee {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetIsMarquee
+    src   "Set Is Marquee"
+    // from the engine's zh-Hans
+    text  "设置为边框"
+    state draft
+}
+
 UIProgressBar:SetIsMarquee:Value {
     at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetIsMarquee:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+UIProgressBar:SetPercent {
+    at    Source/DreamGUIControls/Public/Interaction/UIStandardControls.h#UIProgressBar:SetPercent
+    src   "Set Percent"
+    // from the engine's zh-Hans
+    text  "设置百分比"
     state draft
 }
 

@@ -908,6 +908,13 @@ DreamExpandableAreaStyle:bOverride_ExpandedBrush {
     state machine
 }
 
+DreamExpandableAreaStyle:bOverride_Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:bOverride_Font
+    src   "Override Font"
+    text  "覆盖字体"
+    state machine
+}
+
 DreamExpandableAreaStyle:bOverride_FontSize {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:bOverride_FontSize
     src   "Override Font Size"
@@ -1028,6 +1035,14 @@ DreamExpandableAreaStyle:ExpandedBrush {
     src   "Expanded Brush"
     text  "展开状态的笔刷"
     state machine
+}
+
+DreamExpandableAreaStyle:Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:Font
+    src   "Font"
+    // from the engine's zh-Hans
+    text  "字体"
+    state draft
 }
 
 DreamExpandableAreaStyle:FontSize {
@@ -2143,6 +2158,13 @@ DreamRingMenuStyle:bOverride_ContentWidth {
     state machine
 }
 
+DreamRingMenuStyle:bOverride_Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_Font
+    src   "Override Font"
+    text  "覆盖字体"
+    state machine
+}
+
 DreamRingMenuStyle:bOverride_FontSize {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_FontSize
     src   "Override Font Size"
@@ -2331,6 +2353,14 @@ DreamRingMenuStyle:ContentWidth {
     src   "Content Width"
     // from the engine's zh-Hans
     text  "内容宽度"
+    state draft
+}
+
+DreamRingMenuStyle:Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:Font
+    src   "Font"
+    // from the engine's zh-Hans
+    text  "字体"
     state draft
 }
 
@@ -4797,6 +4827,13 @@ DreamExpandableAreaStyle:bOverride_ExpandedBrush {
     state machine
 }
 
+DreamExpandableAreaStyle:bOverride_Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:bOverride_Font
+    src   "The header's typeface, as a font data asset. Null leaves it on the project's default font (DreamGUI settings)."
+    text  "表头的字体，以一个字体数据资产表示。为空则该表头沿用项目默认字体（DreamGUI 设置）。"
+    state machine
+}
+
 DreamExpandableAreaStyle:bOverride_HeaderDisabled {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamExpandableAreaStyle:bOverride_HeaderDisabled
     src   "Not interactable. Every control pushed three pointer colours and left this one to the\nbehaviour's library default, a flat grey that belongs to no theme -- so a disabled control was\nthe one state a project sheet could not describe."
@@ -5091,6 +5128,13 @@ DreamRingMenuStyle:bOverride_ContentWidth {
     state machine
 }
 
+DreamRingMenuStyle:bOverride_Font {
+    at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_Font
+    src   "The typeface of the items' labels and the hub's caption, as a font data asset. Null leaves them on the project's default font."
+    text  "各项标签与中心标题的字体，以一个字体数据资产表示。为空则沿用项目默认字体。"
+    state machine
+}
+
 DreamRingMenuStyle:bOverride_HighlightGrowth {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_HighlightGrowth
     src   "How much further out the highlighted wedge reaches. Zero for a wheel that only recolours."
@@ -5170,14 +5214,16 @@ DreamRingMenuStyle:bOverride_OuterRadius {
 
 DreamRingMenuStyle:bOverride_StartAngle {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_StartAngle
-    src   "Where the first item begins, in degrees clockwise from twelve o'clock."
+    prev  "Where the first item begins, in degrees clockwise from twelve o'clock."
+    src   "Where the first item begins, in degrees clockwise from twelve o'clock. (UDreamRing, the Ring visual, measures its\nangles the other way: from three o'clock, counter-clockwise.)"
     text  "第一个项的起始位置，用从十二点方向顺时针计算的角度表示。"
     state machine
 }
 
 DreamRingMenuStyle:bOverride_SweepAngle {
     at    Source/DreamGUIControls/Public/Controls/DreamControlStyles.h#DreamRingMenuStyle:bOverride_SweepAngle
-    src   "How far round the items are spread from there. 360 is a full wheel; 180 is the half-ring a\nmenu hanging off a screen edge wants, and it is why this is a knob at all."
+    prev  "How far round the items are spread from there. 360 is a full wheel; 180 is the half-ring a\nmenu hanging off a screen edge wants, and it is why this is a knob at all."
+    src   "How far round the items are spread from there, clockwise. 360 is a full wheel; 180 is the half-ring a\nmenu hanging off a screen edge wants, and it is why this is a knob at all."
     text  "各项从该位置起展开的角度范围。360为整圆；180是挂在屏幕边缘的菜单\n所需的半环，这也是需要此参数的原因。"
     state machine
 }

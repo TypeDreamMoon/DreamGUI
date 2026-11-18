@@ -30,12 +30,26 @@ UIToggle:CustomToggleTransition {
     state machine
 }
 
+UIToggle:GetIndexInGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup
+    src   "Get Index in Group"
+    text  "获取组内索引"
+    state machine
+}
+
 UIToggle:GetIndexInGroup:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetIndexInGroup:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIToggle:GetOffColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOffColor
+    src   "Get Off Color"
+    text  "获取关闭颜色"
+    state machine
 }
 
 UIToggle:GetOffColor:ReturnValue {
@@ -46,12 +60,26 @@ UIToggle:GetOffColor:ReturnValue {
     state draft
 }
 
+UIToggle:GetOnColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOnColor
+    src   "Get on Color"
+    text  "获取开启颜色"
+    state machine
+}
+
 UIToggle:GetOnColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetOnColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIToggle:GetToggleGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetToggleGroup
+    src   "Get Toggle Group"
+    text  "获取切换组"
+    state machine
 }
 
 UIToggle:GetToggleGroup:ReturnValue {
@@ -62,11 +90,26 @@ UIToggle:GetToggleGroup:ReturnValue {
     state draft
 }
 
+UIToggle:GetToggleTransitionTarget {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetToggleTransitionTarget
+    src   "Get Toggle Transition Target"
+    text  "获取切换过渡目标"
+    state machine
+}
+
 UIToggle:GetToggleTransitionTarget:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetToggleTransitionTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIToggle:GetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -121,12 +164,26 @@ UIToggle:OnValueChangedBP {
     state machine
 }
 
+UIToggle:SetAutoFindToggleGroupInParent {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetAutoFindToggleGroupInParent
+    src   "Set Auto Find Toggle Group in Parent"
+    text  "设置自动查找父级中的切换组"
+    state machine
+}
+
 UIToggle:SetAutoFindToggleGroupInParent:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetAutoFindToggleGroupInParent:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UIToggle:SetIsOn {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOn
+    src   "Set Is On"
+    text  "设置是否开启"
+    state machine
 }
 
 UIToggle:SetIsOn:Value {
@@ -137,12 +194,26 @@ UIToggle:SetIsOn:Value {
     state draft
 }
 
+UIToggle:SetIsOnWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOnWithoutNotify
+    src   "Set Is on Without Notify"
+    text  "设置开启状态（不通知）"
+    state machine
+}
+
 UIToggle:SetIsOnWithoutNotify:Value {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetIsOnWithoutNotify:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UIToggle:SetOffColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetOffColor
+    src   "Set Off Color"
+    text  "设置关闭颜色"
+    state machine
 }
 
 UIToggle:SetOffColor:Value {
@@ -153,6 +224,13 @@ UIToggle:SetOffColor:Value {
     state draft
 }
 
+UIToggle:SetOnColor {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetOnColor
+    src   "Set on Color"
+    text  "设置开启颜色"
+    state machine
+}
+
 UIToggle:SetOnColor:Value {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetOnColor:Value
     src   "Value"
@@ -161,10 +239,24 @@ UIToggle:SetOnColor:Value {
     state draft
 }
 
+UIToggle:SetToggleGroup {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleGroup
+    src   "Set Toggle Group"
+    text  "设置切换组"
+    state machine
+}
+
 UIToggle:SetToggleGroup:InGroupComp {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleGroup:InGroupComp
     src   "In Group Comp"
     text  "所属组组件"
+    state machine
+}
+
+UIToggle:SetToggleTransitionTarget {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetToggleTransitionTarget
+    src   "Set Toggle Transition Target"
+    text  "设置切换过渡目标"
     state machine
 }
 
@@ -176,12 +268,27 @@ UIToggle:SetToggleTransitionTarget:Value {
     state draft
 }
 
+UIToggle:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
+    state draft
+}
+
 UIToggle:SetValue:Value {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValue:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UIToggle:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggle:SetValueWithoutNotify
+    src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UIToggle:SetValueWithoutNotify:Value {
@@ -234,6 +341,13 @@ UIToggleTransition {
     state machine
 }
 
+UIToggleTransition:GetToggleComponent {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:GetToggleComponent
+    src   "Get Toggle Component"
+    text  "获取开关组件"
+    state machine
+}
+
 UIToggleTransition:GetToggleComponent:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:GetToggleComponent:ReturnValue
     src   "Return Value"
@@ -242,10 +356,24 @@ UIToggleTransition:GetToggleComponent:ReturnValue {
     state draft
 }
 
+UIToggleTransition:ReceiveToggleOff {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOff
+    src   "ToggleOff"
+    text  "关闭"
+    state machine
+}
+
 UIToggleTransition:ReceiveToggleOff:InImmediateSet {
     at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOff:InImmediateSet
     src   "In Immediate Set"
     text  "立即设置"
+    state machine
+}
+
+UIToggleTransition:ReceiveToggleOn {
+    at    Source/DreamGUIControls/Public/Interaction/UIToggle.h#UIToggleTransition:ReceiveToggleOn
+    src   "ToggleOn"
+    text  "打开"
     state machine
 }
 

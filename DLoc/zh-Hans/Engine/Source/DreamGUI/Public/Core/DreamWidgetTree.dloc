@@ -9,12 +9,26 @@ DreamWidgetTree {
     state machine
 }
 
+DreamWidgetTree:CountWidgets {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:CountWidgets
+    src   "Count Widgets"
+    text  "统计控件数"
+    state machine
+}
+
 DreamWidgetTree:CountWidgets:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:CountWidgets:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWidgetTree:FindWidgetByVariableName {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:FindWidgetByVariableName
+    src   "Find Widget by Variable Name"
+    text  "按变量名查找控件"
+    state machine
 }
 
 DreamWidgetTree:FindWidgetByVariableName:InVariableName {
@@ -33,12 +47,26 @@ DreamWidgetTree:FindWidgetByVariableName:ReturnValue {
     state draft
 }
 
+DreamWidgetTree:GetAllWidgets {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetAllWidgets
+    src   "Get All Widgets"
+    text  "获取所有控件"
+    state machine
+}
+
 DreamWidgetTree:GetAllWidgets:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetAllWidgets:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamWidgetTree:GetRootWidget {
+    at    Source/DreamGUI/Public/Core/DreamWidgetTree.h#DreamWidgetTree:GetRootWidget
+    src   "Get Root Widget"
+    text  "获取根控件"
+    state machine
 }
 
 DreamWidgetTree:GetRootWidget:ReturnValue {

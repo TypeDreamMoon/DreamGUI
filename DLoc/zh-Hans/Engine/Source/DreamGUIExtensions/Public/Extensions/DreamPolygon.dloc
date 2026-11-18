@@ -17,6 +17,13 @@ DreamPolygon:EndAngle {
     state draft
 }
 
+DreamPolygon:EndAngleTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo
+    src   "End Angle To"
+    text  "结束角度终点"
+    state machine
+}
+
 DreamPolygon:EndAngleTo:delay {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:EndAngleTo:delay
     src   "Delay"
@@ -63,12 +70,26 @@ DreamPolygon:FullCycle {
     state machine
 }
 
+DreamPolygon:GetEndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetEndAngle
+    src   "Get End Angle"
+    text  "获取结束角"
+    state machine
+}
+
 DreamPolygon:GetEndAngle:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetEndAngle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPolygon:GetFullCycle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetFullCycle
+    src   "Get Full Cycle"
+    text  "获取完整循环"
+    state machine
 }
 
 DreamPolygon:GetFullCycle:ReturnValue {
@@ -79,12 +100,26 @@ DreamPolygon:GetFullCycle:ReturnValue {
     state draft
 }
 
+DreamPolygon:GetSides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetSides
+    src   "Get Sides"
+    text  "获取侧边"
+    state machine
+}
+
 DreamPolygon:GetSides:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetSides:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPolygon:GetStartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetStartAngle
+    src   "Get Start Angle"
+    text  "获取开始角"
+    state machine
 }
 
 DreamPolygon:GetStartAngle:ReturnValue {
@@ -95,12 +130,26 @@ DreamPolygon:GetStartAngle:ReturnValue {
     state draft
 }
 
+DreamPolygon:GetUVType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetUVType
+    src   "Get UVType"
+    text  "获取UV 类型"
+    state machine
+}
+
 DreamPolygon:GetUVType:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetUVType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPolygon:GetVertexOffsetArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:GetVertexOffsetArray
+    src   "Get Vertex Offset Array"
+    text  "获取顶点偏移数组"
+    state machine
 }
 
 DreamPolygon:GetVertexOffsetArray:ReturnValue {
@@ -111,12 +160,26 @@ DreamPolygon:GetVertexOffsetArray:ReturnValue {
     state draft
 }
 
+DreamPolygon:SetEndAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetEndAngle
+    src   "Set End Angle"
+    text  "设置结束角"
+    state machine
+}
+
 DreamPolygon:SetEndAngle:value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetEndAngle:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPolygon:SetFullCycle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetFullCycle
+    src   "Set Full Cycle"
+    text  "设置完整循环"
+    state machine
 }
 
 DreamPolygon:SetFullCycle:value {
@@ -127,12 +190,26 @@ DreamPolygon:SetFullCycle:value {
     state draft
 }
 
+DreamPolygon:SetSides {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetSides
+    src   "Set Sides"
+    text  "设置侧边"
+    state machine
+}
+
 DreamPolygon:SetSides:value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetSides:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPolygon:SetStartAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetStartAngle
+    src   "Set Start Angle"
+    text  "设置开始角"
+    state machine
 }
 
 DreamPolygon:SetStartAngle:value {
@@ -143,12 +220,26 @@ DreamPolygon:SetStartAngle:value {
     state draft
 }
 
+DreamPolygon:SetUVType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetUVType
+    src   "Set UVType"
+    text  "设置UV 类型"
+    state machine
+}
+
 DreamPolygon:SetUVType:value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetUVType:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamPolygon:SetVertexOffsetArray {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:SetVertexOffsetArray
+    src   "Set Vertex Offset Array"
+    text  "设置顶点偏移数组"
+    state machine
 }
 
 DreamPolygon:SetVertexOffsetArray:value {
@@ -173,6 +264,13 @@ DreamPolygon:StartAngle {
     // from the engine's zh-Hans
     text  "开始角"
     state draft
+}
+
+DreamPolygon:StartAngleTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h#DreamPolygon:StartAngleTo
+    src   "Start Angle To"
+    text  "起始角度终点"
+    state machine
 }
 
 DreamPolygon:StartAngleTo:delay {

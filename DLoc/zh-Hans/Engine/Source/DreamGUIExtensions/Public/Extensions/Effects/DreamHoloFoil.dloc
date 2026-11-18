@@ -46,6 +46,13 @@ DreamHoloFoil:FoilMaterial {
     state machine
 }
 
+DreamHoloFoil:GetCurrentView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:GetCurrentView
+    src   "Get Current View"
+    text  "获取当前视图"
+    state machine
+}
+
 DreamHoloFoil:GetCurrentView:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:GetCurrentView:ReturnValue
     src   "Return Value"
@@ -59,6 +66,14 @@ DreamHoloFoil:Intensity {
     src   "Intensity"
     // from the engine's zh-Hans
     text  "强度"
+    state draft
+}
+
+DreamHoloFoil:IsEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:IsEnabled
+    src   "Is Enabled"
+    // from the engine's zh-Hans
+    text  "已启用"
     state draft
 }
 
@@ -98,11 +113,27 @@ DreamHoloFoil:RainbowTexture {
     state machine
 }
 
+DreamHoloFoil:SetEnabled {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetEnabled
+    src   "Set Enabled"
+    // from the engine's zh-Hans
+    text  "设置已启用项"
+    state draft
+}
+
 DreamHoloFoil:SetEnabled:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetEnabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamHoloFoil:SetIntensity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetIntensity
+    src   "Set Intensity"
+    // from the engine's zh-Hans
+    text  "设置强度"
     state draft
 }
 
@@ -114,12 +145,26 @@ DreamHoloFoil:SetIntensity:Value {
     state draft
 }
 
+DreamHoloFoil:SetManualView {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetManualView
+    src   "Set Manual View"
+    text  "设置手动视图"
+    state machine
+}
+
 DreamHoloFoil:SetManualView:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetManualView:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamHoloFoil:SetViewSource {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamHoloFoil.h#DreamHoloFoil:SetViewSource
+    src   "Set View Source"
+    text  "设置视图源"
+    state machine
 }
 
 DreamHoloFoil:SetViewSource:Value {

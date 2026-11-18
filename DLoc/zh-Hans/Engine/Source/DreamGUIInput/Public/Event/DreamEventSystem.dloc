@@ -9,6 +9,13 @@ DreamEventSystem {
     state machine
 }
 
+DreamEventSystem:ActivateNavigationInput {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ActivateNavigationInput
+    src   "Activate Navigation Input"
+    text  "激活导航输入"
+    state machine
+}
+
 DreamEventSystem:ActivateNavigationInput:InDefaultHighlightedComponent {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ActivateNavigationInput:InDefaultHighlightedComponent
     src   "In Default Highlighted Component"
@@ -37,6 +44,13 @@ DreamEventSystem:bApplyHoverCursor {
     state machine
 }
 
+DreamEventSystem:bNavigationRepeatInGameTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:bNavigationRepeatInGameTime
+    src   "Navigation Repeat in Game Time"
+    text  "导航按游戏时间重复"
+    state machine
+}
+
 DreamEventSystem:bOutputLog {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:bOutputLog
     src   "Output Log"
@@ -56,6 +70,13 @@ DreamEventSystem:bScrollNavigationTargetIntoView {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:bScrollNavigationTargetIntoView
     src   "Scroll Navigation Target Into View"
     text  "滚动导航目标到视图"
+    state machine
+}
+
+DreamEventSystem:ClearEvent {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ClearEvent
+    src   "Clear Event"
+    text  "清除事件"
     state machine
 }
 
@@ -82,6 +103,13 @@ DreamEventSystem:DoubleClickTime {
     state draft
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerBeginDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerBeginDrag
+    src   "Execute Event on Pointer Begin Drag"
+    text  "在指针开始拖拽时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerBeginDrag:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerBeginDrag:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -103,6 +131,13 @@ DreamEventSystem:ExecuteEvent_OnPointerBeginDrag:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerClick {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerClick
+    src   "Execute Event on Pointer Click"
+    text  "在指针点击时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerClick:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerClick:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -121,6 +156,13 @@ DreamEventSystem:ExecuteEvent_OnPointerClick:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerClick:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerDeselect {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDeselect
+    src   "Execute Event on Pointer Deselect"
+    text  "在指针取消选中时执行事件"
     state machine
 }
 
@@ -146,6 +188,13 @@ DreamEventSystem:ExecuteEvent_OnPointerDeselect:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerDoubleClick {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDoubleClick
+    src   "Execute Event on Pointer Double Click"
+    text  "在指针双击时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerDoubleClick:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDoubleClick:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -164,6 +213,13 @@ DreamEventSystem:ExecuteEvent_OnPointerDoubleClick:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDoubleClick:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerDown {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDown
+    src   "Execute Event on Pointer Down"
+    text  "在指针按下时执行事件"
     state machine
 }
 
@@ -188,6 +244,13 @@ DreamEventSystem:ExecuteEvent_OnPointerDown:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDrag
+    src   "Execute Event on Pointer Drag"
+    text  "在指针拖拽时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerDrag:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDrag:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -206,6 +269,13 @@ DreamEventSystem:ExecuteEvent_OnPointerDrag:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDrag:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerDragDrop {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerDragDrop
+    src   "Execute Event on Pointer Drag Drop"
+    text  "在指针拖放时执行事件"
     state machine
 }
 
@@ -230,6 +300,13 @@ DreamEventSystem:ExecuteEvent_OnPointerDragDrop:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerEndDrag {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerEndDrag
+    src   "Execute Event on Pointer End Drag"
+    text  "在指针结束拖拽时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerEndDrag:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerEndDrag:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -248,6 +325,13 @@ DreamEventSystem:ExecuteEvent_OnPointerEndDrag:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerEndDrag:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerEnter {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerEnter
+    src   "Execute Event on Pointer Enter"
+    text  "在指针进入时执行事件"
     state machine
 }
 
@@ -272,6 +356,13 @@ DreamEventSystem:ExecuteEvent_OnPointerEnter:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerExit {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerExit
+    src   "Execute Event on Pointer Exit"
+    text  "在指针离开时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerExit:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerExit:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -290,6 +381,13 @@ DreamEventSystem:ExecuteEvent_OnPointerExit:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerExit:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerLongPress {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerLongPress
+    src   "Execute Event on Pointer Long Press"
+    text  "在指针长按时执行事件"
     state machine
 }
 
@@ -314,6 +412,13 @@ DreamEventSystem:ExecuteEvent_OnPointerLongPress:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerPinch {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerPinch
+    src   "Execute Event on Pointer Pinch"
+    text  "在指针捏合时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerPinch:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerPinch:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -335,6 +440,13 @@ DreamEventSystem:ExecuteEvent_OnPointerPinch:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerScroll {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerScroll
+    src   "Execute Event on Pointer Scroll"
+    text  "在指针滚动时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerScroll:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerScroll:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -353,6 +465,13 @@ DreamEventSystem:ExecuteEvent_OnPointerScroll:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerScroll:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerSelect {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerSelect
+    src   "Execute Event on Pointer Select"
+    text  "在指针选中时执行事件"
     state machine
 }
 
@@ -378,6 +497,13 @@ DreamEventSystem:ExecuteEvent_OnPointerSelect:TargetWidget {
     state machine
 }
 
+DreamEventSystem:ExecuteEvent_OnPointerSwipe {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerSwipe
+    src   "Execute Event on Pointer Swipe"
+    text  "在指针滑动时执行事件"
+    state machine
+}
+
 DreamEventSystem:ExecuteEvent_OnPointerSwipe:AllowEventBubbleUp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerSwipe:AllowEventBubbleUp
     src   "Allow Event Bubble Up"
@@ -396,6 +522,13 @@ DreamEventSystem:ExecuteEvent_OnPointerSwipe:TargetWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerSwipe:TargetWidget
     src   "Target Widget"
     text  "目标控件"
+    state machine
+}
+
+DreamEventSystem:ExecuteEvent_OnPointerUp {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ExecuteEvent_OnPointerUp
+    src   "Execute Event on Pointer Up"
+    text  "在指针抬起时执行事件"
     state machine
 }
 
@@ -427,12 +560,26 @@ DreamEventSystem:GamepadModelChangedEventBP {
     state machine
 }
 
+DreamEventSystem:GetAnimateNavigationScroll {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetAnimateNavigationScroll
+    src   "Get Animate Navigation Scroll"
+    text  "获取动画导航滚动"
+    state machine
+}
+
 DreamEventSystem:GetAnimateNavigationScroll:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetAnimateNavigationScroll:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetApplyHoverCursor {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetApplyHoverCursor
+    src   "Get Apply Hover Cursor"
+    text  "获取应用悬停光标"
+    state machine
 }
 
 DreamEventSystem:GetApplyHoverCursor:ReturnValue {
@@ -443,12 +590,26 @@ DreamEventSystem:GetApplyHoverCursor:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetCurrentGamepadModel {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentGamepadModel
+    src   "Get Current Gamepad Model"
+    text  "获取当前手柄型号"
+    state machine
+}
+
 DreamEventSystem:GetCurrentGamepadModel:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentGamepadModel:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetCurrentInputDevice {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentInputDevice
+    src   "Get Current Input Device"
+    text  "获取当前输入设备"
+    state machine
 }
 
 DreamEventSystem:GetCurrentInputDevice:ReturnValue {
@@ -459,12 +620,26 @@ DreamEventSystem:GetCurrentInputDevice:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetCurrentInputModule {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentInputModule
+    src   "Get Current Input Module"
+    text  "获取当前输入模块"
+    state machine
+}
+
 DreamEventSystem:GetCurrentInputModule:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentInputModule:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetCurrentSelectedComponent {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetCurrentSelectedComponent
+    src   "Get Current Selected Component"
+    text  "获取当前选中的组件"
+    state machine
 }
 
 DreamEventSystem:GetCurrentSelectedComponent:InPointerID {
@@ -482,6 +657,13 @@ DreamEventSystem:GetCurrentSelectedComponent:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetDefaultInputType {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetDefaultInputType
+    src   "Get Default Input Type"
+    text  "获取默认输入类型"
+    state machine
+}
+
 DreamEventSystem:GetDefaultInputType:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetDefaultInputType:ReturnValue
     src   "Return Value"
@@ -490,12 +672,26 @@ DreamEventSystem:GetDefaultInputType:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetDoubleClickTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetDoubleClickTime
+    src   "Get Double Click Time"
+    text  "获取双击时间"
+    state machine
+}
+
 DreamEventSystem:GetDoubleClickTime:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetDoubleClickTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetDreamEventSystemInstance {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetDreamEventSystemInstance
+    src   "Get Dream Event System Instance"
+    text  "获取 Dream 事件系统实例"
+    state machine
 }
 
 DreamEventSystem:GetDreamEventSystemInstance:ReturnValue {
@@ -522,6 +718,13 @@ DreamEventSystem:GetDreamEventSystemInstance:WorldContextObject {
     state draft
 }
 
+DreamEventSystem:GetGamepadModelForDeviceName {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetGamepadModelForDeviceName
+    src   "Get Gamepad Model for Device Name"
+    text  "按设备名获取手柄型号"
+    state machine
+}
+
 DreamEventSystem:GetGamepadModelForDeviceName:InHardwareDeviceIdentifier {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetGamepadModelForDeviceName:InHardwareDeviceIdentifier
     src   "In Hardware Device Identifier"
@@ -544,6 +747,13 @@ DreamEventSystem:GetGamepadModelForDeviceName:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetHighlightedComponentForNavigation {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetHighlightedComponentForNavigation
+    src   "Get Highlighted Component for Navigation"
+    text  "获取导航高亮组件"
+    state machine
+}
+
 DreamEventSystem:GetHighlightedComponentForNavigation:InPointerID {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetHighlightedComponentForNavigation:InPointerID
     src   "In Pointer ID"
@@ -557,6 +767,13 @@ DreamEventSystem:GetHighlightedComponentForNavigation:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetInputDeviceForKey {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetInputDeviceForKey
+    src   "Get Input Device for Key"
+    text  "按按键获取输入设备"
+    state machine
 }
 
 DreamEventSystem:GetInputDeviceForKey:InKey {
@@ -575,12 +792,26 @@ DreamEventSystem:GetInputDeviceForKey:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetLongPressTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetLongPressTime
+    src   "Get Long Press Time"
+    text  "获取长按时间"
+    state machine
+}
+
 DreamEventSystem:GetLongPressTime:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetLongPressTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetNavigateInputInterval {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetNavigateInputInterval
+    src   "Get Navigate Input Interval"
+    text  "获取导航输入间隔"
+    state machine
 }
 
 DreamEventSystem:GetNavigateInputInterval:ReturnValue {
@@ -591,12 +822,41 @@ DreamEventSystem:GetNavigateInputInterval:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetNavigateInputIntervalForFirstTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetNavigateInputIntervalForFirstTime
+    src   "Get Navigate Input Interval for First Time"
+    text  "获取首次导航输入间隔"
+    state machine
+}
+
 DreamEventSystem:GetNavigateInputIntervalForFirstTime:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetNavigateInputIntervalForFirstTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetNavigationRepeatInGameTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetNavigationRepeatInGameTime
+    src   "Get Navigation Repeat in Game Time"
+    text  "获取导航是否按游戏时间重复"
+    state machine
+}
+
+DreamEventSystem:GetNavigationRepeatInGameTime:ReturnValue {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetNavigationRepeatInGameTime:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamEventSystem:GetPinchMinDistanceChange {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPinchMinDistanceChange
+    src   "Get Pinch Min Distance Change"
+    text  "获取捏合最小距离变化"
+    state machine
 }
 
 DreamEventSystem:GetPinchMinDistanceChange:ReturnValue {
@@ -607,12 +867,27 @@ DreamEventSystem:GetPinchMinDistanceChange:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetPlayerController {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPlayerController
+    src   "Get Player Controller"
+    // from the engine's zh-Hans
+    text  "Get Player Controller"
+    state draft
+}
+
 DreamEventSystem:GetPlayerController:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPlayerController:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetPlayerControllerForUser {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPlayerControllerForUser
+    src   "Get Player Controller for User"
+    text  "获取玩家的玩家控制器"
+    state machine
 }
 
 DreamEventSystem:GetPlayerControllerForUser:InUserIndex {
@@ -638,6 +913,13 @@ DreamEventSystem:GetPlayerControllerForUser:WorldContextObject {
     state draft
 }
 
+DreamEventSystem:GetPointerClockSeconds {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPointerClockSeconds
+    src   "Get Pointer Clock Seconds"
+    text  "获取指针时钟秒数"
+    state machine
+}
+
 DreamEventSystem:GetPointerClockSeconds:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPointerClockSeconds:ReturnValue
     src   "Return Value"
@@ -652,6 +934,13 @@ DreamEventSystem:GetPointerClockSeconds:WorldContextObject {
     // from the engine's zh-Hans
     text  "场景情境对象"
     state draft
+}
+
+DreamEventSystem:GetPointerEventData {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetPointerEventData
+    src   "Get Pointer Event Data"
+    text  "获取指针事件数据"
+    state machine
 }
 
 DreamEventSystem:GetPointerEventData:bCreateIfNotExist {
@@ -677,12 +966,26 @@ DreamEventSystem:GetPointerEventData:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetScrollNavigationTargetIntoView {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetScrollNavigationTargetIntoView
+    src   "Get Scroll Navigation Target Into View"
+    text  "获取滚动导航目标到视图"
+    state machine
+}
+
 DreamEventSystem:GetScrollNavigationTargetIntoView:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetScrollNavigationTargetIntoView:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamEventSystem:GetSwipeMaxDuration {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetSwipeMaxDuration
+    src   "Get Swipe Max Duration"
+    text  "获取滑动最大时长"
+    state machine
 }
 
 DreamEventSystem:GetSwipeMaxDuration:ReturnValue {
@@ -693,11 +996,26 @@ DreamEventSystem:GetSwipeMaxDuration:ReturnValue {
     state draft
 }
 
+DreamEventSystem:GetSwipeMinDistance {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetSwipeMinDistance
+    src   "Get Swipe Min Distance"
+    text  "获取滑动最小距离"
+    state machine
+}
+
 DreamEventSystem:GetSwipeMinDistance:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetSwipeMinDistance:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamEventSystem:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
     state draft
 }
 
@@ -720,6 +1038,13 @@ DreamEventSystem:InputEventBP {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:InputEventBP
     src   "InputEvent"
     text  "输入事件"
+    state machine
+}
+
+DreamEventSystem:IsPointerOverUIByPointerID {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:IsPointerOverUIByPointerID
+    src   "Is Pointer Over UIBy Pointer ID"
+    text  "指针是否在 UI 上（按指针 ID）"
     state machine
 }
 
@@ -773,6 +1098,13 @@ DreamEventSystem:RaycastHitEventBP {
     state machine
 }
 
+DreamEventSystem:RefreshGamepadModel {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:RefreshGamepadModel
+    src   "Refresh Gamepad Model"
+    text  "刷新手柄型号"
+    state machine
+}
+
 DreamEventSystem:RefreshGamepadModel:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:RefreshGamepadModel:ReturnValue
     src   "Return Value"
@@ -781,10 +1113,24 @@ DreamEventSystem:RefreshGamepadModel:ReturnValue {
     state draft
 }
 
+DreamEventSystem:RemovePointerEventData {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:RemovePointerEventData
+    src   "Remove Pointer Event Data"
+    text  "移除指针事件数据"
+    state machine
+}
+
 DreamEventSystem:RemovePointerEventData:PointerID {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:RemovePointerEventData:PointerID
     src   "Pointer ID"
     text  "指针 ID"
+    state machine
+}
+
+DreamEventSystem:ReportInputDevice {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:ReportInputDevice
+    src   "Report Input Device"
+    text  "上报输入设备"
     state machine
 }
 
@@ -803,12 +1149,26 @@ DreamEventSystem:ReportInputDevice:ReturnValue {
     state draft
 }
 
+DreamEventSystem:SetAnimateNavigationScroll {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetAnimateNavigationScroll
+    src   "Set Animate Navigation Scroll"
+    text  "设置动画导航滚动"
+    state machine
+}
+
 DreamEventSystem:SetAnimateNavigationScroll:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetAnimateNavigationScroll:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamEventSystem:SetApplyHoverCursor {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetApplyHoverCursor
+    src   "Set Apply Hover Cursor"
+    text  "设置应用悬停光标"
+    state machine
 }
 
 DreamEventSystem:SetApplyHoverCursor:Value {
@@ -819,6 +1179,13 @@ DreamEventSystem:SetApplyHoverCursor:Value {
     state draft
 }
 
+DreamEventSystem:SetDefaultInputType {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetDefaultInputType
+    src   "Set Default Input Type"
+    text  "设置默认输入类型"
+    state machine
+}
+
 DreamEventSystem:SetDefaultInputType:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetDefaultInputType:Value
     src   "Value"
@@ -827,12 +1194,26 @@ DreamEventSystem:SetDefaultInputType:Value {
     state draft
 }
 
+DreamEventSystem:SetDoubleClickTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetDoubleClickTime
+    src   "Set Double Click Time"
+    text  "设置双击时间"
+    state machine
+}
+
 DreamEventSystem:SetDoubleClickTime:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetDoubleClickTime:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamEventSystem:SetGamepadModelOverride {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetGamepadModelOverride
+    src   "Set Gamepad Model Override"
+    text  "设置手柄型号覆盖"
+    state machine
 }
 
 DreamEventSystem:SetGamepadModelOverride:bInOverride {
@@ -851,6 +1232,13 @@ DreamEventSystem:SetGamepadModelOverride:InModel {
     state draft
 }
 
+DreamEventSystem:SetHighlightedComponentForNavigation {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetHighlightedComponentForNavigation
+    src   "Set Highlighted Component for Navigation"
+    text  "设置导航高亮组件"
+    state machine
+}
+
 DreamEventSystem:SetHighlightedComponentForNavigation:InComp {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetHighlightedComponentForNavigation:InComp
     src   "In Comp"
@@ -865,12 +1253,26 @@ DreamEventSystem:SetHighlightedComponentForNavigation:InPointerID {
     state machine
 }
 
+DreamEventSystem:SetLongPressTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetLongPressTime
+    src   "Set Long Press Time"
+    text  "设置长按时间"
+    state machine
+}
+
 DreamEventSystem:SetLongPressTime:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetLongPressTime:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamEventSystem:SetNavigateInputInterval {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetNavigateInputInterval
+    src   "Set Navigate Input Interval"
+    text  "设置导航输入间隔"
+    state machine
 }
 
 DreamEventSystem:SetNavigateInputInterval:Value {
@@ -881,6 +1283,13 @@ DreamEventSystem:SetNavigateInputInterval:Value {
     state draft
 }
 
+DreamEventSystem:SetNavigateInputIntervalForFirstTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetNavigateInputIntervalForFirstTime
+    src   "Set Navigate Input Interval for First Time"
+    text  "设置首次导航输入间隔"
+    state machine
+}
+
 DreamEventSystem:SetNavigateInputIntervalForFirstTime:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetNavigateInputIntervalForFirstTime:Value
     src   "Value"
@@ -889,12 +1298,41 @@ DreamEventSystem:SetNavigateInputIntervalForFirstTime:Value {
     state draft
 }
 
+DreamEventSystem:SetNavigationRepeatInGameTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetNavigationRepeatInGameTime
+    src   "Set Navigation Repeat in Game Time"
+    text  "设置导航按游戏时间重复"
+    state machine
+}
+
+DreamEventSystem:SetNavigationRepeatInGameTime:Value {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetNavigationRepeatInGameTime:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamEventSystem:SetPinchMinDistanceChange {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetPinchMinDistanceChange
+    src   "Set Pinch Min Distance Change"
+    text  "设置捏合最小距离变化"
+    state machine
+}
+
 DreamEventSystem:SetPinchMinDistanceChange:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetPinchMinDistanceChange:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamEventSystem:SetPointerInputTypeByPointerID {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetPointerInputTypeByPointerID
+    src   "Set Pointer Input Type by Pointer ID"
+    text  "按指针 ID 设置指针输入类型"
+    state machine
 }
 
 DreamEventSystem:SetPointerInputTypeByPointerID:InInputType {
@@ -920,6 +1358,13 @@ DreamEventSystem:SetPointerInputTypeByPointerID:ReturnValue {
     state draft
 }
 
+DreamEventSystem:SetRaycastEnable {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetRaycastEnable
+    src   "Set Raycast Enable"
+    text  "设置射线检测启用"
+    state machine
+}
+
 DreamEventSystem:SetRaycastEnable:bClearEvent {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetRaycastEnable:bClearEvent
     src   "Clear Event"
@@ -935,6 +1380,13 @@ DreamEventSystem:SetRaycastEnable:bEnable {
     state draft
 }
 
+DreamEventSystem:SetScrollNavigationTargetIntoView {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetScrollNavigationTargetIntoView
+    src   "Set Scroll Navigation Target Into View"
+    text  "设置滚动导航目标到视图"
+    state machine
+}
+
 DreamEventSystem:SetScrollNavigationTargetIntoView:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetScrollNavigationTargetIntoView:Value
     src   "Value"
@@ -943,10 +1395,24 @@ DreamEventSystem:SetScrollNavigationTargetIntoView:Value {
     state draft
 }
 
+DreamEventSystem:SetSelectComponentWithDefault {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSelectComponentWithDefault
+    src   "Set Select Component with Default"
+    text  "设置选中组件（带默认）"
+    state machine
+}
+
 DreamEventSystem:SetSelectComponentWithDefault:InSelectWidget {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSelectComponentWithDefault:InSelectWidget
     src   "In Select Widget"
     text  "要选择的控件"
+    state machine
+}
+
+DreamEventSystem:SetSelectWidget {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSelectWidget
+    src   "Set Select Widget"
+    text  "设置选中控件"
     state machine
 }
 
@@ -965,6 +1431,13 @@ DreamEventSystem:SetSelectWidget:InSelectWidget {
     state machine
 }
 
+DreamEventSystem:SetSwipeMaxDuration {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSwipeMaxDuration
+    src   "Set Swipe Max Duration"
+    text  "设置滑动最大时长"
+    state machine
+}
+
 DreamEventSystem:SetSwipeMaxDuration:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSwipeMaxDuration:Value
     src   "Value"
@@ -973,12 +1446,26 @@ DreamEventSystem:SetSwipeMaxDuration:Value {
     state draft
 }
 
+DreamEventSystem:SetSwipeMinDistance {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSwipeMinDistance
+    src   "Set Swipe Min Distance"
+    text  "设置滑动最小距离"
+    state machine
+}
+
 DreamEventSystem:SetSwipeMinDistance:Value {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetSwipeMinDistance:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamEventSystem:SetUserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:SetUserIndex
+    src   "Set User Index"
+    text  "设置用户索引"
+    state machine
 }
 
 DreamEventSystem:SetUserIndex:Value {
@@ -1025,6 +1512,13 @@ DreamEventSystemActor:EventSystem {
     state machine
 }
 
+DreamEventSystemActor:GetEventSystem {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystemActor:GetEventSystem
+    src   "Get Event System"
+    text  "获取事件系统"
+    state machine
+}
+
 DreamEventSystemActor:GetEventSystem:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystemActor:GetEventSystem:ReturnValue
     src   "Return Value"
@@ -1060,6 +1554,13 @@ DreamEventSystem:bApplyHoverCursor {
     at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:bApplyHoverCursor
     src   "Let hovered widgets drive the hardware cursor (UDreamWidget::Cursor).\n\nOn by default, because a cursor that changes over a button is how a player learns what is clickable. Off\nfor a project that owns the cursor itself -- an RTS with a build cursor, a game with a custom software\ncursor -- so the two do not write the same field on alternate frames."
     text  "让悬停的控件驱动硬件光标（UDreamWidget::Cursor）。\n\n默认开启，因为光标在按钮上发生变化正是玩家了解什么可点击的方式。对于\n自行管理光标的项目——带有建造光标的 RTS、使用自定义软件\n光标的游戏——请关闭，以免两者在不同帧写入同一字段。"
+    state machine
+}
+
+DreamEventSystem:bNavigationRepeatInGameTime {
+    at    Source/DreamGUIInput/Public/Event/DreamEventSystem.h#DreamEventSystem:bNavigationRepeatInGameTime
+    src   "Time the two navigation intervals on the game clock -- paused by a pause, stretched by time dilation -- instead of\nreal time. Off by default: a pause menu has to go on stepping. On for a recording made frame by frame or a replay in\nslow motion, where real time runs far ahead of the frames and a held direction would repeat many steps at once."
+    text  "按游戏时钟给两个导航间隔计时——随暂停暂停、随时间缩放拉伸——而不是按\n真实时间。默认关闭：暂停菜单还得继续走。按帧录制的录像或慢放的\n回放要打开它，那里真实时间远快于帧，按住的方向会一次重复很多步。"
     state machine
 }
 

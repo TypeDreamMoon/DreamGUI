@@ -9,6 +9,13 @@ DreamWorldWidgetActor {
     state machine
 }
 
+DreamWorldWidgetActor:GetWidgetComponent {
+    at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor:GetWidgetComponent
+    src   "Get Widget Component"
+    text  "获取控件组件"
+    state machine
+}
+
 DreamWorldWidgetActor:GetWidgetComponent:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h#DreamWorldWidgetActor:GetWidgetComponent:ReturnValue
     src   "Return Value"

@@ -51,10 +51,24 @@ DreamUIDynamicSpriteAtlasManager:AtlasMap {
     state machine
 }
 
+DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag
+    src   "Dispose Atlas by Packing Tag"
+    text  "按打包标签释放图集"
+    state machine
+}
+
 DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag {
     at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:DisposeAtlasByPackingTag:InPackingTag
     src   "In Packing Tag"
     text  "输入打包标记"
+    state machine
+}
+
+DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag
+    src   "Evict Unused Sprites by Packing Tag"
+    text  "按打包标签剔除未使用的精灵"
     state machine
 }
 
@@ -73,6 +87,13 @@ DreamUIDynamicSpriteAtlasManager:EvictUnusedSpritesByPackingTag:ReturnValue {
     state draft
 }
 
+DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag
+    src   "Trim Atlas by Packing Tag"
+    text  "按打包标签裁剪图集"
+    state machine
+}
+
 DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:InPackingTag {
     at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:InPackingTag
     src   "In Packing Tag"
@@ -86,6 +107,13 @@ DreamUIDynamicSpriteAtlasManager:TrimAtlasByPackingTag:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases {
+    at    Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h#DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases
+    src   "Trim Unused Atlases"
+    text  "清理未使用的图集"
+    state machine
 }
 
 DreamUIDynamicSpriteAtlasManager:TrimUnusedAtlases:ReturnValue {

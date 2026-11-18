@@ -191,6 +191,13 @@ DreamUserWidget:GetWidgetFromName {
     state machine
 }
 
+DreamUserWidget:GetWidgetsByTag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag
+    src   "Every widget of THIS widget's own contents that carries InTag (UDreamWidget::Tags, `@tag` in a .dui), parents\nbefore children, siblings in order.\n\nOwn contents: what this class authored. A nested component's insides are its own class's and are not searched --\nits widgets answer to its GetWidgetsByTag -- but the component instance itself is, and so is whatever this widget\nput into the component's slots, which is this widget's content wherever it ends up hanging. What a host put into\nTHIS widget's slots is the host's, and is not. Empty before Initialize, and for None."
+    text  "本控件自身内容中所有带 InTag 的控件（UDreamWidget::Tags，`.dui` 里的 `@tag`），父项先于\n子项，同级按顺序。\n\n自身内容：即本类编写出来的东西。嵌套组件的内部属于它自己的类，不会被搜索——\n它自己的控件由它的 GetWidgetsByTag 回答——但组件实例本身算，本控件放进\n该组件插槽里的东西也算，它们不论挂到哪里都是本控件的内容。而宿主放进\n本控件插槽里的东西属于宿主，不算。Initialize 之前为空，对 None 也为空。"
+    state machine
+}
+
 DreamUserWidget:HandleFocusLostBroadcast {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusLostBroadcast
     src   "Bound to this widget's own OnFocusLost broadcast; forwards to NativeOnFocusLost."
@@ -571,6 +578,14 @@ DreamUserWidget {
     state machine
 }
 
+DreamUserWidget:AddToPlayerScreen {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:AddToPlayerScreen
+    src   "Add to Player Screen"
+    // from the engine's zh-Hans
+    text  "添加到播放器屏幕"
+    state draft
+}
+
 DreamUserWidget:AddToPlayerScreen:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:AddToPlayerScreen:ReturnValue
     src   "Return Value"
@@ -584,6 +599,14 @@ DreamUserWidget:AddToPlayerScreen:ZOrder {
     src   "ZOrder"
     // from the engine's zh-Hans
     text  "ZOrder"
+    state draft
+}
+
+DreamUserWidget:AddToViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:AddToViewport
+    src   "Add to Viewport"
+    // from the engine's zh-Hans
+    text  "添加到视口"
     state draft
 }
 
@@ -607,6 +630,14 @@ DreamUserWidget:bCanNavigateHere {
     src   "Can Navigate Here"
     text  "能否导航至此"
     state machine
+}
+
+DreamUserWidget:BindToAnimationEvent {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:BindToAnimationEvent
+    src   "Bind to Animation Event"
+    // from the engine's zh-Hans
+    text  "绑定到动画事件"
+    state draft
 }
 
 DreamUserWidget:BindToAnimationEvent:Animation {
@@ -633,6 +664,14 @@ DreamUserWidget:BindToAnimationEvent:Delegate {
     state draft
 }
 
+DreamUserWidget:BindToAnimationFinished {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:BindToAnimationFinished
+    src   "Bind to Animation Finished"
+    // from the engine's zh-Hans
+    text  "绑定到完成的动画"
+    state draft
+}
+
 DreamUserWidget:BindToAnimationFinished:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:BindToAnimationFinished:Animation
     src   "Animation"
@@ -646,6 +685,14 @@ DreamUserWidget:BindToAnimationFinished:Delegate {
     src   "Delegate"
     // from the engine's zh-Hans
     text  "委托"
+    state draft
+}
+
+DreamUserWidget:BindToAnimationStarted {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:BindToAnimationStarted
+    src   "Bind to Animation Started"
+    // from the engine's zh-Hans
+    text  "绑定到开始的动画"
     state draft
 }
 
@@ -672,10 +719,31 @@ DreamUserWidget:bWantsTick {
     state machine
 }
 
+DreamUserWidget:ClearPlacementInViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ClearPlacementInViewport
+    src   "Clear Placement in Viewport"
+    text  "清除视口中的放置"
+    state machine
+}
+
 DreamUserWidget:EachAdapters {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:EachAdapters
     src   "Each Adapters"
     text  "各适配器"
+    state machine
+}
+
+DreamUserWidget:EvaluatePropertyBindings {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:EvaluatePropertyBindings
+    src   "Evaluate Property Bindings"
+    text  "求值属性绑定"
+    state machine
+}
+
+DreamUserWidget:FindAnimationComponentFor {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FindAnimationComponentFor
+    src   "Find Animation Component For"
+    text  "为此控件查找动画组件"
     state machine
 }
 
@@ -695,6 +763,13 @@ DreamUserWidget:FindAnimationComponentFor:ReturnValue {
     state draft
 }
 
+DreamUserWidget:FindAnimationInstance {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FindAnimationInstance
+    src   "Find Animation Instance"
+    text  "查找动画实例"
+    state machine
+}
+
 DreamUserWidget:FindAnimationInstance:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FindAnimationInstance:Animation
     src   "Animation"
@@ -709,6 +784,13 @@ DreamUserWidget:FindAnimationInstance:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUserWidget:FindSlotWidget {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FindSlotWidget
+    src   "Find Slot Widget"
+    text  "查找插槽控件"
+    state machine
 }
 
 DreamUserWidget:FindSlotWidget:InSlotName {
@@ -726,12 +808,34 @@ DreamUserWidget:FindSlotWidget:ReturnValue {
     state draft
 }
 
+DreamUserWidget:FlushAnimations {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:FlushAnimations
+    src   "Flush Animations"
+    // from the engine's zh-Hans
+    text  "清空动画"
+    state draft
+}
+
+DreamUserWidget:GetAllowEventBubbleUp {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetAllowEventBubbleUp
+    src   "Get Allow Event Bubble Up"
+    text  "获取允许事件冒泡"
+    state machine
+}
+
 DreamUserWidget:GetAllowEventBubbleUp:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetAllowEventBubbleUp:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUserWidget:GetAnimationByName {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetAnimationByName
+    src   "Get Animation by Name"
+    text  "按名字获取动画"
+    state machine
 }
 
 DreamUserWidget:GetAnimationByName:Name {
@@ -747,6 +851,14 @@ DreamUserWidget:GetAnimationByName:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:GetAnimationCurrentTime {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetAnimationCurrentTime
+    src   "Get Animation Current Time"
+    // from the engine's zh-Hans
+    text  "获取动画当前时间"
     state draft
 }
 
@@ -766,12 +878,26 @@ DreamUserWidget:GetAnimationCurrentTime:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetCanNavigateHere {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetCanNavigateHere
+    src   "Get Can Navigate Here"
+    text  "获取能否导航至此"
+    state machine
+}
+
 DreamUserWidget:GetCanNavigateHere:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetCanNavigateHere:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUserWidget:GetContentForNamedSlot {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetContentForNamedSlot
+    src   "Get Content for Named Slot"
+    text  "获取命名插槽的内容"
+    state machine
 }
 
 DreamUserWidget:GetContentForNamedSlot:InSlotName {
@@ -789,6 +915,13 @@ DreamUserWidget:GetContentForNamedSlot:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetContentRoot {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetContentRoot
+    src   "Get Content Root"
+    text  "获取内容根节点"
+    state machine
+}
+
 DreamUserWidget:GetContentRoot:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetContentRoot:ReturnValue
     src   "Return Value"
@@ -797,11 +930,26 @@ DreamUserWidget:GetContentRoot:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetDefaultSlotName {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetDefaultSlotName
+    src   "Get Default Slot Name"
+    text  "获取默认插槽名称"
+    state machine
+}
+
 DreamUserWidget:GetDefaultSlotName:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetDefaultSlotName:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:GetLocalSize {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetLocalSize
+    src   "Get Local Size"
+    // from the engine's zh-Hans
+    text  "获取本地大小"
     state draft
 }
 
@@ -813,11 +961,26 @@ DreamUserWidget:GetLocalSize:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetNativeSlotNames {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetNativeSlotNames
+    src   "Get Native Slot Names"
+    text  "获取原生插槽名称"
+    state machine
+}
+
 DreamUserWidget:GetNativeSlotNames:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetNativeSlotNames:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:GetOwningPlayerPawn {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetOwningPlayerPawn
+    src   "Get Owning Player Pawn"
+    // from the engine's zh-Hans
+    text  "获取拥有玩家pawn"
     state draft
 }
 
@@ -829,11 +992,26 @@ DreamUserWidget:GetOwningPlayerPawn:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetScreenSpaceRect {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetScreenSpaceRect
+    src   "Get Screen Space Rect"
+    text  "获取屏幕空间矩形"
+    state machine
+}
+
 DreamUserWidget:GetScreenSpaceRect:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetScreenSpaceRect:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:GetViewModel {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetViewModel
+    src   "Get View Model"
+    // from the engine's zh-Hans
+    text  "Get View Model"
     state draft
 }
 
@@ -853,12 +1031,26 @@ DreamUserWidget:GetViewModel:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetWantsTick {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWantsTick
+    src   "Get Wants Tick"
+    text  "获取需要Tick"
+    state machine
+}
+
 DreamUserWidget:GetWantsTick:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWantsTick:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUserWidget:GetWidgetFromName {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetFromName
+    src   "Get Widget from Name"
+    text  "按名字获取控件"
+    state machine
 }
 
 DreamUserWidget:GetWidgetFromName:InVariableName {
@@ -877,12 +1069,49 @@ DreamUserWidget:GetWidgetFromName:ReturnValue {
     state draft
 }
 
+DreamUserWidget:GetWidgetsByTag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag
+    src   "Get Widgets by Tag"
+    text  "按标签获取控件"
+    state machine
+}
+
+DreamUserWidget:GetWidgetsByTag:InTag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag:InTag
+    src   "In Tag"
+    // from the engine's zh-Hans
+    text  "在标签中"
+    state draft
+}
+
+DreamUserWidget:GetWidgetsByTag:ReturnValue {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetsByTag:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamUserWidget:GetWidgetTree {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetTree
+    src   "Get Widget Tree"
+    text  "获取控件树"
+    state machine
+}
+
 DreamUserWidget:GetWidgetTree:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:GetWidgetTree:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUserWidget:HandleFocusLostBroadcast {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusLostBroadcast
+    src   "Handle Focus Lost Broadcast"
+    text  "处理焦点丢失广播"
+    state machine
 }
 
 DreamUserWidget:HandleFocusLostBroadcast:PointerId {
@@ -900,6 +1129,13 @@ DreamUserWidget:HandleFocusLostBroadcast:UserIndex {
     state draft
 }
 
+DreamUserWidget:HandleFocusReceivedBroadcast {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusReceivedBroadcast
+    src   "Handle Focus Received Broadcast"
+    text  "处理焦点获得广播"
+    state machine
+}
+
 DreamUserWidget:HandleFocusReceivedBroadcast:PointerId {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HandleFocusReceivedBroadcast:PointerId
     src   "Pointer Id"
@@ -913,6 +1149,13 @@ DreamUserWidget:HandleFocusReceivedBroadcast:UserIndex {
     // from the engine's zh-Hans
     text  "用户索引"
     state draft
+}
+
+DreamUserWidget:HasPlayingAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:HasPlayingAnimation
+    src   "Has Playing Animation"
+    text  "是否有动画在播放"
+    state machine
 }
 
 DreamUserWidget:HasPlayingAnimation:Animation {
@@ -938,6 +1181,13 @@ DreamUserWidget:HostSuppliedChildren {
     state machine
 }
 
+DreamUserWidget:IsAnimationPaused {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnimationPaused
+    src   "Is Animation Paused"
+    text  "动画是否暂停"
+    state machine
+}
+
 DreamUserWidget:IsAnimationPaused:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnimationPaused:Handle
     src   "Handle"
@@ -951,6 +1201,14 @@ DreamUserWidget:IsAnimationPaused:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:IsAnimationPlaying {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnimationPlaying
+    src   "Is Animation Playing"
+    // from the engine's zh-Hans
+    text  "动画正在播放"
     state draft
 }
 
@@ -970,6 +1228,14 @@ DreamUserWidget:IsAnimationPlaying:ReturnValue {
     state draft
 }
 
+DreamUserWidget:IsAnimationPlayingForward {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnimationPlayingForward
+    src   "Is Animation Playing Forward"
+    // from the engine's zh-Hans
+    text  "动画正在向前播放"
+    state draft
+}
+
 DreamUserWidget:IsAnimationPlayingForward:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnimationPlayingForward:Handle
     src   "Handle"
@@ -986,6 +1252,14 @@ DreamUserWidget:IsAnimationPlayingForward:ReturnValue {
     state draft
 }
 
+DreamUserWidget:IsAnyAnimationPlaying {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnyAnimationPlaying
+    src   "Is Any Animation Playing"
+    // from the engine's zh-Hans
+    text  "任意动画正在播放"
+    state draft
+}
+
 DreamUserWidget:IsAnyAnimationPlaying:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsAnyAnimationPlaying:ReturnValue
     src   "Return Value"
@@ -994,11 +1268,26 @@ DreamUserWidget:IsAnyAnimationPlaying:ReturnValue {
     state draft
 }
 
+DreamUserWidget:IsConstructed {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsConstructed
+    src   "Is Constructed"
+    text  "是否已构造"
+    state machine
+}
+
 DreamUserWidget:IsConstructed:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsConstructed:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:IsDesignTime {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsDesignTime
+    src   "Is Design Time"
+    // from the engine's zh-Hans
+    text  "为设计时间"
     state draft
 }
 
@@ -1010,11 +1299,27 @@ DreamUserWidget:IsDesignTime:ReturnValue {
     state draft
 }
 
+DreamUserWidget:IsInitialized {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsInitialized
+    src   "Is Initialized"
+    // from the engine's zh-Hans
+    text  "已初始化"
+    state draft
+}
+
 DreamUserWidget:IsInitialized:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsInitialized:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:IsListeningForInputAction {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:IsListeningForInputAction
+    src   "Is Listening for Input Action"
+    // from the engine's zh-Hans
+    text  "正在聆听输入操作"
     state draft
 }
 
@@ -1034,6 +1339,14 @@ DreamUserWidget:IsListeningForInputAction:ReturnValue {
     state draft
 }
 
+DreamUserWidget:K2_AddFieldValueChangedDelegate {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_AddFieldValueChangedDelegate
+    src   "Add Field Value Changed Delegate"
+    // from the engine's zh-Hans
+    text  "Add Field Value Changed Delegate"
+    state draft
+}
+
 DreamUserWidget:K2_AddFieldValueChangedDelegate:Delegate {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_AddFieldValueChangedDelegate:Delegate
     src   "Delegate"
@@ -1050,6 +1363,14 @@ DreamUserWidget:K2_AddFieldValueChangedDelegate:FieldId {
     state draft
 }
 
+DreamUserWidget:K2_BroadcastFieldValueChanged {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_BroadcastFieldValueChanged
+    src   "Broadcast Field Value Changed"
+    // from the engine's zh-Hans
+    text  "Broadcast Field Value Changed"
+    state draft
+}
+
 DreamUserWidget:K2_BroadcastFieldValueChanged:FieldId {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_BroadcastFieldValueChanged:FieldId
     src   "Field Id"
@@ -1058,11 +1379,26 @@ DreamUserWidget:K2_BroadcastFieldValueChanged:FieldId {
     state draft
 }
 
+DreamUserWidget:K2_GetDeclaredSlotNames {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_GetDeclaredSlotNames
+    src   "Get Declared Slot Names"
+    text  "获取声明的插槽名称"
+    state machine
+}
+
 DreamUserWidget:K2_GetDeclaredSlotNames:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_GetDeclaredSlotNames:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:K2_RemoveFieldValueChangedDelegate {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:K2_RemoveFieldValueChangedDelegate
+    src   "Remove Field Value Changed Delegate"
+    // from the engine's zh-Hans
+    text  "Remove Field Value Changed Delegate"
     state draft
 }
 
@@ -1079,6 +1415,14 @@ DreamUserWidget:K2_RemoveFieldValueChangedDelegate:FieldId {
     src   "Field Id"
     // from the engine's zh-Hans
     text  "字段Id"
+    state draft
+}
+
+DreamUserWidget:ListenForInputAction {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ListenForInputAction
+    src   "Listen for Input Action"
+    // from the engine's zh-Hans
+    text  "正在聆听输入操作"
     state draft
 }
 
@@ -1128,11 +1472,27 @@ DreamUserWidget:OnAnimationEvent {
     state machine
 }
 
+DreamUserWidget:OnAnimationFinished {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnAnimationFinished
+    src   "On Animation Finished"
+    // from the engine's zh-Hans
+    text  "动画完成时"
+    state draft
+}
+
 DreamUserWidget:OnAnimationFinished:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnAnimationFinished:Animation
     src   "Animation"
     // from the engine's zh-Hans
     text  "动画"
+    state draft
+}
+
+DreamUserWidget:OnAnimationStarted {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnAnimationStarted
+    src   "On Animation Started"
+    // from the engine's zh-Hans
+    text  "动画开始时"
     state draft
 }
 
@@ -1144,6 +1504,13 @@ DreamUserWidget:OnAnimationStarted:Animation {
     state draft
 }
 
+DreamUserWidget:OnBeginDrag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnBeginDrag
+    src   "On Begin Drag"
+    text  "开始拖拽时"
+    state machine
+}
+
 DreamUserWidget:OnBeginDrag:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnBeginDrag:EventData
     src   "Event Data"
@@ -1152,11 +1519,47 @@ DreamUserWidget:OnBeginDrag:EventData {
     state draft
 }
 
+DreamUserWidget:OnConstruct {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnConstruct
+    src   "On Construct"
+    text  "构造时"
+    state machine
+}
+
+DreamUserWidget:OnDestruct {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDestruct
+    src   "On Destruct"
+    text  "销毁时"
+    state machine
+}
+
+DreamUserWidget:OnDisable {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDisable
+    src   "On Disable"
+    text  "禁用时"
+    state machine
+}
+
+DreamUserWidget:OnDoubleClick {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDoubleClick
+    src   "On Double Click"
+    text  "双击时"
+    state machine
+}
+
 DreamUserWidget:OnDoubleClick:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDoubleClick:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
+    state draft
+}
+
+DreamUserWidget:OnDrag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDrag
+    src   "On Drag"
+    // from the engine's zh-Hans
+    text  "On Drag"
     state draft
 }
 
@@ -1168,11 +1571,27 @@ DreamUserWidget:OnDrag:EventData {
     state draft
 }
 
+DreamUserWidget:OnDragCancelled {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragCancelled
+    src   "On Drag Cancelled"
+    // from the engine's zh-Hans
+    text  "拖动取消时"
+    state draft
+}
+
 DreamUserWidget:OnDragCancelled:Operation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragCancelled:Operation
     src   "Operation"
     // from the engine's zh-Hans
     text  "运算"
+    state draft
+}
+
+DreamUserWidget:OnDragEnter {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragEnter
+    src   "On Drag Enter"
+    // from the engine's zh-Hans
+    text  "拖动进入时"
     state draft
 }
 
@@ -1192,6 +1611,14 @@ DreamUserWidget:OnDragEnter:Operation {
     state draft
 }
 
+DreamUserWidget:OnDragLeave {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragLeave
+    src   "On Drag Leave"
+    // from the engine's zh-Hans
+    text  "拖动离开时"
+    state draft
+}
+
 DreamUserWidget:OnDragLeave:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragLeave:EventData
     src   "Event Data"
@@ -1205,6 +1632,14 @@ DreamUserWidget:OnDragLeave:Operation {
     src   "Operation"
     // from the engine's zh-Hans
     text  "运算"
+    state draft
+}
+
+DreamUserWidget:OnDragOver {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDragOver
+    src   "On Drag Over"
+    // from the engine's zh-Hans
+    text  "拖出时"
     state draft
 }
 
@@ -1224,12 +1659,34 @@ DreamUserWidget:OnDragOver:Operation {
     state draft
 }
 
+DreamUserWidget:OnDrop {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDrop
+    src   "On Drop"
+    // from the engine's zh-Hans
+    text  "放置时"
+    state draft
+}
+
 DreamUserWidget:OnDrop:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnDrop:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
     state draft
+}
+
+DreamUserWidget:OnEnable {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnEnable
+    src   "On Enable"
+    text  "启用时"
+    state machine
+}
+
+DreamUserWidget:OnEndDrag {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnEndDrag
+    src   "On End Drag"
+    text  "结束拖拽时"
+    state machine
 }
 
 DreamUserWidget:OnEndDrag:EventData {
@@ -1240,11 +1697,34 @@ DreamUserWidget:OnEndDrag:EventData {
     state draft
 }
 
+DreamUserWidget:OnInitialized {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnInitialized
+    src   "On Initialized"
+    // from the engine's zh-Hans
+    text  "初始化时"
+    state draft
+}
+
+DreamUserWidget:OnLongPress {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnLongPress
+    src   "On Long Press"
+    text  "长按时"
+    state machine
+}
+
 DreamUserWidget:OnLongPress:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnLongPress:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
+    state draft
+}
+
+DreamUserWidget:OnMouseMove {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnMouseMove
+    src   "On Mouse Move"
+    // from the engine's zh-Hans
+    text  "鼠标移动时"
     state draft
 }
 
@@ -1256,12 +1736,27 @@ DreamUserWidget:OnMouseMove:EventData {
     state draft
 }
 
+DreamUserWidget:OnMouseWheel {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnMouseWheel
+    src   "On Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "鼠标滚轮上"
+    state draft
+}
+
 DreamUserWidget:OnMouseWheel:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnMouseWheel:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
     state draft
+}
+
+DreamUserWidget:OnNavigate {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnNavigate
+    src   "On Navigate"
+    text  "导航时"
+    state machine
 }
 
 DreamUserWidget:OnNavigate:Direction {
@@ -1280,12 +1775,26 @@ DreamUserWidget:OnNavigate:ReturnValue {
     state draft
 }
 
+DreamUserWidget:OnPinch {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPinch
+    src   "On Pinch"
+    text  "捏合时"
+    state machine
+}
+
 DreamUserWidget:OnPinch:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPinch:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
     state draft
+}
+
+DreamUserWidget:OnPointerClick {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerClick
+    src   "On Pointer Click"
+    text  "指针点击时"
+    state machine
 }
 
 DreamUserWidget:OnPointerClick:EventData {
@@ -1296,12 +1805,26 @@ DreamUserWidget:OnPointerClick:EventData {
     state draft
 }
 
+DreamUserWidget:OnPointerDown {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerDown
+    src   "On Pointer Down"
+    text  "指针按下时"
+    state machine
+}
+
 DreamUserWidget:OnPointerDown:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerDown:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
     state draft
+}
+
+DreamUserWidget:OnPointerEnter {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerEnter
+    src   "On Pointer Enter"
+    text  "指针进入时"
+    state machine
 }
 
 DreamUserWidget:OnPointerEnter:EventData {
@@ -1312,12 +1835,26 @@ DreamUserWidget:OnPointerEnter:EventData {
     state draft
 }
 
+DreamUserWidget:OnPointerExit {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerExit
+    src   "On Pointer Exit"
+    text  "指针离开时"
+    state machine
+}
+
 DreamUserWidget:OnPointerExit:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerExit:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
     state draft
+}
+
+DreamUserWidget:OnPointerUp {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnPointerUp
+    src   "On Pointer Up"
+    text  "指针抬起时"
+    state machine
 }
 
 DreamUserWidget:OnPointerUp:EventData {
@@ -1328,11 +1865,33 @@ DreamUserWidget:OnPointerUp:EventData {
     state draft
 }
 
+DreamUserWidget:OnSlotContentAttached {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnSlotContentAttached
+    src   "On Content Ready"
+    text  "内容就绪时"
+    state machine
+}
+
+DreamUserWidget:OnSwipe {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnSwipe
+    src   "On Swipe"
+    text  "滑动时"
+    state machine
+}
+
 DreamUserWidget:OnSwipe:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnSwipe:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
+    state draft
+}
+
+DreamUserWidget:OnTick {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:OnTick
+    src   "On Tick"
+    // from the engine's zh-Hans
+    text  "On Tick"
     state draft
 }
 
@@ -1352,6 +1911,14 @@ DreamUserWidget:OwningPlayer {
     state draft
 }
 
+DreamUserWidget:PauseAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PauseAnimation
+    src   "Pause Animation"
+    // from the engine's zh-Hans
+    text  "暂停动画"
+    state draft
+}
+
 DreamUserWidget:PauseAnimation:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PauseAnimation:Handle
     src   "Handle"
@@ -1368,6 +1935,13 @@ DreamUserWidget:PauseAnimation:ReturnValue {
     state draft
 }
 
+DreamUserWidget:PauseAnimationsOf {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PauseAnimationsOf
+    src   "Pause Animations Of"
+    text  "暂停此对象的动画"
+    state machine
+}
+
 DreamUserWidget:PauseAnimationsOf:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PauseAnimationsOf:Animation
     src   "Animation"
@@ -1381,6 +1955,14 @@ DreamUserWidget:PauseAnimationsOf:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:PlayAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimation
+    src   "Play Animation"
+    // from the engine's zh-Hans
+    text  "播放动画"
     state draft
 }
 
@@ -1440,6 +2022,13 @@ DreamUserWidget:PlayAnimation:StartAtTime {
     state draft
 }
 
+DreamUserWidget:PlayAnimationByName {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationByName
+    src   "Play Animation by Name"
+    text  "按名字播放动画"
+    state machine
+}
+
 DreamUserWidget:PlayAnimationByName:bRestoreState {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationByName:bRestoreState
     src   "Restore State"
@@ -1496,6 +2085,14 @@ DreamUserWidget:PlayAnimationByName:StartAtTime {
     state draft
 }
 
+DreamUserWidget:PlayAnimationForward {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationForward
+    src   "Play Animation Forward"
+    // from the engine's zh-Hans
+    text  "向前播放动画"
+    state draft
+}
+
 DreamUserWidget:PlayAnimationForward:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationForward:Animation
     src   "Animation"
@@ -1528,6 +2125,14 @@ DreamUserWidget:PlayAnimationForward:ReturnValue {
     state draft
 }
 
+DreamUserWidget:PlayAnimationReverse {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationReverse
+    src   "Play Animation Reverse"
+    // from the engine's zh-Hans
+    text  "反向播放动画"
+    state draft
+}
+
 DreamUserWidget:PlayAnimationReverse:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationReverse:Animation
     src   "Animation"
@@ -1557,6 +2162,14 @@ DreamUserWidget:PlayAnimationReverse:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:PlayAnimationTimeRange {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlayAnimationTimeRange
+    src   "Play Animation Time Range"
+    // from the engine's zh-Hans
+    text  "播放动画时间范围"
     state draft
 }
 
@@ -1624,6 +2237,14 @@ DreamUserWidget:PlayAnimationTimeRange:StartAtTime {
     state draft
 }
 
+DreamUserWidget:PlaySound {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlaySound
+    src   "Play Sound"
+    // from the engine's zh-Hans
+    text  "播放音效"
+    state draft
+}
+
 DreamUserWidget:PlaySound:InPitchMultiplier {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PlaySound:InPitchMultiplier
     src   "In Pitch Multiplier"
@@ -1646,6 +2267,14 @@ DreamUserWidget:PlaySound:InVolumeMultiplier {
     state machine
 }
 
+DreamUserWidget:PreConstruct {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PreConstruct
+    src   "Pre Construct"
+    // from the engine's zh-Hans
+    text  "预构造"
+    state draft
+}
+
 DreamUserWidget:PreConstruct:bIsDesignTime {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:PreConstruct:bIsDesignTime
     src   "Is Design Time"
@@ -1654,11 +2283,27 @@ DreamUserWidget:PreConstruct:bIsDesignTime {
     state draft
 }
 
+DreamUserWidget:QueuePauseAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueuePauseAnimation
+    src   "Queue Pause Animation"
+    // from the engine's zh-Hans
+    text  "Queue Pause Animation"
+    state draft
+}
+
 DreamUserWidget:QueuePauseAnimation:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueuePauseAnimation:Handle
     src   "Handle"
     // from the engine's zh-Hans
     text  "柄"
+    state draft
+}
+
+DreamUserWidget:QueuePlayAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueuePlayAnimation
+    src   "Queue Play Animation"
+    // from the engine's zh-Hans
+    text  "Queue Play Animation"
     state draft
 }
 
@@ -1707,6 +2352,14 @@ DreamUserWidget:QueuePlayAnimation:StartAtTime {
     src   "Start at Time"
     // from the engine's zh-Hans
     text  "开始时间"
+    state draft
+}
+
+DreamUserWidget:QueuePlayAnimationTimeRange {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueuePlayAnimationTimeRange
+    src   "Queue Play Animation Time Range"
+    // from the engine's zh-Hans
+    text  "Queue Play Animation Time Range"
     state draft
 }
 
@@ -1766,11 +2419,35 @@ DreamUserWidget:QueuePlayAnimationTimeRange:StartAtTime {
     state draft
 }
 
+DreamUserWidget:QueueStopAllAnimations {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueueStopAllAnimations
+    src   "Queue Stop All Animations"
+    // from the engine's zh-Hans
+    text  "Queue Stop All Animations"
+    state draft
+}
+
+DreamUserWidget:QueueStopAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueueStopAnimation
+    src   "Queue Stop Animation"
+    // from the engine's zh-Hans
+    text  "Queue Stop Animation"
+    state draft
+}
+
 DreamUserWidget:QueueStopAnimation:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:QueueStopAnimation:Handle
     src   "Handle"
     // from the engine's zh-Hans
     text  "柄"
+    state draft
+}
+
+DreamUserWidget:ReceiveAnalogValueChanged {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveAnalogValueChanged
+    src   "On Analog Value Changed"
+    // from the engine's zh-Hans
+    text  "模拟值变更时"
     state draft
 }
 
@@ -1790,6 +2467,14 @@ DreamUserWidget:ReceiveAnalogValueChanged:ReturnValue {
     state draft
 }
 
+DreamUserWidget:ReceiveFocusLost {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveFocusLost
+    src   "On Focus Lost"
+    // from the engine's zh-Hans
+    text  "On Focus Lost"
+    state draft
+}
+
 DreamUserWidget:ReceiveFocusLost:PointerId {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveFocusLost:PointerId
     src   "Pointer Id"
@@ -1805,6 +2490,14 @@ DreamUserWidget:ReceiveFocusLost:UserIndex {
     state draft
 }
 
+DreamUserWidget:ReceiveFocusReceived {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveFocusReceived
+    src   "On Focus Received"
+    // from the engine's zh-Hans
+    text  "On Focus Received"
+    state draft
+}
+
 DreamUserWidget:ReceiveFocusReceived:PointerId {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveFocusReceived:PointerId
     src   "Pointer Id"
@@ -1817,6 +2510,14 @@ DreamUserWidget:ReceiveFocusReceived:UserIndex {
     src   "User Index"
     // from the engine's zh-Hans
     text  "用户索引"
+    state draft
+}
+
+DreamUserWidget:ReceiveKeyChar {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveKeyChar
+    src   "On Key Char"
+    // from the engine's zh-Hans
+    text  "键字符上"
     state draft
 }
 
@@ -1836,6 +2537,14 @@ DreamUserWidget:ReceiveKeyChar:ReturnValue {
     state draft
 }
 
+DreamUserWidget:ReceiveKeyDown {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveKeyDown
+    src   "On Key Down"
+    // from the engine's zh-Hans
+    text  "按下键时"
+    state draft
+}
+
 DreamUserWidget:ReceiveKeyDown:EventData {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveKeyDown:EventData
     src   "Event Data"
@@ -1849,6 +2558,14 @@ DreamUserWidget:ReceiveKeyDown:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUserWidget:ReceiveKeyUp {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReceiveKeyUp
+    src   "On Key Up"
+    // from the engine's zh-Hans
+    text  "松开键时"
     state draft
 }
 
@@ -1868,11 +2585,33 @@ DreamUserWidget:ReceiveKeyUp:ReturnValue {
     state draft
 }
 
+DreamUserWidget:RefreshEachBindings {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:RefreshEachBindings
+    src   "Refresh Each Bindings"
+    text  "刷新 Each 绑定"
+    state machine
+}
+
+DreamUserWidget:ResumeAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ResumeAnimation
+    src   "Resume Animation"
+    text  "恢复动画"
+    state machine
+}
+
 DreamUserWidget:ResumeAnimation:Handle {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ResumeAnimation:Handle
     src   "Handle"
     // from the engine's zh-Hans
     text  "柄"
+    state draft
+}
+
+DreamUserWidget:ReverseAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:ReverseAnimation
+    src   "Reverse Animation"
+    // from the engine's zh-Hans
+    text  "反转动画"
     state draft
 }
 
@@ -1884,6 +2623,14 @@ DreamUserWidget:ReverseAnimation:Handle {
     state draft
 }
 
+DreamUserWidget:SetAlignmentInViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAlignmentInViewport
+    src   "Set Alignment in Viewport"
+    // from the engine's zh-Hans
+    text  "设置视口中的对齐"
+    state draft
+}
+
 DreamUserWidget:SetAlignmentInViewport:InAlignment {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAlignmentInViewport:InAlignment
     src   "In Alignment"
@@ -1892,11 +2639,26 @@ DreamUserWidget:SetAlignmentInViewport:InAlignment {
     state draft
 }
 
+DreamUserWidget:SetAllowEventBubbleUp {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAllowEventBubbleUp
+    src   "Set Allow Event Bubble Up"
+    text  "设置允许事件冒泡"
+    state machine
+}
+
 DreamUserWidget:SetAllowEventBubbleUp:Value {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAllowEventBubbleUp:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUserWidget:SetAnchorsInViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAnchorsInViewport
+    src   "Set Anchors in Viewport"
+    // from the engine's zh-Hans
+    text  "设置视口中的锚"
     state draft
 }
 
@@ -1912,6 +2674,14 @@ DreamUserWidget:SetAnchorsInViewport:InAnchorMin {
     src   "In Anchor Min"
     text  "锚点最小值"
     state machine
+}
+
+DreamUserWidget:SetAnimationCurrentTime {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetAnimationCurrentTime
+    src   "Set Animation Current Time"
+    // from the engine's zh-Hans
+    text  "设置动画当前时间"
+    state draft
 }
 
 DreamUserWidget:SetAnimationCurrentTime:Handle {
@@ -1930,12 +2700,26 @@ DreamUserWidget:SetAnimationCurrentTime:InTime {
     state draft
 }
 
+DreamUserWidget:SetCanNavigateHere {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetCanNavigateHere
+    src   "Set Can Navigate Here"
+    text  "设置能否导航至此"
+    state machine
+}
+
 DreamUserWidget:SetCanNavigateHere:Value {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetCanNavigateHere:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUserWidget:SetContentForNamedSlot {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetContentForNamedSlot
+    src   "Set Content for Named Slot"
+    text  "设置命名插槽的内容"
+    state machine
 }
 
 DreamUserWidget:SetContentForNamedSlot:InContent {
@@ -1961,11 +2745,27 @@ DreamUserWidget:SetContentForNamedSlot:ReturnValue {
     state draft
 }
 
+DreamUserWidget:SetDesiredSizeInViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetDesiredSizeInViewport
+    src   "Set Desired Size in Viewport"
+    // from the engine's zh-Hans
+    text  "设置视口中的所需大小"
+    state draft
+}
+
 DreamUserWidget:SetDesiredSizeInViewport:InSize {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetDesiredSizeInViewport:InSize
     src   "In Size"
     // from the engine's zh-Hans
     text  "输入尺寸"
+    state draft
+}
+
+DreamUserWidget:SetNumLoopsToPlay {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetNumLoopsToPlay
+    src   "Set Num Loops to Play"
+    // from the engine's zh-Hans
+    text  "设置要播放的循环数"
     state draft
 }
 
@@ -1985,11 +2785,27 @@ DreamUserWidget:SetNumLoopsToPlay:NumLoopsToPlay {
     state draft
 }
 
+DreamUserWidget:SetOwningPlayer {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetOwningPlayer
+    src   "Set Owning Player"
+    // from the engine's zh-Hans
+    text  "设置拥有播放器"
+    state draft
+}
+
 DreamUserWidget:SetOwningPlayer:InPlayerController {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetOwningPlayer:InPlayerController
     src   "In Player Controller"
     // from the engine's zh-Hans
     text  "输入玩家控制器"
+    state draft
+}
+
+DreamUserWidget:SetPlaybackSpeed {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetPlaybackSpeed
+    src   "Set Playback Speed"
+    // from the engine's zh-Hans
+    text  "设置播放速度"
     state draft
 }
 
@@ -2009,11 +2825,27 @@ DreamUserWidget:SetPlaybackSpeed:PlaybackSpeed {
     state draft
 }
 
+DreamUserWidget:SetPositionInViewport {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetPositionInViewport
+    src   "Set Position in Viewport"
+    // from the engine's zh-Hans
+    text  "设置视口中的位置"
+    state draft
+}
+
 DreamUserWidget:SetPositionInViewport:InPosition {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetPositionInViewport:InPosition
     src   "In Position"
     // from the engine's zh-Hans
     text  "输入位置"
+    state draft
+}
+
+DreamUserWidget:SetViewModel {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetViewModel
+    src   "Set View Model"
+    // from the engine's zh-Hans
+    text  "Set View Model"
     state draft
 }
 
@@ -2041,11 +2873,34 @@ DreamUserWidget:SetViewModel:ViewModel {
     state draft
 }
 
+DreamUserWidget:SetWantsTick {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetWantsTick
+    src   "Set Wants Tick"
+    text  "设置需要Tick"
+    state machine
+}
+
 DreamUserWidget:SetWantsTick:Value {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:SetWantsTick:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUserWidget:StopAllAnimations {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopAllAnimations
+    src   "Stop All Animations"
+    // from the engine's zh-Hans
+    text  "停止所有动画"
+    state draft
+}
+
+DreamUserWidget:StopAnimation {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopAnimation
+    src   "Stop Animation"
+    // from the engine's zh-Hans
+    text  "停止动画"
     state draft
 }
 
@@ -2057,11 +2912,34 @@ DreamUserWidget:StopAnimation:Handle {
     state draft
 }
 
+DreamUserWidget:StopAnimationsOf {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopAnimationsOf
+    src   "Stop Animations Of"
+    text  "停止此对象的动画"
+    state machine
+}
+
 DreamUserWidget:StopAnimationsOf:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopAnimationsOf:Animation
     src   "Animation"
     // from the engine's zh-Hans
     text  "动画"
+    state draft
+}
+
+DreamUserWidget:StopListeningForAllInputActions {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopListeningForAllInputActions
+    src   "Stop Listening for All Input Actions"
+    // from the engine's zh-Hans
+    text  "停止聆听所有输入操作"
+    state draft
+}
+
+DreamUserWidget:StopListeningForInputAction {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:StopListeningForInputAction
+    src   "Stop Listening for Input Action"
+    // from the engine's zh-Hans
+    text  "停止聆听输入操作"
     state draft
 }
 
@@ -2073,6 +2951,14 @@ DreamUserWidget:StopListeningForInputAction:InHandle {
     state draft
 }
 
+DreamUserWidget:UnbindAllFromAnimationFinished {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindAllFromAnimationFinished
+    src   "Unbind All from Animation Finished"
+    // from the engine's zh-Hans
+    text  "解绑完成动画中的所有项"
+    state draft
+}
+
 DreamUserWidget:UnbindAllFromAnimationFinished:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindAllFromAnimationFinished:Animation
     src   "Animation"
@@ -2081,11 +2967,27 @@ DreamUserWidget:UnbindAllFromAnimationFinished:Animation {
     state draft
 }
 
+DreamUserWidget:UnbindAllFromAnimationStarted {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindAllFromAnimationStarted
+    src   "Unbind All from Animation Started"
+    // from the engine's zh-Hans
+    text  "解绑开始动画中的所有项"
+    state draft
+}
+
 DreamUserWidget:UnbindAllFromAnimationStarted:Animation {
     at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindAllFromAnimationStarted:Animation
     src   "Animation"
     // from the engine's zh-Hans
     text  "动画"
+    state draft
+}
+
+DreamUserWidget:UnbindFromAnimationFinished {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindFromAnimationFinished
+    src   "Unbind from Animation Finished"
+    // from the engine's zh-Hans
+    text  "从完成动画中解绑"
     state draft
 }
 
@@ -2102,6 +3004,14 @@ DreamUserWidget:UnbindFromAnimationFinished:Delegate {
     src   "Delegate"
     // from the engine's zh-Hans
     text  "委托"
+    state draft
+}
+
+DreamUserWidget:UnbindFromAnimationStarted {
+    at    Source/DreamGUI/Public/Core/DreamUserWidget.h#DreamUserWidget:UnbindFromAnimationStarted
+    src   "Unbind from Animation Started"
+    // from the engine's zh-Hans
+    text  "从开始动画中解绑"
     state draft
 }
 

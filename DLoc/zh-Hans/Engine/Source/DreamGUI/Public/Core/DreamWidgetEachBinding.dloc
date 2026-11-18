@@ -218,6 +218,8 @@ namespace UObjectToolTips
 DreamWidgetEachBinding {
     at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding
     src   "One `each Item in Source { Template }` block, compiled: which widget hosts the list view, which\nwidget is the cell template, where the items come from, and what each cell writes from its item.\n\nThe runtime resolves it at Initialize the way property bindings are resolved: host and template\nthrough the class properties their ids became, the source through reflection -- a nullary\nUFUNCTION returning TArray<UObject*>, or a TArray<UObject*> variable, whose FieldNotify\nbroadcast (when it has one) is what refreshes the list without anyone calling refresh."
+    text  "一个 `each Item in Source { Template }` 块编译后的结果：哪个控件承载列表视图、哪个控件是\n单元格模板、条目从哪里来，以及每个单元格从自己的条目写入什么。\n\n运行时在 Initialize 时按属性绑定的同一套方式解析：宿主和模板通过它们的 id 变成的类属性，\n数据源通过反射——一个返回 TArray<UObject*> 的无参 UFUNCTION，或一个 TArray<UObject*> 变量；\n后者的 FieldNotify 广播（如果有）就是刷新列表的东西，不需要谁去调用刷新。"
+    state draft
 }
 
 DreamWidgetEachBinding:bInPanel {
@@ -272,6 +274,8 @@ DreamWidgetEachBinding:SourceLine {
 DreamWidgetEachBinding:SourceName {
     at    Source/DreamGUI/Public/Core/DreamWidgetEachBinding.h#DreamWidgetEachBinding:SourceName
     src   "Function or variable on the user widget supplying TArray<UObject*>. With SourcePath, its LAST segment."
+    text  "用户控件上提供 TArray<UObject*> 的函数或变量。有 SourcePath 时，取它的最后一段。"
+    state draft
 }
 
 DreamWidgetEachBinding:SourcePath {

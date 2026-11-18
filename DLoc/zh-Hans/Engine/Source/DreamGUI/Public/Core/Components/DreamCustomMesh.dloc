@@ -17,12 +17,26 @@ DreamCustomMesh:CustomMesh {
     state draft
 }
 
+DreamCustomMesh:GetCustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:GetCustomMesh
+    src   "Get Custom Mesh"
+    text  "获取自定义网格体"
+    state machine
+}
+
 DreamCustomMesh:GetCustomMesh:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:GetCustomMesh:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamCustomMesh:SetCustomMesh {
+    at    Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h#DreamCustomMesh:SetCustomMesh
+    src   "Set Custom Mesh"
+    text  "设置自定义网格体"
+    state machine
 }
 
 DreamCustomMesh:SetCustomMesh:Value {

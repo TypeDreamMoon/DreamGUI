@@ -9,12 +9,26 @@ DreamVisualCustomRaycast_VisiblePixel {
     state machine
 }
 
+DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel
+    src   "Get Pixel Channel"
+    text  "获取像素通道"
+    state machine
+}
+
 DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:GetPixelChannel:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:GetVisibilityThreshold {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:GetVisibilityThreshold
+    src   "Get Visibility Threshold"
+    text  "获取可视性阈值"
+    state machine
 }
 
 DreamVisualCustomRaycast_VisiblePixel:GetVisibilityThreshold:ReturnValue {
@@ -32,12 +46,26 @@ DreamVisualCustomRaycast_VisiblePixel:PixelChannel {
     state machine
 }
 
+DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel
+    src   "Set Pixel Channel"
+    text  "设置像素通道"
+    state machine
+}
+
 DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel:value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:SetPixelChannel:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamVisualCustomRaycast_VisiblePixel:SetVisibilityThreshold {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h#DreamVisualCustomRaycast_VisiblePixel:SetVisibilityThreshold
+    src   "Set Visibility Threshold"
+    text  "设置可视性阈值"
+    state machine
 }
 
 DreamVisualCustomRaycast_VisiblePixel:SetVisibilityThreshold:value {

@@ -60,12 +60,26 @@ DreamBorder:FaceNode {
     state machine
 }
 
+DreamBorder:GetBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrush
+    src   "Get Brush"
+    text  "获取笔刷"
+    state machine
+}
+
 DreamBorder:GetBrush:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrush:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBorder:GetBrushColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetBrushColor
+    src   "Get Brush Color"
+    text  "获取笔刷颜色"
+    state machine
 }
 
 DreamBorder:GetBrushColor:ReturnValue {
@@ -76,12 +90,26 @@ DreamBorder:GetBrushColor:ReturnValue {
     state draft
 }
 
+DreamBorder:GetConsumeMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetConsumeMouseEvents
+    src   "Get Consume Mouse Events"
+    text  "获取消耗鼠标事件"
+    state machine
+}
+
 DreamBorder:GetConsumeMouseEvents:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetConsumeMouseEvents:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBorder:GetContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentColorAndOpacity
+    src   "Get Content Color and Opacity"
+    text  "获取内容颜色和不透明度"
+    state machine
 }
 
 DreamBorder:GetContentColorAndOpacity:ReturnValue {
@@ -92,12 +120,26 @@ DreamBorder:GetContentColorAndOpacity:ReturnValue {
     state draft
 }
 
+DreamBorder:GetContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentNode
+    src   "Get Content Node"
+    text  "获取内容节点"
+    state machine
+}
+
 DreamBorder:GetContentNode:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetContentNode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBorder:GetEventTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetEventTrigger
+    src   "Get Event Trigger"
+    text  "获取事件触发器"
+    state machine
 }
 
 DreamBorder:GetEventTrigger:ReturnValue {
@@ -108,12 +150,26 @@ DreamBorder:GetEventTrigger:ReturnValue {
     state draft
 }
 
+DreamBorder:GetHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetHorizontalAlignment
+    src   "Get Horizontal Alignment"
+    text  "获取水平对齐"
+    state machine
+}
+
 DreamBorder:GetHorizontalAlignment:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetHorizontalAlignment:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBorder:GetPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetPadding
+    src   "Get Padding"
+    text  "获取填充"
+    state machine
 }
 
 DreamBorder:GetPadding:ReturnValue {
@@ -124,6 +180,13 @@ DreamBorder:GetPadding:ReturnValue {
     state draft
 }
 
+DreamBorder:GetReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetReportMouseEvents
+    src   "Get Report Mouse Events"
+    text  "获取上报鼠标事件"
+    state machine
+}
+
 DreamBorder:GetReportMouseEvents:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetReportMouseEvents:ReturnValue
     src   "Return Value"
@@ -132,12 +195,26 @@ DreamBorder:GetReportMouseEvents:ReturnValue {
     state draft
 }
 
+DreamBorder:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamBorder:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBorder:GetVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:GetVerticalAlignment
+    src   "Get Vertical Alignment"
+    text  "获取垂直对齐"
+    state machine
 }
 
 DreamBorder:GetVerticalAlignment:ReturnValue {
@@ -188,11 +265,27 @@ DreamBorder:OnMouseMoveEvent {
     state draft
 }
 
+DreamBorder:SetBrush {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrush
+    src   "Set Brush"
+    // from the engine's zh-Hans
+    text  "设置笔刷"
+    state draft
+}
+
 DreamBorder:SetBrush:InBrush {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrush:InBrush
     src   "In Brush"
     // from the engine's zh-Hans
     text  "在笔刷中"
+    state draft
+}
+
+DreamBorder:SetBrushColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushColor
+    src   "Set Brush Color"
+    // from the engine's zh-Hans
+    text  "设置笔刷颜色"
     state draft
 }
 
@@ -204,11 +297,26 @@ DreamBorder:SetBrushColor:InBrushColor {
     state draft
 }
 
+DreamBorder:SetBrushFromSprite {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromSprite
+    src   "Set Brush from Sprite"
+    text  "从精灵设置笔刷"
+    state machine
+}
+
 DreamBorder:SetBrushFromSprite:InSprite {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromSprite:InSprite
     src   "In Sprite"
     text  "输入精灵"
     state machine
+}
+
+DreamBorder:SetBrushFromTexture {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetBrushFromTexture
+    src   "Set Brush from Texture"
+    // from the engine's zh-Hans
+    text  "设置来自纹理的笔刷"
+    state draft
 }
 
 DreamBorder:SetBrushFromTexture:InTexture {
@@ -219,6 +327,13 @@ DreamBorder:SetBrushFromTexture:InTexture {
     state draft
 }
 
+DreamBorder:SetConsumeMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetConsumeMouseEvents
+    src   "Set Consume Mouse Events"
+    text  "设置消耗鼠标事件"
+    state machine
+}
+
 DreamBorder:SetConsumeMouseEvents:bInConsumeMouseEvents {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetConsumeMouseEvents:bInConsumeMouseEvents
     src   "In Consume Mouse Events"
@@ -226,11 +341,27 @@ DreamBorder:SetConsumeMouseEvents:bInConsumeMouseEvents {
     state machine
 }
 
+DreamBorder:SetContentColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetContentColorAndOpacity
+    src   "Set Content Color and Opacity"
+    // from the engine's zh-Hans
+    text  "设置内容颜色和不透明度"
+    state draft
+}
+
 DreamBorder:SetContentColorAndOpacity:InContentColorAndOpacity {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetContentColorAndOpacity:InContentColorAndOpacity
     src   "In Content Color and Opacity"
     // from the engine's zh-Hans
     text  "在内容颜色和不透明度中"
+    state draft
+}
+
+DreamBorder:SetHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetHorizontalAlignment
+    src   "Set Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "设置水平对齐"
     state draft
 }
 
@@ -242,12 +373,27 @@ DreamBorder:SetHorizontalAlignment:InHorizontalAlignment {
     state draft
 }
 
+DreamBorder:SetPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamBorder:SetPadding:InPadding {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetPadding:InPadding
     src   "In Padding"
     // from the engine's zh-Hans
     text  "在填充中"
     state draft
+}
+
+DreamBorder:SetReportMouseEvents {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetReportMouseEvents
+    src   "Set Report Mouse Events"
+    text  "设置上报鼠标事件"
+    state machine
 }
 
 DreamBorder:SetReportMouseEvents:bInReportMouseEvents {
@@ -257,11 +403,27 @@ DreamBorder:SetReportMouseEvents:bInReportMouseEvents {
     state machine
 }
 
+DreamBorder:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamBorder:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamBorder:SetVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamBorder.h#DreamBorder:SetVerticalAlignment
+    src   "Set Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "设置垂直对齐"
     state draft
 }
 

@@ -39,11 +39,27 @@ DreamUIPlayTweenSequenceComponent:OnCompleteBP {
     state draft
 }
 
+DreamUIPlayTweenSequenceComponent:Play {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:Play
+    src   "Play"
+    // from the engine's zh-Hans
+    text  "播放"
+    state draft
+}
+
 DreamUIPlayTweenSequenceComponent:PlayTweenArray {
     at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:PlayTweenArray
     src   "Play Tween Array"
     text  "播放 Tween 数组"
     state machine
+}
+
+DreamUIPlayTweenSequenceComponent:Stop {
+    at    Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h#DreamUIPlayTweenSequenceComponent:Stop
+    src   "Stop"
+    // from the engine's zh-Hans
+    text  "停止"
+    state draft
 }
 
 namespace UObjectToolTips

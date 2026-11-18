@@ -115,6 +115,13 @@ DreamUIFontData_FreeTypeRender:FontType {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:GetFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:GetFallbacks
+    src   "Get Fallbacks"
+    text  "获取备用字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:GetFallbacks:ReturnValue
     src   "Return Value"
@@ -151,6 +158,13 @@ DreamUIFontData_FreeTypeRender:RenderTextArray {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:SetFallbackFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts
+    src   "Set Fallback Fonts"
+    text  "设置回退字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks
     src   "In Fallbacks"
@@ -158,10 +172,24 @@ DreamUIFontData_FreeTypeRender:SetFallbackFonts:InFallbacks {
     state machine
 }
 
+DreamUIFontData_FreeTypeRender:SetFallbacks {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks
+    src   "Set Fallbacks"
+    text  "设置备用字体"
+    state machine
+}
+
 DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFallbacks:InFallbacks
     src   "In Fallbacks"
     text  "备用字体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetFontFilePath {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetFontFilePath
+    src   "Set Font File Path"
+    text  "设置字体文件路径"
     state machine
 }
 
@@ -178,6 +206,13 @@ DreamUIFontData_FreeTypeRender:SetFontFilePath:InPath {
     // from the engine's zh-Hans
     text  "在路径中"
     state draft
+}
+
+DreamUIFontData_FreeTypeRender:SetStyleFonts {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts
+    src   "Set Style Fonts"
+    text  "设置样式字体"
+    state machine
 }
 
 DreamUIFontData_FreeTypeRender:SetStyleFonts:InBold {
@@ -198,6 +233,13 @@ DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetStyleFonts:InItalic
     src   "In Italic"
     text  "斜体"
+    state machine
+}
+
+DreamUIFontData_FreeTypeRender:SetVerticalMetrics {
+    at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontData_FreeTypeRender:SetVerticalMetrics
+    src   "Set Vertical Metrics"
+    text  "设置垂直指标"
     state machine
 }
 
@@ -548,6 +590,8 @@ DreamUIFontFallback:bPreferOverPrimary {
 DreamUIFontFallback:Cultures {
     at    Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h#DreamUIFontFallback:Cultures
     src   "Cultures this face is meant for, semicolon-separated as Slate writes them (\"ja\", \"zh-Hans;zh-Hant\"); empty means any\nlanguage. Matched against the text's language (UDreamText::Language, a rich-text <lang=xx>) and the names it falls\nback to, so \"zh\" matches a Chinese text of any script."
+    text  "这个字面适用的语言，按 Slate 的写法用分号分隔（\"ja\"、\"zh-Hans;zh-Hant\"）；留空表示任何\n语言。匹配时对照文本的语言（UDreamText::Language，富文本的 <lang=xx>）以及它回退到的那些名字，\n所以 \"zh\" 能匹配任意书写系统的中文文本。"
+    state draft
 }
 
 DreamUIFontFallback:Font {

@@ -72,11 +72,27 @@ DreamLayoutContainerBorder:Padding {
     state draft
 }
 
+DreamLayoutContainerBorder:SetBrushColor {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetBrushColor
+    src   "Set Brush Color"
+    // from the engine's zh-Hans
+    text  "设置笔刷颜色"
+    state draft
+}
+
 DreamLayoutContainerBorder:SetBrushColor:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetBrushColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerBorder:SetContentColorAndOpacity {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetContentColorAndOpacity
+    src   "Set Content Color and Opacity"
+    // from the engine's zh-Hans
+    text  "设置内容颜色和不透明度"
     state draft
 }
 
@@ -88,6 +104,14 @@ DreamLayoutContainerBorder:SetContentColorAndOpacity:Value {
     state draft
 }
 
+DreamLayoutContainerBorder:SetDesiredSizeScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetDesiredSizeScale
+    src   "Set Desired Size Scale"
+    // from the engine's zh-Hans
+    text  "设置所需大小缩放"
+    state draft
+}
+
 DreamLayoutContainerBorder:SetDesiredSizeScale:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetDesiredSizeScale:Value
     src   "Value"
@@ -96,11 +120,26 @@ DreamLayoutContainerBorder:SetDesiredSizeScale:Value {
     state draft
 }
 
+DreamLayoutContainerBorder:SetFlipForRightToLeftFlowDirection {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetFlipForRightToLeftFlowDirection
+    src   "Set Flip for Right to Left Flow Direction"
+    text  "设置翻转右到左流动方向"
+    state machine
+}
+
 DreamLayoutContainerBorder:SetFlipForRightToLeftFlowDirection:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetFlipForRightToLeftFlowDirection:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerBorder:SetHorizontalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetHorizontalAlignment
+    src   "Set Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "设置水平对齐"
     state draft
 }
 
@@ -112,6 +151,14 @@ DreamLayoutContainerBorder:SetHorizontalAlignment:Value {
     state draft
 }
 
+DreamLayoutContainerBorder:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamLayoutContainerBorder:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetPadding:Value
     src   "Value"
@@ -120,11 +167,27 @@ DreamLayoutContainerBorder:SetPadding:Value {
     state draft
 }
 
+DreamLayoutContainerBorder:SetShowEffectWhenDisabled {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetShowEffectWhenDisabled
+    src   "Set Show Effect when Disabled"
+    // from the engine's zh-Hans
+    text  "Set Show Effect when Disabled"
+    state draft
+}
+
 DreamLayoutContainerBorder:SetShowEffectWhenDisabled:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetShowEffectWhenDisabled:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerBorder:SetVerticalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerBorder:SetVerticalAlignment
+    src   "Set Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "设置垂直对齐"
     state draft
 }
 
@@ -158,6 +221,13 @@ DreamLayoutContainerCanvasPanel:bSortChildrenByZOrder {
     state machine
 }
 
+DreamLayoutContainerCanvasPanel:SetSortChildrenByZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerCanvasPanel:SetSortChildrenByZOrder
+    src   "Set Sort Children by ZOrder"
+    text  "设置按 Z 轴排序子控件"
+    state machine
+}
+
 DreamLayoutContainerCanvasPanel:SetSortChildrenByZOrder:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerCanvasPanel:SetSortChildrenByZOrder:Value
     src   "Value"
@@ -171,6 +241,14 @@ DreamLayoutContainerGridPanel {
     src   "UMG Grid Panel"
     text  "UMG 网格面板"
     state machine
+}
+
+DreamLayoutContainerGridPanel:ClearFill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:ClearFill
+    src   "Clear Fill"
+    // from the engine's zh-Hans
+    text  "Clear Fill"
+    state draft
 }
 
 DreamLayoutContainerGridPanel:ColumnFill {
@@ -197,12 +275,27 @@ DreamLayoutContainerGridPanel:RowFill {
     state draft
 }
 
+DreamLayoutContainerGridPanel:SetColumnFill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetColumnFill
+    src   "Set Column Fill"
+    // from the engine's zh-Hans
+    text  "设置列填充"
+    state draft
+}
+
 DreamLayoutContainerGridPanel:SetColumnFill:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetColumnFill:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerGridPanel:SetColumnFillAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetColumnFillAt
+    src   "Set Column Fill At"
+    text  "设置列填充位置"
+    state machine
 }
 
 DreamLayoutContainerGridPanel:SetColumnFillAt:InCoefficient {
@@ -219,11 +312,27 @@ DreamLayoutContainerGridPanel:SetColumnFillAt:InColumnIndex {
     state machine
 }
 
+DreamLayoutContainerGridPanel:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamLayoutContainerGridPanel:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetPadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerGridPanel:SetRowFill {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetRowFill
+    src   "Set Row Fill"
+    // from the engine's zh-Hans
+    text  "设置行填充"
     state draft
 }
 
@@ -233,6 +342,13 @@ DreamLayoutContainerGridPanel:SetRowFill:Value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerGridPanel:SetRowFillAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetRowFillAt
+    src   "Set Row Fill At"
+    text  "设置行填充位置"
+    state machine
 }
 
 DreamLayoutContainerGridPanel:SetRowFillAt:InCoefficient {
@@ -246,6 +362,13 @@ DreamLayoutContainerGridPanel:SetRowFillAt:InRowIndex {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetRowFillAt:InRowIndex
     src   "In Row Index"
     text  "行索引"
+    state machine
+}
+
+DreamLayoutContainerGridPanel:SetSpacing {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerGridPanel:SetSpacing
+    src   "Set Spacing"
+    text  "设置间距"
     state machine
 }
 
@@ -303,6 +426,13 @@ DreamLayoutContainerMenuAnchor:bUseApplicationMenuStack {
     state draft
 }
 
+DreamLayoutContainerMenuAnchor:GetAnchorContent {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:GetAnchorContent
+    src   "Get Anchor Content"
+    text  "获取锚点内容"
+    state machine
+}
+
 DreamLayoutContainerMenuAnchor:GetAnchorContent:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:GetAnchorContent:ReturnValue
     src   "Return Value"
@@ -311,11 +441,26 @@ DreamLayoutContainerMenuAnchor:GetAnchorContent:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerMenuAnchor:GetMenuContent {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:GetMenuContent
+    src   "Get Menu Content"
+    text  "获取菜单内容"
+    state machine
+}
+
 DreamLayoutContainerMenuAnchor:GetMenuContent:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:GetMenuContent:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerMenuAnchor:IsOpen {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:IsOpen
+    src   "Is Open"
+    // from the engine's zh-Hans
+    text  "已打开"
     state draft
 }
 
@@ -350,12 +495,26 @@ DreamLayoutContainerMenuAnchor:Placement {
     state draft
 }
 
+DreamLayoutContainerMenuAnchor:SetFitInWindow {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetFitInWindow
+    src   "Set Fit in Window"
+    text  "设置适应窗口"
+    state machine
+}
+
 DreamLayoutContainerMenuAnchor:SetFitInWindow:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetFitInWindow:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerMenuAnchor:SetIsOpen {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetIsOpen
+    src   "Set Is Open"
+    text  "设置已打开"
+    state machine
 }
 
 DreamLayoutContainerMenuAnchor:SetIsOpen:Value {
@@ -366,11 +525,26 @@ DreamLayoutContainerMenuAnchor:SetIsOpen:Value {
     state draft
 }
 
+DreamLayoutContainerMenuAnchor:SetMenuClass {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetMenuClass
+    src   "Set Menu Class"
+    text  "设置菜单类"
+    state machine
+}
+
 DreamLayoutContainerMenuAnchor:SetMenuClass:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetMenuClass:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerMenuAnchor:SetPlacement {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetPlacement
+    src   "Set Placement"
+    // from the engine's zh-Hans
+    text  "设置放置"
     state draft
 }
 
@@ -382,11 +556,26 @@ DreamLayoutContainerMenuAnchor:SetPlacement:Value {
     state draft
 }
 
+DreamLayoutContainerMenuAnchor:SetUseApplicationMenuStack {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetUseApplicationMenuStack
+    src   "Set Use Application Menu Stack"
+    text  "设置使用应用程序菜单堆栈"
+    state machine
+}
+
 DreamLayoutContainerMenuAnchor:SetUseApplicationMenuStack:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:SetUseApplicationMenuStack:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerMenuAnchor:ToggleOpen {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerMenuAnchor:ToggleOpen
+    src   "Toggle Open"
+    // from the engine's zh-Hans
+    text  "切换开启"
     state draft
 }
 
@@ -403,6 +592,14 @@ DreamLayoutContainerOverlay:Padding {
     src   "Padding"
     // from the engine's zh-Hans
     text  "填充"
+    state draft
+}
+
+DreamLayoutContainerOverlay:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerOverlay:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
     state draft
 }
 
@@ -483,12 +680,26 @@ DreamLayoutContainerSafeZone:SafePadding {
     state draft
 }
 
+DreamLayoutContainerSafeZone:SetNormalizedSafePadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetNormalizedSafePadding
+    src   "Set Normalized Safe Padding"
+    text  "设置标准化安全区域填充"
+    state machine
+}
+
 DreamLayoutContainerSafeZone:SetNormalizedSafePadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetNormalizedSafePadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerSafeZone:SetPadBottom {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadBottom
+    src   "Set Pad Bottom"
+    text  "设置填充底部"
+    state machine
 }
 
 DreamLayoutContainerSafeZone:SetPadBottom:Value {
@@ -499,12 +710,26 @@ DreamLayoutContainerSafeZone:SetPadBottom:Value {
     state draft
 }
 
+DreamLayoutContainerSafeZone:SetPadLeft {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadLeft
+    src   "Set Pad Left"
+    text  "设置填充左侧"
+    state machine
+}
+
 DreamLayoutContainerSafeZone:SetPadLeft:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadLeft:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerSafeZone:SetPadRight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadRight
+    src   "Set Pad Right"
+    text  "设置填充右侧"
+    state machine
 }
 
 DreamLayoutContainerSafeZone:SetPadRight:Value {
@@ -515,12 +740,26 @@ DreamLayoutContainerSafeZone:SetPadRight:Value {
     state draft
 }
 
+DreamLayoutContainerSafeZone:SetPadTop {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadTop
+    src   "Set Pad Top"
+    text  "设置填充顶部"
+    state machine
+}
+
 DreamLayoutContainerSafeZone:SetPadTop:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetPadTop:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerSafeZone:SetSafeAreaScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetSafeAreaScale
+    src   "Set Safe Area Scale"
+    text  "设置安全区范围"
+    state machine
 }
 
 DreamLayoutContainerSafeZone:SetSafeAreaScale:Value {
@@ -531,11 +770,26 @@ DreamLayoutContainerSafeZone:SetSafeAreaScale:Value {
     state draft
 }
 
+DreamLayoutContainerSafeZone:SetSafePadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetSafePadding
+    src   "Set Safe Padding"
+    text  "设置安全填充"
+    state machine
+}
+
 DreamLayoutContainerSafeZone:SetSafePadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetSafePadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSafeZone:SetSidesToPad {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetSidesToPad
+    src   "Set Sides to Pad"
+    // from the engine's zh-Hans
+    text  "设置要填充的边"
     state draft
 }
 
@@ -571,6 +825,13 @@ DreamLayoutContainerSafeZone:SetSidesToPad:bInPadTop {
     state draft
 }
 
+DreamLayoutContainerSafeZone:SetUsePlatformSafeZone {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetUsePlatformSafeZone
+    src   "Set Use Platform Safe Zone"
+    text  "设置使用平台安全区域"
+    state machine
+}
+
 DreamLayoutContainerSafeZone:SetUsePlatformSafeZone:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSafeZone:SetUsePlatformSafeZone:Value
     src   "Value"
@@ -594,6 +855,13 @@ DreamLayoutContainerScaleBox:bIgnoreInheritedScale {
     state draft
 }
 
+DreamLayoutContainerScaleBox:GetSafeZoneScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:GetSafeZoneScale
+    src   "Get Safe Zone Scale"
+    text  "获取安全区缩放"
+    state machine
+}
+
 DreamLayoutContainerScaleBox:GetSafeZoneScale:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:GetSafeZoneScale:ReturnValue
     src   "Return Value"
@@ -610,11 +878,27 @@ DreamLayoutContainerScaleBox:Padding {
     state draft
 }
 
+DreamLayoutContainerScaleBox:SetIgnoreInheritedScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetIgnoreInheritedScale
+    src   "Set Ignore Inherited Scale"
+    // from the engine's zh-Hans
+    text  "设置忽略继承的缩放"
+    state draft
+}
+
 DreamLayoutContainerScaleBox:SetIgnoreInheritedScale:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetIgnoreInheritedScale:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScaleBox:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
     state draft
 }
 
@@ -626,6 +910,14 @@ DreamLayoutContainerScaleBox:SetPadding:Value {
     state draft
 }
 
+DreamLayoutContainerScaleBox:SetStretch {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetStretch
+    src   "Set Stretch"
+    // from the engine's zh-Hans
+    text  "设置拉伸"
+    state draft
+}
+
 DreamLayoutContainerScaleBox:SetStretch:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetStretch:Value
     src   "Value"
@@ -634,11 +926,27 @@ DreamLayoutContainerScaleBox:SetStretch:Value {
     state draft
 }
 
+DreamLayoutContainerScaleBox:SetStretchDirection {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetStretchDirection
+    src   "Set Stretch Direction"
+    // from the engine's zh-Hans
+    text  "设置拉伸方向"
+    state draft
+}
+
 DreamLayoutContainerScaleBox:SetStretchDirection:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetStretchDirection:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScaleBox:SetUserSpecifiedScale {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScaleBox:SetUserSpecifiedScale
+    src   "Set User Specified Scale"
+    // from the engine's zh-Hans
+    text  "设置用户指定缩放"
     state draft
 }
 
@@ -744,6 +1052,13 @@ DreamLayoutContainerScrollBox:bFrontPadScrolling {
     state draft
 }
 
+DreamLayoutContainerScrollBox:CanScrollWidgetIntoView {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:CanScrollWidgetIntoView
+    src   "Can Scroll Widget Into View"
+    text  "能否把控件滚动到可见"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:CanScrollWidgetIntoView:InWidget {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:CanScrollWidgetIntoView:InWidget
     src   "In Widget"
@@ -775,6 +1090,21 @@ DreamLayoutContainerScrollBox:DecelerationRate {
     state machine
 }
 
+DreamLayoutContainerScrollBox:EndInertialScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:EndInertialScrolling
+    src   "End Inertial Scrolling"
+    // from the engine's zh-Hans
+    text  "End Inertial Scrolling"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetAllowOverscroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAllowOverscroll
+    src   "Get Allow Overscroll"
+    text  "获取允许过度滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetAllowOverscroll:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAllowOverscroll:ReturnValue
     src   "Return Value"
@@ -783,11 +1113,26 @@ DreamLayoutContainerScrollBox:GetAllowOverscroll:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetAllowRightClickDragScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAllowRightClickDragScrolling
+    src   "Get Allow Right Click Drag Scrolling"
+    text  "获取允许点击右键拖动滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetAllowRightClickDragScrolling:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAllowRightClickDragScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetAnalogMouseWheelKey {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAnalogMouseWheelKey
+    src   "Get Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Get Analog Mouse Wheel Key"
     state draft
 }
 
@@ -799,12 +1144,26 @@ DreamLayoutContainerScrollBox:GetAnalogMouseWheelKey:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetAnimatedScrollTarget {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAnimatedScrollTarget
+    src   "Get Animated Scroll Target"
+    text  "获取滚动动画目标"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetAnimatedScrollTarget:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAnimatedScrollTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetAnimateWheelScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetAnimateWheelScrolling
+    src   "Get Animate Wheel Scrolling"
+    text  "获取动画滚轮滚动"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetAnimateWheelScrolling:ReturnValue {
@@ -815,12 +1174,26 @@ DreamLayoutContainerScrollBox:GetAnimateWheelScrolling:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetBackPadScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetBackPadScrolling
+    src   "Get Back Pad Scrolling"
+    text  "获取背填充滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetBackPadScrolling:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetBackPadScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetConsumeMouseWheel {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetConsumeMouseWheel
+    src   "Get Consume Mouse Wheel"
+    text  "获取消耗鼠标滚轮"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetConsumeMouseWheel:ReturnValue {
@@ -831,12 +1204,26 @@ DreamLayoutContainerScrollBox:GetConsumeMouseWheel:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetDecelerationRate {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetDecelerationRate
+    src   "Get Deceleration Rate"
+    text  "获取减速率"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetDecelerationRate:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetDecelerationRate:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetEnableInertia {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetEnableInertia
+    src   "Get Enable Inertia"
+    text  "获取启用惯性"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetEnableInertia:ReturnValue {
@@ -847,12 +1234,26 @@ DreamLayoutContainerScrollBox:GetEnableInertia:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetEnableTouchScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetEnableTouchScrolling
+    src   "Get Enable Touch Scrolling"
+    text  "获取启用触摸滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetEnableTouchScrolling:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetEnableTouchScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetFrontPadScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetFrontPadScrolling
+    src   "Get Front Pad Scrolling"
+    text  "获取前填充滚动"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetFrontPadScrolling:ReturnValue {
@@ -863,12 +1264,26 @@ DreamLayoutContainerScrollBox:GetFrontPadScrolling:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetMaxScrollOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetMaxScrollOffset
+    src   "Get Max Scroll Offset"
+    text  "获取最大滚动偏移"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetMaxScrollOffset:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetMaxScrollOffset:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetNavigationDestination {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetNavigationDestination
+    src   "Get Navigation Destination"
+    text  "获取导航目标"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetNavigationDestination:ReturnValue {
@@ -879,11 +1294,26 @@ DreamLayoutContainerScrollBox:GetNavigationDestination:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetNavigationScrollPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetNavigationScrollPadding
+    src   "Get Navigation Scroll Padding"
+    text  "获取导航滚动填充"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetNavigationScrollPadding:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetNavigationScrollPadding:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetOverscroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetOverscroll
+    src   "Get Overscroll"
+    // from the engine's zh-Hans
+    text  "Get Overscroll"
     state draft
 }
 
@@ -895,11 +1325,26 @@ DreamLayoutContainerScrollBox:GetOverscroll:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetOverscrollLimit {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetOverscrollLimit
+    src   "Get Overscroll Limit"
+    text  "获取过度滚动限制"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetOverscrollLimit:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetOverscrollLimit:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetOverscrollPercentage {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetOverscrollPercentage
+    src   "Get Overscroll Percentage"
+    // from the engine's zh-Hans
+    text  "Get Overscroll Percentage"
     state draft
 }
 
@@ -911,12 +1356,26 @@ DreamLayoutContainerScrollBox:GetOverscrollPercentage:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollAnimationDuration {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationDuration
+    src   "Get Scroll Animation Duration"
+    text  "获取滚动动画持续时间"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetScrollAnimationDuration:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationDuration:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetScrollAnimationEase {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationEase
+    src   "Get Scroll Animation Ease"
+    text  "获取滚动动画缓动"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetScrollAnimationEase:ReturnValue {
@@ -927,12 +1386,26 @@ DreamLayoutContainerScrollBox:GetScrollAnimationEase:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollAnimationInterpolationSpeed {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationInterpolationSpeed
+    src   "Get Scroll Animation Interpolation Speed"
+    text  "获取滚动动画插值速度"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetScrollAnimationInterpolationSpeed:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationInterpolationSpeed:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetScrollAnimationMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollAnimationMode
+    src   "Get Scroll Animation Mode"
+    text  "获取滚动动画模式"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetScrollAnimationMode:ReturnValue {
@@ -943,11 +1416,26 @@ DreamLayoutContainerScrollBox:GetScrollAnimationMode:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollbar {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollbar
+    src   "Get Scrollbar"
+    text  "获取滚动条"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetScrollbar:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollbar:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetScrollbarVisibility {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollbarVisibility
+    src   "Get Scrollbar Visibility"
+    // from the engine's zh-Hans
+    text  "Get Scrollbar Visibility"
     state draft
 }
 
@@ -959,11 +1447,27 @@ DreamLayoutContainerScrollBox:GetScrollbarVisibility:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollOffset
+    src   "Get Scroll Offset"
+    // from the engine's zh-Hans
+    text  "Get Scroll Offset"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:GetScrollOffset:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollOffset:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetScrollOffsetOfEnd {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollOffsetOfEnd
+    src   "Get Scroll Offset Of End"
+    // from the engine's zh-Hans
+    text  "获取末尾的滚动偏移"
     state draft
 }
 
@@ -975,12 +1479,26 @@ DreamLayoutContainerScrollBox:GetScrollOffsetOfEnd:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollSensitivity {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollSensitivity
+    src   "Get Scroll Sensitivity"
+    text  "获取滚动灵敏度"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetScrollSensitivity:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollSensitivity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:GetScrollVelocity {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollVelocity
+    src   "Get Scroll Velocity"
+    text  "获取滚动速度"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:GetScrollVelocity:ReturnValue {
@@ -991,11 +1509,26 @@ DreamLayoutContainerScrollBox:GetScrollVelocity:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetScrollWhenFocusChanges {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollWhenFocusChanges
+    src   "Get Scroll when Focus Changes"
+    text  "获取聚焦变化时滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetScrollWhenFocusChanges:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetScrollWhenFocusChanges:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:GetViewFraction {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetViewFraction
+    src   "Get View Fraction"
+    // from the engine's zh-Hans
+    text  "Get View Fraction"
     state draft
 }
 
@@ -1007,6 +1540,14 @@ DreamLayoutContainerScrollBox:GetViewFraction:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetViewOffsetFraction {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetViewOffsetFraction
+    src   "Get View Offset Fraction"
+    // from the engine's zh-Hans
+    text  "获取视图偏移部分"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:GetViewOffsetFraction:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetViewOffsetFraction:ReturnValue
     src   "Return Value"
@@ -1015,12 +1556,26 @@ DreamLayoutContainerScrollBox:GetViewOffsetFraction:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:GetWheelScrollMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetWheelScrollMultiplier
+    src   "Get Wheel Scroll Multiplier"
+    text  "获取滚轮滚动乘数"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:GetWheelScrollMultiplier:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:GetWheelScrollMultiplier:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:HandleScrollbarValueChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:HandleScrollbarValueChanged
+    src   "Handle Scrollbar Value Changed"
+    text  "处理滚动条值变更"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:HandleScrollbarValueChanged:InValue {
@@ -1038,12 +1593,26 @@ DreamLayoutContainerScrollBox:InputHandler {
     state machine
 }
 
+DreamLayoutContainerScrollBox:IsAnimatingScroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsAnimatingScroll
+    src   "Is Animating Scroll"
+    text  "是否正在滚动动画"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:IsAnimatingScroll:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsAnimatingScroll:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:IsScrollGestureMirrored {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsScrollGestureMirrored
+    src   "Is Scroll Gesture Mirrored"
+    text  "滚动手势是否镜像"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:IsScrollGestureMirrored:ReturnValue {
@@ -1054,12 +1623,26 @@ DreamLayoutContainerScrollBox:IsScrollGestureMirrored:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:IsScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsScrolling
+    src   "Is Scrolling"
+    text  "是否正在滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:IsScrolling:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:IsScrollNeeded {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:IsScrollNeeded
+    src   "Is Scroll Needed"
+    text  "是否需要滚动"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:IsScrollNeeded:ReturnValue {
@@ -1144,6 +1727,13 @@ DreamLayoutContainerScrollBox:ScrollbarVisibility {
     state machine
 }
 
+DreamLayoutContainerScrollBox:ScrollBy {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollBy
+    src   "Scroll By"
+    text  "按增量滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:ScrollBy:Delta {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollBy:Delta
     src   "Delta"
@@ -1174,11 +1764,35 @@ DreamLayoutContainerScrollBox:ScrollSensitivity {
     state machine
 }
 
+DreamLayoutContainerScrollBox:ScrollToEnd {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollToEnd
+    src   "Scroll to End"
+    // from the engine's zh-Hans
+    text  "滚动到末尾"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:ScrollToStart {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollToStart
+    src   "Scroll to Start"
+    // from the engine's zh-Hans
+    text  "滚动到开头"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:ScrollWhenFocusChanges {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollWhenFocusChanges
     src   "Scroll when Focus Changes"
     // from the engine's zh-Hans
     text  "聚焦变化时滚动"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:ScrollWidgetIntoView {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:ScrollWidgetIntoView
+    src   "Scroll Widget Into View"
+    // from the engine's zh-Hans
+    text  "将控件滚动到视图中"
     state draft
 }
 
@@ -1222,6 +1836,14 @@ DreamLayoutContainerScrollBox:ScrollWidgetIntoView:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetAllowOverscroll {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAllowOverscroll
+    src   "Set Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "设置允许过度滚动"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:SetAllowOverscroll:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAllowOverscroll:Value
     src   "Value"
@@ -1230,11 +1852,26 @@ DreamLayoutContainerScrollBox:SetAllowOverscroll:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetAllowRightClickDragScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAllowRightClickDragScrolling
+    src   "Set Allow Right Click Drag Scrolling"
+    text  "设置允许点击右键拖动滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetAllowRightClickDragScrolling:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAllowRightClickDragScrolling:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetAnalogMouseWheelKey {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAnalogMouseWheelKey
+    src   "Set Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Set Analog Mouse Wheel Key"
     state draft
 }
 
@@ -1246,6 +1883,14 @@ DreamLayoutContainerScrollBox:SetAnalogMouseWheelKey:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetAnimateWheelScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAnimateWheelScrolling
+    src   "Set Animate Wheel Scrolling"
+    // from the engine's zh-Hans
+    text  "设置动画滚轮滚动"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:SetAnimateWheelScrolling:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetAnimateWheelScrolling:Value
     src   "Value"
@@ -1254,11 +1899,26 @@ DreamLayoutContainerScrollBox:SetAnimateWheelScrolling:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetBackPadScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetBackPadScrolling
+    src   "Set Back Pad Scrolling"
+    text  "设置背填充滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetBackPadScrolling:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetBackPadScrolling:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetConsumeMouseWheel {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetConsumeMouseWheel
+    src   "Set Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "设置消耗鼠标滚轮"
     state draft
 }
 
@@ -1270,12 +1930,26 @@ DreamLayoutContainerScrollBox:SetConsumeMouseWheel:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetDecelerationRate {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetDecelerationRate
+    src   "Set Deceleration Rate"
+    text  "设置减速率"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetDecelerationRate:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetDecelerationRate:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:SetEnableInertia {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetEnableInertia
+    src   "Set Enable Inertia"
+    text  "设置启用惯性"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:SetEnableInertia:Value {
@@ -1286,6 +1960,13 @@ DreamLayoutContainerScrollBox:SetEnableInertia:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetEnableTouchScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetEnableTouchScrolling
+    src   "Set Enable Touch Scrolling"
+    text  "设置启用触摸滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetEnableTouchScrolling:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetEnableTouchScrolling:Value
     src   "Value"
@@ -1294,11 +1975,26 @@ DreamLayoutContainerScrollBox:SetEnableTouchScrolling:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetFrontPadScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetFrontPadScrolling
+    src   "Set Front Pad Scrolling"
+    text  "设置前填充滚动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetFrontPadScrolling:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetFrontPadScrolling:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetNavigationDestination {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetNavigationDestination
+    src   "Set Navigation Destination"
+    // from the engine's zh-Hans
+    text  "Set Navigation Destination"
     state draft
 }
 
@@ -1310,12 +2006,26 @@ DreamLayoutContainerScrollBox:SetNavigationDestination:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetNavigationScrollPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetNavigationScrollPadding
+    src   "Set Navigation Scroll Padding"
+    text  "设置导航滚动填充"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetNavigationScrollPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetNavigationScrollPadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:SetOverscrollLimit {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetOverscrollLimit
+    src   "Set Overscroll Limit"
+    text  "设置过度滚动限制"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:SetOverscrollLimit:Value {
@@ -1326,6 +2036,13 @@ DreamLayoutContainerScrollBox:SetOverscrollLimit:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollAnimationDuration {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationDuration
+    src   "Set Scroll Animation Duration"
+    text  "设置滚动动画持续时间"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollAnimationDuration:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationDuration:Value
     src   "Value"
@@ -1334,11 +2051,26 @@ DreamLayoutContainerScrollBox:SetScrollAnimationDuration:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollAnimationEase {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationEase
+    src   "Set Scroll Animation Ease"
+    text  "设置滚动动画缓动"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollAnimationEase:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationEase:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetScrollAnimationInterpolationSpeed {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationInterpolationSpeed
+    src   "Set Scroll Animation Interpolation Speed"
+    // from the engine's zh-Hans
+    text  "Set Scroll Animation Interpolation Speed"
     state draft
 }
 
@@ -1350,6 +2082,13 @@ DreamLayoutContainerScrollBox:SetScrollAnimationInterpolationSpeed:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollAnimationMode {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationMode
+    src   "Set Scroll Animation Mode"
+    text  "设置滚动动画模式"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollAnimationMode:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollAnimationMode:Value
     src   "Value"
@@ -1358,11 +2097,26 @@ DreamLayoutContainerScrollBox:SetScrollAnimationMode:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollbar {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollbar
+    src   "Set Scrollbar"
+    text  "设置滚动条"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollbar:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollbar:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetScrollbarVisibility {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollbarVisibility
+    src   "Set Scrollbar Visibility"
+    // from the engine's zh-Hans
+    text  "设置滚动条可视性"
     state draft
 }
 
@@ -1374,12 +2128,27 @@ DreamLayoutContainerScrollBox:SetScrollbarVisibility:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollOffset {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollOffset
+    src   "Set Scroll Offset"
+    // from the engine's zh-Hans
+    text  "设置滚动偏移"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:SetScrollOffset:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollOffset:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:SetScrollOffsetAnimated {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollOffsetAnimated
+    src   "Set Scroll Offset Animated"
+    text  "设置滚动偏移动画"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:SetScrollOffsetAnimated:Value {
@@ -1390,6 +2159,13 @@ DreamLayoutContainerScrollBox:SetScrollOffsetAnimated:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollSensitivity {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollSensitivity
+    src   "Set Scroll Sensitivity"
+    text  "设置滚动灵敏度"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollSensitivity:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollSensitivity:Value
     src   "Value"
@@ -1398,11 +2174,26 @@ DreamLayoutContainerScrollBox:SetScrollSensitivity:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetScrollVelocity {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollVelocity
+    src   "Set Scroll Velocity"
+    text  "设置滚动速度"
+    state machine
+}
+
 DreamLayoutContainerScrollBox:SetScrollVelocity:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollVelocity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerScrollBox:SetScrollWhenFocusChanges {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetScrollWhenFocusChanges
+    src   "Set Scroll when Focus Changes"
+    // from the engine's zh-Hans
+    text  "焦点变更时设置滚动"
     state draft
 }
 
@@ -1414,12 +2205,34 @@ DreamLayoutContainerScrollBox:SetScrollWhenFocusChanges:Value {
     state draft
 }
 
+DreamLayoutContainerScrollBox:SetWheelScrollMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetWheelScrollMultiplier
+    src   "Set Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "设置滚轮滚动乘数"
+    state draft
+}
+
 DreamLayoutContainerScrollBox:SetWheelScrollMultiplier:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:SetWheelScrollMultiplier:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerScrollBox:StopScrolling {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:StopScrolling
+    src   "Stop Scrolling"
+    text  "停止滚动"
+    state machine
+}
+
+DreamLayoutContainerScrollBox:TickScrollPhysics {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerScrollBox:TickScrollPhysics
+    src   "Tick Scroll Physics"
+    text  "推进滚动物理"
+    state machine
 }
 
 DreamLayoutContainerScrollBox:TickScrollPhysics:DeltaTime {
@@ -1459,12 +2272,90 @@ DreamLayoutContainerSizeBox:bOverrideWidth {
     state machine
 }
 
+DreamLayoutContainerSizeBox:ClearHeightOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearHeightOverride
+    src   "Clear Height Override"
+    // from the engine's zh-Hans
+    text  "清除高度重载"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMaxAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMaxAspectRatio
+    src   "Clear Max Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "清除最大高宽比"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMaxDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMaxDesiredHeight
+    src   "Clear Max Desired Height"
+    // from the engine's zh-Hans
+    text  "清除所需最大高度"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMaxDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMaxDesiredWidth
+    src   "Clear Max Desired Width"
+    // from the engine's zh-Hans
+    text  "清除所需最大宽度"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMinAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMinAspectRatio
+    src   "Clear Min Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "清除所需最小高宽比"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMinDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMinDesiredHeight
+    src   "Clear Min Desired Height"
+    // from the engine's zh-Hans
+    text  "清除所需最小高度"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearMinDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearMinDesiredWidth
+    src   "Clear Min Desired Width"
+    // from the engine's zh-Hans
+    text  "清除所需最小宽度"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:ClearWidthOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:ClearWidthOverride
+    src   "Clear Width Override"
+    // from the engine's zh-Hans
+    text  "清除宽度重载"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:GetMaxDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMaxDesiredHeight
+    src   "Get Max Desired Height"
+    text  "获取最大期望高度"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:GetMaxDesiredHeight:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMaxDesiredHeight:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerSizeBox:GetMaxDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMaxDesiredWidth
+    src   "Get Max Desired Width"
+    text  "获取最大期望宽度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:GetMaxDesiredWidth:ReturnValue {
@@ -1475,12 +2366,26 @@ DreamLayoutContainerSizeBox:GetMaxDesiredWidth:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerSizeBox:GetMinDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMinDesiredHeight
+    src   "Get Min Desired Height"
+    text  "获取最小期望高度"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:GetMinDesiredHeight:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMinDesiredHeight:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerSizeBox:GetMinDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:GetMinDesiredWidth
+    src   "Get Min Desired Width"
+    text  "获取所需最小宽度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:GetMinDesiredWidth:ReturnValue {
@@ -1499,12 +2404,26 @@ DreamLayoutContainerSizeBox:HeightOverride {
     state draft
 }
 
+DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride
+    src   "Is Max Aspect Ratio Override"
+    text  "是否覆盖最大宽高比"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:IsMaxAspectRatioOverride:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamLayoutContainerSizeBox:IsMinAspectRatioOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:IsMinAspectRatioOverride
+    src   "Is Min Aspect Ratio Override"
+    text  "是否覆盖最小宽高比"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:IsMinAspectRatioOverride:ReturnValue {
@@ -1553,11 +2472,27 @@ DreamLayoutContainerSizeBox:Padding {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetHeightOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetHeightOverride
+    src   "Set Height Override"
+    // from the engine's zh-Hans
+    text  "设置高度重载"
+    state draft
+}
+
 DreamLayoutContainerSizeBox:SetHeightOverride:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetHeightOverride:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:SetMaxAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxAspectRatio
+    src   "Set Max Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "设置最大高宽比"
     state draft
 }
 
@@ -1569,6 +2504,14 @@ DreamLayoutContainerSizeBox:SetMaxAspectRatio:Value {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetMaxDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxDesiredHeight
+    src   "Set Max Desired Height"
+    // from the engine's zh-Hans
+    text  "设置所需最大高度"
+    state draft
+}
+
 DreamLayoutContainerSizeBox:SetMaxDesiredHeight:InMaxDesiredHeight {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxDesiredHeight:InMaxDesiredHeight
     src   "In Max Desired Height"
@@ -1577,11 +2520,26 @@ DreamLayoutContainerSizeBox:SetMaxDesiredHeight:InMaxDesiredHeight {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetMaxDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxDesiredSize
+    src   "Set Max Desired Size"
+    text  "设置最大期望尺寸"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:SetMaxDesiredSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxDesiredSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:SetMaxDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMaxDesiredWidth
+    src   "Set Max Desired Width"
+    // from the engine's zh-Hans
+    text  "设置所需最大宽度"
     state draft
 }
 
@@ -1593,11 +2551,27 @@ DreamLayoutContainerSizeBox:SetMaxDesiredWidth:InMaxDesiredWidth {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetMinAspectRatio {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinAspectRatio
+    src   "Set Min Aspect Ratio"
+    // from the engine's zh-Hans
+    text  "设置最小高宽比"
+    state draft
+}
+
 DreamLayoutContainerSizeBox:SetMinAspectRatio:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinAspectRatio:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:SetMinDesiredHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinDesiredHeight
+    src   "Set Min Desired Height"
+    // from the engine's zh-Hans
+    text  "设置所需最小高度"
     state draft
 }
 
@@ -1609,11 +2583,26 @@ DreamLayoutContainerSizeBox:SetMinDesiredHeight:InMinDesiredHeight {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetMinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinDesiredSize
+    src   "Set Min Desired Size"
+    text  "设置最小期望尺寸"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:SetMinDesiredSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinDesiredSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:SetMinDesiredWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetMinDesiredWidth
+    src   "Set Min Desired Width"
+    // from the engine's zh-Hans
+    text  "设置所需最小宽度"
     state draft
 }
 
@@ -1625,12 +2614,26 @@ DreamLayoutContainerSizeBox:SetMinDesiredWidth:InMinDesiredWidth {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetOverrideHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetOverrideHeight
+    src   "Set Override Height"
+    text  "设置重载高度"
+    state machine
+}
+
 DreamLayoutContainerSizeBox:SetOverrideHeight:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetOverrideHeight:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerSizeBox:SetOverrideWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetOverrideWidth
+    src   "Set Override Width"
+    text  "设置重载宽度"
+    state machine
 }
 
 DreamLayoutContainerSizeBox:SetOverrideWidth:Value {
@@ -1641,11 +2644,27 @@ DreamLayoutContainerSizeBox:SetOverrideWidth:Value {
     state draft
 }
 
+DreamLayoutContainerSizeBox:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamLayoutContainerSizeBox:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetPadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerSizeBox:SetWidthOverride {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerSizeBox:SetWidthOverride
+    src   "Set Width Override"
+    // from the engine's zh-Hans
+    text  "设置宽度重载"
     state draft
 }
 
@@ -1688,11 +2707,27 @@ DreamLayoutContainerStackBox:Padding {
     state draft
 }
 
+DreamLayoutContainerStackBox:SetOrientation {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerStackBox:SetOrientation
+    src   "Set Orientation"
+    // from the engine's zh-Hans
+    text  "设置朝向"
+    state draft
+}
+
 DreamLayoutContainerStackBox:SetOrientation:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerStackBox:SetOrientation:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerStackBox:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerStackBox:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
     state draft
 }
 
@@ -1702,6 +2737,13 @@ DreamLayoutContainerStackBox:SetPadding:Value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerStackBox:SetSpacing {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerStackBox:SetSpacing
+    src   "Set Spacing"
+    text  "设置间距"
+    state machine
 }
 
 DreamLayoutContainerStackBox:SetSpacing:Value {
@@ -1751,11 +2793,27 @@ DreamLayoutContainerUniformGridPanel:Padding {
     state draft
 }
 
+DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotHeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotHeight
+    src   "Set Min Desired Slot Height"
+    // from the engine's zh-Hans
+    text  "设置所需最小插槽高度"
+    state draft
+}
+
 DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotHeight:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotHeight:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotWidth {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotWidth
+    src   "Set Min Desired Slot Width"
+    // from the engine's zh-Hans
+    text  "设置所需最小插槽宽度"
     state draft
 }
 
@@ -1767,11 +2825,27 @@ DreamLayoutContainerUniformGridPanel:SetMinDesiredSlotWidth:Value {
     state draft
 }
 
+DreamLayoutContainerUniformGridPanel:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamLayoutContainerUniformGridPanel:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetPadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerUniformGridPanel:SetSlotPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetSlotPadding
+    src   "Set Slot Padding"
+    // from the engine's zh-Hans
+    text  "设置插槽填充"
     state draft
 }
 
@@ -1781,6 +2855,13 @@ DreamLayoutContainerUniformGridPanel:SetSlotPadding:Value {
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerUniformGridPanel:SetSpacing {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerUniformGridPanel:SetSpacing
+    src   "Set Spacing"
+    text  "设置间距"
+    state machine
 }
 
 DreamLayoutContainerUniformGridPanel:SetSpacing:Value {
@@ -1829,11 +2910,27 @@ DreamLayoutContainerWidgetSwitcher:ActiveWidgetIndex {
     state draft
 }
 
+DreamLayoutContainerWidgetSwitcher:GetActiveWidget {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetActiveWidget
+    src   "Get Active Widget"
+    // from the engine's zh-Hans
+    text  "获取激活控件"
+    state draft
+}
+
 DreamLayoutContainerWidgetSwitcher:GetActiveWidget:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetActiveWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerWidgetSwitcher:GetActiveWidgetIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetActiveWidgetIndex
+    src   "Get Active Widget Index"
+    // from the engine's zh-Hans
+    text  "获取激活控件索引"
     state draft
 }
 
@@ -1845,11 +2942,27 @@ DreamLayoutContainerWidgetSwitcher:GetActiveWidgetIndex:ReturnValue {
     state draft
 }
 
+DreamLayoutContainerWidgetSwitcher:GetNumWidgets {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetNumWidgets
+    src   "Get Num Widgets"
+    // from the engine's zh-Hans
+    text  "获取控件数量"
+    state draft
+}
+
 DreamLayoutContainerWidgetSwitcher:GetNumWidgets:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetNumWidgets:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamLayoutContainerWidgetSwitcher:GetWidgetAtIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:GetWidgetAtIndex
+    src   "Get Widget at Index"
+    // from the engine's zh-Hans
+    text  "获取索引处的控件"
     state draft
 }
 
@@ -1877,6 +2990,14 @@ DreamLayoutContainerWidgetSwitcher:Padding {
     state draft
 }
 
+DreamLayoutContainerWidgetSwitcher:SetActiveWidget {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:SetActiveWidget
+    src   "Set Active Widget"
+    // from the engine's zh-Hans
+    text  "设置激活控件"
+    state draft
+}
+
 DreamLayoutContainerWidgetSwitcher:SetActiveWidget:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:SetActiveWidget:ReturnValue
     src   "Return Value"
@@ -1893,11 +3014,27 @@ DreamLayoutContainerWidgetSwitcher:SetActiveWidget:Value {
     state draft
 }
 
+DreamLayoutContainerWidgetSwitcher:SetActiveWidgetIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:SetActiveWidgetIndex
+    src   "Set Active Widget Index"
+    // from the engine's zh-Hans
+    text  "设置激活控件索引"
+    state draft
+}
+
 DreamLayoutContainerWidgetSwitcher:SetActiveWidgetIndex:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:SetActiveWidgetIndex:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerWidgetSwitcher:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWidgetSwitcher:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
     state draft
 }
 
@@ -1922,6 +3059,13 @@ DreamLayoutContainerWrapBox:bExplicitWrapSize {
     // from the engine's zh-Hans
     text  "显式包裹尺寸"
     state draft
+}
+
+DreamLayoutContainerWrapBox:GetInnerSlotPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:GetInnerSlotPadding
+    src   "Get Inner Slot Padding"
+    text  "获取内部插槽填充"
+    state machine
 }
 
 DreamLayoutContainerWrapBox:GetInnerSlotPadding:ReturnValue {
@@ -1956,11 +3100,26 @@ DreamLayoutContainerWrapBox:Padding {
     state draft
 }
 
+DreamLayoutContainerWrapBox:SetExplicitWrapSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetExplicitWrapSize
+    src   "Set Explicit Wrap Size"
+    text  "设置显式包裹尺寸"
+    state machine
+}
+
 DreamLayoutContainerWrapBox:SetExplicitWrapSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetExplicitWrapSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamLayoutContainerWrapBox:SetHorizontalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetHorizontalAlignment
+    src   "Set Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "设置水平对齐"
     state draft
 }
 
@@ -1972,11 +3131,27 @@ DreamLayoutContainerWrapBox:SetHorizontalAlignment:Value {
     state draft
 }
 
+DreamLayoutContainerWrapBox:SetInnerSlotPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetInnerSlotPadding
+    src   "Set Inner Slot Padding"
+    // from the engine's zh-Hans
+    text  "设置内部插槽填充"
+    state draft
+}
+
 DreamLayoutContainerWrapBox:SetInnerSlotPadding:InPadding {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetInnerSlotPadding:InPadding
     src   "In Padding"
     // from the engine's zh-Hans
     text  "在填充中"
+    state draft
+}
+
+DreamLayoutContainerWrapBox:SetOrientation {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetOrientation
+    src   "Set Orientation"
+    // from the engine's zh-Hans
+    text  "设置朝向"
     state draft
 }
 
@@ -1988,6 +3163,14 @@ DreamLayoutContainerWrapBox:SetOrientation:Value {
     state draft
 }
 
+DreamLayoutContainerWrapBox:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamLayoutContainerWrapBox:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetPadding:Value
     src   "Value"
@@ -1996,12 +3179,26 @@ DreamLayoutContainerWrapBox:SetPadding:Value {
     state draft
 }
 
+DreamLayoutContainerWrapBox:SetSpacing {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetSpacing
+    src   "Set Spacing"
+    text  "设置间距"
+    state machine
+}
+
 DreamLayoutContainerWrapBox:SetSpacing:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetSpacing:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamLayoutContainerWrapBox:SetWrapSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamLayoutContainerWrapBox:SetWrapSize
+    src   "Set Wrap Size"
+    text  "设置包裹尺寸"
+    state machine
 }
 
 DreamLayoutContainerWrapBox:SetWrapSize:Value {
@@ -2035,6 +3232,14 @@ DreamPanelLayoutBase {
     state machine
 }
 
+DreamPanelLayoutBase:AddChild {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:AddChild
+    src   "Add Child"
+    // from the engine's zh-Hans
+    text  "添加子项"
+    state draft
+}
+
 DreamPanelLayoutBase:AddChild:InChild {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:AddChild:InChild
     src   "In Child"
@@ -2058,11 +3263,34 @@ DreamPanelLayoutBase:AddChild:ReturnValue {
     state draft
 }
 
+DreamPanelLayoutBase:DestroyAllChildren {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:DestroyAllChildren
+    src   "Destroy All Children"
+    text  "销毁所有子项"
+    state machine
+}
+
+DreamPanelLayoutBase:GetAllChildren {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetAllChildren
+    src   "Get All Children"
+    // from the engine's zh-Hans
+    text  "获取所有子项"
+    state draft
+}
+
 DreamPanelLayoutBase:GetAllChildren:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetAllChildren:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelLayoutBase:GetChildAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetChildAt
+    src   "Get Child At"
+    // from the engine's zh-Hans
+    text  "获取子项位置"
     state draft
 }
 
@@ -2082,6 +3310,14 @@ DreamPanelLayoutBase:GetChildAt:ReturnValue {
     state draft
 }
 
+DreamPanelLayoutBase:GetChildIndex {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetChildIndex
+    src   "Get Child Index"
+    // from the engine's zh-Hans
+    text  "获取子项索引"
+    state draft
+}
+
 DreamPanelLayoutBase:GetChildIndex:InChild {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetChildIndex:InChild
     src   "In Child"
@@ -2098,6 +3334,14 @@ DreamPanelLayoutBase:GetChildIndex:ReturnValue {
     state draft
 }
 
+DreamPanelLayoutBase:GetChildrenCount {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetChildrenCount
+    src   "Get Children Count"
+    // from the engine's zh-Hans
+    text  "获取子项数量"
+    state draft
+}
+
 DreamPanelLayoutBase:GetChildrenCount:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:GetChildrenCount:ReturnValue
     src   "Return Value"
@@ -2106,11 +3350,27 @@ DreamPanelLayoutBase:GetChildrenCount:ReturnValue {
     state draft
 }
 
+DreamPanelLayoutBase:HasAnyChildren {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:HasAnyChildren
+    src   "Has Any Children"
+    // from the engine's zh-Hans
+    text  "拥有任何子项"
+    state draft
+}
+
 DreamPanelLayoutBase:HasAnyChildren:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:HasAnyChildren:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelLayoutBase:HasChild {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:HasChild
+    src   "Has Child"
+    // from the engine's zh-Hans
+    text  "拥有子项"
     state draft
 }
 
@@ -2130,6 +3390,14 @@ DreamPanelLayoutBase:HasChild:ReturnValue {
     state draft
 }
 
+DreamPanelLayoutBase:RemoveChild {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:RemoveChild
+    src   "Remove Child"
+    // from the engine's zh-Hans
+    text  "移除子项"
+    state draft
+}
+
 DreamPanelLayoutBase:RemoveChild:InChild {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:RemoveChild:InChild
     src   "In Child"
@@ -2143,6 +3411,14 @@ DreamPanelLayoutBase:RemoveChild:ReturnValue {
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelLayoutBase:RemoveChildAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:RemoveChildAt
+    src   "Remove Child At"
+    // from the engine's zh-Hans
+    text  "移除子项位置"
     state draft
 }
 
@@ -2160,6 +3436,13 @@ DreamPanelLayoutBase:RemoveChildAt:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPanelLayoutBase:ReplaceChildAt {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:ReplaceChildAt
+    src   "Replace Child At"
+    text  "替换指定子项"
+    state machine
 }
 
 DreamPanelLayoutBase:ReplaceChildAt:InContent {
@@ -2184,6 +3467,13 @@ DreamPanelLayoutBase:ReplaceChildAt:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPanelLayoutBase:RequestLayoutRefresh {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h#DreamPanelLayoutBase:RequestLayoutRefresh
+    src   "Request Layout Refresh"
+    text  "请求布局刷新"
+    state machine
 }
 
 DreamPanelMenuAnchorGetContent__DelegateSignature:ReturnValue {

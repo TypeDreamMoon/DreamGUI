@@ -17,6 +17,13 @@ DreamInvalidationBox:bCanCache {
     state draft
 }
 
+DreamInvalidationBox:GetCachedCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCachedCanvas
+    src   "Get Cached Canvas"
+    text  "获取缓存的画布"
+    state machine
+}
+
 DreamInvalidationBox:GetCachedCanvas:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCachedCanvas:ReturnValue
     src   "Return Value"
@@ -25,11 +32,35 @@ DreamInvalidationBox:GetCachedCanvas:ReturnValue {
     state draft
 }
 
+DreamInvalidationBox:GetCanCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCanCache
+    src   "Get Can Cache"
+    // from the engine's zh-Hans
+    text  "获取可缓存"
+    state draft
+}
+
 DreamInvalidationBox:GetCanCache:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:GetCanCache:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamInvalidationBox:InvalidateCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:InvalidateCache
+    src   "Invalidate Cache"
+    // from the engine's zh-Hans
+    text  "无效缓存"
+    state draft
+}
+
+DreamInvalidationBox:SetCanCache {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamInvalidationBox:SetCanCache
+    src   "Set Can Cache"
+    // from the engine's zh-Hans
+    text  "设置可缓存"
     state draft
 }
 
@@ -70,12 +101,27 @@ DreamRetainerBox:EffectMaterial {
     state draft
 }
 
+DreamRetainerBox:GetEffectMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetEffectMaterial
+    src   "Get Effect Material"
+    // from the engine's zh-Hans
+    text  "获取效果材质"
+    state draft
+}
+
 DreamRetainerBox:GetEffectMaterial:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetEffectMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRetainerBox:GetGroupBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetGroupBlendMode
+    src   "Get Group Blend Mode"
+    text  "获取组混合模式"
+    state machine
 }
 
 DreamRetainerBox:GetGroupBlendMode:ReturnValue {
@@ -86,12 +132,26 @@ DreamRetainerBox:GetGroupBlendMode:ReturnValue {
     state draft
 }
 
+DreamRetainerBox:GetGroupRenderOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetGroupRenderOpacity
+    src   "Get Group Render Opacity"
+    text  "获取组渲染不透明度"
+    state machine
+}
+
 DreamRetainerBox:GetGroupRenderOpacity:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetGroupRenderOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRetainerBox:GetPhase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetPhase
+    src   "Get Phase"
+    text  "获取相位"
+    state machine
 }
 
 DreamRetainerBox:GetPhase:ReturnValue {
@@ -102,6 +162,13 @@ DreamRetainerBox:GetPhase:ReturnValue {
     state draft
 }
 
+DreamRetainerBox:GetPhaseCount {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetPhaseCount
+    src   "Get Phase Count"
+    text  "获取相位数"
+    state machine
+}
+
 DreamRetainerBox:GetPhaseCount:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetPhaseCount:ReturnValue
     src   "Return Value"
@@ -110,12 +177,26 @@ DreamRetainerBox:GetPhaseCount:ReturnValue {
     state draft
 }
 
+DreamRetainerBox:GetRetainedCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainedCanvas
+    src   "Get Retained Canvas"
+    text  "获取保留画布"
+    state machine
+}
+
 DreamRetainerBox:GetRetainedCanvas:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainedCanvas:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRetainerBox:GetRetainRendering {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:GetRetainRendering
+    src   "Get Retain Rendering"
+    text  "获取保留渲染"
+    state machine
 }
 
 DreamRetainerBox:GetRetainRendering:ReturnValue {
@@ -156,12 +237,35 @@ DreamRetainerBox:PhaseCount {
     state draft
 }
 
+DreamRetainerBox:RequestRender {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:RequestRender
+    src   "Request Render"
+    // from the engine's zh-Hans
+    text  "请求渲染"
+    state draft
+}
+
+DreamRetainerBox:SetEffectMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetEffectMaterial
+    src   "Set Effect Material"
+    // from the engine's zh-Hans
+    text  "设置效果材质"
+    state draft
+}
+
 DreamRetainerBox:SetEffectMaterial:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetEffectMaterial:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamRetainerBox:SetGroupBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupBlendMode
+    src   "Set Group Blend Mode"
+    text  "设置组混合模式"
+    state machine
 }
 
 DreamRetainerBox:SetGroupBlendMode:Value {
@@ -172,11 +276,26 @@ DreamRetainerBox:SetGroupBlendMode:Value {
     state draft
 }
 
+DreamRetainerBox:SetGroupRenderOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupRenderOpacity
+    src   "Set Group Render Opacity"
+    text  "设置组渲染不透明度"
+    state machine
+}
+
 DreamRetainerBox:SetGroupRenderOpacity:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetGroupRenderOpacity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamRetainerBox:SetRenderingPhase {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRenderingPhase
+    src   "Set Rendering Phase"
+    // from the engine's zh-Hans
+    text  "设置渲染相位"
     state draft
 }
 
@@ -193,6 +312,14 @@ DreamRetainerBox:SetRenderingPhase:InPhaseCount {
     src   "In Phase Count"
     text  "输入阶段计数"
     state machine
+}
+
+DreamRetainerBox:SetRetainRendering {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h#DreamRetainerBox:SetRetainRendering
+    src   "Set Retain Rendering"
+    // from the engine's zh-Hans
+    text  "设置保留渲染"
+    state draft
 }
 
 DreamRetainerBox:SetRetainRendering:Value {

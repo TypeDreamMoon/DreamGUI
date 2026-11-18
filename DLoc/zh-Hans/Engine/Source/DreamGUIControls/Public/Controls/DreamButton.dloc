@@ -76,12 +76,26 @@ DreamButton:FaceNode {
     state machine
 }
 
+DreamButton:GetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAcceptedMouseButtons
+    src   "Get Accepted Mouse Buttons"
+    text  "获取接受的鼠标按键"
+    state machine
+}
+
 DreamButton:GetAcceptedMouseButtons:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAcceptedMouseButtons:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamButton:GetAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetAllowDragDrop
+    src   "Get Allow Drag Drop"
+    text  "获取允许拖放"
+    state machine
 }
 
 DreamButton:GetAllowDragDrop:ReturnValue {
@@ -92,12 +106,26 @@ DreamButton:GetAllowDragDrop:ReturnValue {
     state draft
 }
 
+DreamButton:GetBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetBackgroundColor
+    src   "Get Background Color"
+    text  "获取背景颜色"
+    state machine
+}
+
 DreamButton:GetBackgroundColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetBackgroundColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamButton:GetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetClickMethod
+    src   "Get Click Method"
+    text  "获取点击方法"
+    state machine
 }
 
 DreamButton:GetClickMethod:ReturnValue {
@@ -108,12 +136,26 @@ DreamButton:GetClickMethod:ReturnValue {
     state draft
 }
 
+DreamButton:GetColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetColorAndOpacity
+    src   "Get Color and Opacity"
+    text  "获取颜色和不透明度"
+    state machine
+}
+
 DreamButton:GetColorAndOpacity:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetColorAndOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamButton:GetDragSource {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetDragSource
+    src   "Get Drag Source"
+    text  "获取拖拽源"
+    state machine
 }
 
 DreamButton:GetDragSource:ReturnValue {
@@ -124,12 +166,26 @@ DreamButton:GetDragSource:ReturnValue {
     state draft
 }
 
+DreamButton:GetPressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetPressMethod
+    src   "Get Press Method"
+    text  "获取按压方法"
+    state machine
+}
+
 DreamButton:GetPressMethod:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetPressMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamButton:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamButton:GetStyle:ReturnValue {
@@ -140,11 +196,26 @@ DreamButton:GetStyle:ReturnValue {
     state draft
 }
 
+DreamButton:GetTouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetTouchMethod
+    src   "Get Touch Method"
+    text  "获取触控方法"
+    state machine
+}
+
 DreamButton:GetTouchMethod:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:GetTouchMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamButton:IsPressed {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:IsPressed
+    src   "Is Pressed"
+    // from the engine's zh-Hans
+    text  "是否按下"
     state draft
 }
 
@@ -204,6 +275,13 @@ DreamButton:PressMethod {
     state draft
 }
 
+DreamButton:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAcceptedMouseButtons
+    src   "Set Accepted Mouse Buttons"
+    text  "设置接受的鼠标按键"
+    state machine
+}
+
 DreamButton:SetAcceptedMouseButtons:InAcceptedMouseButtons {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAcceptedMouseButtons:InAcceptedMouseButtons
     src   "In Accepted Mouse Buttons"
@@ -211,11 +289,27 @@ DreamButton:SetAcceptedMouseButtons:InAcceptedMouseButtons {
     state machine
 }
 
+DreamButton:SetAllowDragDrop {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAllowDragDrop
+    src   "Set Allow Drag Drop"
+    // from the engine's zh-Hans
+    text  "Set Allow Drag Drop"
+    state draft
+}
+
 DreamButton:SetAllowDragDrop:bInAllowDragDrop {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetAllowDragDrop:bInAllowDragDrop
     src   "In Allow Drag Drop"
     // from the engine's zh-Hans
     text  "In Allow Drag Drop"
+    state draft
+}
+
+DreamButton:SetBackgroundColor {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetBackgroundColor
+    src   "Set Background Color"
+    // from the engine's zh-Hans
+    text  "Set Background Color"
     state draft
 }
 
@@ -227,11 +321,27 @@ DreamButton:SetBackgroundColor:InBackgroundColor {
     state draft
 }
 
+DreamButton:SetClickMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetClickMethod
+    src   "Set Click Method"
+    // from the engine's zh-Hans
+    text  "设置点击方法"
+    state draft
+}
+
 DreamButton:SetClickMethod:InMethod {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetClickMethod:InMethod
     src   "In Method"
     text  "传入的方法"
     state machine
+}
+
+DreamButton:SetColorAndOpacity {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetColorAndOpacity
+    src   "Set Color and Opacity"
+    // from the engine's zh-Hans
+    text  "设置颜色和不透明度"
+    state draft
 }
 
 DreamButton:SetColorAndOpacity:InColorAndOpacity {
@@ -242,6 +352,14 @@ DreamButton:SetColorAndOpacity:InColorAndOpacity {
     state draft
 }
 
+DreamButton:SetPressMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetPressMethod
+    src   "Set Press Method"
+    // from the engine's zh-Hans
+    text  "设置按压方法"
+    state draft
+}
+
 DreamButton:SetPressMethod:InMethod {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetPressMethod:InMethod
     src   "In Method"
@@ -249,11 +367,27 @@ DreamButton:SetPressMethod:InMethod {
     state machine
 }
 
+DreamButton:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamButton:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamButton:SetTouchMethod {
+    at    Source/DreamGUIControls/Public/Controls/DreamButton.h#DreamButton:SetTouchMethod
+    src   "Set Touch Method"
+    // from the engine's zh-Hans
+    text  "设置触控方法"
     state draft
 }
 

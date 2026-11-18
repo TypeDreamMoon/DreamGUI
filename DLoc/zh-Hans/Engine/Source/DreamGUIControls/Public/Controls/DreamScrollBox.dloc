@@ -9,6 +9,13 @@ DreamScrollBox {
     state machine
 }
 
+DreamScrollBox:AddContent {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent
+    src   "Add Content"
+    text  "添加内容"
+    state machine
+}
+
 DreamScrollBox:AddContent:InWidget {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:AddContent:InWidget
     src   "In Widget"
@@ -134,6 +141,14 @@ DreamScrollBox:DecelerateRate {
     state machine
 }
 
+DreamScrollBox:EndInertialScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:EndInertialScrolling
+    src   "End Inertial Scrolling"
+    // from the engine's zh-Hans
+    text  "End Inertial Scrolling"
+    state draft
+}
+
 DreamScrollBox:FaceNode {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:FaceNode
     src   "Face Node"
@@ -148,6 +163,13 @@ DreamScrollBox:FocusSelectable {
     state machine
 }
 
+DreamScrollBox:GetAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowOverscroll
+    src   "Get Allow Overscroll"
+    text  "获取允许过度滚动"
+    state machine
+}
+
 DreamScrollBox:GetAllowOverscroll:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowOverscroll:ReturnValue
     src   "Return Value"
@@ -156,11 +178,26 @@ DreamScrollBox:GetAllowOverscroll:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowRightClickDragScrolling
+    src   "Get Allow Right Click Drag Scrolling"
+    text  "获取允许点击右键拖动滚动"
+    state machine
+}
+
 DreamScrollBox:GetAllowRightClickDragScrolling:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAllowRightClickDragScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetAnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnalogMouseWheelKey
+    src   "Get Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Get Analog Mouse Wheel Key"
     state draft
 }
 
@@ -172,12 +209,26 @@ DreamScrollBox:GetAnalogMouseWheelKey:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnimateWheelScrolling
+    src   "Get Animate Wheel Scrolling"
+    text  "获取动画滚轮滚动"
+    state machine
+}
+
 DreamScrollBox:GetAnimateWheelScrolling:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetAnimateWheelScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetBackPadScrolling
+    src   "Get Back Pad Scrolling"
+    text  "获取背填充滚动"
+    state machine
 }
 
 DreamScrollBox:GetBackPadScrolling:ReturnValue {
@@ -188,11 +239,26 @@ DreamScrollBox:GetBackPadScrolling:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetConsumeMouseWheel
+    src   "Get Consume Mouse Wheel"
+    text  "获取消耗鼠标滚轮"
+    state machine
+}
+
 DreamScrollBox:GetConsumeMouseWheel:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetConsumeMouseWheel:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetConsumePointerInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetConsumePointerInput
+    src   "Get Consume Pointer Input"
+    // from the engine's zh-Hans
+    text  "Get Consume Pointer Input"
     state draft
 }
 
@@ -204,12 +270,26 @@ DreamScrollBox:GetConsumePointerInput:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetContentNode {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetContentNode
+    src   "Get Content Node"
+    text  "获取内容节点"
+    state machine
+}
+
 DreamScrollBox:GetContentNode:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetContentNode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetDecelerateRate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetDecelerateRate
+    src   "Get Decelerate Rate"
+    text  "获取减速率"
+    state machine
 }
 
 DreamScrollBox:GetDecelerateRate:ReturnValue {
@@ -220,6 +300,13 @@ DreamScrollBox:GetDecelerateRate:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetEnableTouchScrolling
+    src   "Get Enable Touch Scrolling"
+    text  "获取启用触摸滚动"
+    state machine
+}
+
 DreamScrollBox:GetEnableTouchScrolling:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetEnableTouchScrolling:ReturnValue
     src   "Return Value"
@@ -228,11 +315,26 @@ DreamScrollBox:GetEnableTouchScrolling:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetFrontPadScrolling
+    src   "Get Front Pad Scrolling"
+    text  "获取前填充滚动"
+    state machine
+}
+
 DreamScrollBox:GetFrontPadScrolling:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetFrontPadScrolling:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetIsScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetIsScrolling
+    src   "Get Is Scrolling"
+    // from the engine's zh-Hans
+    text  "Get Is Scrolling"
     state draft
 }
 
@@ -244,12 +346,26 @@ DreamScrollBox:GetIsScrolling:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetNavigationDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetNavigationDestination
+    src   "Get Navigation Destination"
+    text  "获取导航目标"
+    state machine
+}
+
 DreamScrollBox:GetNavigationDestination:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetNavigationDestination:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetNavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetNavigationScrollPadding
+    src   "Get Navigation Scroll Padding"
+    text  "获取导航滚动填充"
+    state machine
 }
 
 DreamScrollBox:GetNavigationScrollPadding:ReturnValue {
@@ -260,11 +376,26 @@ DreamScrollBox:GetNavigationScrollPadding:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOrientation
+    src   "Get Orientation"
+    text  "获取朝向"
+    state machine
+}
+
 DreamScrollBox:GetOrientation:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOrientation:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetOverscrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollOffset
+    src   "Get Overscroll Offset"
+    // from the engine's zh-Hans
+    text  "Get Overscroll Offset"
     state draft
 }
 
@@ -276,12 +407,27 @@ DreamScrollBox:GetOverscrollOffset:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetOverscrollPercentage {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollPercentage
+    src   "Get Overscroll Percentage"
+    // from the engine's zh-Hans
+    text  "Get Overscroll Percentage"
+    state draft
+}
+
 DreamScrollBox:GetOverscrollPercentage:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetOverscrollPercentage:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetScrollbarPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarPadding
+    src   "Get Scrollbar Padding"
+    text  "获取滚动条填充"
+    state machine
 }
 
 DreamScrollBox:GetScrollbarPadding:ReturnValue {
@@ -292,6 +438,13 @@ DreamScrollBox:GetScrollbarPadding:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetScrollbarThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarThickness
+    src   "Get Scrollbar Thickness"
+    text  "获取滚动条粗细"
+    state machine
+}
+
 DreamScrollBox:GetScrollbarThickness:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollbarThickness:ReturnValue
     src   "Return Value"
@@ -300,11 +453,26 @@ DreamScrollBox:GetScrollbarThickness:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollBarVisibility
+    src   "Get Scroll Bar Visibility"
+    text  "获取滚动条可视性"
+    state machine
+}
+
 DreamScrollBox:GetScrollBarVisibility:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollBarVisibility:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffset
+    src   "Get Scroll Offset"
+    // from the engine's zh-Hans
+    text  "Get Scroll Offset"
     state draft
 }
 
@@ -316,12 +484,27 @@ DreamScrollBox:GetScrollOffset:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetScrollOffsetOfEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffsetOfEnd
+    src   "Get Scroll Offset Of End"
+    // from the engine's zh-Hans
+    text  "获取末尾的滚动偏移"
+    state draft
+}
+
 DreamScrollBox:GetScrollOffsetOfEnd:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollOffsetOfEnd:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetScrollProgress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollProgress
+    src   "Get Scroll Progress"
+    text  "获取滚动进度"
+    state machine
 }
 
 DreamScrollBox:GetScrollProgress:ReturnValue {
@@ -332,12 +515,26 @@ DreamScrollBox:GetScrollProgress:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollSensitivity
+    src   "Get Scroll Sensitivity"
+    text  "获取滚动灵敏度"
+    state machine
+}
+
 DreamScrollBox:GetScrollSensitivity:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollSensitivity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollView
+    src   "Get Scroll View"
+    text  "获取滚动视图"
+    state machine
 }
 
 DreamScrollBox:GetScrollView:ReturnValue {
@@ -348,12 +545,26 @@ DreamScrollBox:GetScrollView:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollWhenFocusChanges
+    src   "Get Scroll when Focus Changes"
+    text  "获取聚焦变化时滚动"
+    state machine
+}
+
 DreamScrollBox:GetScrollWhenFocusChanges:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetScrollWhenFocusChanges:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetShowScrollBar
+    src   "Get Show Scroll Bar"
+    text  "获取显示滚动条"
+    state machine
 }
 
 DreamScrollBox:GetShowScrollBar:ReturnValue {
@@ -364,11 +575,26 @@ DreamScrollBox:GetShowScrollBar:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamScrollBox:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBox:GetViewFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewFraction
+    src   "Get View Fraction"
+    // from the engine's zh-Hans
+    text  "Get View Fraction"
     state draft
 }
 
@@ -380,12 +606,27 @@ DreamScrollBox:GetViewFraction:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetViewOffsetFraction {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewOffsetFraction
+    src   "Get View Offset Fraction"
+    // from the engine's zh-Hans
+    text  "获取视图偏移部分"
+    state draft
+}
+
 DreamScrollBox:GetViewOffsetFraction:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetViewOffsetFraction:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:GetWheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetWheelScrollAnimationDuration
+    src   "Get Wheel Scroll Animation Duration"
+    text  "获取滚轮滚动动画时长"
+    state machine
 }
 
 DreamScrollBox:GetWheelScrollAnimationDuration:ReturnValue {
@@ -396,6 +637,13 @@ DreamScrollBox:GetWheelScrollAnimationDuration:ReturnValue {
     state draft
 }
 
+DreamScrollBox:GetWheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetWheelScrollMultiplier
+    src   "Get Wheel Scroll Multiplier"
+    text  "获取滚轮滚动乘数"
+    state machine
+}
+
 DreamScrollBox:GetWheelScrollMultiplier:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:GetWheelScrollMultiplier:ReturnValue
     src   "Return Value"
@@ -404,12 +652,26 @@ DreamScrollBox:GetWheelScrollMultiplier:ReturnValue {
     state draft
 }
 
+DreamScrollBox:IsAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbar
+    src   "Is Always Show Scrollbar"
+    text  "是否始终显示滚动条"
+    state machine
+}
+
 DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbar:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBox:IsAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:IsAlwaysShowScrollbarTrack
+    src   "Is Always Show Scrollbar Track"
+    text  "是否始终显示滚动条轨道"
+    state machine
 }
 
 DreamScrollBox:IsAlwaysShowScrollbarTrack:ReturnValue {
@@ -482,6 +744,13 @@ DreamScrollBox:Orientation {
     state draft
 }
 
+DreamScrollBox:RefreshContentExtent {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:RefreshContentExtent
+    src   "Refresh Content Extent"
+    text  "刷新内容范围"
+    state machine
+}
+
 DreamScrollBox:ScrollBarNode {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollBarNode
     src   "Scroll Bar Node"
@@ -511,6 +780,22 @@ DreamScrollBox:ScrollSensitivity {
     state machine
 }
 
+DreamScrollBox:ScrollToEnd {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollToEnd
+    src   "Scroll to End"
+    // from the engine's zh-Hans
+    text  "滚动到末尾"
+    state draft
+}
+
+DreamScrollBox:ScrollToStart {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollToStart
+    src   "Scroll to Start"
+    // from the engine's zh-Hans
+    text  "滚动到开头"
+    state draft
+}
+
 DreamScrollBox:ScrollView {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollView
     src   "Scroll View"
@@ -523,6 +808,14 @@ DreamScrollBox:ScrollWhenFocusChanges {
     src   "Scroll when Focus Changes"
     // from the engine's zh-Hans
     text  "聚焦变化时滚动"
+    state draft
+}
+
+DreamScrollBox:ScrollWidgetIntoView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:ScrollWidgetIntoView
+    src   "Scroll Widget Into View"
+    // from the engine's zh-Hans
+    text  "将控件滚动到视图中"
     state draft
 }
 
@@ -565,12 +858,27 @@ DreamScrollBox:ScrollWidgetIntoView:ReturnValue {
     state draft
 }
 
+DreamScrollBox:SetAllowOverscroll {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAllowOverscroll
+    src   "Set Allow Overscroll"
+    // from the engine's zh-Hans
+    text  "设置允许过度滚动"
+    state draft
+}
+
 DreamScrollBox:SetAllowOverscroll:bInAllow {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAllowOverscroll:bInAllow
     src   "In Allow"
     // from the engine's zh-Hans
     text  "在允许中"
     state draft
+}
+
+DreamScrollBox:SetAllowRightClickDragScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAllowRightClickDragScrolling
+    src   "Set Allow Right Click Drag Scrolling"
+    text  "设置允许点击右键拖动滚动"
+    state machine
 }
 
 DreamScrollBox:SetAllowRightClickDragScrolling:bInAllow {
@@ -581,10 +889,25 @@ DreamScrollBox:SetAllowRightClickDragScrolling:bInAllow {
     state draft
 }
 
+DreamScrollBox:SetAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAlwaysShowScrollbar
+    src   "Set Always Show Scrollbar"
+    // from the engine's zh-Hans
+    text  "设置固定显示滚动条"
+    state draft
+}
+
 DreamScrollBox:SetAlwaysShowScrollbar:bInAlwaysShow {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAlwaysShowScrollbar:bInAlwaysShow
     src   "In Always Show"
     text  "始终显示"
+    state machine
+}
+
+DreamScrollBox:SetAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAlwaysShowScrollbarTrack
+    src   "Set Always Show Scrollbar Track"
+    text  "设置固定显示滚动条轨道"
     state machine
 }
 
@@ -595,11 +918,27 @@ DreamScrollBox:SetAlwaysShowScrollbarTrack:bInAlwaysShow {
     state machine
 }
 
+DreamScrollBox:SetAnalogMouseWheelKey {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAnalogMouseWheelKey
+    src   "Set Analog Mouse Wheel Key"
+    // from the engine's zh-Hans
+    text  "Set Analog Mouse Wheel Key"
+    state draft
+}
+
 DreamScrollBox:SetAnalogMouseWheelKey:InKey {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAnalogMouseWheelKey:InKey
     src   "In Key"
     // from the engine's zh-Hans
     text  "在键中"
+    state draft
+}
+
+DreamScrollBox:SetAnimateWheelScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetAnimateWheelScrolling
+    src   "Set Animate Wheel Scrolling"
+    // from the engine's zh-Hans
+    text  "设置动画滚轮滚动"
     state draft
 }
 
@@ -610,11 +949,26 @@ DreamScrollBox:SetAnimateWheelScrolling:bInAnimate {
     state machine
 }
 
+DreamScrollBox:SetBackPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetBackPadScrolling
+    src   "Set Back Pad Scrolling"
+    text  "设置背填充滚动"
+    state machine
+}
+
 DreamScrollBox:SetBackPadScrolling:bInPad {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetBackPadScrolling:bInPad
     src   "In Pad"
     text  "输入手柄"
     state machine
+}
+
+DreamScrollBox:SetConsumeMouseWheel {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetConsumeMouseWheel
+    src   "Set Consume Mouse Wheel"
+    // from the engine's zh-Hans
+    text  "设置消耗鼠标滚轮"
+    state draft
 }
 
 DreamScrollBox:SetConsumeMouseWheel:InConsume {
@@ -624,10 +978,25 @@ DreamScrollBox:SetConsumeMouseWheel:InConsume {
     state machine
 }
 
+DreamScrollBox:SetConsumePointerInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetConsumePointerInput
+    src   "Set Consume Pointer Input"
+    // from the engine's zh-Hans
+    text  "Set Consume Pointer Input"
+    state draft
+}
+
 DreamScrollBox:SetConsumePointerInput:bInConsume {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetConsumePointerInput:bInConsume
     src   "In Consume"
     text  "是否消费鼠标滚轮"
+    state machine
+}
+
+DreamScrollBox:SetDecelerateRate {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetDecelerateRate
+    src   "Set Decelerate Rate"
+    text  "设置减速率"
     state machine
 }
 
@@ -639,6 +1008,13 @@ DreamScrollBox:SetDecelerateRate:InRate {
     state draft
 }
 
+DreamScrollBox:SetEnableTouchScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetEnableTouchScrolling
+    src   "Set Enable Touch Scrolling"
+    text  "设置启用触摸滚动"
+    state machine
+}
+
 DreamScrollBox:SetEnableTouchScrolling:bInEnable {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetEnableTouchScrolling:bInEnable
     src   "In Enable"
@@ -647,11 +1023,26 @@ DreamScrollBox:SetEnableTouchScrolling:bInEnable {
     state draft
 }
 
+DreamScrollBox:SetFrontPadScrolling {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetFrontPadScrolling
+    src   "Set Front Pad Scrolling"
+    text  "设置前填充滚动"
+    state machine
+}
+
 DreamScrollBox:SetFrontPadScrolling:bInPad {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetFrontPadScrolling:bInPad
     src   "In Pad"
     text  "输入手柄"
     state machine
+}
+
+DreamScrollBox:SetNavigationDestination {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetNavigationDestination
+    src   "Set Navigation Destination"
+    // from the engine's zh-Hans
+    text  "Set Navigation Destination"
+    state draft
 }
 
 DreamScrollBox:SetNavigationDestination:InDestination {
@@ -662,11 +1053,26 @@ DreamScrollBox:SetNavigationDestination:InDestination {
     state draft
 }
 
+DreamScrollBox:SetNavigationScrollPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetNavigationScrollPadding
+    src   "Set Navigation Scroll Padding"
+    text  "设置导航滚动填充"
+    state machine
+}
+
 DreamScrollBox:SetNavigationScrollPadding:InPadding {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetNavigationScrollPadding:InPadding
     src   "In Padding"
     // from the engine's zh-Hans
     text  "在填充中"
+    state draft
+}
+
+DreamScrollBox:SetOrientation {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetOrientation
+    src   "Set Orientation"
+    // from the engine's zh-Hans
+    text  "设置朝向"
     state draft
 }
 
@@ -678,11 +1084,27 @@ DreamScrollBox:SetOrientation:InOrientation {
     state draft
 }
 
+DreamScrollBox:SetScrollbarPadding {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarPadding
+    src   "Set Scrollbar Padding"
+    // from the engine's zh-Hans
+    text  "设置滚动条填充"
+    state draft
+}
+
 DreamScrollBox:SetScrollbarPadding:InPadding {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarPadding:InPadding
     src   "In Padding"
     // from the engine's zh-Hans
     text  "在填充中"
+    state draft
+}
+
+DreamScrollBox:SetScrollbarThickness {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollbarThickness
+    src   "Set Scrollbar Thickness"
+    // from the engine's zh-Hans
+    text  "设置滚动条厚度"
     state draft
 }
 
@@ -694,11 +1116,27 @@ DreamScrollBox:SetScrollbarThickness:InThickness {
     state draft
 }
 
+DreamScrollBox:SetScrollBarVisibility {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollBarVisibility
+    src   "Set Scroll Bar Visibility"
+    // from the engine's zh-Hans
+    text  "设置滚动条可视性"
+    state draft
+}
+
 DreamScrollBox:SetScrollBarVisibility:InVisibility {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollBarVisibility:InVisibility
     src   "In Visibility"
     // from the engine's zh-Hans
     text  "在可视性中"
+    state draft
+}
+
+DreamScrollBox:SetScrollOffset {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollOffset
+    src   "Set Scroll Offset"
+    // from the engine's zh-Hans
+    text  "设置滚动偏移"
     state draft
 }
 
@@ -710,6 +1148,13 @@ DreamScrollBox:SetScrollOffset:InOffset {
     state draft
 }
 
+DreamScrollBox:SetScrollProgress {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollProgress
+    src   "Set Scroll Progress"
+    text  "设置滚动进度"
+    state machine
+}
+
 DreamScrollBox:SetScrollProgress:InProgress {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollProgress:InProgress
     src   "In Progress"
@@ -718,11 +1163,26 @@ DreamScrollBox:SetScrollProgress:InProgress {
     state draft
 }
 
+DreamScrollBox:SetScrollSensitivity {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollSensitivity
+    src   "Set Scroll Sensitivity"
+    text  "设置滚动灵敏度"
+    state machine
+}
+
 DreamScrollBox:SetScrollSensitivity:InSensitivity {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollSensitivity:InSensitivity
     src   "In Sensitivity"
     text  "输入灵敏度"
     state machine
+}
+
+DreamScrollBox:SetScrollWhenFocusChanges {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetScrollWhenFocusChanges
+    src   "Set Scroll when Focus Changes"
+    // from the engine's zh-Hans
+    text  "焦点变更时设置滚动"
+    state draft
 }
 
 DreamScrollBox:SetScrollWhenFocusChanges:InRule {
@@ -733,11 +1193,26 @@ DreamScrollBox:SetScrollWhenFocusChanges:InRule {
     state draft
 }
 
+DreamScrollBox:SetShowScrollBar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetShowScrollBar
+    src   "Set Show Scroll Bar"
+    text  "设置显示滚动条"
+    state machine
+}
+
 DreamScrollBox:SetShowScrollBar:bInShowScrollBar {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetShowScrollBar:bInShowScrollBar
     src   "In Show Scroll Bar"
     text  "是否显示滚动条"
     state machine
+}
+
+DreamScrollBox:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamScrollBox:SetStyle:InStyle {
@@ -748,11 +1223,26 @@ DreamScrollBox:SetStyle:InStyle {
     state draft
 }
 
+DreamScrollBox:SetWheelScrollAnimationDuration {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetWheelScrollAnimationDuration
+    src   "Set Wheel Scroll Animation Duration"
+    text  "设置滚轮滚动动画时长"
+    state machine
+}
+
 DreamScrollBox:SetWheelScrollAnimationDuration:InDuration {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetWheelScrollAnimationDuration:InDuration
     src   "In Duration"
     // from the engine's zh-Hans
     text  "输入时长"
+    state draft
+}
+
+DreamScrollBox:SetWheelScrollMultiplier {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBox.h#DreamScrollBox:SetWheelScrollMultiplier
+    src   "Set Wheel Scroll Multiplier"
+    // from the engine's zh-Hans
+    text  "设置滚轮滚动乘数"
     state draft
 }
 

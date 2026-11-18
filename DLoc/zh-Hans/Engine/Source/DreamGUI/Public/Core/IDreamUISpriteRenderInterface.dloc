@@ -9,6 +9,20 @@ DreamUISpriteRenderInterface {
     state machine
 }
 
+DreamUISpriteRenderInterface:ApplyAtlasTextureChange {
+    at    Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h#DreamUISpriteRenderInterface:ApplyAtlasTextureChange
+    src   "Apply Atlas Texture Change"
+    text  "应用图集纹理变更"
+    state machine
+}
+
+DreamUISpriteRenderInterface:SpriteRenderGetSprite {
+    at    Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h#DreamUISpriteRenderInterface:SpriteRenderGetSprite
+    src   "Sprite Render Get Sprite"
+    text  "精灵渲染获取精灵"
+    state machine
+}
+
 DreamUISpriteRenderInterface:SpriteRenderGetSprite:ReturnValue {
     at    Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h#DreamUISpriteRenderInterface:SpriteRenderGetSprite:ReturnValue
     src   "Return Value"

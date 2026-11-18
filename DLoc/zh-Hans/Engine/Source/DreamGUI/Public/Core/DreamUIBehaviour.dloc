@@ -40,12 +40,34 @@ DreamUIBehaviour:CacheWidget {
     state draft
 }
 
+DreamUIBehaviour:DestroyComponent {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:DestroyComponent
+    src   "Destroy Component"
+    // from the engine's zh-Hans
+    text  "销毁组件"
+    state draft
+}
+
+DreamUIBehaviour:GetAnimationPlayer {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetAnimationPlayer
+    src   "Get Animation Player"
+    text  "获取动画播放器"
+    state machine
+}
+
 DreamUIBehaviour:GetAnimationPlayer:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetAnimationPlayer:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIBehaviour:GetPathDisplayName {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetPathDisplayName
+    src   "Get Path Display Name"
+    text  "获取路径显示名"
+    state machine
 }
 
 DreamUIBehaviour:GetPathDisplayName:ReturnValue {
@@ -56,12 +78,42 @@ DreamUIBehaviour:GetPathDisplayName:ReturnValue {
     state draft
 }
 
+DreamUIBehaviour:GetWidget {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetWidget
+    src   "Get Widget"
+    // from the engine's zh-Hans
+    text  "获取控件"
+    state draft
+}
+
 DreamUIBehaviour:GetWidget:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:GetWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIBehaviour:ReceiveAwake {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveAwake
+    src   "Awake"
+    // from the engine's zh-Hans
+    text  "苏醒"
+    state draft
+}
+
+DreamUIBehaviour:ReceiveOnAttachmentChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnAttachmentChanged
+    src   "OnAttachmentChanged"
+    text  "挂载变更时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnChildDimensionsChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnChildDimensionsChanged
+    src   "OnChildDimensionsChanged"
+    text  "子项尺寸变更时"
+    state machine
 }
 
 DreamUIBehaviour:ReceiveOnChildDimensionsChanged:Child {
@@ -93,6 +145,20 @@ DreamUIBehaviour:ReceiveOnChildDimensionsChanged:WidthChanged {
     state machine
 }
 
+DreamUIBehaviour:ReceiveOnDestroy {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDestroy
+    src   "OnDestroy"
+    text  "销毁时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnDimensionsChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged
+    src   "OnDimensionsChanged"
+    text  "尺寸变更时"
+    state machine
+}
+
 DreamUIBehaviour:ReceiveOnDimensionsChanged:HeightChanged {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDimensionsChanged:HeightChanged
     src   "Height Changed"
@@ -114,10 +180,38 @@ DreamUIBehaviour:ReceiveOnDimensionsChanged:WidthChanged {
     state machine
 }
 
+DreamUIBehaviour:ReceiveOnDisable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnDisable
+    src   "OnDisable"
+    text  "禁用时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnEnable {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnEnable
+    src   "OnEnable"
+    text  "启用时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnInteractableChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnInteractableChanged
+    src   "OnInteractableChanged"
+    text  "可交互变更时"
+    state machine
+}
+
 DreamUIBehaviour:ReceiveOnInteractableChanged:Interactable {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnInteractableChanged:Interactable
     src   "Interactable"
     text  "可交互"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnRaycastableChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnRaycastableChanged
+    src   "OnRaycastableChanged"
+    text  "可射线检测变更时"
     state machine
 }
 
@@ -128,12 +222,49 @@ DreamUIBehaviour:ReceiveOnRaycastableChanged:Raycastable {
     state machine
 }
 
+DreamUIBehaviour:ReceiveOnSiblingIndexChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnSiblingIndexChanged
+    src   "OnSiblingIndexChanged"
+    text  "同级序号变更时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveOnTransformChanged {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveOnTransformChanged
+    src   "OnTransformChanged"
+    text  "变换变更时"
+    state machine
+}
+
+DreamUIBehaviour:ReceiveStart {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveStart
+    src   "Start"
+    // from the engine's zh-Hans
+    text  "开始"
+    state draft
+}
+
+DreamUIBehaviour:ReceiveTick {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveTick
+    src   "Tick"
+    // from the engine's zh-Hans
+    text  "Tick"
+    state draft
+}
+
 DreamUIBehaviour:ReceiveTick:DeltaTime {
     at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:ReceiveTick:DeltaTime
     src   "Delta Time"
     // from the engine's zh-Hans
     text  "差量时间"
     state draft
+}
+
+DreamUIBehaviour:SetCanExecuteTick {
+    at    Source/DreamGUI/Public/Core/DreamUIBehaviour.h#DreamUIBehaviour:SetCanExecuteTick
+    src   "Set Can Execute Tick"
+    text  "设置是否可 Tick"
+    state machine
 }
 
 DreamUIBehaviour:SetCanExecuteTick:Value {

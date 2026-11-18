@@ -9,6 +9,13 @@ DreamUIAnimationLibrary {
     state machine
 }
 
+DreamUIAnimationLibrary:EqualAnimationHandles {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:EqualAnimationHandles
+    src   "Equal (Animation Handle)"
+    text  "相等（动画句柄）"
+    state machine
+}
+
 DreamUIAnimationLibrary:EqualAnimationHandles:A {
     at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:EqualAnimationHandles:A
     src   "A"
@@ -33,6 +40,13 @@ DreamUIAnimationLibrary:EqualAnimationHandles:ReturnValue {
     state draft
 }
 
+DreamUIAnimationLibrary:GetAnimationFromHandle {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle
+    src   "Get Animation (Animation Handle)"
+    text  "获取动画（动画句柄）"
+    state machine
+}
+
 DreamUIAnimationLibrary:GetAnimationFromHandle:Handle {
     at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:GetAnimationFromHandle:Handle
     src   "Handle"
@@ -47,6 +61,13 @@ DreamUIAnimationLibrary:GetAnimationFromHandle:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIAnimationLibrary:IsAnimationHandleValid {
+    at    Source/DreamGUI/Public/Animation/DreamUIAnimationLibrary.h#DreamUIAnimationLibrary:IsAnimationHandleValid
+    src   "Is Valid (Animation Handle)"
+    text  "是否有效（动画句柄）"
+    state machine
 }
 
 DreamUIAnimationLibrary:IsAnimationHandleValid:Handle {

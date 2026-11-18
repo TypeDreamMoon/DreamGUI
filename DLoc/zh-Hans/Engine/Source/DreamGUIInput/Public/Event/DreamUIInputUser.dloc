@@ -9,6 +9,13 @@ DreamUIInputUser {
     state machine
 }
 
+DreamUIInputUser:GetFocusCause {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusCause
+    src   "Get Focus Cause"
+    text  "获取聚焦原因"
+    state machine
+}
+
 DreamUIInputUser:GetFocusCause:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusCause:ReturnValue
     src   "Return Value"
@@ -17,11 +24,26 @@ DreamUIInputUser:GetFocusCause:ReturnValue {
     state draft
 }
 
+DreamUIInputUser:GetFocusedWidget {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusedWidget
+    src   "Get Focused Widget"
+    text  "获取焦点控件"
+    state machine
+}
+
 DreamUIInputUser:GetFocusedWidget:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetFocusedWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIInputUser:GetPlayerController {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetPlayerController
+    src   "Get Player Controller"
+    // from the engine's zh-Hans
+    text  "Get Player Controller"
     state draft
 }
 
@@ -33,6 +55,14 @@ DreamUIInputUser:GetPlayerController:ReturnValue {
     state draft
 }
 
+DreamUIInputUser:GetUserIndex {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
+    state draft
+}
+
 DreamUIInputUser:GetUserIndex:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:GetUserIndex:ReturnValue
     src   "Return Value"
@@ -41,12 +71,26 @@ DreamUIInputUser:GetUserIndex:ReturnValue {
     state draft
 }
 
+DreamUIInputUser:IsFocusVisible {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsFocusVisible
+    src   "Is Focus Visible"
+    text  "焦点是否可见"
+    state machine
+}
+
 DreamUIInputUser:IsFocusVisible:ReturnValue {
     at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsFocusVisible:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIInputUser:IsScriptUser {
+    at    Source/DreamGUIInput/Public/Event/DreamUIInputUser.h#DreamUIInputUser:IsScriptUser
+    src   "Is Script User"
+    text  "是否为脚本用户"
+    state machine
 }
 
 DreamUIInputUser:IsScriptUser:ReturnValue {

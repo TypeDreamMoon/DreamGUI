@@ -66,12 +66,26 @@ DreamSprite:FillOriginType_Radial90 {
     state machine
 }
 
+DreamSprite:GetFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillAmount
+    src   "Get Fill Amount"
+    text  "获取填充量"
+    state machine
+}
+
 DreamSprite:GetFillAmount:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillAmount:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSprite:GetFillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillDirectionFlip
+    src   "Get Fill Direction Flip"
+    text  "获取填充方向翻转"
+    state machine
 }
 
 DreamSprite:GetFillDirectionFlip:ReturnValue {
@@ -82,12 +96,26 @@ DreamSprite:GetFillDirectionFlip:ReturnValue {
     state draft
 }
 
+DreamSprite:GetFillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillMethod
+    src   "Get Fill Method"
+    text  "获取填充方法"
+    state machine
+}
+
 DreamSprite:GetFillMethod:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillMethod:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSprite:GetFillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetFillOrigin
+    src   "Get Fill Origin"
+    text  "获取填充原点"
+    state machine
 }
 
 DreamSprite:GetFillOrigin:ReturnValue {
@@ -98,12 +126,26 @@ DreamSprite:GetFillOrigin:ReturnValue {
     state draft
 }
 
+DreamSprite:GetPixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetPixelsPerUnitMultiplier
+    src   "Get Pixels Per Unit Multiplier"
+    text  "获取像素/单位倍数"
+    state machine
+}
+
 DreamSprite:GetPixelsPerUnitMultiplier:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetPixelsPerUnitMultiplier:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamSprite:GetSpriteDrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:GetSpriteDrawType
+    src   "Get Sprite Draw Type"
+    text  "获取精灵绘制类型"
+    state machine
 }
 
 DreamSprite:GetSpriteDrawType:ReturnValue {
@@ -121,12 +163,26 @@ DreamSprite:PixelsPerUnitMultiplier {
     state machine
 }
 
+DreamSprite:SetDrawType {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetDrawType
+    src   "Set Draw Type"
+    text  "设置绘制类型"
+    state machine
+}
+
 DreamSprite:SetDrawType:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetDrawType:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamSprite:SetFillAmount {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillAmount
+    src   "Set Fill Amount"
+    text  "设置填充量"
+    state machine
 }
 
 DreamSprite:SetFillAmount:Value {
@@ -137,12 +193,26 @@ DreamSprite:SetFillAmount:Value {
     state draft
 }
 
+DreamSprite:SetFillDirectionFlip {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillDirectionFlip
+    src   "Set Fill Direction Flip"
+    text  "设置填充方向翻转"
+    state machine
+}
+
 DreamSprite:SetFillDirectionFlip:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillDirectionFlip:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamSprite:SetFillMethod {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillMethod
+    src   "Set Fill Method"
+    text  "设置填充方法"
+    state machine
 }
 
 DreamSprite:SetFillMethod:Value {
@@ -153,12 +223,26 @@ DreamSprite:SetFillMethod:Value {
     state draft
 }
 
+DreamSprite:SetFillOrigin {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillOrigin
+    src   "Set Fill Origin"
+    text  "设置填充原点"
+    state machine
+}
+
 DreamSprite:SetFillOrigin:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetFillOrigin:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamSprite:SetPixelsPerUnitMultiplier {
+    at    Source/DreamGUI/Public/Core/Components/DreamSprite.h#DreamSprite:SetPixelsPerUnitMultiplier
+    src   "Set Pixels Per Unit Multiplier"
+    text  "设置像素/单位倍数"
+    state machine
 }
 
 DreamSprite:SetPixelsPerUnitMultiplier:Value {

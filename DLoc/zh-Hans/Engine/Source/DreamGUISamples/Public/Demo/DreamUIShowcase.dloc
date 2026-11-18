@@ -30,12 +30,26 @@ DreamUIControlsGalleryPanel:GalleryClickTotal {
     state machine
 }
 
+DreamUIControlsGalleryPanel:GetClickTotalText {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetClickTotalText
+    src   "Get Click Total Text"
+    text  "获取点击总文本"
+    state machine
+}
+
 DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetClickTotalText:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIControlsGalleryPanel:GetEventLogText {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:GetEventLogText
+    src   "Get Event Log Text"
+    text  "获取事件日志文本"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:GetEventLogText:ReturnValue {
@@ -46,6 +60,13 @@ DreamUIControlsGalleryPanel:GetEventLogText:ReturnValue {
     state draft
 }
 
+DreamUIControlsGalleryPanel:HandleGallerySpin {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:HandleGallerySpin
+    src   "Handle Gallery Spin"
+    text  "处理画廊旋转"
+    state machine
+}
+
 DreamUIControlsGalleryPanel:HandleGallerySpin:InValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:HandleGallerySpin:InValue
     src   "In Value"
@@ -54,10 +75,31 @@ DreamUIControlsGalleryPanel:HandleGallerySpin:InValue {
     state draft
 }
 
+DreamUIControlsGalleryPanel:LogEvent {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:LogEvent
+    src   "Log Event"
+    text  "记录事件"
+    state machine
+}
+
 DreamUIControlsGalleryPanel:LogEvent:InLine {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:LogEvent:InLine
     src   "In Line"
     text  "行内"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:OnGalleryButton {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryButton
+    src   "On Gallery Button"
+    text  "画廊按钮时"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:OnGalleryChipDropped {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryChipDropped
+    src   "On Gallery Chip Dropped"
+    text  "画廊碎片放下时"
     state machine
 }
 
@@ -69,12 +111,33 @@ DreamUIControlsGalleryPanel:OnGalleryChipDropped:InOperation {
     state draft
 }
 
+DreamUIControlsGalleryPanel:OnGallerySecondButton {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGallerySecondButton
+    src   "On Gallery Second Button"
+    text  "画廊第二按钮时"
+    state machine
+}
+
+DreamUIControlsGalleryPanel:OnGalleryToggle {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryToggle
+    src   "On Gallery Toggle"
+    text  "画廊开关时"
+    state machine
+}
+
 DreamUIControlsGalleryPanel:OnGalleryToggle:InValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryToggle:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamUIControlsGalleryPanel:OnGalleryWheelPick {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIControlsGalleryPanel:OnGalleryWheelPick
+    src   "On Gallery Wheel Pick"
+    text  "画廊滚轮选择时"
+    state machine
 }
 
 DreamUIControlsGalleryPanel:OnGalleryWheelPick:InIndex {
@@ -129,12 +192,26 @@ DreamUIShowcasePanel:DropCount {
     state machine
 }
 
+DreamUIShowcasePanel:GetFade {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetFade
+    src   "Get Fade"
+    text  "获取淡入淡出"
+    state machine
+}
+
 DreamUIShowcasePanel:GetFade:ReturnValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetFade:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIShowcasePanel:GetHistory {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetHistory
+    src   "Get History"
+    text  "获取历史记录"
+    state machine
 }
 
 DreamUIShowcasePanel:GetHistory:ReturnValue {
@@ -145,12 +222,26 @@ DreamUIShowcasePanel:GetHistory:ReturnValue {
     state draft
 }
 
+DreamUIShowcasePanel:GetNowPlaying {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetNowPlaying
+    src   "Get Now Playing"
+    text  "获取正在播放"
+    state machine
+}
+
 DreamUIShowcasePanel:GetNowPlaying:ReturnValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetNowPlaying:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIShowcasePanel:GetTrackCount {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetTrackCount
+    src   "Get Track Count"
+    text  "获取轨道数"
+    state machine
 }
 
 DreamUIShowcasePanel:GetTrackCount:ReturnValue {
@@ -161,12 +252,26 @@ DreamUIShowcasePanel:GetTrackCount:ReturnValue {
     state draft
 }
 
+DreamUIShowcasePanel:GetVolume {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetVolume
+    src   "Get Volume"
+    text  "获取音量"
+    state machine
+}
+
 DreamUIShowcasePanel:GetVolume:ReturnValue {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:GetVolume:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIShowcasePanel:HandleChipDropped {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleChipDropped
+    src   "Handle Chip Dropped"
+    text  "处理碎片放下"
+    state machine
 }
 
 DreamUIShowcasePanel:HandleChipDropped:InOperation {
@@ -177,12 +282,33 @@ DreamUIShowcasePanel:HandleChipDropped:InOperation {
     state draft
 }
 
+DreamUIShowcasePanel:HandleConfirm {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleConfirm
+    src   "Handle Confirm"
+    text  "处理确认"
+    state machine
+}
+
+DreamUIShowcasePanel:HandleOpenModal {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:HandleOpenModal
+    src   "Handle Open Modal"
+    text  "处理打开模态"
+    state machine
+}
+
 DreamUIShowcasePanel:History {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:History
     src   "History"
     // from the engine's zh-Hans
     text  "历史记录"
     state draft
+}
+
+DreamUIShowcasePanel:IsMuted {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:IsMuted
+    src   "Is Muted"
+    text  "是否静音"
+    state machine
 }
 
 DreamUIShowcasePanel:IsMuted:ReturnValue {
@@ -211,6 +337,13 @@ DreamUIShowcasePanel:ModalDialogClass {
     at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:ModalDialogClass
     src   "Modal Dialog Class"
     text  "模态对话框类"
+    state machine
+}
+
+DreamUIShowcasePanel:PopulateDemoData {
+    at    Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h#DreamUIShowcasePanel:PopulateDemoData
+    src   "Populate Demo Data"
+    text  "填充演示数据"
     state machine
 }
 

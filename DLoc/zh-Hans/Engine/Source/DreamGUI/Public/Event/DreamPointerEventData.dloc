@@ -68,12 +68,26 @@ DreamPointerEventData:FaceIndex {
     state draft
 }
 
+DreamPointerEventData:GetCumulativeMoveDelta {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta
+    src   "Get Cumulative Move Delta"
+    text  "获取累计移动增量"
+    state machine
+}
+
 DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetCumulativeMoveDelta:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetDragRayDirection {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayDirection
+    src   "Get Drag Ray Direction"
+    text  "获取拖拽射线方向"
+    state machine
 }
 
 DreamPointerEventData:GetDragRayDirection:ReturnValue {
@@ -84,12 +98,26 @@ DreamPointerEventData:GetDragRayDirection:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetDragRayOrigin {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin
+    src   "Get Drag Ray Origin"
+    text  "获取拖拽射线起点"
+    state machine
+}
+
 DreamPointerEventData:GetDragRayOrigin:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetDragRayOrigin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetHighlightedComponentForNavigation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetHighlightedComponentForNavigation
+    src   "Get Highlighted Component for Navigation"
+    text  "获取导航高亮组件"
+    state machine
 }
 
 DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
@@ -100,6 +128,13 @@ DreamPointerEventData:GetHighlightedComponentForNavigation:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetLocalPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane
+    src   "Get Local Point in Plane"
+    text  "获取平面内的局部点"
+    state machine
+}
+
 DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetLocalPointInPlane:ReturnValue
     src   "Return Value"
@@ -108,12 +143,26 @@ DreamPointerEventData:GetLocalPointInPlane:ReturnValue {
     state draft
 }
 
+DreamPointerEventData:GetWorldPointInPlane {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane
+    src   "Get World Point in Plane"
+    text  "获取平面内的世界点"
+    state machine
+}
+
 DreamPointerEventData:GetWorldPointInPlane:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointInPlane:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerEventData:GetWorldPointSpherical {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:GetWorldPointSpherical
+    src   "Get World Point Spherical"
+    text  "获取球面世界点"
+    state machine
 }
 
 DreamPointerEventData:GetWorldPointSpherical:ReturnValue {
@@ -144,6 +193,13 @@ DreamPointerEventData:InputType {
     // from the engine's zh-Hans
     text  "输入类型"
     state draft
+}
+
+DreamPointerEventData:IsPointerOverUI {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:IsPointerOverUI
+    src   "Is Pointer Over UI"
+    text  "指针是否在 UI 上"
+    state machine
 }
 
 DreamPointerEventData:IsPointerOverUI:ReturnValue {
@@ -292,6 +348,13 @@ DreamPointerEventData:ScrollAxisValue {
     at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:ScrollAxisValue
     src   "Scroll Axis Value"
     text  "滚动轴值"
+    state machine
+}
+
+DreamPointerEventData:SetHighlightedWidgetForNavigation {
+    at    Source/DreamGUI/Public/Event/DreamPointerEventData.h#DreamPointerEventData:SetHighlightedWidgetForNavigation
+    src   "Set Highlighted Widget for Navigation"
+    text  "设置导航高亮控件"
     state machine
 }
 

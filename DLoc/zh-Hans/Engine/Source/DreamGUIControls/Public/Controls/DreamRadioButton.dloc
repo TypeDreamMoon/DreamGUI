@@ -52,6 +52,13 @@ DreamRadioButton:DotNode {
     state machine
 }
 
+DreamRadioButton:GetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAcceptedMouseButtons
+    src   "Get Accepted Mouse Buttons"
+    text  "获取接受的鼠标按键"
+    state machine
+}
+
 DreamRadioButton:GetAcceptedMouseButtons:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAcceptedMouseButtons:ReturnValue
     src   "Return Value"
@@ -60,11 +67,26 @@ DreamRadioButton:GetAcceptedMouseButtons:ReturnValue {
     state draft
 }
 
+DreamRadioButton:GetAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAutoGroupWithSiblings
+    src   "Get Auto Group with Siblings"
+    text  "获取自动与同级分组"
+    state machine
+}
+
 DreamRadioButton:GetAutoGroupWithSiblings:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetAutoGroupWithSiblings:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamRadioButton:GetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetCheckedState
+    src   "Get Checked State"
+    // from the engine's zh-Hans
+    text  "获取已勾选状态"
     state draft
 }
 
@@ -76,12 +98,26 @@ DreamRadioButton:GetCheckedState:ReturnValue {
     state draft
 }
 
+DreamRadioButton:GetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetIsOn
+    src   "Get Is On"
+    text  "获取是否开启"
+    state machine
+}
+
 DreamRadioButton:GetIsOn:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetIsOn:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRadioButton:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamRadioButton:GetStyle:ReturnValue {
@@ -92,11 +128,26 @@ DreamRadioButton:GetStyle:ReturnValue {
     state draft
 }
 
+DreamRadioButton:GetToggleGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetToggleGroup
+    src   "Get Toggle Group"
+    text  "获取切换组"
+    state machine
+}
+
 DreamRadioButton:GetToggleGroup:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:GetToggleGroup:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamRadioButton:IsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:IsChecked
+    src   "Is Checked"
+    // from the engine's zh-Hans
+    text  "已勾选"
     state draft
 }
 
@@ -130,10 +181,24 @@ DreamRadioButton:OnValueChangedBP {
     state machine
 }
 
+DreamRadioButton:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAcceptedMouseButtons
+    src   "Set Accepted Mouse Buttons"
+    text  "设置接受的鼠标按键"
+    state machine
+}
+
 DreamRadioButton:SetAcceptedMouseButtons:InAcceptedMouseButtons {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAcceptedMouseButtons:InAcceptedMouseButtons
     src   "In Accepted Mouse Buttons"
     text  "传入的可接受鼠标按键"
+    state machine
+}
+
+DreamRadioButton:SetAutoGroupWithSiblings {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetAutoGroupWithSiblings
+    src   "Set Auto Group with Siblings"
+    text  "设置自动与同级分组"
     state machine
 }
 
@@ -144,11 +209,27 @@ DreamRadioButton:SetAutoGroupWithSiblings:bInAutoGroupWithSiblings {
     state machine
 }
 
+DreamRadioButton:SetCheckedState {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetCheckedState
+    src   "Set Checked State"
+    // from the engine's zh-Hans
+    text  "设置已勾选状态"
+    state draft
+}
+
 DreamRadioButton:SetCheckedState:InCheckedState {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetCheckedState:InCheckedState
     src   "In Checked State"
     // from the engine's zh-Hans
     text  "在已勾选状态中"
+    state draft
+}
+
+DreamRadioButton:SetIsChecked {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsChecked
+    src   "Set Is Checked"
+    // from the engine's zh-Hans
+    text  "设置已勾选"
     state draft
 }
 
@@ -160,11 +241,26 @@ DreamRadioButton:SetIsChecked:bInIsChecked {
     state draft
 }
 
+DreamRadioButton:SetIsOn {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsOn
+    src   "Set Is On"
+    text  "设置是否开启"
+    state machine
+}
+
 DreamRadioButton:SetIsOn:bInIsOn {
     at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetIsOn:bInIsOn
     src   "In Is On"
     text  "输入是否开启"
     state machine
+}
+
+DreamRadioButton:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
 }
 
 DreamRadioButton:SetStyle:InStyle {
@@ -173,6 +269,13 @@ DreamRadioButton:SetStyle:InStyle {
     // from the engine's zh-Hans
     text  "输入风格"
     state draft
+}
+
+DreamRadioButton:SetToggleGroup {
+    at    Source/DreamGUIControls/Public/Controls/DreamRadioButton.h#DreamRadioButton:SetToggleGroup
+    src   "Set Toggle Group"
+    text  "设置切换组"
+    state machine
 }
 
 DreamRadioButton:SetToggleGroup:InGroup {

@@ -9,12 +9,40 @@ DreamBaseRaycaster {
     state machine
 }
 
+DreamBaseRaycaster:ActivateRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:ActivateRaycaster
+    src   "Activate Raycaster"
+    text  "激活射线检测器"
+    state machine
+}
+
+DreamBaseRaycaster:DeactivateRaycaster {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:DeactivateRaycaster
+    src   "Deactivate Raycaster"
+    text  "停用射线检测器"
+    state machine
+}
+
+DreamBaseRaycaster:GetAffectByGamePause {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetAffectByGamePause
+    src   "Get Affect by Game Pause"
+    text  "获取受游戏暂停影响"
+    state machine
+}
+
 DreamBaseRaycaster:GetAffectByGamePause:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetAffectByGamePause:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBaseRaycaster:GetPointerID {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetPointerID
+    src   "Get Pointer ID"
+    text  "获取指针 ID"
+    state machine
 }
 
 DreamBaseRaycaster:GetPointerID:ReturnValue {
@@ -25,12 +53,26 @@ DreamBaseRaycaster:GetPointerID:ReturnValue {
     state draft
 }
 
+DreamBaseRaycaster:GetRayDirection {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayDirection
+    src   "Get Ray Direction"
+    text  "获取射线方向"
+    state machine
+}
+
 DreamBaseRaycaster:GetRayDirection:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayDirection:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamBaseRaycaster:GetRayLength {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayLength
+    src   "Get Ray Length"
+    text  "获取光线长度"
+    state machine
 }
 
 DreamBaseRaycaster:GetRayLength:ReturnValue {
@@ -41,11 +83,26 @@ DreamBaseRaycaster:GetRayLength:ReturnValue {
     state draft
 }
 
+DreamBaseRaycaster:GetRayOrigin {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayOrigin
+    src   "Get Ray Origin"
+    text  "获取射线起点"
+    state machine
+}
+
 DreamBaseRaycaster:GetRayOrigin:ReturnValue {
     at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetRayOrigin:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamBaseRaycaster:GetUserIndex {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:GetUserIndex
+    src   "Get User Index"
+    // from the engine's zh-Hans
+    text  "获取用户索引"
     state draft
 }
 
@@ -64,12 +121,26 @@ DreamBaseRaycaster:PointerID {
     state machine
 }
 
+DreamBaseRaycaster:SetPointerID {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetPointerID
+    src   "Set Pointer ID"
+    text  "设置指针 ID"
+    state machine
+}
+
 DreamBaseRaycaster:SetPointerID:Value {
     at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetPointerID:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamBaseRaycaster:SetUserIndex {
+    at    Source/DreamGUI/Public/Event/DreamBaseRaycaster.h#DreamBaseRaycaster:SetUserIndex
+    src   "Set User Index"
+    text  "设置用户索引"
+    state machine
 }
 
 DreamBaseRaycaster:SetUserIndex:InUserIndex {

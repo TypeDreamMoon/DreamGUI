@@ -9,6 +9,14 @@ DreamUICaptureLibrary {
     state machine
 }
 
+DreamUICaptureLibrary:CaptureAll {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll
+    src   "Capture All"
+    // from the engine's zh-Hans
+    text  "捕获所有"
+    state draft
+}
+
 DreamUICaptureLibrary:CaptureAll:InDirectory {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll:InDirectory
     src   "In Directory"
@@ -32,12 +40,26 @@ DreamUICaptureLibrary:CaptureAll:ReturnValue {
     state draft
 }
 
+DreamUICaptureLibrary:GetCaptureDirectory {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory
+    src   "Get Capture Directory"
+    text  "获取捕获目录"
+    state machine
+}
+
 DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUICaptureLibrary:SaveCanvasToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveCanvasToPng
+    src   "Save Canvas to Png"
+    text  "把画布保存为 PNG"
+    state machine
 }
 
 DreamUICaptureLibrary:SaveCanvasToPng:InCanvas {
@@ -64,6 +86,13 @@ DreamUICaptureLibrary:SaveCanvasToPng:ReturnValue {
     state draft
 }
 
+DreamUICaptureLibrary:SaveRenderTargetToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng
+    src   "Save Render Target to Png"
+    text  "把渲染目标保存为 PNG"
+    state machine
+}
+
 DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveRenderTargetToPng:InFilePath
     src   "In File Path"
@@ -86,6 +115,13 @@ DreamUICaptureLibrary:SaveRenderTargetToPng:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUICaptureLibrary:SaveViewportToPng {
+    at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:SaveViewportToPng
+    src   "Save Viewport to Png"
+    text  "把视口保存为 PNG"
+    state machine
 }
 
 DreamUICaptureLibrary:SaveViewportToPng:InFilePath {
@@ -124,11 +160,15 @@ DreamUICaptureLibrary {
 DreamUICaptureLibrary:CaptureAll {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:CaptureAll
     src   "Everything there is to look at in InWorldContextObject's world, into InDirectory -- a new time-stamped\ndirectory under the capture directory when it is empty: the viewport as Viewport.png, and each root canvas that\nrenders into a target as <its widget's name>.png. Returns the files written, in that order."
+    text  "把 InWorldContextObject 所在世界里能看到的一切存进 InDirectory——该参数为空时，在捕获目录下\n新建一个带时间戳的目录：视口存为 Viewport.png，每个渲染到目标的根画布存为\n<其控件名>.png。按这个顺序返回写出的文件。"
+    state draft
 }
 
 DreamUICaptureLibrary:GetCaptureDirectory {
     at    Source/DreamGUI/Public/DreamUICaptureLibrary.h#DreamUICaptureLibrary:GetCaptureDirectory
     src   "<Project>/Saved/DreamUI/Captures, the directory a relative path given to these functions is taken from."
+    text  "<Project>/Saved/DreamUI/Captures，传给这些函数的相对路径以它为基准目录。"
+    state draft
 }
 
 DreamUICaptureLibrary:SaveCanvasToPng {

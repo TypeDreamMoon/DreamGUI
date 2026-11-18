@@ -9,11 +9,26 @@ DreamViewModel {
     state machine
 }
 
+DreamViewModel:IsDesignTimeInstance {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:IsDesignTimeInstance
+    src   "Is Design Time Instance"
+    text  "是否设计时实例"
+    state machine
+}
+
 DreamViewModel:IsDesignTimeInstance:ReturnValue {
     at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:IsDesignTimeInstance:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamViewModel:K2_AddFieldValueChangedDelegate {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_AddFieldValueChangedDelegate
+    src   "Add Field Value Changed Delegate"
+    // from the engine's zh-Hans
+    text  "Add Field Value Changed Delegate"
     state draft
 }
 
@@ -33,11 +48,27 @@ DreamViewModel:K2_AddFieldValueChangedDelegate:FieldId {
     state draft
 }
 
+DreamViewModel:K2_BroadcastFieldValueChanged {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_BroadcastFieldValueChanged
+    src   "Broadcast Field Value Changed"
+    // from the engine's zh-Hans
+    text  "Broadcast Field Value Changed"
+    state draft
+}
+
 DreamViewModel:K2_BroadcastFieldValueChanged:FieldId {
     at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_BroadcastFieldValueChanged:FieldId
     src   "Field Id"
     // from the engine's zh-Hans
     text  "字段Id"
+    state draft
+}
+
+DreamViewModel:K2_RemoveFieldValueChangedDelegate {
+    at    Source/DreamGUI/Public/ViewModel/DreamViewModel.h#DreamViewModel:K2_RemoveFieldValueChangedDelegate
+    src   "Remove Field Value Changed Delegate"
+    // from the engine's zh-Hans
+    text  "Remove Field Value Changed Delegate"
     state draft
 }
 

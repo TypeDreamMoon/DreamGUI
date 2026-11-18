@@ -103,12 +103,26 @@ DreamScrollBar:Direction {
     state draft
 }
 
+DreamScrollBar:GetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAcceptedMouseButtons
+    src   "Get Accepted Mouse Buttons"
+    text  "获取接受的鼠标按键"
+    state machine
+}
+
 DreamScrollBar:GetAcceptedMouseButtons:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAcceptedMouseButtons:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBar:GetAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAlwaysShowScrollbar
+    src   "Get Always Show Scrollbar"
+    text  "获取固定显示滚动条"
+    state machine
 }
 
 DreamScrollBar:GetAlwaysShowScrollbar:ReturnValue {
@@ -119,6 +133,13 @@ DreamScrollBar:GetAlwaysShowScrollbar:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAlwaysShowScrollbarTrack
+    src   "Get Always Show Scrollbar Track"
+    text  "获取固定显示滚动条轨道"
+    state machine
+}
+
 DreamScrollBar:GetAlwaysShowScrollbarTrack:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetAlwaysShowScrollbarTrack:ReturnValue
     src   "Return Value"
@@ -127,11 +148,26 @@ DreamScrollBar:GetAlwaysShowScrollbarTrack:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetArrowStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetArrowStepSize
+    src   "Get Arrow Step Size"
+    text  "获取箭头步进大小"
+    state machine
+}
+
 DreamScrollBar:GetArrowStepSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetArrowStepSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetDirection
+    src   "Get Direction"
+    // from the engine's zh-Hans
+    text  "获取方向"
     state draft
 }
 
@@ -143,12 +179,26 @@ DreamScrollBar:GetDirection:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetHandleSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetHandleSize
+    src   "Get Handle Size"
+    text  "获取柄大小"
+    state machine
+}
+
 DreamScrollBar:GetHandleSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetHandleSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBar:GetMinHandleLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetMinHandleLength
+    src   "Get Min Handle Length"
+    text  "获取最小手柄长度"
+    state machine
 }
 
 DreamScrollBar:GetMinHandleLength:ReturnValue {
@@ -159,12 +209,26 @@ DreamScrollBar:GetMinHandleLength:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetNavigationChangeInterval
+    src   "Get Navigation Change Interval"
+    text  "获取导航变化间隔"
+    state machine
+}
+
 DreamScrollBar:GetNavigationChangeInterval:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetNavigationChangeInterval:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamScrollBar:GetScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetScrollView
+    src   "Get Scroll View"
+    text  "获取滚动视图"
+    state machine
 }
 
 DreamScrollBar:GetScrollView:ReturnValue {
@@ -175,6 +239,13 @@ DreamScrollBar:GetScrollView:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetShowArrows
+    src   "Get Show Arrows"
+    text  "获取显示箭头"
+    state machine
+}
+
 DreamScrollBar:GetShowArrows:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetShowArrows:ReturnValue
     src   "Return Value"
@@ -183,11 +254,26 @@ DreamScrollBar:GetShowArrows:ReturnValue {
     state draft
 }
 
+DreamScrollBar:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamScrollBar:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamScrollBar:GetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -212,6 +298,13 @@ DreamScrollBar:HandleSize {
     // from the engine's zh-Hans
     text  "柄大小"
     state draft
+}
+
+DreamScrollBar:IsHorizontal {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:IsHorizontal
+    src   "Is Horizontal"
+    text  "是否水平"
+    state machine
 }
 
 DreamScrollBar:IsHorizontal:ReturnValue {
@@ -251,10 +344,24 @@ DreamScrollBar:OnValueChangedBP {
     state machine
 }
 
+DreamScrollBar:RefreshFromScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:RefreshFromScrollView
+    src   "Refresh from Scroll View"
+    text  "从滚动视图刷新"
+    state machine
+}
+
 DreamScrollBar:ScrollView {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:ScrollView
     src   "Scroll View"
     text  "滚动视图"
+    state machine
+}
+
+DreamScrollBar:SetAcceptedMouseButtons {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAcceptedMouseButtons
+    src   "Set Accepted Mouse Buttons"
+    text  "设置接受的鼠标按键"
     state machine
 }
 
@@ -265,6 +372,14 @@ DreamScrollBar:SetAcceptedMouseButtons:InAcceptedMouseButtons {
     state machine
 }
 
+DreamScrollBar:SetAlwaysShowScrollbar {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbar
+    src   "Set Always Show Scrollbar"
+    // from the engine's zh-Hans
+    text  "设置固定显示滚动条"
+    state draft
+}
+
 DreamScrollBar:SetAlwaysShowScrollbar:bInAlwaysShow {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbar:bInAlwaysShow
     src   "In Always Show"
@@ -272,10 +387,24 @@ DreamScrollBar:SetAlwaysShowScrollbar:bInAlwaysShow {
     state machine
 }
 
+DreamScrollBar:SetAlwaysShowScrollbarTrack {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbarTrack
+    src   "Set Always Show Scrollbar Track"
+    text  "设置固定显示滚动条轨道"
+    state machine
+}
+
 DreamScrollBar:SetAlwaysShowScrollbarTrack:bInAlwaysShow {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetAlwaysShowScrollbarTrack:bInAlwaysShow
     src   "In Always Show"
     text  "始终显示"
+    state machine
+}
+
+DreamScrollBar:SetArrowStepSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetArrowStepSize
+    src   "Set Arrow Step Size"
+    text  "设置箭头步进大小"
     state machine
 }
 
@@ -287,6 +416,13 @@ DreamScrollBar:SetArrowStepSize:InStep {
     state draft
 }
 
+DreamScrollBar:SetDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetDirection
+    src   "Set Direction"
+    text  "设置方向"
+    state machine
+}
+
 DreamScrollBar:SetDirection:InDirection {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetDirection:InDirection
     src   "In Direction"
@@ -295,10 +431,24 @@ DreamScrollBar:SetDirection:InDirection {
     state draft
 }
 
+DreamScrollBar:SetHandleSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetHandleSize
+    src   "Set Handle Size"
+    text  "设置柄大小"
+    state machine
+}
+
 DreamScrollBar:SetHandleSize:InFraction {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetHandleSize:InFraction
     src   "In Fraction"
     text  "比例"
+    state machine
+}
+
+DreamScrollBar:SetMinHandleLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetMinHandleLength
+    src   "Set Min Handle Length"
+    text  "设置最小手柄长度"
     state machine
 }
 
@@ -310,12 +460,26 @@ DreamScrollBar:SetMinHandleLength:InLength {
     state draft
 }
 
+DreamScrollBar:SetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetNavigationChangeInterval
+    src   "Set Navigation Change Interval"
+    text  "设置导航变化间隔"
+    state machine
+}
+
 DreamScrollBar:SetNavigationChangeInterval:InInterval {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetNavigationChangeInterval:InInterval
     src   "In Interval"
     // from the engine's zh-Hans
     text  "输入间隔"
     state draft
+}
+
+DreamScrollBar:SetScrollView {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetScrollView
+    src   "Set Scroll View"
+    text  "设置滚动视图"
+    state machine
 }
 
 DreamScrollBar:SetScrollView:InView {
@@ -326,11 +490,26 @@ DreamScrollBar:SetScrollView:InView {
     state draft
 }
 
+DreamScrollBar:SetShowArrows {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetShowArrows
+    src   "Set Show Arrows"
+    text  "设置显示箭头"
+    state machine
+}
+
 DreamScrollBar:SetShowArrows:bInShowArrows {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetShowArrows:bInShowArrows
     src   "In Show Arrows"
     text  "显示箭头"
     state machine
+}
+
+DreamScrollBar:SetState {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetState
+    src   "Set State"
+    // from the engine's zh-Hans
+    text  "Set State"
+    state draft
 }
 
 DreamScrollBar:SetState:bInCollapseIfNecessary {
@@ -356,11 +535,27 @@ DreamScrollBar:SetState:InThumbSizeFraction {
     state draft
 }
 
+DreamScrollBar:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamScrollBar:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetStyle:InStyle
     src   "In Style"
     // from the engine's zh-Hans
     text  "输入风格"
+    state draft
+}
+
+DreamScrollBar:SetValue {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
     state draft
 }
 
@@ -370,6 +565,13 @@ DreamScrollBar:SetValue:InValue {
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+DreamScrollBar:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Controls/DreamScrollBar.h#DreamScrollBar:SetValueWithoutNotify
+    src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 DreamScrollBar:SetValueWithoutNotify:InValue {

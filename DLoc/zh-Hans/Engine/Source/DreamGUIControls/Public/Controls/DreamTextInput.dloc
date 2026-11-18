@@ -100,6 +100,14 @@ DreamTextInput:bTabTypesTabCharacter {
     state machine
 }
 
+DreamTextInput:ClearError {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:ClearError
+    src   "Clear Error"
+    // from the engine's zh-Hans
+    text  "清理错误"
+    state draft
+}
+
 DreamTextInput:ClipNode {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:ClipNode
     src   "Clip Node"
@@ -137,12 +145,26 @@ DreamTextInput:ErrorText {
     state draft
 }
 
+DreamTextInput:GetAllowContextMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetAllowContextMenu
+    src   "Get Allow Context Menu"
+    text  "获取允许快捷菜单"
+    state machine
+}
+
 DreamTextInput:GetAllowContextMenu:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetAllowContextMenu:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetAutoActivateInputWhenNavigateIn {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetAutoActivateInputWhenNavigateIn
+    src   "Get Auto Activate Input when Navigate In"
+    text  "获取导航进入时自动激活输入"
+    state machine
 }
 
 DreamTextInput:GetAutoActivateInputWhenNavigateIn:ReturnValue {
@@ -153,12 +175,26 @@ DreamTextInput:GetAutoActivateInputWhenNavigateIn:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetClearKeyboardFocusOnCommit
+    src   "Get Clear Keyboard Focus on Commit"
+    text  "获取提交时清除键盘聚焦"
+    state machine
+}
+
 DreamTextInput:GetClearKeyboardFocusOnCommit:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetClearKeyboardFocusOnCommit:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetCustomValidation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetCustomValidation
+    src   "Get Custom Validation"
+    text  "获取自定义验证"
+    state machine
 }
 
 DreamTextInput:GetCustomValidation:ReturnValue {
@@ -169,6 +205,13 @@ DreamTextInput:GetCustomValidation:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetDisplayType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetDisplayType
+    src   "Get Display Type"
+    text  "获取显示类型"
+    state machine
+}
+
 DreamTextInput:GetDisplayType:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetDisplayType:ReturnValue
     src   "Return Value"
@@ -177,11 +220,26 @@ DreamTextInput:GetDisplayType:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetError {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetError
+    src   "Get Error"
+    text  "获取错误"
+    state machine
+}
+
 DreamTextInput:GetError:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetError:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTextInput:GetFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetFont
+    src   "Get Font"
+    // from the engine's zh-Hans
+    text  "Get Font"
     state draft
 }
 
@@ -193,12 +251,26 @@ DreamTextInput:GetFont:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetFontMaterial {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetFontMaterial
+    src   "Get Font Material"
+    text  "获取字体材质"
+    state machine
+}
+
 DreamTextInput:GetFontMaterial:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetFontMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetHintText {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetHintText
+    src   "Get Hint Text"
+    text  "获取提示文本"
+    state machine
 }
 
 DreamTextInput:GetHintText:ReturnValue {
@@ -209,12 +281,26 @@ DreamTextInput:GetHintText:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetIgnoreKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIgnoreKeys
+    src   "Get Ignore Keys"
+    text  "获取忽略键"
+    state machine
+}
+
 DreamTextInput:GetIgnoreKeys:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIgnoreKeys:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetInputType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetInputType
+    src   "Get Input Type"
+    text  "获取输入类型"
+    state machine
 }
 
 DreamTextInput:GetInputType:ReturnValue {
@@ -225,12 +311,26 @@ DreamTextInput:GetInputType:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetIsCaretMovedWhenGainFocus {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsCaretMovedWhenGainFocus
+    src   "Get Is Caret Moved when Gain Focus"
+    text  "获取获取焦距时插入符移动"
+    state machine
+}
+
 DreamTextInput:GetIsCaretMovedWhenGainFocus:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsCaretMovedWhenGainFocus:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetIsPassword {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsPassword
+    src   "Get Is Password"
+    text  "是否密码框"
+    state machine
 }
 
 DreamTextInput:GetIsPassword:ReturnValue {
@@ -241,11 +341,26 @@ DreamTextInput:GetIsPassword:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetIsReadOnly {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsReadOnly
+    src   "Get Is Read Only"
+    text  "获取是否只读"
+    state machine
+}
+
 DreamTextInput:GetIsReadOnly:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetIsReadOnly:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTextInput:GetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetJustification
+    src   "Get Justification"
+    // from the engine's zh-Hans
+    text  "Get Justification"
     state draft
 }
 
@@ -257,12 +372,26 @@ DreamTextInput:GetJustification:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetKeyboardType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetKeyboardType
+    src   "Get Keyboard Type"
+    text  "获取键盘类型"
+    state machine
+}
+
 DreamTextInput:GetKeyboardType:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetKeyboardType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetLanguage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetLanguage
+    src   "Get Language"
+    text  "获取语言"
+    state machine
 }
 
 DreamTextInput:GetLanguage:ReturnValue {
@@ -273,12 +402,26 @@ DreamTextInput:GetLanguage:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetLastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetLastLineAlign
+    src   "Get Last Line Align"
+    text  "获取最后一行对齐方式"
+    state machine
+}
+
 DreamTextInput:GetLastLineAlign:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetLastLineAlign:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetMaxLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMaxLength
+    src   "Get Max Length"
+    text  "获取最大长度"
+    state machine
 }
 
 DreamTextInput:GetMaxLength:ReturnValue {
@@ -289,12 +432,26 @@ DreamTextInput:GetMaxLength:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetMinimumDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMinimumDesiredWidth
+    src   "Get Minimum Desired Width"
+    text  "获取所需最小宽度"
+    state machine
+}
+
 DreamTextInput:GetMinimumDesiredWidth:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMinimumDesiredWidth:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetMultiLine {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMultiLine
+    src   "Get Multi Line"
+    text  "获取多行"
+    state machine
 }
 
 DreamTextInput:GetMultiLine:ReturnValue {
@@ -305,12 +462,26 @@ DreamTextInput:GetMultiLine:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetMultiLineSubmitFunctionKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMultiLineSubmitFunctionKeys
+    src   "Get Multi Line Submit Function Keys"
+    text  "获取多行提交功能键"
+    state machine
+}
+
 DreamTextInput:GetMultiLineSubmitFunctionKeys:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetMultiLineSubmitFunctionKeys:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetPasswordChar {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetPasswordChar
+    src   "Get Password Char"
+    text  "获取密码字符"
+    state machine
 }
 
 DreamTextInput:GetPasswordChar:ReturnValue {
@@ -321,12 +492,26 @@ DreamTextInput:GetPasswordChar:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetPlaceholder {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetPlaceholder
+    src   "Get Placeholder"
+    text  "获取占位符"
+    state machine
+}
+
 DreamTextInput:GetPlaceholder:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetPlaceholder:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetRevertTextOnEscape {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetRevertTextOnEscape
+    src   "Get Revert Text on Escape"
+    text  "获取退出时恢复文本"
+    state machine
 }
 
 DreamTextInput:GetRevertTextOnEscape:ReturnValue {
@@ -337,12 +522,26 @@ DreamTextInput:GetRevertTextOnEscape:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSelectAllTextOnCommit
+    src   "Get Select All Text on Commit"
+    text  "获取提交时选择所有文本"
+    state machine
+}
+
 DreamTextInput:GetSelectAllTextOnCommit:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSelectAllTextOnCommit:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetSelectAllWhenActivateInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSelectAllWhenActivateInput
+    src   "Get Select All when Activate Input"
+    text  "获取激活输入时全选"
+    state machine
 }
 
 DreamTextInput:GetSelectAllWhenActivateInput:ReturnValue {
@@ -353,12 +552,26 @@ DreamTextInput:GetSelectAllWhenActivateInput:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetSmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSmallTextRaster
+    src   "Get Small Text Raster"
+    text  "获取小字栅格"
+    state machine
+}
+
 DreamTextInput:GetSmallTextRaster:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSmallTextRaster:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
 }
 
 DreamTextInput:GetStyle:ReturnValue {
@@ -369,12 +582,26 @@ DreamTextInput:GetStyle:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetSubmitWhenDeactivate {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSubmitWhenDeactivate
+    src   "Get Submit when Deactivate"
+    text  "获取停用时提交"
+    state machine
+}
+
 DreamTextInput:GetSubmitWhenDeactivate:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetSubmitWhenDeactivate:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetTabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTabSize
+    src   "Get Tab Size"
+    text  "获取制表符大小"
+    state machine
 }
 
 DreamTextInput:GetTabSize:ReturnValue {
@@ -385,11 +612,26 @@ DreamTextInput:GetTabSize:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetTabTypesTabCharacter {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTabTypesTabCharacter
+    src   "Get Tab Types Tab Character"
+    text  "获取制表符类型：制表符"
+    state machine
+}
+
 DreamTextInput:GetTabTypesTabCharacter:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTabTypesTabCharacter:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTextInput:GetText {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetText
+    src   "Get Text"
+    // from the engine's zh-Hans
+    text  "获取文本"
     state draft
 }
 
@@ -401,12 +643,26 @@ DreamTextInput:GetText:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetTextFlowDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextFlowDirection
+    src   "Get Text Flow Direction"
+    text  "获取文本流方向"
+    state machine
+}
+
 DreamTextInput:GetTextFlowDirection:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextFlowDirection:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetTextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextJustify
+    src   "Get Text Justify"
+    text  "获取文本对齐"
+    state machine
 }
 
 DreamTextInput:GetTextJustify:ReturnValue {
@@ -417,12 +673,26 @@ DreamTextInput:GetTextJustify:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetTextOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextOverflowPolicy
+    src   "Get Text Overflow Policy"
+    text  "获取文本溢出策略"
+    state machine
+}
+
 DreamTextInput:GetTextOverflowPolicy:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetTextOverflowPolicy:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamTextInput:GetVirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetVirtualKeyboardDismissAction
+    src   "Get Virtual Keyboard Dismiss Action"
+    text  "获取虚拟键盘取消操作"
+    state machine
 }
 
 DreamTextInput:GetVirtualKeyboardDismissAction:ReturnValue {
@@ -433,11 +703,26 @@ DreamTextInput:GetVirtualKeyboardDismissAction:ReturnValue {
     state draft
 }
 
+DreamTextInput:GetVirtualKeyboardTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetVirtualKeyboardTrigger
+    src   "Get Virtual Keyboard Trigger"
+    text  "获取虚拟键盘触发器"
+    state machine
+}
+
 DreamTextInput:GetVirtualKeyboardTrigger:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:GetVirtualKeyboardTrigger:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamTextInput:HasError {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:HasError
+    src   "Has Error"
+    // from the engine's zh-Hans
+    text  "出错"
     state draft
 }
 
@@ -469,6 +754,13 @@ DreamTextInput:InputType {
     // from the engine's zh-Hans
     text  "输入类型"
     state draft
+}
+
+DreamTextInput:IsAnyTextSelected {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:IsAnyTextSelected
+    src   "Is Any Text Selected"
+    text  "是否有文本被选中"
+    state machine
 }
 
 DreamTextInput:IsAnyTextSelected:ReturnValue {
@@ -592,10 +884,31 @@ DreamTextInput:PlaceholderNode {
     state machine
 }
 
+DreamTextInput:SelectAllText {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SelectAllText
+    src   "Select All Text"
+    text  "全选文本"
+    state machine
+}
+
+DreamTextInput:SetAllowContextMenu {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetAllowContextMenu
+    src   "Set Allow Context Menu"
+    text  "设置允许快捷菜单"
+    state machine
+}
+
 DreamTextInput:SetAllowContextMenu:bInAllowContextMenu {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetAllowContextMenu:bInAllowContextMenu
     src   "In Allow Context Menu"
     text  "是否允许右键菜单"
+    state machine
+}
+
+DreamTextInput:SetAutoActivateInputWhenNavigateIn {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetAutoActivateInputWhenNavigateIn
+    src   "Set Auto Activate Input when Navigate In"
+    text  "设置导航进入时自动激活输入"
     state machine
 }
 
@@ -606,10 +919,24 @@ DreamTextInput:SetAutoActivateInputWhenNavigateIn:bInAutoActivate {
     state machine
 }
 
+DreamTextInput:SetClearKeyboardFocusOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetClearKeyboardFocusOnCommit
+    src   "Set Clear Keyboard Focus on Commit"
+    text  "设置提交时清除键盘聚焦"
+    state machine
+}
+
 DreamTextInput:SetClearKeyboardFocusOnCommit:bInClearKeyboardFocusOnCommit {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetClearKeyboardFocusOnCommit:bInClearKeyboardFocusOnCommit
     src   "In Clear Keyboard Focus on Commit"
     text  "提交时清除键盘焦点"
+    state machine
+}
+
+DreamTextInput:SetCustomValidation {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetCustomValidation
+    src   "Set Custom Validation"
+    text  "设置自定义验证"
     state machine
 }
 
@@ -620,10 +947,24 @@ DreamTextInput:SetCustomValidation:InCustomValidation {
     state machine
 }
 
+DreamTextInput:SetDisplayType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetDisplayType
+    src   "Set Display Type"
+    text  "设置显示类型"
+    state machine
+}
+
 DreamTextInput:SetDisplayType:InDisplayType {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetDisplayType:InDisplayType
     src   "In Display Type"
     text  "显示类型"
+    state machine
+}
+
+DreamTextInput:SetError {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetError
+    src   "Set Error"
+    text  "设置错误"
     state machine
 }
 
@@ -635,11 +976,27 @@ DreamTextInput:SetError:InError {
     state draft
 }
 
+DreamTextInput:SetFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetFont
+    src   "Set Font"
+    // from the engine's zh-Hans
+    text  "Set Font"
+    state draft
+}
+
 DreamTextInput:SetFont:InFont {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetFont:InFont
     src   "In Font"
     // from the engine's zh-Hans
     text  "在字体中"
+    state draft
+}
+
+DreamTextInput:SetFontMaterial {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetFontMaterial
+    src   "Set Font Material"
+    // from the engine's zh-Hans
+    text  "Set Font Material"
     state draft
 }
 
@@ -651,6 +1008,14 @@ DreamTextInput:SetFontMaterial:InMaterial {
     state draft
 }
 
+DreamTextInput:SetHintText {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetHintText
+    src   "Set Hint Text"
+    // from the engine's zh-Hans
+    text  "设置提示文本"
+    state draft
+}
+
 DreamTextInput:SetHintText:InHintText {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetHintText:InHintText
     src   "In Hint Text"
@@ -659,10 +1024,24 @@ DreamTextInput:SetHintText:InHintText {
     state draft
 }
 
+DreamTextInput:SetIgnoreKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIgnoreKeys
+    src   "Set Ignore Keys"
+    text  "设置忽略键"
+    state machine
+}
+
 DreamTextInput:SetIgnoreKeys:InIgnoreKeys {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIgnoreKeys:InIgnoreKeys
     src   "In Ignore Keys"
     text  "忽略键"
+    state machine
+}
+
+DreamTextInput:SetInputType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetInputType
+    src   "Set Input Type"
+    text  "设置输入类型"
     state machine
 }
 
@@ -674,6 +1053,13 @@ DreamTextInput:SetInputType:InInputType {
     state draft
 }
 
+DreamTextInput:SetIsCaretMovedWhenGainFocus {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsCaretMovedWhenGainFocus
+    src   "Set Is Caret Moved when Gain Focus"
+    text  "设置获取焦距时插入符移动"
+    state machine
+}
+
 DreamTextInput:SetIsCaretMovedWhenGainFocus:bInIsCaretMovedWhenGainFocus {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsCaretMovedWhenGainFocus:bInIsCaretMovedWhenGainFocus
     src   "In Is Caret Moved when Gain Focus"
@@ -681,10 +1067,25 @@ DreamTextInput:SetIsCaretMovedWhenGainFocus:bInIsCaretMovedWhenGainFocus {
     state machine
 }
 
+DreamTextInput:SetIsPassword {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsPassword
+    src   "Set Is Password"
+    // from the engine's zh-Hans
+    text  "设置为密码"
+    state draft
+}
+
 DreamTextInput:SetIsPassword:bInIsPassword {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsPassword:bInIsPassword
     src   "In Is Password"
     text  "是否为密码输入"
+    state machine
+}
+
+DreamTextInput:SetIsReadOnly {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetIsReadOnly
+    src   "Set Is Read Only"
+    text  "设置只读"
     state machine
 }
 
@@ -696,6 +1097,14 @@ DreamTextInput:SetIsReadOnly:bInReadOnly {
     state draft
 }
 
+DreamTextInput:SetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetJustification
+    src   "Set Justification"
+    // from the engine's zh-Hans
+    text  "设置对齐"
+    state draft
+}
+
 DreamTextInput:SetJustification:InJustification {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetJustification:InJustification
     src   "In Justification"
@@ -704,10 +1113,24 @@ DreamTextInput:SetJustification:InJustification {
     state draft
 }
 
+DreamTextInput:SetKeyboardType {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetKeyboardType
+    src   "Set Keyboard Type"
+    text  "设置键盘类型"
+    state machine
+}
+
 DreamTextInput:SetKeyboardType:InKeyboardType {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetKeyboardType:InKeyboardType
     src   "In Keyboard Type"
     text  "键盘类型"
+    state machine
+}
+
+DreamTextInput:SetLanguage {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetLanguage
+    src   "Set Language"
+    text  "设置语言"
     state machine
 }
 
@@ -718,10 +1141,24 @@ DreamTextInput:SetLanguage:InLanguage {
     state machine
 }
 
+DreamTextInput:SetLastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetLastLineAlign
+    src   "Set Last Line Align"
+    text  "设置最后一行对齐方式"
+    state machine
+}
+
 DreamTextInput:SetLastLineAlign:InLastLineAlign {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetLastLineAlign:InLastLineAlign
     src   "In Last Line Align"
     text  "输入末行对齐"
+    state machine
+}
+
+DreamTextInput:SetMaxLength {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMaxLength
+    src   "Set Max Length"
+    text  "设置最大长度"
     state machine
 }
 
@@ -732,11 +1169,27 @@ DreamTextInput:SetMaxLength:InMaxLength {
     state machine
 }
 
+DreamTextInput:SetMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMinDesiredWidth
+    src   "Set Min Desired Width"
+    // from the engine's zh-Hans
+    text  "设置所需最小宽度"
+    state draft
+}
+
 DreamTextInput:SetMinDesiredWidth:InMinDesiredWidth {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMinDesiredWidth:InMinDesiredWidth
     src   "In Min Desired Width"
     // from the engine's zh-Hans
     text  "在所需最小宽度中"
+    state draft
+}
+
+DreamTextInput:SetMinimumDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMinimumDesiredWidth
+    src   "Set Minimum Desired Width"
+    // from the engine's zh-Hans
+    text  "Set Minimum Desired Width"
     state draft
 }
 
@@ -747,10 +1200,24 @@ DreamTextInput:SetMinimumDesiredWidth:InMinimumDesiredWidth {
     state machine
 }
 
+DreamTextInput:SetMultiLine {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMultiLine
+    src   "Set Multi Line"
+    text  "设置多行"
+    state machine
+}
+
 DreamTextInput:SetMultiLine:bInMultiLine {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMultiLine:bInMultiLine
     src   "In Multi Line"
     text  "多行输入"
+    state machine
+}
+
+DreamTextInput:SetMultiLineSubmitFunctionKeys {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetMultiLineSubmitFunctionKeys
+    src   "Set Multi Line Submit Function Keys"
+    text  "设置多行提交功能键"
     state machine
 }
 
@@ -762,10 +1229,24 @@ DreamTextInput:SetMultiLineSubmitFunctionKeys:InKeys {
     state draft
 }
 
+DreamTextInput:SetPasswordChar {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetPasswordChar
+    src   "Set Password Char"
+    text  "设置密码字符"
+    state machine
+}
+
 DreamTextInput:SetPasswordChar:InPasswordChar {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetPasswordChar:InPasswordChar
     src   "In Password Char"
     text  "密码字符"
+    state machine
+}
+
+DreamTextInput:SetPlaceholder {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetPlaceholder
+    src   "Set Placeholder"
+    text  "设置占位符"
     state machine
 }
 
@@ -776,10 +1257,24 @@ DreamTextInput:SetPlaceholder:InPlaceholder {
     state machine
 }
 
+DreamTextInput:SetRevertTextOnEscape {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetRevertTextOnEscape
+    src   "Set Revert Text on Escape"
+    text  "设置退出时恢复文本"
+    state machine
+}
+
 DreamTextInput:SetRevertTextOnEscape:bInRevertTextOnEscape {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetRevertTextOnEscape:bInRevertTextOnEscape
     src   "In Revert Text on Escape"
     text  "转义时还原文本"
+    state machine
+}
+
+DreamTextInput:SetSelectAllTextOnCommit {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSelectAllTextOnCommit
+    src   "Set Select All Text on Commit"
+    text  "设置提交时选择所有文本"
     state machine
 }
 
@@ -790,10 +1285,24 @@ DreamTextInput:SetSelectAllTextOnCommit:bInSelectAllTextOnCommit {
     state machine
 }
 
+DreamTextInput:SetSelectAllWhenActivateInput {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSelectAllWhenActivateInput
+    src   "Set Select All when Activate Input"
+    text  "设置激活输入时全选"
+    state machine
+}
+
 DreamTextInput:SetSelectAllWhenActivateInput:bInSelectAll {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSelectAllWhenActivateInput:bInSelectAll
     src   "In Select All"
     text  "全选"
+    state machine
+}
+
+DreamTextInput:SetSmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSmallTextRaster
+    src   "Set Small Text Raster"
+    text  "设置小字栅格"
     state machine
 }
 
@@ -804,6 +1313,14 @@ DreamTextInput:SetSmallTextRaster:InSmallTextRaster {
     state machine
 }
 
+DreamTextInput:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamTextInput:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetStyle:InStyle
     src   "In Style"
@@ -812,10 +1329,24 @@ DreamTextInput:SetStyle:InStyle {
     state draft
 }
 
+DreamTextInput:SetSubmitWhenDeactivate {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSubmitWhenDeactivate
+    src   "Set Submit when Deactivate"
+    text  "设置停用时提交"
+    state machine
+}
+
 DreamTextInput:SetSubmitWhenDeactivate:bInSubmitWhenDeactivate {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetSubmitWhenDeactivate:bInSubmitWhenDeactivate
     src   "In Submit when Deactivate"
     text  "停用时提交"
+    state machine
+}
+
+DreamTextInput:SetTabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTabSize
+    src   "Set Tab Size"
+    text  "设置制表符大小"
     state machine
 }
 
@@ -826,11 +1357,26 @@ DreamTextInput:SetTabSize:InTabSize {
     state machine
 }
 
+DreamTextInput:SetTabTypesTabCharacter {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTabTypesTabCharacter
+    src   "Set Tab Types Tab Character"
+    text  "设置制表符类型：制表符"
+    state machine
+}
+
 DreamTextInput:SetTabTypesTabCharacter:bInTabTypesTabCharacter {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTabTypesTabCharacter:bInTabTypesTabCharacter
     src   "In Tab Types Tab Character"
     text  "Tab输入制表符"
     state machine
+}
+
+DreamTextInput:SetText {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetText
+    src   "Set Text"
+    // from the engine's zh-Hans
+    text  "设置文本"
+    state draft
 }
 
 DreamTextInput:SetText:InText {
@@ -841,6 +1387,13 @@ DreamTextInput:SetText:InText {
     state draft
 }
 
+DreamTextInput:SetTextFlowDirection {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTextFlowDirection
+    src   "Set Text Flow Direction"
+    text  "设置文本流方向"
+    state machine
+}
+
 DreamTextInput:SetTextFlowDirection:InFlowDirection {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTextFlowDirection:InFlowDirection
     src   "In Flow Direction"
@@ -849,11 +1402,26 @@ DreamTextInput:SetTextFlowDirection:InFlowDirection {
     state draft
 }
 
+DreamTextInput:SetTextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTextJustify
+    src   "Set Text Justify"
+    text  "设置文本对齐"
+    state machine
+}
+
 DreamTextInput:SetTextJustify:InTextJustify {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTextJustify:InTextJustify
     src   "In Text Justify"
     text  "输入文本对齐"
     state machine
+}
+
+DreamTextInput:SetTextOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetTextOverflowPolicy
+    src   "Set Text Overflow Policy"
+    // from the engine's zh-Hans
+    text  "Set Text Overflow Policy"
+    state draft
 }
 
 DreamTextInput:SetTextOverflowPolicy:InOverflowPolicy {
@@ -864,10 +1432,24 @@ DreamTextInput:SetTextOverflowPolicy:InOverflowPolicy {
     state draft
 }
 
+DreamTextInput:SetVirtualKeyboardDismissAction {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetVirtualKeyboardDismissAction
+    src   "Set Virtual Keyboard Dismiss Action"
+    text  "设置虚拟键盘取消操作"
+    state machine
+}
+
 DreamTextInput:SetVirtualKeyboardDismissAction:InDismissAction {
     at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetVirtualKeyboardDismissAction:InDismissAction
     src   "In Dismiss Action"
     text  "关闭键盘操作"
+    state machine
+}
+
+DreamTextInput:SetVirtualKeyboardTrigger {
+    at    Source/DreamGUIControls/Public/Controls/DreamTextInput.h#DreamTextInput:SetVirtualKeyboardTrigger
+    src   "Set Virtual Keyboard Trigger"
+    text  "设置虚拟键盘触发器"
     state machine
 }
 

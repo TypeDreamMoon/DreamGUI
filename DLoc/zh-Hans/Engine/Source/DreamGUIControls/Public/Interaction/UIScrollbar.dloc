@@ -44,10 +44,24 @@ UIScrollbar {
     state machine
 }
 
+UIScrollbar:ApplyValueToVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:ApplyValueToVisual
+    src   "Apply Value to Visual"
+    text  "把值应用到视觉"
+    state machine
+}
+
 UIScrollbar:DirectionType {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:DirectionType
     src   "Direction Type"
     text  "方向类型"
+    state machine
+}
+
+UIScrollbar:GetDirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetDirectionType
+    src   "Get Direction Type"
+    text  "获取方向类型"
     state machine
 }
 
@@ -59,11 +73,26 @@ UIScrollbar:GetDirectionType:ReturnValue {
     state draft
 }
 
+UIScrollbar:GetEffectiveSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetEffectiveSize
+    src   "Get Effective Size"
+    text  "获取有效尺寸"
+    state machine
+}
+
 UIScrollbar:GetEffectiveSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetEffectiveSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandle
+    src   "Get Handle"
+    // from the engine's zh-Hans
+    text  "Get Handle"
     state draft
 }
 
@@ -75,12 +104,26 @@ UIScrollbar:GetHandle:ReturnValue {
     state draft
 }
 
+UIScrollbar:GetHandleAreaLength {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandleAreaLength
+    src   "Get Handle Area Length"
+    text  "获取手柄区域长度"
+    state machine
+}
+
 UIScrollbar:GetHandleAreaLength:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandleAreaLength:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIScrollbar:GetHandlePadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetHandlePadding
+    src   "Get Handle Padding"
+    text  "获取手柄填充"
+    state machine
 }
 
 UIScrollbar:GetHandlePadding:ReturnValue {
@@ -91,12 +134,26 @@ UIScrollbar:GetHandlePadding:ReturnValue {
     state draft
 }
 
+UIScrollbar:GetMinHandleSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetMinHandleSize
+    src   "Get Min Handle Size"
+    text  "获取最小滑块大小"
+    state machine
+}
+
 UIScrollbar:GetMinHandleSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetMinHandleSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIScrollbar:GetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetNavigationChangeInterval
+    src   "Get Navigation Change Interval"
+    text  "获取导航变化间隔"
+    state machine
 }
 
 UIScrollbar:GetNavigationChangeInterval:ReturnValue {
@@ -107,11 +164,27 @@ UIScrollbar:GetNavigationChangeInterval:ReturnValue {
     state draft
 }
 
+UIScrollbar:GetSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetSize
+    src   "Get Size"
+    // from the engine's zh-Hans
+    text  "获取大小"
+    state draft
+}
+
 UIScrollbar:GetSize:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIScrollbar:GetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -142,6 +215,13 @@ UIScrollbar:HandlePadding {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:HandlePadding
     src   "Handle Padding"
     text  "手柄填充"
+    state machine
+}
+
+UIScrollbar:IsHorizontal {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:IsHorizontal
+    src   "Is Horizontal"
+    text  "是否水平"
     state machine
 }
 
@@ -182,12 +262,26 @@ UIScrollbar:OnValueChangedBP {
     state machine
 }
 
+UIScrollbar:SetDirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetDirectionType
+    src   "Set Direction Type"
+    text  "设置方向类型"
+    state machine
+}
+
 UIScrollbar:SetDirectionType:InDirection {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetDirectionType:InDirection
     src   "In Direction"
     // from the engine's zh-Hans
     text  "输入方向"
     state draft
+}
+
+UIScrollbar:SetHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandle
+    src   "Set Handle"
+    text  "设置柄"
+    state machine
 }
 
 UIScrollbar:SetHandle:InHandle {
@@ -198,12 +292,26 @@ UIScrollbar:SetHandle:InHandle {
     state draft
 }
 
+UIScrollbar:SetHandlePadding {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandlePadding
+    src   "Set Handle Padding"
+    text  "设置手柄填充"
+    state machine
+}
+
 UIScrollbar:SetHandlePadding:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetHandlePadding:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UIScrollbar:SetMinHandleSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetMinHandleSize
+    src   "Set Min Handle Size"
+    text  "设置最小滑块大小"
+    state machine
 }
 
 UIScrollbar:SetMinHandleSize:InValue {
@@ -214,11 +322,26 @@ UIScrollbar:SetMinHandleSize:InValue {
     state draft
 }
 
+UIScrollbar:SetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetNavigationChangeInterval
+    src   "Set Navigation Change Interval"
+    text  "设置导航变化间隔"
+    state machine
+}
+
 UIScrollbar:SetNavigationChangeInterval:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetNavigationChangeInterval:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
+    state draft
+}
+
+UIScrollbar:SetSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetSize
+    src   "Set Size"
+    // from the engine's zh-Hans
+    text  "设置大小"
     state draft
 }
 
@@ -230,12 +353,27 @@ UIScrollbar:SetSize:InSize {
     state draft
 }
 
+UIScrollbar:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
+    state draft
+}
+
 UIScrollbar:SetValue:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValue:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UIScrollbar:SetValueAndSize {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueAndSize
+    src   "Set Value and Size"
+    text  "设置值与尺寸"
+    state machine
 }
 
 UIScrollbar:SetValueAndSize:FireEvent {
@@ -259,6 +397,13 @@ UIScrollbar:SetValueAndSize:InValue {
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UIScrollbar:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UIScrollbar.h#UIScrollbar:SetValueWithoutNotify
+    src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
 }
 
 UIScrollbar:SetValueWithoutNotify:InValue {

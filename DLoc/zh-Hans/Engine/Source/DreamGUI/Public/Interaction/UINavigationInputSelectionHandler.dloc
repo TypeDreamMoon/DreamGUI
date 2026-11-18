@@ -23,12 +23,41 @@ UINavigationInputSelectionHandler:CurrentSelected {
     state machine
 }
 
+UINavigationInputSelectionHandler:ReceiveSelectNone {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectNone
+    src   "SelectNone"
+    text  "选择无"
+    state machine
+}
+
+UINavigationInputSelectionHandler:ReceiveSelectWidget {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectWidget
+    src   "SelectWidget"
+    text  "选中控件"
+    state machine
+}
+
 UINavigationInputSelectionHandler:ReceiveSelectWidget:InSelected {
     at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:ReceiveSelectWidget:InSelected
     src   "In Selected"
     // from the engine's zh-Hans
     text  "输入已选项"
     state draft
+}
+
+UINavigationInputSelectionHandler:SelectNone {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:SelectNone
+    src   "Select None"
+    // from the engine's zh-Hans
+    text  "不选"
+    state draft
+}
+
+UINavigationInputSelectionHandler:SelectWidget {
+    at    Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h#UINavigationInputSelectionHandler:SelectWidget
+    src   "Select Widget"
+    text  "选中控件"
+    state machine
 }
 
 UINavigationInputSelectionHandler:SelectWidget:InSelected {

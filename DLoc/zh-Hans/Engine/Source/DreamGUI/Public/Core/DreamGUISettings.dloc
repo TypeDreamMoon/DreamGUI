@@ -23,6 +23,13 @@ DreamGUISettings:bAutoVirtualCursorOnGamepad {
     state machine
 }
 
+DreamGUISettings:bEnableDreamMCPEndpoint {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Enable DreamMCP Endpoint"
+    text  "启用 DreamMCP 端点"
+    state machine
+}
+
 DreamGUISettings:bFieldTextCorrection {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
     src   "Field Text Correction"
@@ -570,6 +577,13 @@ DreamGUISettings:bAutoVirtualCursorOnGamepad {
     state machine
 }
 
+DreamGUISettings:bEnableDreamMCPEndpoint {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Let an AI agent connected through DreamMCP use this editor: check, compile, lay out and preview .dui screens through\na local endpoint (127.0.0.1 only, with a token). Read when the editor starts. Hosts DreamMCP starts itself ignore it."
+    text  "允许通过 DreamMCP 连接的 AI 代理使用这个编辑器：经由本地端点检查、编译、布局并预览 `.dui` 界面\n（仅 127.0.0.1，带令牌）。编辑器启动时读取。DreamMCP 自己启动的宿主会忽略它。"
+    state machine
+}
+
 DreamGUISettings:bFieldTextCorrection {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bFieldTextCorrection
     src   "Run the face of distance-field text above SmallTextMaxPixelSize through the same coverage correction small text gets\n(the contrast and the linear-light blend), so its weight does not jump at the cut-off. Off by default until measured\nagainst Chrome. Drawn by the shaders: the canvases pass it with the font atlas's geometry (FontAtlasInfo.z negated)."
@@ -741,6 +755,8 @@ DreamGUISettings:ExtentKeys {
 DreamGUISettings:GradientPresets {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:GradientPresets
     src   "Gradients a rich text's `<gradient=Name>` finds by name, written as CSS (FDreamGradient::ParseCss), e.g. Gold =\n\"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)\". Looked up after the text's custom style entries and before\nthe name itself is read as CSS; the editor's gradient picker offers them beside the gradient assets."
+    text  "富文本的 `<gradient=Name>` 按名字找到的渐变，用 CSS 书写（FDreamGradient::ParseCss），例如 Gold =\n\"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)\"。查找在文本的自定义样式条目之后、\n在该名字本身被当作 CSS 读取之前进行；编辑器的渐变选择器会在渐变资产旁列出它们。"
+    state draft
 }
 
 DreamGUISettings:InputModeWithoutScope {
@@ -1046,6 +1062,14 @@ namespace UObjectCategory
     state machine
 }
 
+Editor {
+    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bEnableDreamMCPEndpoint
+    src   "Editor"
+    // from the engine's zh-Hans
+    text  "编辑器"
+    state draft
+}
+
 Text {
     at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:bSmallTextCorrection
     src   "Text"
@@ -1106,14 +1130,6 @@ Modal {
     src   "Modal"
     text  "模态"
     state machine
-}
-
-Editor {
-    at    Source/DreamGUI/Public/Core/DreamGUISettings.h#DreamGUISettings:PresetControlFolder
-    src   "Editor"
-    // from the engine's zh-Hans
-    text  "编辑器"
-    state draft
 }
 
 Editor|Palette {

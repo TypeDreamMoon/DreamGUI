@@ -16,10 +16,24 @@ DreamUIFontEmojiData:AnimationFps {
     state machine
 }
 
+DreamUIFontEmojiData:BroadcastOnDataChange {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:BroadcastOnDataChange
+    src   "Broadcast on Data Change"
+    text  "数据变更时广播"
+    state machine
+}
+
 DreamUIFontEmojiData:DataMap {
     at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:DataMap
     src   "Data Map"
     text  "数据映射"
+    state machine
+}
+
+DreamUIFontEmojiData:GetAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetAnimationFps
+    src   "Get Animation Fps"
+    text  "获取动画帧率"
     state machine
 }
 
@@ -31,12 +45,26 @@ DreamUIFontEmojiData:GetAnimationFps:ReturnValue {
     state draft
 }
 
+DreamUIFontEmojiData:GetDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetDataMap
+    src   "Get Data Map"
+    text  "获取数据映射"
+    state machine
+}
+
 DreamUIFontEmojiData:GetDataMap:ReturnValue {
     at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetDataMap:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIFontEmojiData:GetMutableDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:GetMutableDataMap
+    src   "Get Mutable Data Map"
+    text  "获取可变数据映射"
+    state machine
 }
 
 DreamUIFontEmojiData:GetMutableDataMap:ReturnValue {
@@ -47,12 +75,26 @@ DreamUIFontEmojiData:GetMutableDataMap:ReturnValue {
     state draft
 }
 
+DreamUIFontEmojiData:SetAnimationFps {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:SetAnimationFps
+    src   "Set Animation Fps"
+    text  "设置动画帧率"
+    state machine
+}
+
 DreamUIFontEmojiData:SetAnimationFps:Value {
     at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:SetAnimationFps:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIFontEmojiData:SetDataMap {
+    at    Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h#DreamUIFontEmojiData:SetDataMap
+    src   "Set Data Map"
+    text  "设置数据映射"
+    state machine
 }
 
 DreamUIFontEmojiData:SetDataMap:Value {

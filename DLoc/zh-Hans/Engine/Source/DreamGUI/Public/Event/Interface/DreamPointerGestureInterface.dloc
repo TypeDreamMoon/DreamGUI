@@ -9,6 +9,13 @@ DreamPointerGestureInterface {
     state machine
 }
 
+DreamPointerGestureInterface:OnPointerPinch {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerPinch
+    src   "On Pointer Pinch"
+    text  "指针捏合时"
+    state machine
+}
+
 DreamPointerGestureInterface:OnPointerPinch:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerPinch:EventData
     src   "Event Data"
@@ -23,6 +30,13 @@ DreamPointerGestureInterface:OnPointerPinch:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamPointerGestureInterface:OnPointerSwipe {
+    at    Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h#DreamPointerGestureInterface:OnPointerSwipe
+    src   "On Pointer Swipe"
+    text  "指针滑动时"
+    state machine
 }
 
 DreamPointerGestureInterface:OnPointerSwipe:EventData {

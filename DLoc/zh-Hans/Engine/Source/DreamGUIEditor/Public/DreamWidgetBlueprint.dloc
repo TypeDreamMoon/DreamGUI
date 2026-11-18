@@ -30,6 +30,21 @@ DreamWidgetBlueprint:EventBindings {
     state machine
 }
 
+DreamWidgetBlueprint:GetDesignerCanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:GetDesignerCanvasSize
+    src   "Get Designer Canvas Size"
+    text  "获取设计器画布尺寸"
+    state machine
+}
+
+DreamWidgetBlueprint:GetDesignerCanvasSize:ReturnValue {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:GetDesignerCanvasSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
 DreamWidgetBlueprint:LastGoodDispatchers {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodDispatchers
     src   "Last Good Dispatchers"
@@ -66,6 +81,29 @@ DreamWidgetBlueprint:PropertyBindings {
     state draft
 }
 
+DreamWidgetBlueprint:SetDesignerCanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:SetDesignerCanvasSize
+    src   "Set Designer Canvas Size"
+    text  "设置设计器画布尺寸"
+    state machine
+}
+
+DreamWidgetBlueprint:SetDesignerCanvasSize:InSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:SetDesignerCanvasSize:InSize
+    src   "In Size"
+    // from the engine's zh-Hans
+    text  "输入尺寸"
+    state draft
+}
+
+DreamWidgetBlueprint:SetDesignerCanvasSize:ReturnValue {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:SetDesignerCanvasSize:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
 DreamWidgetBlueprint:ViewModelSlots {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:ViewModelSlots
     src   "View Model Slots"
@@ -85,6 +123,13 @@ DreamWidgetDesignerData {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData
     src   "Dream Widget Designer Data"
     text  "DreamUI 控件设计器数据"
+    state machine
+}
+
+DreamWidgetDesignerData:bCanvasFollowsRoot {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:bCanvasFollowsRoot
+    src   "Canvas Follows Root"
+    text  "画布跟随根节点"
     state machine
 }
 
@@ -223,6 +268,13 @@ DreamWidgetBlueprint:EventBindings {
     state machine
 }
 
+DreamWidgetBlueprint:GetDesignerCanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:GetDesignerCanvasSize
+    src   "The design canvas the hierarchy is authored against, as stored on the asset. What the designer opens with.\n\nExposed so a script can read it without exporting the designer data as property text."
+    text  "层级所依据的设计画布，按资产上存储的样子。设计器打开时用它。\n\n对外暴露，好让脚本不必把设计器数据导出成属性文本就能读到它。"
+    state machine
+}
+
 DreamWidgetBlueprint:LastGoodPropVariables {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:LastGoodPropVariables
     src   "The `props` variables, `events` dispatchers and hidden anonymous-widget variable names of the last compile that\nread this asset's .dui into a hierarchy -- LastGoodResourceVariables' reason, for the class members the file\ndeclares beside its resources. A file that stops parsing keeps the previous hierarchy, and that hierarchy's\nbindings read these props, its emit handlers call these dispatchers and its unnamed widgets need their variables\nhidden; without them every one of those fails with an error pointing away from the one mistake in the file.\nEmpty for an asset that names no .dui."
@@ -244,6 +296,13 @@ DreamWidgetBlueprint:PropertyBindings {
     state machine
 }
 
+DreamWidgetBlueprint:SetDesignerCanvasSize {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:SetDesignerCanvasSize
+    src   "Choose the design canvas, as picking a custom screen size in the designer does: the asset records it as the\nresolution the author picked, an open designer is resized with it, and compiles no longer replace it with the\nroot's own size. The canvas is taken as the device resolution, so a hierarchy whose root canvas scales\n(anything but Constant Pixel Size) may lay out on a different canvas than the one asked for.\n\nReturns false, and changes nothing, when either axis is below one."
+    text  "选择设计画布，效果等同于在设计器里选一个自定义屏幕尺寸：资产会把它记为\n作者选定的分辨率，已打开的设计器随之调整大小，编译时不再用\n根节点自身的尺寸覆盖它。画布按设备分辨率处理，所以根画布会缩放的层级\n（Constant Pixel Size 之外的任何方式）可能按与所要求不同的画布布局。\n\n任一轴小于 1 时返回 false，且什么都不改。"
+    state machine
+}
+
 DreamWidgetBlueprint:ViewModelSlots {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:ViewModelSlots
     src   "The `viewmodels` entries of this asset's .dui, as its last read declared them: variable, class and where the object\ncomes from. Rewritten by every compile that parses the file -- empty when it has no `viewmodels` block -- and left\nalone by one that does not (the variables of the last good read are declared again with the hierarchy it kept),\nand by an asset that names no .dui at all. The compiler hands it to the generated class\n(UDreamWidgetGeneratedClass::SetViewModelSlots), which the run time fills at Initialize."
@@ -262,6 +321,13 @@ DreamWidgetDesignerData {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData
     src   "What the designer remembers about one authored hierarchy, as opposed to what the hierarchy IS.\n\nThe prefab kept the same set in FDreamUIPrefabDataForPrefabEditor, keyed by the GUIDs its helper\nobject handed out. There are no GUIDs here: a widget is identified by its object FName, which is\nwhat the class archetype and every instance preserve, and which is therefore already the key the\ntemplate-to-preview correspondence runs on. Two keys for the same thing is how they drift.\n\nGrid snapping and the overlays are deliberately NOT here -- those are per-author preferences and\nlive in UDreamUIDesignerSettings (EditorPerProjectUserSettings). What stays on the asset is what\ndescribes the hierarchy itself: how big its canvas is, and which of its widgets are put away."
     text  "设计器针对某个已创作层级所记住的内容，而非该层级本身。\n\n旧的prefab把同一组数据保存在FDreamUIPrefabDataForPrefabEditor中，以其辅助\n对象分配的GUID为键。这里没有GUID：控件由其对象FName标识，而这是\n类原型和每个实例都会保留的，因此它已经是模板到预览对应关系所使用的键。\n同一事物用两个键，正是它们发生偏差的原因。\n\n网格吸附和叠加层有意不放在这里——那些是每位作者的个人偏好，\n位于UDreamUIDesignerSettings（EditorPerProjectUserSettings）中。留在资产上的是\n描述层级本身的内容：其画布有多大，以及它的哪些控件被收起。"
+    state machine
+}
+
+DreamWidgetDesignerData:bCanvasFollowsRoot {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetDesignerData:bCanvasFollowsRoot
+    src   "CanvasSize was taken from the size of the .dui root, nobody having picked one, and follows it: a root resized in\nthe file resizes the canvas on the next compile. Cleared by picking a resolution."
+    text  "CanvasSize 是取自 .dui 根节点尺寸的（没人选过它），并跟随该尺寸：在\n文件里改了根节点尺寸，下次编译就会改画布。选定一个分辨率即可清除它。"
     state machine
 }
 
@@ -318,5 +384,14 @@ DreamWidgetTextDispatcher {
     at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetTextDispatcher
     src   "One `events` entry as a compile declared it: the dispatcher's name and its parameters, as the variable descriptions\n(name and pin type) its signature graph is made from. Kept so a compile whose .dui does not build can declare the\ndispatcher again -- see UDreamWidgetBlueprint::LastGoodDispatchers."
     text  "编译声明的一个`events`条目：调度器的名称及其参数，即其签名图所依据的变量描述\n（名称与引脚类型）。保留它是为了让.dui无法构建的编译能够重新声明该\n调度器——参见控件蓝图UDreamWidgetBlueprint::LastGoodDispatchers。"
+    state machine
+}
+
+namespace UObjectCategory
+
+DreamUI|Designer {
+    at    Source/DreamGUIEditor/Public/DreamWidgetBlueprint.h#DreamWidgetBlueprint:GetDesignerCanvasSize
+    src   "DreamUI|Designer"
+    text  "DreamUI|设计器"
     state machine
 }

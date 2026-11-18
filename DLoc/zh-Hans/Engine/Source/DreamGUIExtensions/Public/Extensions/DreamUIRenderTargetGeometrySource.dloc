@@ -54,11 +54,26 @@ DreamUIRenderTargetGeometrySource:GeometryMode {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetCanvas
+    src   "Get Canvas"
+    text  "获取画布"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:GetCanvas:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetCanvas:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetCylinderArcAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetCylinderArcAngle
+    src   "Get Cylinder Arc Angle"
+    // from the engine's zh-Hans
+    text  "获取圆柱体弧形角度"
     state draft
 }
 
@@ -70,6 +85,13 @@ DreamUIRenderTargetGeometrySource:GetCylinderArcAngle:ReturnValue {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside
+    src   "Get Enable Interact on Backside"
+    text  "获取启用背面交互"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside:ReturnValue
     src   "Return Value"
@@ -78,11 +100,26 @@ DreamUIRenderTargetGeometrySource:GetEnableInteractOnBackside:ReturnValue {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES
+    src   "Get Flip Vertical on GLES"
+    text  "获取垂直翻转 (GLES)"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetFlipVerticalOnGLES:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetGeometryMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetGeometryMode
+    src   "Get Geometry Mode"
+    // from the engine's zh-Hans
+    text  "获取几何体模式"
     state draft
 }
 
@@ -94,6 +131,14 @@ DreamUIRenderTargetGeometrySource:GetGeometryMode:ReturnValue {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetMaterialInstance {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetMaterialInstance
+    src   "Get Material Instance"
+    // from the engine's zh-Hans
+    text  "获取材质实例"
+    state draft
+}
+
 DreamUIRenderTargetGeometrySource:GetMaterialInstance:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetMaterialInstance:ReturnValue
     src   "Return Value"
@@ -102,11 +147,26 @@ DreamUIRenderTargetGeometrySource:GetMaterialInstance:ReturnValue {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial
+    src   "Get Override Static Mesh Material"
+    text  "获取重载静态网格材质"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetOverrideStaticMeshMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetPivot {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetPivot
+    src   "Get Pivot"
+    // from the engine's zh-Hans
+    text  "获取枢轴"
     state draft
 }
 
@@ -118,12 +178,27 @@ DreamUIRenderTargetGeometrySource:GetPivot:ReturnValue {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:GetRenderTarget {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTarget
+    src   "Get Render Target"
+    // from the engine's zh-Hans
+    text  "获取渲染目标"
+    state draft
+}
+
 DreamUIRenderTargetGeometrySource:GetRenderTarget:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTarget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamUIRenderTargetGeometrySource:GetRenderTargetSize {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:GetRenderTargetSize
+    src   "Get Render Target Size"
+    text  "获取渲染目标尺寸"
+    state machine
 }
 
 DreamUIRenderTargetGeometrySource:GetRenderTargetSize:ReturnValue {
@@ -150,11 +225,26 @@ DreamUIRenderTargetGeometrySource:Pivot {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:SetCanvas {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetCanvas
+    src   "Set Canvas"
+    text  "设置画布"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:SetCanvas:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetCanvas:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetCylinderArcAngle {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetCylinderArcAngle
+    src   "Set Cylinder Arc Angle"
+    // from the engine's zh-Hans
+    text  "设置圆柱体弧形角度"
     state draft
 }
 
@@ -166,12 +256,26 @@ DreamUIRenderTargetGeometrySource:SetCylinderArcAngle:Value {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside
+    src   "Set Enable Interact on Backside"
+    text  "设置启用背面交互"
+    state machine
+}
+
 DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetEnableInteractOnBackside:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES
+    src   "Set Flip Vertical on GLES"
+    text  "设置垂直翻转 (GLES)"
+    state machine
 }
 
 DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES:Value {
@@ -182,11 +286,27 @@ DreamUIRenderTargetGeometrySource:SetFlipVerticalOnGLES:Value {
     state draft
 }
 
+DreamUIRenderTargetGeometrySource:SetGeometryMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetGeometryMode
+    src   "Set Geometry Mode"
+    // from the engine's zh-Hans
+    text  "设置几何体模式"
+    state draft
+}
+
 DreamUIRenderTargetGeometrySource:SetGeometryMode:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetGeometryMode:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUIRenderTargetGeometrySource:SetPivot {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h#DreamUIRenderTargetGeometrySource:SetPivot
+    src   "Set Pivot"
+    // from the engine's zh-Hans
+    text  "设置枢轴"
     state draft
 }
 

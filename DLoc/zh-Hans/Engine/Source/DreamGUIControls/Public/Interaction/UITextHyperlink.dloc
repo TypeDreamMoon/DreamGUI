@@ -37,6 +37,13 @@ UITextHyperlink:bUsePressedColor {
     state machine
 }
 
+UITextHyperlink:GetHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetHoverColor
+    src   "Get Hover Color"
+    text  "获取悬停颜色"
+    state machine
+}
+
 UITextHyperlink:GetHoverColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetHoverColor:ReturnValue
     src   "Return Value"
@@ -45,12 +52,26 @@ UITextHyperlink:GetHoverColor:ReturnValue {
     state draft
 }
 
+UITextHyperlink:GetLinksAreFocusStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinksAreFocusStops
+    src   "Get Links Are Focus Stops"
+    text  "获取链接为焦点停靠点"
+    state machine
+}
+
 UITextHyperlink:GetLinksAreFocusStops:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinksAreFocusStops:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UITextHyperlink:GetLinkStop {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetLinkStop
+    src   "Get Link Stop"
+    text  "获取链接停靠点"
+    state machine
 }
 
 UITextHyperlink:GetLinkStop:InTagIndex {
@@ -68,12 +89,26 @@ UITextHyperlink:GetLinkStop:ReturnValue {
     state draft
 }
 
+UITextHyperlink:GetPressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetPressedColor
+    src   "Get Pressed Color"
+    text  "获取按下颜色"
+    state machine
+}
+
 UITextHyperlink:GetPressedColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetPressedColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UITextHyperlink:GetTextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetTextVisual
+    src   "Get Text Visual"
+    text  "获取文本视觉"
+    state machine
 }
 
 UITextHyperlink:GetTextVisual:ReturnValue {
@@ -84,12 +119,26 @@ UITextHyperlink:GetTextVisual:ReturnValue {
     state draft
 }
 
+UITextHyperlink:GetUseHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetUseHoverColor
+    src   "Get Use Hover Color"
+    text  "获取使用悬停颜色"
+    state machine
+}
+
 UITextHyperlink:GetUseHoverColor:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetUseHoverColor:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UITextHyperlink:GetUsePressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:GetUsePressedColor
+    src   "Get Use Pressed Color"
+    text  "获取使用按下颜色"
+    state machine
 }
 
 UITextHyperlink:GetUsePressedColor:ReturnValue {
@@ -122,12 +171,26 @@ UITextHyperlink:PressedColor {
     state machine
 }
 
+UITextHyperlink:SetHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetHoverColor
+    src   "Set Hover Color"
+    text  "设置悬停颜色"
+    state machine
+}
+
 UITextHyperlink:SetHoverColor:Value {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetHoverColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UITextHyperlink:SetLinksAreFocusStops {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetLinksAreFocusStops
+    src   "Set Links Are Focus Stops"
+    text  "设置链接为焦点停靠点"
+    state machine
 }
 
 UITextHyperlink:SetLinksAreFocusStops:Value {
@@ -138,12 +201,26 @@ UITextHyperlink:SetLinksAreFocusStops:Value {
     state draft
 }
 
+UITextHyperlink:SetPressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetPressedColor
+    src   "Set Pressed Color"
+    text  "设置按下颜色"
+    state machine
+}
+
 UITextHyperlink:SetPressedColor:Value {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetPressedColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UITextHyperlink:SetTextVisual {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetTextVisual
+    src   "Set Text Visual"
+    text  "设置文本视觉"
+    state machine
 }
 
 UITextHyperlink:SetTextVisual:Value {
@@ -154,12 +231,26 @@ UITextHyperlink:SetTextVisual:Value {
     state draft
 }
 
+UITextHyperlink:SetUseHoverColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetUseHoverColor
+    src   "Set Use Hover Color"
+    text  "设置使用悬停颜色"
+    state machine
+}
+
 UITextHyperlink:SetUseHoverColor:Value {
     at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetUseHoverColor:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+UITextHyperlink:SetUsePressedColor {
+    at    Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h#UITextHyperlink:SetUsePressedColor
+    src   "Set Use Pressed Color"
+    text  "设置使用按下颜色"
+    state machine
 }
 
 UITextHyperlink:SetUsePressedColor:Value {

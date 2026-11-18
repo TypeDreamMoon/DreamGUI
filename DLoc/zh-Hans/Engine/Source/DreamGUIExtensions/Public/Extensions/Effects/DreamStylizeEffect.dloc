@@ -16,11 +16,65 @@ DreamStylizeEffect:EffectBlendMode {
     state machine
 }
 
+DreamStylizeEffect:GetEffectBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetEffectBlendMode
+    src   "Get Effect Blend Mode"
+    text  "获取效果混合模式"
+    state machine
+}
+
 DreamStylizeEffect:GetEffectBlendMode:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetEffectBlendMode:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetLayerParameter {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter
+    src   "Get Layer Parameter"
+    text  "获取图层参数"
+    state machine
+}
+
+DreamStylizeEffect:GetLayerParameter:LayerIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter:LayerIndex
+    src   "Layer Index"
+    // from the engine's zh-Hans
+    text  "Layer Index"
+    state draft
+}
+
+DreamStylizeEffect:GetLayerParameter:OutValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter:OutValue
+    src   "Out Value"
+    // from the engine's zh-Hans
+    text  "输出值"
+    state draft
+}
+
+DreamStylizeEffect:GetLayerParameter:ParameterName {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter:ParameterName
+    src   "Parameter Name"
+    // from the engine's zh-Hans
+    text  "参数名称"
+    state draft
+}
+
+DreamStylizeEffect:GetLayerParameter:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetLayers {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayers
+    src   "Get Layers"
+    // from the engine's zh-Hans
+    text  "Get Layers"
     state draft
 }
 
@@ -32,11 +86,26 @@ DreamStylizeEffect:GetLayers:ReturnValue {
     state draft
 }
 
+DreamStylizeEffect:GetOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetOpacity
+    src   "Get Opacity"
+    text  "获取不透明度"
+    state machine
+}
+
 DreamStylizeEffect:GetOpacity:ReturnValue {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetOpacity:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:GetTarget {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetTarget
+    src   "Get Target"
+    // from the engine's zh-Hans
+    text  "Get Target"
     state draft
 }
 
@@ -64,12 +133,65 @@ DreamStylizeEffect:Opacity {
     state draft
 }
 
+DreamStylizeEffect:SetEffectBlendMode {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetEffectBlendMode
+    src   "Set Effect Blend Mode"
+    text  "设置效果混合模式"
+    state machine
+}
+
 DreamStylizeEffect:SetEffectBlendMode:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetEffectBlendMode:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
     state draft
+}
+
+DreamStylizeEffect:SetLayerParameter {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter
+    src   "Set Layer Parameter"
+    text  "设置图层参数"
+    state machine
+}
+
+DreamStylizeEffect:SetLayerParameter:LayerIndex {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter:LayerIndex
+    src   "Layer Index"
+    // from the engine's zh-Hans
+    text  "Layer Index"
+    state draft
+}
+
+DreamStylizeEffect:SetLayerParameter:ParameterName {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter:ParameterName
+    src   "Parameter Name"
+    // from the engine's zh-Hans
+    text  "参数名称"
+    state draft
+}
+
+DreamStylizeEffect:SetLayerParameter:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamStylizeEffect:SetLayerParameter:Value {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter:Value
+    src   "Value"
+    // from the engine's zh-Hans
+    text  "值"
+    state draft
+}
+
+DreamStylizeEffect:SetLayers {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayers
+    src   "Set Layers"
+    text  "设置图层"
+    state machine
 }
 
 DreamStylizeEffect:SetLayers:Value {
@@ -80,11 +202,27 @@ DreamStylizeEffect:SetLayers:Value {
     state draft
 }
 
+DreamStylizeEffect:SetOpacity {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetOpacity
+    src   "Set Opacity"
+    // from the engine's zh-Hans
+    text  "设置不透明度"
+    state draft
+}
+
 DreamStylizeEffect:SetOpacity:Value {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetOpacity:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamStylizeEffect:SetTarget {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetTarget
+    src   "Set Target"
+    // from the engine's zh-Hans
+    text  "设置目标"
     state draft
 }
 
@@ -102,6 +240,13 @@ DreamStylizeEffect:Target {
     // from the engine's zh-Hans
     text  "目标"
     state draft
+}
+
+DreamStylizeEffect:TriggerBurst {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:TriggerBurst
+    src   "Trigger Burst"
+    text  "触发爆发"
+    state machine
 }
 
 DreamStylizeEffect:TriggerBurst:InDuration {
@@ -128,10 +273,24 @@ DreamStylizeEffect {
     state machine
 }
 
+DreamStylizeEffect:GetLayerParameter {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:GetLayerParameter
+    src   "One number of one layer, as SetLayerParameter names it; false when there is no such layer or number."
+    text  "某一图层的某个数值，按 SetLayerParameter 的命名方式；没有该图层或该数值时返回 false。"
+    state machine
+}
+
 DreamStylizeEffect:Layers {
     at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:Layers
     src   "The layers, in order: each works on what the one before made. The first eight enabled ones are drawn."
     text  "图层按顺序排列，每个图层作用于前一个图层的结果。前八个启用的图层会被绘制。"
+    state machine
+}
+
+DreamStylizeEffect:SetLayerParameter {
+    at    Source/DreamGUIExtensions/Public/Extensions/Effects/DreamStylizeEffect.h#DreamStylizeEffect:SetLayerParameter
+    src   "One number of one layer, by the name of its property on FDreamStylizeLayer (AberrationAmount, ScanlineStrength,\nGlitchIntensity...): what a chromatic aberration that follows the camera's speed, or a scanline that rolls for a\ntransition, changes every frame -- without building the whole list again for SetLayers. A whole-number or on/off\nproperty takes the value rounded, or non-zero as on. False, and nothing changed, for a layer that is not there or a\nname that is not a number of a layer."
+    text  "某一图层的某个数值，用它在该图层上的属性名（FDreamStylizeLayer 上的 AberrationAmount、ScanlineStrength、\nGlitchIntensity……）指定：跟随相机速度的色差、为转场滚动的扫描线就是每帧改它——不必为 SetLayers 重建整个列表。\n整数属性或开关属性会取四舍五入后的值，非零即为开。图层不存在、或该名字不是\n图层上的数值时，返回 false 且什么都不改。"
     state machine
 }
 

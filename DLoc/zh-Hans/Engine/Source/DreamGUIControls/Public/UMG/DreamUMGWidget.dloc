@@ -41,11 +41,27 @@ DreamUMGWidget:bWindowFocusable {
     state draft
 }
 
+DreamUMGWidget:GetCurrentDrawSize {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetCurrentDrawSize
+    src   "Get Current Draw Size"
+    // from the engine's zh-Hans
+    text  "获取当前绘制大小"
+    state draft
+}
+
 DreamUMGWidget:GetCurrentDrawSize:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetCurrentDrawSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetManuallyRedraw
+    src   "Get Manually Redraw"
+    // from the engine's zh-Hans
+    text  "获取手动重绘制"
     state draft
 }
 
@@ -57,11 +73,27 @@ DreamUMGWidget:GetManuallyRedraw:ReturnValue {
     state draft
 }
 
+DreamUMGWidget:GetRedrawTime {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRedrawTime
+    src   "Get Redraw Time"
+    // from the engine's zh-Hans
+    text  "获取重绘制时间"
+    state draft
+}
+
 DreamUMGWidget:GetRedrawTime:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRedrawTime:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetRenderTarget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetRenderTarget
+    src   "Get Render Target"
+    // from the engine's zh-Hans
+    text  "获取渲染目标"
     state draft
 }
 
@@ -73,11 +105,26 @@ DreamUMGWidget:GetRenderTarget:ReturnValue {
     state draft
 }
 
+DreamUMGWidget:GetResolutionScale {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetResolutionScale
+    src   "Get Resolution Scale"
+    text  "获取分辨率缩放"
+    state machine
+}
+
 DreamUMGWidget:GetResolutionScale:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetResolutionScale:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetTickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetTickWhenOffscreen
+    src   "Get Tick when Offscreen"
+    // from the engine's zh-Hans
+    text  "获取屏幕外时tick"
     state draft
 }
 
@@ -89,11 +136,26 @@ DreamUMGWidget:GetTickWhenOffscreen:ReturnValue {
     state draft
 }
 
+DreamUMGWidget:GetUMGWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUMGWidget
+    src   "Get UMGWidget"
+    text  "获取 UMG 控件"
+    state machine
+}
+
 DreamUMGWidget:GetUMGWidget:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUMGWidget:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:GetUserWidgetObject {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetUserWidgetObject
+    src   "Get User Widget Object"
+    // from the engine's zh-Hans
+    text  "获取用户控件对象"
     state draft
 }
 
@@ -105,6 +167,14 @@ DreamUMGWidget:GetUserWidgetObject:ReturnValue {
     state draft
 }
 
+DreamUMGWidget:GetWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowFocusable
+    src   "Get Window Focusable"
+    // from the engine's zh-Hans
+    text  "获取可聚焦窗口"
+    state draft
+}
+
 DreamUMGWidget:GetWindowFocusable:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowFocusable:ReturnValue
     src   "Return Value"
@@ -113,11 +183,27 @@ DreamUMGWidget:GetWindowFocusable:ReturnValue {
     state draft
 }
 
+DreamUMGWidget:GetWindowVisiblility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowVisiblility
+    src   "Get Window Visiblility"
+    // from the engine's zh-Hans
+    text  "获取窗口可视性"
+    state draft
+}
+
 DreamUMGWidget:GetWindowVisiblility:ReturnValue {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:GetWindowVisiblility:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamUMGWidget:IsWidgetVisible {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:IsWidgetVisible
+    src   "Is Widget Visible"
+    // from the engine's zh-Hans
+    text  "为可见控件"
     state draft
 }
 
@@ -145,11 +231,27 @@ DreamUMGWidget:RenderTarget {
     state draft
 }
 
+DreamUMGWidget:RequestRenderUpdate {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:RequestRenderUpdate
+    src   "Request Render Update"
+    // from the engine's zh-Hans
+    text  "Request Render Update"
+    state draft
+}
+
 DreamUMGWidget:ResolutionScale {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:ResolutionScale
     src   "Resolution Scale"
     // from the engine's zh-Hans
     text  "Resolution Scale"
+    state draft
+}
+
+DreamUMGWidget:SetBackgroundColor {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetBackgroundColor
+    src   "Set Background Color"
+    // from the engine's zh-Hans
+    text  "Set Background Color"
     state draft
 }
 
@@ -161,11 +263,27 @@ DreamUMGWidget:SetBackgroundColor:NewBackgroundColor {
     state draft
 }
 
+DreamUMGWidget:SetManuallyRedraw {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetManuallyRedraw
+    src   "Set Manually Redraw"
+    // from the engine's zh-Hans
+    text  "设置手动重绘制"
+    state draft
+}
+
 DreamUMGWidget:SetManuallyRedraw:bUseManualRedraw {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetManuallyRedraw:bUseManualRedraw
     src   "Use Manual Redraw"
     // from the engine's zh-Hans
     text  "使用手动重绘制"
+    state draft
+}
+
+DreamUMGWidget:SetRedrawTime {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetRedrawTime
+    src   "Set Redraw Time"
+    // from the engine's zh-Hans
+    text  "设置重绘制时间"
     state draft
 }
 
@@ -177,11 +295,26 @@ DreamUMGWidget:SetRedrawTime:InRedrawTime {
     state draft
 }
 
+DreamUMGWidget:SetResolutionScale {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetResolutionScale
+    src   "Set Resolution Scale"
+    text  "设置分辨率缩放"
+    state machine
+}
+
 DreamUMGWidget:SetResolutionScale:value {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetResolutionScale:value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamUMGWidget:SetTickMode {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickMode
+    src   "Set Tick Mode"
+    // from the engine's zh-Hans
+    text  "设置Tick模式"
     state draft
 }
 
@@ -193,11 +326,27 @@ DreamUMGWidget:SetTickMode:InTickMode {
     state draft
 }
 
+DreamUMGWidget:SetTickWhenOffscreen {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickWhenOffscreen
+    src   "Set Tick when Offscreen"
+    // from the engine's zh-Hans
+    text  "设置屏幕外时tick"
+    state draft
+}
+
 DreamUMGWidget:SetTickWhenOffscreen:bWantTickWhenOffscreen {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetTickWhenOffscreen:bWantTickWhenOffscreen
     src   "Want Tick when Offscreen"
     // from the engine's zh-Hans
     text  "希望在出屏时tick"
+    state draft
+}
+
+DreamUMGWidget:SetWidget {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWidget
+    src   "Set Widget"
+    // from the engine's zh-Hans
+    text  "设置控件"
     state draft
 }
 
@@ -209,11 +358,27 @@ DreamUMGWidget:SetWidget:Widget {
     state draft
 }
 
+DreamUMGWidget:SetWindowFocusable {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowFocusable
+    src   "Set Window Focusable"
+    // from the engine's zh-Hans
+    text  "设置可聚焦窗口"
+    state draft
+}
+
 DreamUMGWidget:SetWindowFocusable:bInWindowFocusable {
     at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowFocusable:bInWindowFocusable
     src   "In Window Focusable"
     // from the engine's zh-Hans
     text  "在可聚焦窗口中"
+    state draft
+}
+
+DreamUMGWidget:SetWindowVisibility {
+    at    Source/DreamGUIControls/Public/UMG/DreamUMGWidget.h#DreamUMGWidget:SetWindowVisibility
+    src   "Set Window Visibility"
+    // from the engine's zh-Hans
+    text  "设置窗口可视性"
     state draft
 }
 

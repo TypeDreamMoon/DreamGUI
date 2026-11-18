@@ -24,6 +24,13 @@ DreamRichTextBlock:CustomStyleData {
     state machine
 }
 
+DreamRichTextBlock:GetAutoWrapText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetAutoWrapText
+    src   "Get Auto Wrap Text"
+    text  "获取自动包裹文本"
+    state machine
+}
+
 DreamRichTextBlock:GetAutoWrapText:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetAutoWrapText:ReturnValue
     src   "Return Value"
@@ -32,11 +39,26 @@ DreamRichTextBlock:GetAutoWrapText:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetCustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetCustomStyleData
+    src   "Get Custom Style Data"
+    text  "获取自定义样式数据"
+    state machine
+}
+
 DreamRichTextBlock:GetCustomStyleData:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetCustomStyleData:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetDefaultDynamicMaterial {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultDynamicMaterial
+    src   "Get Default Dynamic Material"
+    // from the engine's zh-Hans
+    text  "Get Default Dynamic Material"
     state draft
 }
 
@@ -48,12 +70,26 @@ DreamRichTextBlock:GetDefaultDynamicMaterial:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetDefaultFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultFont
+    src   "Get Default Font"
+    text  "获取默认字体"
+    state machine
+}
+
 DreamRichTextBlock:GetDefaultFont:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetDefaultFont:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetHorizontalAlignment
+    src   "Get Horizontal Alignment"
+    text  "获取水平对齐"
+    state machine
 }
 
 DreamRichTextBlock:GetHorizontalAlignment:ReturnValue {
@@ -64,12 +100,26 @@ DreamRichTextBlock:GetHorizontalAlignment:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetImageData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetImageData
+    src   "Get Image Data"
+    text  "获取图像数据"
+    state machine
+}
+
 DreamRichTextBlock:GetImageData:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetImageData:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetLanguage {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetLanguage
+    src   "Get Language"
+    text  "获取语言"
+    state machine
 }
 
 DreamRichTextBlock:GetLanguage:ReturnValue {
@@ -80,12 +130,26 @@ DreamRichTextBlock:GetLanguage:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetLastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetLastLineAlign
+    src   "Get Last Line Align"
+    text  "获取最后一行对齐方式"
+    state machine
+}
+
 DreamRichTextBlock:GetLastLineAlign:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetLastLineAlign:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetMinDesiredWidth
+    src   "Get Min Desired Width"
+    text  "获取所需最小宽度"
+    state machine
 }
 
 DreamRichTextBlock:GetMinDesiredWidth:ReturnValue {
@@ -96,12 +160,26 @@ DreamRichTextBlock:GetMinDesiredWidth:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetOverflowType {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetOverflowType
+    src   "Get Overflow Type"
+    text  "获取溢出类型"
+    state machine
+}
+
 DreamRichTextBlock:GetOverflowType:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetOverflowType:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetSmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetSmallTextRaster
+    src   "Get Small Text Raster"
+    text  "获取小字栅格"
+    state machine
 }
 
 DreamRichTextBlock:GetSmallTextRaster:ReturnValue {
@@ -112,12 +190,26 @@ DreamRichTextBlock:GetSmallTextRaster:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetStyle
+    src   "Get Style"
+    text  "获取样式"
+    state machine
+}
+
 DreamRichTextBlock:GetStyle:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetStyle:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetTabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTabSize
+    src   "Get Tab Size"
+    text  "获取制表符大小"
+    state machine
 }
 
 DreamRichTextBlock:GetTabSize:ReturnValue {
@@ -128,11 +220,26 @@ DreamRichTextBlock:GetTabSize:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetTagFilterFlags {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTagFilterFlags
+    src   "Get Tag Filter Flags"
+    text  "获取标签筛选标志"
+    state machine
+}
+
 DreamRichTextBlock:GetTagFilterFlags:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTagFilterFlags:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamRichTextBlock:GetText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetText
+    src   "Get Text"
+    // from the engine's zh-Hans
+    text  "获取文本"
     state draft
 }
 
@@ -144,6 +251,13 @@ DreamRichTextBlock:GetText:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetTextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextJustify
+    src   "Get Text Justify"
+    text  "获取文本对齐"
+    state machine
+}
+
 DreamRichTextBlock:GetTextJustify:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextJustify:ReturnValue
     src   "Return Value"
@@ -152,12 +266,26 @@ DreamRichTextBlock:GetTextJustify:ReturnValue {
     state draft
 }
 
+DreamRichTextBlock:GetTextTransformPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextTransformPolicy
+    src   "Get Text Transform Policy"
+    text  "获取文本变换策略"
+    state machine
+}
+
 DreamRichTextBlock:GetTextTransformPolicy:ReturnValue {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetTextTransformPolicy:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+DreamRichTextBlock:GetVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:GetVerticalAlignment
+    src   "Get Vertical Alignment"
+    text  "获取垂直对齐"
+    state machine
 }
 
 DreamRichTextBlock:GetVerticalAlignment:ReturnValue {
@@ -214,10 +342,33 @@ DreamRichTextBlock:OverflowType {
     state machine
 }
 
+DreamRichTextBlock:RefreshTextLayout {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:RefreshTextLayout
+    src   "Refresh Text Layout"
+    // from the engine's zh-Hans
+    text  "Refresh Text Layout"
+    state draft
+}
+
+DreamRichTextBlock:SetAutoWrapText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetAutoWrapText
+    src   "Set Auto Wrap Text"
+    // from the engine's zh-Hans
+    text  "设置自动打包文本"
+    state draft
+}
+
 DreamRichTextBlock:SetAutoWrapText:bInAutoWrapText {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetAutoWrapText:bInAutoWrapText
     src   "In Auto Wrap Text"
     text  "输入自动换行文本"
+    state machine
+}
+
+DreamRichTextBlock:SetCustomStyleData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetCustomStyleData
+    src   "Set Custom Style Data"
+    text  "设置自定义样式数据"
     state machine
 }
 
@@ -228,11 +379,27 @@ DreamRichTextBlock:SetCustomStyleData:InCustomStyleData {
     state machine
 }
 
+DreamRichTextBlock:SetDefaultFont {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetDefaultFont
+    src   "Set Default Font"
+    // from the engine's zh-Hans
+    text  "设置默认字体"
+    state draft
+}
+
 DreamRichTextBlock:SetDefaultFont:InFont {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetDefaultFont:InFont
     src   "In Font"
     // from the engine's zh-Hans
     text  "在字体中"
+    state draft
+}
+
+DreamRichTextBlock:SetHorizontalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetHorizontalAlignment
+    src   "Set Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "设置水平对齐"
     state draft
 }
 
@@ -244,11 +411,26 @@ DreamRichTextBlock:SetHorizontalAlignment:InHorizontalAlignment {
     state draft
 }
 
+DreamRichTextBlock:SetImageData {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetImageData
+    src   "Set Image Data"
+    text  "设置图像数据"
+    state machine
+}
+
 DreamRichTextBlock:SetImageData:InImageData {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetImageData:InImageData
     src   "In Image Data"
     // from the engine's zh-Hans
     text  "In Image Data"
+    state draft
+}
+
+DreamRichTextBlock:SetJustification {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetJustification
+    src   "Set Justification"
+    // from the engine's zh-Hans
+    text  "设置对齐"
     state draft
 }
 
@@ -260,10 +442,24 @@ DreamRichTextBlock:SetJustification:InJustification {
     state draft
 }
 
+DreamRichTextBlock:SetLanguage {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetLanguage
+    src   "Set Language"
+    text  "设置语言"
+    state machine
+}
+
 DreamRichTextBlock:SetLanguage:InLanguage {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetLanguage:InLanguage
     src   "In Language"
     text  "输入语言"
+    state machine
+}
+
+DreamRichTextBlock:SetLastLineAlign {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetLastLineAlign
+    src   "Set Last Line Align"
+    text  "设置最后一行对齐方式"
     state machine
 }
 
@@ -274,6 +470,14 @@ DreamRichTextBlock:SetLastLineAlign:InLastLineAlign {
     state machine
 }
 
+DreamRichTextBlock:SetMinDesiredWidth {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetMinDesiredWidth
+    src   "Set Min Desired Width"
+    // from the engine's zh-Hans
+    text  "设置所需最小宽度"
+    state draft
+}
+
 DreamRichTextBlock:SetMinDesiredWidth:InMinDesiredWidth {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetMinDesiredWidth:InMinDesiredWidth
     src   "In Min Desired Width"
@@ -282,10 +486,24 @@ DreamRichTextBlock:SetMinDesiredWidth:InMinDesiredWidth {
     state draft
 }
 
+DreamRichTextBlock:SetOverflowType {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetOverflowType
+    src   "Set Overflow Type"
+    text  "设置溢出类型"
+    state machine
+}
+
 DreamRichTextBlock:SetOverflowType:InOverflowType {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetOverflowType:InOverflowType
     src   "In Overflow Type"
     text  "输入溢出类型"
+    state machine
+}
+
+DreamRichTextBlock:SetSmallTextRaster {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetSmallTextRaster
+    src   "Set Small Text Raster"
+    text  "设置小字栅格"
     state machine
 }
 
@@ -296,6 +514,14 @@ DreamRichTextBlock:SetSmallTextRaster:InSmallTextRaster {
     state machine
 }
 
+DreamRichTextBlock:SetStyle {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetStyle
+    src   "Set Style"
+    // from the engine's zh-Hans
+    text  "设置样式"
+    state draft
+}
+
 DreamRichTextBlock:SetStyle:InStyle {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetStyle:InStyle
     src   "In Style"
@@ -304,10 +530,24 @@ DreamRichTextBlock:SetStyle:InStyle {
     state draft
 }
 
+DreamRichTextBlock:SetTabSize {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTabSize
+    src   "Set Tab Size"
+    text  "设置制表符大小"
+    state machine
+}
+
 DreamRichTextBlock:SetTabSize:InTabSize {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTabSize:InTabSize
     src   "In Tab Size"
     text  "输入制表符大小"
+    state machine
+}
+
+DreamRichTextBlock:SetTagFilterFlags {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTagFilterFlags
+    src   "Set Tag Filter Flags"
+    text  "设置标签筛选标志"
     state machine
 }
 
@@ -318,6 +558,14 @@ DreamRichTextBlock:SetTagFilterFlags:InTagFilterFlags {
     state machine
 }
 
+DreamRichTextBlock:SetText {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetText
+    src   "Set Text"
+    // from the engine's zh-Hans
+    text  "设置文本"
+    state draft
+}
+
 DreamRichTextBlock:SetText:InText {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetText:InText
     src   "In Text"
@@ -326,11 +574,26 @@ DreamRichTextBlock:SetText:InText {
     state draft
 }
 
+DreamRichTextBlock:SetTextJustify {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextJustify
+    src   "Set Text Justify"
+    text  "设置文本对齐"
+    state machine
+}
+
 DreamRichTextBlock:SetTextJustify:InTextJustify {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextJustify:InTextJustify
     src   "In Text Justify"
     text  "输入文本对齐"
     state machine
+}
+
+DreamRichTextBlock:SetTextOverflowPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextOverflowPolicy
+    src   "Set Text Overflow Policy"
+    // from the engine's zh-Hans
+    text  "Set Text Overflow Policy"
+    state draft
 }
 
 DreamRichTextBlock:SetTextOverflowPolicy:InOverflowPolicy {
@@ -341,11 +604,27 @@ DreamRichTextBlock:SetTextOverflowPolicy:InOverflowPolicy {
     state draft
 }
 
+DreamRichTextBlock:SetTextTransformPolicy {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextTransformPolicy
+    src   "Set Text Transform Policy"
+    // from the engine's zh-Hans
+    text  "设置文本变换规则"
+    state draft
+}
+
 DreamRichTextBlock:SetTextTransformPolicy:InTransformPolicy {
     at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetTextTransformPolicy:InTransformPolicy
     src   "In Transform Policy"
     // from the engine's zh-Hans
     text  "在变换规则中"
+    state draft
+}
+
+DreamRichTextBlock:SetVerticalAlignment {
+    at    Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h#DreamRichTextBlock:SetVerticalAlignment
+    src   "Set Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "设置垂直对齐"
     state draft
 }
 

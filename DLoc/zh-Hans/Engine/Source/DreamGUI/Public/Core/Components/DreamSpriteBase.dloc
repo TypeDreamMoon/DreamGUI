@@ -9,11 +9,26 @@ DreamSpriteBase {
     state machine
 }
 
+DreamSpriteBase:GetOverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:GetOverrideMaterial
+    src   "Get Override Material"
+    text  "获取重载材质"
+    state machine
+}
+
 DreamSpriteBase:GetOverrideMaterial:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:GetOverrideMaterial:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamSpriteBase:GetSprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:GetSprite
+    src   "Get Sprite"
+    // from the engine's zh-Hans
+    text  "获取Sprite"
     state draft
 }
 
@@ -33,11 +48,33 @@ DreamSpriteBase:OverrideMaterial {
     state draft
 }
 
+DreamSpriteBase:SetOverrideMaterial {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetOverrideMaterial
+    src   "Set Override Material"
+    text  "设置重载材质"
+    state machine
+}
+
 DreamSpriteBase:SetOverrideMaterial:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetOverrideMaterial:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamSpriteBase:SetSizeFromSpriteData {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetSizeFromSpriteData
+    src   "Set Size from Sprite Data"
+    text  "从精灵数据设置尺寸"
+    state machine
+}
+
+DreamSpriteBase:SetSprite {
+    at    Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h#DreamSpriteBase:SetSprite
+    src   "Set Sprite"
+    // from the engine's zh-Hans
+    text  "设置Sprite"
     state draft
 }
 

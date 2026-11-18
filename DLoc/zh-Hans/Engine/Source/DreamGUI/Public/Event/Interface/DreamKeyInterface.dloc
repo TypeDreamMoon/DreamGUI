@@ -9,11 +9,27 @@ DreamKeyInterface {
     state machine
 }
 
+DreamKeyInterface:OnAnalogValueChanged {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnAnalogValueChanged
+    src   "On Analog Value Changed"
+    // from the engine's zh-Hans
+    text  "模拟值变更时"
+    state draft
+}
+
 DreamKeyInterface:OnAnalogValueChanged:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnAnalogValueChanged:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
+    state draft
+}
+
+DreamKeyInterface:OnKeyChar {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyChar
+    src   "On Key Char"
+    // from the engine's zh-Hans
+    text  "键字符上"
     state draft
 }
 
@@ -25,11 +41,27 @@ DreamKeyInterface:OnKeyChar:EventData {
     state draft
 }
 
+DreamKeyInterface:OnKeyDown {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyDown
+    src   "On Key Down"
+    // from the engine's zh-Hans
+    text  "按下键时"
+    state draft
+}
+
 DreamKeyInterface:OnKeyDown:EventData {
     at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyDown:EventData
     src   "Event Data"
     // from the engine's zh-Hans
     text  "事件数据"
+    state draft
+}
+
+DreamKeyInterface:OnKeyUp {
+    at    Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h#DreamKeyInterface:OnKeyUp
+    src   "On Key Up"
+    // from the engine's zh-Hans
+    text  "松开键时"
     state draft
 }
 

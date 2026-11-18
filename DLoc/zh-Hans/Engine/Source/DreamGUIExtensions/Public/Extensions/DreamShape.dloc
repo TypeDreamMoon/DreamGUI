@@ -1,0 +1,195 @@
+dloc 1
+culture zh-Hans
+namespace UObjectDisplayNames
+
+DreamShape {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape
+    src   "Dream Shape"
+    text  "Dream 形状"
+    state machine
+}
+
+DreamShape:GetPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:GetPoints
+    src   "Get Points"
+    text  "获取点"
+    state machine
+}
+
+DreamShape:GetPoints:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:GetPoints:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShape:GetPointUnit {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:GetPointUnit
+    src   "Get Point Unit"
+    text  "获取点单位"
+    state machine
+}
+
+DreamShape:GetPointUnit:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:GetPointUnit:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShape:Points {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:Points
+    src   "Points"
+    // from the engine's zh-Hans
+    text  "点"
+    state draft
+}
+
+DreamShape:PointsTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo
+    src   "Points To"
+    text  "点终点"
+    state machine
+}
+
+DreamShape:PointsTo:Delay {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo:Delay
+    src   "Delay"
+    // from the engine's zh-Hans
+    text  "延迟"
+    state draft
+}
+
+DreamShape:PointsTo:Duration {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo:Duration
+    src   "Duration"
+    // from the engine's zh-Hans
+    text  "时长"
+    state draft
+}
+
+DreamShape:PointsTo:EaseType {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo:EaseType
+    src   "Ease Type"
+    text  "缓动类型"
+    state machine
+}
+
+DreamShape:PointsTo:InPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo:InPoints
+    src   "In Points"
+    // from the engine's zh-Hans
+    text  "在点中"
+    state draft
+}
+
+DreamShape:PointsTo:ReturnValue {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo:ReturnValue
+    src   "Return Value"
+    // from the engine's zh-Hans
+    text  "返回值"
+    state draft
+}
+
+DreamShape:PointUnit {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointUnit
+    src   "Point Unit"
+    text  "点单位"
+    state machine
+}
+
+DreamShape:SetPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:SetPoints
+    src   "Set Points"
+    text  "设置点"
+    state machine
+}
+
+DreamShape:SetPoints:InPoints {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:SetPoints:InPoints
+    src   "In Points"
+    // from the engine's zh-Hans
+    text  "在点中"
+    state draft
+}
+
+DreamShape:SetPointUnit {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:SetPointUnit
+    src   "Set Point Unit"
+    text  "设置点单位"
+    state machine
+}
+
+DreamShape:SetPointUnit:InUnit {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:SetPointUnit:InUnit
+    src   "In Unit"
+    text  "输入单位"
+    state machine
+}
+
+EDreamShapePointUnit.EDreamShapePointUnit_MAX {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit:EDreamShapePointUnit_MAX
+    src   "EDream Shape Point Unit MAX"
+}
+
+EDreamShapePointUnit.Normalized {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit:Normalized
+    src   "Normalized"
+    // from the engine's zh-Hans
+    text  "Normalized"
+    state draft
+}
+
+EDreamShapePointUnit.Pixels {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit:Pixels
+    src   "Pixels"
+    // from the engine's zh-Hans
+    text  "像素"
+    state draft
+}
+
+namespace UObjectToolTips
+
+DreamShape {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape
+    src   "A filled polygon through any points you give it: triangles, slanted bars, arrows, cursor slashes, star bursts.\n`.dui` tag `Shape`.\n\n    Shape Slash {\n        Points = [(0, 0.2), (1, 1), (0.85, 0.35)]     // normalized, (0,0) bottom left, y up\n        Color = #FF1E3C\n    }\n\nPolygon draws regular N-gons only (each vertex can move along its own ray, never sideways), so a parallelogram or an\narbitrary triangle cannot be made from it. This visual takes the outline directly. The outline is a simple polygon\n-- convex or concave, either winding, no self-intersections -- and is filled by ear clipping. The brush paints it\nthe way it paints an Image: the texture (or material) is laid over the widget's rect and each point samples where it\nsits in that rect, so a shape cut from a picture keeps the picture in place.\n\nPointsTo morphs the outline into another with the same number of points, which is how a cursor stretches from one\nitem to the next. Hit-testing is the rect's, like every other image-derived visual."
+    text  "以你给出的任意点连成的填充多边形：三角形、斜条、箭头、光标斜线、星暴。\n`.dui` 标签 `Shape`。\n\n    Shape Slash {\n        Points = [(0, 0.2), (1, 1), (0.85, 0.35)]     // normalized, (0,0) bottom left, y up\n        Color = #FF1E3C\n    }\n\nPolygon 只画正 N 边形（每个顶点只能沿自己的射线移动，不能横向移动），所以平行四边形或\n任意三角形无法用它做出来。这个视觉直接接受轮廓。轮廓是一个简单多边形\n——凸或凹、两种绕向都行、不自交——用耳朵裁剪填充。笔刷画它的方式与画 Image 相同：纹理（或材质）铺在控件的矩形上，每个点采样它在该\n矩形中的位置，所以从图中切出的形状会保持图案原位。\n\nPointsTo 会把轮廓变形为另一个点数相同的轮廓，光标就是这样从一项拉伸到\n下一项的。命中测试用矩形，与其他所有由图像派生的视觉相同。"
+    state machine
+}
+
+DreamShape:Points {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:Points
+    src   "The outline, in order around the shape. Fewer than three points draws nothing."
+    text  "轮廓，按绕形状的顺序排列。少于三个点则什么都不画。"
+    state machine
+}
+
+DreamShape:PointsTo {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#DreamShape:PointsTo
+    src   "Morph from the current outline to InPoints. With a different point count there is nothing to pair the points\nby, so the outline is replaced at once and no tween is returned."
+    text  "把当前轮廓变形到 InPoints。点数不同时没有东西可以把点一一配对，\n所以轮廓会立刻替换，也不返回补间。"
+    state machine
+}
+
+EDreamShapePointUnit {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit
+    src   "What a Shape's points are measured in."
+    text  "Shape 的点按什么单位度量。"
+    state machine
+}
+
+EDreamShapePointUnit.Normalized {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit:Normalized
+    src   "0..1 across the widget's rect, (0,0) at the bottom left -- the shape stretches with the rect."
+    text  "在控件矩形上取 0..1，(0,0) 在左下角——形状随矩形拉伸。"
+    state machine
+}
+
+EDreamShapePointUnit.Pixels {
+    at    Source/DreamGUIExtensions/Public/Extensions/DreamShape.h#EDreamShapePointUnit:Pixels
+    src   "Pixels from the rect's bottom-left corner -- the shape keeps its size when the rect changes."
+    text  "以矩形左下角为原点的像素——矩形变化时形状保持原尺寸。"
+    state machine
+}

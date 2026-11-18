@@ -93,11 +93,27 @@ DreamPanelSlot:FillWeight {
     state machine
 }
 
+DreamPanelSlot:GetAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAlignment
+    src   "Get Alignment"
+    // from the engine's zh-Hans
+    text  "获取对齐"
+    state draft
+}
+
 DreamPanelSlot:GetAlignment:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAlignment:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetAnchors {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAnchors
+    src   "Get Anchors"
+    // from the engine's zh-Hans
+    text  "获取锚"
     state draft
 }
 
@@ -109,11 +125,27 @@ DreamPanelSlot:GetAnchors:ReturnValue {
     state draft
 }
 
+DreamPanelSlot:GetAutoSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAutoSize
+    src   "Get Auto Size"
+    // from the engine's zh-Hans
+    text  "获取自动大小"
+    state draft
+}
+
 DreamPanelSlot:GetAutoSize:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetAutoSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetLayer {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayer
+    src   "Get Layer"
+    // from the engine's zh-Hans
+    text  "获取图层"
     state draft
 }
 
@@ -125,11 +157,27 @@ DreamPanelSlot:GetLayer:ReturnValue {
     state draft
 }
 
+DreamPanelSlot:GetLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayout
+    src   "Get Layout"
+    // from the engine's zh-Hans
+    text  "获取布局"
+    state draft
+}
+
 DreamPanelSlot:GetLayout:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetLayout:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetOffsets {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetOffsets
+    src   "Get Offsets"
+    // from the engine's zh-Hans
+    text  "获取偏移"
     state draft
 }
 
@@ -141,6 +189,14 @@ DreamPanelSlot:GetOffsets:ReturnValue {
     state draft
 }
 
+DreamPanelSlot:GetPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetPosition
+    src   "Get Position"
+    // from the engine's zh-Hans
+    text  "Get Position"
+    state draft
+}
+
 DreamPanelSlot:GetPosition:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetPosition:ReturnValue
     src   "Return Value"
@@ -149,11 +205,27 @@ DreamPanelSlot:GetPosition:ReturnValue {
     state draft
 }
 
+DreamPanelSlot:GetSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetSize
+    src   "Get Size"
+    // from the engine's zh-Hans
+    text  "获取大小"
+    state draft
+}
+
 DreamPanelSlot:GetSize:ReturnValue {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetSize:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+DreamPanelSlot:GetZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:GetZOrder
+    src   "Get ZOrder"
+    // from the engine's zh-Hans
+    text  "获取ZOrder"
     state draft
 }
 
@@ -191,6 +263,13 @@ DreamPanelSlot:MinDesiredSize {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:MinDesiredSize
     src   "Min Desired Size"
     text  "最小期望尺寸"
+    state machine
+}
+
+DreamPanelSlot:NotifySlotChanged {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:NotifySlotChanged
+    src   "Notify Slot Changed"
+    text  "通知插槽变更"
     state machine
 }
 
@@ -234,11 +313,27 @@ DreamPanelSlot:RowSpan {
     state draft
 }
 
+DreamPanelSlot:SetAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAlignment
+    src   "Set Alignment"
+    // from the engine's zh-Hans
+    text  "设置对齐"
+    state draft
+}
+
 DreamPanelSlot:SetAlignment:InAlignment {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAlignment:InAlignment
     src   "In Alignment"
     // from the engine's zh-Hans
     text  "在对齐中"
+    state draft
+}
+
+DreamPanelSlot:SetAnchors {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAnchors
+    src   "Set Anchors"
+    // from the engine's zh-Hans
+    text  "设置锚"
     state draft
 }
 
@@ -250,11 +345,27 @@ DreamPanelSlot:SetAnchors:InAnchors {
     state draft
 }
 
+DreamPanelSlot:SetAutoSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAutoSize
+    src   "Set Auto Size"
+    // from the engine's zh-Hans
+    text  "设置自动大小"
+    state draft
+}
+
 DreamPanelSlot:SetAutoSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetAutoSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetColumn {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetColumn
+    src   "Set Column"
+    // from the engine's zh-Hans
+    text  "设置列"
     state draft
 }
 
@@ -266,11 +377,27 @@ DreamPanelSlot:SetColumn:Value {
     state draft
 }
 
+DreamPanelSlot:SetColumnSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetColumnSpan
+    src   "Set Column Span"
+    // from the engine's zh-Hans
+    text  "设置列跨度"
+    state draft
+}
+
 DreamPanelSlot:SetColumnSpan:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetColumnSpan:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetFillEmptySpace {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillEmptySpace
+    src   "Set Fill Empty Space"
+    // from the engine's zh-Hans
+    text  "设置填充空白空间"
     state draft
 }
 
@@ -282,6 +409,14 @@ DreamPanelSlot:SetFillEmptySpace:Value {
     state draft
 }
 
+DreamPanelSlot:SetFillSpanWhenLessThan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillSpanWhenLessThan
+    src   "Set Fill Span when Less Than"
+    // from the engine's zh-Hans
+    text  "设置小于该值时填充跨度"
+    state draft
+}
+
 DreamPanelSlot:SetFillSpanWhenLessThan:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillSpanWhenLessThan:Value
     src   "Value"
@@ -290,11 +425,26 @@ DreamPanelSlot:SetFillSpanWhenLessThan:Value {
     state draft
 }
 
+DreamPanelSlot:SetFillWeight {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillWeight
+    src   "Set Fill Weight"
+    text  "设置填充权重"
+    state machine
+}
+
 DreamPanelSlot:SetFillWeight:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetFillWeight:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetHorizontalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetHorizontalAlignment
+    src   "Set Horizontal Alignment"
+    // from the engine's zh-Hans
+    text  "设置水平对齐"
     state draft
 }
 
@@ -306,11 +456,27 @@ DreamPanelSlot:SetHorizontalAlignment:Value {
     state draft
 }
 
+DreamPanelSlot:SetLayer {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetLayer
+    src   "Set Layer"
+    // from the engine's zh-Hans
+    text  "设置图层"
+    state draft
+}
+
 DreamPanelSlot:SetLayer:InLayer {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetLayer:InLayer
     src   "In Layer"
     // from the engine's zh-Hans
     text  "输入层"
+    state draft
+}
+
+DreamPanelSlot:SetLayout {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetLayout
+    src   "Set Layout"
+    // from the engine's zh-Hans
+    text  "设置布局"
     state draft
 }
 
@@ -322,11 +488,26 @@ DreamPanelSlot:SetLayout:InLayout {
     state draft
 }
 
+DreamPanelSlot:SetMaxDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMaxDesiredSize
+    src   "Set Max Desired Size"
+    text  "设置最大期望尺寸"
+    state machine
+}
+
 DreamPanelSlot:SetMaxDesiredSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMaxDesiredSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetMaximum {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMaximum
+    src   "Set Maximum"
+    // from the engine's zh-Hans
+    text  "设置最大"
     state draft
 }
 
@@ -338,11 +519,26 @@ DreamPanelSlot:SetMaximum:InMaximumAnchors {
     state draft
 }
 
+DreamPanelSlot:SetMinDesiredSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMinDesiredSize
+    src   "Set Min Desired Size"
+    text  "设置最小期望尺寸"
+    state machine
+}
+
 DreamPanelSlot:SetMinDesiredSize:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMinDesiredSize:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetMinimum {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetMinimum
+    src   "Set Minimum"
+    // from the engine's zh-Hans
+    text  "设置最小"
     state draft
 }
 
@@ -354,11 +550,27 @@ DreamPanelSlot:SetMinimum:InMinimumAnchors {
     state draft
 }
 
+DreamPanelSlot:SetNewLine {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetNewLine
+    src   "Set New Line"
+    // from the engine's zh-Hans
+    text  "设置新行"
+    state draft
+}
+
 DreamPanelSlot:SetNewLine:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetNewLine:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetNudge {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetNudge
+    src   "Set Nudge"
+    // from the engine's zh-Hans
+    text  "设置微调"
     state draft
 }
 
@@ -370,6 +582,14 @@ DreamPanelSlot:SetNudge:Value {
     state draft
 }
 
+DreamPanelSlot:SetOffsets {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetOffsets
+    src   "Set Offsets"
+    // from the engine's zh-Hans
+    text  "设置偏移"
+    state draft
+}
+
 DreamPanelSlot:SetOffsets:InOffsets {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetOffsets:InOffsets
     src   "In Offsets"
@@ -377,11 +597,27 @@ DreamPanelSlot:SetOffsets:InOffsets {
     state machine
 }
 
+DreamPanelSlot:SetPadding {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetPadding
+    src   "Set Padding"
+    // from the engine's zh-Hans
+    text  "设置填充"
+    state draft
+}
+
 DreamPanelSlot:SetPadding:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetPadding:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetPosition {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetPosition
+    src   "Set Position"
+    // from the engine's zh-Hans
+    text  "设置位置"
     state draft
 }
 
@@ -393,11 +629,27 @@ DreamPanelSlot:SetPosition:InPosition {
     state draft
 }
 
+DreamPanelSlot:SetRow {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetRow
+    src   "Set Row"
+    // from the engine's zh-Hans
+    text  "设置行"
+    state draft
+}
+
 DreamPanelSlot:SetRow:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetRow:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetRowSpan {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetRowSpan
+    src   "Set Row Span"
+    // from the engine's zh-Hans
+    text  "设置行跨度"
     state draft
 }
 
@@ -409,12 +661,27 @@ DreamPanelSlot:SetRowSpan:Value {
     state draft
 }
 
+DreamPanelSlot:SetSize {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetSize
+    src   "Set Size"
+    // from the engine's zh-Hans
+    text  "设置大小"
+    state draft
+}
+
 DreamPanelSlot:SetSize:InSize {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetSize:InSize
     src   "In Size"
     // from the engine's zh-Hans
     text  "输入尺寸"
     state draft
+}
+
+DreamPanelSlot:SetSizeRule {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetSizeRule
+    src   "Set Size Rule"
+    text  "设置大小规则"
+    state machine
 }
 
 DreamPanelSlot:SetSizeRule:Value {
@@ -425,11 +692,27 @@ DreamPanelSlot:SetSizeRule:Value {
     state draft
 }
 
+DreamPanelSlot:SetVerticalAlignment {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetVerticalAlignment
+    src   "Set Vertical Alignment"
+    // from the engine's zh-Hans
+    text  "设置垂直对齐"
+    state draft
+}
+
 DreamPanelSlot:SetVerticalAlignment:Value {
     at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetVerticalAlignment:Value
     src   "Value"
     // from the engine's zh-Hans
     text  "值"
+    state draft
+}
+
+DreamPanelSlot:SetZOrder {
+    at    Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h#DreamPanelSlot:SetZOrder
+    src   "Set ZOrder"
+    // from the engine's zh-Hans
+    text  "设置ZOrder"
     state draft
 }
 

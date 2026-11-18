@@ -87,6 +87,13 @@ UIDropdown {
     state machine
 }
 
+UIDropdown:AddOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:AddOptions
+    src   "Add Options"
+    text  "添加选项"
+    state machine
+}
+
 UIDropdown:AddOptions:InOptions {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:AddOptions:InOptions
     src   "In Options"
@@ -123,10 +130,24 @@ UIDropdown:CaptionText {
     state machine
 }
 
+UIDropdown:ClearItemCustomDataFunction {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ClearItemCustomDataFunction
+    src   "Clear Item Custom Data Function"
+    text  "清除条目自定义数据函数"
+    state machine
+}
+
 UIDropdown:CreatedItemArray {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:CreatedItemArray
     src   "Created Item Array"
     text  "已创建项数组"
+    state machine
+}
+
+UIDropdown:GetCurrentOption {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetCurrentOption
+    src   "Get Current Option"
+    text  "获取当前选项"
     state machine
 }
 
@@ -138,12 +159,26 @@ UIDropdown:GetCurrentOption:ReturnValue {
     state draft
 }
 
+UIDropdown:GetHorizontalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetHorizontalPosition
+    src   "Get Horizontal Position"
+    text  "获取水平位置"
+    state machine
+}
+
 UIDropdown:GetHorizontalPosition:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetHorizontalPosition:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIDropdown:GetListRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetListRoot
+    src   "Get List Root"
+    text  "获取列表根"
+    state machine
 }
 
 UIDropdown:GetListRoot:ReturnValue {
@@ -154,12 +189,26 @@ UIDropdown:GetListRoot:ReturnValue {
     state draft
 }
 
+UIDropdown:GetMaxHeight {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetMaxHeight
+    src   "Get Max Height"
+    text  "获取最大高度"
+    state machine
+}
+
 UIDropdown:GetMaxHeight:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetMaxHeight:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIDropdown:GetOption {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOption
+    src   "Get Option"
+    text  "获取选项"
+    state machine
 }
 
 UIDropdown:GetOption:index {
@@ -178,12 +227,27 @@ UIDropdown:GetOption:ReturnValue {
     state draft
 }
 
+UIDropdown:GetOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOptions
+    src   "Get Options"
+    // from the engine's zh-Hans
+    text  "获取选项"
+    state draft
+}
+
 UIDropdown:GetOptions:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetOptions:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIDropdown:GetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetTabCommitsHighlightedRow
+    src   "Get Tab Commits Highlighted Row"
+    text  "获取选项卡选中项高亮"
+    state machine
 }
 
 UIDropdown:GetTabCommitsHighlightedRow:ReturnValue {
@@ -194,11 +258,26 @@ UIDropdown:GetTabCommitsHighlightedRow:ReturnValue {
     state draft
 }
 
+UIDropdown:GetUseInteractionBlock {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetUseInteractionBlock
+    src   "Get Use Interaction Block"
+    text  "获取使用交互遮挡"
+    state machine
+}
+
 UIDropdown:GetUseInteractionBlock:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetUseInteractionBlock:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIDropdown:GetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
     state draft
 }
 
@@ -210,6 +289,13 @@ UIDropdown:GetValue:ReturnValue {
     state draft
 }
 
+UIDropdown:GetVerticalOverlap {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalOverlap
+    src   "Get Vertical Overlap"
+    text  "获取垂直重叠"
+    state machine
+}
+
 UIDropdown:GetVerticalOverlap:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalOverlap:ReturnValue
     src   "Return Value"
@@ -218,11 +304,26 @@ UIDropdown:GetVerticalOverlap:ReturnValue {
     state draft
 }
 
+UIDropdown:GetVerticalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalPosition
+    src   "Get Vertical Position"
+    text  "获取垂直位置"
+    state machine
+}
+
 UIDropdown:GetVerticalPosition:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:GetVerticalPosition:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIDropdown:Hide {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:Hide
+    src   "Hide"
+    // from the engine's zh-Hans
+    text  "隐藏"
     state draft
 }
 
@@ -244,6 +345,13 @@ UIDropdown:ListRoot {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:ListRoot
     src   "List Root"
     text  "列表根"
+    state machine
+}
+
+UIDropdown:MarkRecreateList {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:MarkRecreateList
+    src   "Mark Recreate List"
+    text  "标记重建列表"
     state machine
 }
 
@@ -278,10 +386,24 @@ UIDropdown:Options {
     state draft
 }
 
+UIDropdown:SetCaptionText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetCaptionText
+    src   "Set Caption Text"
+    text  "设置标题文本"
+    state machine
+}
+
 UIDropdown:SetCaptionText:InCaptionText {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetCaptionText:InCaptionText
     src   "In Caption Text"
     text  "标题文本"
+    state machine
+}
+
+UIDropdown:SetHorizontalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetHorizontalPosition
+    src   "Set Horizontal Position"
+    text  "设置水平位置"
     state machine
 }
 
@@ -293,12 +415,26 @@ UIDropdown:SetHorizontalPosition:InValue {
     state draft
 }
 
+UIDropdown:SetItemCustomDataFunction {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemCustomDataFunction
+    src   "Set Item Custom Data Function"
+    text  "设置条目自定义数据函数"
+    state machine
+}
+
 UIDropdown:SetItemCustomDataFunction:InFunction {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemCustomDataFunction:InFunction
     src   "In Function"
     // from the engine's zh-Hans
     text  "输入函数"
     state draft
+}
+
+UIDropdown:SetItemTemplate {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetItemTemplate
+    src   "Set Item Template"
+    text  "设置项模板"
+    state machine
 }
 
 UIDropdown:SetItemTemplate:InItemTemplate {
@@ -308,10 +444,24 @@ UIDropdown:SetItemTemplate:InItemTemplate {
     state machine
 }
 
+UIDropdown:SetListRoot {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetListRoot
+    src   "Set List Root"
+    text  "设置列表根"
+    state machine
+}
+
 UIDropdown:SetListRoot:InListRoot {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetListRoot:InListRoot
     src   "In List Root"
     text  "列表根节点"
+    state machine
+}
+
+UIDropdown:SetMaxHeight {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetMaxHeight
+    src   "Set Max Height"
+    text  "设置最大高度"
     state machine
 }
 
@@ -323,12 +473,26 @@ UIDropdown:SetMaxHeight:InValue {
     state draft
 }
 
+UIDropdown:SetOptions {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetOptions
+    src   "Set Options"
+    text  "设置选项"
+    state machine
+}
+
 UIDropdown:SetOptions:InOptions {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetOptions:InOptions
     src   "In Options"
     // from the engine's zh-Hans
     text  "In Options"
     state draft
+}
+
+UIDropdown:SetTabCommitsHighlightedRow {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetTabCommitsHighlightedRow
+    src   "Set Tab Commits Highlighted Row"
+    text  "设置选项卡选中项高亮"
+    state machine
 }
 
 UIDropdown:SetTabCommitsHighlightedRow:InValue {
@@ -339,11 +503,26 @@ UIDropdown:SetTabCommitsHighlightedRow:InValue {
     state draft
 }
 
+UIDropdown:SetUseInteractionBlock {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetUseInteractionBlock
+    src   "Set Use Interaction Block"
+    text  "设置使用交互遮挡"
+    state machine
+}
+
 UIDropdown:SetUseInteractionBlock:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetUseInteractionBlock:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
+    state draft
+}
+
+UIDropdown:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
     state draft
 }
 
@@ -355,12 +534,26 @@ UIDropdown:SetValue:InValue {
     state draft
 }
 
+UIDropdown:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValueWithoutNotify
+    src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
+}
+
 UIDropdown:SetValueWithoutNotify:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetValueWithoutNotify:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UIDropdown:SetVerticalOverlap {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetVerticalOverlap
+    src   "Set Vertical Overlap"
+    text  "设置垂直重叠"
+    state machine
 }
 
 UIDropdown:SetVerticalOverlap:InValue {
@@ -371,11 +564,26 @@ UIDropdown:SetVerticalOverlap:InValue {
     state draft
 }
 
+UIDropdown:SetVerticalPosition {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetVerticalPosition
+    src   "Set Vertical Position"
+    text  "设置垂直位置"
+    state machine
+}
+
 UIDropdown:SetVerticalPosition:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:SetVerticalPosition:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
+    state draft
+}
+
+UIDropdown:Show {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdown:Show
+    src   "Show"
+    // from the engine's zh-Hans
+    text  "显示"
     state draft
 }
 
@@ -436,11 +644,33 @@ UIDropdownItemComponent {
     state machine
 }
 
+UIDropdownItemComponent:DynamicDelegate_OnSelect {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:DynamicDelegate_OnSelect
+    src   "Dynamic Delegate on Select"
+    text  "选中时的动态委托"
+    state machine
+}
+
+UIDropdownItemComponent:GetImage {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetImage
+    src   "Get Image"
+    text  "获取图像"
+    state machine
+}
+
 UIDropdownItemComponent:GetImage:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetImage:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UIDropdownItemComponent:GetText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetText
+    src   "Get Text"
+    // from the engine's zh-Hans
+    text  "获取文本"
     state draft
 }
 
@@ -450,6 +680,13 @@ UIDropdownItemComponent:GetText:ReturnValue {
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UIDropdownItemComponent:GetToggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:GetToggle
+    src   "Get Toggle"
+    text  "获取开关"
+    state machine
 }
 
 UIDropdownItemComponent:GetToggle:ReturnValue {
@@ -475,6 +712,14 @@ UIDropdownItemComponent:OnSelectDynamic {
     state machine
 }
 
+UIDropdownItemComponent:ReceiveInit {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit
+    src   "Init"
+    // from the engine's zh-Hans
+    text  "初始"
+    state draft
+}
+
 UIDropdownItemComponent:ReceiveInit:Data {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveInit:Data
     src   "Data"
@@ -498,10 +743,24 @@ UIDropdownItemComponent:ReceiveInit:OnSelectCallback {
     state machine
 }
 
+UIDropdownItemComponent:ReceiveSetSelectionState {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveSetSelectionState
+    src   "SetSelectionState"
+    text  "设置选择状态"
+    state machine
+}
+
 UIDropdownItemComponent:ReceiveSetSelectionState:InSelect {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:ReceiveSetSelectionState:InSelect
     src   "In Select"
     text  "是否通过导航选中"
+    state machine
+}
+
+UIDropdownItemComponent:SetImage {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetImage
+    src   "Set Image"
+    text  "设置图像"
     state machine
 }
 
@@ -512,12 +771,27 @@ UIDropdownItemComponent:SetImage:InImage {
     state machine
 }
 
+UIDropdownItemComponent:SetText {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetText
+    src   "Set Text"
+    // from the engine's zh-Hans
+    text  "设置文本"
+    state draft
+}
+
 UIDropdownItemComponent:SetText:InText {
     at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetText:InText
     src   "In Text"
     // from the engine's zh-Hans
     text  "在文本中"
     state draft
+}
+
+UIDropdownItemComponent:SetToggle {
+    at    Source/DreamGUIControls/Public/Interaction/UIDropdown.h#UIDropdownItemComponent:SetToggle
+    src   "Set Toggle"
+    text  "设置开关"
+    state machine
 }
 
 UIDropdownItemComponent:SetToggle:InToggle {

@@ -89,6 +89,13 @@ UISlider:FillArea {
     state machine
 }
 
+UISlider:GetDirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetDirectionType
+    src   "Get Direction Type"
+    text  "获取方向类型"
+    state machine
+}
+
 UISlider:GetDirectionType:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetDirectionType:ReturnValue
     src   "Return Value"
@@ -97,11 +104,26 @@ UISlider:GetDirectionType:ReturnValue {
     state draft
 }
 
+UISlider:GetFill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetFill
+    src   "Get Fill"
+    text  "获取填充"
+    state machine
+}
+
 UISlider:GetFill:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetFill:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISlider:GetHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetHandle
+    src   "Get Handle"
+    // from the engine's zh-Hans
+    text  "Get Handle"
     state draft
 }
 
@@ -113,11 +135,27 @@ UISlider:GetHandle:ReturnValue {
     state draft
 }
 
+UISlider:GetMaxValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMaxValue
+    src   "Get Max Value"
+    // from the engine's zh-Hans
+    text  "获取最大值"
+    state draft
+}
+
 UISlider:GetMaxValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMaxValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISlider:GetMinValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMinValue
+    src   "Get Min Value"
+    // from the engine's zh-Hans
+    text  "获取最小值"
     state draft
 }
 
@@ -129,12 +167,27 @@ UISlider:GetMinValue:ReturnValue {
     state draft
 }
 
+UISlider:GetMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMouseUsesStep
+    src   "Get Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "Get Mouse Uses Step"
+    state draft
+}
+
 UISlider:GetMouseUsesStep:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetMouseUsesStep:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISlider:GetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetNavigationChangeInterval
+    src   "Get Navigation Change Interval"
+    text  "获取导航变化间隔"
+    state machine
 }
 
 UISlider:GetNavigationChangeInterval:ReturnValue {
@@ -145,11 +198,26 @@ UISlider:GetNavigationChangeInterval:ReturnValue {
     state draft
 }
 
+UISlider:GetRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetRequiresControllerLock
+    src   "Get Requires Controller Lock"
+    text  "获取需要控制器锁定"
+    state machine
+}
+
 UISlider:GetRequiresControllerLock:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetRequiresControllerLock:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISlider:GetStepSize {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetStepSize
+    src   "Get Step Size"
+    // from the engine's zh-Hans
+    text  "Get Step Size"
     state draft
 }
 
@@ -161,12 +229,27 @@ UISlider:GetStepSize:ReturnValue {
     state draft
 }
 
+UISlider:GetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetValue
+    src   "Get Value"
+    // from the engine's zh-Hans
+    text  "获取值"
+    state draft
+}
+
 UISlider:GetValue:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetValue:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
     state draft
+}
+
+UISlider:GetWholeNumber {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:GetWholeNumber
+    src   "Get Whole Number"
+    text  "获取整数"
+    state machine
 }
 
 UISlider:GetWholeNumber:ReturnValue {
@@ -192,11 +275,26 @@ UISlider:HandleArea {
     state machine
 }
 
+UISlider:IsControllerCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsControllerCaptured
+    src   "Is Controller Captured"
+    text  "控制器是否已捕获"
+    state machine
+}
+
 UISlider:IsControllerCaptured:ReturnValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsControllerCaptured:ReturnValue
     src   "Return Value"
     // from the engine's zh-Hans
     text  "返回值"
+    state draft
+}
+
+UISlider:IsLocked {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:IsLocked
+    src   "Is Locked"
+    // from the engine's zh-Hans
+    text  "为锁定"
     state draft
 }
 
@@ -262,12 +360,26 @@ UISlider:RequiresControllerLock {
     state draft
 }
 
+UISlider:SetControllerCaptured {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetControllerCaptured
+    src   "Set Controller Captured"
+    text  "设置控制器已捕获"
+    state machine
+}
+
 UISlider:SetControllerCaptured:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetControllerCaptured:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UISlider:SetDirectionType {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetDirectionType
+    src   "Set Direction Type"
+    text  "设置方向类型"
+    state machine
 }
 
 UISlider:SetDirectionType:InDirection {
@@ -278,10 +390,24 @@ UISlider:SetDirectionType:InDirection {
     state draft
 }
 
+UISlider:SetFill {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetFill
+    src   "Set Fill"
+    text  "设置填充"
+    state machine
+}
+
 UISlider:SetFill:InFill {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetFill:InFill
     src   "In Fill"
     text  "填充"
+    state machine
+}
+
+UISlider:SetHandle {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetHandle
+    src   "Set Handle"
+    text  "设置柄"
     state machine
 }
 
@@ -293,11 +419,27 @@ UISlider:SetHandle:InHandle {
     state draft
 }
 
+UISlider:SetLocked {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetLocked
+    src   "Set Locked"
+    // from the engine's zh-Hans
+    text  "Set Locked"
+    state draft
+}
+
 UISlider:SetLocked:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetLocked:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
+    state draft
+}
+
+UISlider:SetMaxValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMaxValue
+    src   "Set Max Value"
+    // from the engine's zh-Hans
+    text  "设置最大值"
     state draft
 }
 
@@ -322,6 +464,14 @@ UISlider:SetMaxValue:KeepRelativeValue {
     state machine
 }
 
+UISlider:SetMinValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue
+    src   "Set Min Value"
+    // from the engine's zh-Hans
+    text  "设置最小值"
+    state draft
+}
+
 UISlider:SetMinValue:FireEvent {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMinValue:FireEvent
     src   "Fire Event"
@@ -343,12 +493,27 @@ UISlider:SetMinValue:KeepRelativeValue {
     state machine
 }
 
+UISlider:SetMouseUsesStep {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMouseUsesStep
+    src   "Set Mouse Uses Step"
+    // from the engine's zh-Hans
+    text  "Set Mouse Uses Step"
+    state draft
+}
+
 UISlider:SetMouseUsesStep:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetMouseUsesStep:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UISlider:SetNavigationChangeInterval {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetNavigationChangeInterval
+    src   "Set Navigation Change Interval"
+    text  "设置导航变化间隔"
+    state machine
 }
 
 UISlider:SetNavigationChangeInterval:InValue {
@@ -359,11 +524,26 @@ UISlider:SetNavigationChangeInterval:InValue {
     state draft
 }
 
+UISlider:SetRequiresControllerLock {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetRequiresControllerLock
+    src   "Set Requires Controller Lock"
+    text  "设置需要控制器锁定"
+    state machine
+}
+
 UISlider:SetRequiresControllerLock:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetRequiresControllerLock:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
+    state draft
+}
+
+UISlider:SetStepSize {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetStepSize
+    src   "Set Step Size"
+    // from the engine's zh-Hans
+    text  "Set Step Size"
     state draft
 }
 
@@ -375,6 +555,14 @@ UISlider:SetStepSize:InValue {
     state draft
 }
 
+UISlider:SetValue {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValue
+    src   "Set Value"
+    // from the engine's zh-Hans
+    text  "设置值"
+    state draft
+}
+
 UISlider:SetValue:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValue:InValue
     src   "In Value"
@@ -383,12 +571,26 @@ UISlider:SetValue:InValue {
     state draft
 }
 
+UISlider:SetValueWithoutNotify {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValueWithoutNotify
+    src   "Set Value Without Notify"
+    text  "设置值（不通知）"
+    state machine
+}
+
 UISlider:SetValueWithoutNotify:InValue {
     at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetValueWithoutNotify:InValue
     src   "In Value"
     // from the engine's zh-Hans
     text  "输入值"
     state draft
+}
+
+UISlider:SetWholeNumbers {
+    at    Source/DreamGUIControls/Public/Interaction/UISlider.h#UISlider:SetWholeNumbers
+    src   "Set Whole Numbers"
+    text  "设置整数"
+    state machine
 }
 
 UISlider:SetWholeNumbers:InValue {
