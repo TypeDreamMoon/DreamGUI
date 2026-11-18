@@ -618,7 +618,7 @@ void FDreamUIGeometry::UpdateUIRectTiledVertex(FDreamUIGeometry* uiGeo,
 			float remainedUV3Y = spriteInfo.BorderMaxUV.Y + (spriteInfo.BorderMinUV.Y - spriteInfo.BorderMaxUV.Y) * heightRemainedRectSize / spriteInfo.Height;
 			for (int heightRectIndex = 1; heightRectIndex <= heightRectCount; heightRectIndex++)
 			{
-				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.BorderMaxUV.Y;
+				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.BorderMinUV.Y;
 				for (int widthRectIndex = 1; widthRectIndex <= widthRectCount; widthRectIndex++)
 				{
 					float realUV3X = widthRectIndex == widthRectCount ? remainedUV3X : spriteInfo.BorderMaxUV.X;

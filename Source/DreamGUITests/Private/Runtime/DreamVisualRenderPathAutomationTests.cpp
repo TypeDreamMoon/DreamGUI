@@ -722,6 +722,40 @@ bool FDreamAtlasLruEvictionTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTiledImageRowsTest,
+	"DreamGUI.Render.TiledImagesSampleEveryFullRow",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTiledImageRowsTest::RunTest(const FString&)
+{
+	DreamVisualRenderPathTestLocal::FScopedVisualWidget Owner(UDreamImage::StaticClass(),TEXT("TiledRows"));
+	auto* Canvas=NewObject<UDreamCanvas>(GetTransientPackage());
+	FDreamUISpriteInfo Sprite;
+	Sprite.Width=94; Sprite.Height=282;
+	Sprite.ApplyUV(40,80,94,282,1.f/512.f,1.f/512.f);
+	for (float Height : {180.f,564.f,582.f})
+	{
+		int32 Columns,Rows; float WidthRemainder,HeightRemainder;
+		UDreamImage::CalculateTileCount(94.f,94.f,Columns,WidthRemainder);
+		UDreamImage::CalculateTileCount(Height,282.f,Rows,HeightRemainder);
+		FDreamUIGeometry Geometry;
+		FDreamUIGeometry::UpdateUIRectTiledVertex(&Geometry,Sprite,Canvas,Owner.GetVisual(),94.f,Height,FVector2f(.5f,.5f),
+			Columns,Rows,WidthRemainder,HeightRemainder,FColor::White,true,true,true,true);
+		for (int32 Row=0;Row<Rows;++Row)
+		{
+			const int32 Vertex=Row*Columns*4;
+			const float Extent=Row==Rows-1 ? HeightRemainder : 282.f;
+			const float ExpectedV=FMath::Lerp(Sprite.BorderMaxUV.Y,Sprite.BorderMinUV.Y,Extent/282.f);
+			TestTrue(TEXT("Every tile starts at the sprite's bottom UV"),
+				FMath::IsNearlyEqual(Geometry.Vertices[Vertex].TextureCoordinate[0].Y,Sprite.BorderMaxUV.Y));
+			TestTrue(FString::Printf(TEXT("Height %.0f row %d samples its full or partial vertical extent"),Height,Row),
+				FMath::IsNearlyEqual(Geometry.Vertices[Vertex+2].TextureCoordinate[0].Y,ExpectedV));
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamImageDrawTypeGeometryTest,
 	"DreamGUI.Render.TheBrushDrawTypesTileFillAndRoundTheImageInsteadOfQuietlyDrawingAPlainOne",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

@@ -565,6 +565,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- Tiled images and sprites sample the complete vertical texture range for each full row. Previously full rows collapsed to the bottom texel row, leaving long tiled chains or panels with missing sections while a final partial row still appeared.
+
 - **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
   when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it
   reinstanced the screen on the stage and the picture came out empty ("draws almost nothing"), the next one fine. The
