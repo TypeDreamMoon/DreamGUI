@@ -235,10 +235,11 @@ void UDreamRingMenu::ApplyStyle()
 	// them, because a menu that resized its own slot every time the pointer moved would push
 	// whatever is beside it around.
 	//
-	// SizeControl, not SizeFace: this is the control's own rect, so the slot's snapshot has to be
+	// ForceControlSize, not SizeFace: this is the control's own rect, so the slot's snapshot has to be
 	// SYNCED rather than re-captured -- and that snapshot is exactly what the authored-surface
-	// layout-self above answers an Auto consumer with.
-	SizeControl(FVector2D(Outer * 2.0, Outer * 2.0));
+	// layout-self above answers an Auto consumer with. Forced rather than SizeControl's default: the
+	// ring's diameter is its geometry, items are placed on it, so it is written whatever was there.
+	ForceControlSize(FVector2D(Outer * 2.0, Outer * 2.0));
 
 	if (BackdropNode != nullptr)
 	{

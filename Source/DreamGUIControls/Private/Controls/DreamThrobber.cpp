@@ -80,13 +80,13 @@ void UDreamThrobber::ApplyStyle()
 	if (Shape == EDreamThrobberShape::Circular)
 	{
 		const float Extent = (Active.Radius + FMath::Max(Active.PieceSize.X, Active.PieceSize.Y) * 0.5f) * 2.0f;
-		SizeControl(FVector2D(Extent, Extent));
+		ForceControlSize(FVector2D(Extent, Extent));
 	}
 	else
 	{
 		const float Width = Count * static_cast<float>(Active.PieceSize.X)
 			+ FMath::Max(0, Count - 1) * FMath::Max(0.0f, Active.PieceSpacing);
-		SizeControl(FVector2D(Width, Active.PieceSize.Y));
+		ForceControlSize(FVector2D(Width, Active.PieceSize.Y));
 	}
 	// Restated here as well as in WireParts: ApplyStyle is where a details-panel edit lands, and
 	// bAnimate is a property an author can uncheck without going near a setter.

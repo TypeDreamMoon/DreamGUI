@@ -366,25 +366,32 @@ protected:
 	}
 
 	/**
-	 * Authored height for the CONTROL itself; width stays whoever-placed-it's. Syncs the slot's
-	 * desired-size snapshot, because the slot's first capture (OnRegister) runs before any style
-	 * ever applied -- without the sync an Auto consumer measures the pre-style default (100), not
-	 * the style's number. The bare-current-size measure fallback that used to paper over this now
-	 * lives at the measure root only (see UDreamPanelLayoutBase::GetDesiredSize).
+	 * The style's height for the CONTROL itself, as its DEFAULT; width stays whoever-placed-it's.
+	 *
+	 * A default and not the height: a control somebody sized -- dragged taller in the designer, given a height in a .dui,
+	 * set in the details panel -- keeps that size. This runs on every style push, and every instance of a class pushes its
+	 * style when it is built, which is every compile, every preview rebuild and every edit that rebuilds one; writing the
+	 * style's number unconditionally put a resized button back to its style height each time, and under a canvas slot
+	 * with Auto Size off nothing else decides a child's size, so the author's was simply lost. See IsSizeStyleOwned for
+	 * what counts as sized.
+	 *
+	 * Syncs the slot's desired-size snapshot when it writes, because the slot's first capture (OnRegister) runs before
+	 * any style ever applied -- without the sync an Auto consumer measures the pre-style default (100), not the style's
+	 * number. The bare-current-size measure fallback that used to paper over this now lives at the measure root only (see
+	 * UDreamPanelLayoutBase::GetDesiredSize).
 	 */
 	void SizeControlHeight(float InHeight)
 	{
-		SetHeight(InHeight);
-		if (UDreamPanelSlot* Slot = GetPanelSlot())
+		if (IsSizeStyleOwned(/*bVertical*/true))
 		{
-			Slot->SyncAuthoredDesiredSizeFromWidget();
+			ForceControlHeight(InHeight);
 		}
 	}
 
 	/**
-	 * Authored size for the CONTROL itself, both axes -- for a control that has no "length comes
-	 * from whoever placed it" axis at all. A circle has no long side, so a ring states its own
-	 * width the same way everything else states its own height.
+	 * The style's size for the CONTROL itself, both axes, as its default -- for a control that has no "length comes from
+	 * whoever placed it" axis at all. A circle has no long side, so a ring states its own width the same way everything
+	 * else states its own height. Each axis is the author's once they sized it, as in SizeControlHeight.
 	 *
 	 * Syncs the slot's desired-size snapshot rather than re-capturing the whole authored rect
 	 * (which is what SizeFace does, and what makes it a helper for PARTS): the control's live
@@ -393,12 +400,72 @@ protected:
 	 */
 	void SizeControl(const FVector2D& InSize)
 	{
-		SetWidth(static_cast<float>(InSize.X));
-		SetHeight(static_cast<float>(InSize.Y));
+		const bool bWidth = IsSizeStyleOwned(/*bVertical*/false);
+		const bool bHeight = IsSizeStyleOwned(/*bVertical*/true);
+		// Axis by axis, so the one the author sized is neither written nor remembered as the style's.
+		if (bWidth)
+		{
+			SetWidth(static_cast<float>(InSize.X));
+			StyleWrittenSize.X = InSize.X;
+		}
+		if (bHeight)
+		{
+			SetHeight(static_cast<float>(InSize.Y));
+			StyleWrittenSize.Y = InSize.Y;
+		}
+		if (bWidth || bHeight)
+		{
+			if (UDreamPanelSlot* Slot = GetPanelSlot())
+			{
+				Slot->SyncAuthoredDesiredSizeFromWidget();
+			}
+		}
+	}
+
+	/**
+	 * The control's height as the control computes it -- a header plus the content it shows, a ring's diameter -- rather
+	 * than as a style suggests it: written whatever the author had, because the number IS the control's state.
+	 */
+	void ForceControlHeight(float InHeight)
+	{
+		SetHeight(InHeight);
+		StyleWrittenSize.Y = InHeight;
 		if (UDreamPanelSlot* Slot = GetPanelSlot())
 		{
 			Slot->SyncAuthoredDesiredSizeFromWidget();
 		}
+	}
+
+	/** Both axes of ForceControlHeight. */
+	void ForceControlSize(const FVector2D& InSize)
+	{
+		SetWidth(static_cast<float>(InSize.X));
+		SetHeight(static_cast<float>(InSize.Y));
+		StyleWrittenSize = InSize;
+		if (UDreamPanelSlot* Slot = GetPanelSlot())
+		{
+			Slot->SyncAuthoredDesiredSizeFromWidget();
+		}
+	}
+
+	/**
+	 * Whether the style still owns this axis of the control's size: nobody sized it. That is, the authored size is the
+	 * class's own default -- what a control dropped from the palette or written without a size carries, since a template
+	 * never pushes a style itself -- or the number a style push of this instance last wrote there, so a style that changes
+	 * at run time still moves a control nobody sized.
+	 *
+	 * Authored, not live: while a panel's arrange owns the live rect, the slot's snapshot is what the author said.
+	 */
+	bool IsSizeStyleOwned(bool bVertical) const
+	{
+		const UDreamPanelSlot* Slot = GetPanelSlot();
+		const double Authored = Slot != nullptr && Slot->HasLayoutGeometryApplied() && Slot->HasAuthoredGeometry()
+			? (bVertical ? Slot->GetAuthoredDesiredSizeFallback().Y : Slot->GetAuthoredDesiredSizeFallback().X)
+			: (bVertical ? GetHeight() : GetWidth());
+		const UDreamUIControl* Defaults = GetClass()->GetDefaultObject<UDreamUIControl>();
+		const double ClassDefault = Defaults != nullptr ? (bVertical ? Defaults->GetHeight() : Defaults->GetWidth()) : Authored;
+		const double Written = bVertical ? StyleWrittenSize.Y : StyleWrittenSize.X;
+		return FMath::IsNearlyEqual(Authored, ClassDefault, 0.01) || (Written >= 0.0 && FMath::IsNearlyEqual(Authored, Written, 0.01));
 	}
 
 	/**
@@ -563,4 +630,11 @@ private:
 
 	/** The listener. Paints the brush, the foreground and the padding for InState. */
 	void HandleSelectionStateChanged(EUISelectableSelectionState InState, bool bInImmediate);
+
+	/**
+	 * What this instance's own style pushes last wrote as its size, per axis; negative before any. Transient, so a copy
+	 * made from a template (every preview, every instance) starts without one and asks the authored size afresh.
+	 */
+	UPROPERTY(Transient)
+	FVector2D StyleWrittenSize = FVector2D(-1.0, -1.0);
 };
