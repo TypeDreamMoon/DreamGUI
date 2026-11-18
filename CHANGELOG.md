@@ -14,6 +14,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 ### New
 
 - HDR display targets composite screen UI in linear light at the display paper white, then encode to PQ/Rec2020 or scRGB. SDR and linear capture targets retain their existing rendering path.
+
+- Navigation indicators expose `GetAnimDuration` / `SetAnimDuration`. Zero snaps native focus movement and fades immediately, including an in-progress transition, for host accessibility policies.
+
+- `UUITextInput::GetOnInputActivateEvent()` exposes the existing begin/end-edit notification to native consumers, alongside the text-change and submit delegates.
+
 - **Edge Anti-Aliasing: the outline of a mesh element is smooth without MSAA.** A Polygon, Shape, Ring, Path, PolygonLine,
   2D line or custom mesh, and an Image drawn as a RoundedBox or radially filled, now draws its outline with a strip one
   device pixel wide made by its own geometry: the outline's vertices move half a pixel in, keeping the texture in place,
@@ -567,6 +572,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 ### Fixed
 
 - Tiled images and sprites sample the complete vertical texture range for each full row. Previously full rows collapsed to the bottom texel row, leaving long tiled chains or panels with missing sections while a final partial row still appeared.
+
+- Native scroll boxes resize their content when the inner viewport changes. Cached viewport dimensions no longer leave rows at the old width or height until another interaction or style update.
+
+- Native scroll boxes refresh their range after content layout commits, including dynamic rows, removals and visibility changes. Switching from a long list to a short list no longer retains the old scrollable extent.
+
+- Native scroll boxes measure wrapping content against the viewport's cross-axis size, including nested Fill slots. Scrolling to the end no longer exposes a blank tail calculated from stale or authored widths; horizontal boxes follow the same rule.
+
+- Scope-free scroll-box key tests explicitly select menu input, so a host configured for gameplay outside menus no longer disables their navigation fixture.
+
+- `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.
 
 - **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
   when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it

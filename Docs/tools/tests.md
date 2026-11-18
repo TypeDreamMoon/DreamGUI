@@ -29,6 +29,8 @@ commas, semicolons or quotes — `-ExecCmds` splits on commas and the Automation
 Under `-nullrhi` the engine drops every test flagged `NonNullRHI` (the ones that read pixels) by itself, so those need
 `-RenderOffScreen`: a real RHI without a window.
 
+Navigation fixtures without an active scope must explicitly select the input mode they need and restore it afterwards. A host can legitimately set `InputModeWithoutScope=Game`; in that mode, built-in D-pad and paging keys do not operate an unscoped HUD. Menu integration tests should create their actual scope instead of changing the host fallback.
+
 ## The runner: Invoke-DreamGUITests.ps1
 
 What you use day to day is `Tools/Tests/Invoke-DreamGUITests.ps1`. It builds, runs and judges, and says how many tests

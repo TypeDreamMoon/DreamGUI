@@ -62,6 +62,11 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	virtual void SelectWidget(UDreamWidget* InSelected);
+	/** Zero snaps the current native ring to its target and makes subsequent movement/fades immediate. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetAnimDuration(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI")
+	float GetAnimDuration() const { return AnimDuration; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	virtual void SelectNone();
 

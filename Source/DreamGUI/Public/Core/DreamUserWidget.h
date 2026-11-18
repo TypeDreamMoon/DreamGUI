@@ -1498,6 +1498,7 @@ private:
 	void TickPointerMoveWatch();
 	FVector LastWatchedPointerWorldPoint = FVector::ZeroVector;
 	bool bHasWatchedPointerPoint = false;
+	bool bForwardingDisable = false;
 };
 
 /**

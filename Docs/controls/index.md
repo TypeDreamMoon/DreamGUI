@@ -93,7 +93,20 @@ is literally true of the class structure.
 The base of every control is [`UDreamUIControl`](../Reference/DreamUIControl.md), which is abstract and
 has no tag.
 
+Native scroll boxes measure their content with the viewport's actual cross-axis size and no limit along
+the scrolling axis. Wrapping text and nested Fill slots therefore contribute the height (or width)
+they need in that viewport. Resizing and committed content layout changes remeasure the extent;
+authored content padding remains scrollable. Repeated and conditional rows, removals and changing
+text update the range even while the viewport stays the same size.
+The content extent follows the inner viewport's size notification, after its cached dimensions
+have been invalidated. Window and parent-layout resizes therefore update the content's cross-axis
+size without another click, a style reapplication, or a manual `RefreshContentExtent` call.
+
 ## Placing a control from .dui
+
+Native consumers of a text field's `UUITextInput` can subscribe to `GetOnInputActivateEvent()` to
+observe begin/end-edit alongside `GetOnValueChangedEvent()` and `GetOnSubmitEvent()`. The activation
+event carries `true` when editing begins and `false` when it ends.
 
 In a `.dui` a control is a node typed by its **registry tag**: `Scope.Name`, with the plugin's controls
 under `Native`.
