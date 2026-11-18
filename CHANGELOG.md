@@ -574,6 +574,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A widget made in a dedicated server's world is reported once, as a warning that says what to do.** A dedicated
+  server has no UI manager by design, and every widget registered there raised an ensure -- a stack walk and a pause each
+  time, and with a `Create Dream Widget` in a player controller's `BeginPlay`, one for every player who joined (the server
+  runs that `BeginPlay` too). The world now logs one warning naming the first widget: the widget is never drawn there,
+  and UI belongs behind `Is Local Controller` or in the HUD. A widget left there is not reported again as "not destroyed
+  by its owner" when the world ends: it never had a manager to leak into. A client or standalone world without its
+  manager still raises the ensure. The new [Networking and multiplayer](Docs/guides/networking.md) guide covers dedicated and listen
+  servers and the play-in-editor net modes.
+
 - Tiled images and sprites sample the complete vertical texture range for each full row. Previously full rows collapsed to the bottom texel row, leaving long tiled chains or panels with missing sections while a final partial row still appeared.
 
 - Native scroll boxes resize their content when the inner viewport changes. Cached viewport dimensions no longer leave rows at the old width or height until another interaction or style update.

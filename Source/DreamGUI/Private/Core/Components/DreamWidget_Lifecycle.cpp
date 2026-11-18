@@ -36,10 +36,33 @@
 // FLayoutLocalization, for the Culture flow-direction preference. SlateCore is already a public
 // dependency; this is the one header of it that answers "which way does the running culture read".
 #include "Layout/FlowDirection.h"
+#include "UObject/ObjectKey.h"
 #if WITH_EDITOR
 #include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"
 #endif
+
+namespace DreamWidgetLifecycleLocal
+{
+	/**
+	 * A widget registered in a dedicated server's world, which has no DreamUI manager by design
+	 * (UDreamUIManagerWorldSubsystem::ShouldRunForWorld): said once a world, as a warning. A player controller's BeginPlay
+	 * runs on the server for every player that joins, so a widget made there each time is the one mistake made again,
+	 * and an ensure for each -- a stack walk and a pause apiece -- told the author nothing the first had not.
+	 */
+	void WarnOnceAboutServerWorld(const UWorld* InWorld, const UDreamWidget* InWidget)
+	{
+		static TSet<FObjectKey> WarnedWorlds;
+		bool bAlreadyWarned = false;
+		WarnedWorlds.Add(FObjectKey(InWorld), &bAlreadyWarned);
+		if (bAlreadyWarned)
+		{
+			return;
+		}
+		UE_LOG(DreamGUI, Warning, TEXT("%s: created in %s, a dedicated server's world. A dedicated server has no DreamUI manager by design -- nothing is drawn there -- so this widget is never laid out, drawn, ticked or given input. Create UI only where a local player sees it: in a player controller behind IsLocalController(), since BeginPlay runs on the server too for every player that joins, or in the HUD, which only a local player has. Play-in-editor's Play As Client runs such a server. Widgets created in this world after this one are not reported. See Guides > Networking and multiplayer."),
+			*InWidget->GetPathName(), *InWorld->GetName());
+	}
+}
 
 UDreamWidget::UDreamWidget()
 {
@@ -217,15 +240,18 @@ void UDreamWidget::BeginDestroy()
 	// Reported once per tree, at its root, and as an Error only where there is a world. A tree with NO
 	// world never had a manager to leak into -- the state of every tree in a headless test and of every
 	// Blueprint authoring tree -- and an Error at collection time lands on whichever test happens to be
-	// running, which fails a bystander and teaches people to ignore the suite.
+	// running, which fails a bystander and teaches people to ignore the suite. Nor did a tree registered in a
+	// world that had no manager -- a dedicated server's, by design: no manager was ever kept (RegisteredManager is
+	// explicitly null, where one kept and since gone is not), and registering it there was reported then (OnRegister).
 	if (HasRegistered() && Parent.GetEvenIfUnreachable() == nullptr)
 	{
-		if (const UWorld* World = GetWorld())
+		const UWorld* World = GetWorld();
+		if (World != nullptr && !RegisteredManager.IsExplicitlyNull())
 		{
 			UE_LOG(DreamGUI, Error, TEXT("UDreamWidget tree %s (%s) was not destroyed by its owner. World:%s, WorldType:%d."),
 				*GetFullName(), *GetDisplayName(), *World->GetName(), (int32)World->WorldType);
 		}
-		else
+		else if (World == nullptr)
 		{
 			UE_LOG(DreamGUI, Warning, TEXT("UDreamWidget tree %s (%s) reached the collector still registered, with no world to have leaked into."),
 				*GetFullName(), *GetDisplayName());
@@ -554,8 +580,17 @@ void UDreamWidget::OnRegister()
 			|| World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::EditorPreview))
 	{
 		// A world of a kind the manager is made for, with no manager in it: nothing will lay this
-		// widget out, draw it, tick it or take it down with the world.
-		ensureMsgf(false, TEXT("%s: registered in %s, which has no DreamUI manager."), *GetPathName(), *World->GetName());
+		// widget out, draw it, tick it or take it down with the world. A dedicated server's world is
+		// left without one on purpose, and a widget there is the author's to move to the client; any
+		// other world without one is DreamGUI's to explain.
+		if (!UDreamUIManagerWorldSubsystem::ShouldRunForWorld(World))
+		{
+			DreamWidgetLifecycleLocal::WarnOnceAboutServerWorld(World, this);
+		}
+		else
+		{
+			ensureMsgf(false, TEXT("%s: registered in %s, which has no DreamUI manager."), *GetPathName(), *World->GetName());
+		}
 	}
 	CheckRootWidget();
 

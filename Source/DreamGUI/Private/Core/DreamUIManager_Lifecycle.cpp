@@ -100,10 +100,14 @@ bool UDreamUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 		return false;
 	}
 	// Asked while the world is being made, which is early enough to trust its net mode: a play-in-editor server answers
-	// the mode it was created in before it has a net driver (UWorld::InternalGetNetMode). A server process is a dedicated
-	// server whatever its world would say.
-	const UWorld* World = Cast<UWorld>(Outer);
-	const ENetMode NetMode = IsRunningDedicatedServer() ? NM_DedicatedServer : (World != nullptr ? World->GetNetMode() : NM_Standalone);
+	// the mode it was created in before it has a net driver (UWorld::InternalGetNetMode).
+	return ShouldRunForWorld(Cast<UWorld>(Outer));
+}
+
+bool UDreamUIManagerWorldSubsystem::ShouldRunForWorld(const UWorld* InWorld)
+{
+	// A server process is a dedicated server whatever its world would say.
+	const ENetMode NetMode = IsRunningDedicatedServer() ? NM_DedicatedServer : (InWorld != nullptr ? InWorld->GetNetMode() : NM_Standalone);
 	return ShouldRunForNetMode(NetMode);
 }
 

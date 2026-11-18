@@ -455,7 +455,8 @@ when nothing scrolls, collapses its built-in bar and hides an idle track.
 The UI manager does not start in a dedicated server's worlds, a play-in-editor server included
 (`UDreamUIManagerWorldSubsystem::ShouldRunForNetMode`): a server builds the widget trees its level holds without a
 manager, as a commandlet does, draws nothing and makes no renderer or paint rows. Code of your own that asks for the
-manager there gets null, as every DreamGUI caller already expects.
+manager there gets null, as every DreamGUI caller already expects. A widget created in such a world is reported once for
+the world as a warning; where to make UI instead is in [Networking and multiplayer](networking.md).
 
 ### C++ of your own
 

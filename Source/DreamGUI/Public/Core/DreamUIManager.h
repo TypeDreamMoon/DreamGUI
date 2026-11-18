@@ -123,6 +123,11 @@ public:
 	 */
 	static bool ShouldRunForNetMode(ENetMode InNetMode);
 	/**
+	 * ShouldRunForNetMode with the mode InWorld is in: NM_DedicatedServer in a server process whatever the world says,
+	 * the world's own net mode otherwise. False for a dedicated server's world, which is left without a manager by design.
+	 */
+	static bool ShouldRunForWorld(const UWorld* InWorld);
+	/**
 	 * While one lives, a world made in a commandlet gets a manager as an editor's world does. A commandlet's worlds get none
 	 * (a cook, a compile, a resave lays nothing out), except the one a tool makes on purpose to lay a screen out without
 	 * drawing it: the DreamMCP host does that in its stage's world, and scopes this around making it. Game thread.
