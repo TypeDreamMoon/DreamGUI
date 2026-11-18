@@ -754,6 +754,113 @@ namespace DreamGUIMCP
 			return Result;
 		}
 
+		/**
+		 * How much of a box what a node draws covers, in the plane of another, the bound of that part, and the area of all
+		 * it draws there: a shape kept point by point by its convex outline (a hexagon's corners are not its box), anything
+		 * else by its body's four corners (a thin bar turned 40 degrees is not its box either).
+		 */
+		double CoveredBy(const FLayoutNode& InNode, const FLayoutNode& InPlaneOf, const FBox2D& InBox, FBox2D& OutPart, double& OutWhole)
+		{
+			OutPart = FBox2D(ForceInit);
+			OutWhole = 0.0;
+			if (!InNode.LocalBody.bIsValid || !InPlaneOf.LocalRect.bIsValid)
+			{
+				OutPart = Intersect(BodyOf(InNode), InBox);
+				OutWhole = Area(BodyOf(InNode));
+				return Area(OutPart);
+			}
+			TArray<FVector2D> Local = InNode.LocalShape;
+			if (Local.Num() < 3)
+			{
+				const FBox2D& Body = InNode.LocalBody;
+				Local = { Body.Min, FVector2D(Body.Max.X, Body.Min.Y), Body.Max, FVector2D(Body.Min.X, Body.Max.Y) };
+			}
+			TArray<FVector2D> Points;
+			for (const FVector2D& Point : Local)
+			{
+				const FVector There = InPlaneOf.World.InverseTransformPosition(InNode.World.TransformPosition(FVector(0.0, Point.X, Point.Y)));
+				Points.Emplace(There.Y * InPlaneOf.PxPerUnit, -There.Z * InPlaneOf.PxPerUnit);
+			}
+			// The convex outline (monotone chain), counter-clockwise.
+			Points.Sort([](const FVector2D& A, const FVector2D& B) { return A.X < B.X || (A.X == B.X && A.Y < B.Y); });
+			const auto Cross = [](const FVector2D& O, const FVector2D& A, const FVector2D& B) { return (A.X - O.X) * (B.Y - O.Y) - (A.Y - O.Y) * (B.X - O.X); };
+			TArray<FVector2D> Hull;
+			for (int32 Pass = 0; Pass < 2; ++Pass)
+			{
+				const int32 Start = Hull.Num();
+				for (int32 I = 0; I < Points.Num(); ++I)
+				{
+					const FVector2D& P = Points[Pass == 0 ? I : Points.Num() - 1 - I];
+					while (Hull.Num() >= Start + 2 && Cross(Hull[Hull.Num() - 2], Hull.Last(), P) <= 0.0)
+					{
+						Hull.Pop();
+					}
+					Hull.Add(P);
+				}
+				Hull.Pop();
+			}
+			if (Hull.Num() < 3)
+			{
+				return 0.0;
+			}
+			const auto PolygonArea = [](const TArray<FVector2D>& InPoly)
+			{
+				double Twice = 0.0;
+				for (int32 I = 0; I < InPoly.Num(); ++I)
+				{
+					Twice += InPoly[I].X * InPoly[(I + 1) % InPoly.Num()].Y - InPoly[(I + 1) % InPoly.Num()].X * InPoly[I].Y;
+				}
+				return FMath::Abs(Twice) * 0.5;
+			};
+			OutWhole = PolygonArea(Hull);
+			// Cut to the box, one edge of it at a time.
+			TArray<FVector2D> Poly = MoveTemp(Hull);
+			for (int32 Edge = 0; Edge < 4 && Poly.Num() > 0; ++Edge)
+			{
+				const auto Inside = [&](const FVector2D& P)
+				{
+					return Edge == 0 ? P.X >= InBox.Min.X : Edge == 1 ? P.X <= InBox.Max.X : Edge == 2 ? P.Y >= InBox.Min.Y : P.Y <= InBox.Max.Y;
+				};
+				const auto Cut = [&](const FVector2D& A, const FVector2D& B)
+				{
+					const double T = Edge == 0 ? (InBox.Min.X - A.X) / (B.X - A.X) : Edge == 1 ? (InBox.Max.X - A.X) / (B.X - A.X)
+						: Edge == 2 ? (InBox.Min.Y - A.Y) / (B.Y - A.Y) : (InBox.Max.Y - A.Y) / (B.Y - A.Y);
+					return A + (B - A) * T;
+				};
+				TArray<FVector2D> Kept;
+				for (int32 I = 0; I < Poly.Num(); ++I)
+				{
+					const FVector2D& A = Poly[I];
+					const FVector2D& B = Poly[(I + 1) % Poly.Num()];
+					if (Inside(A))
+					{
+						Kept.Add(A);
+						if (!Inside(B)) { Kept.Add(Cut(A, B)); }
+					}
+					else if (Inside(B))
+					{
+						Kept.Add(Cut(A, B));
+					}
+				}
+				Poly = MoveTemp(Kept);
+			}
+			for (const FVector2D& Point : Poly)
+			{
+				OutPart += Point;
+			}
+			return PolygonArea(Poly);
+		}
+
+		/** The branch a node belongs to, seen from another: its ancestor (or itself) whose parent holds both. */
+		int32 BranchOf(const FLayoutSnapshot& InSnapshot, int32 InNode, int32 InFrom)
+		{
+			int32 Walk = InNode;
+			while (InSnapshot.Nodes[Walk].Parent != INDEX_NONE && !IsAncestor(InSnapshot, InSnapshot.Nodes[Walk].Parent, InFrom))
+			{
+				Walk = InSnapshot.Nodes[Walk].Parent;
+			}
+			return Walk;
+		}
 	}
 
 	int32 FLayoutSnapshot::FindByPath(const FString& InPathOrName) const
@@ -1256,7 +1363,8 @@ namespace DreamGUIMCP
 			{
 				continue;
 			}
-			for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+			bool bCovered = false;
+			for (int32 Index = 0; Index < Nodes.Num() && !bCovered; ++Index)
 			{
 				const FLayoutNode& Over = Nodes[Index];
 				if (Over.Order <= TextNode.Order || !Over.IsDrawn() || Over.Visual.IsEmpty() || Over.Visual == TEXT("Text") || Over.Visual == TEXT("Empty")
@@ -1318,7 +1426,114 @@ namespace DreamGUIMCP
 				Issue.Hint = TEXT("Move it off the text, or put it before the text in the file (or in a lower layer) so it is drawn under it. A decoration meant to lie over text: write @tag Bleed on it.");
 				Issue.Key = FString::Printf(TEXT("8009|%s|%s"), *Over.Path, *TextNode.Path);
 				Issue.Weight = 1.75;
-				break; // one finding a text: the first thing drawn over it
+				bCovered = true; // one finding a text: the first thing drawn over it
+			}
+			if (bCovered || IsBleed(InSnapshot, TextIndex))
+			{
+				continue;
+			}
+
+			// A text laid across the edge of a shape drawn under it that is not its plate: some of its letters on the
+			// shape, the rest off it, so it reads over two backgrounds at once (a label slid onto the next badge). What is
+			// drawn before a text is its plate when it holds the text, or when the text's own plate is drawn over it; a
+			// backplate of a panel the text is in, its frame and its ancestors never count.
+			// What the text is on: an ancestor that draws, or a plate an ancestor holds under it, that holds the whole text.
+			// A shape drawn before that is behind the panel the text is on -- see-through or not, frosted glass over a busy
+			// backdrop -- not next to the text.
+			const auto HoldsText = [&](int32 InIndex)
+			{
+				const FLayoutNode& Plate = Nodes[InIndex];
+				return Plate.IsDrawn() && !Plate.Visual.IsEmpty() && Plate.Visual != TEXT("Text") && Plate.Visual != TEXT("Empty") && Plate.Color.A >= 13
+					&& Area(Intersect(InPlane(Plate, EPart::Body, TextNode), Glyphs)) >= (1.0 - CoversTextShare) * GlyphArea;
+			};
+			int32 PlateOrder = INDEX_NONE;
+			for (int32 Child = TextIndex, Walk = TextNode.Parent; Walk != INDEX_NONE; Child = Walk, Walk = Nodes[Walk].Parent)
+			{
+				if (HoldsText(Walk))
+				{
+					PlateOrder = FMath::Max(PlateOrder, Nodes[Walk].Order);
+				}
+				for (const int32 Sibling : Nodes[Walk].Children)
+				{
+					if (Sibling == Child)
+					{
+						break;
+					}
+					if (HoldsText(Sibling))
+					{
+						PlateOrder = FMath::Max(PlateOrder, Nodes[Sibling].Order);
+					}
+				}
+			}
+			for (int32 Index = 0; Index < Nodes.Num(); ++Index)
+			{
+				const FLayoutNode& Under = Nodes[Index];
+				if (Under.Order >= TextNode.Order || !Under.IsDrawn() || Under.Visual.IsEmpty() || Under.Visual == TEXT("Text") || Under.Visual == TEXT("Empty")
+					|| Under.Visual == TEXT("Ring") || Under.Visual == TEXT("Line") || Under.bInteractive || Under.Canvas != TextNode.Canvas || Under.bApproximate
+					|| Under.VisW <= ZeroSize || Under.VisH <= ZeroSize || Under.bHollow || Under.Color.A < CoversTextAlpha)
+				{
+					continue; // a ring or a line is an outline: its box is not what it draws
+				}
+				if (Index == TextFrame || IsAncestor(InSnapshot, Index, TextIndex) || IsAncestor(InSnapshot, TextIndex, Index) || IsBleed(InSnapshot, Index))
+				{
+					continue;
+				}
+				if (Under.Parent != INDEX_NONE && IsAncestor(InSnapshot, Under.Parent, TextIndex) && IsBackplateOf(Index, Under.Parent))
+				{
+					continue; // the plate of a panel the text is in
+				}
+				if (Under.Order < PlateOrder)
+				{
+					continue; // the panel or plate the text is on lies between them
+				}
+				if (!Under.bAuthored)
+				{
+					int32 Owner = Under.Parent;
+					while (Owner != INDEX_NONE && !Nodes[Owner].bAuthored)
+					{
+						Owner = Nodes[Owner].Parent;
+					}
+					if (Owner != INDEX_NONE && (Owner == TextIndex || IsAncestor(InSnapshot, Owner, TextIndex)))
+					{
+						continue;
+					}
+				}
+				if (Area(BodyOf(Under)) >= ScrimShare * ViewportArea)
+				{
+					continue;
+				}
+				// On the screen first, cut to what clips each of them: a shape a frame crops short of the text is not under it.
+				const FBox2D OnScreen = Intersect(BodyOf(Under), BodyOf(TextNode));
+				if (FMath::Min(OnScreen.Max.X - OnScreen.Min.X, OnScreen.Max.Y - OnScreen.Min.Y) < CoversTextThickness)
+				{
+					continue;
+				}
+				FBox2D Part;
+				double Whole = 0.0;
+				const double CoveredArea = CoveredBy(Under, TextNode, Glyphs, Part, Whole);
+				// The shape as drawn in the text's plane, no more than what shows of it on the screen.
+				const double Share = FMath::Min(CoveredArea / GlyphArea, Area(OnScreen) / FMath::Max(1.0, Area(BodyOf(TextNode))));
+				if (Whole > UnderShapeRatio * GlyphArea)
+				{
+					continue; // a backdrop shape, a glow, a stripe the text is laid over: not one thing the text is on the edge of
+				}
+				if (Share < CoversTextShare || Share > 1.0 - CoversTextShare || !Part.bIsValid
+					|| FMath::Min(Part.Max.X - Part.Min.X, Part.Max.Y - Part.Min.Y) < CoversTextThickness)
+				{
+					continue; // clear of it, a sliver, or on it all but an edge: then it is the text's plate
+				}
+				const int32 Branch = BranchOf(InSnapshot, Index, TextIndex);
+				const FString Belongs = Branch != Index ? FString::Printf(TEXT(" (in %s)"), *Who(InSnapshot, Branch)) : FString();
+				FLayoutIssue& Issue = OutIssues.AddDefaulted_GetRef();
+				Issue.Code = static_cast<int32>(EDreamUIDiagnosticCode::LayoutCoversText);
+				Issue.Node = TextIndex;
+				Issue.Other = Index;
+				Issue.Message = FString::Printf(TEXT("the text of %s, %s, lies across the edge of %s%s, drawn under it: %d%% of its letters are on that shape and the rest off it"),
+					*Who(InSnapshot, TextIndex), *QuoteText(TextNode.Text), *Who(InSnapshot, Index), *Belongs, FMath::RoundToInt(100.0 * Share));
+				Issue.Hint = TEXT("Move the text clear of the shape, or give the text a plate of its own. A text meant to lie across it: write @tag Bleed on the shape.");
+				Issue.Key = FString::Printf(TEXT("8009|under|%s|%s"), *Under.Path, *TextNode.Path);
+				Issue.Weight = 1.7;
+				break;
 			}
 		}
 

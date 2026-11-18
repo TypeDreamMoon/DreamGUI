@@ -134,5 +134,5 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI8006 | LayoutBreaksAtSize | A layout problem at one of the further viewport sizes asked for, and not at the first. |
 | DUI8007 | LayoutLowContrast | A text that stands out from what is behind it less than 3 to 1 (preview only). |
 | DUI8008 | LayoutOutsideFrame | A node drawn past the panel or card it sits in (not when tagged `Bleed`). |
-| DUI8009 | LayoutCoversText | A visual that takes no pointer drawn over a text it is not the backplate of (not when tagged `Bleed`). |
+| DUI8009 | LayoutCoversText | A visual that takes no pointer drawn over a text it is not the backplate of, or a text laid across the edge of a small shape drawn under it (not when tagged `Bleed`). |
 | DUI8010 | LayoutUnbalanced | A panel whose content keeps to one side or leaves a wide band empty (an info). |

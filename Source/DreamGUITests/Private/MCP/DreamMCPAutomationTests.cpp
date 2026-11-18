@@ -1542,9 +1542,9 @@ bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("naming both"), Issues.Num() > 0 && Issues[0].Node == Block && Issues[0].Other == Text && Issues[0].Message.Contains(TEXT("HALCYON")));
 
 	FSnapshotBuilder Under;
-	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 150, 105, 100, 30);
+	Under.Add(0, TEXT("Plate"), TEXT("RectBlock"), 90, 95, 320, 50);
 	Title(Under);
-	TestEqual(TEXT("the same block drawn before the text is its backplate"), Count(Under), 0);
+	TestEqual(TEXT("a block drawn before the text that holds it is its backplate"), Count(Under), 0);
 
 	FSnapshotBuilder Tagged;
 	Title(Tagged);
@@ -1577,6 +1577,66 @@ bool FDreamMCPLintCoversTextTest::RunTest(const FString& Parameters)
 	const TArray<FLayoutIssue> Crowded = Crowding.Lint();
 	TestEqual(TEXT("a small bar lying in the text's line is reported"), CountCode(Crowded, EDreamUIDiagnosticCode::LayoutCoversText), 1);
 	TestTrue(TEXT("as over its line"), Crowded.Num() > 0 && Crowded[0].Message.Contains(TEXT("over the line of")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamMCPLintTextAcrossAShapeTest,
+	"DreamGUI.MCP.Layout.ATextLaidAcrossTheEdgeOfAShapeUnderItIsReported",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMCPLintTextAcrossAShapeTest::RunTest(const FString& Parameters)
+{
+	// A label, its glyphs 200 x 40 at (100, 100); what is added before it is drawn under it.
+	const auto Label = [](FSnapshotBuilder& Build, int32 InParent)
+	{
+		const int32 Text = Build.Add(InParent, TEXT("Name"), TEXT("Text"), 100, 100, 300, 40);
+		FLayoutNode& Node = Build.Snapshot.Nodes[Text];
+		Node.bHasText = true;
+		Node.Text = TEXT("Cinder Lance");
+		Node.TextNeeded = FVector2f(200.0f, 40.0f);
+		Node.TextSpillX = 1;
+		Node.TextSpillY = 1;
+		return Text;
+	};
+	const auto Count = [](const FSnapshotBuilder& Build) { return CountCode(Build.Lint(), EDreamUIDiagnosticCode::LayoutCoversText); };
+
+	// The next node's badge, drawn before the label, under the lower half of its letters.
+	FSnapshotBuilder Across;
+	const int32 Seal = Across.Add(0, TEXT("SealB1"), TEXT("Widget"), 150, 120, 100, 100);
+	const int32 Shell = Across.Add(Seal, TEXT("Shell"), TEXT("Polygon"), 150, 120, 100, 100);
+	const int32 Text = Label(Across, 0);
+	const TArray<FLayoutIssue> Issues = Across.Lint();
+	TestEqual(TEXT("a text half on the next node's badge, drawn under it, is reported"), CountCode(Issues, EDreamUIDiagnosticCode::LayoutCoversText), 1);
+	TestTrue(TEXT("on the text, naming the shape and the node it belongs to"), Issues.Num() > 0 && Issues[0].Node == Text && Issues[0].Other == Shell
+		&& Issues[0].Message.Contains(TEXT("lies across the edge of Polygon Shell (in Widget SealB1)")) && Issues[0].Message.Contains(TEXT("25%")));
+
+	FSnapshotBuilder Holds;
+	Holds.Add(0, TEXT("Chip"), TEXT("RectBlock"), 90, 95, 320, 50);
+	Label(Holds, 0);
+	TestEqual(TEXT("a shape that holds the whole text is its plate"), Count(Holds), 0);
+
+	FSnapshotBuilder Backdrop;
+	Backdrop.Add(0, TEXT("Glow"), TEXT("RectBlock"), 200, 0, 600, 300);
+	Label(Backdrop, 0);
+	TestEqual(TEXT("a backdrop shape far bigger than the text is what the text is laid over"), Count(Backdrop), 0);
+
+	FSnapshotBuilder Plated;
+	Plated.Add(0, TEXT("Badge"), TEXT("Polygon"), 150, 120, 100, 100);
+	const int32 Tag = Plated.Add(0, TEXT("Tag"), TEXT("Widget"), 90, 95, 320, 50);
+	Plated.Add(Tag, TEXT("TagFace"), TEXT("RectBlock"), 90, 95, 320, 50);
+	Label(Plated, Tag);
+	TestEqual(TEXT("a text on a plate of its own, drawn over the shape, reads on its plate"), Count(Plated), 0);
+
+	FSnapshotBuilder Tagged;
+	Tagged.Snapshot.Nodes[Tagged.Add(0, TEXT("Swash"), TEXT("Polygon"), 150, 120, 100, 100)].bBleed = true;
+	Label(Tagged, 0);
+	TestEqual(TEXT("a shape tagged Bleed is meant to run under the text"), Count(Tagged), 0);
+
+	FSnapshotBuilder Lines;
+	Lines.Add(0, TEXT("Link"), TEXT("Line"), 150, 120, 100, 100);
+	Lines.Add(0, TEXT("Halo"), TEXT("Ring"), 150, 120, 100, 100);
+	Label(Lines, 0);
+	TestEqual(TEXT("a line or a ring is an outline: its box is not what it draws"), Count(Lines), 0);
 	return true;
 }
 

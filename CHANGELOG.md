@@ -69,6 +69,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   off the picture (the edge drawn shorter), so a model that cannot see the preview can tell a panel that faces the
   middle from one that faces away. Facts, not warnings. See
   [DreamMCP endpoint](Docs/tools/dreammcp.md#which-way-a-turned-face-looks).
+- **DUI8009 also reports a text laid across the edge of a shape under it.** A label drawn after the next node's badge,
+  some of its letters on the badge and the rest off it, was taken for a text on its backplate. A shape drawn before a
+  text is now its plate only when it holds the text (or the panel the text is on is drawn over it); a shape no more than 8
+  times the text's size that it straddles is reported. Backdrop shapes, glows, rings, lines and what a frame crops away
+  are not.
 - **Agent skills.** `.skill/` holds `dream-gui-create`, `dream-gui-verify` and `dream-gui-diagnose` (published into a
   project's `.claude/skills/` by `.skill/sync-skills.ps1`), self-contained reference pages for agents
   (`.skill/reference/`, built from `Docs/` by `.skill/build-reference.ps1`), and `.skill/dui.ps1`, which runs `check`,

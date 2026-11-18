@@ -76,6 +76,12 @@ namespace DreamGUIMCP
 		inline constexpr double CrowdsTextShare = 0.3;
 		/** ...and covers less than this share of the viewport (a full-screen scrim or vignette is not about one text). */
 		inline constexpr double ScrimShare = 0.6;
+		/**
+		 * A text drawn across the edge of a shape under it (DUI8009 too): CoversTextShare to 1 - CoversTextShare of its
+		 * glyph box on the shape, where the shape is no more than this many times that box's area -- a badge, an icon, the
+		 * next item's picture, not a backdrop shape or a glow the text is laid over.
+		 */
+		inline constexpr double UnderShapeRatio = 8.0;
 		/** DUI8010 looks at panels at least this big (pixels on each side, and share of the viewport)... */
 		inline constexpr double UnbalancedMinSide = 240.0;
 		inline constexpr double UnbalancedMinShare = 0.02;

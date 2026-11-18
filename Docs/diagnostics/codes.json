@@ -1330,8 +1330,8 @@
       "name": "LayoutCoversText",
       "severity": "warning",
       "stage": "Layout",
-      "title": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line.",
-      "meaning": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line. Its backplate (drawn before it), an outline with no body, a veil over the whole card and a scrim over most of the screen are not reported, nor a node tagged `Bleed`. Most often: an accent bar, a shape or a glow written after the text and overlapping it.",
+      "title": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line",
+      "meaning": "A visual that takes no pointer, drawn after a text in its canvas, over 12 % or more of its glyphs -- or a small decoration lying mostly in the text's line; or a text laid across the edge of a small shape drawn under it that is not its plate (a label slid onto the next badge), part of its letters on the shape and the rest off it. Its backplate (drawn before it and holding it), an outline with no body, a veil over the whole card and a scrim over most of the screen are not reported, nor a node tagged `Bleed`. Most often: an accent bar, a shape or a glow written after the text and overlapping it.",
       "fix": "move it off the text, or write it before the text so it is drawn under it; a sheen meant to lie over it: `@tag Bleed`",
       "doc": "https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui8xxx#dui8009"
     },
