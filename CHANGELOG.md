@@ -607,6 +607,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 - `SetWantsTick(false)` inside a user widget's `NativeOnDisable` now removes its manager tick registration. Cancelled interactions no longer tick while disabled or leave a stale registration after destruction.
 
+- **The starter screens' turned cards face the middle, as they say.** The title menu's save card (on the right)
+  and the results screen's rank card (on the left) were turned with the wrong sign and faced away from the middle of the
+  screen; a screen copied from them turned its panels outward. They now take `RenderRotation = (0, 14, 0)` and
+  `(0, -16, 0)`.
 - **A preview right after a change draws the screen.** The source watcher rebuilds a `.dui` a moment after it changes;
   when that rebuild landed in the frames a DreamMCP `preview` (or `layout`) spent on a screen it had just compiled, it
   reinstanced the screen on the stage and the picture came out empty ("draws almost nothing"), the next one fine. The
