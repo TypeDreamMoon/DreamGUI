@@ -2214,6 +2214,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	UDreamVisual* GetVisual()const { return Visual; }
+	/** The visual if it is a T, else nullptr: `GetVisual<UDreamText>()`. */
+	template<class T>
+	T* GetVisual()const
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UDreamVisual>::Value, "'T' template parameter to GetVisual must be derived from UDreamVisual");
+		return Cast<T>(Visual);
+	}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta=(DeterminesOutputType="VisualClass"))
 	UDreamVisual* CreateNewVisual(TSubclassOf<UDreamVisual> VisualClass);
 	template<class T>
@@ -2227,6 +2234,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	UDreamLayoutContainer* GetLayoutContainer()const { return LayoutContainer; }
+	/** The layout container if it is a T, else nullptr: `GetLayoutContainer<UDreamLayoutContainerVerticalBox>()`. */
+	template<class T>
+	T* GetLayoutContainer()const
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UDreamLayoutContainer>::Value, "'T' template parameter to GetLayoutContainer must be derived from UDreamLayoutContainer");
+		return Cast<T>(LayoutContainer);
+	}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta=(DeterminesOutputType="LayoutClass"))
 	UDreamLayoutContainer* CreateNewLayoutContainer(TSubclassOf<UDreamLayoutContainer> Class);
 	template<class T>
@@ -2240,6 +2254,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	UDreamLayoutSelf* GetLayoutSelf()const{return LayoutSelf;}
+	/** The layout self if it is a T, else nullptr. */
+	template<class T>
+	T* GetLayoutSelf()const
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UDreamLayoutSelf>::Value, "'T' template parameter to GetLayoutSelf must be derived from UDreamLayoutSelf");
+		return Cast<T>(LayoutSelf);
+	}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta=(DeterminesOutputType="LayoutClass"))
 	UDreamLayoutSelf* CreateNewLayoutSelf(TSubclassOf<UDreamLayoutSelf> Class);
 	template<class T>

@@ -134,6 +134,7 @@ Source/DreamGUI/Private/Core/DreamWidgetGeneratedClass.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamWidgetNavigation.cpp,DreamGUI,navigation rules data returned by UDreamWidget::GetNavigation (UFUNCTION); scan helpers use a retyped selectable registry
 Source/DreamGUI/Private/Core/DreamWidgetPresenterComponentBase.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamWidgetPropertyBinding.cpp,DreamGUI,core
+Source/DreamGUI/Private/Core/DreamWidgetParts.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamWidgetTree.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamWorldWidgetActor.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamWorldWidgetComponent.cpp,DreamGUI,core
@@ -391,6 +392,7 @@ Source/DreamGUI/Public/Core/DreamWidgetLifecycle.h,DreamGUI,core contract: widge
 Source/DreamGUI/Public/Core/DreamWidgetNavigation.h,DreamGUI,navigation rules data returned by UDreamWidget::GetNavigation (UFUNCTION); scan helpers use a retyped selectable registry
 Source/DreamGUI/Public/Core/DreamWidgetPresenterComponentBase.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamWidgetPropertyBinding.h,DreamGUI,core
+Source/DreamGUI/Public/Core/DreamWidgetParts.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamWidgetTree.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamWidgetTreeHost.h,DreamGUI,core contract: tree ownership
 Source/DreamGUI/Public/Core/DreamWorldWidgetActor.h,DreamGUI,core

@@ -182,6 +182,46 @@ It is deliberately not UMG's `BindWidget`. The two never collide at run time, bu
 `BindDreamWidgetAnim` and, without the error, `BindDreamWidgetAnimOptional`. At run time, `GetWidgetFromName` finds a
 widget by its variable name.
 
+### Reaching a widget's parts
+
+A widget variable is a `UDreamWidget`, whatever the node draws: a `Text` node is a widget with a `UDreamText` visual, and
+a `VerticalBox` node is a widget with a vertical-box layout container. One node can carry a visual, a layout container, a
+layout self and behaviours at once, and each of those is a **part** with its own API.
+
+Drag off a widget's pin and the menu lists what its parts can do, filed under the widget and then the part:
+
+```text
+Player Label
+  Dream Text (Visual)
+    Get Dream Text (Visual)
+    Set Text
+    Set Font Size
+    ...
+  UMG Vertical Box (Layout)
+    Get Spacing
+    Set Spacing
+    ...
+```
+
+Picking *Set Text* places one node, **Set Text**, whose target is the widget itself: `PlayerLabel` wires straight into it.
+The node finds the part when it compiles, so there is no Get Visual, no Cast and no failure branch. A property the part
+shows to graphs is listed as its Get and Set, one node each in the same way. A function the part inherits (from
+`UDreamVisual`, say) is listed under the part as the widget really has it.
+
+*Get Dream Text (Visual)* is for when the part itself is wanted -- to hand to a function of your own, or keep in a
+variable: its output is typed as the part's own class.
+
+The compile checks every such node against the hierarchy it builds. If the `.dui` turns `PlayerLabel` from a `Text` into a
+`RectBlock`, the next compile fails at *Set Text* and says what `PlayerLabel`'s visual is now: change the graph, or change
+the node back. A call every visual takes, such as one declared on `UDreamVisual`, still compiles. The part stays
+swappable; the compile finds every graph a swap breaks.
+
+The nodes also take a widget that is not one of the tree's (a function input, an array element). There is nothing to
+check that against, so a widget without the part does nothing there, as a failed cast would.
+
+In C++, the same reads are templates: `GetVisual<UDreamText>()`, `GetLayoutContainer<T>()`, `GetLayoutSelf<T>()` and
+`GetComponent<T>()` for behaviours, each `nullptr` when the part is not a `T`.
+
 Events are handled with **routes**: `OnClick -> HandleConfirm` connects an event to a function on the user widget, which
 is where UMG puts event handling too. The compiler resolves every route into `UDreamWidgetBlueprint::EventBindings`, and
 `UDreamUserWidget::BindEventBindings` attaches them at Initialize. In the designer the same thing is the *Events* section
