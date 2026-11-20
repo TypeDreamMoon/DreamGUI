@@ -230,7 +230,8 @@ void UDreamExpandableArea::PushShownHeight()
 		// Never 0 mid-travel: 0 on the slot means no cap at all, which is the whole body on the frame it arrives shut.
 		SetContentCap(FMath::Max(ShownExtent, KINDA_SMALL_NUMBER));
 	}
-	SizeControlHeight(Active.HeaderHeight + ShownExtent);
+	// The header and what of the body shows: the control's state, not a style's suggestion, so written whatever was there.
+	ForceControlHeight(Active.HeaderHeight + ShownExtent);
 }
 
 float UDreamExpandableArea::GetShownFraction() const

@@ -147,6 +147,34 @@ bool FDreamControlButtonSizeTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlStyleHeightIsADefaultTest,
+	"DreamGUI.Controls.Button.TheStyleHeightIsADefaultASizedButtonKeepsItsOwn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlStyleHeightIsADefaultTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlLibraryTestLocal;
+
+	// Nobody sized it: it is the style's height, and follows the style when that changes at run time.
+	TStrongObjectPtr<UDreamButton> Unsized(Make<UDreamButton>());
+	FDreamButtonStyle Style;
+	TestEqual(TEXT("a button nobody sized is its style's height"), static_cast<double>(Unsized->GetHeight()), static_cast<double>(Style.Height));
+	Style.Height = 50.0f;
+	Unsized->SetStyle(Style);
+	TestEqual(TEXT("and follows a new style height"), static_cast<double>(Unsized->GetHeight()), 50.0);
+
+	// Somebody sized it -- the designer, a .dui, a details edit, all of which land as the widget's height. Every style push
+	// used to put it back to the style's number, and every instance pushes its style when it is built.
+	TStrongObjectPtr<UDreamButton> Sized(Make<UDreamButton>());
+	Sized->SetHeight(90.0f);
+	Style.Height = 60.0f;
+	Sized->SetStyle(Style);
+	TestEqual(TEXT("a button somebody sized keeps that height through a style push"), static_cast<double>(Sized->GetHeight()), 90.0);
+	// The rebuild a compile makes is DreamGUI.Designer.Driver.AButtonDraggedTallerKeepsItsHeightThroughACompile.
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamControlSliderTest,
 	"DreamGUI.Controls.Slider.ItsPartsReachTheBehaviourAndOneClassServesBothAxes",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

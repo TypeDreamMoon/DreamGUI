@@ -590,6 +590,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A control you resized keeps its size.** A Button, TextInput, SpinBox, Dropdown, ProgressBar, scroll bar, Toggle,
+  RadioButton or key selector dragged taller in the designer -- or given a height in a `.dui` or the details panel --
+  went back to its style's height on the next compile, preview rebuild or any edit that rebuilt it (a Tool Tip Text, say):
+  every instance pushes its style when it is built, and the push wrote the style's height over the control's own. Under a
+  canvas slot with Auto Size off nothing else decides a child's size, so the author's was lost. The style's size is now
+  the control's default: it applies while nobody has sized the control, and follows a style changed at run time, but a
+  size somebody set stays. A Throbber, a RingMenu and an ExpandableArea still size themselves, since their size is their
+  geometry.
+
 - **A widget made in a dedicated server's world is reported once, as a warning that says what to do.** A dedicated
   server has no UI manager by design, and every widget registered there raised an ensure -- a stack walk and a pause each
   time, and with a `Create Dream Widget` in a player controller's `BeginPlay`, one for every player who joined (the server
