@@ -146,6 +146,37 @@ protected:
 
 它有意不采用 UMG 的 `BindWidget`。两者在运行时从不冲突，但头文件是给人读的，一个裸的 `meta=(BindWidget)` 加在 Dream 控件上会表明它属于一个它并不属于的框架。动画方面的对应物是 `BindDreamWidgetAnim`，以及不带错误的 `BindDreamWidgetAnimOptional`。在运行时，`GetWidgetFromName` 按其变量名查找控件。
 
+<a id="reaching-a-widgets-parts"></a>
+
+### 访问控件的部件
+
+控件变量是 `UDreamWidget`，无论该节点绘制什么：`Text` 节点是一个带有 `UDreamText` 视觉的控件，而 `VerticalBox` 节点是一个带有垂直框布局容器的控件。一个节点可以同时承载视觉、布局容器、布局自身和行为，而其中的每一项都是一个拥有自己 API 的**部件**。
+
+从控件的引脚上拖出连线，菜单会列出其部件能执行的操作，并按控件、再按部件归类：
+
+```text
+Player Label
+  Dream Text (Visual)
+    Get Dream Text (Visual)
+    Set Text
+    Set Font Size
+    ...
+  UMG Vertical Box (Layout)
+    Get Spacing
+    Set Spacing
+    ...
+```
+
+选择 *Set Text* 会放置一个节点 **Set Text**，其目标是控件本身：`PlayerLabel` 直接连入它。该节点会在编译时找到部件，因此没有 Get Visual、没有 Cast，也没有失败分支。部件向图表公开的属性会以其 Get 和 Set 列出，同样各一个节点。部件继承的函数（例如来自 `UDreamVisual`）会列在该部件下，正如控件实际拥有它一样。
+
+*Get Dream Text (Visual)* 用于需要部件本身的情况——将它传给自己的函数，或保存在变量中：其输出类型为部件自身的类。
+
+编译会对照其构建的层级结构检查每个此类节点。如果 `.dui` 将 `PlayerLabel` 从 `Text` 变成 `RectBlock`，下一次编译会在 *Set Text* 处失败，并说明 `PlayerLabel` 的视觉现在是什么：修改图表，或把节点改回去。每个视觉都接受的调用（例如在 `UDreamVisual` 上声明的调用）仍然可以编译。部件保持可替换；编译会找出替换所破坏的每个图表。
+
+这些节点也接受不属于控件树的控件（函数输入、数组元素）。没有可供检查的依据，因此不带该部件的控件在那里什么也不做，就像失败的 Cast 一样。
+
+在 C++ 中，同样的读取是模板：用于行为的 `GetVisual<UDreamText>()`、`GetLayoutContainer<T>()`、`GetLayoutSelf<T>()` 和 `GetComponent<T>()`；当部件不是 `T` 时，各自为 `nullptr`。
+
 事件通过**路由**处理：`OnClick -> HandleConfirm` 将一个事件连接到用户控件上的一个函数，这也正是 UMG 放置事件处理的地方。编译器将每条路由解析为 `UDreamWidgetBlueprint::EventBindings`，而 `UDreamUserWidget::BindEventBindings` 在 Initialize 时附加它们。在设计器中，同样的事情是细节面板的 *Events* 部分： `+` 会创建一个具有正确签名的自定义事件以及命名它的路由。
 
 <a id="the-designer-edits-the-class"></a>
