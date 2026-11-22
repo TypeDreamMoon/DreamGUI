@@ -24,6 +24,7 @@
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
+#include "MaterialDomain.h"
 
 /*
  * Reference: the material mapping tables of SourySK/NiagaraUIRenderer and liufei2008/LGUI_ParticleSystem (both MIT) are what
@@ -277,7 +278,7 @@ namespace DreamNiagaraMaterialConverterLocal
 				ReplaceSubUV(Material, SubUV);
 				OutConversion.Replaced.Add(TEXT("ParticleSubUV -> the two frames DreamGUI writes (UV0, UV2), blended by UV3.x"));
 			}
-			else if (Expression->IsA<UMaterialExpressionParticleColor>())
+			else if (Expression->GetClass()->GetFName() == TEXT("MaterialExpressionParticleColor"))	// by name: the engine does not export the class before 5.6
 			{
 				ReplaceParticleColor(Material, Expression);
 				OutConversion.Replaced.Add(TEXT("ParticleColor -> vertex colour in linear light, times its scale (UV3.x)"));
