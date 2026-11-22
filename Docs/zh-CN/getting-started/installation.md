@@ -7,7 +7,7 @@ DreamGUI 的装法和别的项目插件一样：克隆进项目的 `Plugins/`，
 
 | | |
 | --- | --- |
-| 引擎 | Unreal Engine `5.8`（`EngineVersion` 5.8.0），源码引擎和 Epic 启动器安装版都行 |
+| 引擎 | Unreal Engine `5.8`，源码构建或 Epic 启动器安装版均可。源码也可在 `5.5` 和 `5.6` 上编译，但尚未在这些版本上运行（参见 [Engine versions](../guides/platforms.md#engine-versions)） |
 | 平台 | Win64 是唯一构建并运行过的平台（见[平台](../guides/platforms.md)） |
 | 依赖插件 | `EnhancedInput`，`.uplugin` 里自己启用 |
 | 运行时模块 | `DreamGUIRenderer`、`DreamGUI`、`DreamGUIInput`、`DreamGUIControls`、`DreamGUIExtensions`、`DreamGUISamples`（`PostConfigInit`）；`DreamTween`（`Default`） |
@@ -22,7 +22,9 @@ DreamGUI 的装法和别的项目插件一样：克隆进项目的 `Plugins/`，
 
 ### 引擎 5.8，启动器安装版也可以
 
-插件只用引擎的公开头文件编译：渲染器通过公开的 scene-texture API 读取场景深度，静态检查 `engine-private-path` 会让任何指向 `Runtime/Renderer/Private` 或 `Internal` 的 include 路径直接失败。所以不需要源码引擎，也没有 5.7 的分支。
+插件只针对引擎的公开头文件编译：渲染器通过公开的 scene-texture API 读取场景深度，静态检查 `engine-private-path` 会让任何指向 `Runtime/Renderer/Private` 或 `Internal` 的 include 路径失败。所以不需要源码构建。
+
+所有引擎共用一个分支：描述符中不指定 `EngineVersion`，引擎之间的差异都在一个头文件（`DreamGUIEngineCompat.h`）中处理。它覆盖哪些引擎，以及每个引擎上实际构建并运行过什么，见 [Engine versions](../guides/platforms.md#engine-versions)。
 
 <a id="the-bundled-msdfgen"></a>
 

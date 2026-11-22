@@ -16,7 +16,7 @@ DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个
 | | |
 | --- | --- |
 | 插件版本 | `1.0.0`，第一个公开版本（之前的开发版编号是 1.x、2.0、2.1，见[更新日志](changelog/index.md)） |
-| 引擎 | Unreal Engine `5.8`，源码引擎与 Epic 启动器安装版都可以 |
+| 引擎 | Unreal Engine `5.8`，源码构建版或 Epic 启动器安装版；该源码也可在 `5.5` 和 `5.6` 上编译（参见 [平台](guides/platforms.md#engine-versions)） |
 | 平台 | Win64 是唯一构建并运行过的平台（见[平台](guides/platforms.md)） |
 | 运行时模块 | `DreamGUIRenderer`、`DreamGUI`、`DreamGUIInput`、`DreamGUIControls`、`DreamGUIExtensions`、`DreamGUISamples`、`DreamTween` |
 | 编辑器侧模块 | `DreamGUIEditor`、`DreamGUIK2Nodes`（`UncookedOnly`）、`DreamGUITests`（`Editor`） |
