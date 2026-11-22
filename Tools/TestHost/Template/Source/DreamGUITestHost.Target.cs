@@ -15,16 +15,16 @@ using System.Collections.Generic;
  * monolithic target defaults to a UNIQUE build environment (TargetRules.BuildEnvironment), which means
  * the whole engine is compiled again into this project's own Intermediate folder.
  *
- * The three settings are DevTest's (DevTest.Target.cs), which are the Blank template's: the host has to
- * build under exactly the rules the project it stands in for builds under.
+ * The build settings and include order are each engine's latest, which on the newest engine are the Blank
+ * template's: the one host template builds on every engine the plugin supports.
  */
 public class DreamGUITestHostTarget : TargetRules
 {
 	public DreamGUITestHostTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
-		DefaultBuildSettings = BuildSettingsVersion.V7;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
+		DefaultBuildSettings = BuildSettingsVersion.Latest;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		ExtraModuleNames.Add("DreamGUITestHost");
 	}
 }
