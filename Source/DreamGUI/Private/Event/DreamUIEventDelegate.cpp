@@ -10,7 +10,9 @@
 #include "Serialization/MemoryReader.h"
 // A `Struct` parameter is stored as exported text and imported into a real instance before it is
 // fired; UScriptStruct::ImportText reports what it could not read through one of these.
+#if __has_include("Misc/StringOutputDevice.h")
 #include "Misc/StringOutputDevice.h"
+#endif
 #if WITH_EDITOR
 #include "Utils/DreamUIUtils.h"
 #endif

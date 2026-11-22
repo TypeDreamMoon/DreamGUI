@@ -28,7 +28,7 @@ public:
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIBitmapCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.CharSize26Dot6), GetTypeHash(other.bBold));
+		return HashCombine(HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.CharSize26Dot6)), GetTypeHash(other.bBold));
 	}
 };
 

@@ -6,6 +6,7 @@
 #include "MovieSceneTracksComponentTypes.h"
 #include "MovieSceneTracksPropertyTypes.h"
 #include "Misc/CommandLine.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamUI
 {
@@ -81,6 +82,23 @@ namespace
 	{
 		CastChecked<UDreamWidgetPresenterComponentBase>(Object)->SetWidgetOffset(ToVector(In));
 	}
+
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+	#define DREAMUI_VECTOR_ACCESSORS(Get, Set) &Get, &Set
+#else
+	// Before 5.7 a vector accessor is also handed the track's channel count, which these have no use for.
+	template <FDoubleIntermediateVector (*Get)(const UObject*)>
+	FDoubleIntermediateVector GetIgnoringMetaData(const UObject* Object, UE::MovieScene::FVectorPropertyMetaData)
+	{
+		return Get(Object);
+	}
+	template <void (*Set)(UObject*, const FDoubleIntermediateVector&)>
+	void SetIgnoringMetaData(UObject* Object, UE::MovieScene::FVectorPropertyMetaData, const FDoubleIntermediateVector& In)
+	{
+		Set(Object, In);
+	}
+	#define DREAMUI_VECTOR_ACCESSORS(Get, Set) &GetIgnoringMetaData<&Get>, &SetIgnoringMetaData<&Set>
+#endif
 }
 
 void EnsureMovieScenePropertyAccessorsRegistered()
@@ -106,11 +124,13 @@ void EnsureMovieScenePropertyAccessorsRegistered()
 
 	// Registered against UDreamWidget: the lookup walks the bound object's class hierarchy, so
 	// every widget subclass gets them.
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RenderTranslation", &GetRenderTranslation, &SetRenderTranslation);
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RenderScale", &GetRenderScale, &SetRenderScale);
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RelativeLocation", &GetRelativeLocation, &SetRelativeLocation);
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RelativeScale", &GetRelativeScale, &SetRelativeScale);
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "PerspectiveOrigin", &GetPerspectiveOrigin, &SetPerspectiveOrigin);
-	TrackComponents->Accessors.DoubleVector.Add(UDreamWidgetPresenterComponentBase::StaticClass(), "WidgetOffset", &GetWidgetOffset, &SetWidgetOffset);
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RenderTranslation", DREAMUI_VECTOR_ACCESSORS(GetRenderTranslation, SetRenderTranslation));
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RenderScale", DREAMUI_VECTOR_ACCESSORS(GetRenderScale, SetRenderScale));
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RelativeLocation", DREAMUI_VECTOR_ACCESSORS(GetRelativeLocation, SetRelativeLocation));
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "RelativeScale", DREAMUI_VECTOR_ACCESSORS(GetRelativeScale, SetRelativeScale));
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidget::StaticClass(), "PerspectiveOrigin", DREAMUI_VECTOR_ACCESSORS(GetPerspectiveOrigin, SetPerspectiveOrigin));
+	TrackComponents->Accessors.DoubleVector.Add(UDreamWidgetPresenterComponentBase::StaticClass(), "WidgetOffset", DREAMUI_VECTOR_ACCESSORS(GetWidgetOffset, SetWidgetOffset));
 }
 }
+
+#undef DREAMUI_VECTOR_ACCESSORS

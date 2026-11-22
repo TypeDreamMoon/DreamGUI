@@ -34,6 +34,7 @@
 // dependency; this is the one header of it that answers "which way does the running culture read".
 #include "Layout/FlowDirection.h"
 #include "UObject/UObjectHash.h"
+#include "DreamGUIEngineCompat.h"
 #if WITH_EDITOR
 #include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"

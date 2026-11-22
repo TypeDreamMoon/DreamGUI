@@ -6,6 +6,7 @@
 #include "MovieSceneSequence.h"
 #include "MovieScene.h"
 #include "DreamWidgetAnimationObjectReference.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamWidgetAnimation.generated.h"
 
 /**
@@ -34,7 +35,12 @@ public:
 #if WITH_EDITOR
 	virtual FText GetDisplayName() const override { return FText::FromString(DisplayNameString); }
 	virtual ETrackSupport IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const override;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 	virtual bool IsFilterSupportedImpl(const FString& InFilterName) const override;
+#else
+	/** The sequence is asked which outliner filters it supports from 5.6 on; nothing calls this before. */
+	bool IsFilterSupportedImpl(const FString& InFilterName) const;
+#endif
 #endif
 
 	bool IsEditable() const;

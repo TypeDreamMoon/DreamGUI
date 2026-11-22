@@ -11,6 +11,7 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/CoreDelegates.h"
 #include "Engine/Engine.h"
+#include "DreamGUIEngineCompat.h"
 #if WITH_EDITOR
 #include "Editor/EditorEngine.h"
 #endif
@@ -68,7 +69,7 @@ void FDreamGUIModule::StartupModule()
 	}
 	else
 	{
-		GPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda([]()
+		GPostEngineInitHandle = DreamGUICompat::OnPostEngineInit().AddLambda([]()
 		{
 			DreamUI::EnsureMovieScenePropertyAccessorsRegistered();
 		});
@@ -81,7 +82,7 @@ void FDreamGUIModule::ShutdownModule()
 	// we call this function before unloading the module.
 	if (GPostEngineInitHandle.IsValid())
 	{
-		FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
+		DreamGUICompat::OnPostEngineInit().Remove(GPostEngineInitHandle);
 		GPostEngineInitHandle.Reset();
 	}
 	DreamUIRendererSettings::SetProvider(nullptr);

@@ -4,6 +4,7 @@
 
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/World.h"
+#include "DreamGUIEngineCompat.h"
 
 // The same INotifyFieldValueChanged plumbing UDreamUserWidget carries (DreamUserWidget.cpp), on a plain UObject: a
 // view model is the other half of the binding, and the two halves answer the descriptor and the delegate calls alike.

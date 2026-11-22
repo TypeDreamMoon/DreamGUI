@@ -22,7 +22,11 @@
 #include "Sections/MovieSceneFloatSection.h"
 #include "Sections/MovieSceneRotatorSection.h"
 #include "Sections/MovieSceneVectorSection.h"
+#if __has_include("TrackInstancePropertyBindings.h")
 #include "TrackInstancePropertyBindings.h"
+#else
+#include "MovieSceneCommonHelpers.h"
+#endif
 #include "Tracks/MovieSceneBoolTrack.h"
 #include "Tracks/MovieSceneColorTrack.h"
 #include "Tracks/MovieSceneDoubleTrack.h"

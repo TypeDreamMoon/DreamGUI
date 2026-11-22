@@ -8,6 +8,7 @@
 #include "FieldNotificationDelegate.h"
 #include "INotifyFieldValueChanged.h"
 #include "UObject/Object.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamViewModel.generated.h"
 
 namespace DreamViewModel

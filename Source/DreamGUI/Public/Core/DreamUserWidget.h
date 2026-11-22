@@ -35,6 +35,7 @@
 #include "Engine/DataTable.h"
 // Held through TUniquePtr members below; a complete type here so every translation unit that destroys a widget can.
 #include "Core/DreamUIBindingObserver.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;

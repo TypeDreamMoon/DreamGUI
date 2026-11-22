@@ -36,7 +36,11 @@
 #include "Core/Text/DreamTextPaint.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "HAL/IConsoleManager.h"
+#if __has_include("Materials/MaterialParameters.h")
 #include "Materials/MaterialParameters.h"
+#else
+#include "MaterialTypes.h"
+#endif
 
 
 #define LOCTEXT_NAMESPACE "UIText"
