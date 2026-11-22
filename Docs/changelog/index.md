@@ -22,6 +22,14 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
+- **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
+  names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
+  The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.
+  **Nothing has been run on those engines, and the plugin's content is still saved by 5.8, which they cannot load** —
+  so this is the code half of supporting them. What differs on each is in
+  [Platforms](../guides/platforms.md#engine-versions). The test host's template builds with each engine's latest
+  build settings (template version 6).
+
 - **Clip masks.** A widget that clips to its bounds takes a mask on its clip (`ClipMask`): an ellipse, polygon, star or
   ring fitted to the clip rect, a feathered edge, a texture's channel laid over it (stretched, fitted, filled or tiled) or
   a procedural pattern (linear, radial, angular, diamond, blinds, checker, noise), through a threshold and softness that

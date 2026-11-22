@@ -14,6 +14,36 @@ run.**
 | Consoles | No | Not in any module's `PlatformAllowList` |
 | Dedicated server | Never — no server target has been built | No |
 
+## Engine versions
+
+The same rule, per engine. **5.8 is the only engine the plugin has been run on.**
+
+| Engine | Compiled | Run |
+| --- | --- | --- |
+| **5.8** | The editor; the game target in Development and Shipping | The automation suite; the packaged smoke test, once the release gate has run |
+| 5.7 | Never -- there is no 5.7 here to build with. Each difference was read against the 5.7 release source | Never |
+| 5.6 | The editor target and a Development game, Win64 | Never |
+| 5.5 | The editor target and a Development game, Win64 | Never |
+| 5.4 and earlier | No | No -- binding a widget in Sequencer is built on the custom bindings 5.5 added |
+
+Two things stand between "compiles" and "works" on 5.5 to 5.7:
+
+- **The content is saved by 5.8.** The default fonts, the materials, the Niagara systems and the Blueprints under the
+  plugin's `Content` are packages an older engine refuses to load, so the plugin starts there without them. They have
+  to be made again in the oldest supported engine -- the materials and the systems from their `DShader` and `DFX`
+  sources -- and that has not been done.
+- **Nothing has been run.** The automation suite needs that content, so it has not been run on those engines either.
+
+The code is written for the newest engine; where an older one spells an API differently, or lacks it, the difference
+is answered once in `Source/DreamGUIRenderer/Public/DreamGUIEngineCompat.h`, each guard naming the engine that
+introduced the newer form. What is different on an older engine, beyond spelling:
+
+| Before | What is different |
+| --- | --- |
+| 5.8 | The Content Browser's Add menu files the DreamGUI assets under submenus, not sections. A localized text carries no translator's note. An HDR target's paper white is `r.HDR.UI.Luminance`. The gamepad model is taken from the device being polled, not from a device registry. The gradient editor has no alpha row |
+| 5.7 | A frame's render commands are enqueued one by one, not recorded and sent together. The UI manager learns that its world ended play from the world's cleanup. A ray-traced render-target surface is collected for one reference view |
+| 5.6 | The variables a `.dui` declares are kept on the widget Blueprint itself, and made into properties by the plugin's compiler: 5.5 has no generated-variable list on a Blueprint |
+
 ## The release gate
 
 What a version goes through before it is tagged:

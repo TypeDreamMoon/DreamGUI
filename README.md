@@ -204,8 +204,11 @@ The plugin ships no CoreRedirects. Assets saved against LGUI, LexUI or a build b
 
 ## Platforms
 
-Unreal Engine **5.8**, source and launcher installs alike. What is *claimed* and what has been *run* are different
-lists, so both are here:
+Unreal Engine **5.8**, source and launcher installs alike, is the engine DreamGUI is built, tested and released on. The
+same source also compiles on **5.5** and **5.6** (the editor and a Development game); nothing has been run there, and the
+plugin's content is saved by 5.8, which an older engine cannot load -- see
+[Engine versions](https://gui.toolchain.64hz.cn/en/docs/guides/platforms#engine-versions). What is *claimed* and what
+has been *run* are different lists, so both are here:
 
 | | Compiled | Run |
 | :-- | :-- | :-- |
@@ -225,7 +228,7 @@ and what was checked for a dedicated server are on
 | | |
 | :-- | :-- |
 | Version | `1.0.0` |
-| Unreal Engine | `5.8` |
+| Unreal Engine | `5.8`; the source also compiles on `5.5` and `5.6` |
 | Modules | `DreamGUIRenderer`, `DreamTween`, `DreamGUI`, `DreamGUIInput`, `DreamGUIControls`, `DreamGUIExtensions`, `DreamGUISamples` (Runtime), `DreamGUIEditor`, `DreamGUIK2Nodes` (uncooked), `DreamGUITests` (Editor) |
 | Author | TypeDreamMoon |
 | GitHub | <https://github.com/TypeDreamMoon> |

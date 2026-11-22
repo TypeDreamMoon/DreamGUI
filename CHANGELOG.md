@@ -13,6 +13,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
+  names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
+  The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.
+  **Nothing has been run on those engines, and the plugin's content is still saved by 5.8, which they cannot load** --
+  so this is the code half of supporting them. What differs on each is in
+  [Platforms](Docs/guides/platforms.md#engine-versions). The test host's template builds with each engine's latest
+  build settings (template version 6).
+
 - **A widget's parts, from its own pin.** Dragging off an authored widget's pin now lists what its visual, layout
   container, layout self and behaviours can do -- their functions, and their properties as Get and Set -- filed under the
   widget and the part. Picking *Set Text* off `PlayerLabel` places one node whose target is the widget: no Get Visual, no
