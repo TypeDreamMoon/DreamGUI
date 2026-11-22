@@ -39,7 +39,9 @@
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
+#if __has_include("GenericPlatform/InputDeviceRegistry.h")
 #include "GenericPlatform/InputDeviceRegistry.h"
+#endif
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUIPopupLayer.h"
@@ -49,6 +51,7 @@
 #include "Misc/ScopeExit.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "UObject/StrongObjectPtr.h"
+#include "DreamGUIEngineCompat.h"
 
 DECLARE_CYCLE_STAT(TEXT("InputUserFrame"), STAT_DreamUIInputUserFrame, STATGROUP_DreamGUI);
 
@@ -611,10 +614,19 @@ namespace DreamUIInputUserDeviceLocal
 	/** The model InDeviceId's descriptor names (the registry rather than FInputDeviceScope, which is deprecated in 5.8 and valid only inside the platform's own dispatch); Generic for a device with none. */
 	EDreamUIGamepadModel DetectModelOf(FInputDeviceId InDeviceId)
 	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 		if (const TOptional<FInputDeviceDescriptor> Descriptor = FInputDeviceRegistry::FindDescriptor(InDeviceId))
 		{
 			return UDreamEventSystem::GetGamepadModelForDeviceName(Descriptor->InputDeviceName, Descriptor->HardwareDeviceIdentifier);
 		}
+#else
+		// No registry before 5.8: the device the platform is dispatching for right now, which is the one that sent the
+		// input this is reported for.
+		if (const FInputDeviceScope* Scope = FInputDeviceScope::GetCurrent())
+		{
+			return UDreamEventSystem::GetGamepadModelForDeviceName(Scope->InputDeviceName, FName(*Scope->HardwareDeviceIdentifier));
+		}
+#endif
 		return EDreamUIGamepadModel::Generic;
 	}
 }

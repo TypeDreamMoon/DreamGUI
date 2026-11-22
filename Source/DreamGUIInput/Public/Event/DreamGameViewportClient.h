@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameViewportClient.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamGameViewportClient.generated.h"
 
 class APlayerController;
@@ -58,8 +59,18 @@ class DREAMGUIINPUT_API UDreamGameViewportClient : public UGameViewportClient
 
 public:
 	virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 	virtual bool InputAxis(const FInputKeyEventArgs& EventArgs) override;
+#else
+	virtual bool InputAxis(FViewport* InViewport, FInputDeviceId InputDevice, FKey Key, float Delta, float DeltaTime, int32 NumSamples = 1, bool bGamepad = false) override;
+#endif
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	virtual bool InputTouch(FViewport* const InViewport, const FTouchId TouchId, const ETouchType::Type Type, const FVector2D& TouchLocation, const float Force, const uint64 Timestamp) override;
+#elif DREAMGUI_ENGINE_AT_LEAST(5, 6)
+	virtual bool InputTouch(FViewport* InViewport, const FInputDeviceId DeviceId, uint32 Handle, ETouchType::Type Type, const FVector2D& TouchLocation, float Force, uint32 TouchpadIndex, const uint64 Timestamp) override;
+#else
+	virtual bool InputTouch(FViewport* InViewport, int32 ControllerId, uint32 Handle, ETouchType::Type Type, const FVector2D& TouchLocation, float Force, FDateTime DeviceTimestamp, uint32 TouchpadIndex) override;
+#endif
 
 	/**
 	 * Called by UDreamUIInputModeLibrary as it enters or leaves UI-only mode for InPlayerController.

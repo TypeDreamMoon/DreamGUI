@@ -7,6 +7,7 @@
 #include "Event/DreamUIInputSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "Interaction/DreamUITextInputTarget.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamGameViewportClientLocal
 {
@@ -34,23 +35,42 @@ bool UDreamGameViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
 	return Super::InputKey(EventArgs);
 }
 
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 bool UDreamGameViewportClient::InputAxis(const FInputKeyEventArgs& EventArgs)
+#define DREAMGUI_AXIS_ARGS EventArgs
+#else
+// An axis came as separate arguments before 5.6.
+bool UDreamGameViewportClient::InputAxis(FViewport* InViewport, FInputDeviceId InputDevice, FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
+#define DREAMGUI_AXIS_ARGS InViewport, InputDevice, Key, Delta, DeltaTime, NumSamples, bGamepad
+#endif
 {
 	if (IgnoreInput() && bDreamUIOnlyInput)
 	{
-		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputAxis(EventArgs); });
+		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputAxis(DREAMGUI_AXIS_ARGS); });
 	}
-	return Super::InputAxis(EventArgs);
+	return Super::InputAxis(DREAMGUI_AXIS_ARGS);
 }
+#undef DREAMGUI_AXIS_ARGS
 
+// The touch event's signature changed in 5.6 and again in 5.8; the body is the same each time.
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 bool UDreamGameViewportClient::InputTouch(FViewport* const InViewport, const FTouchId TouchId, const ETouchType::Type Type, const FVector2D& TouchLocation, const float Force, const uint64 Timestamp)
+#define DREAMGUI_TOUCH_ARGS InViewport, TouchId, Type, TouchLocation, Force, Timestamp
+#elif DREAMGUI_ENGINE_AT_LEAST(5, 6)
+bool UDreamGameViewportClient::InputTouch(FViewport* InViewport, const FInputDeviceId DeviceId, uint32 Handle, ETouchType::Type Type, const FVector2D& TouchLocation, float Force, uint32 TouchpadIndex, const uint64 Timestamp)
+#define DREAMGUI_TOUCH_ARGS InViewport, DeviceId, Handle, Type, TouchLocation, Force, TouchpadIndex, Timestamp
+#else
+bool UDreamGameViewportClient::InputTouch(FViewport* InViewport, int32 ControllerId, uint32 Handle, ETouchType::Type Type, const FVector2D& TouchLocation, float Force, FDateTime DeviceTimestamp, uint32 TouchpadIndex)
+#define DREAMGUI_TOUCH_ARGS InViewport, ControllerId, Handle, Type, TouchLocation, Force, DeviceTimestamp, TouchpadIndex
+#endif
 {
 	if (IgnoreInput() && bDreamUIOnlyInput)
 	{
-		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp); });
+		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputTouch(DREAMGUI_TOUCH_ARGS); });
 	}
-	return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp);
+	return Super::InputTouch(DREAMGUI_TOUCH_ARGS);
 }
+#undef DREAMGUI_TOUCH_ARGS
 
 bool UDreamGameViewportClient::HandleNavigation(const uint32 InUserIndex, TSharedPtr<SWidget> InDestination)
 {
