@@ -719,7 +719,8 @@ const TArray<FDreamTextShapeCache::FGlyph>* FDreamTextShapeCache::Find(const FKe
 	{
 		return nullptr;
 	}
-	DreamTextShapeCacheLocal::FEntry* Entry = State.Entries->FindAndTouch(DreamTextShapeCacheLocal::HashKey(Key));
+	// The cache hands its entry out const before 5.6; it is this thread's own either way.
+	DreamTextShapeCacheLocal::FEntry* Entry = const_cast<DreamTextShapeCacheLocal::FEntry*>(State.Entries->FindAndTouch(DreamTextShapeCacheLocal::HashKey(Key)));
 	if (Entry == nullptr || !Entry->Matches(Key))
 	{
 		return nullptr;

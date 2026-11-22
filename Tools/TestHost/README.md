@@ -145,6 +145,8 @@ Things to know:
   `New-DreamGUITestHost.ps1` as it is, and the changed ones -- the game module, its `Build.cs` and `Target.cs`,
   `Config/DefaultGame.ini` -- with `-Force`, which keeps a copy of each file it replaces. The click smoke probe came with
   template version 5 the same way: its two files as they are, the game module and its `Build.cs` with `-Force`.
+  Template version 6 builds on every engine the plugin supports: the two `Target.cs` files ask for the engine's latest
+  build settings and include order instead of naming 5.8's, and take `-Force` in an older host.
 - **The safe zone is not compared between the runs, by design.** An editor build fits the platform's safe zone to the
   viewport it is given; a cooked one answers in pixels of the primary display, as UMG's `SSafeZone` does
   (`FSlateApplicationBase::GetSafeZoneSize`). Each run is checked against what the platform asked for in that run.

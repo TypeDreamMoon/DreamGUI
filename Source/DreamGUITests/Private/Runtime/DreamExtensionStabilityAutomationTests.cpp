@@ -37,6 +37,7 @@
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverWorldSpace.h"
 #include "DreamScopedWorld.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * The DreamGUIExtensions audit's crashes and broken behaviours, each pinned where it happened.

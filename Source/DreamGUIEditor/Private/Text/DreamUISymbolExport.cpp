@@ -32,6 +32,7 @@
 #include "UObject/TextProperty.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamUISymbolExportLocal
 {
@@ -666,7 +667,7 @@ void FDreamUISymbolExport::Register()
 	using namespace DreamUISymbolExportLocal;
 	// OnPostEngineInit rather than module startup: the dump reads every reflected class, and the
 	// class set is only whole once every module has loaded.
-	GStartupHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda([] { ExportNow(); });
+	GStartupHandle = DreamGUICompat::OnPostEngineInit().AddLambda([] { ExportNow(); });
 }
 
 void FDreamUISymbolExport::Unregister()
@@ -674,7 +675,7 @@ void FDreamUISymbolExport::Unregister()
 	using namespace DreamUISymbolExportLocal;
 	if (GStartupHandle.IsValid())
 	{
-		FCoreDelegates::GetOnPostEngineInit().Remove(GStartupHandle);
+		DreamGUICompat::OnPostEngineInit().Remove(GStartupHandle);
 		GStartupHandle.Reset();
 	}
 }

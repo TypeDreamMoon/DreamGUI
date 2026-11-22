@@ -34,6 +34,7 @@
 #include "UObject/UObjectIterator.h"
 #include "ViewModel/DreamViewModel.h"
 #include "ViewModel/DreamViewModelSubsystem.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamUserWidgetBindingLocal
 {

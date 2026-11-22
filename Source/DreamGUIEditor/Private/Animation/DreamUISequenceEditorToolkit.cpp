@@ -29,6 +29,7 @@
 #include "PropertyPath.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISequenceEditorToolkit"
 
@@ -144,7 +145,7 @@ void FDreamUISequenceEditorToolkit::ResumeSequencerEvaluation()
 	if (Sequencer.IsValid())
 	{
 		// Resolved bindings still name the tree that has just been destroyed.
-		Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+		DreamGUICompat::EvaluationState(*Sequencer)->ClearObjectCaches(*Sequencer);
 		Sequencer->ForceEvaluate();
 	}
 }

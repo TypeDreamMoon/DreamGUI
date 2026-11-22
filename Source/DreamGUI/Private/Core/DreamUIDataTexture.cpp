@@ -48,7 +48,8 @@ namespace DreamUIDataTextureLocal
 		{
 			if (TextureReferenceRHI.IsValid())
 			{
-				RHIClearTextureReference(TextureReferenceRHI);
+				// What RHIClearTextureReference (5.7) does, spelt so that every supported engine has it.
+				FRHICommandListImmediate::Get().UpdateTextureReference(TextureReferenceRHI, nullptr);
 			}
 			FTextureResource::ReleaseRHI();
 			Pixels.Empty();

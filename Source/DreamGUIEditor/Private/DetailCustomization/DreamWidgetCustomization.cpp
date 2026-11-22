@@ -41,6 +41,7 @@
 #include "Widgets/Input/SButton.h"
 // The Navigation category at the end of CustomizeDetails reaches the rules object by its real type.
 #include "Core/DreamWidgetNavigation.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "UIItemComponentDetails"
 
@@ -1166,7 +1167,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	// registered globally, so anything that generates rows for a UDreamWidget headlessly comes through
 	// here. The transform section only reads the actor selection to grey itself out for locked actors.
 	FSelectedActorInfo selectedActorInfo;
-	if (const TSharedPtr<IDetailsView> OwningDetailsView = DetailBuilder.GetDetailsViewSharedPtr())
+	if (const TSharedPtr<IDetailsView> OwningDetailsView = DreamGUICompat::GetDetailsViewSharedPtr(DetailBuilder))
 	{
 		selectedActorInfo = OwningDetailsView->GetSelectedActorInfo();
 	}

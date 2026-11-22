@@ -198,7 +198,7 @@ private:
 			{
 				if (!FChar::IsHexDigit(Token[Index]))return false;
 			}
-			const uint32 Codepoint = FParse::HexNumber(Token);
+			const uint32 Codepoint = FParse::HexNumber(*Token);
 			if (Codepoint == 0 || Codepoint > 0x10FFFF || (Codepoint >= FDreamUIText_CodePoint::HIGH_SURROGATE_START && Codepoint <= FDreamUIText_CodePoint::LOW_SURROGATE_END))return false;
 			AppendCodepoint(OutCharacters, Codepoint);
 		}

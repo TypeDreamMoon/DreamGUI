@@ -869,6 +869,11 @@ namespace DreamDesignerRhiScenarioLocal
 		/** Last of all the extensions, so DreamGUI's passes are already in the graph when the workers are held. */
 		virtual int32 GetPriority() const override { return MIN_int32; }
 
+		// Pure in the base before 5.6.
+		virtual void SetupViewFamily(FSceneViewFamily& InViewFamily) override {}
+		virtual void SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView) override {}
+		virtual void BeginRenderViewFamily(FSceneViewFamily& InViewFamily) override {}
+
 		virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily) override
 		{
 			if (!bArmed.load())

@@ -39,6 +39,8 @@
 
 #include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
+#include "Driver/DreamEnhancedInputQuery.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 /*
  * THE ENHANCED INPUT PRESET THE PLUGIN SHIPS, AS SHIPPED.
@@ -251,8 +253,8 @@ namespace DreamEnhancedPresetAssetTestLocal
 		void SendKey(const FKey& InKey, EInputEvent InEvent) const
 		{
 			const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(Controller->GetPlatformUserId());
-			Controller->InputKey(FInputKeyEventArgs::CreateSimulated(InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
-				/*InNumSamplesOverride*/ -1, Device));
+			DreamDriverSimulatedInput::SendKey(*Controller, InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
+				/*InNumSamplesOverride*/ -1, Device);
 		}
 
 		/**
@@ -303,14 +305,7 @@ namespace DreamEnhancedPresetAssetTestLocal
 		{
 			return false;
 		}
-		for (const FEnhancedActionKeyMapping& Mapping : PlayerInput->GetEnhancedActionMappingsView())
-		{
-			if (Mapping.Key == InKey && Mapping.Action == InAction)
-			{
-				return true;
-			}
-		}
-		return false;
+		return DreamEnhancedInputQuery::MapsKeyToAction(*PlayerInput, InKey, InAction);
 	}
 }
 

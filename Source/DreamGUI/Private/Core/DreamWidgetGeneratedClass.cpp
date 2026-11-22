@@ -14,6 +14,7 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace
 {

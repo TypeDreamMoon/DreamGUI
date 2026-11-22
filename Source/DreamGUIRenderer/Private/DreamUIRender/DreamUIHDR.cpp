@@ -6,6 +6,7 @@
 #include "ShaderParameterStruct.h"
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
+#include "DreamGUIEngineCompat.h"
 
 class FDreamUIHDRTransferPS : public FGlobalShader
 {
@@ -35,10 +36,16 @@ DreamUIHDR::FOutput DreamUIHDR::FromTarget(const FRenderTarget& Target)
     case EDisplayOutputFormat::HDR_ACES_2000nit_ScRGB: Result.Encoding=EEncoding::ScRGB; break;
     default: return Result;
     }
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
     float White=Target.GetHDRPaperWhiteInNits();
     const auto* Mode=IConsoleManager::Get().FindConsoleVariable(TEXT("r.HDR.UI.Luminance.Mode"));
     if (Mode && Mode->GetInt()==1)
         if (const auto* Luminance=IConsoleManager::Get().FindConsoleVariable(TEXT("r.HDR.UI.Luminance"))) White=Luminance->GetFloat();
+#else
+    // A render target reports no paper white before 5.8: Slate composites its UI at r.HDR.UI.Luminance there.
+    float White=203.f;
+    if (const auto* Luminance=IConsoleManager::Get().FindConsoleVariable(TEXT("r.HDR.UI.Luminance"))) White=Luminance->GetFloat();
+#endif
     if (const auto* Level=IConsoleManager::Get().FindConsoleVariable(TEXT("r.HDR.UI.Level"))) White*=Level->GetFloat();
     Result.PaperWhiteNits=FMath::IsFinite(White) && White>0 ? FMath::Clamp(White,1.f,10000.f) : 203.f;
     return Result;

@@ -10,7 +10,7 @@ nothing in the engine's own UI-only input mode.
 
 | | |
 | --- | --- |
-| Engine | Unreal Engine `5.8` (`EngineVersion` 5.8.0), a source build or an Epic launcher install |
+| Engine | Unreal Engine `5.8`, a source build or an Epic launcher install. The source also compiles on `5.5` and `5.6`, where it has not been run (see [Engine versions](../guides/platforms.md#engine-versions)) |
 | Platform | Win64 is the only platform built and run (see [Platforms](../guides/platforms.md)) |
 | Plugin dependency | `EnhancedInput`, enabled by the `.uplugin` itself |
 | Runtime modules | `DreamGUIRenderer`, `DreamGUI`, `DreamGUIInput`, `DreamGUIControls`, `DreamGUIExtensions`, `DreamGUISamples` (`PostConfigInit`); `DreamTween` (`Default`) |
@@ -23,7 +23,11 @@ nothing in the engine's own UI-only input mode.
 
 The plugin compiles against the engine's public headers only: the renderer reads the scene's depth through the
 public scene-texture API, and the static check `engine-private-path` fails any include path into
-`Runtime/Renderer/Private` or `Internal`. So no source build is needed — and there is no 5.7 branch.
+`Runtime/Renderer/Private` or `Internal`. So no source build is needed.
+
+There is one branch for every engine: the descriptor names no `EngineVersion`, and the differences between engines
+are answered in one header (`DreamGUIEngineCompat.h`). Which engines that reaches, and what has actually been built
+and run on each, is in [Engine versions](../guides/platforms.md#engine-versions).
 
 ### The bundled msdfgen
 

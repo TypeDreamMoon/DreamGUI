@@ -41,6 +41,7 @@
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Animation/MovieSceneDreamUIMaterialTrack.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetAnimationEditorWidget"
 
@@ -686,7 +687,7 @@ public:
 		{
 			// Resolved bindings still name the dead tree; UMG drops them at the same moment, at
 			// the end of FWidgetBlueprintEditor::UpdatePreview.
-			Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+			DreamGUICompat::EvaluationState(*Sequencer)->ClearObjectCaches(*Sequencer);
 			Sequencer->ForceEvaluate();
 		}
 	}
@@ -850,7 +851,7 @@ public:
 	{
 		if (!WeakSequence.IsValid())return;
 
-		Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+		DreamGUICompat::EvaluationState(*Sequencer)->ClearObjectCaches(*Sequencer);
 		TSet<UObject*> AllBoundObjects;
 		UMovieScene* MovieScene = Sequencer->GetFocusedMovieSceneSequence()->GetMovieScene();
 		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)

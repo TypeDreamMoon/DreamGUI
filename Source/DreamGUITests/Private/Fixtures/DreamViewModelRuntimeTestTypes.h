@@ -9,6 +9,7 @@
 #include "Core/DreamUserWidget.h"
 #include "DreamViewModelTestTypes.h"
 #include "INotifyFieldValueChanged.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamViewModelRuntimeTestTypes.generated.h"
 
 /*

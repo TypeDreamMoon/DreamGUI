@@ -36,7 +36,11 @@
 #include "Elements/Framework/EngineElementsLibrary.h"
 #include "Elements/Framework/TypedElementViewportInteraction.h"
 #include "InputState.h"
+#if __has_include("ViewportSelectionUtilities.h")
 #include "ViewportSelectionUtilities.h"
+#else
+#include "LevelViewportClickHandlers.h"	// HLevelSocketProxy, before 5.7
+#endif
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "DreamWidgetDesignerClickHandlers.h"
@@ -66,8 +70,12 @@
 //declared in DreamWidgetAnimationEditorWidget.cpp; the comment there says why it is a bare prototype
 DREAMGUIEDITOR_API bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
-// UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
-// (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
+// HLevelSocketProxy is declared by the engine, but only 5.8 exports its hit-proxy type (DECLARE_HIT_PROXY(UNREALED_API));
+// implementing it here as well would be a duplicate there (C4273). Before 5.8 the engine keeps the implementation to
+// itself, so a module that draws or tests for the proxy implements it again.
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 8)
+IMPLEMENT_HIT_PROXY(HLevelSocketProxy, HHitProxy);
+#endif
 
 
 FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InDesignerPtr
@@ -94,7 +102,9 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	// the ITF gizmo comes from AreEditorGizmosAllowed(ModeTools), which is on by default and follows
 	// an editor-wide setting; the ITF has no valid context in a custom asset-editor viewport (see the
 	// note on the base constructor call), so deferring to it would draw no gizmo at all.
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	ModeTools->SetSupportsViewportITF(false);
+#endif
 
 	// GEditorModeTools serves as our draw helper
 	bUsesDrawHelper = true;
@@ -897,7 +907,7 @@ bool FDreamWidgetDesignerViewportClient::IntersectDesignerPlane(const FVector2D&
 	if (!View)return false;
 	FVector RayOrigin, RayDirection;
 	FSceneView::DeprojectScreenToWorld(PixelPosition, View->UnscaledViewRect,
-		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+		DreamGUICompat::ClipToWorld(View->ViewMatrices), RayOrigin, RayDirection);
 	OutPoint = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0f,
 		PlaneTransform.GetLocation(), PlaneTransform.GetUnitAxis(EAxis::X));
 	return true;
@@ -1333,7 +1343,7 @@ void FDreamWidgetDesignerViewportClient::DrawCursorReadout(FViewport& InViewport
 	const FTransform& Transform = RootAgent->GetWorldTransform();
 	FVector RayOrigin, RayDirection;
 	FSceneView::DeprojectScreenToWorld(FVector2D(HoverPixel.X, HoverPixel.Y), View.UnscaledViewRect,
-		View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+		DreamGUICompat::ClipToWorld(View.ViewMatrices), RayOrigin, RayDirection);
 	const FVector OnPlane = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0,
 		Transform.GetLocation(), Transform.GetUnitAxis(EAxis::X));
 	// The canvas's own rect space -- X right, Y up, measured from its pivot -- which is the space the
@@ -2578,7 +2588,7 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 	const FViewportClick Click(&View, this, Key, Event, HitX, HitY);
 
 	FVector RayOrigin, RayDirection;
-	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, DreamGUICompat::ClipToWorld(View.ViewMatrices), RayOrigin, RayDirection);
 	const FVector LineStart = RayOrigin;
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0f;
 	TArray<UDreamWidget*> AllWidgetArray;
@@ -2875,7 +2885,7 @@ bool FDreamWidgetDesignerViewportClient::InputWidgetDelta(FViewport* InViewport,
 			// but still pretend that we have handled the input -- asked as the level editor's viewport asks it, through
 			// a query the engine marks experimental
 			PRAGMA_DISABLE_EXPERIMENTAL_WARNINGS
-			const bool bAnyLocked = GEditor->HasSelectedMovementLockedItems();
+			const bool bAnyLocked = DreamGUICompat::HasSelectedMovementLockedItems(GEditor);
 			PRAGMA_ENABLE_EXPERIMENTAL_WARNINGS
 			if (!bAnyLocked)
 			{
@@ -3078,7 +3088,7 @@ FSceneView* FDreamWidgetDesignerViewportClient::CalcSceneView(FSceneViewFamily* 
 	// view has been pushed roughly two million units backwards by FSceneViewInitOptions::
 	// UpdateOrthoPlanes -- and only in some view modes, so trusting it would work in Lit and fail
 	// in Unlit.
-	const FMatrix ReferenceWorldToClip = View->ViewMatrices.GetWorldToClip();
+	const FMatrix ReferenceWorldToClip = DreamGUICompat::WorldToClip(View->ViewMatrices);
 	const FTransform& RootTransform = RootAgent->GetWorldTransform();
 	FMatrix Correction;
 	if (!DreamCanvasViewFit::BuildClipCorrection(
@@ -4016,7 +4026,7 @@ bool FDreamWidgetDesignerViewportClient::ComputePickRay(int32 PixelX, int32 Pixe
 	if (!View)return false;
 	FVector RayOrigin, RayDirection;
 	FSceneView::DeprojectScreenToWorld(FVector2D(PixelX, PixelY), View->UnscaledViewRect,
-		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+		DreamGUICompat::ClipToWorld(View->ViewMatrices), RayOrigin, RayDirection);
 	OutLineStart = RayOrigin;
 	OutLineEnd = RayOrigin + RayDirection * 100000000.0f;
 	return true;
@@ -4430,6 +4440,7 @@ bool FDreamWidgetDesignerViewportClient::CanMoveActorInViewport(const AActor* In
 }
 
 #include "UnrealWidget.h"
+#include "DreamGUIEngineCompat.h"
 
 void FDreamWidgetDesignerViewportClient::TrackRightMouseMovement(int32 MouseX, int32 MouseY)
 {

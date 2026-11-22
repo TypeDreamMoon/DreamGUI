@@ -250,10 +250,10 @@ bool FDreamRenderTransformIsKeyableTest::RunTest(const FString& Parameters)
 			UDreamWidget::StaticClass()->FindPropertyByName(FName(PropertyName)));
 		return AsStruct ? AsStruct->Struct->GetFName() : NAME_None;
 	};
-	TestEqual(TEXT("Translation is an FVector"), StructNameOf(TEXT("RenderTranslation")), NAME_Vector);
-	TestEqual(TEXT("Scale is an FVector"), StructNameOf(TEXT("RenderScale")), NAME_Vector);
-	TestEqual(TEXT("Rotation is an FRotator, not the FQuat Sequencer cannot key"),
-		StructNameOf(TEXT("RenderRotation")), NAME_Rotator);
+	TestTrue(TEXT("Translation is an FVector"), StructNameOf(TEXT("RenderTranslation")) == NAME_Vector);
+	TestTrue(TEXT("Scale is an FVector"), StructNameOf(TEXT("RenderScale")) == NAME_Vector);
+	TestTrue(TEXT("Rotation is an FRotator, not the FQuat Sequencer cannot key"),
+		StructNameOf(TEXT("RenderRotation")) == NAME_Rotator);
 	return true;
 }
 

@@ -61,6 +61,7 @@
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UnrealType.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamOldAssetFixtures
 {

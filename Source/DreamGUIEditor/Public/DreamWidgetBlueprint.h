@@ -11,6 +11,7 @@
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/DreamWidgetViewModelSlot.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamWidgetBlueprint.generated.h"
 
 class UDreamWidgetTree;
@@ -230,6 +231,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamUI|Designer")
 	bool SetDesignerCanvasSize(FIntPoint InSize);
+
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 6)
+	/**
+	 * UBlueprint::GeneratedVariables, which the engine has from 5.6 on: the variables the compiler declares for the
+	 * class -- one per widget, animation, resource and dispatcher of the .dui -- beside the ones an author added.
+	 * Rebuilt by every compile and never saved (FDreamWidgetBlueprintCompilerContext::EnsureGeneratedVariablesPopulated).
+	 */
+	TArray<FBPVariableDescription> GeneratedVariables;
+#endif
 
 	virtual UClass* GetBlueprintClass() const override;
 	virtual bool SupportedByDefaultBlueprintFactory() const override { return false; }

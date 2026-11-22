@@ -23,6 +23,7 @@
 #include "Materials/Material.h"
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
+#include "MaterialDomain.h"
 
 /*
  * The geometry-generating extension visuals, and the line between what a headless test can hold and

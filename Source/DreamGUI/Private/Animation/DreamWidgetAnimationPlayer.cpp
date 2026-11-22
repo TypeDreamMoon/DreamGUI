@@ -20,6 +20,18 @@
 #include "MovieSceneSequence.h"
 #include "MovieSceneTimeController.h"
 #include "MovieSceneTimeHelpers.h"
+#include "DreamGUIEngineCompat.h"
+
+// The sequence player's time controller can be not yet ready to play, and answers where a pause lands, from 5.7 on;
+// before that it is always ready, and the pause is asked as a range.
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+#define DREAMUI_TIME_CONTROLLER_READY (TimeControllerState == ETimeControllerState::ReadyToPlay)
+#define DREAMUI_PAUSES_AT(InTime) GetPauseTimeForNewPosition(InTime).IsSet()
+#else
+#define DREAMUI_TIME_CONTROLLER_READY true
+#define DREAMUI_PAUSES_AT(InTime) GetPauseRange(InTime).IsSet()
+#endif
+
 
 static TAutoConsoleVariable<int32> CVarDreamUIDirectAnimationEvaluation(
 	TEXT("DreamUI.Animation.DirectEvaluation"),
@@ -147,7 +159,7 @@ void UDreamWidgetAnimationPlayer::KeepTicked()
 
 bool UDreamWidgetAnimationPlayer::HasNothingToTick() const
 {
-	return Status != EMovieScenePlayerStatus::Playing && TimeControllerState == ETimeControllerState::ReadyToPlay && !bUpdateNetSync;
+	return Status != EMovieScenePlayerStatus::Playing && DREAMUI_TIME_CONTROLLER_READY && !bUpdateNetSync;
 }
 
 void UDreamWidgetAnimationPlayer::BeginDestroy()
@@ -379,7 +391,7 @@ UDreamWidgetAnimationPlayer::ELiteTick UDreamWidgetAnimationPlayer::ChooseLiteTi
 	if (CVarDreamUILiteAnimationPlayer.GetValueOnGameThread() == 0
 		// The two things the sequencer's update does whether or not the player plays: a replicated client's correction
 		// (UpdateNetworkSync), and starting a time controller that was not yet ready when play was asked for.
-		|| bUpdateNetSync || TimeControllerState != ETimeControllerState::ReadyToPlay)
+		|| bUpdateNetSync || !DREAMUI_TIME_CONTROLLER_READY)
 	{
 		return ELiteTick::Sequencer;
 	}
@@ -441,7 +453,7 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		? FDreamUIAnimationClock::TimeInLine(ClockState, FQualifiedFrameTime(PlayPosition.GetCurrentPosition(), PlayPosition.GetInputRate()))
 		: TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, LiteDisplayRate);
 
-	if (GetPauseTimeForNewPosition(NewTime).IsSet() || ShouldStopOrLoop(NewTime))
+	if (DREAMUI_PAUSES_AT(NewTime) || ShouldStopOrLoop(NewTime))
 	{
 		// A loop boundary, the end, or where PlayTo asked to pause: the sequencer's own cursor update takes the time the
 		// clock has just given and does the rest. The loop count, the direction, finishing and the pause, and the events
@@ -454,7 +466,12 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		// UpdateTimeCursorPosition_Internal between boundaries. A play with a length arms the zero-duration warning again...
 		bWarnZeroDuration = true;
 		// ...the cursor moves only by PlayTo, the way the player is playing...
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 		const FMovieSceneEvaluationRange Range = PlayPosition.PlayTo(NewTime, bReversePlayback ? EPlayDirection::Backwards : EPlayDirection::Forwards);
+#else
+		// The position works the direction out from the two times before 5.6.
+		const FMovieSceneEvaluationRange Range = PlayPosition.PlayTo(NewTime);
+#endif
 		// ...and the range goes to UpdateMovieSceneInstance: the direct evaluation takes it, between the pre- and
 		// post-evaluation callbacks, and should it hand the animation over to the sequencer, the sequencer is given it with
 		// the arguments its own update gives, so that the update is queued rather than flushed, as in the main level update.
@@ -487,3 +504,6 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 	// And what the update does last, whichever way the frame went.
 	bSkipNextUpdate = false;
 }
+
+#undef DREAMUI_TIME_CONTROLLER_READY
+#undef DREAMUI_PAUSES_AT

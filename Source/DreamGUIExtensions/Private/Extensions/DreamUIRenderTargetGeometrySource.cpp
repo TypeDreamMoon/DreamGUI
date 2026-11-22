@@ -26,6 +26,22 @@
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "DreamGUIEngineCompat.h"
+
+#if RHI_RAYTRACING
+namespace DreamUIRayTracingCompat
+{
+	/** FRayTracingGeometry::GetInitializer() (5.8); the public Initializer member before. */
+	static const FRayTracingGeometryInitializer& InitializerOf(const FRayTracingGeometry& InGeometry)
+	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
+		return InGeometry.GetInitializer();
+#else
+		return InGeometry.Initializer;
+#endif
+	}
+}
+#endif
 
 #define LOCTEXT_NAMESPACE "DreamGUIRenderTargetGeometrySource"
 
@@ -72,7 +88,7 @@ public:
 		SurfaceMaterialProxy = MaterialInstance->GetRenderProxy();
 		const UTextureRenderTarget2D* Target = Component->GetRenderTarget();
 		bHasRenderTarget = Target != nullptr && Target->GetResource() != nullptr;
-		MaterialRelevance = MaterialInstance->GetRelevance_Concurrent(GetScene().GetShaderPlatform());
+		MaterialRelevance = DreamGUICompat::GetRelevance_Concurrent(MaterialInstance, GetScene().GetShaderPlatform());
 
 		Section = new FDreamUIRenderTargetGeometrySourceMeshProxySection(GetScene().GetFeatureLevel());
 
@@ -105,7 +121,7 @@ public:
 					Section->RayTracingGeometry.SetInitializer(Initializer);
 					Section->RayTracingGeometry.InitResource(RHICmdList);
 
-					Initializer = Section->RayTracingGeometry.GetInitializer();
+					Initializer = DreamUIRayTracingCompat::InitializerOf(Section->RayTracingGeometry);
 					Initializer.IndexBuffer = Section->IndexBuffer.IndexBufferRHI;
 					Initializer.TotalPrimitiveCount = Section->IndexBuffer.Indices.Num() / 3;
 
@@ -214,7 +230,7 @@ public:
 			Section->RayTracingGeometry.SetInitializer(Initializer);
 			Section->RayTracingGeometry.InitResource(RHICmdList);
 
-			Initializer = Section->RayTracingGeometry.GetInitializer();
+			Initializer = DreamUIRayTracingCompat::InitializerOf(Section->RayTracingGeometry);
 			FRayTracingGeometrySegment Segment;
 			Segment.VertexBuffer = Section->VertexBuffers.PositionVertexBuffer.VertexBufferRHI;
 			Segment.NumPrimitives = Initializer.TotalPrimitiveCount;
@@ -361,6 +377,7 @@ public:
 
 	virtual void GetDynamicRayTracingInstances(FRayTracingInstanceCollector& Collector) override final
 	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 		TConstArrayView<const FSceneView*> Views = Collector.GetViews();
 		const uint32 VisibilityMap = Collector.GetVisibilityMap();
 
@@ -370,6 +387,10 @@ public:
 		checkf(Views.IsValidIndex(FirstActiveViewIndex), TEXT("There should be at least one active view when calling GetDynamicRayTracingInstances(...)."));
 
 		const FSceneView* FirstActiveView = Views[FirstActiveViewIndex];
+#else
+		// One reference view per collection before 5.7.
+		const FSceneView* FirstActiveView = Collector.GetReferenceView();
+#endif
 		
 		if (Section != nullptr)
 		{
@@ -377,7 +398,7 @@ public:
 
 			if (Section->RayTracingGeometry.IsValid())
 			{
-				check(Section->RayTracingGeometry.GetInitializer().IndexBuffer.IsValid());
+				check(DreamUIRayTracingCompat::InitializerOf(Section->RayTracingGeometry).IndexBuffer.IsValid());
 
 				FRayTracingInstance RayTracingInstance;
 				RayTracingInstance.Geometry = &Section->RayTracingGeometry;
@@ -416,6 +437,7 @@ public:
 
 				RayTracingInstance.Materials.Add(MeshBatch);
 				
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 				{
 					if ((VisibilityMap & (1 << ViewIndex)) == 0)
@@ -425,6 +447,9 @@ public:
 
 					Collector.AddRayTracingInstance(ViewIndex, RayTracingInstance);
 				}
+#else
+				Collector.AddRayTracingInstance(MoveTemp(RayTracingInstance));
+#endif
 			}
 		}
 	}
@@ -1405,6 +1430,7 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentThickness() const
 }
 
 #include "Kismet/GameplayStatics.h"
+#include "DreamGUIEngineCompat.h"
 bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
 {
 	switch (GeometryMode)

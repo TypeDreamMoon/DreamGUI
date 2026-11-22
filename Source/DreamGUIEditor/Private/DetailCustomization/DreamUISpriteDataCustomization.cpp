@@ -17,6 +17,7 @@
 #include "DetailWidgetRow.h"
 #include "IDetailsView.h"
 #include "IPropertyUtilities.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUISpriteDataCustomization"
 
@@ -264,7 +265,7 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 			[
 				SAssignNew(ImageBox, SBox)
 				//.MinDesiredHeight(this, &FDreamGUISpriteDataCustomization::GetMinDesiredHeight, &DetailBuilder)
-				.HeightOverride(this, &FDreamUISpriteDataCustomization::GetMinDesiredHeight, TWeakPtr<IDetailsView>(DetailBuilder.GetDetailsViewSharedPtr()))
+				.HeightOverride(this, &FDreamUISpriteDataCustomization::GetMinDesiredHeight, TWeakPtr<IDetailsView>(DreamGUICompat::GetDetailsViewSharedPtr(DetailBuilder)))
 				//.MinDesiredHeight(4096)
 				//.MinDesiredWidth(4096)
 				[

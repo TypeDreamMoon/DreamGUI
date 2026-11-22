@@ -25,7 +25,7 @@ own whose names deliberately follow UMG's, and where a name could not be kept th
 | | |
 | --- | --- |
 | Plugin version | `1.0.0`, the first public release (the development builds before it were numbered 1.x, 2.0 and 2.1; see the [changelog](changelog/index.md)) |
-| Engine | Unreal Engine `5.8`, a source build or an Epic launcher install |
+| Engine | Unreal Engine `5.8`, a source build or an Epic launcher install; the source also compiles on `5.5` and `5.6` (see [Platforms](guides/platforms.md#engine-versions)) |
 | Platform | Win64 is the only platform built and run (see [Platforms](guides/platforms.md)) |
 | Runtime modules | `DreamGUIRenderer`, `DreamGUI`, `DreamGUIInput`, `DreamGUIControls`, `DreamGUIExtensions`, `DreamGUISamples`, `DreamTween` |
 | Editor-side modules | `DreamGUIEditor`, `DreamGUIK2Nodes` (`UncookedOnly`), `DreamGUITests` (`Editor`) |

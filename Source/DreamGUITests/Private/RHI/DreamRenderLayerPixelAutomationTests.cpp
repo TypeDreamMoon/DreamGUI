@@ -9,7 +9,11 @@
 #include "Engine/World.h"
 #include "HAL/PlatformTime.h"
 #include "Materials/MaterialInterface.h"
+#if __has_include("Materials/MaterialParameters.h")
 #include "Materials/MaterialParameters.h"
+#else
+#include "MaterialTypes.h"
+#endif
 #include "PixelFormat.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"

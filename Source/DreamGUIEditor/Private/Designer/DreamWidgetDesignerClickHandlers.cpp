@@ -2,7 +2,11 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetDesignerClickHandlers.h"
+#if __has_include("ViewportSelectionUtilities.h")
 #include "ViewportSelectionUtilities.h"
+#else
+#include "LevelViewportClickHandlers.h"	// HLevelSocketProxy, before 5.7
+#endif
 #include "UObject/Class.h"
 #include "InputCoreTypes.h"
 #include "GameFramework/Actor.h"

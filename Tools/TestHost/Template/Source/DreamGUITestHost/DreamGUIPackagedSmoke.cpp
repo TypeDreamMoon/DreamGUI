@@ -34,7 +34,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
-#include "Misc/StringOutputDevice.h"
+#if __has_include("Misc/StringOutputDevice.h")
+#include "Misc/StringOutputDevice.h"	// FStringOutputDevice; in Containers/UnrealString.h before 5.7
+#endif
 #include "Policies/PrettyJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"

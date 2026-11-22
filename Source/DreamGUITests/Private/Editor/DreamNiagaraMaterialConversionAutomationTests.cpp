@@ -21,6 +21,7 @@
 #include "Materials/MaterialExpressionVertexColor.h"
 #include "Materials/MaterialFunctionInterface.h"
 #include "UObject/Package.h"
+#include "MaterialDomain.h"
 
 /*
  * A particle material made a UI one, node by node: what the conversion replaces, what it leaves and says so, and how it puts
@@ -33,6 +34,20 @@ namespace DreamNiagaraMaterialConversionTestLocal
 	T* Add(UMaterial* InMaterial)
 	{
 		return Cast<T>(UMaterialEditingLibrary::CreateMaterialExpression(InMaterial, T::StaticClass()));
+	}
+
+	/**
+	 * An expression of an engine class named InClassName, and whether an expression is one. By name, for the two particle
+	 * expressions the engine does not export before 5.6: their StaticClass() does not link from another module there.
+	 */
+	UMaterialExpression* AddNamed(UMaterial* InMaterial, const TCHAR* InClassName)
+	{
+		UClass* const Class = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), InClassName));
+		return Class != nullptr ? UMaterialEditingLibrary::CreateMaterialExpression(InMaterial, Class) : nullptr;
+	}
+	bool IsNamed(const UMaterialExpression* InExpression, const TCHAR* InClassName)
+	{
+		return InExpression->GetClass()->GetFName() == InClassName;
 	}
 
 	/** Whether InFrom's graph reaches an expression of class InClass, walking back through inputs. */
@@ -92,11 +107,11 @@ bool FDreamNiagaraMaterialConversionTest::RunTest(const FString& Parameters)
 	Source->SetShadingModel(MSM_Unlit);
 	UMaterialExpressionParticleSubUV* SubUV = Add<UMaterialExpressionParticleSubUV>(Source);
 	SubUV->Texture = LoadObject<UTexture2D>(nullptr, TEXT("/Engine/EngineResources/DefaultTexture.DefaultTexture"));
-	UMaterialExpressionParticleColor* Color = Add<UMaterialExpressionParticleColor>(Source);
+	UMaterialExpression* Color = AddNamed(Source, TEXT("MaterialExpressionParticleColor"));
 	UMaterialExpressionDynamicParameter* Dynamic = Add<UMaterialExpressionDynamicParameter>(Source);
 	UMaterialExpressionTextureCoordinate* Second = Add<UMaterialExpressionTextureCoordinate>(Source);
 	Second->CoordinateIndex = 1;
-	UMaterialExpressionParticleRandom* Random = Add<UMaterialExpressionParticleRandom>(Source);
+	UMaterialExpression* Random = AddNamed(Source, TEXT("MaterialExpressionParticleRandom"));
 	UMaterialExpressionMultiply* Tint = Add<UMaterialExpressionMultiply>(Source);
 	Tint->A.Connect(0, SubUV);
 	Tint->B.Connect(0, Color);
@@ -125,7 +140,7 @@ bool FDreamNiagaraMaterialConversionTest::RunTest(const FString& Parameters)
 	int32 ParticleNodes = 0, VertexColours = 0, Customs = 0, SecondCoordinates = 0, ThirdCoordinates = 0;
 	for (UMaterialExpression* Expression : Result->GetExpressions())
 	{
-		ParticleNodes += Expression->IsA<UMaterialExpressionParticleColor>() || Expression->IsA<UMaterialExpressionParticleSubUV>() || Expression->IsA<UMaterialExpressionDynamicParameter>() ? 1 : 0;
+		ParticleNodes += IsNamed(Expression, TEXT("MaterialExpressionParticleColor")) || Expression->IsA<UMaterialExpressionParticleSubUV>() || Expression->IsA<UMaterialExpressionDynamicParameter>() ? 1 : 0;
 		VertexColours += Expression->IsA<UMaterialExpressionVertexColor>() ? 1 : 0;
 		Customs += Expression->IsA<UMaterialExpressionCustom>() ? 1 : 0;
 		if (const UMaterialExpressionTextureCoordinate* Coordinate = Cast<UMaterialExpressionTextureCoordinate>(Expression))

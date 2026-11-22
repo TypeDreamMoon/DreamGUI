@@ -52,6 +52,7 @@
 #include "UObject/CoreRedirects.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetBlueprintCompiler"
 
@@ -75,8 +76,44 @@ FName FDreamWidgetBlueprintCompilerContext::MakeWidgetVariableName(const UDreamW
 	return UDreamWidgetTree::MakeWidgetVariableName(InWidget);
 }
 
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 6)
+void FDreamWidgetBlueprintCompilerContext::EnsureGeneratedVariablesPopulated()
+{
+	if (bGeneratedVariablesPopulated)
+	{
+		return;
+	}
+	bGeneratedVariablesPopulated = true;
+	if (UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint())
+	{
+		DreamBlueprint->GeneratedVariables.Reset();
+		PopulateBlueprintGeneratedVariables();
+	}
+}
+
+void FDreamWidgetBlueprintCompilerContext::CreateClassVariablesFromBlueprint()
+{
+	EnsureGeneratedVariablesPopulated();
+
+	// The base makes a property, with its flags, metadata, default and delegate signature, for each of NewVariables and
+	// knows no other list here. The generated ones are lent to it for the call, after the author's, which is the order
+	// the newer engines make the two lists in.
+	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
+	const int32 NumAuthored = Blueprint->NewVariables.Num();
+	if (DreamBlueprint != nullptr)
+	{
+		Blueprint->NewVariables.Append(DreamBlueprint->GeneratedVariables);
+	}
+	Super::CreateClassVariablesFromBlueprint();
+	Blueprint->NewVariables.SetNum(NumAuthored);
+}
+#endif
+
 void FDreamWidgetBlueprintCompilerContext::SpawnNewClass(const FString& NewClassName)
 {
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 6)
+	EnsureGeneratedVariablesPopulated();
+#endif
 	NewDreamWidgetClass = FindObject<UDreamWidgetGeneratedClass>(Blueprint->GetOutermost(), *NewClassName);
 	if (NewDreamWidgetClass == nullptr)
 	{
@@ -108,6 +145,9 @@ void FDreamWidgetBlueprintCompilerContext::EnsureProperGeneratedClass(UClass*& I
 
 void FDreamWidgetBlueprintCompilerContext::CleanAndSanitizeClass(UBlueprintGeneratedClass* ClassToClean, UObject*& InOutOldCDO)
 {
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 6)
+	EnsureGeneratedVariablesPopulated();
+#endif
 	Super::CleanAndSanitizeClass(ClassToClean, InOutOldCDO);
 
 	// The previous archetype is deliberately not destroyed here: FinishCompilingClass patches the new
@@ -275,7 +315,7 @@ namespace DreamWidgetTextMembersLocal
 			// own (or the one `@key(...)` pins): a component's default label is text a translator has to see.
 			const FString Key = Value.LocalizationKeyOverride.IsEmpty()
 				? FString::Printf(TEXT("props.%s"), *InProp.Name) : Value.LocalizationKeyOverride;
-			FTextStringHelper::WriteToBuffer(OutDefault, FText::AsLocalizable_Advanced(InLocalizationNamespace, Key, FString(Value.Raw), Value.LocalizationNote));
+			FTextStringHelper::WriteToBuffer(OutDefault, DreamGUICompat::AsLocalizableWithNote(InLocalizationNamespace, Key, FString(Value.Raw), Value.LocalizationNote));
 			return true;
 		}
 		if (Category == UEdGraphSchema_K2::PC_String)
@@ -2256,7 +2296,9 @@ namespace DreamWidgetAuthoredHierarchy
 
 void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 {
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 	Super::PopulateBlueprintGeneratedVariables();
+#endif
 
 	// The hierarchy has to BE the one the text says before anything counts what is in it, and the
 	// walk below is the count. See the header for why this and not PreCompile: the list built here is

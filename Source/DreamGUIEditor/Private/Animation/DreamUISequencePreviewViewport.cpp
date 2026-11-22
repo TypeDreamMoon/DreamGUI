@@ -11,6 +11,7 @@
 #include "UnrealWidget.h"
 #include "SceneView.h"
 #include "Engine/World.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISequencePreviewViewport"
 
@@ -29,7 +30,9 @@ FDreamUISequencePreviewViewportClient::FDreamUISequencePreviewViewportClient(TWe
 	// exists for exactly this and carries no other state, so it serves here too.
 	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamWidgetDesigner);
 	ModeTools->ActivateDefaultMode();
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	ModeTools->SetSupportsViewportITF(false);
+#endif
 
 	SetRealtime(true);
 
@@ -109,7 +112,7 @@ void FDreamUISequencePreviewViewportClient::ProcessClick(FSceneView& View, HHitP
 	}
 
 	FVector RayOrigin, RayDirection;
-	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, DreamGUICompat::ClipToWorld(View.ViewMatrices), RayOrigin, RayDirection);
 	const FVector LineStart = RayOrigin;
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0;
 

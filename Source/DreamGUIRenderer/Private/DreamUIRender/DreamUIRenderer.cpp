@@ -39,6 +39,7 @@ static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 #include "DreamUIRender/DreamUIMeshVertex.h"
 #include "DreamUIRender/DreamUIGizmoMesh.h"
 #include "DreamUIRender/DreamUIPostProcessVertex.h"
+#include "DreamGUIEngineCompat.h"
 
 DEFINE_LOG_CATEGORY(LogDreamGUIRenderer);
 
@@ -970,7 +971,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	};
 
 	// Model-view-projection in double precision, demoted once.
-	const FMatrix ViewProjection = View.ViewMatrices.GetWorldToClip();
+	const FMatrix ViewProjection = DreamGUICompat::WorldToClip(View.ViewMatrices);
 	FDreamUIBaseVS::FParameters VSParameters;
 	VSParameters.DreamUI_MVP = FMatrix44f(Batch.LocalToWorld * ViewProjection);
 	VSParameters.DreamUI_RenderLayerTable = TextureOrFallback(Params.RenderLayerTableRHI.GetReference(), GBlackTexture);
@@ -1419,7 +1420,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 				{
 					auto WorldBounds = WorldRenderParameter.Primitive->DreamUI_GetWorldBounds();
 					if (!RenderThreadViewParameter.bFrustumCulling 
-						|| (RenderThreadViewParameter.bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+						|| (RenderThreadViewParameter.bFrustumCulling && DreamGUICompat::CullingFrustum(InView).IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
@@ -1458,7 +1459,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 
 			RenderView->ViewMatrices = InView.ViewMatrices;
 			RenderView->ViewMatrices.HackRemoveTemporalAAProjectionJitter();
-			auto ViewProjectionMatrix = FMatrix44f(RenderView->ViewMatrices.GetWorldToClip());
+			auto ViewProjectionMatrix = FMatrix44f(DreamGUICompat::WorldToClip(RenderView->ViewMatrices));
 
 			// The view's uniform buffer is what a material reads; the built-in shader reads none of it. It is made once a batch
 			// that can be drawn through a material has been collected, and a stage that collects none makes none. The copy
@@ -1561,7 +1562,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			 * drawn into it is still tested against the scene's depth in clip space, so a group put down is occluded already.
 			 */
 			FDreamUICompositeStack Stack(GraphBuilder, this, RenderTargetTexture, ScreenColorRenderTargetTexture, ViewRect, NumSamples
-				, RenderView->ViewMatrices.GetWorldToClip(), /*bInOpaqueBackdrop*/ true, /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
+				, DreamGUICompat::WorldToClip(RenderView->ViewMatrices), /*bInOpaqueBackdrop*/ true, /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
 			Stack.SetTimeSeconds(InView.Family->Time.GetWorldTimeSeconds());
 			// The collection the stretch of primitives being recorded is collected into, and its pass so far.
 			DreamUIRendererLocal::FCollectedMeshBatches* Collecting = nullptr;
@@ -1861,7 +1862,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 								}
 								FlushPendingDraws();
 								RunStart = BatchIndex + 1;
-								const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, RenderView->ViewMatrices.GetWorldToClip(), ViewRect);
+								const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, DreamGUICompat::WorldToClip(RenderView->ViewMatrices), ViewRect);
 								FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
 								if (FRDGTextureRef Backdrop = Stack.CopyBackdrop(Covered, BackdropOrigin, TEXT("DreamUI_ElementBackdrop")))
 								{
@@ -2091,7 +2092,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		{
 			auto WorldBounds = Primitive->DreamUI_GetWorldBounds();
 			if (!RenderThreadViewParameter.bFrustumCulling
-				|| (RenderThreadViewParameter.bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+				|| (RenderThreadViewParameter.bFrustumCulling && DreamGUICompat::CullingFrustum(*RenderView).IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 				)
 			{
 				Primitive->DreamUI_CollectRenderData(RenderSequenceArray);
@@ -2218,7 +2219,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 	 */
 	FDreamUICompositeStack Stack(GraphBuilder, this, ScreenSpaceRenderTargetTexture
 		, RenderScaleTarget.IsValid() ? RenderScaleTarget->GetRHI() : ScreenColorRenderTargetTexture.GetReference()
-		, ViewRect, NumSamples, RenderView->ViewMatrices.GetWorldToClip()
+		, ViewRect, NumSamples, DreamGUICompat::WorldToClip(RenderView->ViewMatrices)
 		, /*bInOpaqueBackdrop*/ !bIsRenderTarget && !RenderScaleTarget.IsValid(), /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
 	Stack.SetTimeSeconds(InView.Family->Time.GetWorldTimeSeconds());
 	for (int32 SequenceIndex = 0; SequenceIndex < RenderSequenceArray.Num(); ++SequenceIndex)
@@ -2463,7 +2464,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				}
 				AddMeshPass(RunStart, BatchIndex, nullptr, FIntPoint::ZeroValue);
 				RunStart = BatchIndex + 1;
-				const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, RenderView->ViewMatrices.GetWorldToClip(), ViewRect);
+				const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, DreamGUICompat::WorldToClip(RenderView->ViewMatrices), ViewRect);
 				FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
 				if (FRDGTextureRef Backdrop = Stack.CopyBackdrop(Covered, BackdropOrigin, TEXT("DreamUI_ElementBackdrop")))
 				{
@@ -2527,12 +2528,18 @@ public:
 	{
 		const int32 NumDummyVerts = 3;
 		const uint32 Size = sizeof(FVector4f) * NumDummyVerts;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 		const FRHIBufferCreateDesc CreateDesc =
 			FRHIBufferCreateDesc::CreateVertex(TEXT("FDreamUIDummySceneColorResolveBuffer"), Size)
 			.AddUsage(EBufferUsageFlags::Static)
 			.DetermineInitialState();
 
 		VertexBufferRHI = RHICmdList.CreateBuffer(CreateDesc);
+#else
+		// Buffer create descriptors are 5.6's.
+		FRHIResourceCreateInfo CreateInfo(TEXT("FDreamUIDummySceneColorResolveBuffer"));
+		VertexBufferRHI = RHICmdList.CreateVertexBuffer(Size, BUF_Static, CreateInfo);
+#endif
 	}
 };
 
@@ -2825,7 +2832,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 			FDreamUIBasePS::FPermutationDomain PermutationVector;
 			PermutationVector.Set<FDreamUIBasePS::FPlainColor>(true);
 			TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
-			const FMatrix ViewProjection = RenderView->ViewMatrices.GetWorldToClip();
+			const FMatrix ViewProjection = DreamGUICompat::WorldToClip(RenderView->ViewMatrices);
 
 			for (const TSharedPtr<FDreamUIGizmoMesh>& RenderParameter : Gizmos)
 			{
@@ -2834,7 +2841,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
 				if (bFrustumCulling)
 				{
-					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
+					if (!DreamGUICompat::CullingFrustum(*RenderView).IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
 				}
 
 				uint32 NumPrimitives = 0;

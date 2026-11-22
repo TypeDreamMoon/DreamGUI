@@ -17,6 +17,7 @@
 #include "NiagaraSystem.h"
 #include "NiagaraSystemInstance.h"
 #include "NiagaraSystemInstanceController.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamNiagara"
 
@@ -355,7 +356,11 @@ void DreamNiagaraEngine::InferShading(const UMaterialInterface* InMaterial, UTex
 #endif
 	// Cooked, the graph is gone: the textures the compiled material uses.
 	TArray<UTexture*> Used;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 	InMaterial->GetUsedTextures(Used);
+#else
+	InMaterial->GetUsedTextures(Used, EMaterialQualityLevel::Num, /*bAllQualityLevels*/ true, ERHIFeatureLevel::Num, /*bAllFeatureLevels*/ true);
+#endif
 	for (UTexture* Texture : Used)
 	{
 		if (Texture != nullptr)

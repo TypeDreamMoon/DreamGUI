@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "FieldNotificationDelegate.h"
 #include "INotifyFieldValueChanged.h"
+#include "DreamGUIEngineCompat.h"
 
 /**
  * The delegate store behind an INotifyFieldValueChanged implementation: the multicast container

@@ -36,6 +36,7 @@
 #include "Driver/DreamDriverTypes.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
 #include "Interaction/DreamTextInteractionTestTypes.h"
+#include "Driver/DreamEnhancedInputQuery.h"
 
 /*
  * WHAT STILL WORKS WHEN THE GAME IS PAUSED, ENTERING WHERE A PLAYER'S INPUT DOES.
@@ -145,14 +146,7 @@ namespace DreamPausedGameHostTestLocal
 	/** Whether the player's Enhanced Input mappings map InKey to InAction -- through the public view. */
 	bool PlayerInputMaps(const UEnhancedPlayerInput& InPlayerInput, const FKey& InKey, const UInputAction* InAction)
 	{
-		for (const FEnhancedActionKeyMapping& Mapping : InPlayerInput.GetEnhancedActionMappingsView())
-		{
-			if (Mapping.Key == InKey && Mapping.Action == InAction)
-			{
-				return true;
-			}
-		}
-		return false;
+		return DreamEnhancedInputQuery::MapsKeyToAction(InPlayerInput, InKey, InAction);
 	}
 
 	/**

@@ -15,18 +15,18 @@ using System.Collections.Generic;
  * entire engine a second time into this project.
  *
  * It also means this file must not set anything UnrealBuildTool marks [RequiresUniqueBuildEnvironment]:
- * under a shared environment such a setting is not ignored, it is a build error. The settings below are
- * DevTest's (DevTestEditor.Target.cs) line for line, apart from the explicit environment -- the host
- * builds under exactly the rules the project it stands in for builds under, so that the two agree on
- * every engine module being up to date and neither rebuilds the other's.
+ * under a shared environment such a setting is not ignored, it is a build error. The build settings and
+ * include order are each engine's latest (on the newest engine, what a working project created from the
+ * Blank template has), so that the one host template builds on every engine the plugin supports and, where
+ * it shares an engine with a working project, agrees with it on every engine module being up to date.
  */
 public class DreamGUITestHostEditorTarget : TargetRules
 {
 	public DreamGUITestHostEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-		DefaultBuildSettings = BuildSettingsVersion.V7;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
+		DefaultBuildSettings = BuildSettingsVersion.Latest;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		BuildEnvironment = TargetBuildEnvironment.Shared;
 		ExtraModuleNames.Add("DreamGUITestHost");
 	}

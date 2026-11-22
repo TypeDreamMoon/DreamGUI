@@ -26,6 +26,7 @@
 #include "DreamNiagaraVertexLayout.h"
 
 #include "Lifecycle/DreamLifecycleFixtures.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * A Niagara system on a widget: its renderers become the widget's segments, its particles are read after each step and placed
@@ -560,7 +561,7 @@ bool FDreamNiagaraGeneratedPathsTest::RunTest(const FString& Parameters)
 			continue;
 		}
 		++Systems;
-		FMetaData& MetaData = System->GetPackage()->GetMetaData();
+		auto& MetaData = DreamGUICompat::PackageMetaData(System->GetPackage());
 		TestFalse(*FString::Printf(TEXT("%s carries no full path"), *Asset.PackageName.ToString()), MetaData.HasValue(System, TEXT("DreamFX.SourceFullPath")));
 	}
 	TestTrue(*FString::Printf(TEXT("The plugin's systems are found (%d)"), Systems), Systems >= 7);

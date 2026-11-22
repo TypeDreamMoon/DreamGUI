@@ -28,6 +28,7 @@
 
 #include "DreamGalleryStage.h"
 #include "DreamPixelProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * Layer styles, drawn: every effect on a rect block in its own pixels, each pixel held to the CPU's formula; the same scene
@@ -345,7 +346,7 @@ bool FDreamLayerStyleMaterialPathPixelTest::RunTest(const FString& Parameters)
 		// Its shaders ready first: a material still compiling is not drawn at all, and this one's change with its shader file.
 		UDreamRectBlockData* Data = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
 		UMaterialInterface* Material = Data != nullptr ? Data->GetMaterial() : nullptr;
-		if (FMaterialResource* Resource = Material != nullptr ? Material->GetMaterialResource(GMaxRHIShaderPlatform) : nullptr)
+		if (FMaterialResource* Resource = Material != nullptr ? DreamGUICompat::GetMaterialResource(Material, GMaxRHIShaderPlatform) : nullptr)
 		{
 			Resource->FinishCompilation();
 			if (Resource->GetCompileErrors().Num() > 0)

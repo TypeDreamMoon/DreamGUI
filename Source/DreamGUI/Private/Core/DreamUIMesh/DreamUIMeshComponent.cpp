@@ -27,6 +27,7 @@
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "RHIResourceUtils.h"
+#include "DreamGUIEngineCompat.h"
 
 
 #define LOCTEXT_NAMESPACE "DreamUIMeshComponent"
@@ -1226,7 +1227,7 @@ public:
 	FDreamUIRenderSceneProxy(UDreamUIMeshComponent* InComponent, const FDreamUIRenderRootRef& InRoot, bool InIsRenderCanvas)
 		: FPrimitiveSceneProxy(InComponent)
 		, Root(InRoot)
-		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetShaderPlatform()))
+		, MaterialRelevance(DreamGUICompat::GetMaterialRelevance(InComponent, GetScene().GetShaderPlatform()))
 	{
 		SCOPE_CYCLE_COUNTER(STAT_CreateRenderSection);
 		bIsSupportUERenderer = InComponent->bIsSupportUERenderer;

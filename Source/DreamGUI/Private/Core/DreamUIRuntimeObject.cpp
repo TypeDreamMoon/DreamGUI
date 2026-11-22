@@ -15,6 +15,7 @@
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
 #include <atomic>
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamUIRuntimeObjectLocal
 {

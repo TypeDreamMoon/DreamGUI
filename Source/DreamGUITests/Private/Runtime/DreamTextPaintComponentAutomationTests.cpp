@@ -26,6 +26,7 @@
 #include "DreamScopedWorld.h"
 #include "DreamTextTestFont.h"
 #include "Driver/DreamDriverRig.h"
+#include "MaterialDomain.h"
 
 /*
  * The text component's half of painted text: what a text holds of its world's paint rows -- a table of its own, a gradient

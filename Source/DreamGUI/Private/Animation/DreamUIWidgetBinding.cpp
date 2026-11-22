@@ -12,6 +12,7 @@
 #include "Engine/World.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/Package.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIWidgetBinding"
 
@@ -132,6 +133,19 @@ UDreamWidgetPresenterComponentBase* UDreamUIWidgetBinding::ResolvePresenter(UObj
 	return Actor->FindComponentByClass<UDreamWidgetPresenterComponentBase>();
 }
 
+namespace DreamUIWidgetBindingCompat
+{
+	/** A custom binding resolves to an array of objects from 5.7 on, and to one object before. */
+	static void AddResolved(FMovieSceneBindingResolveResult& InOutResult, UObject* InObject)
+	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+		InOutResult.Objects.Add(InObject);
+#else
+		InOutResult.Object = InObject;
+#endif
+	}
+}
+
 FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMovieSceneBindingResolveParams& ResolveParams, int32 BindingIndex, TSharedRef<const UE::MovieScene::FSharedPlaybackState> SharedPlaybackState) const
 {
 	FMovieSceneBindingResolveResult Result;
@@ -176,11 +190,11 @@ FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMov
 	{
 		if (SubObjectPathRelativeToWidget.IsEmpty())
 		{
-			Result.Objects.Add(Widget);
+			DreamUIWidgetBindingCompat::AddResolved(Result, Widget);
 		}
 		else if (UObject* SubObject = StaticFindObject(UObject::StaticClass(), Widget, *SubObjectPathRelativeToWidget))
 		{
-			Result.Objects.Add(SubObject);
+			DreamUIWidgetBindingCompat::AddResolved(Result, SubObject);
 		}
 	}
 	return Result;

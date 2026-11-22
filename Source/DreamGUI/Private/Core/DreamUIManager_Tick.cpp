@@ -33,6 +33,7 @@
 #include "CoreGlobals.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
+#include "DreamGUIEngineCompat.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -330,7 +331,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		DREAMUI_STAGE_SCOPE(CanvasUpdate);
 		bCanvasesUpdatedSinceSubmit = true;
 		// Recorded and sent as one: see SubmitCanvasDrawCall.
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 		FRenderCommandList::FRecordScope RecordScope(FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit), FRenderCommandList::EStopRecordingAction::Submit);
+#endif
 		const UWorld* World = GetWorld();
 		ForEachRootCanvasInRenderModeOrder(true, [World](UDreamCanvas* Canvas)
 		{
@@ -749,10 +752,12 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		 * render root -- recorded on this thread and handed to the render thread together when the pass ends. Enqueued one
 		 * by one, each was a task of its own and, whenever the render thread had gone idle, a wake-up of it. The order is
 		 * kept, and anything that waits for the render thread meanwhile (FlushRenderingCommands, a fence) sends what was
-		 * recorded first.
+		 * recorded first. (Render command lists are 5.7's; before that each command is enqueued as it is sent.)
 		 */
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 		FRenderCommandList* const RenderCommands = FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit);
 		FRenderCommandList::FRecordScope RecordScope(RenderCommands, FRenderCommandList::EStopRecordingAction::Submit);
+#endif
 		// Each canvas's UpdateDrawCallBatchData, in its three parts: what has to happen on the game thread for every canvas
 		// first, then the vertex refreshes, which touch nothing another canvas does, on as many threads as there are, then
 		// the game thread's again.
@@ -805,6 +810,7 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			// frame's in task order when the context goes out of scope.
 			constexpr int32 MinBatchSize = 8;
 			constexpr EParallelForFlags Flags = EParallelForFlags::None;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 			FRenderCommandList::FParallelForContext ParallelForContext(RenderCommands, ToRefresh.Num(), MinBatchSize, Flags);
 			ParallelForWithExistingTaskContext(TEXT("DreamUI_RefreshDrawCallVertices"), ParallelForContext.GetCommandLists(), ToRefresh.Num(), MinBatchSize,
 				[&ToRefresh](FRenderCommandList* TaskCommands, int32 Index)
@@ -812,6 +818,13 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 					FRenderCommandList::FRecordScope TaskRecordScope(TaskCommands);
 					ToRefresh[Index]->RefreshDrawCallVertices();
 				}, Flags);
+#else
+			ParallelFor(TEXT("DreamUI_RefreshDrawCallVertices"), ToRefresh.Num(), MinBatchSize,
+				[&ToRefresh](int32 Index)
+				{
+					ToRefresh[Index]->RefreshDrawCallVertices();
+				}, Flags);
+#endif
 		}
 		else
 		{

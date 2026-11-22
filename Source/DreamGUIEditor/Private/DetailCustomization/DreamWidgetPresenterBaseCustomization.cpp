@@ -10,6 +10,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "Window/DreamUIWidgetInspector.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPresenterBaseCustomization"
 
@@ -108,7 +109,7 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 		];
 
 	TSharedPtr<FTabManager> HostTabManager = nullptr;
-	if (auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr())
+	if (auto DetailsView = DreamGUICompat::GetDetailsViewSharedPtr(DetailBuilder))
 	{
 		HostTabManager = DetailsView->GetHostTabManager();
 	}

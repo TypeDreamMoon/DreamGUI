@@ -51,11 +51,14 @@
 #include "Tracks/MovieSceneVectorTrack.h"
 
 #include "Misc/PackageName.h"
+#if __has_include("Misc/StringOutputDevice.h")
 #include "Misc/StringOutputDevice.h"
+#endif
 #include "UObject/EnumProperty.h"
 #include "UObject/TextProperty.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * Why this file writes properties through reflection rather than through setters.
@@ -1180,7 +1183,7 @@ namespace DreamUITextBuilderLocal
 			}
 #if WITH_EDITORONLY_DATA
 			// The note reaches the engine's own gather too, as the text's developer notes.
-			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace, Key, MoveTemp(SourceString), Value.LocalizationNote));
+			AsText->SetPropertyValue(ValuePtr, DreamGUICompat::AsLocalizableWithNote(InContext.LocalizationNamespace, Key, MoveTemp(SourceString), Value.LocalizationNote));
 #else
 			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace, Key, MoveTemp(SourceString)));
 #endif

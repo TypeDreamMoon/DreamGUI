@@ -8,6 +8,7 @@
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectGlobals.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * The plugin's Niagara systems are generated from the text under DFX/ by DreamFX, which stamps each asset's package with
@@ -28,7 +29,7 @@ namespace DreamGeneratedAssetPathsLocal
 
 	bool ForgetFullPath(UPackage* InPackage, TArray<FString>& OutLog)
 	{
-		FMetaData& MetaData = InPackage->GetMetaData();
+		auto& MetaData = DreamGUICompat::PackageMetaData(InPackage);
 		bool bChanged = false;
 		TArray<UObject*> Objects;
 		GetObjectsWithPackage(InPackage, Objects, EGetObjectsFlags::None);
