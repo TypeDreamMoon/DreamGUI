@@ -8,6 +8,7 @@
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "UObject/StrongObjectPtr.h"
+#include "DreamGUIEngineCompat.h"
 
 class UDreamWidget;
 class UDreamWidgetBlueprint;
@@ -151,8 +152,32 @@ protected:
 	 * their variables from the PREVIOUS compile's hierarchy: rename a node in the .dui and the class
 	 * declares the old name, silently, until something compiles the asset a second time. This is the
 	 * earliest point the compilation manager offers, and it is the point the variable list is built.
+	 *
+	 * That is 5.6 and later. Generated variables are 5.6's: 5.5 has neither the list on UBlueprint nor this hook, so
+	 * there the list is the Blueprint's own (UDreamWidgetBlueprint::GeneratedVariables), this is an ordinary function,
+	 * and EnsureGeneratedVariablesPopulated calls it at the same point of the compile -- see there.
 	 */
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 	virtual void PopulateBlueprintGeneratedVariables() override;
+#else
+	void PopulateBlueprintGeneratedVariables();
+
+	/**
+	 * 5.5's stand-in for ResetAndPopulateBlueprintGeneratedVariables: reset the list and fill it, once for this
+	 * compile. Called from the first thing 5.5's compilation manager asks of the compiler when it regenerates the
+	 * skeleton (SpawnNewClass or CleanAndSanitizeClass), which is before the skeleton's delegate signatures and
+	 * variables are made -- a dispatcher declared any later has no signature function on the skeleton -- and again
+	 * from CreateClassVariablesFromBlueprint for a compile that regenerates no skeleton.
+	 */
+	void EnsureGeneratedVariablesPopulated();
+
+	/** The Blueprint's own variables and then the generated ones, which the base only knows how to make from NewVariables. */
+	virtual void CreateClassVariablesFromBlueprint() override;
+
+private:
+	bool bGeneratedVariablesPopulated = false;
+protected:
+#endif
 
 	/**
 	 * The `resources` entries of the file just built, carried from BuildWidgetTreeFromTextSource to
