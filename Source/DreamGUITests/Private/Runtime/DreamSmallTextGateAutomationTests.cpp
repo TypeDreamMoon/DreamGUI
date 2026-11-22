@@ -25,6 +25,7 @@
 #include "DreamTextTestFont.h"
 #include "DreamTextHoldRecordingFont.h"
 #include "Driver/DreamDriverRig.h"
+#include "MaterialDomain.h"
 
 /*
  * Small text from coverage glyphs, the text component's half: the gate that decides, at each paint, whether a text may

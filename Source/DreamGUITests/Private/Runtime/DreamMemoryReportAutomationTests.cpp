@@ -16,7 +16,9 @@
 #include "HAL/IConsoleManager.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
+#if __has_include("Misc/StringOutputDevice.h")
 #include "Misc/StringOutputDevice.h"
+#endif
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 

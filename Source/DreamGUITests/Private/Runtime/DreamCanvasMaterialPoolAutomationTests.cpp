@@ -19,6 +19,7 @@
 
 #include "Driver/DreamDriverRig.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * A CANVAS ANSWERS FOR ITS MATERIALS WITHOUT A MATERIAL INSTANCE OF ITS OWN.

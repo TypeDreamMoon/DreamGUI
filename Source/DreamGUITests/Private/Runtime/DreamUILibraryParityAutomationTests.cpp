@@ -16,6 +16,7 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "MaterialDomain.h"
 
 /*
  * The three Blueprint libraries that took the coordinate conversions, the widget searches and the

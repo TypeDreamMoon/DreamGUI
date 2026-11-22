@@ -28,6 +28,7 @@
 #include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverSequence.h"
 #include "RHI/DreamPixelProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * The shipped Niagara sample, played as a person plays it: a widget Blueprint of its class, made in a play session the way a

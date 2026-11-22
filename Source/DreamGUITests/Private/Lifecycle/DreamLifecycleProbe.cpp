@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Lifecycle/DreamLifecycleProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 #if WITH_EDITOR
 

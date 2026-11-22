@@ -10,7 +10,11 @@
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Materials/MaterialInterface.h"
+#if __has_include("Materials/MaterialParameters.h")
 #include "Materials/MaterialParameters.h"
+#else
+#include "MaterialTypes.h"
+#endif
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
 

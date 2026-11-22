@@ -18,7 +18,9 @@
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputTypes.h"
 #include "Event/DreamUIInputUser.h"
+#if __has_include("GenericPlatform/InputDeviceRegistry.h")
 #include "GenericPlatform/InputDeviceRegistry.h"
+#endif
 #include "InputCoreTypes.h"
 
 #include "Driver/DreamDriver.h"
@@ -27,6 +29,7 @@
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
 #include "Driver/DreamDriverTypes.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * WHERE THE PLAYER'S FOCUS COMES FROM, AND WHAT IT LOOKS LIKE.
@@ -266,6 +269,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
  */
 bool FDreamPadModelFromLatestDeviceTest::RunTest(const FString& Parameters)
 {
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 8)
+	AddInfo(TEXT("It drives the input device registry, which Unreal Engine 5.8 added; skipped on this engine."));
+	return true;
+#else
 	using namespace DreamFocusPresentationTestLocal;
 	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
 	Rig.BindTest(this);
@@ -324,6 +331,7 @@ bool FDreamPadModelFromLatestDeviceTest::RunTest(const FString& Parameters)
 	User->SetGamepadModelOverride(false, EDreamUIGamepadModel::Generic);
 	TestEqual(TEXT("Dropping it reads the pad used last, the one used under the override"), User->GetCurrentGamepadModel(), EDreamUIGamepadModel::Xbox);
 	return true;
+#endif
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

@@ -34,6 +34,7 @@
 
 #include "Driver/Designer/DreamSlatePanelDriver.h"
 #include "Driver/DreamDriverKeys.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDesignerDriver, Log, All);
 
@@ -566,10 +567,8 @@ namespace DreamTests
 		Client->CapturedMouseMove(&InViewport, InViewport.GetMouseX(), InViewport.GetMouseY());
 		const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetDefaultInputDevice();
 		const float DeltaTime = static_cast<float>(FApp::GetDeltaTime());
-		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseX,
-			static_cast<float>(InTravel.X), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
-		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseY,
-			static_cast<float>(-InTravel.Y), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
+		DreamDriverSimulatedInput::SendViewportAxis(*Client, InViewport, Device, EKeys::MouseX, static_cast<float>(InTravel.X), DeltaTime);
+		DreamDriverSimulatedInput::SendViewportAxis(*Client, InViewport, Device, EKeys::MouseY, static_cast<float>(-InTravel.Y), DeltaTime);
 		Client->ProcessAccumulatedPointerInput(&InViewport);
 	}
 

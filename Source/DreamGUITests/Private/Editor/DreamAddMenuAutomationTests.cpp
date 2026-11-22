@@ -13,6 +13,7 @@
 
 #include "DataFactory/DreamUIAssetFactory.h"
 #include "DataFactory/DreamWidgetBlueprintFactory.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * The Content Browser's Add menu: the DreamGUI widget offered at its top, beside the engine's Blueprint Class, and the
@@ -75,10 +76,14 @@ bool FDreamAddMenuEntriesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("...as the DreamGUI Widget"), WidgetFactory->GetDisplayName().BuildSourceString(), FString(TEXT("DreamGUI Widget")));
 	// The category alone, with no section under it, is what the menu files under its own Basic section.
 	bool bInBasicSection = true;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	for (const FAssetCategoryPath& Path : WidgetFactory->GetAssetMenuPathsForCategory(FName(TEXT("DreamGUI"))))
 	{
 		bInBasicSection &= !Path.HasSubCategory();
 	}
+#else
+	bInBasicSection = WidgetFactory->GetMenuCategorySubMenus().IsEmpty();
+#endif
 	TestTrue(TEXT("...in the submenu's Basic section, which the menu names and puts first itself"), bInBasicSection);
 
 	// A filed entry names its section, as a section rather than a further submenu.
@@ -89,6 +94,7 @@ bool FDreamAddMenuEntriesTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	const TArray<FAssetCategoryPath> FontPaths = FontFactory->GetAssetMenuPathsForCategory(FName(TEXT("DreamGUI")));
 	if (TestEqual(TEXT("the distance field font has one place in the menu"), FontPaths.Num(), 1))
 	{
@@ -100,6 +106,14 @@ bool FDreamAddMenuEntriesTest::RunTest(const FString& Parameters)
 			TestTrue(TEXT("a section, not a submenu"), SubCategories[0].GetCategoryMenuType() == ECategoryMenuType::Section);
 		}
 	}
+#else
+	// Menu sections are 5.8's: before that the font goes in a submenu named after its section.
+	const TArray<FText>& FontSubMenus = FontFactory->GetMenuCategorySubMenus();
+	if (TestEqual(TEXT("one level below the DreamGUI submenu"), FontSubMenus.Num(), 1))
+	{
+		TestTrue(TEXT("the Fonts submenu"), FontSubMenus[0].EqualTo(UDreamUIAssetFactory::FontsSection()));
+	}
+#endif
 	return true;
 }
 

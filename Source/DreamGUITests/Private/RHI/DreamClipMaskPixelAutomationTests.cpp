@@ -7,7 +7,11 @@
 
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInterface.h"
+#if __has_include("Materials/MaterialParameters.h")
 #include "Materials/MaterialParameters.h"
+#else
+#include "MaterialTypes.h"
+#endif
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamRectBlock.h"

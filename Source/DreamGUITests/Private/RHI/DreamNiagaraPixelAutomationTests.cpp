@@ -30,6 +30,7 @@
 
 #include "DreamGalleryStage.h"
 #include "DreamPixelProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * Niagara particles drawn: the test system (DFX/Tests/NS_DreamUITest_Particles.dfs) stepped a fixed number of times and
@@ -319,7 +320,7 @@ bool FDreamNiagaraConvertedMaterialTest::RunTest(const FString& Parameters)
 			{
 				continue;
 			}
-			const FMaterialResource* Resource = Material->GetMaterialResource(GMaxRHIShaderPlatform);
+			const FMaterialResource* Resource = DreamGUICompat::GetMaterialResource(Material, GMaxRHIShaderPlatform);
 			TArray<FString> Nodes;
 			for (const UMaterialExpression* Expression : Material->GetExpressions())
 			{

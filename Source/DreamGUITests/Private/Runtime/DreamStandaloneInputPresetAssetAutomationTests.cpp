@@ -32,6 +32,7 @@
 
 #include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 /*
  * THE STANDARD PRESET THE PLUGIN SHIPS, AS SHIPPED.
@@ -206,8 +207,8 @@ namespace DreamStandalonePresetAssetTestLocal
 		void SendKey(const FKey& InKey, EInputEvent InEvent) const
 		{
 			const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(Controller->GetPlatformUserId());
-			Controller->InputKey(FInputKeyEventArgs::CreateSimulated(InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
-				/*InNumSamplesOverride*/ -1, Device));
+			DreamDriverSimulatedInput::SendKey(*Controller, InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
+				/*InNumSamplesOverride*/ -1, Device);
 		}
 
 		/**

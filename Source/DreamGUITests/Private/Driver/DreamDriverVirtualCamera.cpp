@@ -6,6 +6,7 @@
 #include "Math/InverseRotationMatrix.h"
 #include "SceneView.h"
 #include "UnrealClient.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamDriverVirtualCameraLocal
 {
@@ -52,8 +53,13 @@ namespace DreamDriverVirtualCameraLocal
 		// aspect ratio of an FViewport is its size's (no viewport in the engine overrides it), so that is
 		// what is passed.
 		FMinimalViewInfo ViewInfo = InCamera.View;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 		const float CropAspectRatio = (ViewInfo.AsymmetricCropFraction.X + ViewInfo.AsymmetricCropFraction.Y)
 			/ (ViewInfo.AsymmetricCropFraction.Z + ViewInfo.AsymmetricCropFraction.W);
+#else
+		// One crop fraction for both axes before 5.6, which leaves the aspect ratio as it is.
+		const float CropAspectRatio = 1.0f;
+#endif
 		const float AspectRatio = ViewInfo.AspectRatio * CropAspectRatio;
 		const float DesiredAspectRatio = static_cast<float>(Size.X) / static_cast<float>(Size.Y);
 		const FIntRect ViewExtents = FViewport::CalculateViewExtents(AspectRatio, DesiredAspectRatio,

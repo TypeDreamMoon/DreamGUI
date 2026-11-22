@@ -42,6 +42,7 @@
 #include "Driver/DreamDriverKeys.h"
 #include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverSlateHost.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDriver, Log, All);
 
@@ -1715,8 +1716,8 @@ namespace DreamDriverSequenceLocal
 	 */
 	void FeedLeftStick(const FDreamDriverContext& InContext, APlayerController& InController, const FVector2D& InStick, float InDeltaSeconds)
 	{
-		InController.InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftX, IE_Axis, (float)InStick.X, 1));
-		InController.InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY, IE_Axis, (float)InStick.Y, 1));
+		DreamDriverSimulatedInput::SendKey(InController, EKeys::Gamepad_LeftX, IE_Axis, (float)InStick.X, 1);
+		DreamDriverSimulatedInput::SendKey(InController, EKeys::Gamepad_LeftY, IE_Axis, (float)InStick.Y, 1);
 		if (!IsActorHost(InContext) && InController.PlayerInput != nullptr)
 		{
 			const bool bPaused = InContext.World != nullptr && InContext.World->IsPaused();

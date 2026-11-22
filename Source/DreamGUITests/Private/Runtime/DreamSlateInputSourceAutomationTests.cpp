@@ -18,7 +18,9 @@
 #include "Event/DreamUISlateInputSource.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GenericPlatform/GenericApplication.h"
+#if __has_include("GenericPlatform/InputDeviceRegistry.h")
 #include "GenericPlatform/InputDeviceRegistry.h"
+#endif
 #include "Input/Events.h"
 #include "Misc/ScopeExit.h"
 #include "InputCoreTypes.h"
@@ -35,6 +37,7 @@
 #include "DreamPlayerScreenTestTypes.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
 #include "Interaction/DreamDragInteractionTestTypes.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * INPUT HEARD FROM SLATE.
@@ -804,6 +807,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
  */
 bool FDreamSlateSourcePadModelTest::RunTest(const FString& Parameters)
 {
+#if !DREAMGUI_ENGINE_AT_LEAST(5, 8)
+	AddInfo(TEXT("It drives the input device registry, which Unreal Engine 5.8 added; skipped on this engine."));
+	return true;
+#else
 	using namespace DreamSlateInputSourceTestLocal;
 	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
 	Rig.BindTest(this);
@@ -847,6 +854,7 @@ bool FDreamSlateSourcePadModelTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("...and says so, once"), ModelChanges, ChangesAfterSony + 1);
 	Rig.PumpFrames(1);
 	return true;
+#endif
 }
 
 #endif

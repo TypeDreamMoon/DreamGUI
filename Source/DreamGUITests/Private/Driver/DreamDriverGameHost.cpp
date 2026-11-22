@@ -30,6 +30,8 @@
 #include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverKeys.h"
 #include "Driver/DreamDriverSequence.h"
+#include "DreamGUIEngineCompat.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 namespace DreamDriverGameHostLocal
 {
@@ -173,17 +175,14 @@ namespace DreamDriverGameHostLocal
 	 */
 	void SendKey(APlayerController& InController, const FKey& InKey, EInputEvent InEvent)
 	{
-		InController.InputKey(FInputKeyEventArgs::CreateSimulated(InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
-			/*InNumSamplesOverride*/ -1, DeviceOf(InController)));
+		DreamDriverSimulatedInput::SendKey(InController, InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f,
+			/*InNumSamplesOverride*/ -1, DeviceOf(InController));
 	}
 
 	/** One sample of an axis, the way UGameViewportClient::InputAxis delivers one: IE_Axis, one sample. */
 	void SendAxis(APlayerController& InController, const FKey& InAxisKey, float InValue, float InDeltaSeconds)
 	{
-		FInputKeyEventArgs AxisEvent = FInputKeyEventArgs::CreateSimulated(InAxisKey, IE_Axis, InValue,
-			/*InNumSamplesOverride*/ 1, DeviceOf(InController));
-		AxisEvent.DeltaTime = InDeltaSeconds;
-		InController.InputKey(AxisEvent);
+		DreamDriverSimulatedInput::SendKey(InController, InAxisKey, IE_Axis, InValue, /*InNumSamples*/ 1, DeviceOf(InController), InDeltaSeconds);
 	}
 
 	void DeliverDueReleases(APlayerController& InController)
@@ -1028,8 +1027,15 @@ bool DreamDriverGameHost::Touch(FDreamDriverContext& InContext, EDreamDriverTouc
 	}
 	// As FSceneViewport sends it: the touch's device and finger, the viewport pixel, full force while
 	// down and none on the way up.
+	const float Force = TouchType == ETouchType::Ended ? 0.0f : 1.0f;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	Controller->InputTouch(FTouchId(DeviceOf(*Controller), static_cast<ETouchIndex::Type>(InFingerId)),
-		TouchType, InPixel, TouchType == ETouchType::Ended ? 0.0f : 1.0f, FPlatformTime::Cycles64());
+		TouchType, InPixel, Force, FPlatformTime::Cycles64());
+#elif DREAMGUI_ENGINE_AT_LEAST(5, 6)
+	Controller->InputTouch(DeviceOf(*Controller), InFingerId, TouchType, InPixel, Force, /*TouchpadIndex*/ 0, FPlatformTime::Cycles64());
+#else
+	Controller->InputTouch(InFingerId, TouchType, InPixel, Force, FDateTime::Now(), /*TouchpadIndex*/ 0);
+#endif
 
 	if (TouchType == ETouchType::Began)
 	{

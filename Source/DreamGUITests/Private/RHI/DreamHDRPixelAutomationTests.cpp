@@ -11,6 +11,7 @@
 #include "RenderingThread.h"
 #include "HAL/IConsoleManager.h"
 #include "Math/Float16Color.h"
+#include "DreamGUIEngineCompat.h"
 
 namespace DreamHDRTest
 {
@@ -26,7 +27,9 @@ namespace DreamHDRTest
         virtual FIntPoint GetSizeXY() const override { return FIntPoint(64,64); }
         virtual EDisplayOutputFormat GetDisplayOutputFormat() const override { return Format; }
         virtual bool GetSceneHDREnabled() const override { return HDR; }
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
         virtual float GetHDRPaperWhiteInNits() const override { return White; }
+#endif
     };
     struct FCVarScope
     {

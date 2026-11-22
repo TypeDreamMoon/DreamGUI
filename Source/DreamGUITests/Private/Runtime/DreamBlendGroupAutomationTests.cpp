@@ -28,6 +28,7 @@
 #include "Utils/DreamUIUtils.h"
 
 #include "Lifecycle/DreamLifecycleFixtures.h"
+#include "MaterialDomain.h"
 
 /*
  * The blend modes and the groups, on the CPU: the formulas held to the W3C definitions and to the shader's numbers, the blend

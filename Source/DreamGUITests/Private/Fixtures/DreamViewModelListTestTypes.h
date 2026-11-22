@@ -8,6 +8,7 @@
 #include "DreamViewModelTestTypes.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "UObject/Object.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamViewModelListTestTypes.generated.h"
 
 /*

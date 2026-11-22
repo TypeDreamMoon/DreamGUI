@@ -31,6 +31,7 @@
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
+#include "MaterialDomain.h"
 
 namespace DreamDesignerCompositeReferenceTestLocal
 {

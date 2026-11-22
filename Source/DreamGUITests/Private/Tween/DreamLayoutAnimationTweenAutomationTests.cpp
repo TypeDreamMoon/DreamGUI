@@ -15,6 +15,7 @@
 #include "UObject/UObjectHash.h"
 
 #include "Driver/DreamDriverRig.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * The tweens a layout animation starts, as tweens: whom they hold, when they end, and which clock they run on.

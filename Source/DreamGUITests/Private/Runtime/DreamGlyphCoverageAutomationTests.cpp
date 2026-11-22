@@ -280,7 +280,9 @@ namespace DreamGlyphCoverageTestLocal
 			return false;
 		}
 		FT_Outline_Translate(&Face->glyph->outline, Shift, 0);
+#ifdef FT_OUTLINE_OVERLAP	// FreeType 2.10.3; the engine's copy is older before 5.7
 		Face->glyph->outline.flags &= ~FT_OUTLINE_OVERLAP;
+#endif
 		if (FT_Render_Glyph(Face->glyph, FT_RENDER_MODE_NORMAL) != 0)
 		{
 			return false;

@@ -32,6 +32,8 @@
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
 #include "Driver/DreamDriverTypes.h"
+#include "Driver/DreamEnhancedInputQuery.h"
+#include "Driver/DreamDriverSimulatedInput.h"
 
 /*
  * PROBES OF THE HEADLESS GAME HOST.
@@ -72,7 +74,7 @@ namespace DreamGameHostProbeLocal
 	void SendKey(APlayerController& InController, const FKey& InKey, EInputEvent InEvent)
 	{
 		const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(InController.GetPlatformUserId());
-		InController.InputKey(FInputKeyEventArgs::CreateSimulated(InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f, -1, Device));
+		DreamDriverSimulatedInput::SendKey(InController, InKey, InEvent, InEvent == IE_Released ? 0.0f : 1.0f, -1, Device);
 	}
 
 	bool PointerIsPressed(const FDreamDriverRig& InRig)
@@ -84,14 +86,7 @@ namespace DreamGameHostProbeLocal
 	bool PlayerInputMaps(const UEnhancedPlayerInput& InPlayerInput, const FKey& InKey, const UInputAction* InAction)
 	{
 		// The public read-only view; the array behind it is protected.
-		for (const FEnhancedActionKeyMapping& Mapping : InPlayerInput.GetEnhancedActionMappingsView())
-		{
-			if (Mapping.Key == InKey && Mapping.Action == InAction)
-			{
-				return true;
-			}
-		}
-		return false;
+		return DreamEnhancedInputQuery::MapsKeyToAction(InPlayerInput, InKey, InAction);
 	}
 }
 
@@ -239,7 +234,7 @@ bool FDreamGameHostProbeEnhancedActionTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	AddInfo(FString::Printf(TEXT("The player's Enhanced Input mappings: %d"), PlayerInput->GetEnhancedActionMappingsView().Num()));
+	AddInfo(FString::Printf(TEXT("The player's Enhanced Input mappings: %d"), DreamEnhancedInputQuery::NumMappings(*PlayerInput)));
 
 	// Watchers of our own on the actor's component, beside the preset's bindings, counting what fires.
 	UEnhancedInputComponent* InputComponent = Cast<UEnhancedInputComponent>(InputActor->InputComponent);

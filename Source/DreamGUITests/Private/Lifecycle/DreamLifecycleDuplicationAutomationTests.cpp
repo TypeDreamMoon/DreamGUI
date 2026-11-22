@@ -34,6 +34,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
+#include "MaterialDomain.h"
 
 /*
  * Copy, paste and play in the editor, with a world-space panel in the level.

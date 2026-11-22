@@ -36,6 +36,7 @@
 #include "Utils/DreamUIUtils.h"
 
 #include "DreamPixelProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * What the render thread keeps drawing after the game thread has changed its mind, looked at in pixels.
@@ -1100,7 +1101,7 @@ bool FDreamRhiBuiltInAfterMaterialTest::RunTest(const FString& Parameters)
 	}
 	// Its shaders ready before the first frame: a material still compiling is not drawn at all, which would read as this
 	// test's failure when it runs before anything else has drawn the material in this editor.
-	if (FMaterialResource* Resource = Material->GetMaterialResource(GMaxRHIShaderPlatform))
+	if (FMaterialResource* Resource = DreamGUICompat::GetMaterialResource(Material, GMaxRHIShaderPlatform))
 	{
 		Resource->FinishCompilation();
 	}

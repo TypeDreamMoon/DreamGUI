@@ -13,6 +13,7 @@
 
 #include "DreamGalleryStage.h"
 #include "DreamPixelProbe.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * A rect block's gradients written the two-colour way -- a gradient colour at a centre, the body's (or the border's) colour
@@ -232,7 +233,7 @@ namespace DreamRectBlockGradientPixelTestLocal
 	{
 		UDreamRectBlockData* Data = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
 		UMaterialInterface* Material = Data != nullptr ? Data->GetMaterial() : nullptr;
-		FMaterialResource* Resource = Material != nullptr ? Material->GetMaterialResource(GMaxRHIShaderPlatform) : nullptr;
+		FMaterialResource* Resource = Material != nullptr ? DreamGUICompat::GetMaterialResource(Material, GMaxRHIShaderPlatform) : nullptr;
 		if (Resource == nullptr)
 		{
 			InTest.AddError(TEXT("The rect block's material was not found"));

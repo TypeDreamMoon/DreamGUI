@@ -26,6 +26,7 @@
 #include "LocateBy.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SWindow.h"
+#include "DreamGUIEngineCompat.h"
 
 /*
  * CAN THE DESIGNER'S OWN SLATE PANELS BE DRIVEN BY A HAND'S INPUT?
@@ -595,7 +596,11 @@ bool FDreamDesignerSlateAutomationDriverProbe::RunTest(const FString& Parameters
 				{
 					OutWidgets.Add(Switch.ToSharedRef());
 				}
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 			}, TEXT("the Graph mode switch")));
+#else
+			}));
+#endif
 		State->AutomationElement = Element;
 		State->Pending = Element->Click();
 		State->PendingSince = FPlatformTime::Seconds();
