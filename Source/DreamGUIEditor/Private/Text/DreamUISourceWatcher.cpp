@@ -41,6 +41,7 @@
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectIterator.h"
 #include "Widgets/Notifications/SNotificationList.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISourceWatcher"
 
@@ -1963,7 +1964,7 @@ void FDreamUISourceWatcher::InstallSourceClassResolver()
 	}
 	else
 	{
-		Index.PostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda(HookBlueprintCompiled);
+		Index.PostEngineInitHandle = DreamGUICompat::OnPostEngineInit().AddLambda(HookBlueprintCompiled);
 	}
 
 	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
@@ -1998,7 +1999,7 @@ void FDreamUISourceWatcher::UninstallSourceClassResolver()
 	FCoreUObjectDelegates::OnObjectPreSave.Remove(Index.ObjectPreSaveHandle);
 	if (Index.PostEngineInitHandle.IsValid())
 	{
-		FCoreDelegates::GetOnPostEngineInit().Remove(Index.PostEngineInitHandle);
+		DreamGUICompat::OnPostEngineInit().Remove(Index.PostEngineInitHandle);
 	}
 	// The editor engine is gone by the time its modules shut down on exit, and its delegates with it.
 	if (GEditor != nullptr && Index.BlueprintCompiledHandle.IsValid())

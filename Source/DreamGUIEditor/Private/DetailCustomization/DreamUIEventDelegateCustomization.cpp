@@ -20,7 +20,9 @@
 #include "ScopedTransaction.h"
 // A `Struct` parameter is edited by a real nested details view over a real instance of the struct.
 #include "IStructureDetailsView.h"
+#if __has_include("Misc/StringOutputDevice.h")
 #include "Misc/StringOutputDevice.h"
+#endif
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 #include "DreamUIEditableTextPropertyHandle.h"

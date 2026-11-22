@@ -11,6 +11,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/SecureHash.h"
+#include "UObject/Package.h"
 #include "Templates/UnrealTemplate.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -34,7 +35,7 @@ UDreamUIDocument* UDreamUIDocument::CreateFromFile(UObject* InOuter, const FStri
 	}
 
 	UDreamUIDocument* Document = NewObject<UDreamUIDocument>(
-		InOuter != nullptr ? InOuter : GetTransientPackageAsObject(), NAME_None, RF_Transactional);
+		InOuter != nullptr ? InOuter : static_cast<UObject*>(GetTransientPackage()), NAME_None, RF_Transactional);
 	Document->SetFilePath(InAbsoluteFilePath);
 	if (!Document->LoadFromFile(OutError))
 	{

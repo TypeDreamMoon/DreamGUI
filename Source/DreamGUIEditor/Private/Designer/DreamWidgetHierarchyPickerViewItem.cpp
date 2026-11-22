@@ -12,6 +12,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Styling/SlateIconFinder.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetHierarchyPickerViewItem"
 

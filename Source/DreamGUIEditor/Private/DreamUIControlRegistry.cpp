@@ -107,6 +107,7 @@
 #include "UMGStyle.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UObjectGlobals.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIControlRegistry"
 
@@ -644,7 +645,7 @@ void FDreamUIControlRegistry::InitializeDynamicDiscovery()
 	BindBlueprintCompiled();
 	if (!BlueprintCompiledHandle.IsValid() && !PostEngineInitHandle.IsValid())
 	{
-		PostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddRaw(this, &FDreamUIControlRegistry::HandlePostEngineInit);
+		PostEngineInitHandle = DreamGUICompat::OnPostEngineInit().AddRaw(this, &FDreamUIControlRegistry::HandlePostEngineInit);
 	}
 	if (!AssetLoadedHandle.IsValid())
 	{
@@ -677,7 +678,7 @@ void FDreamUIControlRegistry::ShutdownDynamicDiscovery()
 	BlueprintCompiledHandle.Reset();
 	if (PostEngineInitHandle.IsValid())
 	{
-		FCoreDelegates::GetOnPostEngineInit().Remove(PostEngineInitHandle);
+		DreamGUICompat::OnPostEngineInit().Remove(PostEngineInitHandle);
 	}
 	PostEngineInitHandle.Reset();
 	if (AssetLoadedHandle.IsValid())

@@ -26,6 +26,7 @@
 #include "Internationalization/Internationalization.h"
 #include "ViewportToolbar/UnrealEdViewportToolbar.h"
 #include "ViewportToolbar/UnrealEdViewportToolbarContext.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "SDreamWidgetDesignerViewportToolbar"
 
@@ -105,7 +106,9 @@ namespace DreamUI_Private
 						false,
 						FSlateIcon(FAppStyle::GetAppStyleSetName(), "ClassIcon.CameraComponent")
 					);
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 					Entry.ToolBarData.ResizeParams.ClippingPriority = 800;
+#endif
 				}
 			)
 		);
@@ -666,7 +669,11 @@ void SDreamWidgetDesignerViewportToolbar::Construct(const FArguments& InArgs, TS
 			RightSection.AddEntry(DreamUI_Private::MakeCameraSubmenuEntry());
 
 			// View Modes menu
+#if DREAMGUI_ENGINE_AT_LEAST(5, 6)
 			RightSection.AddEntry(UE::UnrealEd::CreateViewModesSubmenu());
+#else
+			RightSection.AddEntry(UE::UnrealEd::CreateViewportToolbarViewModesSubmenu());
+#endif
 		}
 	}
 

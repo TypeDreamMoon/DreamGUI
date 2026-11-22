@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Factories/Factory.h"
+#include "DreamGUIEngineCompat.h"
 #include "DreamUIAssetFactory.generated.h"
 
 /**
@@ -25,7 +26,15 @@ class DREAMGUIEDITOR_API UDreamUIAssetFactory : public UFactory
 public:
 	virtual FText GetDisplayName() const override;
 	virtual FText GetToolTip() const override;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 	virtual TArray<FAssetCategoryPath> GetAssetMenuPathsForCategory(FName InCategory) const override;
+#else
+	/** Menu sections are 5.8's; before that the entry goes in a submenu named after the section. */
+	virtual const TArray<FText>& GetMenuCategorySubMenus() const override;
+private:
+	mutable TArray<FText> MenuSubMenus;
+public:
+#endif
 
 	/**
 	 * The DreamGUI submenu's sections. The menu puts its own Basic section first and the rest after it by name, which

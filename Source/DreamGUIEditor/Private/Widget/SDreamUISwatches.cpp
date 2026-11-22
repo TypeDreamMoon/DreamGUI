@@ -139,7 +139,7 @@ void SDreamUISwatchGrid::Rebuild()
 	}
 	Box->ClearChildren();
 	const TArray<FDreamUISwatch>& Swatches = FDreamUIProjectPalette::Get();
-	const TWeakPtr<SDreamUISwatchGrid> WeakThis = SharedThis(this);
+	const TWeakPtr<SDreamUISwatchGrid> WeakSelf = SharedThis(this);
 	for (int32 Index = 0; Index < Swatches.Num(); ++Index)
 	{
 		const FDreamUISwatch& Swatch = Swatches[Index];
@@ -156,9 +156,9 @@ void SDreamUISwatchGrid::Rebuild()
 				.Color(FLinearColor::FromSRGBColor(Swatch.Color))
 				.ShowBackgroundForAlpha(true)
 				.CornerRadius(FVector4(2.0f, 2.0f, 2.0f, 2.0f))
-				.OnMouseButtonDown_Lambda([WeakThis, Index](const FGeometry&, const FPointerEvent& InEvent)
+				.OnMouseButtonDown_Lambda([WeakSelf, Index](const FGeometry&, const FPointerEvent& InEvent)
 				{
-					const TSharedPtr<SDreamUISwatchGrid> Grid = WeakThis.Pin();
+					const TSharedPtr<SDreamUISwatchGrid> Grid = WeakSelf.Pin();
 					if (!Grid.IsValid())
 					{
 						return FReply::Unhandled();
@@ -192,9 +192,9 @@ void SDreamUISwatchGrid::Rebuild()
 				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
 				.ToolTipText(LOCTEXT("AddSwatchTooltip", "Add this colour to the project's palette."))
-				.OnClicked_Lambda([WeakThis]()
+				.OnClicked_Lambda([WeakSelf]()
 				{
-					if (const TSharedPtr<SDreamUISwatchGrid> Grid = WeakThis.Pin())
+					if (const TSharedPtr<SDreamUISwatchGrid> Grid = WeakSelf.Pin())
 					{
 						Grid->AddCurrentColor();
 					}

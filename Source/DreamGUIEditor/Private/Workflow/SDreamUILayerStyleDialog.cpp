@@ -120,11 +120,11 @@ void SDreamUILayerStyleDialog::Construct(const FArguments& InArgs, const TShared
 	if (IDetailsView* View = Details->GetDetailsView())
 	{
 		View->SetGenericLayoutDetailsDelegate(FOnGetDetailCustomizationInstance::CreateLambda(
-			[WeakThis = TWeakPtr<SDreamUILayerStyleDialog>(SharedThis(this))]() -> TSharedRef<IDetailCustomization>
+			[WeakSelf = TWeakPtr<SDreamUILayerStyleDialog>(SharedThis(this))]() -> TSharedRef<IDetailCustomization>
 			{
-				return MakeShared<DreamUILayerStyleDialogLocal::FPageLayout>([WeakThis](IDetailLayoutBuilder& InBuilder)
+				return MakeShared<DreamUILayerStyleDialogLocal::FPageLayout>([WeakSelf](IDetailLayoutBuilder& InBuilder)
 				{
-					if (const TSharedPtr<SDreamUILayerStyleDialog> Pinned = WeakThis.Pin())
+					if (const TSharedPtr<SDreamUILayerStyleDialog> Pinned = WeakSelf.Pin())
 					{
 						Pinned->CustomizePage(InBuilder);
 					}

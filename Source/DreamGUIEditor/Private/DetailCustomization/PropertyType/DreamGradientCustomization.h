@@ -8,6 +8,7 @@
 #include "Curves/RichCurve.h"
 #include "IPropertyTypeCustomization.h"
 #include "Templates/Function.h"
+#include "DreamGUIEngineCompat.h"
 
 class IPropertyHandle;
 
@@ -52,15 +53,24 @@ public:
 	float GetViewMaxInput() const { return ViewMaxInput; }
 
 	//~ Begin FCurveOwnerInterface
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 	UE_DEPRECATED(5.6, "Use version taking a TAdderReserverRef")
 	virtual TArray<FRichCurveEditInfoConst> GetCurves() const override;
 	virtual void GetCurves(TAdderReserverRef<FRichCurveEditInfoConst> OutCurves) const override;
+#else
+	virtual TArray<FRichCurveEditInfoConst> GetCurves() const override;
+#endif
 	virtual TArray<FRichCurveEditInfo> GetCurves() override;
 	virtual void ModifyOwner() override;
 	virtual TArray<const UObject*> GetOwners() const override;
 	virtual void MakeTransactional() override;
 	virtual void OnCurveChanged(const TArray<FRichCurveEditInfo>& ChangedCurveEditInfos) override;
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 	virtual void SetOnCurveChangedIsInteractive(bool bInIsInteractive) override;
+#else
+	/** FCurveOwnerInterface asks this from 5.7 on; before that nothing calls it. */
+	void SetOnCurveChangedIsInteractive(bool bInIsInteractive);
+#endif
 	virtual bool IsLinearColorCurve() const override { return true; }
 	virtual FLinearColor GetLinearColorValue(float InTime) const override;
 	virtual bool HasAnyAlphaKeys() const override;

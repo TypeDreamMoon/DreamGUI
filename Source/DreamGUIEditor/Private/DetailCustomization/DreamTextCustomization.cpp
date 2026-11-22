@@ -18,6 +18,7 @@
 #include "PropertyType/DreamTextAlignmentCustomization.h"
 #include "PropertyType/DreamTextFontStyleCustomization.h"
 #include "PropertyType/DreamUIFontFallbackCustomization.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "UITextCustomization"
 FDreamTextCustomization::FDreamTextCustomization()
@@ -49,7 +50,7 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	// IPropertyUtilities is the handle that outlives a refresh, and it is what ForceRefresh takes; held
 	// weakly, since a delegate that is still registered must not keep the details view alive.
 	const TWeakPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
-	const TSharedPtr<IDetailsView> DetailsView = DetailBuilder.GetDetailsViewSharedPtr();
+	const TSharedPtr<IDetailsView> DetailsView = DreamGUICompat::GetDetailsViewSharedPtr(DetailBuilder);
 
 	// THE ORDER OF A TEXT'S ROWS: what it says and how it looks first, then three groups that start closed --
 	// how it wraps, the finer points of its typography, how it is rendered. They used to come in declaration

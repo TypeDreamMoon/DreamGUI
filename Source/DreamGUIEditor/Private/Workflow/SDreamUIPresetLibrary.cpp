@@ -408,22 +408,22 @@ TSharedPtr<SWidget> SDreamUIPresetLibrary::MakeContextMenu()
 		return nullptr;
 	}
 	const TSharedPtr<FDreamUIPreset> Preset = Selected[0];
-	const TWeakPtr<SDreamUIPresetLibrary> WeakThis = SharedThis(this);
+	const TWeakPtr<SDreamUIPresetLibrary> WeakSelf = SharedThis(this);
 	FMenuBuilder Menu(/*bShouldCloseWindowAfterMenuSelection*/true, nullptr);
 	Menu.BeginSection("Apply", LOCTEXT("ApplySection", "Apply"));
 	{
 		Menu.AddMenuEntry(LOCTEXT("ApplyToSelection", "Apply to Selection"), FText::GetEmpty(), FSlateIcon(),
 			FUIAction(
-				FExecuteAction::CreateLambda([WeakThis, Preset]() { if (const auto This = WeakThis.Pin()) This->ApplyToSelection(*Preset); }),
-				FCanExecuteAction::CreateLambda([WeakThis]() { const auto This = WeakThis.Pin(); return This.IsValid() && This->HasSelection(); })));
+				FExecuteAction::CreateLambda([WeakSelf, Preset]() { if (const auto This = WeakSelf.Pin()) This->ApplyToSelection(*Preset); }),
+				FCanExecuteAction::CreateLambda([WeakSelf]() { const auto This = WeakSelf.Pin(); return This.IsValid() && This->HasSelection(); })));
 		if (Preset->Source == EDreamUIPresetSource::Asset)
 		{
 			Menu.AddMenuEntry(LOCTEXT("ApplyCopy", "Apply as a Copy"),
 				LOCTEXT("ApplyCopyTooltip", "Write the asset's values onto the widgets instead of following the asset, so later edits of the asset leave them as they are."),
 				FSlateIcon(),
 				FUIAction(
-					FExecuteAction::CreateLambda([WeakThis, Preset]() { if (const auto This = WeakThis.Pin()) This->ApplyToSelection(*Preset, /*bInFollowAsset*/false); }),
-					FCanExecuteAction::CreateLambda([WeakThis]() { const auto This = WeakThis.Pin(); return This.IsValid() && This->HasSelection(); })));
+					FExecuteAction::CreateLambda([WeakSelf, Preset]() { if (const auto This = WeakSelf.Pin()) This->ApplyToSelection(*Preset, /*bInFollowAsset*/false); }),
+					FCanExecuteAction::CreateLambda([WeakSelf]() { const auto This = WeakSelf.Pin(); return This.IsValid() && This->HasSelection(); })));
 		}
 	}
 	Menu.EndSection();
@@ -434,12 +434,12 @@ TSharedPtr<SWidget> SDreamUIPresetLibrary::MakeContextMenu()
 			Menu.AddMenuEntry(LOCTEXT("SaveAsAsset", "Save as an Asset..."),
 				LOCTEXT("SaveAsAssetTooltip", "Make an asset of this preset, which widgets can follow."),
 				FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Save")),
-				FUIAction(FExecuteAction::CreateLambda([WeakThis, Preset]()
+				FUIAction(FExecuteAction::CreateLambda([WeakSelf, Preset]()
 				{
 					FText Error;
 					if (DreamUIPresetLibrary::SaveAsAsset(*Preset, FString(), &Error) == nullptr && !Error.IsEmpty())
 					{
-						if (const auto This = WeakThis.Pin()) This->LastError = Error;
+						if (const auto This = WeakSelf.Pin()) This->LastError = Error;
 					}
 				})));
 		}
@@ -448,13 +448,13 @@ TSharedPtr<SWidget> SDreamUIPresetLibrary::MakeContextMenu()
 			Menu.AddMenuEntry(LOCTEXT("SaveAsText", "Save in the Project Settings..."),
 				LOCTEXT("SaveAsTextTooltip", "Keep a copy of this preset as text in the project settings."),
 				FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Save")),
-				FUIAction(FExecuteAction::CreateLambda([WeakThis, Preset]()
+				FUIAction(FExecuteAction::CreateLambda([WeakSelf, Preset]()
 				{
 					const TOptional<FString> Name = PromptForName(LOCTEXT("TextPresetName", "Text Preset Name"), Preset->Name.ToString());
 					FText Error;
 					if (Name.IsSet() && !DreamUIPresetLibrary::SaveAsText(*Preset, FName(*Name.GetValue()), &Error))
 					{
-						if (const auto This = WeakThis.Pin()) This->LastError = Error;
+						if (const auto This = WeakSelf.Pin()) This->LastError = Error;
 					}
 				})));
 		}
@@ -489,15 +489,15 @@ TSharedPtr<SWidget> SDreamUIPresetLibrary::MakeContextMenu()
 TSharedRef<SWidget> SDreamUIPresetLibrary::MakeSaveMenu()
 {
 	FMenuBuilder Menu(/*bShouldCloseWindowAfterMenuSelection*/true, nullptr);
-	const TWeakPtr<SDreamUIPresetLibrary> WeakThis = SharedThis(this);
+	const TWeakPtr<SDreamUIPresetLibrary> WeakSelf = SharedThis(this);
 	Menu.AddMenuEntry(LOCTEXT("SaveSelectionText", "In the Project Settings..."),
 		LOCTEXT("SaveSelectionTextTooltip", "A text preset, kept in the project settings."), FSlateIcon(),
-		FUIAction(FExecuteAction::CreateLambda([WeakThis]() { if (const auto This = WeakThis.Pin()) This->SaveSelection(/*bInAsAsset*/false); })));
+		FUIAction(FExecuteAction::CreateLambda([WeakSelf]() { if (const auto This = WeakSelf.Pin()) This->SaveSelection(/*bInAsAsset*/false); })));
 	if (Kind != EDreamUIPresetKind::Effect)
 	{
 		Menu.AddMenuEntry(LOCTEXT("SaveSelectionAsset", "As an Asset..."),
 			LOCTEXT("SaveSelectionAssetTooltip", "A preset asset, which widgets can follow."), FSlateIcon(),
-			FUIAction(FExecuteAction::CreateLambda([WeakThis]() { if (const auto This = WeakThis.Pin()) This->SaveSelection(/*bInAsAsset*/true); })));
+			FUIAction(FExecuteAction::CreateLambda([WeakSelf]() { if (const auto This = WeakSelf.Pin()) This->SaveSelection(/*bInAsAsset*/true); })));
 	}
 	return Menu.MakeWidget();
 }

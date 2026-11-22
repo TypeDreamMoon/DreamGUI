@@ -30,8 +30,38 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIFontFallbackCustomization"
+
+/** FUnicodeBlockRange keeps its bounds and its name differently before 5.7 (a range and a text member). */
+namespace DreamUIUnicodeBlock
+{
+	int32 Lower(const FUnicodeBlockRange& InBlock)
+	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+		return InBlock.RangeLower;
+#else
+		return InBlock.Range.GetLowerBoundValue();
+#endif
+	}
+	int32 Upper(const FUnicodeBlockRange& InBlock)
+	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+		return InBlock.RangeUpper;
+#else
+		return InBlock.Range.GetUpperBoundValue();
+#endif
+	}
+	FText Name(const FUnicodeBlockRange& InBlock)
+	{
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
+		return InBlock.GetDisplayName();
+#else
+		return InBlock.DisplayName;
+#endif
+	}
+}
 
 namespace DreamUIFontFallbackCustomizationLocal
 {
@@ -160,7 +190,7 @@ namespace DreamUIFontFallbackCustomizationLocal
 				return false;
 			}
 		}
-		const uint32 Codepoint = FParse::HexNumber(Digits);
+		const uint32 Codepoint = FParse::HexNumber(*Digits);
 		if (Codepoint > (uint32)MaxUnicodeCodepoint)
 		{
 			return false;
@@ -185,7 +215,7 @@ namespace DreamUIFontFallbackCustomizationLocal
 			TMap<uint64, const FUnicodeBlockRange*> Result;
 			for (const FUnicodeBlockRange& Block : FUnicodeBlockRange::GetUnicodeBlockRanges())
 			{
-				Result.Add(MakeKey(Block.RangeLower, Block.RangeUpper), &Block);
+				Result.Add(MakeKey(DreamUIUnicodeBlock::Lower(Block), DreamUIUnicodeBlock::Upper(Block)), &Block);
 			}
 			return Result;
 		}();
@@ -200,10 +230,10 @@ namespace DreamUIFontFallbackCustomizationLocal
 		OutTouchedBlocks = 0;
 		for (const FUnicodeBlockRange& Block : FUnicodeBlockRange::GetUnicodeBlockRanges())
 		{
-			if (Block.RangeLower <= InMax && InMin <= Block.RangeUpper)
+			if (DreamUIUnicodeBlock::Lower(Block) <= InMax && InMin <= DreamUIUnicodeBlock::Upper(Block))
 			{
 				OutTouchedBlocks++;
-				if (Block.RangeLower <= InMin && InMax <= Block.RangeUpper)
+				if (DreamUIUnicodeBlock::Lower(Block) <= InMin && InMax <= DreamUIUnicodeBlock::Upper(Block))
 				{
 					Containing = &Block;
 				}
@@ -246,7 +276,7 @@ namespace DreamUIFontFallbackCustomizationLocal
 			}
 			else if (const FUnicodeBlockRange* Block = FindExactBlock(Range.Min, Range.Max))
 			{
-				Labels.AddUnique(Block->GetDisplayName().ToString());
+				Labels.AddUnique(DreamUIUnicodeBlock::Name(*Block).ToString());
 			}
 			else
 			{
@@ -476,14 +506,14 @@ namespace DreamUIFontFallbackCustomizationLocal
 		}
 		Algo::Sort(Blocks, [](const FUnicodeBlockRange* InA, const FUnicodeBlockRange* InB)
 		{
-			return InA->GetDisplayName().CompareTo(InB->GetDisplayName()) < 0;
+			return DreamUIUnicodeBlock::Name(*InA).CompareTo(DreamUIUnicodeBlock::Name(*InB)) < 0;
 		});
 		MenuBuilder.BeginSection(NAME_None, LOCTEXT("BlocksSection", "Unicode blocks"));
 		for (const FUnicodeBlockRange* Block : Blocks)
 		{
-			const FCodepointRange Range{Block->RangeLower, Block->RangeUpper};
+			const FCodepointRange Range{DreamUIUnicodeBlock::Lower(*Block), DreamUIUnicodeBlock::Upper(*Block)};
 			const FText Bounds = FText::FromString(FormatBounds(Range.Min, Range.Max));
-			AddRangesMenuEntry(MenuBuilder, InRangesHandle, Block->GetDisplayName(), Bounds, Bounds, MakeArrayView(&Range, 1));
+			AddRangesMenuEntry(MenuBuilder, InRangesHandle, DreamUIUnicodeBlock::Name(*Block), Bounds, Bounds, MakeArrayView(&Range, 1));
 		}
 		MenuBuilder.EndSection();
 
@@ -577,12 +607,12 @@ namespace DreamUIFontFallbackCustomizationLocal
 		}
 		if (const FUnicodeBlockRange* Block = FindExactBlock(Range->Min, Range->Max))
 		{
-			return Block->GetDisplayName();
+			return DreamUIUnicodeBlock::Name(*Block);
 		}
 		int32 TouchedBlocks = 0;
 		if (const FUnicodeBlockRange* Block = FindContainingBlock(Range->Min, Range->Max, TouchedBlocks))
 		{
-			return FText::Format(LOCTEXT("RangeInsideBlock", "in {0}"), Block->GetDisplayName());
+			return FText::Format(LOCTEXT("RangeInsideBlock", "in {0}"), DreamUIUnicodeBlock::Name(*Block));
 		}
 		return TouchedBlocks > 1
 			? FText::Format(LOCTEXT("RangeAcrossBlocks", "across {0} blocks"), FText::AsNumber(TouchedBlocks))

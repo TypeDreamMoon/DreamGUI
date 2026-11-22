@@ -3490,9 +3490,9 @@ void FDreamUITextWriteBack::RequestRebuild(EDreamUIDocumentChangeReason InReason
 
 	DeferredRebuildTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
 		TEXT("DreamUITextWriteBackDeferredRebuild"), 0.0f,
-		[WeakThis = TWeakPtr<FDreamUITextWriteBack>(AsShared())](float) -> bool
+		[WeakSelf = TWeakPtr<FDreamUITextWriteBack>(AsShared())](float) -> bool
 		{
-			if (const TSharedPtr<FDreamUITextWriteBack> Pinned = WeakThis.Pin())
+			if (const TSharedPtr<FDreamUITextWriteBack> Pinned = WeakSelf.Pin())
 			{
 				Pinned->ProcessDeferredRebuild();
 			}

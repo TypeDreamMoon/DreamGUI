@@ -40,6 +40,7 @@
 
 #include "DetailCategoryBuilder.h"
 #include "Algo/Transform.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIComponentTransformDetails"
 
@@ -470,7 +471,7 @@ bool FComponentTransformDetails::GetIsEnabled() const
 {
 	// The level editor's own query, which the engine marks experimental.
 	PRAGMA_DISABLE_EXPERIMENTAL_WARNINGS
-	const bool bAnyLocked = GEditor->HasSelectedMovementLockedItems();
+	const bool bAnyLocked = DreamGUICompat::HasSelectedMovementLockedItems(GEditor);
 	PRAGMA_ENABLE_EXPERIMENTAL_WARNINGS
 	return !bAnyLocked || SelectedActorInfo.NumSelected == 0;
 }

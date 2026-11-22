@@ -28,6 +28,7 @@
 #include "Settings/EditorLoadingSavingSettings.h"
 
 #include <atomic>
+#include "DreamGUIEngineCompat.h"
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -462,9 +463,9 @@ namespace DreamGUIMCP
 			StartNow();
 			return;
 		}
-		GPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda([]()
+		GPostEngineInitHandle = DreamGUICompat::OnPostEngineInit().AddLambda([]()
 		{
-			FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
+			DreamGUICompat::OnPostEngineInit().Remove(GPostEngineInitHandle);
 			GPostEngineInitHandle.Reset();
 			StartNow();
 		});
@@ -475,7 +476,7 @@ namespace DreamGUIMCP
 		StopWatchdog();
 		if (GPostEngineInitHandle.IsValid())
 		{
-			FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
+			DreamGUICompat::OnPostEngineInit().Remove(GPostEngineInitHandle);
 			GPostEngineInitHandle.Reset();
 		}
 		StopHostLifetime();

@@ -6,6 +6,7 @@
 #include "IDetailsView.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "PropertyType/DreamUIFontEmojiKeyCustomization.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIFontEmojiDataCustomization"
 FDreamUIFontEmojiDataCustomization::FDreamUIFontEmojiDataCustomization()
@@ -33,7 +34,7 @@ void FDreamUIFontEmojiDataCustomization::CustomizeDetails(IDetailLayoutBuilder& 
 	}
 
 	// Null on a host that is not an SDetailsView (a details panel embedded in another tool).
-	if (const TSharedPtr<IDetailsView> DetailsView = DetailBuilder.GetDetailsViewSharedPtr())
+	if (const TSharedPtr<IDetailsView> DetailsView = DreamGUICompat::GetDetailsViewSharedPtr(DetailBuilder))
 	{
 		DetailsView->RegisterInstancedCustomPropertyTypeLayout(FDreamUIFontEmojiKey::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontEmojiKeyCustomization::MakeInstance));
 	}

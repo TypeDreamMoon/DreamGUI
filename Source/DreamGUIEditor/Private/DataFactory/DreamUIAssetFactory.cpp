@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DataFactory/DreamUIAssetFactory.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIAssetFactory"
 
@@ -29,6 +30,7 @@ FText UDreamUIAssetFactory::GetToolTip() const
 	return MenuToolTip.IsEmpty() ? Super::GetToolTip() : MenuToolTip;
 }
 
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 TArray<FAssetCategoryPath> UDreamUIAssetFactory::GetAssetMenuPathsForCategory(FName InCategory) const
 {
 	if (MenuSection.IsEmpty())
@@ -39,5 +41,16 @@ TArray<FAssetCategoryPath> UDreamUIAssetFactory::GetAssetMenuPathsForCategory(FN
 	}
 	return { FAssetCategoryPath(FAssetCategoryPath(FText::FromName(InCategory)), FCategoryPath(MenuSection, ECategoryMenuType::Section)) };
 }
+#else
+const TArray<FText>& UDreamUIAssetFactory::GetMenuCategorySubMenus() const
+{
+	if (MenuSection.IsEmpty())
+	{
+		return Super::GetMenuCategorySubMenus();
+	}
+	MenuSubMenus = { MenuSection };
+	return MenuSubMenus;
+}
+#endif
 
 #undef LOCTEXT_NAMESPACE

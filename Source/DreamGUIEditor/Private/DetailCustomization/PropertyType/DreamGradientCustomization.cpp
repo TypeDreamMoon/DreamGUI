@@ -40,6 +40,7 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
+#include "DreamGUIEngineCompat.h"
 
 #define LOCTEXT_NAMESPACE "DreamGradientCustomization"
 
@@ -1024,8 +1025,11 @@ namespace DreamGradientCustomizationLocal
 			.ViewMaxInput_Lambda([StopCurves]() { return StopCurves->GetViewMaxInput(); })
 			.IsEditingEnabled_Lambda([InGradientHandle]() { return CanEdit(InGradientHandle); })
 			.ClampStopsToViewRange(true)
+#if DREAMGUI_ENGINE_AT_LEAST(5, 8)
 			.WithAlphaChannel(true)
-			.DesiredSizeOverride(TOptional<FVector2D>(FVector2D(250.0, 64.0)));
+			.DesiredSizeOverride(TOptional<FVector2D>(FVector2D(250.0, 64.0)))
+#endif
+			;
 		GradientEditor->SetCurveOwner(&StopCurves.Get());
 
 		ChildBuilder.AddCustomRow(LOCTEXT("StopsFilter", "Stops"))
@@ -1369,6 +1373,7 @@ TArray<FRichCurveEditInfoConst> FDreamGradientStopCurves::GetCurves() const
 	return Result;
 }
 
+#if DREAMGUI_ENGINE_AT_LEAST(5, 7)
 void FDreamGradientStopCurves::GetCurves(TAdderReserverRef<FRichCurveEditInfoConst> OutCurves) const
 {
 	SyncFromSource();
@@ -1378,6 +1383,7 @@ void FDreamGradientStopCurves::GetCurves(TAdderReserverRef<FRichCurveEditInfoCon
 		OutCurves.Add(FRichCurveEditInfoConst(&Curves[Channel], DreamGradientCustomizationLocal::GetChannelName(Channel)));
 	}
 }
+#endif
 
 TArray<FRichCurveEditInfo> FDreamGradientStopCurves::GetCurves()
 {
