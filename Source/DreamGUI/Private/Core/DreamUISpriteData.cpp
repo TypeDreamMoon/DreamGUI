@@ -308,7 +308,7 @@ void UDreamUISpriteData::ReloadTexture()
 	auto SizeX = AtlasTexture->GetSizeX();
 	auto SizeY = AtlasTexture->GetSizeY();
 	// A texture still compiling, or one that failed to, reports no size; its UVs are not worth a crash.
-	if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture)))
+	if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture.Get())))
 	{
 		return;
 	}
@@ -341,7 +341,7 @@ void UDreamUISpriteData::InitSpriteData()
 				}
 #endif
 				AtlasTexture = PackingAtlas->GetAtlasTexture(AtlasTextureIndex);
-				if (AtlasTexture)
+				if (AtlasTexture.IsValid())
 				{
 					bIsInitialized = true;
 				}
@@ -404,7 +404,7 @@ void UDreamUISpriteData::InitSpriteData()
 				auto SizeX = AtlasTexture->GetSizeX();
 				auto SizeY = AtlasTexture->GetSizeY();
 				// See ReloadTexture: no size, no UVs, and not initialized, so the next use tries again.
-				if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture)))
+				if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture.Get())))
 				{
 					bIsInitialized = false;
 					return;
@@ -422,7 +422,7 @@ void UDreamUISpriteData::InitSpriteData()
 UTexture2D* UDreamUISpriteData::GetAtlasTexture()
 {
 	InitSpriteData();
-	return AtlasTexture;
+	return AtlasTexture.Get();
 }
 const FDreamUISpriteInfo& UDreamUISpriteData::GetSpriteInfo()
 {

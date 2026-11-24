@@ -77,7 +77,8 @@ private:
 		bool bUseEdgePixelPadding = true;
 private:
 	bool bIsInitialized = false;
-	UPROPERTY(Transient)TObjectPtr<UTexture2D> AtlasTexture = nullptr;
+	// Non-owning cache: the dynamic atlas (or the source/static atlas) owns the texture.
+	UPROPERTY(Transient) TWeakObjectPtr<UTexture2D> AtlasTexture;
 	bool PackSprite();
 	void CheckSpriteTexture();
 public:
