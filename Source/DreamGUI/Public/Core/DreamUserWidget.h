@@ -260,6 +260,13 @@ public:
 	 * Like Initialize, it runs once and does nothing on a class template.
 	 */
 	void InitializeFromArchetype(UDreamWidgetTree* InArchetype);
+private:
+	friend class UDreamScreenCreationRequest;
+	bool BeginTreeInitialization();
+	void FinishTreeCallbacks();
+	void FinishTreeSlots();
+	void FinishTreeBindings();
+public:
 
 	/**
 	 * Adopt contents that were DUPLICATED onto this widget rather than instanced from its class --
@@ -1513,6 +1520,8 @@ private:
  * hierarchy by hand rather than from a class: the designer, whose preview comes from an authoring
  * tree. Bringing it to life through a second, parallel copy of these rules is how the two drift.
  */
+void ReconcileDreamWidgetHierarchy(UDreamWidget* InRoot);
+void BeginRegisteredDreamWidget(UDreamWidget* Widget);
 DREAMGUI_API void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot);
 
 /**

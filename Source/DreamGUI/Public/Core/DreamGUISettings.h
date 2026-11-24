@@ -147,6 +147,10 @@ class DREAMGUI_API UDreamGUISettings : public UDeveloperSettings
 public:
 	UDreamGUISettings();
 
+	/** Shared game-thread soft budget for screen creation requests in one world, in milliseconds. */
+	UPROPERTY(config, EditAnywhere, Category="Performance", meta=(ClampMin="0.1", ClampMax="16"))
+	float CreationBudgetMs = 2.0f;
+
 	virtual FName GetCategoryName() const override { return TEXT("Plugins"); }
 
 	static const UDreamGUISettings* Get();
