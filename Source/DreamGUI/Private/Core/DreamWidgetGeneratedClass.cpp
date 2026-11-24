@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamTreeBinding.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUIBehaviour.h"
@@ -233,21 +234,32 @@ void UDreamWidgetGeneratedClass::InitializeWidget(UDreamUserWidget* InUserWidget
 
 void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype)
 {
+	auto Cursor = BeginBinding(InUserWidget, InClass, InWidgetTreeArchetype);
+	if (!Cursor) return;
+	UDreamUserWidget* Child;
+	while (AdvanceBinding(*Cursor, Child))
+	{
+		if (Child) Child->Initialize();
+	}
+}
+
+TSharedPtr<FDreamTreeBinding> UDreamWidgetGeneratedClass::BeginBinding(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype)
+{
 	if (!IsValid(InUserWidget) || InClass == nullptr)
 	{
-		return;
+		return nullptr;
 	}
 	// A CDO is the template, not an instance of one. Building into it would give the class a
 	// hierarchy of its own that every later instance would then copy.
 	if (InUserWidget->IsTemplate())
 	{
-		return;
+		return nullptr;
 	}
 	if (InWidgetTreeArchetype == nullptr)
 	{
 		// Legitimate for a class that declares no hierarchy (logic-only, or not compiled yet). The
 		// widget stays empty rather than half-built.
-		return;
+		return nullptr;
 	}
 
 	// 1. Instance the template. The instancing graph follows Instanced properties -- UDreamWidgetTree
@@ -276,21 +288,20 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 
 	// 2. Parent is DuplicateTransient, so the instanced tree arrives with the structure intact and
 	//    every back-pointer empty. Nothing below may run before this.
-	InstancedTree->RebuildParentLinks();
+	auto Cursor = MakeShared<FDreamTreeBinding>();
+	Cursor->Host = InUserWidget;
+	Cursor->Tree = InstancedTree;
+	Cursor->Archetype = InWidgetTreeArchetype;
+	return Cursor;
+}
 
-	// 2b. Re-aim the pointers that run from one node of the tree to another. Done here, with the rest
-	//     of "make the instanced tree whole", and before anything below reads them.
-	RetargetIntraTreeReferences(InstancedTree, InWidgetTreeArchetype);
+void UDreamWidgetGeneratedClass::PrepareBinding(FDreamTreeBinding& Cursor)
+{
+	auto* InUserWidget = Cursor.Host.Get();
+	auto* InstancedTree = Cursor.Tree.Get();
+	const UClass* InClass = InUserWidget->GetClass();
 
-	// 3. Bind each widget to the class property of the same name -- this is BindDreamWidget, and it is the
-	//    same shape UMG uses (walk the tree, look the name up in the class's object properties).
-	//    Widgets are matched by DisplayName, not object name: object names here are generated.
-	//
-	//    Only properties declared BELOW UDreamUserWidget are candidates. Binding is driven by display
-	//    names, which a designer types, so without this a widget named "Parent" would overwrite
-	//    UDreamWidget::Parent and quietly detach the hierarchy from itself. Framework members are not
-	//    bindings; bindings live on the class someone wrote for this hierarchy.
-	TMap<FName, FObjectPropertyBase*> ObjectPropertiesByName;
+
 	for (TFieldIterator<FObjectPropertyBase> It(const_cast<UClass*>(InClass), EFieldIterationFlags::Default); It; ++It)
 	{
 		const UClass* OwnerClass = It->GetOwnerClass();
@@ -298,65 +309,93 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		{
 			continue;
 		}
-		ObjectPropertiesByName.Add(It->GetFName(), *It);
+		Cursor.Properties.Add(It->GetFName(), *It);
 	}
 	// Both halves of the animation contract the compiler declares: the embedded animations of every
 	// component on a widget, and the standalone sequence ASSETS the same components reference (those
 	// are shared assets, so the pointer is the asset itself rather than an instanced copy). A lambda
 	// because the user widget ITSELF may carry an animation component, and the tree walk below never
 	// visits it -- UDreamUserWidget::CollectAnimationComponents makes the same exception at runtime.
-	auto BindAnimationVariables = [&](const UDreamWidget* Widget)
+	Cursor.BindAnimations(InUserWidget);
+	const auto WidgetsToBind = InstancedTree->GetAllWidgets();
+	InUserWidget->CaptureBindingComponentIdentities(InstancedTree, WidgetsToBind);
+	for (auto* W : WidgetsToBind) Cursor.Widgets.Emplace(W);
+}
+
+
+void FDreamTreeBinding::BindAnimations(const UDreamWidget* Widget)
+{
+	auto* InUserWidget = Host.Get();
+	if (!IsValid(Widget))
 	{
-		if (!IsValid(Widget))
+		return;
+	}
+	auto BindOne = [&](UMovieSceneSequence* Animation, const FName AnimationVariableName)
+	{
+		FObjectPropertyBase* const* PropertyPtr = AnimationVariableName.IsNone() ? nullptr : Properties.Find(AnimationVariableName);
+		if (PropertyPtr != nullptr && Animation->IsA((*PropertyPtr)->PropertyClass))
 		{
-			return;
-		}
-		auto BindOne = [&](UMovieSceneSequence* Animation, const FName AnimationVariableName)
-		{
-			FObjectPropertyBase* const* PropertyPtr = AnimationVariableName.IsNone() ? nullptr : ObjectPropertiesByName.Find(AnimationVariableName);
-			if (PropertyPtr != nullptr && Animation->IsA((*PropertyPtr)->PropertyClass))
-			{
-				(*PropertyPtr)->SetObjectPropertyValue_InContainer(InUserWidget, Animation);
-			}
-		};
-		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
-		{
-			UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
-			if (Animator == nullptr)
-			{
-				continue;
-			}
-			for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
-			{
-				if (IsValid(Animation))
-				{
-					BindOne(Animation, UDreamWidgetTree::MakeAnimationVariableName(Animation));
-				}
-			}
-			for (const TObjectPtr<UDreamUISequence>& Asset : Animator->GetSequenceAssets())
-			{
-				if (IsValid(Asset))
-				{
-					BindOne(Asset, FName(*UDreamWidgetTree::SanitizeIdentifier(Asset->GetName())));
-				}
-			}
+			(*PropertyPtr)->SetObjectPropertyValue_InContainer(InUserWidget, Animation);
 		}
 	};
-	BindAnimationVariables(InUserWidget);
-	// Initializing a nested user widget adds its private children. Bind only the authored
-	// snapshot, including this tree's named-slot content, before any such expansion.
-	const TArray<UDreamWidget*> WidgetsToBind = InstancedTree->GetAllWidgets();
-	// A nested widget's initialization can reorder its own components too, so capture every
-	// authored target before initializing even the first nested widget.
-	InUserWidget->CaptureBindingComponentIdentities(InstancedTree, WidgetsToBind);
-	for (UDreamWidget* Widget : WidgetsToBind)
+	for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
 	{
-		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InstancedTree)
+		UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+		if (Animator == nullptr)
 		{
 			continue;
 		}
+		for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+		{
+			if (IsValid(Animation))
+			{
+				BindOne(Animation, UDreamWidgetTree::MakeAnimationVariableName(Animation));
+			}
+		}
+		for (const TObjectPtr<UDreamUISequence>& Asset : Animator->GetSequenceAssets())
+		{
+			if (IsValid(Asset))
+			{
+				BindOne(Asset, FName(*UDreamWidgetTree::SanitizeIdentifier(Asset->GetName())));
+			}
+		}
+	}
+}
+
+bool UDreamWidgetGeneratedClass::AdvanceBinding(FDreamTreeBinding& Cursor, UDreamUserWidget*& OutChild)
+{
+	OutChild = nullptr;
+	auto* InUserWidget = Cursor.Host.Get();
+	auto* InstancedTree = Cursor.Tree.Get();
+	if (!InUserWidget || !InstancedTree) return false;
+	const UClass* InClass = InUserWidget->GetClass();
+	if (Cursor.Stage == 0)
+	{
+		InstancedTree->RebuildParentLinks();
+		++Cursor.Stage;
+		return true;
+	}
+	if (Cursor.Stage == 1)
+	{
+		RetargetIntraTreeReferences(InstancedTree, Cursor.Archetype.Get());
+		++Cursor.Stage;
+		return true;
+	}
+	if (Cursor.Stage == 2)
+	{
+		PrepareBinding(Cursor);
+		++Cursor.Stage;
+		return true;
+	}
+	if (Cursor.Index < Cursor.Widgets.Num())
+	{
+		auto* Widget = Cursor.Widgets[Cursor.Index++].Get();
+		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InstancedTree)
+		{
+			return true;
+		}
 		const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
-		if (FObjectPropertyBase** PropertyPtr = ObjectPropertiesByName.Find(VariableName))
+		if (FObjectPropertyBase** PropertyPtr = Cursor.Properties.Find(VariableName))
 		{
 			FObjectPropertyBase* Property = *PropertyPtr;
 			// A same-named property of an unrelated type is a mistake worth naming rather than a
@@ -377,7 +416,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		// The same by-name contract for this widget's animations. The compiler declared one
 		// property per authored animation; the INSTANCED copy is what must land in it, because a
 		// graph that plays the archetype's copy animates a tree nobody is looking at.
-		BindAnimationVariables(Widget);
+		Cursor.BindAnimations(Widget);
 
 		// A nested user widget builds its own contents from its own class, the way UMG initializes
 		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.
@@ -385,9 +424,10 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		{
 			if (NestedUserWidget != InUserWidget)
 			{
-				NestedUserWidget->Initialize();
+				OutChild = NestedUserWidget;
 			}
 		}
+		return true;
 	}
 
 	// Filling the host's slots used to be step 3b, here. It is now UDreamUserWidget::
@@ -402,6 +442,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	{
 		InstancedTree->RootWidget->SetParentBeforeRegister(InUserWidget);
 	}
+	return false;
 }
 
 void UDreamWidgetGeneratedClass::CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings)

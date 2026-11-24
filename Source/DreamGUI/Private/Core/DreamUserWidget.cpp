@@ -239,25 +239,8 @@ void CollectDreamWidgetsToNestedBoundary(UDreamWidget* InRoot, TArray<UDreamWidg
 	}
 }
 
-void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
+void ReconcileDreamWidgetHierarchy(UDreamWidget* InRoot)
 {
-	if (!IsValid(InRoot))
-	{
-		return;
-	}
-	TArray<UDreamWidget*> AllWidgets;
-	UDreamWidget::CollectChildrenWidgets(InRoot, AllWidgets, true);
-
-	// Parents before children, which CollectChildrenWidgets already gives us: OnRegister reads the
-	// parent link to reconcile panel slots.
-	for (UDreamWidget* Widget : AllWidgets)
-	{
-		if (IsValid(Widget))
-		{
-			Widget->OnRegister();
-		}
-	}
-
 	// Everything this subtree inherits from the parent it was just attached to. OnRegister does
 	// this itself only for a hierarchy ROOT; a subtree parented through SetParentBeforeRegister
 	// raises no attach event, so without this it registers holding its birth defaults -- visible
@@ -309,23 +292,38 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 			Manager->AddLayoutDirtyWidget(Parent);
 		}
 
-		if (Manager->HasBegunPlay())
+	}
+}
+
+void BeginRegisteredDreamWidget(UDreamWidget* Widget)
+{
+	if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay()) Widget->BeginPlay();
+}
+
+void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
+{
+	if (!IsValid(InRoot))
+	{
+		return;
+	}
+	TArray<UDreamWidget*> AllWidgets;
+	UDreamWidget::CollectChildrenWidgets(InRoot, AllWidgets, true);
+
+	// Parents before children, which CollectChildrenWidgets already gives us: OnRegister reads the
+	// parent link to reconcile panel slots.
+	for (UDreamWidget* Widget : AllWidgets)
+	{
+		if (IsValid(Widget))
 		{
-			for (UDreamWidget* Widget : AllWidgets)
-			{
-				// This walk does not own every widget it covers. It collects the whole subtree, nested user
-				// widgets and all, and anything built by CreateDreamWidget has already registered and
-				// begun on its own -- a nested widget when its own class initialized it, an `each` list's
-				// cells the moment the list was given a data source, which is before the containing
-				// widget is registered at all. BeginPlay is a no-op for those; asking only of the widgets
-				// still waiting to begin also skips one an earlier widget's BeginPlay unregistered, which
-				// BeginPlay would report as never having been registered.
-				if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay())
-				{
-					Widget->BeginPlay();
-				}
-			}
+			Widget->OnRegister();
 		}
+	}
+
+	ReconcileDreamWidgetHierarchy(InRoot);
+	const auto* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld());
+	if (Manager && Manager->HasBegunPlay())
+	{
+		for (UDreamWidget* Widget : AllWidgets) BeginRegisteredDreamWidget(Widget);
 	}
 }
 
@@ -476,9 +474,18 @@ void UDreamUserWidget::Initialize()
 
 void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 {
+	if (!BeginTreeInitialization()) return;
+	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
+	FinishTreeCallbacks();
+	FinishTreeSlots();
+	FinishTreeBindings();
+}
+
+bool UDreamUserWidget::BeginTreeInitialization()
+{
 	if (bInitialized || IsTemplate())
 	{
-		return;
+		return false;
 	}
 	bInitialized = true;
 
@@ -497,8 +504,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 		HostSuppliedChildren.Add(Child);
 	}
 
-	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
+	return true;
+}
 
+void UDreamUserWidget::FinishTreeCallbacks()
+{
 	// The `viewmodels` entries nobody handed an object, filled before anything reads them: On Initialized below, and
 	// every binding's first value after it, already see the view model. The nested widgets the line above initialized
 	// have linked their `= parent` entries to this widget by now, so what is written here reaches them too.
@@ -542,6 +552,10 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// whatever the source held, which for a list built at Begin Play is nothing.
 	NativeOnInitialized();
 
+}
+
+void UDreamUserWidget::FinishTreeSlots()
+{
 	// Both kinds of contents now exist, and nothing is registered yet: the one moment that works for
 	// an archetype-instanced tree and a code-built one alike.
 	AttachNamedSlotContent();
@@ -551,6 +565,10 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// been reparented or been destroyed, answering a question nobody should still be asking.
 	HostSuppliedChildren.Reset();
 
+}
+
+void UDreamUserWidget::FinishTreeBindings()
+{
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
 	BindEventBindings();

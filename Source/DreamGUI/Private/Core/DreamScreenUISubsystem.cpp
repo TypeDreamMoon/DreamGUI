@@ -59,6 +59,15 @@ void UDreamScreenUISubsystem::TeardownForWorld(UWorld& InWorld)
 		return;
 	}
 	bTornDownForWorld = true;
+	FWorldDelegates::OnWorldPostActorTick.Remove(CreationTick);
+	CreationTick.Reset();
+	// Keep jobs in the reflected array during notification: a listener may force GC.
+	for (UDreamScreenCreationRequest* Request : CreationQueue)
+	{
+		Request->Cancel();
+		if (!bInCreationTick) Request->Finish(EDreamScreenCreationState::Cancelled);
+	}
+	if (!bInCreationTick) CreationQueue.Reset();
 	for (TPair<FName, FPendingPageLoad>& Pair : PendingPageLoads)
 	{
 		if (Pair.Value.Handle.IsValid())
