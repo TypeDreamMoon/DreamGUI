@@ -103,6 +103,21 @@ hand off from the innermost outward, and only the outermost maps onto the canvas
   draws in an undefined order against the stack, so asking for one logs a warning.
 - Among world-space canvases, `UDreamWorldWidgetComponent::SortOrder` is written through to the root canvas.
 
+## Opening a large screen over several frames
+
+Call `OpenScreenBudgeted` on the screen UI subsystem with the widget's soft class, optional local controller and sort
+order. Bind `OnFinished` on the returned request immediately. `GetPage` returns the published instance only in `Ready`;
+`Failed` and `Cancelled` have no page. A world already tearing down refuses submission (null handle). Call `Cancel` when
+the navigation intent changes. Cancellation takes effect at a scheduling boundary, never halfway through a callback.
+The world owns pending requests, and the caller does not have to prewarm a class, retain an instance or manage a cache.
+
+`CreationBudgetMs` in Dream GUI project settings defaults to **2 ms per game world per frame**, shared by local players
+and pending pages. This is cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
+Resource loading is asynchronous. An engine instancing operation, a native or Blueprint callback, or publication and
+its observers can exceed the budget; the log identifies over-budget steps. Ready means attached, not that the GPU has
+presented a frame. Keep the current page usable until Ready; leave navigation and focus changes to that callback.
+`AddToViewport`, synchronous creation and `PushPageAsync` keep their existing contracts.
+
 ## Render-target canvases
 
 In `RenderTarget` mode a canvas draws into `RenderTarget`, or into one it makes for itself when none is assigned

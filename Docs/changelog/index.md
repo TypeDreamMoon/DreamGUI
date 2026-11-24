@@ -22,6 +22,10 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
+- Large screens can use `OpenScreenBudgeted` to share a game-thread creation budget without changing synchronous callers. Requests can be cancelled before publication. See [screen creation](../concepts/canvas.md#opening-a-large-screen-over-several-frames).
+
+- Widget registration no longer scans the entire world registry on each insertion. Enumeration and BeginPlay retain registration order. Name lookup stops at the first match; callers resolving many parts can take one ordered snapshot.
+
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
   The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.
