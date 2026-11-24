@@ -129,7 +129,7 @@ public:
 		bool bAsyncGlyphRasterization = true;
 	/** How many new glyphs a frame may generate on the game thread before the rest go to the worker. */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
-		int32 AsyncGlyphSyncBudgetPerFrame = 24;
+		int32 AsyncGlyphSyncBudgetPerFrame = PLATFORM_ANDROID ? 0 : 24;
 	/**
 	 * How many new small-text coverage glyphs a frame may rasterize on the game thread before the rest go to the worker. A
 	 * budget of its own, separate from the field glyphs': a coverage glyph is far cheaper to make than a field, and an
