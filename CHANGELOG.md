@@ -11,6 +11,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
+- Large screens can use `OpenScreenBudgeted` to share a game-thread creation budget without changing synchronous callers. Requests can be cancelled before publication. See [screen creation](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
+
 - **Android arm64:** A UE 5.8.4 Development demo built, cooked and ran on a handset. Runtime sprites no longer own their cached atlas page, and a render proxy recreates its uniform buffer when it falls back to another parent material.
 
 ### New
