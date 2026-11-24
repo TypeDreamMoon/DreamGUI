@@ -167,9 +167,11 @@ void FDreamUIMaterialProxy::LetGoOfUnreachable()
 		ENQUEUE_RENDER_COMMAND(FDreamUIMaterialProxyLetGo)(
 			[Proxy, Source = Proxy->GameThreadSource, Parameters = Proxy->GameThreadParameters](FRHICommandListImmediate& RHICmdList) mutable
 			{
+				// Losing the source changes the parent to the default material, not just its parameters.
+				const bool bParentChanged = Proxy->RenderThreadSource != Source;
 				Proxy->RenderThreadSource = Source;
 				Proxy->RenderThreadParameters = MoveTemp(Parameters);
-				Proxy->CacheUniformExpressions(RHICmdList, false);
+				Proxy->CacheUniformExpressions(RHICmdList, bParentChanged);
 			});
 	}
 }
