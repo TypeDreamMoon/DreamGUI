@@ -379,6 +379,10 @@ private:
 	 */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamWidget>> RegisteredWidgets;
+	// The array preserves BeginPlay and enumeration order. Vacant slots never own a widget.
+	TMap<FObjectKey, int32> RegisteredWidgetSlots;
+	int32 NextRegistrySweep = 128;
+	void CompactRegisteredWidgets();
 	/**
 	 * The roots of registered trees nothing but this manager holds: made with no host (CreateDreamWidget
 	 * with no parent, a Blueprint's ConstructWidget, a test's widget made straight in the world), or taken
