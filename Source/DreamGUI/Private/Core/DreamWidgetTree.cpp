@@ -68,18 +68,19 @@ void UDreamWidgetTree::RebuildParentLinks()
 	}
 }
 
-void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const
+template <typename Visitor>
+static UDreamWidget* WalkUntil(const UDreamWidgetTree& Tree, Visitor&& Visit)
 {
-	if (!IsValid(RootWidget))
+	if (!IsValid(Tree.RootWidget))
 	{
-		return;
+		return nullptr;
 	}
 	// Iterative rather than recursive: a malformed Children array would blow the stack, and this runs
 	// over trees that arrive from disk. RestoreParentLinksRecursive is the pass that reports cycles;
 	// here a revisit is simply skipped so a caller can still walk a damaged tree without hanging.
 	TSet<UDreamWidget*> Visited;
 	TArray<UDreamWidget*> Pending;
-	Pending.Push(RootWidget);
+	Pending.Push(Tree.RootWidget);
 	while (Pending.Num() > 0)
 	{
 		UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
@@ -93,7 +94,7 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 		{
 			continue;
 		}
-		InPredicate(Widget);
+		if (Visit(Widget)) return Widget;
 		// A nested widget blueprint's named-slot content belongs to THIS tree -- the host authored it
 		// -- but it hangs off the binding map rather than off Children until the instance is built.
 		// A walk that only followed Children would miss it, which means no variable declared for it,
@@ -102,7 +103,7 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 		{
 			for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : UserWidget->NamedSlotContent)
 			{
-				if (IsValid(Binding.Value) && Binding.Value->GetTypedOuter<UDreamWidgetTree>() == this)
+				if (IsValid(Binding.Value) && Binding.Value->GetTypedOuter<UDreamWidgetTree>() == &Tree)
 				{
 					Pending.Push(Binding.Value);
 				}
@@ -115,6 +116,12 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 			Pending.Push(Children[i]);
 		}
 	}
+	return nullptr;
+}
+
+void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const
+{
+	WalkUntil(*this, [&](UDreamWidget* Widget) { InPredicate(Widget); return false; });
 }
 
 int32 UDreamWidgetTree::CountWidgets() const
@@ -133,15 +140,17 @@ TArray<UDreamWidget*> UDreamWidgetTree::GetAllWidgets() const
 
 UDreamWidget* UDreamWidgetTree::FindWidgetByVariableName(FName InVariableName) const
 {
-	UDreamWidget* Found = nullptr;
-	ForEachWidget([&Found, InVariableName](UDreamWidget* Widget)
+	return WalkUntil(*this, [InVariableName](UDreamWidget* Widget) { return MakeWidgetVariableName(Widget) == InVariableName; });
+}
+
+void UDreamWidgetTree::BuildVariableNameIndex(TMap<FName, TWeakObjectPtr<UDreamWidget>>& Out) const
+{
+	Out.Reset();
+	ForEachWidget([&](UDreamWidget* Widget)
 	{
-		if (Found == nullptr && MakeWidgetVariableName(Widget) == InVariableName)
-		{
-			Found = Widget;
-		}
+		const FName Name = MakeWidgetVariableName(Widget);
+		if (!Out.Contains(Name)) Out.Add(Name, Widget);
 	});
-	return Found;
 }
 
 FString UDreamWidgetTree::SanitizeIdentifier(const FString& InRaw)

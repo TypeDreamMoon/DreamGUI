@@ -86,6 +86,27 @@ namespace DreamNestedWidgetBindingTestLocal
 	}
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamWidgetNameIndexTest,
+	"DreamGUI.WidgetBlueprint.VariableNameIndexMatchesLiveLookupAfterTreeEdits",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetNameIndexTest::RunTest(const FString& Parameters)
+{
+	DreamNestedWidgetBindingTestLocal::FScopedBlueprint Fixture(TEXT("BP_NameLookup"));
+	auto* Tree = Fixture.Blueprint->GetOrCreateWidgetTree();
+	auto* First = Fixture.AddWidget(TEXT("Same Name"));
+	auto* Other = Fixture.AddWidget(TEXT("Same_Name"));
+	TMap<FName, TWeakObjectPtr<UDreamWidget>> Parts;
+	Tree->BuildVariableNameIndex(Parts);
+	TestEqual(TEXT("first sanitized match"), Parts.FindRef(TEXT("Same_Name")).Get(), First);
+	First->SetDisplayName(TEXT("Renamed"));
+	TestEqual(TEXT("live lookup sees rename"), Tree->FindWidgetByVariableName(TEXT("Same_Name")), Other);
+	Tree->BuildVariableNameIndex(Parts);
+	TestEqual(TEXT("rebuilt snapshot sees rename"), Parts.FindRef(TEXT("Same_Name")).Get(), Other);
+	TestEqual(TEXT("renamed node stays reachable"), Parts.FindRef(TEXT("Renamed")).Get(), First);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamNestedWidgetVariableBindingTest,
 	"DreamGUI.WidgetBlueprint.ANestedPrivateWidgetDoesNotReplaceTheHostsGeneratedVariable",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
