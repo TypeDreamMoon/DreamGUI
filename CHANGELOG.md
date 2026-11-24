@@ -11,7 +11,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
-- **Android arm64:** A UE 5.8.4 Development demo built, cooked and ran on a handset. Runtime sprites no longer own their cached atlas page, and a render proxy recreates its uniform buffer when it falls back to another parent material.
+- **Android arm64:** A UE 5.8.4 Development demo built, cooked and ran on a handset. Runtime sprites no longer own their cached atlas page, and a render proxy recreates its uniform buffer when it falls back to another parent material. Cold text reserves its advance while worker-supported field glyphs are prepared off the game thread by default on Android.
 
 ### New
 
