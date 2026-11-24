@@ -11,6 +11,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
+- Building a large hierarchy no longer scans the entire world widget registry for every registration. Enumeration and BeginPlay retain registration order.
+
+- Android no longer rasterizes the first 24 worker-supported field glyphs on the game thread by default. Cold text keeps its advance while the ink is prepared. Widget-tree name lookup stops at the first match; native callers resolving many parts can take a single ordered lookup snapshot.
+
 - Large screens can use `OpenScreenBudgeted` to share a game-thread creation budget without changing synchronous callers. Requests can be cancelled before publication. See [screen creation](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
 
 - **Android arm64:** A UE 5.8.4 Development demo built, cooked and ran on a handset. Runtime sprites no longer own their cached atlas page, and a render proxy recreates its uniform buffer when it falls back to another parent material.
