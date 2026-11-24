@@ -478,10 +478,9 @@ bool FDreamUIEntryRows::WriteEntry(const FDreamWidgetEntryBinding& InEntry, UObj
 		FProperty* SetterParameter = nullptr;
 		if (Setter != nullptr)
 		{
-			for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+			if (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm))
 			{
 				SetterParameter = *It;
-				break;
 			}
 		}
 		if (SetterParameter == nullptr)
