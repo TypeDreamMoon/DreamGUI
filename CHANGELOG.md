@@ -606,6 +606,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A page of new CJK text no longer holds the frame after it opens.** A frame generated up to
+  `AsyncGlyphSyncBudgetPerFrame` (24) new outline glyphs on the game thread before the rest went to the worker; a CJK
+  distance-field glyph costs about 7 ms on a desktop and more on a phone, so a page of new Chinese text held one frame
+  for over 200 ms. `AsyncGlyphSyncBudgetMs` (2 ms, *Project Settings ▸ Plugins ▸ DreamUI ▸ Text*) now also stops the
+  frame's synchronous glyphs once what it has spent on them, plus what a glyph has cost lately, would pass it; a burst
+  still makes its first glyph on the frame. The rest are drawn once the worker has them, as past the count. `0` leaves
+  only the count. See [Fonts](Docs/concepts/text.md#fonts).
+
 - **A control you resized keeps its size.** A Button, TextInput, SpinBox, Dropdown, ProgressBar, scroll bar, Toggle,
   RadioButton or key selector dragged taller in the designer -- or given a height in a `.dui` or the details panel --
   went back to its style's height on the next compile, preview rebuild or any edit that rebuilt it (a Tool Tip Text, say):

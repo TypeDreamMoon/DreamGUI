@@ -138,6 +138,11 @@ int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
 	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
 }
 
+float UDreamUISettings::GetAsyncGlyphSyncBudgetMs()
+{
+	return FMath::Max(GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetMs, 0.0f);
+}
+
 int32 UDreamUISettings::GetCoverageGlyphSyncBudgetPerFrame()
 {
 	return FMath::Max(GetDefault<UDreamUISettings>()->CoverageGlyphSyncBudgetPerFrame, 0);
