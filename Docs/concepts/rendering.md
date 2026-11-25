@@ -125,8 +125,8 @@ HDR metadata alone does not activate this conversion: the target must report act
 Linear EXR captures retain their existing semantics. This path does not enable Windows HDR.
 
 Anti-aliasing is `AntiAliasingMethod` (`None` or MSAA) and `MSAASampleCount`, for all three DreamGUI-renderer modes; where
-the RHI reports no MSAA support the renderer falls back to none and warns once rather than pretending. Win64 is the only
-platform built and run; see [Platforms](../guides/platforms.md).
+the RHI reports no MSAA support the renderer falls back to none and warns once rather than pretending. What has been
+built and run on which platform is in [Platforms](../guides/platforms.md).
 
 Without MSAA most of what DreamGUI draws is smooth already: text and RectBlock compute their edges in the shader, and a
 clip's edge is soft by its own width. What is left is the outline of an element drawn as a mesh -- a Polygon, Shape, Ring,

@@ -220,7 +220,7 @@ has been *run* are different lists, so both are here:
 | Dedicated server | never — no server target has been built | no |
 
 The descriptor's `SupportedTargetPlatforms` names the five platforms the code is written for; that says what the
-build tools will try, not that anyone has run it there. The release gate, the mobile code paths that have never run
+build tools will try, not that anyone has run it there. The release gate, what the handset smoke test leaves unchecked on mobile
 and what was checked for a dedicated server are on
 [Platforms](https://gui.toolchain.64hz.cn/en/docs/guides/platforms).
 
