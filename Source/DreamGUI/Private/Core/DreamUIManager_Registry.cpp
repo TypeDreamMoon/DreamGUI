@@ -315,8 +315,7 @@ TArray<UDreamWidget*> UDreamUIManagerWorldSubsystem::GetRegisteredWidgets()const
 
 bool UDreamUIManagerWorldSubsystem::IsWidgetRegistered(const UDreamWidget* InWidget)const
 {
-	return InWidget != nullptr && RegisteredWidgets.ContainsByPredicate(
-		[InWidget](const TWeakObjectPtr<UDreamWidget>& Registered) { return Registered.Get() == InWidget; });
+	return IsValid(InWidget) && RegisteredWidgetSlots.Contains(FObjectKey(InWidget));
 }
 
 bool UDreamUIManagerWorldSubsystem::IsHeldByHost(const UDreamWidget* InRoot)const
@@ -418,6 +417,17 @@ void UDreamUIManagerWorldSubsystem::HandleLevelRemovedFromWorld(ULevel* InLevel,
 	}
 }
 
+void UDreamUIManagerWorldSubsystem::CompactRegisteredWidgets()
+{
+	RegisteredWidgets.RemoveAll([](const auto& Weak) { return !Weak.IsValid(); });
+	RegisteredWidgetSlots.Reset();
+	for (int32 Index = 0; Index < RegisteredWidgets.Num(); ++Index)
+	{
+		RegisteredWidgetSlots.Add(FObjectKey(RegisteredWidgets[Index].Get()), Index);
+	}
+	NextRegistrySweep = FMath::Max(128, RegisteredWidgets.Num() * 2);
+}
+
 void UDreamUIManagerWorldSubsystem::AddWidget(UDreamWidget* InWidget)
 {
 #if !UE_BUILD_SHIPPING && ENABLED_DreamGUI_DEBUG_DUMP
@@ -427,8 +437,13 @@ void UDreamUIManagerWorldSubsystem::AddWidget(UDreamWidget* InWidget)
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
 #endif
-	RegisteredWidgets.RemoveAll([](const TWeakObjectPtr<UDreamWidget>& Registered) { return !Registered.IsValid(); });
-	RegisteredWidgets.AddUnique(InWidget);
+	if (!IsValid(InWidget)) return;
+	if (RegisteredWidgets.Num() >= NextRegistrySweep) CompactRegisteredWidgets();
+	const FObjectKey Key(InWidget);
+	if (!RegisteredWidgetSlots.Contains(Key))
+	{
+		RegisteredWidgetSlots.Add(Key, RegisteredWidgets.Add(InWidget));
+	}
 	// A root no host holds has nobody else to keep it alive now that registering is not owning.
 	AdoptIfFreeRoot(InWidget);
 }
@@ -444,8 +459,15 @@ void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
 #endif
-	RegisteredWidgets.RemoveAll(
-		[InWidget](const TWeakObjectPtr<UDreamWidget>& Registered) { return !Registered.IsValid() || Registered.Get() == InWidget; });
+	int32 Slot;
+	if (RegisteredWidgetSlots.RemoveAndCopyValue(FObjectKey(InWidget), Slot))
+	{
+		RegisteredWidgets[Slot].Reset();
+		if (RegisteredWidgets.Num() >= 128 && RegisteredWidgetSlots.Num() <= RegisteredWidgets.Num() / 2)
+		{
+			CompactRegisteredWidgets();
+		}
+	}
 	// Unregistered is no longer the manager's to keep, whatever becomes of it: a widget moved out of a
 	// tree that came down is free to be registered where it went, and holds its own place there.
 	ForgetFreeRoot(InWidget);

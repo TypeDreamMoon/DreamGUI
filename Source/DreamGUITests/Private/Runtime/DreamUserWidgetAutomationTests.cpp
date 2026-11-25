@@ -239,6 +239,33 @@ bool FDreamUserWidgetVariableNameIsSharedTest::RunTest(const FString& Parameters
 	TestEqual(TEXT("lookup by variable name finds the widget"), Tree->FindWidgetByVariableName(FName(TEXT("Header"))), Widget);
 	TestNull(TEXT("and reports nothing for a name no widget carries"), Tree->FindWidgetByVariableName(FName(TEXT("Nope"))));
 
+	// The lookup compares without building the variable name, so it is held to the rule above case by case: it finds
+	// the widget by exactly the names MakeWidgetVariableName gives it, which ignore case as FName does, and no other.
+	struct FLookupCase
+	{
+		const TCHAR* DisplayName;
+		const TCHAR* Finds;
+		const TCHAR* Misses;
+	};
+	const FLookupCase Cases[] = {
+		{ TEXT("Play Button"), TEXT("play_button"), TEXT("Play Button") },
+		{ TEXT("2ndPanel"), TEXT("_2ndPanel"), TEXT("2ndPanel") },
+		{ TEXT("确定按钮"), TEXT("确定按钮"), TEXT("确定") },
+		{ TEXT(""), TEXT("Element"), TEXT("") },
+		{ TEXT("Row_2"), TEXT("Row_2"), TEXT("Row_3") },
+		{ TEXT("a-b.c"), TEXT("A_B_C"), TEXT("a_b") },
+	};
+	for (const FLookupCase& Case : Cases)
+	{
+		Widget->SetDisplayName(Case.DisplayName);
+		TestEqual(FString::Printf(TEXT("'%s' is found as %s"), Case.DisplayName, Case.Finds),
+			Tree->FindWidgetByVariableName(FName(Case.Finds)), Widget);
+		TestTrue(FString::Printf(TEXT("'%s' gets that variable name"), Case.DisplayName),
+			UDreamWidgetTree::MakeWidgetVariableName(Widget) == FName(Case.Finds));
+		TestNull(FString::Printf(TEXT("'%s' is not found as '%s'"), Case.DisplayName, Case.Misses),
+			Tree->FindWidgetByVariableName(FName(Case.Misses)));
+	}
+
 	return true;
 }
 
