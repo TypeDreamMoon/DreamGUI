@@ -113,7 +113,8 @@ void FDreamUIMaterialProxy::SetParameters_GameThread(const FDreamUIMaterialParam
 		{
 			Proxy->RenderThreadParameters = MoveTemp(Parameters);
 			// What the material shaders read: made again from the new values, the proxy made a render resource on the way.
-			Proxy->CacheUniformExpressions(RHICmdList, false);
+			// The buffers are made anew, not updated, when the parent changed since they were made.
+			Proxy->CacheUniformExpressions(RHICmdList, Proxy->TakeParentChange_RenderThread());
 		});
 }
 
@@ -134,8 +135,35 @@ void FDreamUIMaterialProxy::FollowSource_RenderThread(FRHICommandListBase& RHICm
 	// updater's task and broadcasts editor invalidations, from a gathering of dynamic meshes that may run on a task. The
 	// passes a graph still executes asynchronously read this cache, so they are waited for first, as the update does.
 	FRDGBuilder::WaitForAsyncExecuteTask();
-	UniformExpressionCache[InFeatureLevel].CachedUniformExpressionShaderMap = nullptr;
+	FUniformExpressionCache& Cache = UniformExpressionCache[InFeatureLevel];
+	Cache.CachedUniformExpressionShaderMap = nullptr;
+	// A different parent -- the source's render proxy appearing or going, the default material standing in, the source
+	// reparented -- is a different material: the buffers made for the old one have its layout, and are made again here
+	// rather than updated. As CacheUniformExpressions(true) would, without its waits and editor broadcasts.
+	if (TakeParentChange_RenderThread(InFeatureLevel))
+	{
+		Cache.UniformBuffer = nullptr;
+		Cache.UniformBufferVS = nullptr;
+	}
 	UpdateUniformExpressionCacheIfNeeded(RHICmdList, InFeatureLevel);
+}
+
+bool FDreamUIMaterialProxy::TakeParentChange_RenderThread(ERHIFeatureLevel::Type InFeatureLevel)
+{
+	const FMaterialRenderProxy* Parent = GetParent();
+	const bool bChanged = UniformBufferParents[InFeatureLevel] != Parent;
+	UniformBufferParents[InFeatureLevel] = Parent;
+	return bChanged;
+}
+
+bool FDreamUIMaterialProxy::TakeParentChange_RenderThread()
+{
+	bool bChanged = false;
+	for (int32 LevelIndex = 0; LevelIndex < ERHIFeatureLevel::Num; ++LevelIndex)
+	{
+		bChanged |= TakeParentChange_RenderThread(static_cast<ERHIFeatureLevel::Type>(LevelIndex));
+	}
+	return bChanged;
 }
 
 void FDreamUIMaterialProxy::LetGoOfUnreachable()
@@ -167,11 +195,10 @@ void FDreamUIMaterialProxy::LetGoOfUnreachable()
 		ENQUEUE_RENDER_COMMAND(FDreamUIMaterialProxyLetGo)(
 			[Proxy, Source = Proxy->GameThreadSource, Parameters = Proxy->GameThreadParameters](FRHICommandListImmediate& RHICmdList) mutable
 			{
-				// Losing the source changes the parent to the default material, not just its parameters.
-				const bool bParentChanged = Proxy->RenderThreadSource != Source;
 				Proxy->RenderThreadSource = Source;
 				Proxy->RenderThreadParameters = MoveTemp(Parameters);
-				Proxy->CacheUniformExpressions(RHICmdList, bParentChanged);
+				// Losing the source changes the parent to the default material, not just its parameters.
+				Proxy->CacheUniformExpressions(RHICmdList, Proxy->TakeParentChange_RenderThread());
 			});
 	}
 }
