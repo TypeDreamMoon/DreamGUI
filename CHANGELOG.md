@@ -11,9 +11,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
-- **Android arm64:** A UE 5.8.4 Development demo built, cooked and ran on a handset. Runtime sprites no longer own their cached atlas page, and a render proxy recreates its uniform buffer when it falls back to another parent material. Cold text reserves its advance while worker-supported field glyphs are prepared off the game thread by default on Android.
-
 ### New
+
+- **Android arm64 builds, cooks and runs on a handset.** A UE 5.8.4 Development game built with Android clang, its content
+  cooked to ETC2 for OpenGL ES 3.1 and Vulkan ES 3.1 with no errors or warnings, and the signed gallery ran on one
+  handset. Not a Shipping, Meta Quest or full-suite run; see [Platforms](Docs/guides/platforms.md).
 
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
@@ -437,6 +439,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **Cold text on Android waits for the worker, not the frame.** With asynchronous glyph rasterization on, Android
+  generates no outline-field glyphs on the game thread by default: an uncached glyph the worker supports reserves its
+  advance at once and its ink appears when the worker finishes; cached glyphs are not delayed. In one handset run the
+  longest cold layout pass fell from about 710 ms to 5 ms. The allowance is a setting of its own,
+  `AndroidAsyncGlyphSyncBudgetPerFrame` (0, Meta Quest included), beside `AsyncGlyphSyncBudgetPerFrame` (24, every other
+  platform). See [Fonts and packaging](Docs/guides/fonts-and-packaging.md#cold-text-on-android).
 - **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
   slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
   `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way
@@ -608,6 +616,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A sprite keeps its atlas page, and a material that falls back keeps drawing.** Both stopped the gallery on an
+  Android handset. A runtime sprite no longer owns its cached atlas page -- the atlas does -- and a sprite whose page was
+  collected looks it up again. A draw's material proxy whose parent material changed -- its source collected and the
+  default material standing in, or the source's render proxy appearing -- updated a uniform buffer laid out for the old
+  one, which a cooked build checks and stops on; it makes the buffer again.
 - **A control you resized keeps its size.** A Button, TextInput, SpinBox, Dropdown, ProgressBar, scroll bar, Toggle,
   RadioButton or key selector dragged taller in the designer -- or given a height in a `.dui` or the details panel --
   went back to its style's height on the next compile, preview rebuild or any edit that rebuilt it (a Tool Tip Text, say):
