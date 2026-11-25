@@ -75,6 +75,14 @@ description: UDreamCanvas 做什么——把子树合批为绘制调用——包
 - 屏幕页面：`AddToViewport` 的 `InSortOrder` 对页面之间进行排序。1000（`StackBaseSortOrder`）及以上保留给页面栈，页面栈在每次刷新时重写其页面的排序顺序；放在该区间的独立页面相对栈的绘制顺序未定义，因此请求这样做会记录一条警告。
 - 在世界空间画布之间，`UDreamWorldWidgetComponent::SortOrder` 被写入到根画布。
 
+<a id="opening-a-large-screen-over-several-frames"></a>
+
+## 跨多帧打开大屏幕
+
+用控件的软类、可选的本地控制器和排序顺序在屏幕 UI 子系统上调用 `OpenScreenBudgeted`。立即在返回的请求上绑定 `OnFinished`。`GetPage` 只在 `Ready` 中返回已发布的实例；`Failed` 和 `Cancelled` 没有页面。已在销毁中的世界会拒绝提交（空句柄）。当导航意图发生变化时调用 `Cancel`。取消只在调度边界生效，绝不会在回调中途生效。世界拥有待处理的请求，调用方不必预热类、保留实例或管理缓存。
+
+游戏世界的待处理页面和本地玩家每帧共享同一份游戏线程预算。Dream GUI 项目设置中的 `CreationFrameTargetMs`（默认 **33.3 ms**）是创建过程可填充到的帧时间：每帧取上一帧游戏线程在目标时间内的剩余量，减去 8 ms，绝不超过目标的一半，也绝不少于 `CreationBudgetMs`（**2 ms**）。将目标设为 0 可使用固定的 `CreationBudgetMs`。构建完成的页面在其玩家屏幕尚未激活时、于某一帧开始时附加，并在下一帧开始时启用和发布；发布的那一帧不再做其他创建工作，因为画布会在该帧稍后构建整个页面的几何体。这是协作式的游戏线程调度，而非后台 UObject 工厂或硬性帧限制。资源加载是异步的。引擎的实例化操作、原生或蓝图回调，或发布及其观察者都可能超出预算；在 Verbose 级别下 `DreamGUI` 会记录每个超出的步骤，每个已发布的页面都会记录一行 `Budgeted screen`，包含各阶段耗时。Ready 表示已附加，不代表 GPU 已呈现了一帧。在进入 Ready 之前保持当前页面可用；把导航和焦点变更留给该回调。`AddToViewport`、同步创建和 `PushPageAsync` 保持其现有约定。
+
 <a id="render-target-canvases"></a>
 
 ## 渲染目标画布

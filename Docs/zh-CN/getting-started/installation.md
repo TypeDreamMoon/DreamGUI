@@ -8,7 +8,7 @@ DreamGUI 的装法和别的项目插件一样：克隆进项目的 `Plugins/`，
 | | |
 | --- | --- |
 | 引擎 | Unreal Engine `5.8`，源码构建或 Epic 启动器安装版均可。源码也可在 `5.5` 和 `5.6` 上编译，但尚未在这些版本上运行（参见 [Engine versions](../guides/platforms.md#engine-versions)） |
-| 平台 | Win64 是唯一构建并运行过的平台（见[平台](../guides/platforms.md)） |
+| 平台 | Win64 已跑通完整的自动化测试套件；Android arm64 已在一台真机上做过一次冒烟测试（见[平台](../guides/platforms.md)） |
 | 依赖插件 | `EnhancedInput`，`.uplugin` 里自己启用 |
 | 运行时模块 | `DreamGUIRenderer`、`DreamGUI`、`DreamGUIInput`、`DreamGUIControls`、`DreamGUIExtensions`、`DreamGUISamples`（`PostConfigInit`）；`DreamTween`（`Default`） |
 | 只在未烹饪环境加载 | `DreamGUIEditor`、`DreamGUIK2Nodes`（`UncookedOnly`） |

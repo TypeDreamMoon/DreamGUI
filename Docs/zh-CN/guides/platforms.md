@@ -1,15 +1,16 @@
 ---
 title: 平台与状态
-description: 声称支持的平台和真正运行过的平台分开列出——Win64 是唯一构建并运行过的平台；发布闸门、移动端与专用服务器的实际状况、测试覆盖范围以及已知缺口。
+description: 声称支持的平台和真正运行过的平台分开列出——Win64 有自动化测试套件；Android arm64 有真机冒烟测试；发布闸门、移动端与专用服务器的实际状况、测试覆盖范围以及已知缺口。
 ---
 
-*声称*支持的平台和*真正运行*过的平台是不同的清单，因此两者都列在这里。**Win64 是唯一构建并运行过的平台。**
+*声称*支持的平台和*真正运行*过的平台是不同的清单，因此两者都列在这里。**Win64 有完整的自动化测试套件；Android 已在一台 arm64 真机上试过。**
 
 | | 编译过 | 运行过 |
 | --- | --- | --- |
 | **Win64** | 编辑器；游戏目标的 Development 与 Shipping | **编辑器加整套自动化测试**；打包的 Development 游戏——在发布闸门为该版本运行过打包文本冒烟测试之后 |
 | Mac、Linux | 从未 | 从未——这里没有对应的机器或工具链 |
-| iOS、Android | 从未 | 从未——这里没有 SDK，也从未在真机上运行过 |
+| Android arm64 | UE 5.8.4 Development 游戏；为 OpenGL ES 3.1 和 Vulkan ES 3.1 烹饪 ETC2 | 一个已签名的演示 APK 在一台真机上运行过；不是 Shipping、Quest 或完整套件验证 |
+| iOS | 从未 | 从未 |
 | 主机 | 否 | 不在任何模块的 `PlatformAllowList` 中 |
 | 专用服务器 | 从未——没有构建过服务器目标 | 否 |
 
@@ -49,25 +50,49 @@ description: 声称支持的平台和真正运行过的平台分开列出——W
 1. **BuildPlugin**，为编辑器和 Development 与 Shipping 的游戏目标编译插件；
 2. **测试宿主的打包文本冒烟测试**，它烹饪并打包一个 Development 游戏，运行它，并将其绘制内容与在未烹饪内容上运行的同一构建进行比对（见插件的 `Tools/TestHost/README.md` 和[字体与打包](fonts-and-packaging.md#5-checking-a-package)）。
 
-在一个版本经过闸门之前，该版本没有任何打包后的游戏被运行过。
+在一个版本通过闸门之前，该版本没有任何打包后的 Win64 游戏被运行过。Android Development APK 冒烟测试与这个发布闸门是分开的：它不属于给版本打标签的流程。
 
 <a id="what-the-listed-platforms-mean"></a>
 
 ## 列出的平台意味着什么
 
-每个模块的 `PlatformAllowList` 和描述符的 `SupportedTargetPlatforms` 列出了代码所面向的五个平台——Win64、Mac、Linux、IOS、Android——并且有一个测试让两者保持一致；`DreamGUIEditor` 和 `DreamGUIK2Nodes` 只列出 Win64、Mac 和 Linux。它们说明的是构建工具会*尝试*编译什么、烹饪器会烹饪什么，而不是有人在这些平台上编译、运行或发布过：着色器、文本所使用的引擎第三方库以及 C++（clang 与 MSVC 不同，会将警告视为错误）都只为 Win64 构建过。
+每个模块的 `PlatformAllowList` 和描述符的 `SupportedTargetPlatforms` 列出了代码所面向的五个平台——Win64、Mac、Linux、IOS、Android——并且有一个测试让两者保持一致；`DreamGUIEditor` 和 `DreamGUIK2Nodes` 只列出 Win64、Mac 和 Linux。它们说明的是构建工具会*尝试*编译什么、烹饪器会烹饪什么。实际检查过的构建和运行见上表。
 
 <a id="mobile"></a>
 
 ## 移动端
 
-有些代码路径从未运行过：
+真机冒烟测试并不等于完整的移动端覆盖：
 
 - 触摸已端到端接通（`BindTouch` → 独立输入模块）；
 - 虚拟键盘已实现（`FPlatformApplicationMisc::RequiresVirtualKeyboard` → `ShowVirtualKeyboard`）；
 - 渲染器中唯一一处实际生效的平台分支会为 Android GLES 翻转剔除设置。
 
 GLES 上*不*提供 MSAA，渲染器会回退而不是假装支持——见 *Project Settings ▸ Plugins ▸ DreamUI* 中的 `AntiAliasingMethod`。
+
+<a id="pipeline-compiles"></a>
+
+### 管线编译
+
+一条尚未被任何人编译过的图形管线，会由第一次用它绘制的帧来编译。在桌面 GPU 上这只有几毫秒；而手机的 Vulkan 驱动编译一条可能要花上几秒，并且引擎只有在编译于绘制时的管线积累到填满其缓存的一个块（`r.Vulkan.ChunkedPSOCache.MaxSingleCachePSOCount`）时才把它们写入磁盘，因此同一帧可能在每次启动时都卡顿。
+
+DreamGUI 将自己的管线交给引擎的 PSO 预缓存。第一次绘制到某个给定格式与采样数的目标时，它会收集其着色器能用来绘制到该目标的全部管线——批次、合成器、后处理、背景效果、背景模糊、像素排序和图层样式，各自绘制到目标本身，并以单采样绘制到它们所用的工作纹理，以及输出为 HDR 时的 HDR 编码——然后一次性请求它们全部；预缓存的工作线程会在帧继续推进的同时编译它们。它在首次绘制时而不是在启动时做这件事，因为只有那时目标才是已知的：在没有移动 HDR 的手机上，那就是后备缓冲区的格式、多采样，而启动时没有任何东西能说明这一点。
+
+引擎只通过已注册的收集器来预缓存全局着色器的管线，而在 Android 或 iOS 上从不会调用它们（`BaseEngine.ini` 中的 `GlobalShaderMode=0`），因此 DreamGUI 在所有平台上都自行请求。
+
+| 设置 | |
+| --- | --- |
+| `dreamgui.PSOPrecache` | `1`（默认）开启；`0` 关闭，每条管线由第一次用它绘制的帧编译；`2` 开启，并记录它为其预缓存的每个目标 |
+| `r.PSOPrecaching` | 引擎的开关；当它为 `0` 时不会预缓存任何内容，在不预缓存 PSO 的 RHI 上也是如此 |
+
+每次请求都会在 `LogDreamGUIRenderer` 下记录一行：`Precaching 169 DreamGUI graphics pipelines (4 first) for a target of PF_R8G8B8A8, 4 sample(s), gathered in 25.52 ms.`
+
+它没有覆盖的内容：
+
+- 画布绘制时所用材质的管线——它们属于材质，而不是 DreamGUI；
+- 第一次绘制到某个目标的那一帧本身就需要的管线：它在那一帧才被请求，来不及完成。在安装后的首次启动中，这在手机上可能长达数秒；随游戏一起打包的管线缓存（引擎的 `PipelineFileCache`）才是覆盖它的手段。
+
+在一个演示项目中、于发布门禁之外，在一台 Android 手机（Vulkan，4 采样）上测得：热启动打开每个界面时，帧内都没有任何管线编译，而首次启动曾花费 3.2 s。
 
 <a id="dedicated-server"></a>
 

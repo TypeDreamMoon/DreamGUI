@@ -75,6 +75,7 @@ Widget Panel {
 - **回退字面。** `Fallbacks` 中的每一项（`FDreamUIFontFallback`）都有 `Font`、`Ranges`（码点）、`Cultures`（适用的语言）、一个 `Scale` 和 `bPreferOverPrimary`。旧的 `FallbackFontArray` 在加载时会转成使用默认设置的 `Fallbacks` 项。中文文化名会被补回书写体系（`zh-Hans`、`zh-Hant`），因此针对它们编写的回退在打包后的游戏中也能匹配。
 - **没有任何字型包含的字符。** 当某个字符既不在字体自身的字型中，也不在其任何回退项中时，DreamGUI 会针对该字体记录一次警告，并指出码点（`has no glyph for U+4E2D`），文本会在对应位置显示一个方框或不显示任何内容。请为文本指定一个覆盖该字符的字体，或为该字体添加一个回退项。默认字体通过 `/DreamGUI/DefaultFont_DistanceField_CJK` 覆盖中文、日文和韩文；而你自己仅覆盖拉丁字符的字体则不会，这通常是该警告的常见原因。
 - **轮廓重叠。** 一个字形若由相互交叠的独立笔画绘制而成——可变字体绘制其字形的方式，以及从可变字体切出的静态实例在未移除重叠时保留这些笔画的方式——在笔画交叉处的距离场中可能出现缺口或接缝；一条自身回绕的轮廓可能整块丢失。它的轮廓是正确的，FreeType 填充它也是正确的；无法跟随它的是场生成器。DreamGUI 会测量它光栅化的每个字形的重叠，并对每个字体警告一次，指出第一个这样的字形及其文件（引擎自带的字体，例如默认 CJK 回退字体，只在日志中说明）。从文件中移除重叠并改用该文件：先 `pip install fonttools skia-pathops`，再 `python -c "from fontTools.ttLib import TTFont; from fontTools.ttLib.removeOverlaps import removeOverlaps; f = TTFont('in.ttf'); removeOverlaps(f); f.save('out.ttf')"`，或用 `fonttools varLib.instancer --remove-overlaps` 切出实例。
+- **新字形由工作线程生成。** 启用 `bAsyncGlyphRasterization`（默认开启）时，尚未加入图集的轮廓字形会按实际步进进行布局，并在工作线程生成后绘制。一帧仍会在游戏线程上生成一些这样的字形，以便短标签能完整显示：最多 `AsyncGlyphSyncBudgetPerFrame`（24）个，并且只有当它花在这些字形上的时间加上最近一个字形耗费的时间保持在 `AsyncGlyphSyncBudgetMs`（2 ms）以内时才会生成。一个拉丁字母只耗费不到一毫秒，而一个 CJK 距离场要耗费几毫秒，因此在一页全新的中文文本上，生成一两个字形后，时间就会成为限制。小字号覆盖字形有自己的数量上限，`CoverageGlyphSyncBudgetPerFrame`（48）。
 - **彩色 emoji**：CBDT/CBLC、sbix 和 COLRv0；`bPreferColorEmoji` 默认开。阴影、描边和长阴影修改器给彩色 emoji 做的拷贝是剪影。
 
 怎么随游戏发出字体文件、彩色 emoji 字体和 ICU 数据，见[字体与打包](../guides/fonts-and-packaging.md)。
