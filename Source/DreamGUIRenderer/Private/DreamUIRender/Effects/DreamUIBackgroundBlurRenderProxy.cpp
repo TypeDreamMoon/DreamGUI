@@ -3,6 +3,7 @@
 
 #include "DreamUIRender/DreamUIPostProcessEffects.h"
 #include "DreamUIRender/DreamUIBackdropEffects.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
 #include "DreamUIBackdropEffectPasses.h"
 #include "Engine/Texture.h"
@@ -180,13 +181,7 @@ public:
 				SourceTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				DreamUIPipelines::InitPostProcessQuad(GraphicsPSOInit, VertexShader.GetVertexShader(), PixelShader.GetPixelShader());
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 				//render vertical
 				RHICmdList.SetViewport(0, 0, 0.0f, BlurTexture->Desc.Extent.X, BlurTexture->Desc.Extent.Y, 1.0f);
@@ -210,13 +205,7 @@ public:
 				BlurTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				DreamUIPipelines::InitPostProcessQuad(GraphicsPSOInit, VertexShader.GetVertexShader(), PixelShader.GetPixelShader());
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 				//render horizontal
 				RHICmdList.SetViewport(0, 0, 0.0f, SourceTexture->Desc.Extent.X, SourceTexture->Desc.Extent.Y, 1.0f);

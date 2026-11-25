@@ -2,7 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
+#include "DreamUIRender/DreamUIPostProcessVertex.h"
 #include "Rendering/Texture2DResource.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "Engine/Texture.h"
@@ -236,13 +238,7 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+			DreamUIPipelines::InitRenderMesh(GraphicsPSOInit, GlobalShaderMap, bMask, IsWorldSpace, IsWorldSpace && DepthFadeForWorld > 0);
 			GraphicsPSOInit.NumSamples = NumSamples;
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::ForceApply);
 
@@ -281,4 +277,47 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 			RHICmdList.DrawIndexedPrimitive(GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, RenderMeshRegionToScreenVertexArray.Num(), 0, 2, 1);
 			VertexBufferRHI.SafeRelease();
 		});
+}
+
+void DreamUIPipelines::InitRenderMesh(FGraphicsPipelineStateInitializer& Init, FGlobalShaderMap* ShaderMap, bool bMask, bool bWorldSpace, bool bDepthFade)
+{
+	FDreamUIRenderMeshVS::FPermutationDomain VertexPermutation;
+	VertexPermutation.Set<FDreamUIRenderMeshVS::FBlendDepth>(bWorldSpace);
+	TShaderMapRef<FDreamUIRenderMeshVS> VertexShader(ShaderMap, VertexPermutation);
+	FDreamUIRenderMeshPS::FPermutationDomain PixelPermutation;
+	PixelPermutation.Set<FDreamUIRenderMeshPS::FMask>(bMask);
+	PixelPermutation.Set<FDreamUIRenderMeshPS::FBlendDepth>(bWorldSpace);
+	PixelPermutation.Set<FDreamUIRenderMeshPS::FDepthFade>(bDepthFade);
+	TShaderMapRef<FDreamUIRenderMeshPS> PixelShader(ShaderMap, PixelPermutation);
+	Init.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+	Init.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+	Init.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();
+	Init.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
+	Init.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+	Init.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+	Init.PrimitiveType = EPrimitiveType::PT_TriangleList;
+}
+
+void DreamUIPipelines::CollectVisualPostProcess(FCollector& Collector)
+{
+	// The result drawn back onto the canvas, or the group, it was taken from: with or without a mask, screen or world space.
+	for (int32 Bits = 0; Bits < 8; ++Bits)
+	{
+		const bool bMask = (Bits & 1) != 0;
+		const bool bWorldSpace = (Bits & 2) != 0;
+		const bool bDepthFade = (Bits & 4) != 0;
+		FDreamUIRenderMeshVS::FPermutationDomain VertexPermutation;
+		VertexPermutation.Set<FDreamUIRenderMeshVS::FBlendDepth>(bWorldSpace);
+		FDreamUIRenderMeshPS::FPermutationDomain PixelPermutation;
+		PixelPermutation.Set<FDreamUIRenderMeshPS::FMask>(bMask);
+		PixelPermutation.Set<FDreamUIRenderMeshPS::FBlendDepth>(bWorldSpace);
+		PixelPermutation.Set<FDreamUIRenderMeshPS::FDepthFade>(bDepthFade);
+		if (!Collector.Find<FDreamUIRenderMeshVS>(VertexPermutation).IsValid() || !Collector.Find<FDreamUIRenderMeshPS>(PixelPermutation).IsValid())
+		{
+			continue;
+		}
+		FGraphicsPipelineStateInitializer Init;
+		InitRenderMesh(Init, Collector.ShaderMap, bMask, bWorldSpace, bDepthFade);
+		Collector.Add(Init, Collector.AnyTargets, Bits == 0 ? EPSOPrecachePriority::Medium : EPSOPrecachePriority::Low);
+	}
 }

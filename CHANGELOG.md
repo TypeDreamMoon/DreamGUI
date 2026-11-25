@@ -13,6 +13,18 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **DreamGUI's own pipelines are compiled before the frame that first draws with them.** The first time DreamGUI
+  draws into a target of a given format and sample count, it gathers every graphics pipeline its own shaders can draw
+  into that target with -- the batches, the compositor, post-process, backdrop effects, background blur, pixel sort,
+  layer styles, and the HDR encode when the output is HDR -- and hands them to the engine's PSO precache, whose worker
+  threads compile them. A screen that opens later finds them compiled, instead of holding a frame for the driver. The
+  engine never calls a registered global-shader collector on Android or iOS (`GlobalShaderMode=0` in `BaseEngine.ini`),
+  so DreamGUI asks for its own on every platform. It needs an RHI that precaches PSOs and `r.PSOPrecaching` on;
+  `dreamgui.PSOPrecache` turns it off (`0`) or also logs the targets (`2`). On one Android handset (Vulkan, 4 samples)
+  that is 169 pipelines, gathered in about 25 ms on the render thread, and a warm launch opened every screen of a demo
+  without a pipeline compile in a frame, where the first had cost 3.2 s. See
+  [Pipeline compiles](Docs/guides/platforms.md#pipeline-compiles).
+
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
   The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.

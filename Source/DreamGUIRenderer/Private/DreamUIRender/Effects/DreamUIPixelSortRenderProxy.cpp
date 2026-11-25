@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIRender/DreamUIPostProcessEffects.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRendererLogging.h"
@@ -137,13 +138,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				SourceTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer PSOInit;
 				RHICmdList.ApplyCachedRenderTargets(PSOInit);
-				PSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				PSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				PSOInit.BlendState = TStaticBlendState<>::GetRHI();
-				PSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-				PSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				PSOInit.BoundShaderState.PixelShaderRHI = RankShader.GetPixelShader();
-				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				DreamUIPipelines::InitPostProcessQuad(PSOInit, VertexShader.GetVertexShader(), RankShader.GetPixelShader());
 				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
 				RHICmdList.SetViewport(0, 0, 0.0f, DestinationTexture->Desc.Extent.X, DestinationTexture->Desc.Extent.Y, 1.0f);
 				FDreamUIPostProcessPixelSortRankPS::FParameters Parameters;
@@ -175,13 +170,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				DestinationTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer PSOInit;
 				RHICmdList.ApplyCachedRenderTargets(PSOInit);
-				PSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				PSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				PSOInit.BlendState = TStaticBlendState<>::GetRHI();
-				PSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-				PSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				PSOInit.BoundShaderState.PixelShaderRHI = GatherShader.GetPixelShader();
-				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				DreamUIPipelines::InitPostProcessQuad(PSOInit, VertexShader.GetVertexShader(), GatherShader.GetPixelShader());
 				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
 				RHICmdList.SetViewport(0, 0, 0.0f, ResultRDGTexture->Desc.Extent.X, ResultRDGTexture->Desc.Extent.Y, 1.0f);
 				FDreamUIPostProcessPixelSortGatherPS::FParameters Parameters;
