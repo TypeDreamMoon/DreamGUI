@@ -39,6 +39,7 @@ static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 #include "DreamUIRender/DreamUIMeshVertex.h"
 #include "DreamUIRender/DreamUIGizmoMesh.h"
 #include "DreamUIRender/DreamUIPostProcessVertex.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamGUIEngineCompat.h"
 
 DEFINE_LOG_CATEGORY(LogDreamGUIRenderer);
@@ -459,25 +460,13 @@ namespace DreamUIRendererLocal
 				const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
 				RHICmdList.SetViewport(0, 0, 0, DestinationExtent.X, DestinationExtent.Y, 1.0f);
 
-				TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 				FDreamUISimpleCopyTargetPS::FPermutationDomain PermutationVector;
 				PermutationVector.Set<FDreamUISimpleCopyTargetPS::FColorCorrect>(bColorCorrect);
 				PermutationVector.Set<FDreamUISimpleCopyTargetPS::FBlendAlpha>(bBlendAlpha);
 				TShaderMapRef<FDreamUISimpleCopyTargetPS> PixelShader(GlobalShaderMap, PermutationVector);
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				GraphicsPSOInit.BlendState = bBlendAlpha
-					? (bPremultipliedAlpha
-						? TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceAlpha, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI()
-						: TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI())
-					: TStaticBlendState<>::GetRHI();
-				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-				GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+				DreamUIPipelines::InitCopyTarget(GraphicsPSOInit, GlobalShaderMap, bColorCorrect, bBlendAlpha, bPremultipliedAlpha);
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
 				FDreamUISimpleCopyTargetPS::FParameters Parameters;
@@ -567,32 +556,23 @@ void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
 	auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
 	PassParameters->SourceTexture = SourceTexture;
 	PassParameters->RenderTargets[0] = FRenderTargetBinding(Dst, ERenderTargetLoadAction::EClear);
-	auto NumSamples = Dst->Desc.NumSamples;
 
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("DreamUICopyRenderTargetOnMeshRegion"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[SourceTexture, GlobalShaderMap, RegionVertexData, MVP, bIsRenderTarget, ViewRect, SrcTextureScaleOffset, NumSamples, ColorCorrect](FRHICommandListImmediate& RHICmdList)
+		[SourceTexture, GlobalShaderMap, RegionVertexData, MVP, bIsRenderTarget, ViewRect, SrcTextureScaleOffset, ColorCorrect](FRHICommandListImmediate& RHICmdList)
 		{
 			SourceTexture->MarkResourceAsUsed();
 			auto SourceRHI = SourceTexture->GetRHI();
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			TShaderMapRef<FDreamUICopyMeshRegionVS> VertexShader(GlobalShaderMap);
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessCopyMeshRegionVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-			GraphicsPSOInit.NumSamples = NumSamples;
+			DreamUIPipelines::InitCopyMeshRegion(GraphicsPSOInit, GlobalShaderMap, ColorCorrect);
 			FDreamUICopyMeshRegionPS::FPermutationDomain PermutationVector;
 			PermutationVector.Set<FDreamUICopyMeshRegionPS::FColorCorrect>(ColorCorrect);
 			TShaderMapRef<FDreamUICopyMeshRegionPS> PixelShader(GlobalShaderMap, PermutationVector);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
 			FDreamUICopyMeshRegionPS::FParameters Parameters;
@@ -935,26 +915,10 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 		}
 	}
 
-	/**
-	 * The shader outputs premultiplied colour; two-sided like the UI materials it replaces.
-	 *
-	 * Two-step on purpose. The depth/stencil/rasterizer half comes from the shared helper with
-	 * BLEND_AlphaComposite, which is what every built-in draw used to be nailed to; then the blend
-	 * state alone is replaced by the one this draw-call asked for. Per-element blend modes are safe
-	 * to set here because the batcher never puts two different ones in one draw-call -- see
-	 * FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh.
-	 */
 	// Set only when it differs from the one the pass's last built-in draw set: nothing else of it changes between draws.
 	if (InOutCache == nullptr || !InOutCache->Pipeline.Matches(BlendMode, bIsDepthValid, Mesh.ReverseCulling, Permutation, NumSamples))
 	{
-		SetGraphicPipelineState_BlendDepthStencilRasterize(FeatureLevel, GraphicsPSOInit, BLEND_AlphaComposite
-			, false, true, false, bIsDepthValid, Mesh.ReverseCulling
-		);
-		GraphicsPSOInit.BlendState = GetBuiltInBlendState(BlendMode);
-		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-		GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+		DreamUIPipelines::InitBuiltIn(GraphicsPSOInit, FeatureLevel, VertexShader.GetVertexShader(), PixelShader.GetPixelShader(), BlendMode, bIsDepthValid, Mesh.ReverseCulling);
 		GraphicsPSOInit.NumSamples = NumSamples;
 		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 		if (InOutCache != nullptr)
@@ -1139,6 +1103,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	{
 		return;
 	}
+	// Every pipeline DreamGUI could draw into this target with, the first time it draws into one like it (DreamUIPipelinePrecache.cpp).
+	DreamUIPipelines::PrecacheForCanvas(InView.GetFeatureLevel(), Targets.ScreenColorRenderTargetTexture->GetFormat(), Targets.ScreenColorRenderTargetTexture->GetFlags()
+		, Targets.NumSamples, Targets.HDROutput.IsActive());
 	RecordWorldSpace_RenderThread(GraphBuilder, InView, Targets);
 	RecordScreenSpace_RenderThread(GraphBuilder, InView, Targets);
 	Resolve_RenderThread(GraphBuilder, InView, Targets);
@@ -2580,10 +2547,7 @@ void FDreamUIRenderer::AddResolvePass(
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+			DreamUIPipelines::InitResolve(GraphicsPSOInit, GlobalShaderMap, NumSamples);
 
 			const FIntPoint SceneColorExtent = SceneColorTargetable->Desc.Extent;
 
@@ -2591,14 +2555,9 @@ void FDreamUIRenderer::AddResolvePass(
 			RHICmdList.SetViewport(0.0f, 0.0f, 0.0f, SceneColorExtent.X, SceneColorExtent.Y, 1.0f);
 			RHICmdList.SetScissorRect(true, ViewRect.Min.X, ViewRect.Min.Y, ViewRect.Max.X, ViewRect.Max.Y);
 
-			TShaderMapRef<FDreamUIResolveShaderVS> VertexShader(GlobalShaderMap);
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetVertexDeclarationFVector4();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 			FDreamUIResolveShaderPS::FPermutationDomain PermutationVector;
 			PermutationVector.Set<FDreamUIResolveShaderPS::FSampleCount>(NumSamples);
 			TShaderMapRef<FDreamUIResolveShaderPS> PixelShader(GlobalShaderMap, PermutationVector);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 			FDreamUIResolveShaderPS::FParameters Parameters;
 			Parameters.Tex = SceneColorTargetableRHI;
@@ -2865,14 +2824,8 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				// Straight alpha over the scene, two-sided, no depth: helper geometry is an overlay.
-				FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, BLEND_AlphaComposite
-					, false, true, true, false, false);
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+				DreamUIPipelines::InitGizmo(GraphicsPSOInit, RenderView->GetFeatureLevel(), GlobalShaderMap, PrimitiveType);
 				GraphicsPSOInit.NumSamples = NumSamples;
-				GraphicsPSOInit.PrimitiveType = PrimitiveType;
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
 				FDreamUIBaseVS::FParameters VSParameters;

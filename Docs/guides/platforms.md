@@ -74,6 +74,42 @@ The handset smoke test does not establish full mobile coverage:
 MSAA is *not* available on GLES, and the renderer falls back rather than pretending — see `AntiAliasingMethod` in
 *Project Settings ▸ Plugins ▸ DreamUI*.
 
+### Pipeline compiles
+
+A graphics pipeline nobody has compiled yet is compiled by the frame that first draws with it. On a desktop GPU that is
+milliseconds; a phone's Vulkan driver can take seconds for one, and the engine writes a pipeline compiled at draw time
+to disk only once enough of them fill a chunk of its cache (`r.Vulkan.ChunkedPSOCache.MaxSingleCachePSOCount`), so the
+same frame can stall on every launch.
+
+DreamGUI hands its own pipelines to the engine's PSO precache. The first time it draws into a target of a given format
+and sample count, it gathers every pipeline its shaders can draw into that target with — the batches, the compositor,
+post-process, backdrop effects, background blur, pixel sort and layer styles, each into the target itself and,
+single-sampled, into the work textures they use, and the HDR encode when the output is HDR — and requests them all;
+the precache's worker threads compile them while the frames go on. It does this when it first draws rather than at
+startup because only then is the target known: on a phone without mobile HDR it is the back buffer's format,
+multisampled, which nothing at startup says.
+
+The engine precaches global shaders' pipelines only through registered collectors, and never calls them on Android or
+iOS (`GlobalShaderMode=0` in `BaseEngine.ini`), so DreamGUI requests its own on every platform.
+
+| Setting | |
+| --- | --- |
+| `dreamgui.PSOPrecache` | `1` (default) on; `0` off, each pipeline is compiled by the first frame that draws with it; `2` on, and logs each target it precaches for |
+| `r.PSOPrecaching` | The engine's switch; nothing is precached while it is `0`, or on an RHI that does not precache PSOs |
+
+Each request logs one line under `LogDreamGUIRenderer`:
+`Precaching 169 DreamGUI graphics pipelines (4 first) for a target of PF_R8G8B8A8, 4 sample(s), gathered in 25.52 ms.`
+
+What it does not cover:
+
+- the pipelines of materials a canvas draws with — they are the material's, not DreamGUI's;
+- a pipeline the very frame that first draws into a target needs: it is requested on that frame and is not done in
+  time. On the first launch after an install that can be seconds on a phone; a pipeline cache packaged with the game
+  (the engine's `PipelineFileCache`) is what covers it.
+
+Measured on one Android handset (Vulkan, 4 samples) in a demo project, outside the release gate: a warm launch opened
+each of its screens with no pipeline compile in a frame, where the first had cost 3.2 s.
+
 ## Dedicated server
 
 There is no server target in this project, so the server configuration has never been compiled. What has been done is

@@ -10,6 +10,7 @@
 #include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
 #include "ShaderParameterStruct.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 
@@ -411,7 +412,6 @@ void FDreamUICompositeStack::PopAndComposite()
 				}
 				RHICmdList.SetViewport(DestRect.Min.X, DestRect.Min.Y, 0.0f, DestRect.Max.X, DestRect.Max.Y, 1.0f);
 				FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(FeatureLevel);
-				TShaderMapRef<FDreamUICompositeVS> VertexShader(GlobalShaderMap);
 				FDreamUICompositePS::FPermutationDomain Permutation;
 				Permutation.Set<FDreamUICompositePS::FBackdrop>(bReadBackdrop);
 				Permutation.Set<FDreamUICompositePS::FMask>(bMask);
@@ -420,13 +420,7 @@ void FDreamUICompositeStack::PopAndComposite()
 
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				GraphicsPSOInit.BlendState = FDreamUIRenderer::GetBuiltInBlendState(Mode);
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GEmptyVertexDeclaration.VertexDeclarationRHI;
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+				DreamUIPipelines::InitComposite(GraphicsPSOInit, GlobalShaderMap, bReadBackdrop, bMask, bExternal, Mode);
 				GraphicsPSOInit.NumSamples = NumSamples;
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
@@ -474,5 +468,63 @@ void FDreamUICompositeStack::PopAndComposite()
 	for (const FDreamUILayerStyleLayer& Layer : StyleLayers)
 	{
 		PutDown(Layer.Texture, Layer.bContent ? Desc.BlendMode : Layer.BlendMode);
+	}
+}
+
+EPixelFormat DreamUIPipelines::GroupFormatOf(EPixelFormat InTarget)
+{
+	return DreamUICompositorLocal::GroupFormatOf(InTarget);
+}
+
+void DreamUIPipelines::InitComposite(FGraphicsPipelineStateInitializer& Init, FGlobalShaderMap* ShaderMap, bool bBackdrop, bool bMask, bool bExternal, EDreamUIBlendMode BlendMode)
+{
+	TShaderMapRef<FDreamUICompositeVS> VertexShader(ShaderMap);
+	FDreamUICompositePS::FPermutationDomain Permutation;
+	Permutation.Set<FDreamUICompositePS::FBackdrop>(bBackdrop);
+	Permutation.Set<FDreamUICompositePS::FMask>(bMask);
+	Permutation.Set<FDreamUICompositePS::FExternal>(bExternal);
+	TShaderMapRef<FDreamUICompositePS> PixelShader(ShaderMap, Permutation);
+	Init.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+	Init.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+	Init.BlendState = FDreamUIRenderer::GetBuiltInBlendState(BlendMode);
+	Init.BoundShaderState.VertexDeclarationRHI = GEmptyVertexDeclaration.VertexDeclarationRHI;
+	Init.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+	Init.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+	Init.PrimitiveType = PT_TriangleList;
+}
+
+void DreamUIPipelines::CollectCompositor(FCollector& Collector)
+{
+	if (!Collector.Find<FDreamUICompositeVS>().IsValid())
+	{
+		return;
+	}
+	// A group is put down onto what is under it: the canvas's target, or the group it is in.
+	for (int32 Bits = 0; Bits < 8; ++Bits)
+	{
+		const bool bBackdrop = (Bits & 1) != 0;
+		const bool bMask = (Bits & 2) != 0;
+		const bool bExternal = (Bits & 4) != 0;
+		FDreamUICompositePS::FPermutationDomain Permutation;
+		Permutation.Set<FDreamUICompositePS::FBackdrop>(bBackdrop);
+		Permutation.Set<FDreamUICompositePS::FMask>(bMask);
+		Permutation.Set<FDreamUICompositePS::FExternal>(bExternal);
+		if (!Collector.Find<FDreamUICompositePS>(Permutation).IsValid())
+		{
+			continue;
+		}
+		for (int32 ModeIndex = 0; ModeIndex < DreamUIBlend::NumModes; ++ModeIndex)
+		{
+			const EDreamUIBlendMode Asked = static_cast<EDreamUIBlendMode>(ModeIndex);
+			// As PutDown in FDreamUICompositor resolves it: a backdrop only for a mode that reads one, Alpha where it has none.
+			if (bBackdrop && !DreamUIBlend::ReadsBackdrop(Asked))
+			{
+				continue;
+			}
+			const EDreamUIBlendMode Drawn = DreamUIBlend::ReadsBackdrop(Asked) && !bBackdrop ? EDreamUIBlendMode::Alpha : Asked;
+			FGraphicsPipelineStateInitializer Init;
+			InitComposite(Init, Collector.ShaderMap, bBackdrop, bMask, bExternal, Drawn);
+			Collector.Add(Init, Collector.AnyTargets, Bits == 0 && Drawn == EDreamUIBlendMode::Alpha ? EPSOPrecachePriority::High : EPSOPrecachePriority::Low);
+		}
 	}
 }

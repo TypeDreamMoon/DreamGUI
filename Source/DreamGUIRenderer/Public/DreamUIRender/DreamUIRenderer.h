@@ -206,10 +206,11 @@ public:
 	 * it (DreamUIBlend_FixedOutput); Normal's for a mode drawn over a copy of what is behind.
 	 */
 	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
-private:
+	/** The blend, depth-stencil and rasterizer states of a draw, for the pipelines of the built-in shader and of a material. */
 	static void SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 		, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
 	);
+private:
 	/**
 	 * Draw one batch with the built-in UI shader (no material). Used for both screen-space and world-space
 	 * canvases; bBlendDepth selects the world-space depth blend / fade permutation.
