@@ -22,9 +22,11 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
-- Large screens can use `OpenScreenBudgeted` to share a game-thread creation budget without changing synchronous callers. Requests can be cancelled before publication. See [screen creation](../concepts/canvas.md#opening-a-large-screen-over-several-frames).
-
-- Widget registration no longer scans the entire world registry on each insertion. Enumeration and BeginPlay retain registration order. Name lookup stops at the first match; callers resolving many parts can take one ordered snapshot.
+- **A large page can open over several frames.** `OpenScreenBudgeted` on the screen UI subsystem loads the page's
+  class asynchronously and builds the page a slice at a time on the game thread, filling each frame up to
+  `CreationFrameTargetMs` (33.3 ms); the request hands the page out only once it is attached and turned on, and can be
+  cancelled until then. Synchronous creation, `AddToViewport` and `PushPageAsync` are unchanged. See
+  [Opening a large screen over several frames](../concepts/canvas.md#opening-a-large-screen-over-several-frames).
 
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
@@ -329,6 +331,11 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Changed
 
+- **Building and attaching a large page costs far less on the game thread.** Marking widgets for layout checked each
+  against every widget already marked, looking a part up by name built a string and a name for every widget it passed,
+  registering a widget searched the world's whole registry, and a page attached to the screen before getting its own
+  canvas moved every visual twice. On an Android handset the NOCTURNE settings page went from 1.17 s, with frames of
+  up to 62 ms, to 0.23 s with none over 29 ms on the game thread; the archive page from 0.35 s to 0.12 s.
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
   gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
   them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*

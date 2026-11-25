@@ -13,9 +13,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
-- Large screens can use `OpenScreenBudgeted` to share a game-thread creation budget without changing synchronous callers. Requests can be cancelled before publication. See [screen creation](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
-
-- Widget registration no longer scans the entire world registry on each insertion. Enumeration and BeginPlay retain registration order. Name lookup stops at the first match; callers resolving many parts can take one ordered snapshot.
+- **A large page can open over several frames.** `OpenScreenBudgeted` on the screen UI subsystem loads the page's
+  class asynchronously and builds the page a slice at a time on the game thread, filling each frame up to
+  `CreationFrameTargetMs` (33.3 ms); the request hands the page out only once it is attached and turned on, and can be
+  cancelled until then. Synchronous creation, `AddToViewport` and `PushPageAsync` are unchanged. See
+  [Opening a large screen over several frames](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
 
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
@@ -439,6 +441,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **Building and attaching a large page costs far less on the game thread.** Marking widgets for layout checked each
+  against every widget already marked, looking a part up by name built a string and a name for every widget it passed,
+  registering a widget searched the world's whole registry, and a page attached to the screen before getting its own
+  canvas moved every visual twice. On an Android handset the NOCTURNE settings page went from 1.17 s, with frames of
+  up to 62 ms, to 0.23 s with none over 29 ms on the game thread; the archive page from 0.35 s to 0.12 s.
 - **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
   slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
   `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way
