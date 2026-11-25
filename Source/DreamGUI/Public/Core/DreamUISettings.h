@@ -138,6 +138,15 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization", DisplayName = "Async Glyph Sync Budget Per Frame (Android)"))
 		int32 AndroidAsyncGlyphSyncBudgetPerFrame = 0;
 	/**
+	 * The game-thread time, in milliseconds, a frame may spend generating new outline and colour glyphs before the rest go
+	 * to the worker, within the count above. A glyph is generated on the game thread only while what the frame has spent on
+	 * them so far, plus what one has cost lately, stays within it: a CJK outline field costs several milliseconds where a
+	 * Latin letter costs a fraction of one, so the count alone let a page of new CJK text hold one frame for hundreds of
+	 * milliseconds. 0 leaves only the count.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
+		float AsyncGlyphSyncBudgetMs = 2.0f;
+	/**
 	 * How many new small-text coverage glyphs a frame may rasterize on the game thread before the rest go to the worker. A
 	 * budget of its own, separate from the field glyphs': a coverage glyph is far cheaper to make than a field, and an
 	 * item whose coverage glyph is still on the worker draws from the field meanwhile rather than not at all.
@@ -234,6 +243,8 @@ public:
 	static int32 GetMultisamplesInEffect();
 	static bool GetAsyncGlyphRasterization();
 	static int32 GetAsyncGlyphSyncBudgetPerFrame();
+	/** AsyncGlyphSyncBudgetMs, never negative; 0 is no time limit. */
+	static float GetAsyncGlyphSyncBudgetMs();
 	/** CoverageGlyphSyncBudgetPerFrame, never negative. */
 	static int32 GetCoverageGlyphSyncBudgetPerFrame();
 	/** The configured atlas slice budget, clamped to what the RHI can address. */

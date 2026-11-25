@@ -113,6 +113,13 @@ implemented for it. The project's default font is `UDreamGUISettings::DefaultFon
   that file instead: `pip install fonttools skia-pathops`, then
   `python -c "from fontTools.ttLib import TTFont; from fontTools.ttLib.removeOverlaps import removeOverlaps; f = TTFont('in.ttf'); removeOverlaps(f); f.save('out.ttf')"`,
   or cut the instance with `fonttools varLib.instancer --remove-overlaps`.
+- **New glyphs are made on a worker.** With `bAsyncGlyphRasterization` (on by default), an outline glyph that is not in
+  the atlas yet is laid out at its real advance and drawn once a worker thread has made it. A frame still makes some on
+  the game thread, so that a short label appears whole: up to `AsyncGlyphSyncBudgetPerFrame` (24) of them, and only
+  while what it has spent on them, plus what a glyph has cost lately, stays within `AsyncGlyphSyncBudgetMs` (2 ms). A
+  Latin letter costs a fraction of a millisecond and a CJK distance field several, so on a page of new Chinese text the
+  time is what stops it, after a glyph or two. Small-text coverage glyphs have their own count,
+  `CoverageGlyphSyncBudgetPerFrame` (48).
 - **Colour emoji**: CBDT/CBLC, sbix and COLRv0; `bPreferColorEmoji` is on by default. The shadow, outline and long-shadow
   modifiers draw a colour emoji's copies as silhouettes.
 

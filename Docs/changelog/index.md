@@ -431,6 +431,14 @@ What is on `main` after 1.0.0, and ships with the next version.
   collected looks it up again. A draw's material proxy whose parent material changed — its source collected and the
   default material standing in, or the source's render proxy appearing — updated a uniform buffer laid out for the old
   one, which a cooked build checks and stops on; it makes the buffer again.
+
+- **A page of new CJK text no longer holds the frame after it opens.** A frame generated up to
+  `AsyncGlyphSyncBudgetPerFrame` (24) new outline glyphs on the game thread before the rest went to the worker; a CJK
+  distance-field glyph costs about 7 ms on a desktop and more on a phone, so a page of new Chinese text held one frame
+  for over 200 ms. `AsyncGlyphSyncBudgetMs` (2 ms, *Project Settings ▸ Plugins ▸ DreamUI ▸ Text*) now also stops the
+  frame's synchronous glyphs once what it has spent on them, plus what a glyph has cost lately, would pass it; a burst
+  still makes its first glyph on the frame. The rest are drawn once the worker has them, as past the count. `0` leaves
+  only the count. See [Fonts](../concepts/text.md#fonts).
 - **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
   letters overlap — tight or negative letter spacing, italic, a heavy condensed face — the next letter's shadow landed on
   this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with

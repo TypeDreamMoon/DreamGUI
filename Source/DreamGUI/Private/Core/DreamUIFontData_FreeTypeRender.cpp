@@ -46,6 +46,22 @@ namespace
 	int32 AsyncGlyphSyncBudgetOverride = -1;
 	uint64 SyncGlyphBudgetFrame = 0;
 	int32 SyncGlyphsThisFrame = 0;
+	/** What this frame's synchronous field and colour glyphs have cost so far, in milliseconds. */
+	double SyncGlyphMsThisFrame = 0.0;
+	/** What one synchronous glyph has cost lately, in milliseconds: a running average, 0 until one has been made. */
+	double SyncGlyphMsAverage = 0.0;
+
+	/** Times one synchronous glyph into this frame's spend and the running average. */
+	struct FSyncGlyphTimer
+	{
+		const double Start = FPlatformTime::Seconds();
+		~FSyncGlyphTimer()
+		{
+			const double Ms = (FPlatformTime::Seconds() - Start) * 1000.0;
+			SyncGlyphMsThisFrame += Ms;
+			SyncGlyphMsAverage = SyncGlyphMsAverage > 0.0 ? SyncGlyphMsAverage * 0.75 + Ms * 0.25 : Ms;
+		}
+	};
 }
 
 namespace DreamFreeTypeRenderLocal
@@ -1902,6 +1918,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 			}
 		}
 
+		FSyncGlyphTimer SyncTimer;
 		FGlyphBitmap glyphBitmap;
 		if (!RenderGlyph(Key, CharSize, bAtlasBold, glyphBitmap))//no valid glyph
 		{
@@ -2020,6 +2037,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetColorGlyphData(int32 FaceIn
 			return MakePendingCharData(Key, CharSize, false);
 		}
 	}
+	FSyncGlyphTimer SyncTimer;
 	FColorGlyphEntry NewEntry;
 	FDreamGlyphColorResult Color;
 	if (!FDreamGlyphColor::Rasterize(GetFreeTypeFace(FaceIndex), GlyphIndex, Params, Color) || !InsertColorGlyph(Color, NewEntry))
@@ -2190,11 +2208,24 @@ bool UDreamUIFontData_FreeTypeRender::TakeSyncGlyphBudget()
 {
 	if (SyncGlyphBudgetFrame != GFrameCounter)
 	{
+		// A frame that asked for no new glyph ends a burst: what the last one cost says nothing of the next, which starts
+		// with one glyph made here to learn from.
+		if (SyncGlyphBudgetFrame + 1 < GFrameCounter)
+		{
+			SyncGlyphMsAverage = 0.0;
+		}
 		SyncGlyphBudgetFrame = GFrameCounter;
 		SyncGlyphsThisFrame = 0;
+		SyncGlyphMsThisFrame = 0.0;
 	}
 	const int32 Budget = AsyncGlyphSyncBudgetOverride >= 0 ? AsyncGlyphSyncBudgetOverride : UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame();
 	if (SyncGlyphsThisFrame >= Budget)
+	{
+		return false;
+	}
+	// A test's override is a count and nothing else, so what it sees does not hang on how fast the machine is.
+	const float BudgetMs = AsyncGlyphSyncBudgetOverride >= 0 ? 0.0f : UDreamUISettings::GetAsyncGlyphSyncBudgetMs();
+	if (BudgetMs > 0.0f && SyncGlyphMsThisFrame + SyncGlyphMsAverage > BudgetMs)
 	{
 		return false;
 	}
@@ -2223,6 +2254,7 @@ void UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(int32 Budg
 {
 	AsyncGlyphSyncBudgetOverride = Budget;
 	SyncGlyphBudgetFrame = 0;
+	SyncGlyphMsAverage = 0.0;
 	DreamFreeTypeRenderLocal::SyncCoverageBudgetFrame = 0;
 }
 
