@@ -13,6 +13,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **Android arm64 builds, cooks and runs on a handset.** A UE 5.8.4 Development game built with Android clang, its content
+  cooked to ETC2 for OpenGL ES 3.1 and Vulkan ES 3.1 with no errors or warnings, and the signed gallery ran on one
+  handset. Not a Shipping, Meta Quest or full-suite run; see [Platforms](Docs/guides/platforms.md).
+
+- **A large page can open over several frames.** `OpenScreenBudgeted` on the screen UI subsystem loads the page's
+  class asynchronously and builds the page a slice at a time on the game thread, filling each frame up to
+  `CreationFrameTargetMs` (33.3 ms); the request hands the page out only once it is attached and turned on, and can be
+  cancelled until then. Synchronous creation, `AddToViewport` and `PushPageAsync` are unchanged. See
+  [Opening a large screen over several frames](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
+
 - **DreamGUI's own pipelines are compiled before the frame that first draws with them.** The first time DreamGUI
   draws into a target of a given format and sample count, it gathers every graphics pipeline its own shaders can draw
   into that target with -- the batches, the compositor, post-process, backdrop effects, background blur, pixel sort,
@@ -447,6 +457,18 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **Cold text on Android waits for the worker, not the frame.** With asynchronous glyph rasterization on, Android
+  generates no outline-field glyphs on the game thread by default: an uncached glyph the worker supports reserves its
+  advance at once and its ink appears when the worker finishes; cached glyphs are not delayed. In one handset run the
+  longest cold layout pass fell from about 710 ms to 5 ms. The allowance is a setting of its own,
+  `AndroidAsyncGlyphSyncBudgetPerFrame` (0, Meta Quest included), beside `AsyncGlyphSyncBudgetPerFrame` (24, every other
+  platform). See [Fonts and packaging](Docs/guides/fonts-and-packaging.md#cold-text-on-android).
+
+- **Building and attaching a large page costs far less on the game thread.** Marking widgets for layout checked each
+  against every widget already marked, looking a part up by name built a string and a name for every widget it passed,
+  registering a widget searched the world's whole registry, and a page attached to the screen before getting its own
+  canvas moved every visual twice. On an Android handset the NOCTURNE settings page went from 1.17 s, with frames of
+  up to 62 ms, to 0.23 s with none over 29 ms on the game thread; the archive page from 0.35 s to 0.12 s.
 - **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
   slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
   `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way
@@ -618,6 +640,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A sprite keeps its atlas page, and a material that falls back keeps drawing.** Both stopped the gallery on an
+  Android handset. A runtime sprite no longer owns its cached atlas page -- the atlas does -- and a sprite whose page was
+  collected looks it up again. A draw's material proxy whose parent material changed -- its source collected and the
+  default material standing in, or the source's render proxy appearing -- updated a uniform buffer laid out for the old
+  one, which a cooked build checks and stops on; it makes the buffer again.
 - **A control you resized keeps its size.** A Button, TextInput, SpinBox, Dropdown, ProgressBar, scroll bar, Toggle,
   RadioButton or key selector dragged taller in the designer -- or given a height in a `.dui` or the details panel --
   went back to its style's height on the next compile, preview rebuild or any edit that rebuilt it (a Tool Tip Text, say):

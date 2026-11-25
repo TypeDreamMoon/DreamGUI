@@ -314,7 +314,7 @@ bool FDreamUIDynamicSpriteAtlasData::TryPackSpriteIntoExistingPages(UDreamUISpri
 			PackedRect.width -= SpaceBetweenSprites + SpaceBetweenSprites;
 			PackedRect.height -= SpaceBetweenSprites + SpaceBetweenSprites;
 			//pixels
-			CopySpriteTextureToAtlas(Sprite, Sprite->AtlasTexture, PackedRect, SpaceBetweenSprites);
+			CopySpriteTextureToAtlas(Sprite, Sprite->AtlasTexture.Get(), PackedRect, SpaceBetweenSprites);
 			//add to Sprite
 			auto AtlasTextureSize = this->GetAtlasTextureSize();
 			float InvAtlasTextureSize = 1.0f / AtlasTextureSize;

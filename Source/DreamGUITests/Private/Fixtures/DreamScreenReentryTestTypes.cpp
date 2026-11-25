@@ -4,6 +4,13 @@
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUserWidget.h"
 
+void UDreamCreationCompletionProbe::Finished(UDreamScreenCreationRequest* Request)
+{
+	++Calls;
+	Request->Cancel(); // Terminal by the time callbacks run.
+	if (!Followup) Followup = Screens->OpenScreenBudgeted(UDreamUserWidget::StaticClass());
+}
+
 bool UDreamScreenReentryWidget::bRefreshStackOnInitialize = false;
 
 void UDreamScreenReentryWidget::NativeOnInitialized()

@@ -415,6 +415,8 @@ void UDreamUIManagerWorldSubsystem::RunLayoutPasses(int32& InOutPassesThisTick)
 
 		TArray<TWeakObjectPtr<UDreamWidget>> CopiedLayoutDirtyWidgetArray;
 		Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);
+		// What this pass took; a widget marked from inside it is new to the next one.
+		LayoutDirtyWidgetKeys.Reset();
 
 		// Collect the live roots up front so ancestry can be tested against the whole batch.
 		TSet<UDreamWidget*> BatchRoots;
@@ -1030,7 +1032,12 @@ void UDreamUIManagerWorldSubsystem::AddLayoutDirtyWidget(UDreamWidget* InWidget)
 {
 	if (IsValid(InWidget))
 	{
-		LayoutDirtyWidgetArray.AddUnique(InWidget);
+		bool bAlreadyDirty = false;
+		LayoutDirtyWidgetKeys.Add(FObjectKey(InWidget), &bAlreadyDirty);
+		if (!bAlreadyDirty)
+		{
+			LayoutDirtyWidgetArray.Add(InWidget);
+		}
 	}
 }
 

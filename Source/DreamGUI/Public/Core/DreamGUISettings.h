@@ -147,6 +147,20 @@ class DREAMGUI_API UDreamGUISettings : public UDeveloperSettings
 public:
 	UDreamGUISettings();
 
+	/**
+	 * The least game-thread time, in milliseconds, that the screen creation requests of one world share in a frame. With a
+	 * frame target they take more when the frame has room for it; without one this is the whole budget.
+	 */
+	UPROPERTY(config, EditAnywhere, Category="Performance", meta=(ClampMin="0.1", ClampMax="16"))
+	float CreationBudgetMs = 2.0f;
+	/**
+	 * The frame time, in milliseconds, that screen creation fills up to: each frame the requests take what the previous
+	 * frame's game thread left of it, less a margin, and never less than CreationBudgetMs nor more than half the target.
+	 * 33.3 keeps a page opening at 30 frames per second or better where the game thread has the room; 0 turns this off.
+	 */
+	UPROPERTY(config, EditAnywhere, Category="Performance", meta=(ClampMin="0", ClampMax="100"))
+	float CreationFrameTargetMs = 33.3f;
+
 	virtual FName GetCategoryName() const override { return TEXT("Plugins"); }
 
 	static const UDreamGUISettings* Get();

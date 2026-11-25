@@ -46,7 +46,7 @@ The whole layout is under [What is in the plugin folder](../getting-started/proj
 ## Building
 
 You need Unreal Engine 5.8 (source or launcher), PowerShell 7.2 or later, Python 3.8 or later and git. Win64 is the
-only platform built and run. Build in a project that has the checkout as `Plugins/DreamGUI`; the
+only platform the suite runs on. Build in a project that has the checkout as `Plugins/DreamGUI`; the
 [test host](../tools/tests.md#the-test-host) is a minimal one, with the plugin as a git worktree of your clone:
 
 ```text

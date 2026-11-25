@@ -106,16 +106,21 @@ namespace DreamVisualRenderPathTestLocal
 		return Exponent == 0 && Mantissa != 0;
 	}
 
-	/** The atlas page a sprite currently holds, read through reflection: the field is private. */
-	UTexture2D* GetPackedAtlasTexture(UDreamUISpriteData* InSprite)
+	/**
+	 * The atlas page a sprite currently holds, read through reflection: the field is private. False when the field
+	 * cannot be read at all -- renamed, or of a kind that is not an object reference -- so a caller asserting "no page"
+	 * cannot pass on a lookup that found nothing to look at. FObjectPropertyBase covers both the strong and the weak
+	 * pointer the field has been.
+	 */
+	bool TryGetPackedAtlasTexture(UDreamUISpriteData* InSprite, UTexture2D*& OutTexture)
 	{
-		if (!IsValid(InSprite))return nullptr;
-		if (FObjectProperty* Property = CastField<FObjectProperty>(
-			UDreamUISpriteData::StaticClass()->FindPropertyByName(TEXT("AtlasTexture"))))
-		{
-			return Cast<UTexture2D>(Property->GetObjectPropertyValue_InContainer(InSprite));
-		}
-		return nullptr;
+		OutTexture = nullptr;
+		if (!IsValid(InSprite))return false;
+		const FObjectPropertyBase* Property = CastField<FObjectPropertyBase>(
+			UDreamUISpriteData::StaticClass()->FindPropertyByName(TEXT("AtlasTexture")));
+		if (Property == nullptr)return false;
+		OutTexture = Cast<UTexture2D>(Property->GetObjectPropertyValue_InContainer(InSprite));
+		return true;
 	}
 
 	/**
@@ -661,8 +666,11 @@ bool FDreamAtlasLruEvictionTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("it is the one the probe draws"), Data.SpriteDataArray[0].Get(), Middle);
 		}
 		TestTrue(TEXT("whoever draws from the atlas is told its rectangle moved"), Probe->AtlasChangeCount > 0);
-		TestNull(TEXT("an evicted sprite goes back to holding no atlas page"),
-			GetPackedAtlasTexture(Oldest));
+		UTexture2D* OldestPage = nullptr;
+		if (TestTrue(TEXT("the sprite's atlas page can be read"), TryGetPackedAtlasTexture(Oldest, OldestPage)))
+		{
+			TestNull(TEXT("an evicted sprite goes back to holding no atlas page"), OldestPage);
+		}
 	}
 
 	{

@@ -7,6 +7,18 @@
 #include "DreamScreenReentryTestTypes.generated.h"
 
 class UDreamScreenUISubsystem;
+class UDreamScreenCreationRequest;
+
+UCLASS()
+class UDreamCreationCompletionProbe : public UObject
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY() TObjectPtr<UDreamScreenUISubsystem> Screens;
+	UPROPERTY() TObjectPtr<UDreamScreenCreationRequest> Followup;
+	int32 Calls = 0;
+	UFUNCTION() void Finished(UDreamScreenCreationRequest* Request);
+};
 
 /** Mutates a page's registration from the public dynamic lifecycle delegates. */
 UCLASS()

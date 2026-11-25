@@ -80,6 +80,7 @@ Source/DreamGUI/Private/Core/DreamCanvasDrawCallProcessingRunnable.cpp,DreamGUI,
 Source/DreamGUI/Private/Core/DreamCanvasViewFit.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamGUISettings.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamPerspective.cpp,DreamGUI,core
+Source/DreamGUI/Private/Core/DreamScreenCreationRequest.cpp,DreamGUI,screen creation scheduling
 Source/DreamGUI/Private/Core/DreamScreenUISubsystem.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamTextUserWidget.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIBehaviour.cpp,DreamGUI,core
@@ -330,6 +331,7 @@ Source/DreamGUI/Public/Core/DreamFieldNotification.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamGUISettings.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamLayoutPassContext.h,DreamGUI,core contract: per-world layout pass state
 Source/DreamGUI/Public/Core/DreamPerspective.h,DreamGUI,core
+Source/DreamGUI/Public/Core/DreamScreenCreationRequest.h,DreamGUI,screen creation scheduling
 Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamTextUserWidget.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIActionTypes.h,DreamGUI,action handle + delegate: what a widget listening for an input action holds on to
@@ -531,3 +533,4 @@ Source/DreamGUI/Public/Utils/sdf/sdf.h,DreamGUI,utilities
 Source/DreamGUIRenderer/Public/DreamUIRender/DreamUIHDR.h,DreamGUIRenderer,HDR display transfer
 Source/DreamGUIRenderer/Private/DreamUIRender/DreamUIHDR.cpp,DreamGUIRenderer,HDR display transfer
 Source/DreamGUITests/Private/RHI/DreamHDRPixelAutomationTests.cpp,DreamGUITests,HDR display pixel acceptance
+Source/DreamGUI/Private/Core/DreamTreeBinding.h,DreamGUI,screen creation scheduling
