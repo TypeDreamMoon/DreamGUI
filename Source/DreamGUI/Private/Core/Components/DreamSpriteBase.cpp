@@ -254,9 +254,13 @@ UTexture* UDreamSpriteBase::GetTextureToCreateGeometry()
 	{
 		Sprite = UDreamUISpriteData::GetDefaultWhiteSolid();
 	}
-	if (IsValid(Sprite) && IsValid(Sprite->GetAtlasTexture()))
+	if (IsValid(Sprite))
 	{
-		return Sprite->GetAtlasTexture();
+		UTexture2D* AtlasTexture = Sprite->GetAtlasTexture();
+		if (IsValid(AtlasTexture))
+		{
+			return AtlasTexture;
+		}
 	}
 	return nullptr;
 }
