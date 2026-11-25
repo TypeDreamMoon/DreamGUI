@@ -243,5 +243,5 @@ commands are in `Tools/TestHost/README.md`.
 
 **The release gate** is what a version goes through before it is tagged: BuildPlugin (compiling the plugin for the editor
 and for the game target in Development and Shipping), plus this packaged text smoke test. **Until the gate has run for a
-version, no packaged game of that version has been run.** Win64 is the only platform built and run; see
-[Platforms](../guides/platforms.md).
+version, no packaged Win64 game of that version has been run.** The suite runs on Win64 only; Android arm64 has had
+one handset smoke test, apart from the gate. See [Platforms](../guides/platforms.md).

@@ -200,12 +200,13 @@ Unreal Engine **5.8**，源码引擎和 Launcher 安装版都行。"声称支持
 | :-- | :-- | :-- |
 | **Win64** | 编辑器；Development 和 Shipping 的游戏目标 | 编辑器跑完整个自动化测试；发布门槛跑过打包文字冒烟测试之后的打包 Development 游戏 |
 | Mac、Linux | 从未 | 从未——这里没有对应的机器和工具链 |
-| iOS、Android | 从未 | 从未——这里没有 SDK，也从没上过真机 |
+| Android arm64 | UE 5.8.4 Development 游戏和 ETC2 烹饪 | 演示 APK 在一台手机上跑过；不含 Shipping 和 Quest |
+| iOS | 从未 | 从未 |
 | 主机平台 | 否 | 不在任何模块的 `PlatformAllowList` 里 |
 | 专用服务器 | 从未——没有编译过服务器目标 | 否 |
 
 描述文件的 `SupportedTargetPlatforms` 列的是代码按哪五个平台写的，说明的是构建工具会去尝试什么，而不是有人在那里跑过。
-发布门槛、从未运行过的移动端代码路径、专用服务器检查过什么，见[平台](https://gui.toolchain.64hz.cn/docs/guides/platforms)。
+发布门槛、手机冒烟测试在移动端没覆盖到的部分、专用服务器检查过什么，见[平台](https://gui.toolchain.64hz.cn/docs/guides/platforms)。
 
 ## 项目信息
 

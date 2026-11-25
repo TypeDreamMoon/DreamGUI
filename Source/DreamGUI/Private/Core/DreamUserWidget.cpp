@@ -1943,10 +1943,9 @@ void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 		return;
 	}
 	FProperty* SetterParameter = nullptr;
-	for (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+	if (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm))
 	{
 		SetterParameter = *It;
-		break;
 	}
 	if (ReturnProperty == nullptr || SetterParameter == nullptr)
 	{

@@ -37,7 +37,8 @@ Usage questions, design ideas and show-and-tell go to
 
 ## Development setup
 
-- Unreal Engine 5.8, a source build or a launcher install. Win64 is the only platform built and run.
+- Unreal Engine 5.8, a source build or a launcher install. Win64 is the only platform the suite runs on; Android arm64
+  has had one handset smoke test (see `Docs/guides/platforms.md`).
 - PowerShell 7.2 or later (`pwsh`), Python 3.8 or later on `PATH` as `python`, and git.
 - A host project with this repository checked out as `Plugins/DreamGUI`. The test host script makes a minimal one,
   with the plugin as a git worktree of your clone:

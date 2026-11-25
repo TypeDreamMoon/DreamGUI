@@ -214,12 +214,13 @@ has been *run* are different lists, so both are here:
 | :-- | :-- | :-- |
 | **Win64** | the editor; the game target in Development and Shipping | the editor with the whole automation suite; a packaged Development game, once the release gate has run the packaged text smoke test |
 | Mac, Linux | never | never — there is no machine or toolchain for them here |
-| iOS, Android | never | never — no SDK here, and never on a device |
+| Android arm64 | UE 5.8.4 Development game and ETC2 cook | demo APK on one handset; not Shipping or Quest |
+| iOS | never | never |
 | Consoles | no | not in any module's `PlatformAllowList` |
 | Dedicated server | never — no server target has been built | no |
 
 The descriptor's `SupportedTargetPlatforms` names the five platforms the code is written for; that says what the
-build tools will try, not that anyone has run it there. The release gate, the mobile code paths that have never run
+build tools will try, not that anyone has run it there. The release gate, what the handset smoke test leaves unchecked on mobile
 and what was checked for a dedicated server are on
 [Platforms](https://gui.toolchain.64hz.cn/en/docs/guides/platforms).
 

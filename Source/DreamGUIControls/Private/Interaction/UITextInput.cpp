@@ -3686,13 +3686,10 @@ EKeyboardType UUITextInput::FVirtualKeyboardEntry::GetVirtualKeyboardType() cons
 	default:
 	case EUITextInputType::Standard:
 		return EKeyboardType::Keyboard_Default;
-		break;
 	case EUITextInputType::Password:
 		return EKeyboardType::Keyboard_Password;
-		break;
 	case EUITextInputType::DecimalNumber:
 		return EKeyboardType::Keyboard_Number;
-		break;
 	}
 }
 FVirtualKeyboardOptions UUITextInput::FVirtualKeyboardEntry::GetVirtualKeyboardOptions() const

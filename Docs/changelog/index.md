@@ -22,6 +22,10 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
+- **Android arm64 builds, cooks and runs on a handset.** A UE 5.8.4 Development game built with Android clang, its content
+  cooked to ETC2 for OpenGL ES 3.1 and Vulkan ES 3.1 with no errors or warnings, and the signed gallery ran on one
+  handset. Not a Shipping, Meta Quest or full-suite run; see [Platforms](../guides/platforms.md).
+
 - **A large page can open over several frames.** `OpenScreenBudgeted` on the screen UI subsystem loads the page's
   class asynchronously and builds the page a slice at a time on the game thread, filling each frame up to
   `CreationFrameTargetMs` (33.3 ms); the request hands the page out only once it is attached and turned on, and can be
@@ -331,6 +335,13 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Changed
 
+- **Cold text on Android waits for the worker, not the frame.** With asynchronous glyph rasterization on, Android
+  generates no outline-field glyphs on the game thread by default: an uncached glyph the worker supports reserves its
+  advance at once and its ink appears when the worker finishes; cached glyphs are not delayed. In one handset run the
+  longest cold layout pass fell from about 710 ms to 5 ms. The allowance is a setting of its own,
+  `AndroidAsyncGlyphSyncBudgetPerFrame` (0, Meta Quest included), beside `AsyncGlyphSyncBudgetPerFrame` (24, every other
+  platform). See [Fonts and packaging](../guides/fonts-and-packaging.md#cold-text-on-android).
+
 - **Building and attaching a large page costs far less on the game thread.** Marking widgets for layout checked each
   against every widget already marked, looking a part up by name built a string and a name for every widget it passed,
   registering a widget searched the world's whole registry, and a page attached to the screen before getting its own
@@ -415,6 +426,11 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Fixed
 
+- **A sprite keeps its atlas page, and a material that falls back keeps drawing.** Both stopped the gallery on an
+  Android handset. A runtime sprite no longer owns its cached atlas page — the atlas does — and a sprite whose page was
+  collected looks it up again. A draw's material proxy whose parent material changed — its source collected and the
+  default material standing in, or the source's render proxy appearing — updated a uniform buffer laid out for the old
+  one, which a cooked build checks and stops on; it makes the buffer again.
 - **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
   letters overlap — tight or negative letter spacing, italic, a heavy condensed face — the next letter's shadow landed on
   this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with
