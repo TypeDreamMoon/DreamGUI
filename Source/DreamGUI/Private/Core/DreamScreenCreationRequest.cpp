@@ -182,6 +182,9 @@ void UDreamScreenCreationRequest::Step(UDreamScreenUISubsystem& Screens)
 		if (!Staging) { Finish(EDreamScreenCreationState::Failed); return; }
 		Staging->SetWidgetActive(false);
 		Staging->SetOwningPlayer(Player.Get());
+		// While the tree is still empty: its visuals then register with the page's canvas as they arrive, and
+		// publication has none of them to move.
+		Screens.ApplyPageCanvas(Staging, Sort);
 		InitStack.AddDefaulted_GetRef().Widget = Staging.Get();
 		State = EDreamScreenCreationState::Creating;
 		return;

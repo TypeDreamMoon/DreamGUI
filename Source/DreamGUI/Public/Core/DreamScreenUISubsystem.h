@@ -375,6 +375,10 @@ private:
 	bool IsUsablePage(const UDreamWidget* InRoot) const;
 	FName FindNameForWidget(const UDreamWidget* InRoot) const;
 	void ConfigurePage(UDreamWidget* InRoot, int32 InSortOrder, int32 InPlayerIndex, bool bInCustomPlacement);
+	/** The page's own canvas, sorted at InSortOrder: what ConfigurePage gives a page before attaching it. */
+	void ApplyPageCanvas(UDreamWidget* InRoot, int32 InSortOrder);
+	/** Gives the page it is building its canvas while the page is still empty. */
+	friend class UDreamScreenCreationRequest;
 	void RegisterUIInternal(FName InName, UDreamWidget* InRoot, int32 InSortOrder,
 		EDreamUIScreenPageCachePolicy InCachePolicy, TSoftClassPtr<UDreamUserWidget> InSourceClass,
 		bool bInitiallyVisible, int32 InPlayerIndex);
