@@ -202,4 +202,4 @@ pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1 -Root <host dir> -
 
 探针等玩家就位，把 `WBP_TextSmoke` 放上视口，等每个字形落地、小字稳定，然后写出 `TextSmoke.json`（每段文本的显示列表、字体的回答、回退条目、ICU 的回退、安全区、帧时间、`DreamGUI.Memory Json` 的内存报告）和视口截图 `TextSmoke.png`，再让游戏退出。整个流程——构建编辑器目标、生成资产、构建游戏目标的 Development 和 Shipping、未烹饪的参考运行、带 `-I18NPreset=EFIGSCJK` 的烹饪打包、打包后的运行、对比——要构建两个目标并烹饪，在作者的机器上大约一个小时；写成一个脚本放后台跑。完整命令在 `Tools/TestHost/README.md` 里。
 
-**发版闸门**是一个版本打 tag 之前要过的：BuildPlugin（为编辑器、为游戏目标的 Development 和 Shipping 编译插件），加上这个打包文本冒烟测试。**闸门没为某个版本跑过之前，那个版本的打包游戏就没有被运行过。** Win64 是唯一被构建和运行过的平台，见[平台](../guides/platforms.md)。
+**发版闸门**是一个版本打 tag 之前要过的：BuildPlugin（为编辑器、为游戏目标的 Development 和 Shipping 编译插件），加上这个打包文本冒烟测试。**闸门没为某个版本跑过之前，那个版本的打包 Win64 游戏就没有被运行过。** 这套测试只在 Win64 上运行；除闸门之外，Android arm64 做过一次真机冒烟测试。参见[平台](../guides/platforms.md)。

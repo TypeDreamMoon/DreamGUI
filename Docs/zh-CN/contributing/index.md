@@ -46,7 +46,7 @@ pwsh -NoProfile -File Plugins/DreamGUI/Tools/Get-DreamGUIEnvironment.ps1
 
 ## 构建
 
-你需要 Unreal Engine 5.8（源码版或启动器版）、PowerShell 7.2 或更高版本、Python 3.8 或更高版本以及 git。Win64 是唯一构建和运行的平台。请在将检出内容作为 `Plugins/DreamGUI` 的项目中构建；[测试宿主](../tools/tests.md#the-test-host) 是一个最小项目，其中插件是你的克隆的 git 工作树：
+你需要 Unreal Engine 5.8（源码版或启动器版）、PowerShell 7.2 或更高版本、Python 3.8 或更高版本以及 git。Win64 是该套件唯一运行的平台。请在将检出内容作为 `Plugins/DreamGUI` 的项目中构建；[测试宿主](../tools/tests.md#the-test-host) 是一个最小项目，其中插件是你的克隆的 git 工作树：
 
 ```text
 pwsh -NoProfile -File Tools/TestHost/New-DreamGUITestHost.ps1 -Root <host folder> -RepoPath <your clone> -Branch <your branch> -Detach -EngineRoot <engine root>

@@ -99,3 +99,9 @@ Noto Color Emoji 的字节约占 7.8 MB 内存，由其字体资产持有，而�
 
 - 在打包游戏（Development）的控制台里，`DreamGUI.Memory` 打印字体、精灵图集和画布占了什么； `DreamGUI.Memory File=<path>` 把它写成 JSON，相对路径写在 `Saved/` 下。
 - 插件测试宿主里的打包文本冒烟测试，把一屏这些情况 —— 小字号文本、混排的一行、按文化后备的中文和日文、彩色 emoji、两端对齐的段落、日文段落、安全区 —— 分别放进一个打包游戏和同一构建在未烹饪内容上的运行里，逐字段比对两边 —— 安全区各自对照自己的视口（`Tools/TestHost/README.md`， "The packaged text smoke test"）。发布闸门在打标签之前跑它。
+
+<a id="cold-text-on-android"></a>
+
+### Android 上的冷文本
+
+启用异步字形光栅化后，Android 默认不会同步生成任何轮廓场字形。工作线程支持的未缓存字形会立即预留其步进宽度；其墨迹会在工作线程完成后出现。已缓存字形不会延迟。该配额由独立设置 **Async Glyph Sync Budget Per Frame (Android)** 控制（`AndroidAsyncGlyphSyncBudgetPerFrame` 位于引擎配置的 `[/Script/DreamGUI.DreamUISettings]` 中，默认值为 0）；它适用于所有 Android 设备，包括 Meta Quest。其他平台读取 `AsyncGlyphSyncBudgetPerFrame`，默认值为 24，因此在编辑器的 Project Settings 中修改该项不会改变 Android。
