@@ -127,9 +127,16 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (DisplayName = "Async Glyph Rasterization"))
 		bool bAsyncGlyphRasterization = true;
-	/** How many new glyphs a frame may generate on the game thread before the rest go to the worker. */
+	/** How many new glyphs a frame may generate on the game thread before the rest go to the worker. Not on Android: see AndroidAsyncGlyphSyncBudgetPerFrame. */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
-		int32 AsyncGlyphSyncBudgetPerFrame = PLATFORM_ANDROID ? 0 : 24;
+		int32 AsyncGlyphSyncBudgetPerFrame = 24;
+	/**
+	 * AsyncGlyphSyncBudgetPerFrame on Android, Meta Quest included. 0 by default: a cold glyph reserves its advance and its
+	 * ink appears when the worker finishes, because synchronously generating a frame's first glyphs stalled a handset's
+	 * cold layout for hundreds of milliseconds.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization", DisplayName = "Async Glyph Sync Budget Per Frame (Android)"))
+		int32 AndroidAsyncGlyphSyncBudgetPerFrame = 0;
 	/**
 	 * How many new small-text coverage glyphs a frame may rasterize on the game thread before the rest go to the worker. A
 	 * budget of its own, separate from the field glyphs': a coverage glyph is far cheaper to make than a field, and an
