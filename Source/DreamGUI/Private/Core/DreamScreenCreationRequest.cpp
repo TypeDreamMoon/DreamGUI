@@ -50,10 +50,18 @@ double UDreamScreenUISubsystem::GetCreationBudgetMs() const
 	return FMath::Clamp(Target - OtherMs - MarginMs, Floor, FMath::Max(Floor, Target * .5));
 }
 
-void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
+void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float DeltaSeconds)
 {
 	if (World != GetWorld() || bInCreationTick) return;
 	TGuardValue<bool> Guard(bInCreationTick, true);
+	// DeltaSeconds is the frame before this one: from the second frame after submission on, a frame creation worked in.
+	for (UDreamScreenCreationRequest* Pending : CreationQueue)
+	{
+		if (Pending != nullptr && GFrameCounter >= Pending->SubmittedFrame + 2)
+		{
+			Pending->LongestFrameMs = FMath::Max(Pending->LongestFrameMs, DeltaSeconds * 1000.);
+		}
+	}
 	const double Budget = GetCreationBudgetMs();
 	const double TickStart = FPlatformTime::Seconds();
 	const double End = TickStart + Budget * .001;
@@ -85,11 +93,14 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
 			if (Request->State == EDreamScreenCreationState::Ready)
 			{
 				const double* T = Request->Costs;
-				UE_LOG(DreamGUI, Display, TEXT("Budgeted screen %s: submit-to-publish=%.2fms step-wall=%.2fms queue=%.2fms class-wait=%.2fms allocate=%.2fms instance=%.2fms bind=%.2fms callbacks=%.2fms collect=%.2fms register=%.2fms reconcile=%.2fms begin=%.2fms publish/notify=%.2fms"),
-					*Request->Class.GetAssetName(), (FPlatformTime::Seconds()-Request->Submitted)*1000., Request->CpuMs,
+				// Once a page, in the log file and not on the console; the step that went over the budget is Verbose,
+				// because a page can have dozens of them and every game that opens pages would print them all.
+				// longest-frame is the longest frame before this one; the frame that publishes ends after this line.
+				UE_LOG(DreamGUI, Log, TEXT("Budgeted screen %s: submit-to-publish=%.2fms frames=%llu longest-frame=%.2fms step-wall=%.2fms queue=%.2fms class-wait=%.2fms allocate=%.2fms instance=%.2fms bind=%.2fms callbacks=%.2fms collect=%.2fms register=%.2fms reconcile=%.2fms begin=%.2fms publish/notify=%.2fms"),
+					*Request->Class.GetAssetName(), (FPlatformTime::Seconds()-Request->Submitted)*1000., GFrameCounter - Request->SubmittedFrame, Request->LongestFrameMs, Request->CpuMs,
 					(Request->LoadStarted-Request->Submitted)*1000., (Request->LoadedAt-Request->LoadStarted)*1000., T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]);
 			}
-			if (Ms > Budget) UE_LOG(DreamGUI, Display, TEXT("Screen creation over budget: %s %s %s %.2f ms"), *Request->Class.GetAssetName(), *Request->StepClass.ToString(), Request->Phase, Ms);
+			if (Ms > Budget) UE_LOG(DreamGUI, Verbose, TEXT("Screen creation over budget: %s %s %s %.2f ms"), *Request->Class.GetAssetName(), *Request->StepClass.ToString(), Request->Phase, Ms);
 		}
 		Idle = bWaiting ? Idle + 1 : 0;
 		if (!Request->Terminal()) CreationQueue.Add(Request.Get());

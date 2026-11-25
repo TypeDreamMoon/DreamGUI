@@ -118,7 +118,8 @@ previous frame's game thread left of the target, less 8 ms, never more than half
 does nothing else for creation, because the canvas builds the whole page's geometry later in that frame. This is
 cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
 Resource loading is asynchronous. An engine instancing operation, a native or Blueprint callback, or publication and
-its observers can exceed the budget; the log identifies over-budget steps. Ready means attached, not that the GPU has
+its observers can exceed the budget; `DreamGUI` at Verbose logs each step that did, and every published page logs one
+`Budgeted screen` line with its time per stage. Ready means attached, not that the GPU has
 presented a frame. Keep the current page usable until Ready; leave navigation and focus changes to that callback.
 `AddToViewport`, synchronous creation and `PushPageAsync` keep their existing contracts.
 

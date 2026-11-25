@@ -60,6 +60,8 @@ private:
 	EWork Work = EWork::Load;
 	double Costs[static_cast<uint8>(EWork::Count)] = {};
 	double Submitted = 0, CpuMs = 0, LoadStarted = 0, LoadedAt = 0;
+	/** The longest frame from the one after submission to the one before publication, for the summary line. */
+	double LongestFrameMs = 0;
 	FName StepClass;
 	uint64 SubmittedFrame = 0;
 	const TCHAR* Phase = TEXT("queue");
