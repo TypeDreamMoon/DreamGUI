@@ -320,7 +320,10 @@ void UDreamUISpriteData::ReloadTexture()
 
 void UDreamUISpriteData::InitSpriteData()
 {
-	if (!bIsInitialized)
+	// AtlasTexture does not keep its page alive. A static atlas that rebuilds its pages (a sprite added to it in the
+	// editor) does not reset the other sprites, so once the old page is collected the cache is empty while the sprite
+	// still reads as initialized: resolve it again rather than draw with no texture from then on.
+	if (!bIsInitialized || !AtlasTexture.IsValid())
 	{
 #if WITH_EDITOR
 		if (IsRunningCookCommandlet())
