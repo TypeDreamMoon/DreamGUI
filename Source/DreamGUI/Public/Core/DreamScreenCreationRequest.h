@@ -64,6 +64,8 @@ private:
 	uint64 SubmittedFrame = 0;
 	const TCHAR* Phase = TEXT("queue");
 	bool Terminal() const;
+	/** Whether the next Step attaches the page to the screen. */
+	bool IsAboutToPublish() const;
 	bool OwnerValid(const UDreamScreenUISubsystem& Screens) const;
 	void Step(UDreamScreenUISubsystem& Screens);
 	void Finish(EDreamScreenCreationState Outcome);

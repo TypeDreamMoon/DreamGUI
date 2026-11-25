@@ -111,8 +111,12 @@ order. Bind `OnFinished` on the returned request immediately. `GetPage` returns 
 the navigation intent changes. Cancellation takes effect at a scheduling boundary, never halfway through a callback.
 The world owns pending requests, and the caller does not have to prewarm a class, retain an instance or manage a cache.
 
-`CreationBudgetMs` in Dream GUI project settings defaults to **2 ms per game world per frame**, shared by local players
-and pending pages. This is cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
+The pending pages and local players of a game world share one game-thread budget per frame. `CreationFrameTargetMs` in
+Dream GUI project settings (**33.3 ms** by default) is the frame time creation fills up to: each frame takes what the
+previous frame's game thread left of the target, less 8 ms, never more than half the target and never less than
+`CreationBudgetMs` (**2 ms**). Set the target to 0 for a fixed `CreationBudgetMs`. The frame that publishes a page
+does nothing else for creation, because the canvas builds the whole page's geometry later in that frame. This is
+cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
 Resource loading is asynchronous. An engine instancing operation, a native or Blueprint callback, or publication and
 its observers can exceed the budget; the log identifies over-budget steps. Ready means attached, not that the GPU has
 presented a frame. Keep the current page usable until Ready; leave navigation and focus changes to that callback.

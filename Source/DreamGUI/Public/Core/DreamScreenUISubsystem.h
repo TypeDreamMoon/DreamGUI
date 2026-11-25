@@ -340,7 +340,12 @@ private:
 	UPROPERTY(Transient) TArray<TObjectPtr<UDreamScreenCreationRequest>> CreationQueue;
 	FDelegateHandle CreationTick;
 	void TickCreation(UWorld* World, ELevelTick TickType, float DeltaTime);
+	/** This frame's share for creation: see UDreamGUISettings::CreationFrameTargetMs. */
+	double GetCreationBudgetMs() const;
 	bool bInCreationTick = false;
+	/** How long the last TickCreation took, and in which frame: what the previous frame's game-thread time includes. */
+	double LastCreationMs = 0.;
+	uint64 LastCreationFrame = 0;
 
 	TMap<FName, FEntry> Entries;
 	uint64 NextPageMutationSerial = 0;

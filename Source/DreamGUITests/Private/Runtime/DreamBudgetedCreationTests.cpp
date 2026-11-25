@@ -37,6 +37,9 @@ bool FDreamCheckBudgetCreation::Update()
 	auto* W = Case->Host.World;
 	auto* Settings = GetMutableDefault<UDreamGUISettings>();
 	TGuardValue<float> Budget(Settings->CreationBudgetMs, .1f);
+	// A fixed budget: filling the frame up to a target would build each page in one tick, and the test watches one
+	// between ticks.
+	TGuardValue<float> FrameTarget(Settings->CreationFrameTargetMs, 0.f);
 	FWorldDelegates::OnWorldPostActorTick.Broadcast(W, LEVELTICK_All, 0.016f);
 	if (!Case->bReachedCreation && Case->Interrupted->GetState() == EDreamScreenCreationState::Creating)
 	{

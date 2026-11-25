@@ -10,6 +10,7 @@
 #include "Engine/StreamableManager.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "RenderTimer.h"
 #include "DreamGUI.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -28,13 +29,36 @@ UDreamScreenCreationRequest* UDreamScreenUISubsystem::OpenScreenBudgeted(TSoftCl
 	return Request;
 }
 
+double UDreamScreenUISubsystem::GetCreationBudgetMs() const
+{
+	const UDreamGUISettings* Settings = GetDefault<UDreamGUISettings>();
+	const double Floor = FMath::Clamp(Settings->CreationBudgetMs, .1f, 16.f);
+	const double Target = Settings->CreationFrameTargetMs;
+	// GGameThreadTime is the previous frame's busy game-thread time, set as it was drawn; zero where nothing draws, as in
+	// a run without a renderer, which then gets the most this allows.
+	if (Target <= 0.)
+	{
+		return Floor;
+	}
+	const double LastGameThreadMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
+	// What the frame spent on everything but creation, which is what this frame will spend on it again. Eight
+	// milliseconds are kept back for what varies from one frame to the next and for a step that runs past the end:
+	// with four, a handset's filled frames reached 29 ms and now and then presented a vsync late, at 50.
+	const bool bCreatedLastFrame = LastCreationFrame + 1 == GFrameCounter;
+	const double OtherMs = FMath::Max(0., LastGameThreadMs - (bCreatedLastFrame ? LastCreationMs : 0.));
+	constexpr double MarginMs = 8.;
+	return FMath::Clamp(Target - OtherMs - MarginMs, Floor, FMath::Max(Floor, Target * .5));
+}
+
 void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
 {
 	if (World != GetWorld() || bInCreationTick) return;
 	TGuardValue<bool> Guard(bInCreationTick, true);
-	const double Budget = FMath::Clamp(GetDefault<UDreamGUISettings>()->CreationBudgetMs, .1f, 16.f);
-	const double End = FPlatformTime::Seconds() + Budget * .001;
+	const double Budget = GetCreationBudgetMs();
+	const double TickStart = FPlatformTime::Seconds();
+	const double End = TickStart + Budget * .001;
 	int32 Idle = 0;
+	bool bSteppedThisFrame = false;
 	while (!CreationQueue.IsEmpty() && !bTornDownForWorld && Idle < CreationQueue.Num() && FPlatformTime::Seconds() < End)
 	{
 		// Keep the current request rooted while callbacks submit/cancel other jobs.
@@ -42,8 +66,17 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
 		CreationQueue.RemoveAt(0, 1, EAllowShrinking::No);
 		const bool bWaiting = Request->SubmittedFrame == GFrameCounter ||
 			(Request->State == EDreamScreenCreationState::Loading && Request->Load && !Request->Load->HasLoadCompleted() && !Request->bCancel && Request->OwnerValid(*this));
+		// Publishing attaches the whole page, and the canvas then builds every one of its widgets' geometry later in the
+		// same frame: a frame that publishes does nothing else here, and stops after it.
+		const bool bPublishes = !bWaiting && Request->IsAboutToPublish();
+		if (bPublishes && bSteppedThisFrame)
+		{
+			CreationQueue.Insert(Request.Get(), 0);
+			break;
+		}
 		if (!bWaiting)
 		{
+			bSteppedThisFrame = true;
 			const double Start = FPlatformTime::Seconds();
 			Request->Step(*this);
 			const double Ms = (FPlatformTime::Seconds() - Start) * 1000.;
@@ -60,7 +93,13 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
 		}
 		Idle = bWaiting ? Idle + 1 : 0;
 		if (!Request->Terminal()) CreationQueue.Add(Request.Get());
+		if (bPublishes)
+		{
+			break;
+		}
 	}
+	LastCreationMs = (FPlatformTime::Seconds() - TickStart) * 1000.;
+	LastCreationFrame = GFrameCounter;
 	if (bTornDownForWorld)
 	{
 		for (UDreamScreenCreationRequest* R : CreationQueue) R->Finish(EDreamScreenCreationState::Cancelled);
@@ -76,6 +115,12 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float)
 UDreamUserWidget* UDreamScreenCreationRequest::GetPage() const { return Result.Get(); }
 void UDreamScreenCreationRequest::Cancel() { if (!Terminal()) bCancel = true; }
 bool UDreamScreenCreationRequest::Terminal() const { return State >= EDreamScreenCreationState::Ready; }
+bool UDreamScreenCreationRequest::IsAboutToPublish() const
+{
+	// Every stage Step runs before "publish", in its order, is behind it.
+	return State == EDreamScreenCreationState::Creating && !bCancel && InitStack.IsEmpty() && bCollected
+		&& RegisterIndex >= RegisterList.Num() && bReconciled && BeginIndex >= RegisterList.Num();
+}
 bool UDreamScreenCreationRequest::OwnerValid(const UDreamScreenUISubsystem& Screens) const
 {
 	return !bExplicitPlayer || (Player.IsValid() && Player->GetWorld() == Screens.GetWorld() && Player->GetLocalPlayer());
