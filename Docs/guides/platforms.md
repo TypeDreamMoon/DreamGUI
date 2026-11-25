@@ -53,7 +53,8 @@ What a version goes through before it is tagged:
    draws to the same build run on uncooked content (see the plugin's `Tools/TestHost/README.md` and
    [Fonts and packaging](fonts-and-packaging.md#5-checking-a-package)).
 
-The Android Development APK smoke test is separate from this release gate.
+Until the gate has run for a version, no packaged Win64 game of that version has been run. The Android Development APK
+smoke test is separate from this release gate: it is not part of tagging a version.
 
 ## What the listed platforms mean
 
