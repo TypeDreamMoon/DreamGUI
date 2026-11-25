@@ -71,6 +71,14 @@ private:
 	const FMaterialRenderProxy* GetParent() const;
 	/** After the collector's reachability analysis: every proxy lets go of what is about to be freed. */
 	static void LetGoOfUnreachable();
+	/**
+	 * Render thread: whether the parent is another than the one InFeatureLevel's uniform buffers were laid out for,
+	 * noting the current one. Another parent is another material, whose uniform buffer has another layout: the buffer
+	 * has to be made again rather than updated, which a cooked build checks and stops on.
+	 */
+	bool TakeParentChange_RenderThread(ERHIFeatureLevel::Type InFeatureLevel);
+	/** The same for every feature level, as CacheUniformExpressions caches them all. */
+	bool TakeParentChange_RenderThread();
 
 	UMaterialInterface* GameThreadSource = nullptr;
 	UMaterialInterface* RenderThreadSource = nullptr;
@@ -79,4 +87,6 @@ private:
 	/** The source's render proxy and its cache's serial number, as FollowSource_RenderThread last saw them. Render thread. */
 	const FMaterialRenderProxy* FollowedParent = nullptr;
 	int32 FollowedSerial = -1;
+	/** The parent each feature level's uniform buffers were last laid out for. Render thread. */
+	const FMaterialRenderProxy* UniformBufferParents[ERHIFeatureLevel::Num] = {};
 };

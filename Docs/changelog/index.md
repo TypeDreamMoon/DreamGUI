@@ -22,6 +22,10 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### New
 
+- **Android arm64 builds, cooks and runs on a handset.** A UE 5.8.4 Development game built with Android clang, its content
+  cooked to ETC2 for OpenGL ES 3.1 and Vulkan ES 3.1 with no errors or warnings, and the signed gallery ran on one
+  handset. Not a Shipping, Meta Quest or full-suite run; see [Platforms](../guides/platforms.md).
+
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
   The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.
@@ -325,6 +329,12 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Changed
 
+- **Cold text on Android waits for the worker, not the frame.** With asynchronous glyph rasterization on, Android
+  generates no outline-field glyphs on the game thread by default: an uncached glyph the worker supports reserves its
+  advance at once and its ink appears when the worker finishes; cached glyphs are not delayed. In one handset run the
+  longest cold layout pass fell from about 710 ms to 5 ms. The allowance is a setting of its own,
+  `AndroidAsyncGlyphSyncBudgetPerFrame` (0, Meta Quest included), beside `AsyncGlyphSyncBudgetPerFrame` (24, every other
+  platform). See [Fonts and packaging](../guides/fonts-and-packaging.md#cold-text-on-android).
 - **One kind of viewport handles at a time.** The designer's viewport shows one kind of the selection's handles -- its
   gradient's, its mask's, its shadows' -- named under the selection with the kind Tab shows next; **Tab** steps through
   them and then to none, the selection box alone. `FDreamDesignerHandles::SetActive` picks one, the *Edit in Viewport*
@@ -404,6 +414,11 @@ What is on `main` after 1.0.0, and ships with the next version.
 
 ### Fixed
 
+- **A sprite keeps its atlas page, and a material that falls back keeps drawing.** Both stopped the gallery on an
+  Android handset. A runtime sprite no longer owns its cached atlas page — the atlas does — and a sprite whose page was
+  collected looks it up again. A draw's material proxy whose parent material changed — its source collected and the
+  default material standing in, or the source's render proxy appearing — updated a uniform buffer laid out for the old
+  one, which a cooked build checks and stops on; it makes the buffer again.
 - **A text's shadow goes under every letter of it.** The underlay was drawn with each glyph's glow and outline, so where
   letters overlap — tight or negative letter spacing, italic, a heavy condensed face — the next letter's shadow landed on
   this one's outline. Every glyph's underlay now draws first, then every glow and outline, then every face; a text with

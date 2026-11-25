@@ -150,3 +150,12 @@ system's language, so the same game broke Japanese lines differently on a Japane
   on a packaged game and on the same build run on uncooked content, and holds the two to each other field by field --
   the safe zone each against its own viewport (`Tools/TestHost/README.md`, "The packaged text smoke test"). The release
   gate runs it before a version is tagged.
+
+### Cold text on Android
+
+With asynchronous glyph rasterization enabled, Android generates no outline-field glyphs synchronously by default. An
+uncached glyph that the worker supports reserves its advance immediately; its ink appears when the worker finishes.
+Cached glyphs are not delayed. The allowance is its own setting, **Async Glyph Sync Budget Per Frame (Android)**
+(`AndroidAsyncGlyphSyncBudgetPerFrame` in `[/Script/DreamGUI.DreamUISettings]` in Engine config, 0 by default); it
+covers every Android device, Meta Quest included. Other platforms read `AsyncGlyphSyncBudgetPerFrame`, 24 by default,
+so editing that one in the editor's Project Settings does not change Android.

@@ -823,12 +823,10 @@ bool UDreamUIRenderTargetGeometrySource::GetPhysicsTriMeshData(struct FTriMeshCo
 		CollisionData->bFastCook = true;
 		return true;
 	}
-	break;
 	case EDreamUIRenderTargetGeometryMode::StaticMesh:
 	{
 		return false;
 	}
-	break;
 	}
 	return false;
 }
@@ -1377,10 +1375,8 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentWidth() const
 	{
 	default:
 		return 0.0f;
-		break;
 	case EDreamUIRenderTargetGeometryMode::Plane:
 		return RenderTargetSize.X;
-		break;
 
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
 		// The arc UpdateMeshData builds: its size, never under 0.01 radians. An arc of 0 (Sign(0) kept it so) made
@@ -1388,7 +1384,6 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentWidth() const
 		const float ArcAngleRadians = FMath::Max(FMath::DegreesToRadians(FMath::Abs(CylinderArcAngle)), 0.01f);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return 2.0f * Radius * FMath::Sin(0.5f * ArcAngleRadians);
-		break;
 	}
 }
 
@@ -1399,11 +1394,9 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentHeight() const
 	{
 	default:
 		return 0.0f;
-		break;
 	case EDreamUIRenderTargetGeometryMode::Plane:
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
 		return RenderTargetSize.Y;
-		break;
 	}
 }
 
@@ -1414,10 +1407,8 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentThickness() const
 	{
 	default:
 		return 0.0f;
-		break;
 	case EDreamUIRenderTargetGeometryMode::Plane:
 		return 0.00f;
-		break;
 
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
 		// As in ComputeComponentWidth, and unsigned: a negative arc gave a negative thickness, and an inverted box.
@@ -1425,7 +1416,6 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentThickness() const
 		const float ArcAngleRadians = FMath::Max(FMath::DegreesToRadians(FMath::Abs(CylinderArcAngle)), 0.01f);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return Radius * (1.0f - FMath::Cos(0.5f * ArcAngleRadians));
-		break;
 	}
 }
 
@@ -1448,7 +1438,6 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 
 		return true;
 	}
-	break;
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
 	{
 		if (InHitFaceIndex >= 0)
