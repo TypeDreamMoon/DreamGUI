@@ -6,7 +6,9 @@
 #include "ShaderParameterStruct.h"
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
+#include "CommonRenderResources.h"
 #include "DreamGUIEngineCompat.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 
 class FDreamUIHDRTransferPS : public FGlobalShader
 {
@@ -65,6 +67,34 @@ void DreamUIHDR::AddTransferPass(FRDGBuilder& GraphBuilder,const FGlobalShaderMa
     Permutation.Set<FDreamUIHDRTransferPS::FToWorking>(ToWorking);
     Permutation.Set<FDreamUIHDRTransferPS::FScRGB>(Output.Encoding==EEncoding::ScRGB);
     TShaderMapRef<FDreamUIHDRTransferPS> Shader(ShaderMap,Permutation);
-    FPixelShaderUtils::AddFullscreenPass(GraphBuilder,ShaderMap,
+    DreamUIPipelines::AddFullscreenPass(GraphBuilder,ShaderMap,
         ToWorking ? RDG_EVENT_NAME("DreamUI HDR Decode") : RDG_EVENT_NAME("DreamUI HDR Encode"),Shader,Parameters,Rect);
+}
+
+void DreamUIPipelines::CollectHDR(FCollector& Collector)
+{
+    // Only where the RHI can output HDR: the decode into the half-float working space, the encode into the output's
+    // target, 10-bit for PQ and half-float for scRGB.
+    if (!GRHISupportsHDROutput || !Collector.Find<FScreenVertexShaderVS>().IsValid())
+    {
+        return;
+    }
+    for (int32 Bits=0; Bits<4; ++Bits)
+    {
+        const bool bToWorking=(Bits&1)!=0;
+        const bool bScRGB=(Bits&2)!=0;
+        FDreamUIHDRTransferPS::FPermutationDomain Permutation;
+        Permutation.Set<FDreamUIHDRTransferPS::FToWorking>(bToWorking);
+        Permutation.Set<FDreamUIHDRTransferPS::FScRGB>(bScRGB);
+        const TShaderRef<FDreamUIHDRTransferPS> Shader=Collector.Find<FDreamUIHDRTransferPS>(Permutation);
+        if (!Shader.IsValid())
+        {
+            continue;
+        }
+        FTarget Target;
+        Target.Format=bToWorking || bScRGB ? PF_FloatRGBA : PF_A2B10G10R10;
+        FGraphicsPipelineStateInitializer Init;
+        InitFullscreen(Init,Collector.ShaderMap,Shader);
+        Collector.Add(Init,Target,EPSOPrecachePriority::Low);
+    }
 }

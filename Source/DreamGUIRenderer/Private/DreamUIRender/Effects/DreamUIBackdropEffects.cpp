@@ -15,6 +15,7 @@
 #include "ShaderParameterStruct.h"
 #include "TextureResource.h"
 #include "DreamUIRender/DreamUICompositor.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "DreamUIRender/DreamUIPostProcessVertex.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
@@ -291,7 +292,7 @@ public:
 		Parameters->DreamUI_AdjustLutSampler = LookupTableSampler.IsValid() ? LookupTableSampler.GetReference() : Bilinear();
 		Parameters->RenderTargets[0] = FRenderTargetBinding(Output, ERenderTargetLoadAction::ENoAction);
 		TShaderMapRef<FDreamUIAdjustPS> PixelShader(ShaderMap);
-		FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIAdjust"), PixelShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+		DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIAdjust"), PixelShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 		return Output;
 	}
 
@@ -360,7 +361,7 @@ public:
 			Parameters->DreamUI_StylizeFrame = InContext.Frame;
 			Parameters->DreamUI_StylizeParams = FVector4f(InContext.PixelScale, InContext.TimeSeconds, 0.0f, 0.0f);
 			Parameters->RenderTargets[0] = FRenderTargetBinding(Next, ERenderTargetLoadAction::ENoAction);
-			FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIStylize"), StylizeShader, Parameters, Viewport);
+			DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIStylize"), StylizeShader, Parameters, Viewport);
 			Current = Next;
 		}
 		if (Packed.Opacity >= 1.0f && Packed.BlendMode == EDreamUIBlendMode::Alpha)
@@ -375,7 +376,7 @@ public:
 		Parameters->DreamUI_EffectOrigin = OriginOf(InContext, InSource);
 		Parameters->RenderTargets[0] = FRenderTargetBinding(Mixed, ERenderTargetLoadAction::ENoAction);
 		TShaderMapRef<FDreamUIEffectMixPS> MixShader(ShaderMap);
-		FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIStylizeMix"), MixShader, Parameters, Viewport);
+		DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIStylizeMix"), MixShader, Parameters, Viewport);
 		return Mixed;
 	}
 
@@ -489,7 +490,7 @@ void DreamUIBackdropPasses::BuildPyramid(FRDGBuilder& GraphBuilder, FGlobalShade
 		Parameters->DreamUI_FilterTexel = FVector4f(1.0f / SourceSize.X, 1.0f / SourceSize.Y, 0.0f, 0.0f);
 		Parameters->DreamUI_TargetTexel = FVector4f(1.0f / Size.X, 1.0f / Size.Y, 0.0f, 0.0f);
 		Parameters->RenderTargets[0] = FRenderTargetBinding(Down[Level], ERenderTargetLoadAction::ENoAction);
-		FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIBlurDown"), DownShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+		DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIBlurDown"), DownShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 	}
 	// Each level back up to the first's size, the dual filter's up passes smoothing what the down passes left blocky.
 	for (int32 Level = 1; Level <= MaxLevel; ++Level)
@@ -506,7 +507,7 @@ void DreamUIBackdropPasses::BuildPyramid(FRDGBuilder& GraphBuilder, FGlobalShade
 			Parameters->DreamUI_FilterTexel = FVector4f(0.5f / SourceSize.X, 0.5f / SourceSize.Y, 0.0f, 0.0f);
 			Parameters->DreamUI_TargetTexel = FVector4f(1.0f / Size.X, 1.0f / Size.Y, 0.0f, 0.0f);
 			Parameters->RenderTargets[0] = FRenderTargetBinding(Next, ERenderTargetLoadAction::ENoAction);
-			FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIBlurUp"), UpShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+			DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIBlurUp"), UpShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 			Current = Next;
 		}
 		OutLevels[Level] = Current;
@@ -586,14 +587,7 @@ void DreamUIBackdropPasses::DrawComposite(const FDreamUIPostProcessContext& InCo
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			// No blend: the shader mixes what was behind with what the effect made of it.
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+			DreamUIPipelines::InitBackdropComposite(GraphicsPSOInit, ShaderMap, Composite.Effect, bWorld, Mask.IsValid(), bGlassShape);
 			GraphicsPSOInit.NumSamples = NumSamples;
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
@@ -766,4 +760,71 @@ int32 DreamUIPostProcessEffects::GetBlurPyramidReach(int32 InLevel)
 	// Each down pass reads a texel and a half further at its scale, each up pass as much again: about three times the
 	// level's scale in all.
 	return InLevel <= 0 ? 0 : 3 << FMath::Min(InLevel, BlurPyramidLevels - 1);
+}
+
+void DreamUIPipelines::InitBackdropComposite(FGraphicsPipelineStateInitializer& Init, FGlobalShaderMap* ShaderMap, int32 Effect, bool bWorldSpace, bool bMask, bool bGlassShape)
+{
+	FDreamUIBackdropCompositePS::FPermutationDomain Permutation;
+	Permutation.Set<FDreamUIBackdropCompositePS::FEffect>(Effect);
+	Permutation.Set<FDreamUIBackdropCompositePS::FBlendDepth>(bWorldSpace);
+	Permutation.Set<FDreamUIBackdropCompositePS::FMask>(bMask);
+	Permutation.Set<FDreamUIBackdropCompositePS::FGlassShape>(bGlassShape);
+	TShaderMapRef<FDreamUIBackdropCompositeVS> VertexShader(ShaderMap);
+	TShaderMapRef<FDreamUIBackdropCompositePS> PixelShader(ShaderMap, Permutation);
+	Init.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+	Init.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+	// No blend: the shader mixes what was behind with what the effect made of it.
+	Init.BlendState = TStaticBlendState<>::GetRHI();
+	Init.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
+	Init.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+	Init.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+	Init.PrimitiveType = PT_TriangleList;
+}
+
+void DreamUIPipelines::CollectBackdropEffects(FCollector& Collector)
+{
+	// Each effect's passes, drawn into a copy of what is behind (DreamUIBackdropEffectsLocal::CreateLike): single-sampled,
+	// the canvas's format.
+	auto AddFullscreen = [&Collector](const TShaderRef<FShader>& InPixelShader, EPSOPrecachePriority Priority)
+	{
+		if (!InPixelShader.IsValid() || !Collector.Find<FScreenVertexShaderVS>().IsValid())
+		{
+			return;
+		}
+		FGraphicsPipelineStateInitializer Init;
+		InitFullscreen(Init, Collector.ShaderMap, InPixelShader);
+		Collector.Add(Init, Collector.OffscreenTargets, Priority);
+	};
+	AddFullscreen(Collector.Find<FDreamUIPyramidDownPS>(), EPSOPrecachePriority::Medium);
+	AddFullscreen(Collector.Find<FDreamUIPyramidUpPS>(), EPSOPrecachePriority::Medium);
+	AddFullscreen(Collector.Find<FDreamUIAdjustPS>(), EPSOPrecachePriority::Low);
+	AddFullscreen(Collector.Find<FDreamUIStylizePS>(), EPSOPrecachePriority::Low);
+	AddFullscreen(Collector.Find<FDreamUIEffectMixPS>(), EPSOPrecachePriority::Low);
+
+	// What an effect made, put back over what it was made from: onto the canvas's target or the group it is in.
+	if (!Collector.Find<FDreamUIBackdropCompositeVS>().IsValid())
+	{
+		return;
+	}
+	for (int32 Effect = 0; Effect < FDreamUIBackdropCompositePS::FEffect::PermutationCount; ++Effect)
+	{
+		for (int32 Bits = 0; Bits < 8; ++Bits)
+		{
+			const bool bWorldSpace = (Bits & 1) != 0;
+			const bool bMask = (Bits & 2) != 0;
+			const bool bGlassShape = (Bits & 4) != 0;
+			FDreamUIBackdropCompositePS::FPermutationDomain Permutation;
+			Permutation.Set<FDreamUIBackdropCompositePS::FEffect>(Effect);
+			Permutation.Set<FDreamUIBackdropCompositePS::FBlendDepth>(bWorldSpace);
+			Permutation.Set<FDreamUIBackdropCompositePS::FMask>(bMask);
+			Permutation.Set<FDreamUIBackdropCompositePS::FGlassShape>(bGlassShape);
+			if (!Collector.Find<FDreamUIBackdropCompositePS>(Permutation).IsValid())
+			{
+				continue;
+			}
+			FGraphicsPipelineStateInitializer Init;
+			InitBackdropComposite(Init, Collector.ShaderMap, Effect, bWorldSpace, bMask, bGlassShape);
+			Collector.Add(Init, Collector.AnyTargets, Bits == 0 ? EPSOPrecachePriority::Medium : EPSOPrecachePriority::Low);
+		}
+	}
 }

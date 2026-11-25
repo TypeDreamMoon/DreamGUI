@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIRender/DreamUILayerStyleComposite.h"
+#include "DreamUIRender/DreamUIPipelines.h"
 #include "CommonRenderResources.h"
 #include "Engine/Texture.h"
 #include "GlobalShader.h"
@@ -106,7 +107,7 @@ FRDGTextureRef FDreamUILayerStyleComposite::JumpFlood(FRDGBuilder& GraphBuilder,
 		Parameters->DreamUI_FloodSource = InGroup;
 		Parameters->DreamUI_FloodParams = SizeParams;
 		Parameters->RenderTargets[0] = FRenderTargetBinding(Seeds, ERenderTargetLoadAction::ENoAction);
-		FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIJumpFloodInit"), InitShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+		DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIJumpFloodInit"), InitShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 	}
 	// Halving from the largest power of two under the texture's size down to one, and one more step of one: the seeds' last
 	// few errors, where a nearer seed was passed over at a long step, are mostly mended by it.
@@ -123,7 +124,7 @@ FRDGTextureRef FDreamUILayerStyleComposite::JumpFlood(FRDGBuilder& GraphBuilder,
 		Parameters->DreamUI_FloodSource = Seeds;
 		Parameters->DreamUI_FloodParams = FVector4f(static_cast<float>(Step), SizeParams.Y, SizeParams.Z, 0.0f);
 		Parameters->RenderTargets[0] = FRenderTargetBinding(Other, ERenderTargetLoadAction::ENoAction);
-		FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIJumpFloodStep(%d)", Step), StepShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+		DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUIJumpFloodStep(%d)", Step), StepShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 		Swap(Seeds, Other);
 	}
 	return Seeds;
@@ -221,8 +222,43 @@ void FDreamUILayerStyleComposite::Apply_RenderThread(FRDGBuilder& GraphBuilder, 
 		Layer.BlendMode = Record.OuterSlotModes[Slot];
 		Parameters->RenderTargets[Slot + 1] = FRenderTargetBinding(Layer.Texture, ERenderTargetLoadAction::ENoAction);
 	}
-	FPixelShaderUtils::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUILayerStyle"), PixelShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
+	DreamUIPipelines::AddFullscreenPass(GraphBuilder, ShaderMap, RDG_EVENT_NAME("DreamUILayerStyle"), PixelShader, Parameters, FIntRect(FIntPoint::ZeroValue, Size));
 	FDreamUILayerStyleLayer& Last = OutLayers.AddDefaulted_GetRef();
 	Last.Texture = Content;
 	Last.bContent = true;
+}
+
+void DreamUIPipelines::CollectLayerStyle(FCollector& Collector)
+{
+	if (!Collector.Find<FScreenVertexShaderVS>().IsValid())
+	{
+		return;
+	}
+	auto Fullscreen = [&Collector](const TShaderRef<FShader>& InPixelShader)
+	{
+		FGraphicsPipelineStateInitializer Init;
+		InitFullscreen(Init, Collector.ShaderMap, InPixelShader);
+		return Init;
+	};
+	// The distance field the effects are drawn from, in its own float target (FDreamUILayerStyleComposite::JumpFlood).
+	FTarget Field;
+	Field.Format = PF_A32B32G32R32F;
+	for (const TShaderRef<FShader>& Shader : { TShaderRef<FShader>(Collector.Find<FDreamUIJumpFloodInitPS>()), TShaderRef<FShader>(Collector.Find<FDreamUIJumpFloodStepPS>()) })
+	{
+		if (Shader.IsValid())
+		{
+			Collector.Add(Fullscreen(Shader), Field, EPSOPrecachePriority::Low);
+		}
+	}
+	// The styled group and each of its outer slots, all at once, in the group's format: one target more for each slot.
+	for (int32 Slots = 0; Slots < FDreamUILayerStyleCompositePS::FSlots::PermutationCount; ++Slots)
+	{
+		FDreamUILayerStyleCompositePS::FPermutationDomain Permutation;
+		Permutation.Set<FDreamUILayerStyleCompositePS::FSlots>(Slots);
+		const TShaderRef<FDreamUILayerStyleCompositePS> Shader = Collector.Find<FDreamUILayerStyleCompositePS>(Permutation);
+		if (Shader.IsValid())
+		{
+			Collector.Add(Fullscreen(Shader), Collector.OffscreenTargets, EPSOPrecachePriority::Low, 1 + Slots);
+		}
+	}
 }
