@@ -435,6 +435,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamWidget>> LayoutDirtyWidgetArray;
+	/**
+	 * The widgets in LayoutDirtyWidgetArray, for the duplicate check AddLayoutDirtyWidget makes. AddUnique on the array
+	 * compared every entry: a page of a few hundred widgets attaching or turning active marked each of them, and the
+	 * checks grew with the square of the page. Emptied whenever the array is taken by a layout pass.
+	 */
+	TSet<FObjectKey> LayoutDirtyWidgetKeys;
 	
 	/** Weak for the same reason as FDreamUILayoutTree::WidgetArray: neither container is a UPROPERTY. */
 	TMap<TWeakObjectPtr<UDreamWidget>, FDreamUILayoutTree> MapWidgetToLayoutTree;
