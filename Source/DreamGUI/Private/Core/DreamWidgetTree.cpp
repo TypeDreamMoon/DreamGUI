@@ -138,9 +138,54 @@ TArray<UDreamWidget*> UDreamWidgetTree::GetAllWidgets() const
 	return Widgets;
 }
 
+namespace DreamWidgetTreeLocal
+{
+	/**
+	 * Whether SanitizeIdentifier(InRaw) is InTarget, compared as two FNames compare -- ignoring case -- without building
+	 * either. The sanitized string differs from the raw one only where SanitizeIdentifier rewrites it: a character that
+	 * is not an identifier's becomes '_', a leading digit gets a '_' before it, and an empty name is "Element".
+	 */
+	bool IsSanitizedIdentifier(const FString& InRaw, FStringView InTarget)
+	{
+		if (InRaw.IsEmpty())
+		{
+			return InTarget.Equals(TEXT("Element"), ESearchCase::IgnoreCase);
+		}
+		int32 Offset = 0;
+		if (FChar::IsDigit(InRaw[0]))
+		{
+			if (InTarget.IsEmpty() || InTarget[0] != TEXT('_'))
+			{
+				return false;
+			}
+			Offset = 1;
+		}
+		if (InTarget.Len() - Offset != InRaw.Len())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < InRaw.Len(); ++Index)
+		{
+			const TCHAR Char = InRaw[Index];
+			const TCHAR Sanitized = FChar::IsAlnum(Char) || Char == TEXT('_') || Char > 0x7F ? Char : TEXT('_');
+			if (FChar::ToLower(Sanitized) != FChar::ToLower(InTarget[Offset + Index]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
 UDreamWidget* UDreamWidgetTree::FindWidgetByVariableName(FName InVariableName) const
 {
-	return WalkUntil(*this, [InVariableName](UDreamWidget* Widget) { return MakeWidgetVariableName(Widget) == InVariableName; });
+	// MakeWidgetVariableName built a sanitized string and an FName for every widget it passed, which on a handset made a
+	// page's part lookups the largest cost of its On Initialized. The same answer, from one string made for the name.
+	const FString Target = InVariableName.ToString();
+	return WalkUntil(*this, [&Target](UDreamWidget* Widget)
+	{
+		return DreamWidgetTreeLocal::IsSanitizedIdentifier(Widget->GetDisplayName(), Target);
+	});
 }
 
 void UDreamWidgetTree::BuildVariableNameIndex(TMap<FName, TWeakObjectPtr<UDreamWidget>>& Out) const
