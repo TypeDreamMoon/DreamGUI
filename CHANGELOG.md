@@ -17,6 +17,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   cooked to ETC2 for OpenGL ES 3.1 and Vulkan ES 3.1 with no errors or warnings, and the signed gallery ran on one
   handset. Not a Shipping, Meta Quest or full-suite run; see [Platforms](Docs/guides/platforms.md).
 
+- **A large page can open over several frames.** `OpenScreenBudgeted` on the screen UI subsystem loads the page's
+  class asynchronously and builds the page a slice at a time on the game thread, filling each frame up to
+  `CreationFrameTargetMs` (33.3 ms); the request hands the page out only once it is attached and turned on, and can be
+  cancelled until then. Synchronous creation, `AddToViewport` and `PushPageAsync` are unchanged. See
+  [Opening a large screen over several frames](Docs/concepts/canvas.md#opening-a-large-screen-over-several-frames).
+
 - **The source builds on Unreal Engine 5.5 and 5.6 as well as 5.8.** One branch for every engine: the descriptor no longer
   names an `EngineVersion`, and the differences between engines are answered in one header, `DreamGUIEngineCompat.h`.
   The editor target and a Development game compile on 5.5 and 5.6; 5.7 was read against its source and not compiled.
@@ -445,6 +451,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   longest cold layout pass fell from about 710 ms to 5 ms. The allowance is a setting of its own,
   `AndroidAsyncGlyphSyncBudgetPerFrame` (0, Meta Quest included), beside `AsyncGlyphSyncBudgetPerFrame` (24, every other
   platform). See [Fonts and packaging](Docs/guides/fonts-and-packaging.md#cold-text-on-android).
+
+- **Building and attaching a large page costs far less on the game thread.** Marking widgets for layout checked each
+  against every widget already marked, looking a part up by name built a string and a name for every widget it passed,
+  registering a widget searched the world's whole registry, and a page attached to the screen before getting its own
+  canvas moved every visual twice. On an Android handset the NOCTURNE settings page went from 1.17 s, with frames of
+  up to 62 ms, to 0.23 s with none over 29 ms on the game thread; the archive page from 0.35 s to 0.12 s.
 - **`Center` where the enum says `Middle` names the right word.** A text's own vertical alignment says `Middle` and a
   slot's says `Center`; DUI4005 for either spelling in the other's place now ends `(did you mean 'Middle'?)` (or
   `'Center'`). The worked example in the manual compiles and lays out as written, and the language pages say which way

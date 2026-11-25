@@ -139,6 +139,14 @@ public:
 	 */
 	static void InitializeWidgetStatic(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype);
 
+private:
+	friend class UDreamScreenCreationRequest;
+	static void PrepareBinding(struct FDreamTreeBinding& Cursor);
+	static TSharedPtr<struct FDreamTreeBinding> BeginBinding(UDreamUserWidget* Host, const UClass* Class, UDreamWidgetTree* Archetype);
+	static bool AdvanceBinding(struct FDreamTreeBinding& Cursor, UDreamUserWidget*& OutChild);
+public:
+
+
 	virtual void PurgeClass(bool bRecompilingOnLoad) override;
 
 private:

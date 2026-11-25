@@ -95,6 +95,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
 	UDreamWidget* FindWidgetByVariableName(FName InVariableName) const;
 
+	/** Snapshot of the first match per name, in lookup order. Rebuild after hierarchy or name edits. */
+	void BuildVariableNameIndex(TMap<FName, TWeakObjectPtr<UDreamWidget>>& Out) const;
+
 	/**
 	 * The member-variable name a widget binds to.
 	 *

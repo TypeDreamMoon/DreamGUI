@@ -68,18 +68,19 @@ void UDreamWidgetTree::RebuildParentLinks()
 	}
 }
 
-void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const
+template <typename Visitor>
+static UDreamWidget* WalkUntil(const UDreamWidgetTree& Tree, Visitor&& Visit)
 {
-	if (!IsValid(RootWidget))
+	if (!IsValid(Tree.RootWidget))
 	{
-		return;
+		return nullptr;
 	}
 	// Iterative rather than recursive: a malformed Children array would blow the stack, and this runs
 	// over trees that arrive from disk. RestoreParentLinksRecursive is the pass that reports cycles;
 	// here a revisit is simply skipped so a caller can still walk a damaged tree without hanging.
 	TSet<UDreamWidget*> Visited;
 	TArray<UDreamWidget*> Pending;
-	Pending.Push(RootWidget);
+	Pending.Push(Tree.RootWidget);
 	while (Pending.Num() > 0)
 	{
 		UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
@@ -93,7 +94,7 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 		{
 			continue;
 		}
-		InPredicate(Widget);
+		if (Visit(Widget)) return Widget;
 		// A nested widget blueprint's named-slot content belongs to THIS tree -- the host authored it
 		// -- but it hangs off the binding map rather than off Children until the instance is built.
 		// A walk that only followed Children would miss it, which means no variable declared for it,
@@ -102,7 +103,7 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 		{
 			for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : UserWidget->NamedSlotContent)
 			{
-				if (IsValid(Binding.Value) && Binding.Value->GetTypedOuter<UDreamWidgetTree>() == this)
+				if (IsValid(Binding.Value) && Binding.Value->GetTypedOuter<UDreamWidgetTree>() == &Tree)
 				{
 					Pending.Push(Binding.Value);
 				}
@@ -115,6 +116,12 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 			Pending.Push(Children[i]);
 		}
 	}
+	return nullptr;
+}
+
+void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const
+{
+	WalkUntil(*this, [&](UDreamWidget* Widget) { InPredicate(Widget); return false; });
 }
 
 int32 UDreamWidgetTree::CountWidgets() const
@@ -131,17 +138,64 @@ TArray<UDreamWidget*> UDreamWidgetTree::GetAllWidgets() const
 	return Widgets;
 }
 
+namespace DreamWidgetTreeLocal
+{
+	/**
+	 * Whether SanitizeIdentifier(InRaw) is InTarget, compared as two FNames compare -- ignoring case -- without building
+	 * either. The sanitized string differs from the raw one only where SanitizeIdentifier rewrites it: a character that
+	 * is not an identifier's becomes '_', a leading digit gets a '_' before it, and an empty name is "Element".
+	 */
+	bool IsSanitizedIdentifier(const FString& InRaw, FStringView InTarget)
+	{
+		if (InRaw.IsEmpty())
+		{
+			return InTarget.Equals(TEXT("Element"), ESearchCase::IgnoreCase);
+		}
+		int32 Offset = 0;
+		if (FChar::IsDigit(InRaw[0]))
+		{
+			if (InTarget.IsEmpty() || InTarget[0] != TEXT('_'))
+			{
+				return false;
+			}
+			Offset = 1;
+		}
+		if (InTarget.Len() - Offset != InRaw.Len())
+		{
+			return false;
+		}
+		for (int32 Index = 0; Index < InRaw.Len(); ++Index)
+		{
+			const TCHAR Char = InRaw[Index];
+			const TCHAR Sanitized = FChar::IsAlnum(Char) || Char == TEXT('_') || Char > 0x7F ? Char : TEXT('_');
+			if (FChar::ToLower(Sanitized) != FChar::ToLower(InTarget[Offset + Index]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
 UDreamWidget* UDreamWidgetTree::FindWidgetByVariableName(FName InVariableName) const
 {
-	UDreamWidget* Found = nullptr;
-	ForEachWidget([&Found, InVariableName](UDreamWidget* Widget)
+	// MakeWidgetVariableName built a sanitized string and an FName for every widget it passed, which on a handset made a
+	// page's part lookups the largest cost of its On Initialized. The same answer, from one string made for the name.
+	const FString Target = InVariableName.ToString();
+	return WalkUntil(*this, [&Target](UDreamWidget* Widget)
 	{
-		if (Found == nullptr && MakeWidgetVariableName(Widget) == InVariableName)
-		{
-			Found = Widget;
-		}
+		return DreamWidgetTreeLocal::IsSanitizedIdentifier(Widget->GetDisplayName(), Target);
 	});
-	return Found;
+}
+
+void UDreamWidgetTree::BuildVariableNameIndex(TMap<FName, TWeakObjectPtr<UDreamWidget>>& Out) const
+{
+	Out.Reset();
+	ForEachWidget([&](UDreamWidget* Widget)
+	{
+		const FName Name = MakeWidgetVariableName(Widget);
+		if (!Out.Contains(Name)) Out.Add(Name, Widget);
+	});
 }
 
 FString UDreamWidgetTree::SanitizeIdentifier(const FString& InRaw)

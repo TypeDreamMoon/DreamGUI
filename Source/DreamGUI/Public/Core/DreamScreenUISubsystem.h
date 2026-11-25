@@ -1,10 +1,12 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Core/DreamUIWorldService.h"
+#include "Core/DreamScreenCreationRequest.h"
 #include "DreamScreenUISubsystem.generated.h"
 
 class AActor;
@@ -76,6 +78,10 @@ public:
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+
+	/** Submit a screen without blocking on class load or publishing a partly initialized page. */
+	UFUNCTION(BlueprintCallable, Category="DreamGUI|Screen", meta=(AdvancedDisplay="OwningPlayer,SortOrder"))
+	UDreamScreenCreationRequest* OpenScreenBudgeted(TSoftClassPtr<UDreamUserWidget> PageClass, APlayerController* OwningPlayer = nullptr, int32 SortOrder = 0);
 	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Layers; }
 	virtual void TeardownForWorld(UWorld& InWorld) override;
 
@@ -331,6 +337,15 @@ private:
 	TSet<int32> OwnedScreenRoots;
 	/** Set by TeardownForWorld, which runs once. */
 	bool bTornDownForWorld = false;
+	UPROPERTY(Transient) TArray<TObjectPtr<UDreamScreenCreationRequest>> CreationQueue;
+	FDelegateHandle CreationTick;
+	void TickCreation(UWorld* World, ELevelTick TickType, float DeltaTime);
+	/** This frame's share for creation: see UDreamGUISettings::CreationFrameTargetMs. */
+	double GetCreationBudgetMs() const;
+	bool bInCreationTick = false;
+	/** How long the last TickCreation took, and in which frame: what the previous frame's game-thread time includes. */
+	double LastCreationMs = 0.;
+	uint64 LastCreationFrame = 0;
 
 	TMap<FName, FEntry> Entries;
 	uint64 NextPageMutationSerial = 0;
@@ -360,6 +375,10 @@ private:
 	bool IsUsablePage(const UDreamWidget* InRoot) const;
 	FName FindNameForWidget(const UDreamWidget* InRoot) const;
 	void ConfigurePage(UDreamWidget* InRoot, int32 InSortOrder, int32 InPlayerIndex, bool bInCustomPlacement);
+	/** The page's own canvas, sorted at InSortOrder: what ConfigurePage gives a page before attaching it. */
+	void ApplyPageCanvas(UDreamWidget* InRoot, int32 InSortOrder);
+	/** Gives the page it is building its canvas while the page is still empty. */
+	friend class UDreamScreenCreationRequest;
 	void RegisterUIInternal(FName InName, UDreamWidget* InRoot, int32 InSortOrder,
 		EDreamUIScreenPageCachePolicy InCachePolicy, TSoftClassPtr<UDreamUserWidget> InSourceClass,
 		bool bInitiallyVisible, int32 InPlayerIndex);
