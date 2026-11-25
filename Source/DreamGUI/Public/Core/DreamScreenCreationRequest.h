@@ -46,6 +46,7 @@ private:
 	int32 RegisterIndex = 0;
 	bool bCollected = false;
 	bool bReconciled = false;
+	bool bAttached = false;
 	int32 BeginIndex = 0;
 	bool bCancel = false;
 	bool bExplicitPlayer = false;
@@ -56,7 +57,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UDreamUserWidget> Staging;
 	TSharedPtr<FStreamableHandle> Load;
 	int32 Sort = 0;
-	enum class EWork : uint8 { Load, Allocate, Instance, Bind, Callbacks, Collect, Register, Reconcile, BeginPlay, Publish, Count };
+	enum class EWork : uint8 { Load, Allocate, Instance, Bind, Callbacks, Collect, Register, Reconcile, BeginPlay, Attach, Publish, Count };
 	EWork Work = EWork::Load;
 	double Costs[static_cast<uint8>(EWork::Count)] = {};
 	double Submitted = 0, CpuMs = 0, LoadStarted = 0, LoadedAt = 0;
@@ -66,7 +67,11 @@ private:
 	uint64 SubmittedFrame = 0;
 	const TCHAR* Phase = TEXT("queue");
 	bool Terminal() const;
-	/** Whether the next Step attaches the page to the screen. */
+	/** Whether every stage before attaching is done. */
+	bool IsBuilt() const;
+	/** Whether the next Step attaches the inactive page to its player's screen. */
+	bool IsAboutToAttach() const;
+	/** Whether the next Step turns the attached page on and hands it out. */
 	bool IsAboutToPublish() const;
 	bool OwnerValid(const UDreamScreenUISubsystem& Screens) const;
 	void Step(UDreamScreenUISubsystem& Screens);

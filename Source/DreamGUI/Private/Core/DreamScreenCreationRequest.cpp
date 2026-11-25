@@ -74,10 +74,12 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float Delt
 		CreationQueue.RemoveAt(0, 1, EAllowShrinking::No);
 		const bool bWaiting = Request->SubmittedFrame == GFrameCounter ||
 			(Request->State == EDreamScreenCreationState::Loading && Request->Load && !Request->Load->HasLoadCompleted() && !Request->bCancel && Request->OwnerValid(*this));
-		// Publishing attaches the whole page, and the canvas then builds every one of its widgets' geometry later in the
-		// same frame: a frame that publishes does nothing else here, and stops after it.
+		// Attaching walks the whole page, and publishing turns it on, after which the canvas builds every one of its
+		// widgets' geometry later in the same frame: each opens a frame of its own, and a frame that publishes stops
+		// after it.
 		const bool bPublishes = !bWaiting && Request->IsAboutToPublish();
-		if (bPublishes && bSteppedThisFrame)
+		const bool bOpensFrame = bPublishes || (!bWaiting && Request->IsAboutToAttach());
+		if (bOpensFrame && bSteppedThisFrame)
 		{
 			CreationQueue.Insert(Request.Get(), 0);
 			break;
@@ -96,9 +98,9 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float Delt
 				// Once a page, in the log file and not on the console; the step that went over the budget is Verbose,
 				// because a page can have dozens of them and every game that opens pages would print them all.
 				// longest-frame is the longest frame before this one; the frame that publishes ends after this line.
-				UE_LOG(DreamGUI, Log, TEXT("Budgeted screen %s: submit-to-publish=%.2fms frames=%llu longest-frame=%.2fms step-wall=%.2fms queue=%.2fms class-wait=%.2fms allocate=%.2fms instance=%.2fms bind=%.2fms callbacks=%.2fms collect=%.2fms register=%.2fms reconcile=%.2fms begin=%.2fms publish/notify=%.2fms"),
+				UE_LOG(DreamGUI, Log, TEXT("Budgeted screen %s: submit-to-publish=%.2fms frames=%llu longest-frame=%.2fms step-wall=%.2fms queue=%.2fms class-wait=%.2fms allocate=%.2fms instance=%.2fms bind=%.2fms callbacks=%.2fms collect=%.2fms register=%.2fms reconcile=%.2fms begin=%.2fms attach=%.2fms publish/notify=%.2fms"),
 					*Request->Class.GetAssetName(), (FPlatformTime::Seconds()-Request->Submitted)*1000., GFrameCounter - Request->SubmittedFrame, Request->LongestFrameMs, Request->CpuMs,
-					(Request->LoadStarted-Request->Submitted)*1000., (Request->LoadedAt-Request->LoadStarted)*1000., T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]);
+					(Request->LoadStarted-Request->Submitted)*1000., (Request->LoadedAt-Request->LoadStarted)*1000., T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10]);
 			}
 			if (Ms > Budget) UE_LOG(DreamGUI, Verbose, TEXT("Screen creation over budget: %s %s %s %.2f ms"), *Request->Class.GetAssetName(), *Request->StepClass.ToString(), Request->Phase, Ms);
 		}
@@ -126,12 +128,14 @@ void UDreamScreenUISubsystem::TickCreation(UWorld* World, ELevelTick, float Delt
 UDreamUserWidget* UDreamScreenCreationRequest::GetPage() const { return Result.Get(); }
 void UDreamScreenCreationRequest::Cancel() { if (!Terminal()) bCancel = true; }
 bool UDreamScreenCreationRequest::Terminal() const { return State >= EDreamScreenCreationState::Ready; }
-bool UDreamScreenCreationRequest::IsAboutToPublish() const
+bool UDreamScreenCreationRequest::IsBuilt() const
 {
-	// Every stage Step runs before "publish", in its order, is behind it.
+	// Every stage Step runs before "attach", in its order, is behind it.
 	return State == EDreamScreenCreationState::Creating && !bCancel && InitStack.IsEmpty() && bCollected
 		&& RegisterIndex >= RegisterList.Num() && bReconciled && BeginIndex >= RegisterList.Num();
 }
+bool UDreamScreenCreationRequest::IsAboutToAttach() const { return IsBuilt() && !bAttached; }
+bool UDreamScreenCreationRequest::IsAboutToPublish() const { return IsBuilt() && bAttached; }
 bool UDreamScreenCreationRequest::OwnerValid(const UDreamScreenUISubsystem& Screens) const
 {
 	return !bExplicitPlayer || (Player.IsValid() && Player->GetWorld() == Screens.GetWorld() && Player->GetLocalPlayer());
@@ -252,6 +256,15 @@ void UDreamScreenCreationRequest::Step(UDreamScreenUISubsystem& Screens)
 	{
 		Phase = TEXT("begin play"); Work = EWork::BeginPlay;
 		BeginRegisteredDreamWidget(RegisterList[BeginIndex++].Get());
+		return;
+	}
+	if (!bAttached)
+	{
+		Phase = TEXT("attach"); Work = EWork::Attach;
+		// Onto its player's screen while still inactive, in a frame of its own: nothing draws it yet, and the walks
+		// attaching makes over the whole page are behind it when publication turns it on and the canvas builds it.
+		Screens.ConfigurePage(Staging, Sort, Screens.PlayerIndexForWidget(Staging), false);
+		bAttached = true;
 		return;
 	}
 	Phase = TEXT("publish"); Work = EWork::Publish;

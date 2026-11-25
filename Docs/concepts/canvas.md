@@ -114,9 +114,10 @@ The world owns pending requests, and the caller does not have to prewarm a class
 The pending pages and local players of a game world share one game-thread budget per frame. `CreationFrameTargetMs` in
 Dream GUI project settings (**33.3 ms** by default) is the frame time creation fills up to: each frame takes what the
 previous frame's game thread left of the target, less 8 ms, never more than half the target and never less than
-`CreationBudgetMs` (**2 ms**). Set the target to 0 for a fixed `CreationBudgetMs`. The frame that publishes a page
-does nothing else for creation, because the canvas builds the whole page's geometry later in that frame. This is
-cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
+`CreationBudgetMs` (**2 ms**). Set the target to 0 for a fixed `CreationBudgetMs`. A built page is attached to its
+player's screen while still inactive, at the start of one frame, and turned on and published at the start of the next;
+the frame that publishes does nothing else for creation, because the canvas builds the whole page's geometry later in
+that frame. This is cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
 Resource loading is asynchronous. An engine instancing operation, a native or Blueprint callback, or publication and
 its observers can exceed the budget; `DreamGUI` at Verbose logs each step that did, and every published page logs one
 `Budgeted screen` line with its time per stage. Ready means attached, not that the GPU has
