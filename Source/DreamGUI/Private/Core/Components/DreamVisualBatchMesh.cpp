@@ -443,16 +443,12 @@ bool UDreamVisualBatchMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVector
 	default:
 	case EDreamVisualRaycastType::Rect:
 		return LineTraceUIRect(OutHit, Start, End);
-		break;
 	case EDreamVisualRaycastType::Mesh:
 		return LineTraceUIGeometry(UIGeometry.Get(), OutHit, Start, End);
-		break;
 	case EDreamVisualRaycastType::VisiblePixel:
 		return LineTraceVisiblePixel(VisiblePixelThreshold, OutHit, Start, End);
-		break;
 	case EDreamVisualRaycastType::Custom:
 		return LineTraceUICustom(OutHit, Start, End);
-		break;
 	}
 }
 

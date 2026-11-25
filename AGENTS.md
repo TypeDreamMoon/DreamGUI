@@ -125,7 +125,8 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
   `Tools/Tests/module-owners.csv`. The `layering` static check enforces it.
 - Test names are `DreamGUI.<Area>.<Sentence>`. A test that reads pixels carries `NonNullRHI`. Preset floors in
   `Tools/Tests/presets.json` only go up.
-- Unreal Engine 5.8 only; Win64 is the only platform built and run. There are no engine-version macros.
+- Unreal Engine 5.8 only; Win64 is the only platform the suite runs on. Android arm64 has had one handset smoke test
+  (`Docs/guides/platforms.md`). There are no engine-version macros.
 - English under `Docs/` is the source. `Docs/zh-CN/` is translated by CI; never edit `Docs/zh-CN/.align/`.
 - A change a project can notice gets a line in `CHANGELOG.md` under `## Unreleased` (`### New`, `### Changed`,
   `### Fixed`). Behaviour changes update the page in `Docs/` that describes them.

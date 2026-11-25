@@ -1,16 +1,16 @@
 ---
 title: Platforms and status
-description: What is claimed and what has been run, listed apart — Win64 is the only platform built and run; the release gate, what mobile and dedicated servers actually amount to, test coverage and the known gaps.
+description: What is claimed and what has been run, listed apart — Win64 has the automation suite; Android arm64 has a handset smoke test; the release gate, what mobile and dedicated servers actually amount to, test coverage and the known gaps.
 ---
 
-What is *claimed* and what has been *run* are different lists, so both are here. **Win64 is the only platform built and
-run.**
+What is *claimed* and what has been *run* are different lists, so both are here. **Win64 has the full automation suite; Android has been tried on one arm64 handset.**
 
 | | Compiled | Run |
 | --- | --- | --- |
 | **Win64** | The editor; the game target in Development and Shipping | **The editor with the whole automation suite**; a packaged Development game, once the release gate has run the packaged text smoke test for that version |
 | Mac, Linux | Never | Never — there is no machine or toolchain for them here |
-| iOS, Android | Never | Never — no SDK here, and never on a device |
+| Android arm64 | UE 5.8.4 Development game; ETC2 cook for OpenGL ES 3.1 and Vulkan ES 3.1 | A signed demo APK ran on one handset; not a Shipping, Quest or full-suite validation |
+| iOS | Never | Never |
 | Consoles | No | Not in any module's `PlatformAllowList` |
 | Dedicated server | Never — no server target has been built | No |
 
@@ -53,20 +53,19 @@ What a version goes through before it is tagged:
    draws to the same build run on uncooked content (see the plugin's `Tools/TestHost/README.md` and
    [Fonts and packaging](fonts-and-packaging.md#5-checking-a-package)).
 
-Until the gate has run for a version, no packaged game of that version has been run.
+Until the gate has run for a version, no packaged Win64 game of that version has been run. The Android Development APK
+smoke test is separate from this release gate: it is not part of tagging a version.
 
 ## What the listed platforms mean
 
 The per-module `PlatformAllowList` and the descriptor's `SupportedTargetPlatforms` name the five platforms the code is
 written for — Win64, Mac, Linux, IOS, Android — and a test keeps them in step with each other; `DreamGUIEditor` and
 `DreamGUIK2Nodes` list Win64, Mac and Linux only. They say what the build tools will *try* to compile and what the cooker
-will cook, not that anyone has compiled, run or shipped on those platforms: the shaders, the engine's third-party
-libraries the text uses and the C++ (which clang, unlike MSVC, builds with warnings as errors) have only ever been built
-for Win64.
+will cook. See the table above for the builds and runs actually checked.
 
 ## Mobile
 
-There are code paths that have never run:
+The handset smoke test does not establish full mobile coverage:
 
 - touch is routed end to end (`BindTouch` → the standalone input module);
 - the virtual keyboard is implemented (`FPlatformApplicationMisc::RequiresVirtualKeyboard` → `ShowVirtualKeyboard`);
@@ -74,6 +73,42 @@ There are code paths that have never run:
 
 MSAA is *not* available on GLES, and the renderer falls back rather than pretending — see `AntiAliasingMethod` in
 *Project Settings ▸ Plugins ▸ DreamUI*.
+
+### Pipeline compiles
+
+A graphics pipeline nobody has compiled yet is compiled by the frame that first draws with it. On a desktop GPU that is
+milliseconds; a phone's Vulkan driver can take seconds for one, and the engine writes a pipeline compiled at draw time
+to disk only once enough of them fill a chunk of its cache (`r.Vulkan.ChunkedPSOCache.MaxSingleCachePSOCount`), so the
+same frame can stall on every launch.
+
+DreamGUI hands its own pipelines to the engine's PSO precache. The first time it draws into a target of a given format
+and sample count, it gathers every pipeline its shaders can draw into that target with — the batches, the compositor,
+post-process, backdrop effects, background blur, pixel sort and layer styles, each into the target itself and,
+single-sampled, into the work textures they use, and the HDR encode when the output is HDR — and requests them all;
+the precache's worker threads compile them while the frames go on. It does this when it first draws rather than at
+startup because only then is the target known: on a phone without mobile HDR it is the back buffer's format,
+multisampled, which nothing at startup says.
+
+The engine precaches global shaders' pipelines only through registered collectors, and never calls them on Android or
+iOS (`GlobalShaderMode=0` in `BaseEngine.ini`), so DreamGUI requests its own on every platform.
+
+| Setting | |
+| --- | --- |
+| `dreamgui.PSOPrecache` | `1` (default) on; `0` off, each pipeline is compiled by the first frame that draws with it; `2` on, and logs each target it precaches for |
+| `r.PSOPrecaching` | The engine's switch; nothing is precached while it is `0`, or on an RHI that does not precache PSOs |
+
+Each request logs one line under `LogDreamGUIRenderer`:
+`Precaching 169 DreamGUI graphics pipelines (4 first) for a target of PF_R8G8B8A8, 4 sample(s), gathered in 25.52 ms.`
+
+What it does not cover:
+
+- the pipelines of materials a canvas draws with — they are the material's, not DreamGUI's;
+- a pipeline the very frame that first draws into a target needs: it is requested on that frame and is not done in
+  time. On the first launch after an install that can be seconds on a phone; a pipeline cache packaged with the game
+  (the engine's `PipelineFileCache`) is what covers it.
+
+Measured on one Android handset (Vulkan, 4 samples) in a demo project, outside the release gate: a warm launch opened
+each of its screens with no pipeline compile in a frame, where the first had cost 3.2 s.
 
 ## Dedicated server
 

@@ -135,7 +135,11 @@ bool UDreamUISettings::GetAsyncGlyphRasterization()
 
 int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
 {
+#if PLATFORM_ANDROID
+	return GetDefault<UDreamUISettings>()->AndroidAsyncGlyphSyncBudgetPerFrame;
+#else
 	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
+#endif
 }
 
 float UDreamUISettings::GetAsyncGlyphSyncBudgetMs()

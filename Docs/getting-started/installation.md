@@ -11,7 +11,7 @@ nothing in the engine's own UI-only input mode.
 | | |
 | --- | --- |
 | Engine | Unreal Engine `5.8`, a source build or an Epic launcher install. The source also compiles on `5.5` and `5.6`, where it has not been run (see [Engine versions](../guides/platforms.md#engine-versions)) |
-| Platform | Win64 is the only platform built and run (see [Platforms](../guides/platforms.md)) |
+| Platform | Win64, with the whole automation suite; Android arm64 has had one handset smoke test (see [Platforms](../guides/platforms.md)) |
 | Plugin dependency | `EnhancedInput`, enabled by the `.uplugin` itself |
 | Runtime modules | `DreamGUIRenderer`, `DreamGUI`, `DreamGUIInput`, `DreamGUIControls`, `DreamGUIExtensions`, `DreamGUISamples` (`PostConfigInit`); `DreamTween` (`Default`) |
 | Loaded only on uncooked content | `DreamGUIEditor`, `DreamGUIK2Nodes` (`UncookedOnly`) |

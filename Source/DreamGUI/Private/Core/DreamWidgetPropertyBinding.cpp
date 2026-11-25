@@ -38,7 +38,7 @@ UFunction* FindDreamWidgetSetterFor(const UClass* InClass, const FProperty* InPr
 	{
 		return nullptr;
 	}
-	for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+	if (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm))
 	{
 		// One parameter, in, of the property's own type. Anything else is a different function that
 		// happens to be spelled the same way.

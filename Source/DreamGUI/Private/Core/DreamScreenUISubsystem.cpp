@@ -59,6 +59,15 @@ void UDreamScreenUISubsystem::TeardownForWorld(UWorld& InWorld)
 		return;
 	}
 	bTornDownForWorld = true;
+	FWorldDelegates::OnWorldPostActorTick.Remove(CreationTick);
+	CreationTick.Reset();
+	// Keep jobs in the reflected array during notification: a listener may force GC.
+	for (UDreamScreenCreationRequest* Request : CreationQueue)
+	{
+		Request->Cancel();
+		if (!bInCreationTick) Request->Finish(EDreamScreenCreationState::Cancelled);
+	}
+	if (!bInCreationTick) CreationQueue.Reset();
 	for (TPair<FName, FPendingPageLoad>& Pair : PendingPageLoads)
 	{
 		if (Pair.Value.Handle.IsValid())
@@ -279,6 +288,10 @@ void UDreamScreenUISubsystem::ConfigurePage(UDreamWidget* InRoot, int32 InSortOr
 	{
 		return;
 	}
+	// The page's own canvas first. Added after attaching, every visual of the page registered with the screen root's
+	// canvas on the way in and moved to the page's at once, each a search of the canvas's list: on a handset a third of
+	// a large page's publication. Added before, the page's visuals stay where they are and only its canvas joins.
+	ApplyPageCanvas(InRoot, InSortOrder);
 	if (InRoot->GetParent() != Root)
 	{
 		// Attaching is what un-parks a widget that was created but never added.
@@ -296,7 +309,10 @@ void UDreamScreenUISubsystem::ConfigurePage(UDreamWidget* InRoot, int32 InSortOr
 	// Placement only. The page's ACTIVE state belongs to SetPageActive, which owns both axes for
 	// every page -- switching it on here as well made the stack's own "this page is covered" pass
 	// toggle a covered page off and straight back on again on every refresh.
+}
 
+void UDreamScreenUISubsystem::ApplyPageCanvas(UDreamWidget* InRoot, int32 InSortOrder)
+{
 	UDreamCanvas* PageCanvas = InRoot->GetComponent<UDreamCanvas>();
 	if (!PageCanvas)
 	{

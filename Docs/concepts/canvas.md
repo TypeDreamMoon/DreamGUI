@@ -103,6 +103,27 @@ hand off from the innermost outward, and only the outermost maps onto the canvas
   draws in an undefined order against the stack, so asking for one logs a warning.
 - Among world-space canvases, `UDreamWorldWidgetComponent::SortOrder` is written through to the root canvas.
 
+## Opening a large screen over several frames
+
+Call `OpenScreenBudgeted` on the screen UI subsystem with the widget's soft class, optional local controller and sort
+order. Bind `OnFinished` on the returned request immediately. `GetPage` returns the published instance only in `Ready`;
+`Failed` and `Cancelled` have no page. A world already tearing down refuses submission (null handle). Call `Cancel` when
+the navigation intent changes. Cancellation takes effect at a scheduling boundary, never halfway through a callback.
+The world owns pending requests, and the caller does not have to prewarm a class, retain an instance or manage a cache.
+
+The pending pages and local players of a game world share one game-thread budget per frame. `CreationFrameTargetMs` in
+Dream GUI project settings (**33.3 ms** by default) is the frame time creation fills up to: each frame takes what the
+previous frame's game thread left of the target, less 8 ms, never more than half the target and never less than
+`CreationBudgetMs` (**2 ms**). Set the target to 0 for a fixed `CreationBudgetMs`. A built page is attached to its
+player's screen while still inactive, at the start of one frame, and turned on and published at the start of the next;
+the frame that publishes does nothing else for creation, because the canvas builds the whole page's geometry later in
+that frame. This is cooperative game-thread scheduling, not a background UObject factory or a hard frame limit.
+Resource loading is asynchronous. An engine instancing operation, a native or Blueprint callback, or publication and
+its observers can exceed the budget; `DreamGUI` at Verbose logs each step that did, and every published page logs one
+`Budgeted screen` line with its time per stage. Ready means attached, not that the GPU has
+presented a frame. Keep the current page usable until Ready; leave navigation and focus changes to that callback.
+`AddToViewport`, synchronous creation and `PushPageAsync` keep their existing contracts.
+
 ## Render-target canvases
 
 In `RenderTarget` mode a canvas draws into `RenderTarget`, or into one it makes for itself when none is assigned
