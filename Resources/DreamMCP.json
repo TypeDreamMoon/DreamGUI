@@ -4,7 +4,7 @@
   "id": "gui",
   "plugin": "DreamGUI",
   "title": "DreamGUI",
-  "description": "DreamGUI builds Unreal UI screens from text. A .dui file under the project's DUI/ folder is the source of one widget Blueprint, named by its first line (class /Game/UI/WBP_Menu): nodes in a tree (Widget, Text, Image, Native.Button...), each with its properties, layout boxes attached with + VerticalBox { }, styles and components. Use this tool to check a source, compile it, see where every node lands at a viewport size with the problems that shows (layout), draw it (preview), read diagnostics, and look up the names the compiler accepts. Read the language reference before writing a screen, look names up instead of guessing them, and run layout after every change: a screen that compiles can still be laid out wrong.",
+  "description": "DreamGUI builds Unreal UI screens from text. A .dui file under the project's DreamSource/UI/ folder (an older project's DUI/) is the source of one widget Blueprint, named by its first line (class /Game/UI/WBP_Menu): nodes in a tree (Widget, Text, Image, Native.Button...), each with its properties, layout boxes attached with + VerticalBox { }, styles and components. Use this tool to check a source, compile it, see where every node lands at a viewport size with the problems that shows (layout), draw it (preview), read diagnostics, and look up the names the compiler accepts. Read the language reference before writing a screen, look names up instead of guessing them, and run layout after every change: a screen that compiles can still be laid out wrong.",
   "route": "/dream/gui",
   "host": { "commandlet": "DreamGUIHost" },
   "extensions": [".dui"],
@@ -31,7 +31,7 @@
       "args": {
         "type": "object",
         "properties": {
-          "file": { "type": "string", "description": "The .dui, relative to the project root, e.g. DUI/Menu.dui" },
+          "file": { "type": "string", "description": "The .dui, relative to the project root, e.g. DreamSource/UI/Menu.dui" },
           "all": { "type": "boolean", "description": "Check every .dui of the project and its plugins instead of one file" }
         }
       }

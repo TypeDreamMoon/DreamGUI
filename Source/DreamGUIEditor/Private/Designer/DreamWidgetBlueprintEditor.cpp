@@ -2817,7 +2817,7 @@ void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 			"DreamWidgetConvertToText",
 			FToolUIActionChoice(ConvertAction),
 			LOCTEXT("ConvertToTextButton", "Convert to Text"),
-			LOCTEXT("ConvertToTextButtonTooltip", "Write this hierarchy, its bindings and its routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."),
+			LOCTEXT("ConvertToTextButtonTooltip", "Write this hierarchy, its bindings and its routes into a new .dui in the project's source folder (DreamSource/UI), and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."),
 			FSlateIcon(AppStyle, "Icons.Documentation")));
 	}
 }

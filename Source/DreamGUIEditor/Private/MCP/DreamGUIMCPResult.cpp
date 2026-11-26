@@ -296,7 +296,7 @@ namespace DreamGUIMCP
 		{
 			return UnderProject;
 		}
-		// The spellings a `use` line and a Blueprint's Source File take: relative to a DUI/ root, or Plugin.X:...
+		// The spellings a `use` line and a Blueprint's Source File take: relative to a source root, or Plugin.X:...
 		const FString UnderSourceRoot = NormalizeAbsolute(DreamUIPaths::Resolve(Value));
 		if (IFileManager::Get().FileExists(*UnderSourceRoot))
 		{

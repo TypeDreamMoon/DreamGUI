@@ -166,7 +166,7 @@ void FAssetTypeActions_DreamWidgetBlueprint::GetActions(const TArray<UObject*>& 
 	Section.AddMenuEntry(
 		"DreamUI_ConvertToText",
 		LOCTEXT("ConvertToText", "Convert to Text (.dui)"),
-		LOCTEXT("ConvertToTextTooltip", "Write each selected Blueprint's hierarchy, bindings and routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first; a backup of the asset (<Name>_PreDui) is made before anything changes."),
+		LOCTEXT("ConvertToTextTooltip", "Write each selected Blueprint's hierarchy, bindings and routes into a new .dui in the project's source folder (DreamSource/UI), and build the class from it from now on. Anything the file cannot hold is listed first; a backup of the asset (<Name>_PreDui) is made before anything changes."),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Documentation"),
 		FUIAction(
 			FExecuteAction::CreateLambda([Blueprints]()

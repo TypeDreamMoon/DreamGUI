@@ -24,9 +24,9 @@
     project's EngineAssociation names.
 
 .EXAMPLE
-    pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DUI/Menu.dui
+    pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DreamSource/UI/Menu.dui
 .EXAMPLE
-    pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Menu.dui -Width 1280 -Height 720 -Sizes "1920x1080, 1080x1920"
+    pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/Menu.dui -Width 1280 -Height 720 -Sizes "1920x1080, 1080x1920"
 #>
 [CmdletBinding()]
 param(
@@ -136,7 +136,7 @@ function Test-Answers([int]$Port, [string]$Token, [string]$Route) {
 # --- the arguments -----------------------------------------------------------------------------
 
 if ($Verb -ne 'check' -and $All) { Fail '-All goes with check only.' }
-if (-not $All -and -not $File) { Fail "$Verb needs a .dui, e.g. dui.ps1 $Verb DUI/Menu.dui." }
+if (-not $All -and -not $File) { Fail "$Verb needs a .dui, e.g. dui.ps1 $Verb DreamSource/UI/Menu.dui." }
 $ProjectFile = Find-Project
 if (-not $ProjectFile -or -not (Test-Path -LiteralPath $ProjectFile -PathType Leaf)) { Fail 'no project: pass -Project <path>/<Name>.uproject.' }
 $ProjectDir = Split-Path -Parent $ProjectFile

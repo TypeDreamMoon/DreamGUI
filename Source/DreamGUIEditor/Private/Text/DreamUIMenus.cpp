@@ -110,7 +110,7 @@ namespace DreamUIMenusLocal
 				TEXT("DreamUI.OpenWorkspace"),
 				LOCTEXT("OpenWorkspaceLabel", "DreamUI Workspace"),
 				LOCTEXT("OpenWorkspaceTooltip",
-					"Rewrite DUI/DreamUI.code-workspace from the current source roots and open it in VSCode, or Notepad if VSCode is unavailable."),
+					"Rewrite DreamUI.code-workspace in the project's source folder (DreamSource/UI) from the current source roots and open it in VSCode, or Notepad if VSCode is unavailable."),
 				FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor")),
 				FUIAction(FExecuteAction::CreateStatic(&FDreamUIWorkspaceService::OpenWorkspace)));
 			Section.AddMenuEntry(
@@ -129,7 +129,7 @@ namespace DreamUIMenusLocal
 				TEXT("DreamUI.OpenWorkspaceTools"),
 				LOCTEXT("OpenWorkspaceToolsLabel", "Open DreamUI Workspace (VSCode)"),
 				LOCTEXT("OpenWorkspaceTooltip",
-					"Rewrite DUI/DreamUI.code-workspace from the current source roots and open it in VSCode, or Notepad if VSCode is unavailable."),
+					"Rewrite DreamUI.code-workspace in the project's source folder (DreamSource/UI) from the current source roots and open it in VSCode, or Notepad if VSCode is unavailable."),
 				FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor")),
 				FUIAction(FExecuteAction::CreateStatic(&FDreamUIWorkspaceService::OpenWorkspace)));
 			Section.AddMenuEntry(

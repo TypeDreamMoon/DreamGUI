@@ -83,6 +83,6 @@ namespace DreamGUIMCP
 	/** Forgets which sources were compiled when (tests). */
 	DREAMGUIEDITOR_API void ResetCompileState();
 
-	/** Every .dui under the project's and the plugins' DUI/ folders, absolute. */
+	/** Every .dui under the project's and the plugins' source folders (DreamSource/UI, or a legacy DUI), absolute. */
 	DREAMGUIEDITOR_API void FindAllSources(TArray<FString>& OutFiles);
 }

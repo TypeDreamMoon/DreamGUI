@@ -15,7 +15,7 @@ struct DREAMGUIPSD_API FDreamPsdImportRequest
 	FString SourceFile;
 	/**
 	 * The folder the Blueprint goes in: /Game/UI. Its textures go in a folder of the document's name below it
-	 * (/Game/UI/Hud), and its .dui to the project's DUI directory at the same path (DUI/UI/WBP_Hud.dui).
+	 * (/Game/UI/Hud), and its .dui to the project's source folder at the same path (DreamSource/UI/UI/WBP_Hud.dui).
 	 */
 	FString AssetFolder = TEXT("/Game/UI");
 	/** The document's name in asset names; empty takes the file's. */

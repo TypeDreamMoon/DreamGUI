@@ -7,7 +7,7 @@
 struct FDreamUISourceRoot;
 
 /**
- * The VSCode side door: `DUI/DreamUI.code-workspace`, rewritten from the current source roots and
+ * The VSCode side door: `DreamUI.code-workspace` in the project's source folder, rewritten from the current source roots and
  * opened in VSCode (falling back to the default editor, then Notepad) -- the same shape
  * DreamShader and DreamFX give their languages. Opening through here rather than a bare folder is
  * what lights up the extension's workspace features: the file names every enabled plugin's DUI/
@@ -35,8 +35,8 @@ struct DREAMGUIEDITOR_API FDreamUIWorkspaceService
 	static FString BuildWorkspaceJson(const TArray<FDreamUISourceRoot>& InRoots, const FString& InWorkspaceDirectory);
 
 	/**
-	 * Writes `<Project>/DUI/DreamUI.code-workspace`, creating the directory when the project has
-	 * none yet -- the button is allowed to be the first thing that ever makes a DUI folder.
+	 * Writes `DreamUI.code-workspace` in the project's source folder (DreamSource/UI, or a legacy DUI), creating the directory when the project has
+	 * none yet -- the button is allowed to be the first thing that ever makes that folder.
 	 */
 	static bool WriteWorkspaceFile(FString& OutWorkspaceFilePath, FString& OutError);
 
