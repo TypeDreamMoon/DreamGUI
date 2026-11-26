@@ -147,6 +147,8 @@ public class DreamGUITests : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				// The mailbox tests read Intermediate/DreamSource/ui.db back.
+				"SQLiteCore",
 			});
 
 		DynamicallyLoadedModuleNames.AddRange(

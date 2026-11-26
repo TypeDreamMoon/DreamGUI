@@ -147,7 +147,7 @@ FString DreamPsdImporter::DefaultDuiFile(const FString& InBlueprintPackage)
 	{
 		Relative.RightChopInline(Slash + 1);
 	}
-	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName, Relative + DreamUIPaths::SourceExtension));
+	return FPaths::ConvertRelativePathToFull(FPaths::Combine(DreamUIPaths::GetProjectSourceDirectory(), Relative + DreamUIPaths::SourceExtension));
 }
 
 TArray<UTexture2D*> DreamPsdImporter::MakeTextures(const TArray<FDreamPsdTextureRequest>& InRequests, bool bInSave, FDreamPsdMessages& OutMessages)

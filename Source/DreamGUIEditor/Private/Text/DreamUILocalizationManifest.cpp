@@ -63,9 +63,12 @@ bool DreamUILocalizationManifest::GetPaths(const FString& InSourcePath, FString&
 		{
 			continue;
 		}
-		// The folder that holds DUI/: the project's, or the plugin's.
-		const FString Owner = FPaths::GetPath(Directory.LeftChop(1));
-		OutSource = FString(DreamUIPaths::SourceDirectoryName) / Source.RightChop(Directory.Len());
+		// The project or plugin the root belongs to -- not the root's parent, which for DreamSource/UI is DreamSource/.
+		FString Owner = Root.OwnerDirectory;
+		FPaths::NormalizeDirectoryName(Owner);
+		// Spelled `DUI/...` whatever directory the file is in: this is the key DreamLoc files the text under, and moving
+		// the folder must not orphan a translation. It changes when DreamLoc learns language keys (`UI:...`).
+		OutSource = FString(DreamUIPaths::LegacySourceDirectoryName) / Source.RightChop(Directory.Len());
 		OutRootToken = Root.RootToken;
 		OutManifestPath = Owner / TEXT("Intermediate/DLoc/extract/DreamGUI") / (OutSource + TEXT(".json"));
 		return true;

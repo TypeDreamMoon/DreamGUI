@@ -134,9 +134,9 @@ bool FDreamUILocalizationManifestCompileTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUILocalizationManifestTestLocal;
 
-	// A file under the project's own DUI/ folder, made for this run and gone after it, folder included when the run
+	// A file under the project's own source folder, made for this run and gone after it, folder included when the run
 	// made the folder.
-	const FString DuiDirectory = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / DreamUIPaths::SourceDirectoryName);
+	const FString DuiDirectory = DreamUIPaths::GetProjectSourceDirectory();
 	const bool bMadeDuiDirectory = !IFileManager::Get().DirectoryExists(*DuiDirectory);
 	// Hex digits only: the name goes into the file's `class` line, where the '-' of a short guid is not a path character.
 	const FString Name = FString::Printf(TEXT("LocManifest_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Digits));

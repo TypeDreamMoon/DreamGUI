@@ -18,25 +18,21 @@ struct FDreamUIDiagnosticsMailboxEntry
 };
 
 /**
- * The diagnostics mailbox: `DUI/.dui-diagnostics.json`, one entry per .dui the compiler has seen
- * this session, rewritten after every compile of a text-backed class. The VSCode extension reads
- * it into the Problems panel -- this is how the compiler's verdicts (values, builder, compile:
- * everything a lexer cannot know) reach an editor that is not this one, without that editor
- * growing a second compiler.
+ * The diagnostics mailbox: the `diagnostics` table of `Intermediate/DreamSource/ui.db` (FDreamUIDatabase), one row per
+ * .dui the compiler has seen this session, rewritten after every compile of a text-backed class. The VSCode extension
+ * reads it into the Problems panel -- this is how the compiler's verdicts (values, builder, compile: everything a lexer
+ * cannot know) reach an editor that is not this one, without that editor growing a second compiler. It used to be
+ * `DUI/.dui-diagnostics.json`; the rows hold what that file's `files` object held:
  *
- * The format contract lives on the READER side (the extension's parseMailbox tests); this writer
- * conforms to it. Version 1:
- *
- *   { "version": 1, "files": { "<abs path>": { "compiledAt": "<ISO>", "diagnostics": [
- *       { "code": 5004, "severity": "error", "line": 12, "column": 5, "message": "..." } ] } } }
+ *   path = "<abs path>", compiled_at_utc = "<ISO>",
+ *   json = [ { "code": 5004, "severity": "error", "line": 12, "column": 5, "message": "..." } ]
  *
  * Three load-bearing choices, none of them free to undo:
  *   - a clean compile writes an EMPTY array -- that is what clears the file's squiggles over
  *     there; dropping clean files would leave stale errors standing forever;
- *   - the write is beside-then-rename: the reader polls-and-reads, and an in-place write hands
- *     it half a file;
+ *   - the table is replaced in one transaction: a reader never sees half a flush;
  *   - deposits coalesce through one ticker flush: a watcher batch recompiles N classes in one
- *     go, and N rewrites of the same file for one keypress is the shape the debounce exists for.
+ *     go, and N rewrites for one keypress is the shape the debounce exists for.
  */
 struct DREAMGUIEDITOR_API FDreamUIDiagnosticsMailbox
 {
@@ -60,11 +56,11 @@ struct DREAMGUIEDITOR_API FDreamUIDiagnosticsMailbox
 	static void Remove(const FString& InSourceName);
 
 	/**
-	 * Writes the mailbox now. InOverrideDirectory is the test seam; empty means the project's
-	 * DUI/ directory, and without one nothing is written (same rule the symbols export follows).
-	 * Returns the path written, or empty.
+	 * Writes the mailbox now. InOverrideDatabasePath is the test seam; empty means the project's ui.db, written only
+	 * when the project has a .dui source directory (same rule the symbols export follows). Returns the database path
+	 * written, or empty.
 	 */
-	static FString FlushNow(const FString& InOverrideDirectory = FString());
+	static FString FlushNow(const FString& InOverrideDatabasePath = FString());
 
 	/** Drops every deposited entry and any pending flush. Tests start clean with this. */
 	static void Reset();

@@ -84,11 +84,10 @@ namespace DreamUIPathsTestLocal
 
 	FString ProjectRootDirectory()
 	{
-		return FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+		return DreamUIPaths::GetProjectSourceDirectory();
 	}
 
-	/** This plugin's own DUI/ directory, whether or not it exists yet; empty when the plugin cannot find itself. */
+	/** This plugin's own source directory (DreamSource/UI), whether or not it exists yet; empty when the plugin cannot find itself. */
 	FString PluginRootDirectory()
 	{
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
@@ -97,7 +96,7 @@ namespace DreamUIPathsTestLocal
 			return FString();
 		}
 		return FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::SourceDirectoryName));
+			FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::PluginSourceDirectory));
 	}
 
 	/**
@@ -206,7 +205,7 @@ bool FDreamUIPathsPluginRootTest::RunTest(const FString&)
 		return false;
 	}
 	const FString PluginRoot = FPaths::ConvertRelativePathToFull(
-		FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::SourceDirectoryName));
+		FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::PluginSourceDirectory));
 
 	FScopedRootFile File(PluginRoot, TEXT("PathsTest/Shipped.dui"));
 	if (!TestTrue(TEXT("the fixture wrote its file"), File.bWritten))

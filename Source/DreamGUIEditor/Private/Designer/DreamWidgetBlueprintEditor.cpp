@@ -3014,7 +3014,7 @@ void FDreamWidgetBlueprintEditor::RevealInVSCode(const UDreamWidget* InWidget)
 	if (!FDreamUIBridgeService::WriteRevealToEditor(ResolvedPath, Line, Column, WidgetId))
 	{
 		DreamUIRevealLocal::Notify(LOCTEXT("RevealWriteFailed",
-			"DreamUI could not write the reveal request under Saved/DreamGUI/Bridge."), false);
+			"DreamUI could not write the reveal request under Intermediate/DreamSource/UI/Bridge."), false);
 		return;
 	}
 
@@ -3221,8 +3221,7 @@ FString FDreamWidgetBlueprintEditor::GetDefaultTextSourceDirectory()
 	// with the project, and stored in the project's own asset under the plugin's name. A project that
 	// has DUI/ gets the answer it always got, because its own root is listed first whenever it exists,
 	// and every other root is still a folder away in the dialog.
-	return FPaths::ConvertRelativePathToFull(
-		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+	return DreamUIPaths::GetProjectSourceDirectory();
 }
 
 bool FDreamWidgetBlueprintEditor::CreateTextSourceFileFor(UDreamWidgetBlueprint* InBlueprint,

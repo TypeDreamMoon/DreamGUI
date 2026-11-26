@@ -246,6 +246,7 @@ Source/DreamGUI/Private/Text/DreamUIAst.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUIDiagnostics.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUIPaths.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUIReflectionPolicy.cpp,DreamGUI,.dui text format
+Source/DreamGUI/Private/Text/DreamUISourceSettings.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUISourceFile.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp,DreamGUI,.dui text format
 Source/DreamGUI/Private/Text/DreamUIValueFormat.cpp,DreamGUI,.dui text format
@@ -520,6 +521,7 @@ Source/DreamGUI/Public/Text/DreamUIAst.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUIDiagnostics.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUIPaths.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUIReflectionPolicy.h,DreamGUI,.dui text format
+Source/DreamGUI/Public/Text/DreamUISourceSettings.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUISourceFile.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUITextBuilder.h,DreamGUI,.dui text format
 Source/DreamGUI/Public/Text/DreamUIValueFormat.h,DreamGUI,.dui text format

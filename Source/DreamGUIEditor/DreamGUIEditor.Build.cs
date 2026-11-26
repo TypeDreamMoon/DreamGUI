@@ -100,6 +100,8 @@ public class DreamGUIEditor : ModuleRules
 			new string[]
 			{
                 "EditorStyle",
+				// FDreamUIDatabase: Intermediate/DreamSource/ui.db, the symbols and diagnostics external editors read.
+				"SQLiteCore",
 				// The timeline write-back reads a sequence's sampled keys back as the ease that made them, with the same
 				// curves the builder sampled (FDreamUITimelineWriteBack).
 				"DreamTween",

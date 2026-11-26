@@ -66,10 +66,10 @@ namespace DreamUICreateSourceFileTestLocal
 
 	FString ProjectSourceDirectory()
 	{
-		return NormalizedPath(FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+		return NormalizedPath(DreamUIPaths::GetProjectSourceDirectory());
 	}
 
-	/** This plugin's own DUI/ directory, whether or not it exists; empty when the plugin cannot find itself. */
+	/** This plugin's own source directory (DreamSource/UI), whether or not it exists; empty when the plugin cannot find itself. */
 	FString PluginSourceDirectory()
 	{
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
@@ -77,7 +77,7 @@ namespace DreamUICreateSourceFileTestLocal
 		{
 			return FString();
 		}
-		return NormalizedPath(FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::SourceDirectoryName));
+		return NormalizedPath(FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::PluginSourceDirectory));
 	}
 
 	/** Every file and directory under InDirectory, recursively, normalised. Empty when it does not exist. */

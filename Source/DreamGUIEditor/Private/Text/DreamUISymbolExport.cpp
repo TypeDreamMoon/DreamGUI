@@ -12,6 +12,7 @@
 #include "Core/DreamUIWidgetRegistry.h"
 // DescribeEvents lists FDreamUIEventDelegate properties as well as multicast delegates.
 #include "Event/DreamUIEventDelegate.h"
+#include "Text/DreamUIDatabase.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
 #include "Text/DreamUITextBuilder.h"
@@ -27,7 +28,9 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
+#include "SQLitePreparedStatement.h"
 #include "UObject/EnumProperty.h"
 #include "UObject/TextProperty.h"
 #include "UObject/UnrealType.h"
@@ -52,12 +55,12 @@ namespace DreamUISymbolExportLocal
 
 	FAutoConsoleCommand GExportCommand(
 		TEXT("DreamUI.ExportSymbols"),
-		TEXT("Rewrites DUI/.dui-symbols.json, the completion data the VSCode extension reads."),
+		TEXT("Rewrites the symbols in Intermediate/DreamSource/ui.db, the completion data the VSCode extension reads."),
 		FConsoleCommandDelegate::CreateLambda([]
 		{
 			const FString Written = FDreamUISymbolExport::ExportNow();
 			UE_LOG(DreamGUIEditor, Display, TEXT("DreamUI.ExportSymbols: %s"),
-				Written.IsEmpty() ? TEXT("no project DUI/ directory, nothing written") : *Written);
+				Written.IsEmpty() ? TEXT("no project .dui source directory (DreamSource/UI or DUI), nothing written") : *Written);
 		}));
 
 	/** The leaf FProperty a dotted path names on a class, or null. Mirrors the builder's walk. */
@@ -680,42 +683,192 @@ void FDreamUISymbolExport::Unregister()
 	}
 }
 
-FString FDreamUISymbolExport::ExportNow()
+namespace DreamUISymbolExportLocal
 {
-	const FString Directory = FPaths::ConvertRelativePathToFull(
-		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
-	if (!IFileManager::Get().DirectoryExists(*Directory))
+	/** One value, condensed: rows are compared as text, so the spelling must not depend on indentation. */
+	FString SerializeValue(const TSharedPtr<FJsonValue>& InValue)
+	{
+		FString Out;
+		using FWriter = TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>;
+		using FFactory = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>;
+		switch (InValue.IsValid() ? InValue->Type : EJson::Null)
+		{
+		case EJson::Object:
+		{
+			const TSharedRef<FWriter> Writer = FFactory::Create(&Out);
+			FJsonSerializer::Serialize(InValue->AsObject().ToSharedRef(), Writer);
+			break;
+		}
+		case EJson::Array:
+		{
+			const TSharedRef<FWriter> Writer = FFactory::Create(&Out);
+			FJsonSerializer::Serialize(InValue->AsArray(), Writer);
+			break;
+		}
+		case EJson::Number:
+		{
+			// The only scalar section is `version`; an integer is written as one, so the reader's JSON.parse gives 2, not 2.0.
+			const double Number = InValue->AsNumber();
+			Out = FMath::IsNearlyEqual(Number, FMath::RoundToDouble(Number))
+				? LexToString(static_cast<int64>(FMath::RoundToDouble(Number)))
+				: FString::SanitizeFloat(Number);
+			break;
+		}
+		case EJson::String:
+		{
+			// A one-element array is the shortest way to borrow the writer's escaping.
+			TArray<TSharedPtr<FJsonValue>> Wrapped = { InValue };
+			const TSharedRef<FWriter> Writer = FFactory::Create(&Out);
+			FJsonSerializer::Serialize(Wrapped, Writer);
+			Out = Out.Mid(1, Out.Len() - 2);
+			break;
+		}
+		case EJson::Boolean:
+			Out = InValue->AsBool() ? TEXT("true") : TEXT("false");
+			break;
+		default:
+			Out = TEXT("null");
+			break;
+		}
+		return Out;
+	}
+
+	/**
+	 * The dump as rows, keyed "section\nname" (a newline is in no section or member name). A non-empty object section is
+	 * one row per member, so a change to one class rewrites one row; anything else is one row named ''. The reader puts
+	 * them back together (Plan/DreamSource/dreamsource-layout-spec.md 11.3).
+	 */
+	TMap<FString, FString> ToRows(const TSharedRef<FJsonObject>& InRoot)
+	{
+		TMap<FString, FString> Rows;
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Section : InRoot->Values)
+		{
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			if (Section.Value.IsValid() && Section.Value->TryGetObject(Object) && Object != nullptr && (*Object)->Values.Num() > 0)
+			{
+				for (const TPair<FString, TSharedPtr<FJsonValue>>& Member : (*Object)->Values)
+				{
+					Rows.Add(Section.Key + TEXT("\n") + Member.Key, SerializeValue(Member.Value));
+				}
+			}
+			else
+			{
+				Rows.Add(Section.Key + TEXT("\n"), SerializeValue(Section.Value));
+			}
+		}
+		return Rows;
+	}
+}
+
+FString FDreamUISymbolExport::ExportNow(const FString& InOverrideDatabasePath)
+{
+	using namespace DreamUISymbolExportLocal;
+
+	// Only for a project that has a .dui source directory: one that has never used a .dui should not wake up owning a
+	// database. The override is the test seam.
+	if (InOverrideDatabasePath.IsEmpty() && !DreamUIPaths::ResolveProjectSourceDirectory().bExists)
+	{
+		return FString();
+	}
+	const FString DatabasePath = InOverrideDatabasePath.IsEmpty() ? DreamUIPaths::GetDatabasePath() : InOverrideDatabasePath;
+
+	const TMap<FString, FString> Rows = ToRows(BuildSymbols());
+
+	FDreamUIDatabase Database;
+	if (!Database.Open(DatabasePath))
 	{
 		return FString();
 	}
 
-	const TSharedRef<FJsonObject> Root = BuildSymbols();
-	FString Serialized;
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-	FJsonSerializer::Serialize(Root, Writer);
-
-	const FString FilePath = FPaths::Combine(Directory, TEXT(".dui-symbols.json"));
-
-	// Not rewritten when it would say the same thing. This runs at every editor start, and a file written with
-	// identical bytes is still a change as far as VS Code is concerned: it reloads the symbols and drops what it
-	// has cached, for a process that taught it nothing new. Compared as text, case-sensitively -- FString's own ==
-	// is case-blind, and a symbol that changed only in case is a changed symbol.
-	FString Existing;
-	if (FFileHelper::LoadFileToString(Existing, *FilePath) && Existing.Equals(Serialized, ESearchCase::CaseSensitive))
+	TMap<FString, FString> Existing;
 	{
-		UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d '%s' is already up to date."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
-		return FilePath;
+		FSQLitePreparedStatement Select(Database.Get(), TEXT("SELECT section, name, json FROM symbols;"));
+		while (Select.IsValid() && Select.Step() == ESQLitePreparedStatementStepResult::Row)
+		{
+			FString Section, Name, Json;
+			Select.GetColumnValueByIndex(0, Section);
+			Select.GetColumnValueByIndex(1, Name);
+			Select.GetColumnValueByIndex(2, Json);
+			Existing.Add(Section + TEXT("\n") + Name, MoveTemp(Json));
+		}
 	}
-	if (!FFileHelper::SaveStringToFile(Serialized, *FilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+
+	// Only the rows that changed. This runs at every editor start, and a write that says the same thing is still a change
+	// as far as VS Code is concerned: it reloads 1.8 MB of symbols for a process that taught it nothing new. Compared
+	// case-sensitively -- FString's own == is case-blind, and a symbol that changed only in case is a changed symbol.
+	TArray<FString> Changed;
+	TArray<FString> Removed;
+	for (const TPair<FString, FString>& Row : Rows)
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Could not write '%s'."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+		const FString* Previous = Existing.Find(Row.Key);
+		if (Previous == nullptr || !Previous->Equals(Row.Value, ESearchCase::CaseSensitive))
+		{
+			Changed.Add(Row.Key);
+		}
+	}
+	for (const TPair<FString, FString>& Row : Existing)
+	{
+		if (!Rows.Contains(Row.Key))
+		{
+			Removed.Add(Row.Key);
+		}
+	}
+	if (Changed.IsEmpty() && Removed.IsEmpty())
+	{
+		UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d '%s' symbols are already up to date."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *DatabasePath);
+		return DatabasePath;
+	}
+
+	const auto Split = [](const FString& InKey, FString& OutSection, FString& OutName)
+	{
+		InKey.Split(TEXT("\n"), &OutSection, &OutName);
+	};
+	bool bOk = Database.Begin();
+	{
+		FSQLitePreparedStatement Upsert(Database.Get(),
+			TEXT("INSERT OR REPLACE INTO symbols(section, name, json) VALUES(?1, ?2, ?3);"));
+		FSQLitePreparedStatement Delete(Database.Get(), TEXT("DELETE FROM symbols WHERE section = ?1 AND name = ?2;"));
+		bOk = bOk && Upsert.IsValid() && Delete.IsValid();
+		for (const FString& Key : Changed)
+		{
+			if (!bOk)
+			{
+				break;
+			}
+			FString Section, Name;
+			Split(Key, Section, Name);
+			Upsert.Reset();
+			Upsert.ClearBindings();
+			bOk = Upsert.SetBindingValueByIndex(1, Section) && Upsert.SetBindingValueByIndex(2, Name)
+				&& Upsert.SetBindingValueByIndex(3, Rows[Key])
+				&& Upsert.Step() == ESQLitePreparedStatementStepResult::Done;
+		}
+		for (const FString& Key : Removed)
+		{
+			if (!bOk)
+			{
+				break;
+			}
+			FString Section, Name;
+			Split(Key, Section, Name);
+			Delete.Reset();
+			Delete.ClearBindings();
+			bOk = Delete.SetBindingValueByIndex(1, Section) && Delete.SetBindingValueByIndex(2, Name)
+				&& Delete.Step() == ESQLitePreparedStatementStepResult::Done;
+		}
+	}
+	bOk = bOk && Database.Bump(TEXT("symbols_revision"), TEXT("symbols_updated_utc"));
+	if (!bOk || !Database.Commit())
+	{
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			*Database.DescribeError(TEXT("writing symbols")));
+		Database.Rollback();
 		return FString();
 	}
-	UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d Wrote '%s'."),
-		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
-	return FilePath;
+	UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d Wrote '%s' symbols: %d row(s) changed, %d removed."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *DatabasePath, Changed.Num(), Removed.Num());
+	return DatabasePath;
 }
 
 TSharedRef<FJsonObject> FDreamUISymbolExport::BuildSymbols(const bool bInvariantTooltips)

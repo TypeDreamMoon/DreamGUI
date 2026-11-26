@@ -243,8 +243,8 @@ void FDreamUIWorkspaceService::WarnAboutOldExtensionCopies()
 
 bool FDreamUIWorkspaceService::WriteWorkspaceFile(FString& OutWorkspaceFilePath, FString& OutError)
 {
-	const FString ProjectRoot = FPaths::ConvertRelativePathToFull(
-		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+	// The legacy DUI/ when that is what the project still uses, else DreamSource/UI (created here when missing).
+	const FString ProjectRoot = DreamUIPaths::GetProjectSourceDirectory();
 	if (!IFileManager::Get().MakeDirectory(*ProjectRoot, /*Tree*/true))
 	{
 		OutError = FString::Printf(TEXT("could not create '%s'"), *ProjectRoot);

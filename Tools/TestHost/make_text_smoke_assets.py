@@ -7,7 +7,7 @@
 #                   bytes are saved into the asset, and refreshed from the file when the game is cooked)
 #   Font_Text       a copy of DreamGUI's default font with three fallback entries: the CJK font for zh-Hans, the CJK
 #                   font again for ja at scale 1.2, and Font_Emoji for the emoji ranges only
-#   WBP_TextSmoke   a widget Blueprint whose hierarchy is the host's DUI/TextSmoke.dui (the template carries it)
+#   WBP_TextSmoke   a widget Blueprint whose hierarchy is the host's DreamSource/UI/TextSmoke.dui (the template carries it)
 #   L_TextSmoke     an empty level for the packaged game to start in
 #
 # Runs inside the editor (it imports `unreal`), headless as the README shows:
@@ -32,7 +32,8 @@ EMOJI_FONT = "Font_Emoji"
 TEXT_FONT = "Font_Text"
 SCREEN = "WBP_TextSmoke"
 LEVEL = "L_TextSmoke"
-# Relative to the project's DUI folder (DreamUIPaths), which the host template fills.
+# Relative to the project's .dui source folder (DreamUIPaths), which the host template fills: DreamSource/UI, or the
+# legacy DUI of a host made from template version 6 or older.
 SCREEN_SOURCE = "TextSmoke.dui"
 # The emoji, and nothing a text font has, as Docs/FontsAndPackaging.md lists them: the keycap bases, (c) and (r), the
 # emoji among the symbols, arrows, dingbats and enclosed ideographs, and the emoji blocks.
@@ -136,7 +137,10 @@ def make_text_font(registry, asset_tools, default_font, cjk_font, emoji_font):
 
 
 def make_screen(registry, asset_tools):
-    source = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir()), "DUI", SCREEN_SOURCE)
+    project = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
+    source = os.path.join(project, "DreamSource", "UI", SCREEN_SOURCE)
+    if not os.path.isfile(source):
+        source = os.path.join(project, "DUI", SCREEN_SOURCE)
     if not os.path.isfile(source):
         raise RuntimeError(source + " is missing: run Tools/TestHost/New-DreamGUITestHost.ps1, whose template carries it")
     if asset_exists(registry, SCREEN):
