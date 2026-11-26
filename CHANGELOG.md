@@ -457,6 +457,21 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **`.dui` sources live in `DreamSource/UI/`.** A project's files go in `<Project>/DreamSource/UI/` by default, a folder
+  set in *Project Settings ▸ Dream Source ▸ UI* (`SourceDirectory` in `Config/DefaultDreamSource.ini`); a plugin's go in
+  `<Plugin>/DreamSource/UI/`, and DreamGUI's presets are now in `DreamSource/UI/Presets/`. An older project's `DUI/`
+  folder is still read while it has no `DreamSource/UI/`, with a notice in the Output Log and an editor notification
+  that offers to move it (*Migrate*, *Don't show again*, *Later*); with both present, `DreamSource/UI/` wins and `DUI/`
+  is ignored with a warning. Paths written relative to a source folder (`use "Panels/Row.dui"`, a Blueprint's *Source
+  File*) do not change. See [Project layout](Docs/getting-started/project-layout.md#where-dui-files-live).
+
+- **The editor's data for VS Code is one SQLite database.** `Intermediate/DreamSource/ui.db` holds the symbols and the
+  compiler's diagnostics that `DUI/.dui-symbols.json` and `DUI/.dui-diagnostics.json` held; `DreamUI.ExportSymbols`
+  writes only the rows that changed. The bridge's drop folder moved from `Saved/DreamGUI/Bridge/` to
+  `Intermediate/DreamSource/UI/Bridge/`, with the same protocol. Version 0.13.0 of the VS Code extension reads both and
+  needs VS Code 1.147 or later; it still reads the old files from an older plugin. See
+  [The VS Code extension](Docs/tools/vscode.md#the-symbols-intermediatedreamsourceuidb).
+
 - **Cold text on Android waits for the worker, not the frame.** With asynchronous glyph rasterization on, Android
   generates no outline-field glyphs on the game thread by default: an uncached glyph the worker supports reserves its
   advance at once and its ink appears when the worker finishes; cached glyphs are not delayed. In one handset run the
@@ -639,6 +654,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   [DreamRingMenu](Docs/Reference/DreamRingMenu.md).
 
 ### Fixed
+
+- **A test run or a commandlet no longer writes the diagnostics VS Code shows.** The compiler's diagnostics are now
+  written only by the editor the author works in -- the process that owns the bridge. A test suite's deferred write could
+  land between two tests, after the automation flag was down, and leave a fixture's file in the project's Problems panel.
 
 - **A sprite keeps its atlas page, and a material that falls back keeps drawing.** Both stopped the gallery on an
   Android handset. A runtime sprite no longer owns its cached atlas page -- the atlas does -- and a sprite whose page was
