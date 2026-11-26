@@ -30,7 +30,7 @@ own whose names deliberately follow UMG's, and where a name could not be kept th
 | Runtime modules | `DreamGUIRenderer`, `DreamGUI`, `DreamGUIInput`, `DreamGUIControls`, `DreamGUIExtensions`, `DreamGUISamples`, `DreamTween` |
 | Editor-side modules | `DreamGUIEditor`, `DreamGUIK2Nodes` (`UncookedOnly`), `DreamGUITests` (`Editor`) |
 | Plugin dependency | `EnhancedInput` (the plugin enables it itself) |
-| Source files | `.dui`, under a project's or a plugin's `DUI/` directory |
+| Source files | `.dui`, under a project's or a plugin's `DreamSource/UI/` folder (an older project's `DUI/` is still read) |
 | Project settings | *Project Settings ▸ Plugins ▸ Dream GUI* and *Project Settings ▸ Plugins ▸ DreamUI* |
 | License | MIT |
 | Origin | A fork of [LGUI / LexUI](https://github.com/liufei2008/LGUI) by Lex Liu — not a drop-in replacement for it |

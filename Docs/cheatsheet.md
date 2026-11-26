@@ -2,16 +2,16 @@
 
 One page of the `.dui` language: the shape of a file, how nodes, properties and values are written, styles and
 resources, bindings, control flow and timelines, and the codes that cost the most time. Every complete file on this
-page — a block whose first line is `// DUI/<path>.dui` — is compiled and laid out by the test suite with no error and
-no warning. For the rules behind a line, read [the language](language/overview.md); for a code,
+page — a block whose first line is `// DUI/<path>.dui`, the path under the source folder — is compiled and laid out
+by the test suite with no error and no warning. For the rules behind a line, read [the language](language/overview.md); for a code,
 [the diagnostics](diagnostics/index.md) or the same data as JSON, [`diagnostics/codes.json`](diagnostics/codes.json).
 
-`.dui` is not QML, XAML, UMG or CSS. Look every node type and property up (DreamMCP's `lookup`, or
-`DUI/.dui-symbols.json`) instead of guessing it: an unknown name is an error, not a no-op.
+`.dui` is not QML, XAML, UMG or CSS. Look every node type and property up (DreamMCP's `lookup`, or the
+symbols in `Intermediate/DreamSource/ui.db`) instead of guessing it: an unknown name is an error, not a no-op.
 
 ## A file
 
-A file lives under a `DUI/` folder (the project's or a plugin's), never under `Content/`. It is a list of statements,
+A file lives under a source folder (`DreamSource/UI/`, the project's or a plugin's), never under `Content/`. It is a list of statements,
 one per line or separated by `;`, in any order:
 
 | Statement | Purpose |

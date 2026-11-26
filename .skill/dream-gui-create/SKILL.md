@@ -23,7 +23,8 @@ Every call is `dream_gui { "action": "<action>", "args": { ... } }`. `help` list
    - `lookup { "name": "VerticalBox", "kind": "component" }`: a layout box for `+ VerticalBox { }`.
    - `lookup { "name": "Widget" }`: what every node takes (anchors, size). `lookup { "name": "slot" }`: what `@slot` takes.
    - `lookup { "name": "Button" }`: every name containing the text, when you do not know the exact one.
-3. **Write the file** under `DUI/`, for example `DUI/MainMenu.dui`. Its first line names the widget Blueprint:
+3. **Write the file** under the project's source folder `DreamSource/UI/` (an older project may still use `DUI/`), for
+   example `DreamSource/UI/MainMenu.dui`. Its first line names the widget Blueprint:
    `class /Game/UI/WBP_MainMenu`. One root node, anchored to fill the screen:
 
    ```
@@ -40,9 +41,9 @@ Every call is `dream_gui { "action": "<action>", "args": { ... } }`. `help` list
 
    Lay things out with boxes (`+ VerticalBox { Spacing = 16 }`, `+ HorizontalBox`, `+ Overlay`) and `@slot` lines,
    not with absolute positions: a box keeps its children apart and aligned at every screen size.
-4. **Check.** `check { "file": "DUI/MainMenu.dui" }`. It writes nothing and answers in a fraction of a second. Fix every
+4. **Check.** `check { "file": "DreamSource/UI/MainMenu.dui" }`. It writes nothing and answers in a fraction of a second. Fix every
    error at the line it gives (each code has a `doc` link), and check again until it says `0 errors`.
-5. **Lay it out.** `layout { "file": "DUI/MainMenu.dui", "sizes": "1280x720, 2560x1440" }`. The answer lists every node
+5. **Lay it out.** `layout { "file": "DreamSource/UI/MainMenu.dui", "sizes": "1280x720, 2560x1440" }`. The answer lists every node
    with its rect in pixels (x, y from the top left), its text and whether that fits, and then the problems:
    - `DUI8001` off the screen, `DUI8002` text that does not fit, `DUI8003` zero size or a button smaller than 24 px,
      `DUI8004` buttons on top of each other, `DUI8006` something that breaks at one of the other sizes: **fix all of
@@ -50,7 +51,7 @@ Every call is `dream_gui { "action": "<action>", "args": { ... } }`. `help` list
    - `DUI8005` (info) edges that miss lining up by 1-3 px: fix them; they look like mistakes.
    Read the tree too: is every node where the description wants it? A node at `w=0` or far from the others is wrong
    even with no warning. Change the file and run `layout` again until there are no warnings.
-6. **Look at it** if you can see images: `preview { "file": "DUI/MainMenu.dui" }` draws the screen into a PNG. If you
+6. **Look at it** if you can see images: `preview { "file": "DreamSource/UI/MainMenu.dui" }` draws the screen into a PNG. If you
    cannot see images, read its figures: coverage, mean colour, luminance, and `DUI8007` for text that is hard to read.
 7. **Report** the file, the Blueprint (`writes` in the result), what `layout` shows, and anything you could not do.
 
@@ -63,11 +64,11 @@ The same steps, with the script instead of the tool (each call starts an engine 
 file first):
 
 ```bash
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DUI/MainMenu.dui
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/MainMenu.dui -Sizes "1280x720, 2560x1440"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DreamSource/UI/MainMenu.dui
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/MainMenu.dui -Sizes "1280x720, 2560x1440"
 ```
 
-For names, read `DUI/.dui-symbols.json` (the editor writes it) or the class pages linked from `reference/controls.md`.
+For names, read the `symbols` table of `Intermediate/DreamSource/ui.db` (the editor writes it) or the class pages linked from `reference/controls.md`.
 There is no picture without DreamMCP.
 
 ## Rules
@@ -80,4 +81,4 @@ There is no picture without DreamMCP.
   pixels: `preview` shows a pill where you wanted a rounded card.
 - A text in a box that gives it its width breaks its lines at `WrapTextAt`; without it, it may be measured one
   character wide (`DUI8002`, or a `w=0` text in the tree).
-- Never edit `DUI/.dui-symbols.json` or `DUI/.dui-diagnostics.json`.
+- Never edit `Intermediate/DreamSource/ui.db`.

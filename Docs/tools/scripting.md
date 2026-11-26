@@ -147,7 +147,7 @@ source has no error, 1 when it has, 2 when it could not run.
 
 ```powershell
 pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check -All
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Menu.dui -Sizes "1280x720, 2560x1440"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/Menu.dui -Sizes "1280x720, 2560x1440"
 ```
 
 ## Editor Python: a Widget Blueprint from a .dui
@@ -164,7 +164,7 @@ A class can name a `.dui` exactly when it derives from `UDreamTextUserWidget` (o
 `BlueprintEditorLibrary.reparent_blueprint`.
 
 ### Set SourceFile
-Set `SourceFile` on the generated class's default object. A relative path is rooted at a `DUI/` source directory.
+Set `SourceFile` on the generated class's default object. A relative path is rooted at a source folder (`DreamSource/UI/`).
 
 ### Compile and save
 `compile_blueprint` reads the file and builds the tree; then save the package.
@@ -175,7 +175,7 @@ import unreal
 
 PACKAGE_PATH = "/Game/UI"
 NAME = "WBP_Settings"
-SOURCE = "UI/Settings.dui"   # relative to the project's DUI/ directory
+SOURCE = "UI/Settings.dui"   # relative to the project's source folder, DreamSource/UI/
 
 
 def make_widget():

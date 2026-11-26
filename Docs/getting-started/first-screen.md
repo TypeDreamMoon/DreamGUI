@@ -10,12 +10,12 @@ created on demand.
 
 ## Copy the file into the project first
 
-Copy it under the project's `DUI/` directory — say `<Project>/DUI/HelloDreamGUI.dui` — and edit only that copy. Two
-reasons:
+Copy it under the project's source folder — say `<Project>/DreamSource/UI/HelloDreamGUI.dui` — and edit only that
+copy. Two reasons:
 
 - the copy in the plugin folder is a reference, and a plugin update overwrites it;
-- when you pick a file, DreamGUI stores its path relative to a `DUI/` root — `HelloDreamGUI.dui` for one under the
-  project, `Plugin.X:…` for one under a plugin. A file under no `DUI/` root can only be stored as an absolute path,
+- when you pick a file, DreamGUI stores its path relative to a source folder — `HelloDreamGUI.dui` for one under the
+  project, `Plugin.X:…` for one under a plugin. A file under no source folder can only be stored as an absolute path,
   which works on exactly one machine.
 
 A `.dui` is source, not an asset, so it does not go under `Content/`. See [Project layout](project-layout.md).

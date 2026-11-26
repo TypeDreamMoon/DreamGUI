@@ -1,16 +1,17 @@
 ---
 title: The VS Code extension
-description: Installing DreamGUI Language Support, what it does, where its completion data DUI/.dui-symbols.json comes from, the bridge to the running editor, and its commands and settings.
+description: Installing DreamGUI Language Support, what it does, where its completion data (Intermediate/DreamSource/ui.db) comes from, the bridge to the running editor, and its commands and settings.
 ---
 
 [DreamGUI Language Support](https://github.com/TypeDreamMoon/dreamgui-language-support) is the VS Code extension for
 `.dui`: highlighting, completion, hover, navigation, rename, formatting, diagnostics, and a bridge to the running Unreal
-editor. It never guesses at the language — its completion data comes from the symbol file the plugin exports, and its
+editor. It never guesses at the language — its completion data comes from the symbols the plugin exports, and its
 semantic verdicts come from the compiler's own diagnostics.
 
 ## Installing
 
-The extension's id is `typedreammoon.dreamgui-language-support`, and it needs VS Code 1.85 or later. It is on the
+The extension's id is `typedreammoon.dreamgui-language-support`, and it needs VS Code 1.147 or later (0.13.0 reads
+the editor's data with the `node:sqlite` module that VS Code version ships; 0.12 and earlier ran on 1.85). It is on the
 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=typedreammoon.dreamgui-language-support):
 search the Extensions view for *DreamGUI Language Support*, or:
 
@@ -31,11 +32,12 @@ uninstall the old one after installing the new; the extension also says so when 
 same thing):
 
 1. refreshes the symbol export, so the completion data is fresh the moment VS Code opens;
-2. rewrites `DUI/DreamUI.code-workspace` — the project's `DUI/` and every enabled plugin's `DUI/` root, the `*.dui`
+2. rewrites `DreamUI.code-workspace` in the project's source folder — that folder and every enabled plugin's source
+   folder, the `*.dui`
    association pinned, and the extension recommended (`typedreammoon.dreamgui-language-support`, with the old
    `typedreammoon.dreamui-language-support` listed under `unwantedRecommendations`, so VS Code does not suggest it);
-   when the project has no `DUI/` directory yet, this button is
-   allowed to be the first thing that makes one;
+   when the project has no source folder yet, this button is allowed to be the first thing that makes one (it makes
+   `DreamSource/UI/`, or the folder set in *Project Settings ▸ Dream Source ▸ UI*);
 3. opens it in VS Code, falling back to the system's default editor and then to Notepad.
 
 Older builds of the editor recommended the extension under its old id, left over from the 0.9.2 rename, so a workspace
@@ -69,10 +71,10 @@ What the language **deliberately does not have** (compile-time conditions, macro
 written as `A | B`, a ternary, array literals, …) the extension will not complete either; the reasons are in the
 extension's README and in [the .dui overview](../language/overview.md).
 
-## The symbol file: DUI/.dui-symbols.json
+## The symbols: Intermediate/DreamSource/ui.db
 
 Completion offers exactly what the compiler accepts because the two read **one list**. The editor module dumps what the
-compiler knows into the project's `DUI/.dui-symbols.json`:
+compiler knows into the `symbols` table of the project's `Intermediate/DreamSource/ui.db`, a SQLite database:
 
 - **tags** from the builder's own table (registry tags such as `Native.Button` included);
 - **properties** from the same reflection rules the write-back sweeps with;
@@ -80,30 +82,41 @@ compiler knows into the project's `DUI/.dui-symbols.json`:
 - and the layout containers with their properties, events, property tooltips and class defaults;
 - the classes a `viewmodels` line can name (subclasses of `UDreamViewModel`, and any class that is not a widget and
   implements `INotifyFieldValueChanged`) with their members — what completion after `Player.` reads (version 2 of the
-  file; an older export completes nothing there, rather than guessing).
+  export; an older export completes nothing there, rather than guessing).
 
-It is written at two moments: **on editor startup** (once classes exist), and **on demand**, by a console command:
+The table holds the object `.dui-symbols.json` used to: each member of an object section (`tags`, `components`,
+`enums`, …) is one row, everything else one row per section, so a change to one class rewrites one row. The schema is
+the plugin's contract with the extension; the `meta` table carries `schema`, `producer` and a `symbols_revision` the
+extension watches. It is written at two moments: **on editor startup** (once classes exist), and **on demand**, by a
+console command:
 
 ```text
 DreamUI.ExportSymbols
 ```
 
-It writes only into a project `DUI/` directory that **already exists**: a project that has never used a `.dui` should
-not wake up owning one. With no `DUI/`, the command logs that nothing was written.
+Only the rows that changed are written, and an export that says the same thing writes nothing, so an editor start that
+taught the extension nothing does not make it reload. The database is written only for a project that **already has a
+source folder** (`DreamSource/UI/`, or the old `DUI/`): a project that has never used a `.dui` should not wake up owning
+one. With no source folder, the command logs that nothing was written.
 
-No symbols file yet? Open the project in the Unreal editor once, with a `DUI/` directory present. Everything
-grammar-driven works without it, and the status bar says which mode you are in — a missing symbols file is a visible
-warning with instructions, not a silent downgrade. After the file changes, *DreamUI: Reload Symbols* reads it again.
+No symbols yet? Open the project in the Unreal editor once, with a source folder present. Everything grammar-driven works
+without them, and the status bar says which mode you are in — missing symbols are a visible warning with instructions,
+not a silent downgrade. When they change the extension reloads them by itself; *DreamUI: Reload Symbols* reads them
+again by hand.
+
+With a plugin older than this layout, the extension falls back to that plugin's `DUI/.dui-symbols.json` and
+`DUI/.dui-diagnostics.json`, and to its `Saved/DreamGUI/Bridge/`.
 
 ## The bridge to the editor
 
 While the editor is running, the extension reaches what one file's characters cannot see:
 
-- **Compiler diagnostics, live.** Every compile of a text-backed class writes its verdicts to
-  `DUI/.dui-diagnostics.json`, and they appear in the Problems panel as `dui-compiler` — the semantic layer: unknown
-  properties, bad values, missing binding functions. A clean compile writes an empty array, which is what clears that
-  file's squiggles.
-- **Requests and responses.** A drop-folder protocol in `Saved/DreamGUI/Bridge/`: the extension drops a request, the
+- **Compiler diagnostics, live.** Every compile of a text-backed class writes its verdicts to the `diagnostics` table of
+  `Intermediate/DreamSource/ui.db` (one row per file compiled this session, replaced in one transaction), and they
+  appear in the Problems panel as `dui-compiler` — the semantic layer: unknown properties, bad values, missing binding
+  functions. A clean compile writes an empty list, which is what clears that file's squiggles.
+- **Requests and responses.** A drop-folder protocol in `Intermediate/DreamSource/UI/Bridge/` (`Saved/DreamGUI/Bridge/`
+  before this layout): the extension drops a request, the
   editor polls, handles it and writes a response. `<-` and `->` completion ask the editor what the class really
   declares; `<->` completion lists the class's variables (FieldNotify ones first — the rest are polled every frame);
   typing `/` offers every nestable widget class; `/Game/...` paths are links that open the asset in the editor's Content
@@ -122,12 +135,13 @@ While the editor is running, the extension reaches what one file's characters ca
 
 | Command | Key | What it does |
 | --- | --- | --- |
-| DreamUI: Reload Symbols (.dui-symbols.json) | | Read the symbols file again |
-| DreamUI: New .dui File | | Write a starter `.dui` (also on a folder's context menu) |
+| DreamUI: Reload Symbols | | Read the symbols again |
+| DreamUI: New .dui File | | Write a starter `.dui` (also on a folder's context menu); from the palette it lands in the project's source folder |
+| DreamUI: Migrate DUI/ to DreamSource | | Move a project's old `DUI/` folder to its DreamSource folder (refused while the editor is running or when the target exists); also offered by the deprecation warning |
 | DreamUI: Reveal in Unreal Designer | Ctrl+Alt+R | Open the designer and select the node under the cursor |
 | DreamUI: Compile This File | Ctrl+Alt+B | Have the editor compile this file now |
 | DreamUI: Clear Bridge Caches | | Drop what was cached from the editor's answers |
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `dreamui.symbolsPath` | empty | An explicit path to `.dui-symbols.json`. Empty searches each workspace folder's `DUI/` directory and the folders above the open file |
+| `dreamui.symbolsPath` | empty | An explicit path to a `.dui-symbols.json`, read instead of `ui.db`. Empty reads the project's `Intermediate/DreamSource/ui.db`, or, from an older plugin, the `.dui-symbols.json` in `DUI/` or the folders above the open file |

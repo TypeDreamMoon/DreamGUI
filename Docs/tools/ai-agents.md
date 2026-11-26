@@ -17,7 +17,7 @@ see what it made. All of it is in the plugin.
 | The references | `.skill/reference/`: `dui.md` (the whole language on one page), `example.md`, `presets.md`, `blocks.md` (building blocks), `screens.md` (starter screens), `pitfalls.md`, `controls.md`, `diagnostics.md` | What an author needs, each page standing alone; DreamMCP serves them through `reference` |
 | The agent guide | `AGENTS.md` at the plugin's root; `CLAUDE.md` imports it | The loop below and the rules agents get wrong |
 | `dui.ps1` | `.skill/dui.ps1` | The endpoint's `check`, `compile` and `layout` from the command line, for CI and agents with no DreamMCP server |
-| The symbols file | `<Project>/DUI/.dui-symbols.json` | Every node type, property, enum value, event and view model class ([the symbol file](vscode.md#the-symbol-file-duidui-symbolsjson)); `lookup` reads the same table |
+| The symbols | the `symbols` table of `<Project>/Intermediate/DreamSource/ui.db` (SQLite) | Every node type, property, enum value, event and view model class ([the symbols](vscode.md#the-symbols-intermediatedreamsourceuidb)); `lookup` reads the same table |
 | The commandlet | `-run=DreamUICompileWidgets` | Creates, compiles and saves widget Blueprints from a manifest ([compiling from the command line](scripting.md#compiling-from-the-command-line)) |
 | The diagnostic catalogue | [Diagnostics](../diagnostics/index.md) | What each `DUInnnn` code means and how to fix it, the layout codes (DUI8xxx) included |
 
@@ -41,9 +41,9 @@ With the `dream_gui` tool (calls are `{ "action": ..., "args": { ... } }`):
 1. **Read** the references (`reference`), the language page first.
 2. **Look up** every node type and property before writing it: `lookup { "name": "Text" }`, `Text.FontSize`,
    `VerticalBox`, `Widget` (what every node takes), `slot` (what `@slot` takes).
-3. **Write** the file under `<Project>/DUI/`; its `class` line names the widget Blueprint, such as `class /Game/UI/WBP_Hello`.
-4. **Check**: `check { "file": "DUI/Hello.dui" }` writes nothing and lists every error with its line and code.
-5. **Lay out**: `layout { "file": "DUI/Hello.dui", "sizes": "1280x720, 2560x1440" }` compiles the screen (components it
+3. **Write** the file under `<Project>/DreamSource/UI/` (the project's source folder); its `class` line names the widget Blueprint, such as `class /Game/UI/WBP_Hello`.
+4. **Check**: `check { "file": "DreamSource/UI/Hello.dui" }` writes nothing and lists every error with its line and code.
+5. **Lay out**: `layout { "file": "DreamSource/UI/Hello.dui", "sizes": "1280x720, 2560x1440" }` compiles the screen (components it
    places first) and answers with the screen, one node a line — type, id, `x y w h`, its text and whether it fits —
    and the problems: off the screen, text cut, zero size or too small to press, buttons on top of each other, edges a
    pixel or two off, what breaks at another size. Fix, and lay out again until nothing is reported.
@@ -54,21 +54,21 @@ Without DreamMCP, `dui.ps1` does steps 4 and 5 (and `compile`) from the command 
 is serving the project, and otherwise starts a headless engine for the call:
 
 ```text
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DUI/Hello.dui
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Hello.dui -Sizes "1280x720"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DreamSource/UI/Hello.dui
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/Hello.dui -Sizes "1280x720"
 ```
 
 It prints diagnostics as `File.dui(line,col): error DUI3001: …` and ends with `RESULT=OK` or `RESULT=FAILED` (exit 0, 1,
-or 2 when it could not run). Names then come from `DUI/.dui-symbols.json`, which the editor writes on startup when the
-project's `DUI/` folder exists.
+or 2 when it could not run). Names then come from the symbols in `Intermediate/DreamSource/ui.db`, which the editor writes on startup when the
+project has a source folder.
 
 ### With the editor open
 
 The editor serves DreamMCP itself while *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸ Enable DreamMCP Endpoint* is
 on ([the endpoint](dreammcp.md)), so the agent's calls go to it, and a compile leaves the Blueprints in memory for you to save, as saving a
 `.dui` does. Saving a `.dui` also recompiles the **loaded** classes built from it
-([save to recompile](../getting-started/workflow.md#save-to-recompile)), and the editor rewrites
-`DUI/.dui-diagnostics.json` after each compile.
+([save to recompile](../getting-started/workflow.md#save-to-recompile)), and the editor rewrites the
+diagnostics in `Intermediate/DreamSource/ui.db` after each compile.
 
 ## What agents get wrong
 
@@ -79,7 +79,7 @@ on ([the endpoint](dreammcp.md)), so the agent's calls go to it, and a compile l
 - A text in a box that gives it its width, with no `WrapTextAt`: measured as narrow as it can be (`DUI8002`).
 - `Style.X = v` with a style sheet in the project: it compiles and changes nothing until `StyleSource = Inline`
   ([styles](../controls/styles.md#in-dui-and-at-run-time)).
-- A `.dui` under `Content/`. Source files live under `DUI/`.
+- A `.dui` under `Content/`. Source files live under `DreamSource/UI/` (or an older project's `DUI/`).
 - Editing a `.dui`-backed Blueprint's hierarchy in the designer. The file owns the hierarchy; the designer refuses
   structural edits.
 

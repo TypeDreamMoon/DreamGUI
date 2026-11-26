@@ -96,8 +96,8 @@ function Get-Note([string]$Title, [string]$Source) {
 # $Title
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's ``lookup``, or
-> ``DUI/.dui-symbols.json``) instead of guessing them. Built from ``$Source`` by ``.skill/build-reference.ps1``.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's ``lookup``, or the symbols in
+> ``Intermediate/DreamSource/ui.db``) instead of guessing them. Built from ``$Source`` by ``.skill/build-reference.ps1``.
 
 "@
 }

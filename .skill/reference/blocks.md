@@ -1,12 +1,13 @@
 # Building blocks
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/language/building-blocks.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/language/building-blocks.md` by `.skill/build-reference.ps1`.
 ## Building blocks
 
-Each block below is a whole file: copy it into your project's `DUI/` folder at the path its first line gives. They
-wear the [presets](https://gui.toolchain.64hz.cn/en/docs/dui/presets/) through `DUI/Theme.dui`, so they change look with it; copy that file too. Every block
+Each block below is a whole file: copy it into your project's source folder (`DreamSource/UI/`) at the path its first
+line gives after `DUI/`. They wear the [presets](https://gui.toolchain.64hz.cn/en/docs/dui/presets/) through `Theme.dui` at the root of that folder, so they
+change look with it; copy that file too. Every block
 compiles and lays out with no error and no warning, under every preset, and the two demo screens at the end place them
 all; the three screens turned in 3D stand on their own. The [starter screens](https://gui.toolchain.64hz.cn/en/docs/dui/starter-screens/) are built from them.
 
