@@ -117,7 +117,7 @@ for (UDreamWidget* Trim : GetWidgetsByTag(TEXT("Trim")))
 
 因为标签和容器最先判定，别名永远改变不了 `Text` 或 `VerticalBox` 的含义；试图这么做的别名会被拒绝（DUI3018）。
 
-`DUI/.dui-symbols.json` 会在编辑器启动时以及 `DreamUI.ExportSymbols` 时写出，列出每个标签、容器和注册控件及其属性，供编辑器补全使用。
+`Intermediate/DreamSource/ui.db` 中的符号由编辑器在启动时以及 `DreamUI.ExportSymbols` 时写出，列出每个标签、容器和注册控件及其属性，供编辑器补全使用。
 
 
 <a id="properties-and-values"></a>
@@ -179,7 +179,7 @@ AnchorData.SizeDelta = (400, 240)
 
 把列表写在不是数组或 Set 的属性上、把 Map 写在不是 Map 的属性上，或者节点的 Set/Map，都是 DUI4009；读不通的列表或 Map（括号没有闭合、Map 条目缺少 `:`，但 struct 的第一个条目除外，它可以不带键）是 DUI2023。
 
-字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于 `class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在所属 `DUI/` 目录下的路径（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。
+字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于 `class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在源文件夹下的路径（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。
 
 另外三个注解写给译者，跟在字符串后面，顺序随意：
 

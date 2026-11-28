@@ -124,7 +124,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamUICompileWidgets -Manifest=Too
 
 ```powershell
 pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check -All
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Menu.dui -Sizes "1280x720, 2560x1440"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/Menu.dui -Sizes "1280x720, 2560x1440"
 ```
 
 <a id="editor-python-a-widget-blueprint-from-a-dui"></a>
@@ -146,7 +146,7 @@ pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Menu.dui -Sizes
 <a id="set-sourcefile"></a>
 
 ### 设置 SourceFile
-在生成类的默认对象上设置 `SourceFile`。相对路径以 `DUI/` 源目录为根。
+在生成类的默认对象上设置 `SourceFile`。相对路径以源文件夹（`DreamSource/UI/`）为根。
 
 <a id="compile-and-save"></a>
 
@@ -159,7 +159,7 @@ import unreal
 
 PACKAGE_PATH = "/Game/UI"
 NAME = "WBP_Settings"
-SOURCE = "UI/Settings.dui"   # relative to the project's DUI/ directory
+SOURCE = "UI/Settings.dui"   # relative to the project's source folder, DreamSource/UI/
 
 
 def make_widget():

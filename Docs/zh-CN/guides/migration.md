@@ -42,6 +42,8 @@
 
 `UDreamSpinBox` 或列表族的 C++ 子类若重写 `NativeOnKeyDown`，应调用 `Super` 来保留这些按键，就像基类对任何按键作出回答一样。
 
+`.dui` 源文件现在位于 `<Project>/DreamSource/UI/`（该文件夹是项目设置）。项目的 `DUI/` 文件夹在没有 `DreamSource/UI/` 时仍可正常使用；编辑器每个会话会说明一次并提供移动它的选项，VS Code 扩展的 *DreamUI: Migrate DUI/ to DreamSource* 也会执行相同操作。相对于源文件夹的路径保持不变。如果移动后遗留了 `DUI/.dui-symbols.json` 和 `DUI/.dui-diagnostics.json`，请删除它们：编辑器现在会写入 `Intermediate/DreamSource/ui.db`。参见 [项目布局](../getting-started/project-layout.md#the-old-dui-folder)。
+
 <a id="from-21-to-100"></a>
 
 ## 从 2.1 到 1.0.0

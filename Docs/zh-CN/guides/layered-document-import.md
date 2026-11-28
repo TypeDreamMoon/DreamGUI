@@ -28,8 +28,8 @@ description: 把 .psd 或 .psb 变成 DreamUI 控件——一个 .dui 加它用�
 |---|---|
 | 控件蓝图 | `/Game/UI/WBP_Hud` |
 | 它的贴图 | `/Game/UI/Hud/`——像素用 `T_Hud_<layer>_<id>`，蒙版用 `TM_…`，渐变用 `TG_…`，图案用 `TP_…` |
-| 该 `.dui` | `<Project>/DUI/UI/WBP_Hud.dui`，即蓝图转换器为同一个蓝图所使用的路径 |
-| 清单 | `<Project>/DUI/UI/WBP_Hud.dui.psdimport.json`：这次导入写了什么，供下次导入用 |
+| 该 `.dui` | `<Project>/DreamSource/UI/UI/WBP_Hud.dui`，即蓝图转换器为同一个蓝图所使用的路径 |
+| 清单 | `<Project>/DreamSource/UI/UI/WBP_Hud.dui.psdimport.json`：这次导入写了什么，供下次导入用 |
 
 <a id="what-each-layer-becomes"></a>
 

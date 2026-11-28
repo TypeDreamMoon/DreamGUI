@@ -9,7 +9,7 @@ description: 创作一个界面的完整循环——文本与设计器互相写�
 
 以文本方式创作的控件蓝图只有一个真相：它的 `.dui`。有两种方式可以修改它，而两者看到的始终是同一个东西。
 
-- **在文本中。** 在 VS Code 中打开它（*Tools ▸ Open DreamUI Workspace (VSCode)* 会根据当前源根重写 `DUI/DreamUI.code-workspace` 并打开它，当 VS Code 不可用时回退到记事本）。扩展的补全来自编辑器写出的 `DUI/.dui-symbols.json`；见 [VS Code extension](../tools/vscode.md)。
+- **在文本中。** 在 VS Code 中打开它（*Tools ▸ Open DreamUI Workspace (VSCode)* 会根据当前源根在项目源文件夹中重写 `DreamUI.code-workspace` 并打开它，当 VS Code 不可用时回退到记事本）。扩展的补全来自编辑器写入 `Intermediate/DreamSource/ui.db` 的符号；见 [VS Code extension](../tools/vscode.md)。
 - **在设计器中。** 设计器是该文件的前端：在那里所做的修改就是对文本的修改，写入保存该值的那一行——或该节点其他行之后的新行——其余部分逐字节保持不变。少数修改没有可写入的行——例如由 `if` 显示或隐藏的控件的可见性——此时设计器会明确告知（[DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004)），而不是凭空发明一行。见 [Write-back](../language/write-back.md)。
 
 <a id="save-to-recompile"></a>

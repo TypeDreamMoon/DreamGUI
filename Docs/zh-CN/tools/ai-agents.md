@@ -16,7 +16,7 @@ description: AI 智能体在编写 .dui 时可以借助的资源——DreamMCP �
 | 参考文档 | `.skill/reference/`：`dui.md`（整门语言浓缩于一页）、`example.md`、`presets.md`、`blocks.md`（构建块）、`screens.md`（入门界面）、`pitfalls.md`、`controls.md`、`diagnostics.md` | 作者所需的内容，每页均可独立使用；DreamMCP 通过 `reference` 提供它们 |
 | 智能体指南 | 插件根目录下的 `AGENTS.md`；`CLAUDE.md` 导入它 | 下文的循环流程，以及智能体容易出错的规则 |
 | `dui.ps1` | `.skill/dui.ps1` | 从命令行调用端点的 `check`、`compile` 和 `layout`，供 CI 和没有 DreamMCP 服务器的智能体使用 |
-| 符号文件 | `<Project>/DUI/.dui-symbols.json` | 每一种节点类型、属性、枚举值、事件和视图模型类（[符号文件](vscode.md#the-symbol-file-duidui-symbolsjson)）；`lookup` 读取同一张表 |
+| 符号 | `<Project>/Intermediate/DreamSource/ui.db` 的 `symbols` 表（SQLite） | 每一种节点类型、属性、枚举值、事件和视图模型类（[符号](vscode.md#the-symbols-intermediatedreamsourceuidb)）；`lookup` 读取同一张表 |
 | commandlet | `-run=DreamUICompileWidgets` | 从清单创建、编译并保存控件蓝图（[从命令行编译](scripting.md#compiling-from-the-command-line)） |
 | 诊断目录 | [诊断](../diagnostics/index.md) | 每个 `DUInnnn` 代码的含义以及如何修复，包括布局类代码（DUI8xxx） |
 
@@ -40,25 +40,25 @@ Before writing or fixing any .dui file, read Plugins/DreamGUI/AGENTS.md and foll
 
 1. **阅读**参考文档（`reference`），先看语言页。
 2. **查阅**每一种节点类型和属性之后再写：`lookup { "name": "Text" }`、`Text.FontSize`、`VerticalBox`、`Widget`（每个节点都接受的参数）、`slot`（`@slot` 接受的参数）。
-3. **写入** `<Project>/DUI/` 下的文件；其 `class` 行指明控件蓝图，例如 `class /Game/UI/WBP_Hello`。
-4. **检查**：`check { "file": "DUI/Hello.dui" }` 不写入任何内容，并列出每个错误及其行号和代码。
-5. **布局**：`layout { "file": "DUI/Hello.dui", "sizes": "1280x720, 2560x1440" }` 编译屏幕（先编译它放置的组件），并以屏幕作答，一行一个节点——类型、id、`x y w h`、其文本以及是否放得下——还会给出问题：超出屏幕、文本被截断、尺寸为零或小到无法按下、按钮相互重叠、边缘偏差一两个像素、在另一尺寸下会出问题的地方。修正后再次布局，直到不再报告任何问题。
+3. **写入** `<Project>/DreamSource/UI/`（工程的源文件夹）下的文件；其 `class` 行指明控件蓝图，例如 `class /Game/UI/WBP_Hello`。
+4. **检查**：`check { "file": "DreamSource/UI/Hello.dui" }` 不写入任何内容，并列出每个错误及其行号和代码。
+5. **布局**：`layout { "file": "DreamSource/UI/Hello.dui", "sizes": "1280x720, 2560x1440" }` 编译屏幕（先编译它放置的组件），并以屏幕作答，一行一个节点——类型、id、`x y w h`、其文本以及是否放得下——还会给出问题：超出屏幕、文本被截断、尺寸为零或小到无法按下、按钮相互重叠、边缘偏差一两个像素、在另一尺寸下会出问题的地方。修正后再次布局，直到不再报告任何问题。
 6. **查看**：`preview` 把屏幕绘制成 PNG；看不到图像的智能体则读取其覆盖率、颜色以及难以辨认的文本。
 
 没有 DreamMCP 时，`dui.ps1` 从命令行执行第 4 步和第 5 步（以及 `compile`）。当用户的编辑器正在为该工程提供服务时，它使用该编辑器；否则会为这次调用启动一个无头引擎：
 
 ```text
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DUI/Hello.dui
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Hello.dui -Sizes "1280x720"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DreamSource/UI/Hello.dui
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/Hello.dui -Sizes "1280x720"
 ```
 
-它以 `File.dui(line,col): error DUI3001: …` 的形式打印诊断信息，并以 `RESULT=OK` 或 `RESULT=FAILED` 结束（退出码为 0、1，无法运行时为 2）。此时名称来自 `DUI/.dui-symbols.json`，当工程的 `DUI/` 文件夹存在时，编辑器会在启动时写入它。
+它以 `File.dui(line,col): error DUI3001: …` 的形式打印诊断信息，并以 `RESULT=OK` 或 `RESULT=FAILED` 结束（退出码为 0、1，无法运行时为 2）。此时名称来自 `Intermediate/DreamSource/ui.db` 中的符号，当工程有源文件夹时，编辑器会在启动时写入它。
 
 <a id="with-the-editor-open"></a>
 
 ### 在编辑器打开的情况下
 
-当 *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸ Enable DreamMCP Endpoint* 开启时（[端点](dreammcp.md)），编辑器自己就会提供 DreamMCP 服务，因此智能体的调用会发往它，而一次编译会把蓝图留在内存中供你保存，就像保存 `.dui` 一样。保存 `.dui` 还会重新编译由它构建的**已加载**类（[保存以重新编译](../getting-started/workflow.md#save-to-recompile)），并且编辑器会在每次编译后重写 `DUI/.dui-diagnostics.json`。
+当 *Project Settings ▸ Plugins ▸ Dream GUI ▸ Editor ▸ Enable DreamMCP Endpoint* 开启时（[端点](dreammcp.md)），编辑器自己就会提供 DreamMCP 服务，因此智能体的调用会发往它，而一次编译会把蓝图留在内存中供你保存，就像保存 `.dui` 一样。保存 `.dui` 还会重新编译由它构建的**已加载**类（[保存以重新编译](../getting-started/workflow.md#save-to-recompile)），并且编辑器会在每次编译后重写 `Intermediate/DreamSource/ui.db`。
 
 <a id="what-agents-get-wrong"></a>
 
@@ -68,7 +68,7 @@ pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/Hello.dui -Size
 - 以中心为基准测量的绝对位置：屏幕在一种尺寸下刚好合适，在另一种尺寸下就会溢出（`DUI8001`、`DUI8006`）。锚定到边缘以及使用 `Spacing` 的盒子在每种尺寸下都能保持。
 - 文本位于一个由它决定宽度的盒子中，且没有 `WrapTextAt`：会被测量为尽可能窄（`DUI8002`）。
 - 项目中存在样式表时使用 `Style.X = v`：它能编译通过，但在 `StyleSource = Inline` 之前不会有任何效果（[样式](../controls/styles.md#in-dui-and-at-run-time)）。
-- 把 `.dui` 放在 `Content/` 下。源文件应放在 `DUI/` 下。
+- 把 `.dui` 放在 `Content/` 下。源文件应放在 `DreamSource/UI/` 下（或旧工程的 `DUI/` 下）。
 - 在设计器中编辑由 `.dui` 支撑的蓝图的层级结构。层级结构归文件所有；设计器会拒绝结构性编辑。
 
 <a id="when-the-agent-still-gets-it-wrong"></a>

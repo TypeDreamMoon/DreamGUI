@@ -56,15 +56,45 @@ PublicDependencyModuleNames.AddRange(new string[] { "DreamGUI", "DreamGUIInput",
 
 ## .dui 文件放在哪
 
-放在一个 `DUI/` 目录下：项目自己的（`<Project>/DUI/`），或者某个已启用插件的（`<Plugin>/DUI/`）。**不放在 `Content/` 下** —— `.dui` 是源码，不是资产：放进 `Content/` 意味着烹饪器要去走它，内容浏览器里多出一个打不开的文件，而一个发布控件类的插件得把源码混进烹饪内容里才能被找到。
+放在源码文件夹下：项目自己的（默认是 `<Project>/DreamSource/UI/`），或者某个已启用插件的（`<Plugin>/DreamSource/UI/`）。**不放在 `Content/` 下** —— `.dui` 是源码，不是资产：放在 `Content/` 下时，烹饪器会去遍历它，内容浏览器里会显示一个打不开的文件，而一个发布控件类的插件得把源码放进它的烹饪内容里才能被找到。
+
+`DreamSource/` 是每个 Dream 插件存放其文本源码的地方，每种语言一个文件夹（`DreamSource/UI/`、`DreamSource/FX/`、`DreamSource/Shader/`……），这样它们可以集中管理，而不必作为项目根目录下的一个个独立文件夹。
+
+<a id="choosing-the-projects-folder"></a>
+
+### 选择项目的文件夹
+
+*Project Settings ▸ Dream Source ▸ UI ▸ Source Directory* 设置项目的文件夹，相对于项目目录。它保存在 `Config/DefaultDreamSource.ini` 中，VS Code 扩展也会读取它：
+
+```ini
+[/Script/DreamGUI.DreamUISourceSettings]
+SourceDirectory=(Path="DreamSource/UI")
+```
+
+绝对路径或空值会被视为默认值。插件的文件夹不可配置：它始终是 `<Plugin>/DreamSource/UI/`。
+
+<a id="the-old-dui-folder"></a>
+
+### 旧的 DUI/ 文件夹
+
+在此布局之前，源码放在 `<Project>/DUI/` 和 `<Plugin>/DUI/` 中。这些文件夹已弃用但仍会被读取，且没有终止日期：
+
+| `DreamSource/UI/` | `DUI/` | 读取的内容 | 提示你的内容 |
+| --- | --- | --- | --- |
+| 存在 | — | `DreamSource/UI/` | 无 |
+| 存在 | 存在 | `DreamSource/UI/` | `DUI/` 被忽略：把它仍然保存的内容合并过来，然后删除它 |
+| — | 存在 | `DUI/` | `DUI/` 已弃用：把它移到 `DreamSource/UI/` |
+| — | — | 暂无 | 无；编辑器创建的文件夹（新建文件、*Open DreamUI Workspace*）是 `DreamSource/UI/` |
+
+该提示每个会话会在 Output Log 中输出一次。在编辑器中它还会显示为一个带三个按钮的通知：**Migrate** 把 `DUI/` 移到配置的文件夹（若该文件夹已存在则拒绝），**Don't show again** 在此机器上停止该通知（日志行仍保留），以及 **Later**。仍位于 `<Plugin>/DUI/` 的插件只会记录日志。移动文件夹不会改变任何文件或资产：路径是相对于该文件夹存储的（见下文），因此从新文件夹解析结果相同。
 
 指向另一个文件的路径 —— 蓝图的 Source File，或者 `use` 后面那个 —— 有三种写法：
 
 | 写法 | 含义 |
 | --- | --- |
-| `Panels/Settings.dui` | 相对某个 `DUI/` 根：先找项目的，再按顺序找每个插件的，取第一个存在这个文件的 |
-| `Plugin.MyPlugin:Panels/Settings.dui` | 那个插件的 `DUI/` 目录 |
-| `D:/Work/Proj/DUI/Panels/Settings.dui` | 绝对路径，按原样使用 |
+| `Panels/Settings.dui` | 相对某个源码文件夹：先找项目的，再依次找每个插件的，取第一个包含该文件的 |
+| `Plugin.MyPlugin:Panels/Settings.dui` | 那个插件的源码文件夹 |
+| `D:/Work/Proj/DreamSource/UI/Panels/Settings.dui` | 绝对路径，按原样使用 |
 
 裸的相对路径意思是"哪个根有它就是哪个"，方便，但两个根里有同一个相对路径时就有歧义 —— 这正是插件限定写法存在的原因。在设计器里选文件时，选到的绝对路径会被转回可移植的写法：项目根下的存成相对路径，插件根下的存成 `Plugin.X:…`，都不在的才原样存成绝对路径（拒收会让选择框悄悄丢掉你的选择）。
 
@@ -80,7 +110,17 @@ VerticalBox Root {
 }
 ```
 
-编辑器还会往项目的 `DUI/` 里写两个文件：`.dui-symbols.json`（启动时和执行 `DreamUI.ExportSymbols` 时重写，是 VS Code 扩展做补全用的符号表），以及 `DreamUI.code-workspace` （*Tools ▸ Open DreamUI Workspace (VSCode)* 按当前的源码根重写并打开）。
+<a id="what-the-editor-writes"></a>
+
+## 编辑器写入的内容
+
+| 文件 | 说明 |
+| --- | --- |
+| `Intermediate/DreamSource/ui.db` | 供非 Unreal 编辑器使用的 SQLite 数据库：`symbols` 表（编译器知道的每个标签、属性、枚举、事件和视图模型 —— 在启动时和 `DreamUI.ExportSymbols` 时重写，只写有变化的行）以及 `diagnostics` 表（本次会话编译的每个 `.dui` 及其问题）。VS Code 扩展从中获取补全和报告。仅在项目有源码文件夹时写入。 |
+| `Intermediate/DreamSource/UI/Bridge/` | VS Code 扩展与运行中的编辑器通信所经由的投递文件夹（参见 [VS Code extension](../tools/vscode.md)）。 |
+| `<source folder>/DreamUI.code-workspace` | 由 *Tools ▸ Open DreamUI Workspace (VSCode)* 根据当前源码文件夹重写并打开。 |
+
+`Intermediate/DreamSource/` 下的所有内容都会自行重建，并且不纳入版本控制。它取代了早期版本的 `DUI/.dui-symbols.json`、`DUI/.dui-diagnostics.json` 和 `Saved/DreamGUI/Bridge/`；Migrate 会删除这两个 json 文件，除此之外它们不再被本插件写入或读取。
 
 一个用了 DreamGUI 的项目大概是这样：
 
@@ -88,14 +128,18 @@ VerticalBox Root {
 MyProject/
   Config/
     DefaultDreamGUI.ini
+    DefaultDreamSource.ini
     DefaultEngine.ini
   Content/
     UI/
       WBP_HelloDreamGUI.uasset
-  DUI/
-    HelloDreamGUI.dui
-    .dui-symbols.json
-    DreamUI.code-workspace
+  DreamSource/
+    UI/
+      HelloDreamGUI.dui
+      DreamUI.code-workspace
+  Intermediate/
+    DreamSource/
+      ui.db
   Plugins/
     DreamGUI/
 ```

@@ -261,7 +261,7 @@ ClipMask.Shape = Ellipse
 
 工具栏上的 **Convert to Text**（只对没有 `.dui` 的蓝图显示）、内容浏览器右键菜单里的 **Convert to Text (.dui)**（可多选），或者 `DreamUIConvertBlueprints` commandlet，会把一个在设计器里搭层级的蓝图变成由 `.dui` 编写的类：
 
-- 文件由设计器用的同一套写回写出：层级、每个和默认值不同的值、行为和面板、绑定（`<-`）和路由（`->`），以及资产保留的每个动画，写成 `timeline Name external`。文件放在 `DUI/<path under /Game>/<AssetName>.dui`，已存在就不写。
+- 文件由设计器所用的同一套写回写出：层级、每个和默认值不同的值、行为和面板、绑定（`<-`）和路由（`->`），以及资产保留为 `timeline Name external` 的每个动画。文件放在 `<source folder>/<path under /Game>/<AssetName>.dui`（`DreamSource/UI/...`），且绝不覆盖已存在的文件。
 - 节点 id 就是编译器给控件起的名字，所以事件图、变量和每个绑定照常工作。
 - 文件装不下的东西先列出来——没有写法的值、找不到行的节点或绑定——确认后才继续（commandlet 要加 `-AllowLoss`）。这部分会丢掉。
 - 改动之前会在旁边复制一份备份资产 `<AssetName>_PreDui`；确认没问题后自己删。

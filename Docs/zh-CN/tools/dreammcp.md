@@ -50,7 +50,7 @@ description: DreamMCP 服务器借以访问 DreamGUI 的 HTTP 端点——针对
 | `preview` | 是 | 是 | `file`, `width`, `height`, `background`, `timeline`, `time`, `frames`, `duration`, `force` | 编译，把界面绘制成 PNG，并对其进行测量（见下文）。需要能绘制的进程 |
 | `info` | 否 | 否 | — | 插件版本与提交、引擎版本与类型、操作系统、区域设置、模式、本进程是否绘制、源文件夹 |
 
-参数和应答中的路径相对于项目根目录（`DUI/Menu.dui`）；相对于 `DUI/` 文件夹的路径（`Menu.dui`）也能找到。`help` 和 `reference` 由服务器添加。
+参数和应答中的路径相对于项目根目录（`DreamSource/UI/Menu.dui`）；相对于源文件夹的路径（`Menu.dui`）也能找到。`help` 和 `reference` 由服务器添加。
 
 <a id="what-layout-lists"></a>
 
@@ -61,7 +61,7 @@ description: DreamMCP 服务器借以访问 DreamGUI 的 HTTP 端点——针对
 应答的摘要是一句话——文件、视口、节点数量、问题数量以及最严重的问题。其 `text` 由服务器按原文显示在摘要之后，内容是界面，一个节点一行，子节点缩进在父节点下：
 
 ```text
-Laid out DUI/Menu.dui at 1920x1080: 7 nodes, 1 problem (1 warning(s), 0 info); the most serious: ...
+Laid out DreamSource/UI/Menu.dui at 1920x1080: 7 nodes, 1 problem (1 warning(s), 0 info); the most serious: ...
 The screen, one node a line (x, y from the top left of the viewport, in pixels):
 Widget Root  x=0 y=0 w=1920 h=1080  [Overlay]
   Widget Card  x=701 y=466 w=519 h=148  [Overlay]
