@@ -1,15 +1,15 @@
 ---
 title: VS Code 扩展
-description: DreamGUI Language Support 的安装、它能做什么、补全数据 DUI/.dui-symbols.json 从哪来、与正在运行的编辑器之间的桥，以及它的命令和设置。
+description: DreamGUI Language Support 的安装、它的功能、补全数据（Intermediate/DreamSource/ui.db）从哪来、与正在运行的编辑器之间的桥接，以及它的命令和设置。
 ---
 
-[DreamGUI Language Support](https://github.com/TypeDreamMoon/dreamgui-language-support) 是 `.dui` 的 VS Code 扩展：高亮、补全、悬停、导航、重命名、格式化、诊断，以及一座通往正在运行的 Unreal 编辑器的桥。它从不猜测语言——补全数据来自插件导出的符号文件，语义判定来自编译器自己的诊断。
+[DreamGUI Language Support](https://github.com/TypeDreamMoon/dreamgui-language-support) 是 `.dui` 的 VS Code 扩展：高亮、补全、悬停、导航、重命名、格式化、诊断，以及一座通往正在运行的 Unreal 编辑器的桥。它从不猜测语言——补全数据来自插件导出的符号，语义判定来自编译器自己的诊断。
 
 <a id="installing"></a>
 
 ## 安装
 
-扩展的 id 是 `typedreammoon.dreamgui-language-support`，需要 VS Code 1.85 或更高版本。它在 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=typedreammoon.dreamgui-language-support) 上：在扩展视图里搜索 *DreamGUI Language Support*，或者：
+扩展的 id 是 `typedreammoon.dreamgui-language-support`，需要 VS Code 1.147 或更高版本（0.13.0 使用该 VS Code 版本自带的 `node:sqlite` 模块读取编辑器的数据；0.12 及更早版本运行在 1.85 上）。它在 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=typedreammoon.dreamgui-language-support) 上：在扩展视图里搜索 *DreamGUI Language Support*，或者：
 
 ```powershell
 code --install-extension typedreammoon.dreamgui-language-support
@@ -26,7 +26,7 @@ code --install-extension typedreammoon.dreamgui-language-support
 *Tools ▸ Open DreamUI Workspace (VSCode)*（或关卡工具栏 *Dream* 下拉菜单里的 *DreamUI Workspace*，这两者是同一个）：
 
 1. 刷新符号导出，让补全数据在 VS Code 打开的那一刻就是最新的；
-2. 重写`DUI/DreamUI.code-workspace`——即项目的`DUI/`和每个已启用插件的`DUI/`根、固定`*.dui`关联，并推荐该扩展（`typedreammoon.dreamgui-language-support`，旧的`typedreammoon.dreamui-language-support`列在`unwantedRecommendations`下，因此 VS Code 不会建议它）；当项目还没有`DUI/`目录时，这个按钮可以是第一个创建它的操作；
+2. 重写项目源文件夹中的 `DreamUI.code-workspace`——即该文件夹和每个已启用插件的源文件夹，固定 `*.dui` 关联，并推荐该扩展（`typedreammoon.dreamgui-language-support`，旧的 `typedreammoon.dreamui-language-support` 列在 `unwantedRecommendations` 下，因此 VS Code 不会建议它）；当项目还没有源文件夹时，这个按钮可以是第一个创建它的操作（它创建 `DreamSource/UI/`，或 *Project Settings ▸ Dream Source ▸ UI* 中设置的文件夹）；
 3. 用 VS Code 打开它，找不到则回退到系统默认编辑器，再回退到 Notepad。
 
 编辑器较旧的版本会以扩展的旧 id 推荐该扩展，这是 0.9.2 重命名时遗留下来的，因此在此修复之前写出的工作区文件会指向错误的那一个：从编辑器打开工作区会重写它。编辑器打开工作区时，还会在`~/.vscode/extensions`中查找旧 id 下的扩展副本，如果找到，会在通知和日志中对其发出警告：请如上所述卸载该副本。
@@ -54,27 +54,29 @@ code --install-extension typedreammoon.dreamgui-language-support
 
 语言**刻意没有**的东西（编译期条件、宏、变量、伪状态、以 `A | B` 写出的标志枚举、三元表达式、数组字面量……）扩展也不会补全；原因见扩展的 README 和 [.dui 概览](../language/overview.md)。
 
-<a id="the-symbol-file-duidui-symbolsjson"></a>
+<a id="the-symbols-intermediatedreamsourceuidb"></a>
 
-## 符号文件：DUI/.dui-symbols.json
+## 符号：Intermediate/DreamSource/ui.db
 
-补全提供的恰好是编译器接受的内容，因为两者读的是**同一份清单**。编辑器模块把编译器知道的内容导出到项目的 `DUI/.dui-symbols.json`：
+补全提供的恰好是编译器接受的内容，因为两者读的是**同一份清单**。编辑器模块把编译器知道的内容导出到项目 `Intermediate/DreamSource/ui.db` 的 `symbols` 表中，这是一个 SQLite 数据库：
 
 - **标签**来自构建器自己的表（包括 `Native.Button` 之类的注册表标签）；
 - **属性**来自写回扫描所用的同一套反射规则；
 - **枚举值**来自它们的 `UEnum`；
 - 以及布局容器及其属性、事件、属性说明和类默认值；
-- `viewmodels` 行可以命名的类（`UDreamViewModel` 的子类，以及任何不是 widget 且实现了 `INotifyFieldValueChanged` 的类）及其成员——`Player.` 之后的补全读的就是它（文件版本 2；更旧的导出在这里什么都不补全，而不是去猜）。
+- `viewmodels` 行可以命名的类（`UDreamViewModel` 的子类，以及任何不是控件且实现了 `INotifyFieldValueChanged` 的类）及其成员——`Player.` 之后的补全读的就是它（导出版本 2；更旧的导出在这里什么都不补全，而不是去猜）。
 
-它在两个时刻写出：**编辑器启动时**（类都已存在之后），以及**按需**，通过控制台命令：
+该表保存了 `.dui-symbols.json` 过去所用的对象：对象段（`tags`、`components`、`enums`……）的每个成员占一行，其余内容每段一行，因此改动一个类只会重写一行。schema 是插件与扩展之间的约定；`meta` 表保存 `schema`、`producer` 以及扩展会监视的 `symbols_revision`。它在两个时刻写出：**编辑器启动时**（类都已存在之后），以及**按需**，通过控制台命令：
 
 ```text
 DreamUI.ExportSymbols
 ```
 
-它只写入一个**已经存在的**项目 `DUI/` 目录：一个从未用过 `.dui` 的项目不应该在某次启动后突然拥有一个。没有 `DUI/` 时，该命令会在日志中说明什么都没写入。
+只有发生变化的行才会写入，而内容相同的导出不会写入任何内容，因此一次没有教给扩展任何东西的编辑器启动不会让它重新加载。数据库只会写入**已经有源文件夹**的项目（`DreamSource/UI/`，或旧的 `DUI/`）：一个从未用过 `.dui` 的项目不应该在某次启动后突然拥有一个。没有源文件夹时，该命令会在日志中说明什么都没写入。
 
-还没有符号文件？在有 `DUI/` 目录的情况下，用 Unreal 编辑器打开一次项目。所有语法驱动的功能没有它也能用，状态栏会说明你处于哪种模式——缺少符号文件是一条带说明的可见警告，而不是静默降级。文件变化后，*DreamUI: Reload Symbols* 会重新读取它。
+还没有符号？在存在源文件夹的情况下，用 Unreal 编辑器打开一次项目。所有语法驱动的功能没有它们也能用，状态栏会说明你处于哪种模式——缺少符号是一条带说明的可见警告，而不是静默降级。符号变化后扩展会自行重新加载；*DreamUI: Reload Symbols* 则手动再次读取它们。
+
+对于比此布局更旧的插件，扩展会回退到该插件的 `DUI/.dui-symbols.json` 和 `DUI/.dui-diagnostics.json`，以及它的 `Saved/DreamGUI/Bridge/`。
 
 <a id="the-bridge-to-the-editor"></a>
 
@@ -82,8 +84,8 @@ DreamUI.ExportSymbols
 
 编辑器运行时，扩展能拿到单个文件的字符看不到的东西：
 
-- **编译器诊断，实时。** 每次编译一个由文本支撑的类，其判定都会写入 `DUI/.dui-diagnostics.json`，它们会作为 `dui-compiler` 出现在“问题”面板中——语义层：未知属性、错误的值、缺失的绑定函数。一次干净的编译会写入一个空数组，这正是清除该文件波浪线的方式。
-- **请求与响应。** `Saved/DreamGUI/Bridge/` 中的投放文件夹协议：扩展投放一个请求，编辑器轮询、处理并写入响应。`<-` 和 `->` 补全会询问编辑器该类究竟声明了什么；`<->` 补全会列出该类的变量（FieldNotify 的排在最前——其余每帧轮询）；输入 `/` 会提供所有可嵌套的控件类；`/Game/...` 路径是链接，会在编辑器的内容浏览器中打开该资产。
+- **编译器诊断，实时。** 每次编译一个由文本支撑的类，其判定都会写入 `Intermediate/DreamSource/ui.db` 的 `diagnostics` 表中（本次会话中每个编译的文件一行，在一个事务中整体替换），它们会作为 `dui-compiler` 出现在“问题”面板中——即语义层：未知属性、错误的值、缺失的绑定函数。一次干净的编译会写入一个空列表，这正是清除该文件波浪线的方式。
+- **请求与响应。** `Intermediate/DreamSource/UI/Bridge/` 中的投放文件夹协议（此布局之前为 `Saved/DreamGUI/Bridge/`）：扩展投放一个请求，编辑器轮询、处理并写入响应。`<-` 和 `->` 补全会询问编辑器该类究竟声明了什么；`<->` 补全会列出该类的变量（FieldNotify 的排在最前——其余每帧轮询）；输入 `/` 会提供所有可嵌套的控件类；`/Game/...` 路径是链接，会在编辑器的内容浏览器中打开该资产。
 - **在 Unreal 设计器中显示**（Ctrl+Alt+R）会打开设计器并选中光标下的节点；**编译此文件**（Ctrl+Alt+B）立即编译，判定出现在“问题”中。设计器是这门语言的预览界面——桥只是把你带到那里。
 - **反过来**：在设计器工具栏或层级结构上下文菜单中的 *在 VS Code 中显示* 会让编辑器写入 `Bridge/reveal-to-editor.json`，然后 VS Code 跳转到该节点所在的行。
 
@@ -97,12 +99,13 @@ DreamUI.ExportSymbols
 
 | 命令 | 快捷键 | 作用 |
 | --- | --- | --- |
-| DreamUI: Reload Symbols (.dui-symbols.json) | | 再次读取符号文件 |
-| DreamUI: New .dui File | | 写入一个起始 `.dui`（也出现在文件夹的上下文菜单中） |
+| DreamUI: Reload Symbols | | 再次读取符号 |
+| DreamUI: New .dui File | | 写入一个起始 `.dui`（也出现在文件夹的上下文菜单中）；从命令面板执行时会落到项目的源文件夹中 |
+| DreamUI: Migrate DUI/ to DreamSource | | 将项目旧的 `DUI/` 文件夹移动到其 DreamSource 文件夹（编辑器运行时或目标已存在时会拒绝执行）；弃用警告中也会提供该命令 |
 | DreamUI: Reveal in Unreal Designer | Ctrl+Alt+R | 打开设计器并选中光标下的节点 |
 | DreamUI: Compile This File | Ctrl+Alt+B | 让编辑器立即编译此文件 |
 | DreamUI: Clear Bridge Caches | | 丢弃从编辑器回答中缓存的内容 |
 
 | 设置 | 默认值 | 含义 |
 | --- | --- | --- |
-| `dreamui.symbolsPath` | 空 | `.dui-symbols.json` 的显式路径。为空时会搜索每个工作区文件夹的 `DUI/` 目录以及打开文件上方的文件夹 |
+| `dreamui.symbolsPath` | 空 | `.dui-symbols.json` 的显式路径，读取它而不是 `ui.db`。为空时读取项目的 `Intermediate/DreamSource/ui.db`，或者对于较旧的插件，读取 `DUI/` 中的 `.dui-symbols.json` 或打开文件上方的文件夹 |

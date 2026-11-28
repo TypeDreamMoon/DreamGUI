@@ -109,11 +109,11 @@ r.DreamUI.VerifyKeptPointers=1
 | `dreamgui.ListPendingWidgets` | 列出已经创建但还没加到任何地方的 widget（`ConstructWidget` 之后、`AddChild` 之前的"停放"状态），以及它们等了多久。把它们放在一个具名数组里是为了不被回收，能列出来是为了不让那里变成东西悄悄堆积的地方 |
 | `DreamGUI.Diag.FindTreeBridges` | 列出当前世界的关卡持有的对象（actor、它的组件或子对象）指向某棵 DreamGUI widget 树的每一个引用，以及那是谁的树。播放会话复制关卡时会顺着这种引用进入树 |
 | `DreamGUI.Text.ShapeCacheFlush` | 清空文字整形缓存，计数器保留 |
-| `DreamUI.ExportSymbols` | 重写 `DUI/.dui-symbols.json`（编辑器），见 [VS Code 扩展](vscode.md) |
+| `DreamUI.ExportSymbols` | 重写 `Intermediate/DreamSource/ui.db` 中的符号（编辑器），见 [VS Code 扩展](vscode.md) |
 | `DreamUI.Binding.Dump` | 列出每个带属性绑定的活 user widget：多少绑定是订阅的（变化时才更新）、多少每帧读、多少是常量、多少是旧格式，以及每个每帧读的绑定是因为哪个成员才留在轮询上的。见[绑定什么时候更新](../language/bindings.md#bindings-and-routes) |
 | `DreamUI.Binding.ForcePoll 1` | 之后初始化的 widget，所有按依赖订阅的绑定都改回每帧读。值不更新时用它区分"没人宣布这次变化"和"它从来没变"，默认 0 |
 
-⚠️ **不是所有 DreamUI 的「命令」都是控制台命令。** 编辑器侧有两个名字同族的入口走的是**工具栏与 Tools 菜单**，不是控制台：`DreamUI.OpenWorkspace`（重写并打开 `DUI/DreamUI.code-workspace`）和 `DreamUI.RebuildAll` （整项目重编译文本支撑的控件蓝图，**会先弹确认框**）。它们各有 toolbar 与 Tools 菜单两个 id （`DreamUI.OpenWorkspaceTools` / `DreamUI.RebuildAllTools`），见[设计器](designer.md)。
+⚠️ **不是所有 DreamUI 的「命令」都是控制台命令。** 编辑器侧有两个名字同族的入口走的是**工具栏与 Tools 菜单**，不是控制台：`DreamUI.OpenWorkspace`（重写并在项目的源文件夹中打开 `DreamUI.code-workspace`）和 `DreamUI.RebuildAll`（重编译项目中所有文本支撑的控件蓝图，**会先弹确认框**）。它们各有 toolbar 与 Tools 菜单两个 id（`DreamUI.OpenWorkspaceTools` / `DreamUI.RebuildAllTools`），见[设计器](designer.md)。
 
 追踪类变量，打开后往日志里写：`dreamgui.LayoutTrace 1`（每次面板排列和它提交的每个矩形）、 `dreamgui.ScrollBoxTrace 1`（每次改变状态的滚动框拖动增量和物理 tick），以及 `dreamgui.DumpMaterialDraws 1` （每次屏幕空间材质绘制尝试走了哪个分支，直到设回 0）。
 

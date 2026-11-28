@@ -9,15 +9,15 @@ description: "什么是 .dui 文件、它放在哪里、它由哪些语句组成
 
 ## 文件放在哪里
 
-位于 `DUI/` 目录下：项目的（`<Project>/DUI/`）或已启用插件的（`<Plugin>/DUI/`）。不在 `Content/` 下——`.dui` 是源码，不是资产。
+位于某个源文件夹下：项目的（默认 `<Project>/DreamSource/UI/`，在 *Project Settings ▸ Dream Source ▸ UI* 中设置）或已启用插件的（`<Plugin>/DreamSource/UI/`）。不在 `Content/` 下——`.dui` 是源码，不是资产。较旧项目的 `DUI/` 文件夹仍会被读取；参见 [Project layout](../getting-started/project-layout.md#the-old-dui-folder)。
 
 指向另一个文件的路径——无论是在蓝图的 Source File 中，还是在 `use` 之后——有三种写法：
 
 | 写法 | 含义 |
 |---|---|
-| `Panels/Settings.dui` | 相对于某个 `DUI/` 根目录：先找项目的，然后依次找每个插件的，取第一个存在该文件的。 |
-| `Plugin.MyPlugin:Panels/Settings.dui` | 该插件的 `DUI/` 目录。 |
-| `D:/Work/Proj/DUI/Panels/Settings.dui` | 绝对路径，按原样使用。 |
+| `Panels/Settings.dui` | 相对于某个源文件夹：先找项目的，然后依次找每个插件的，取第一个存在该文件的。 |
+| `Plugin.MyPlugin:Panels/Settings.dui` | 该插件的源文件夹。 |
+| `D:/Work/Proj/DreamSource/UI/Panels/Settings.dui` | 绝对路径，按原样使用。 |
 
 
 <a id="file-structure"></a>

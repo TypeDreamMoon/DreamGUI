@@ -9,10 +9,10 @@ description: 把插件的 HelloDreamGUI.dui 从文本带到屏幕上，逐行读
 
 ## 先把文件拷进项目
 
-把它拷到项目的 `DUI/` 目录下——比如 `<Project>/DUI/HelloDreamGUI.dui`——然后只改这一份。两个原因：
+把它复制到项目的源文件夹下——比如 `<Project>/DreamSource/UI/HelloDreamGUI.dui`——然后只编辑这一份副本。原因有两个：
 
 - 插件目录里那份是参考，插件更新会覆盖它；
-- 选文件时，DreamGUI 会把路径存成相对某个 `DUI/` 根的形式——项目里的存成 `HelloDreamGUI.dui`，插件里的存成 `Plugin.X:…`。不在任何 `DUI/` 根下的文件只能存成绝对路径，这只在某一台机器上有效。
+- 选择文件时，DreamGUI 会把路径存成相对于某个源文件夹的形式——项目中的文件存为 `HelloDreamGUI.dui`，插件中的文件存为 `Plugin.X:…`。不属于任何源文件夹的文件只能存成绝对路径，而这只能在一台机器上有效。
 
 `.dui` 是源码，不是资产，所以不放在 `Content/` 下。详见[项目布局](project-layout.md)。
 

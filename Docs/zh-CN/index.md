@@ -21,7 +21,7 @@ DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个
 | 运行时模块 | `DreamGUIRenderer`、`DreamGUI`、`DreamGUIInput`、`DreamGUIControls`、`DreamGUIExtensions`、`DreamGUISamples`、`DreamTween` |
 | 编辑器侧模块 | `DreamGUIEditor`、`DreamGUIK2Nodes`（`UncookedOnly`）、`DreamGUITests`（`Editor`） |
 | 依赖插件 | `EnhancedInput`（插件自己启用） |
-| 源文件 | `.dui`，放在项目或插件的 `DUI/` 目录下 |
+| 源文件 | `.dui`，位于项目或插件的 `DreamSource/UI/` 文件夹下（旧项目的 `DUI/` 仍会被读取） |
 | 项目设置 | *Project Settings ▸ Plugins ▸ Dream GUI* 与 *Project Settings ▸ Plugins ▸ DreamUI* |
 | 许可证 | MIT |
 | 来历 | Lex Liu 的 [LGUI / LexUI](https://github.com/liufei2008/LGUI) 的分叉，不是它的直接替代品 |

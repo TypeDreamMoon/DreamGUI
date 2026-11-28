@@ -154,7 +154,7 @@ python Tools/Tests/static_checks.py --list-rules
 | `layering` | error | 包含了上层的下层模块没法和它拆开 |
 | `layering-stale` | error | 待拆的边的清单只减不增：已经不存在的边要从清单上拿掉 |
 | `engine-private-path` | error | 引擎的 `Private` 和 `Internal` 头文件会不打招呼地在版本之间变化；插件只通过公开头文件读引擎 |
-| `preset-names` | 错误 | 屏幕通过指定另一个预设来改变外观，因此 `DUI/Presets/` 中的每个预设都会声明 `Default.dui` 所声明的资源和样式 |
+| `preset-names` | 错误 | 屏幕通过指定另一个预设来改变外观，因此 `DreamSource/UI/Presets/` 中的每个预设都会声明 `Default.dui` 所声明的资源和样式 |
 
 一个应当保留的发现，可以就地放行（写在那一行或上一行），或者写进 `static-checks-allow.json`（路径 glob、可选的正则、理由）：
 
@@ -195,7 +195,7 @@ pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1 -Root <host dir> -
 
 | 部件 | 在哪 |
 | --- | --- |
-| 屏幕 | `Tools/TestHost/Template/DUI/TextSmoke.dui`，拷到宿主的 `DUI/` |
+| 屏幕 | `Tools/TestHost/Template/DreamSource/UI/TextSmoke.dui`，拷到宿主的 `DreamSource/UI/` |
 | 资产 | `/Game/DreamGUISmoke`，由 `Tools/TestHost/make_text_smoke_assets.py` 生成 |
 | 探针 | 宿主游戏模块里的 `DreamGUIPackagedSmoke.cpp`，由 `-DreamGUITextSmoke=<dir>` 打开，Shipping 也可以 |
 | 对比 | `Tools/Tests/compare_text_smoke.py`，两次运行一致时退出码 0 |
