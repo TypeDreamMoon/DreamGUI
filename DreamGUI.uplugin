@@ -23,6 +23,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "SQLiteCore",
+			"Enabled": true
+		},
+		{
 			"Name": "DreamLoc",
 			"Enabled": true,
 			"Optional": true

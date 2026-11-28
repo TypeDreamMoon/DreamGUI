@@ -1,8 +1,8 @@
 # The .dui language
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/language/*.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/language/*.md` by `.skill/build-reference.ps1`.
 
 A `.dui` file is the source of a DreamGUI widget Blueprint: a tree of widgets, their properties, their bindings and their
 animations, as text. The Blueprint names the file as its *Source File*, compiling the Blueprint reads the file, and the
@@ -10,16 +10,17 @@ designer writes its edits back into the file. This page is the reference for wri
 
 ## Where a file lives
 
-Under a `DUI/` directory: the project's (`<Project>/DUI/`) or an enabled plugin's (`<Plugin>/DUI/`). Not under
-`Content/` -- a `.dui` is source, not an asset.
+Under a source folder: the project's (`<Project>/DreamSource/UI/` by default, set in *Project Settings ▸ Dream Source ▸
+UI*) or an enabled plugin's (`<Plugin>/DreamSource/UI/`). Not under `Content/` -- a `.dui` is source, not an asset. An
+older project's `DUI/` folder is still read; see [Project layout](https://gui.toolchain.64hz.cn/en/docs/start/project-layout/#the-old-dui-folder).
 
 A path to another file -- in a Blueprint's Source File, or after `use` -- is written one of three ways:
 
 | Spelling | Means |
 |---|---|
-| `Panels/Settings.dui` | Relative to a `DUI/` root: the project's first, then each plugin's, the first that has the file. |
-| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's `DUI/` directory. |
-| `D:/Work/Proj/DUI/Panels/Settings.dui` | Absolute, used as written. |
+| `Panels/Settings.dui` | Relative to a source folder: the project's first, then each plugin's, the first that has the file. |
+| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's source folder. |
+| `D:/Work/Proj/DreamSource/UI/Panels/Settings.dui` | Absolute, used as written. |
 
 
 ## File structure
@@ -204,7 +205,8 @@ that class's properties. The class must be a concrete DreamUI user widget (DUI50
 Because tags and containers are asked first, an alias can never change what `Text` or `VerticalBox` means; an alias
 that tries is refused (DUI3018).
 
-`DUI/.dui-symbols.json`, which the editor writes on start and on `DreamUI.ExportSymbols`, lists every tag, container
+The symbols in `Intermediate/DreamSource/ui.db`, which the editor writes on start and on `DreamUI.ExportSymbols`, list
+every tag, container
 and registered widget with its properties, for an editor's completion.
 
 
@@ -285,7 +287,7 @@ DUI4009; a list or a map that does not read (a bracket never closed, a map entry
 
 A string can carry the key it is localized under: `Text = "OK" @key("Dialog.Confirm")`. Without one the key is
 `<node id>.<property>` -- with the component's class and position between the two for a line of a `+` block -- in the
-namespace the `class` line gives. A file without a `class` line uses its path under its `DUI/` folder
+namespace the `class` line gives. A file without a `class` line uses its path under its source folder
 (`Panels/Settings.dui`, `Plugin.X:Panels/Settings.dui`), the same on every machine.
 
 Three more annotations say what a translator needs, after the string and in any order:

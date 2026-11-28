@@ -159,7 +159,8 @@ that class's properties. The class must be a concrete DreamUI user widget (DUI50
 Because tags and containers are asked first, an alias can never change what `Text` or `VerticalBox` means; an alias
 that tries is refused (DUI3018).
 
-`DUI/.dui-symbols.json`, which the editor writes on start and on `DreamUI.ExportSymbols`, lists every tag, container
+The symbols in `Intermediate/DreamSource/ui.db`, which the editor writes on start and on `DreamUI.ExportSymbols`, list
+every tag, container
 and registered widget with its properties, for an editor's completion.
 
 
@@ -240,7 +241,7 @@ DUI4009; a list or a map that does not read (a bracket never closed, a map entry
 
 A string can carry the key it is localized under: `Text = "OK" @key("Dialog.Confirm")`. Without one the key is
 `<node id>.<property>` -- with the component's class and position between the two for a line of a `+` block -- in the
-namespace the `class` line gives. A file without a `class` line uses its path under its `DUI/` folder
+namespace the `class` line gives. A file without a `class` line uses its path under its source folder
 (`Panels/Settings.dui`, `Plugin.X:Panels/Settings.dui`), the same on every machine.
 
 Three more annotations say what a translator needs, after the string and in any order:

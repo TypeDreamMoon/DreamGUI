@@ -1,13 +1,14 @@
 # Starter screens
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/language/starter-screens.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/language/starter-screens.md` by `.skill/build-reference.ps1`.
 ## Starter screens
 
 Five whole screens of different kinds. Each is one file built from the [building blocks](https://gui.toolchain.64hz.cn/en/docs/dui/building-blocks/) and worn
-in a [preset](https://gui.toolchain.64hz.cn/en/docs/dui/presets/) through `DUI/Theme.dui`: copy those files with it. Each lays out with no problem at
-1920 x 1080, 1280 x 720 and 2560 x 1440 under all four presets. The text is placeholder text written to read like a
+in a [preset](https://gui.toolchain.64hz.cn/en/docs/dui/presets/) through `Theme.dui`: copy those files with it, into your source folder at the path each
+first line gives after `DUI/`. Each lays out with no problem at 1920 x 1080, 1280 x 720 and 2560 x 1440 under all
+four presets. The text is placeholder text written to read like a
 game's; change it, and the values, to your own.
 
 Start from the screen nearest to what you need and change it; do not start from an empty file. What they have in common

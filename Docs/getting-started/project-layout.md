@@ -53,18 +53,53 @@ Assets need nothing: every type that moved still loads under its old name (see [
 
 ## Where .dui files live
 
-Under a `DUI/` directory: the project's (`<Project>/DUI/`) or an enabled plugin's (`<Plugin>/DUI/`). **Not under
-`Content/`** — a `.dui` is source, not an asset: under `Content/` the cooker walks it, the Content Browser shows a file it
-cannot open, and a plugin shipping widget classes would have to ship its sources inside its cooked content to have
-them found.
+Under a source folder: the project's (`<Project>/DreamSource/UI/` by default) or an enabled plugin's
+(`<Plugin>/DreamSource/UI/`). **Not under `Content/`** — a `.dui` is source, not an asset: under `Content/` the cooker
+walks it, the Content Browser shows a file it cannot open, and a plugin shipping widget classes would have to ship its
+sources inside its cooked content to have them found.
+
+`DreamSource/` is where every Dream plugin keeps its text sources, one folder per language (`DreamSource/UI/`,
+`DreamSource/FX/`, `DreamSource/Shader/`, …), so they are managed together instead of as separate folders at the
+project root.
+
+### Choosing the project's folder
+
+*Project Settings ▸ Dream Source ▸ UI ▸ Source Directory* sets the project's folder, relative to the project directory.
+It is saved in `Config/DefaultDreamSource.ini`, which the VS Code extension reads too:
+
+```ini
+[/Script/DreamGUI.DreamUISourceSettings]
+SourceDirectory=(Path="DreamSource/UI")
+```
+
+An absolute or empty value reads as the default. A plugin's folder is not configurable: it is always
+`<Plugin>/DreamSource/UI/`.
+
+### The old DUI/ folder
+
+Before this layout, sources lived in `<Project>/DUI/` and `<Plugin>/DUI/`. Those folders are deprecated but still
+read, with no end date:
+
+| `DreamSource/UI/` | `DUI/` | What is read | What you are told |
+| --- | --- | --- | --- |
+| exists | — | `DreamSource/UI/` | nothing |
+| exists | exists | `DreamSource/UI/` | `DUI/` is ignored: merge what it still holds, then delete it |
+| — | exists | `DUI/` | `DUI/` is deprecated: move it to `DreamSource/UI/` |
+| — | — | nothing yet | nothing; a folder the editor creates (a new file, *Open DreamUI Workspace*) is `DreamSource/UI/` |
+
+The notice goes to the Output Log once per session. In the editor it is also a notification with three buttons:
+**Migrate** moves `DUI/` to the configured folder (it refuses when that folder already exists), **Don't show again**
+stops the notification on this machine (the log line stays), and **Later**. A plugin still on `<Plugin>/DUI/` is only
+logged. Moving the folder changes no file and no asset: paths are stored relative to the folder (below), so they
+resolve the same from the new one.
 
 A path to another file — in a Blueprint's Source File, or after `use` — is written one of three ways:
 
 | Spelling | Means |
 | --- | --- |
-| `Panels/Settings.dui` | Relative to a `DUI/` root: the project's first, then each plugin's, the first that has the file |
-| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's `DUI/` directory |
-| `D:/Work/Proj/DUI/Panels/Settings.dui` | Absolute, used as written |
+| `Panels/Settings.dui` | Relative to a source folder: the project's first, then each plugin's, the first that has the file |
+| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's source folder |
+| `D:/Work/Proj/DreamSource/UI/Panels/Settings.dui` | Absolute, used as written |
 
 A bare relative path means "whichever root has it" — convenient, and ambiguous the moment two roots hold the same
 relative path, which is why the plugin-qualified spelling exists. When you pick a file in the designer, the absolute
@@ -84,9 +119,17 @@ VerticalBox Root {
 }
 ```
 
-The editor also writes two files into the project's `DUI/`: `.dui-symbols.json` (rewritten on start and on
-`DreamUI.ExportSymbols`; the symbol table the VS Code extension completes from) and `DreamUI.code-workspace`
-(rewritten from the current source roots, and opened, by *Tools ▸ Open DreamUI Workspace (VSCode)*).
+## What the editor writes
+
+| File | What it is |
+| --- | --- |
+| `Intermediate/DreamSource/ui.db` | A SQLite database for editors that are not Unreal's: the `symbols` table (every tag, property, enum, event and view model the compiler knows — rewritten on start and on `DreamUI.ExportSymbols`, only the rows that changed) and the `diagnostics` table (each `.dui` compiled this session and its problems). The VS Code extension completes and reports from it. Only written when the project has a source folder. |
+| `Intermediate/DreamSource/UI/Bridge/` | The drop folder the VS Code extension talks to the running editor through (see [VS Code extension](../tools/vscode.md)). |
+| `<source folder>/DreamUI.code-workspace` | Rewritten from the current source folders, and opened, by *Tools ▸ Open DreamUI Workspace (VSCode)*. |
+
+Everything under `Intermediate/DreamSource/` rebuilds by itself and stays out of version control. It replaces the
+`DUI/.dui-symbols.json`, `DUI/.dui-diagnostics.json` and `Saved/DreamGUI/Bridge/` of earlier versions; Migrate deletes
+the two json files, and otherwise they are no longer written or read by this plugin.
 
 A project using DreamGUI looks roughly like this:
 
@@ -94,14 +137,18 @@ A project using DreamGUI looks roughly like this:
 MyProject/
   Config/
     DefaultDreamGUI.ini
+    DefaultDreamSource.ini
     DefaultEngine.ini
   Content/
     UI/
       WBP_HelloDreamGUI.uasset
-  DUI/
-    HelloDreamGUI.dui
-    .dui-symbols.json
-    DreamUI.code-workspace
+  DreamSource/
+    UI/
+      HelloDreamGUI.dui
+      DreamUI.code-workspace
+  Intermediate/
+    DreamSource/
+      ui.db
   Plugins/
     DreamGUI/
 ```

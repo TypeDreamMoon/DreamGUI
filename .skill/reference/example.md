@@ -1,13 +1,13 @@
 # A worked example
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/language/example.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/language/example.md` by `.skill/build-reference.ps1`.
 ## A worked example
 
 A settings screen built from one row component. Three files: the component, a library that names it and styles the
-family, and the screen. Copied as they are into a project's `DUI/` folder, they compile and lay out with no error and no
-warning: the screen needs nothing from C++ or a Blueprint graph.
+family, and the screen. Copied as they are into a project's source folder (`DreamSource/UI/`, at the path after
+`DUI/`), they compile and lay out with no error and no warning: the screen needs nothing from C++ or a Blueprint graph.
 
 The row -- a label on the left, a value with arrows on the right -- declares what a host sets and hears:
 

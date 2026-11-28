@@ -61,7 +61,7 @@
  */
 namespace DreamGUIPackagedSmokeLocal
 {
-	/** The widget class the asset script builds from DUI/TextSmoke.dui (Tools/TestHost/make_text_smoke_assets.py). */
+	/** The widget class the asset script builds from DreamSource/UI/TextSmoke.dui (Tools/TestHost/make_text_smoke_assets.py). */
 	const TCHAR* const ScreenClassPath = TEXT("/Game/DreamGUISmoke/WBP_TextSmoke.WBP_TextSmoke_C");
 	/** Frames every condition of IsSettled has to hold for: a coverage glyph that lands repaints its text a frame later. */
 	constexpr int32 SettledFramesNeeded = 10;

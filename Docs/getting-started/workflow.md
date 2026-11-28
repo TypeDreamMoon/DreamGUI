@@ -8,9 +8,9 @@ description: The whole loop of authoring a screen — text and designer writing 
 A text-authored widget Blueprint has one truth: its `.dui`. There are two ways to change it, and both always see the
 same thing.
 
-- **In the text.** Open it in VS Code (*Tools ▸ Open DreamUI Workspace (VSCode)* rewrites `DUI/DreamUI.code-workspace`
-  from the current source roots and opens it, falling back to Notepad when VS Code is unavailable). The extension's
-  completion comes from the `DUI/.dui-symbols.json` the editor writes; see [VS Code extension](../tools/vscode.md).
+- **In the text.** Open it in VS Code (*Tools ▸ Open DreamUI Workspace (VSCode)* rewrites `DreamUI.code-workspace` in
+  the project's source folder from the current source roots and opens it, falling back to Notepad when VS Code is unavailable). The extension's
+  completion comes from the symbols the editor writes to `Intermediate/DreamSource/ui.db`; see [VS Code extension](../tools/vscode.md).
 - **In the designer.** The designer is a front end for the file: a change made there is a change to the text, written
   into the line that holds the value — or a new line after the node's others — with everything else byte for byte as
   it was. A few changes have no line to write into — the visibility of a widget an `if` shows or hides, for one — and the

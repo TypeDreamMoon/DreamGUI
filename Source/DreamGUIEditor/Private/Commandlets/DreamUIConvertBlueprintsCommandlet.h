@@ -13,7 +13,7 @@
  *         (-Assets=/Game/UI/WBP_A,/Game/UI/WBP_B | -Path=/Game/UI) [-DryRun] [-AllowLoss]
  *
  * Each Blueprint gets the report the editor shows (FDreamUIBlueprintConverter): what cannot be converted, what would not
- * reach the file. -DryRun stops there and changes nothing. Otherwise each is converted to its default file under DUI/,
+ * reach the file. -DryRun stops there and changes nothing. Otherwise each is converted to its default file in the project's source folder,
  * with its `_PreDui` backup, and both packages are saved -- except one with anything that would not reach the file,
  * which is skipped unless -AllowLoss says the loss is accepted. Exits non-zero when any Blueprint was skipped or failed.
  */

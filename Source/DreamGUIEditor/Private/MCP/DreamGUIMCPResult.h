@@ -121,7 +121,7 @@ namespace DreamGUIMCP
 
 	/**
 	 * A `file` argument resolved: an absolute path as given; a relative one against the project directory first, then
-	 * against the project's DUI/ folder -- whichever exists, the project spelling when neither does.
+	 * against the .dui source roots (DreamUIPaths::Resolve) -- whichever exists, the project spelling when neither does.
 	 */
 	DREAMGUIEDITOR_API FString ResolveProjectFileArgument(const FString& Argument);
 

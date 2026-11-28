@@ -4,24 +4,25 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Text/DreamUIDatabase.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUIDiagnosticsMailbox.h"
+#include "Text/DreamUISymbolExport.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
-#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
+#include "SQLitePreparedStatement.h"
 
 /*
  * The diagnostics mailbox, held to the reader's contract.
  *
- * The FORMAT contract lives in the VSCode extension (its parseMailbox tests are the spec); what
- * these tests hold is this side's half: what gets deposited, what a clean compile writes (an empty
- * array, because absence over there means "no news" while emptiness means "all clear"), what a
- * non-text compile leaves alone, and that the write really is beside-then-rename onto the final
- * name. Everything runs against an override directory under Saved/ so the suite never touches the
- * project's real mailbox -- the one an actual VSCode session may be watching while tests run.
+ * The contract is the `diagnostics` table of ui.db (Plan/DreamSource/dreamsource-layout-spec.md 11.3); what these
+ * tests hold is this side's half: what gets deposited, what a clean compile writes (an empty array, because absence
+ * over there means "no news" while emptiness means "all clear"), what a non-text compile leaves alone, and that every
+ * flush is one revision. Everything runs against an override database under Saved/ so the suite never touches the
+ * project's real one -- the one an actual VSCode session may be watching while tests run.
  */
 
 namespace DreamUIMailboxTestLocal
@@ -29,12 +30,14 @@ namespace DreamUIMailboxTestLocal
 	struct FScopedMailboxDirectory
 	{
 		FString Directory;
+		FString Database;
 
 		FScopedMailboxDirectory()
 		{
 			Directory = FPaths::ConvertRelativePathToFull(FPaths::Combine(
 				FPaths::ProjectSavedDir(), TEXT("DreamGUITests"), TEXT("Mailbox"),
 				FGuid::NewGuid().ToString(EGuidFormats::Short)));
+			Database = FPaths::Combine(Directory, TEXT("ui.db"));
 			IFileManager::Get().MakeDirectory(*Directory, /*Tree*/true);
 			FDreamUIDiagnosticsMailbox::Reset();
 		}
@@ -46,16 +49,39 @@ namespace DreamUIMailboxTestLocal
 		}
 	};
 
-	TSharedPtr<FJsonObject> ReadMailbox(const FString& InPath)
+	/**
+	 * The diagnostics table, put back into the shape the extension builds from it -- `{ "files": { path: { "compiledAt",
+	 * "diagnostics" } } }` -- so the assertions below read as they did against the json file it replaced.
+	 */
+	TSharedPtr<FJsonObject> ReadMailbox(const FString& InDatabasePath)
 	{
-		FString Serialized;
-		if (!FFileHelper::LoadFileToString(Serialized, *InPath))
+		FDreamUIDatabase Database;
+		if (InDatabasePath.IsEmpty() || !Database.Open(InDatabasePath))
 		{
 			return nullptr;
 		}
-		TSharedPtr<FJsonObject> Root;
-		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Serialized);
-		FJsonSerializer::Deserialize(Reader, Root);
+		TSharedPtr<FJsonObject> Files = MakeShared<FJsonObject>();
+		FSQLitePreparedStatement Select(Database.Get(), TEXT("SELECT path, compiled_at_utc, json FROM diagnostics;"));
+		while (Select.IsValid() && Select.Step() == ESQLitePreparedStatementStepResult::Row)
+		{
+			FString Path, CompiledAt, Json;
+			Select.GetColumnValueByIndex(0, Path);
+			Select.GetColumnValueByIndex(1, CompiledAt);
+			Select.GetColumnValueByIndex(2, Json);
+			TArray<TSharedPtr<FJsonValue>> Diagnostics;
+			if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Json), Diagnostics))
+			{
+				return nullptr;
+			}
+			TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+			Entry->SetStringField(TEXT("compiledAt"), CompiledAt);
+			Entry->SetArrayField(TEXT("diagnostics"), Diagnostics);
+			Files->SetObjectField(Path, Entry);
+		}
+		TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+		Root->SetStringField(TEXT("schema"), Database.GetMeta(TEXT("schema")));
+		Root->SetNumberField(TEXT("revision"), FCString::Atoi64(*Database.GetMeta(TEXT("diagnostics_revision"))));
+		Root->SetObjectField(TEXT("files"), Files);
 		return Root;
 	}
 }
@@ -78,15 +104,16 @@ bool FDreamUIMailboxCarriesTheCompilersBagTest::RunTest(const FString& Parameter
 		FDreamUISourceLocation(1, 7), TEXT("this file already compiles into another class"));
 	FDreamUIDiagnosticsMailbox::Deposit(Bag);
 
-	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Directory);
-	TestFalse(TEXT("something was written"), Written.IsEmpty());
+	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Database);
+	TestEqual(TEXT("the database it was given was written"), Written, Scoped.Database);
 
 	const TSharedPtr<FJsonObject> Root = ReadMailbox(Written);
-	if (!TestTrue(TEXT("the mailbox parses as JSON"), Root.IsValid()))
+	if (!TestTrue(TEXT("the database reads back"), Root.IsValid()))
 	{
 		return false;
 	}
-	TestEqual(TEXT("version"), static_cast<int32>(Root->GetNumberField(TEXT("version"))), 1);
+	TestEqual(TEXT("schema"), Root->GetStringField(TEXT("schema")), FString::FromInt(FDreamUIDatabase::SchemaVersion));
+	TestEqual(TEXT("the first flush is revision 1"), static_cast<int32>(Root->GetNumberField(TEXT("revision"))), 1);
 
 	const TSharedPtr<FJsonObject>* Entry = nullptr;
 	const TSharedPtr<FJsonObject> Files = Root->GetObjectField(TEXT("files"));
@@ -111,10 +138,10 @@ bool FDreamUIMailboxCarriesTheCompilersBagTest::RunTest(const FString& Parameter
 	const TSharedPtr<FJsonObject> Second = Diagnostics[1]->AsObject();
 	TestEqual(TEXT("warning severity"), Second->GetStringField(TEXT("severity")), FString(TEXT("warning")));
 
-	// No stray .tmp beside the real file: the write renamed onto the final name.
-	TArray<FString> Leftovers;
-	IFileManager::Get().FindFiles(Leftovers, *(Scoped.Directory / TEXT("*.tmp")), /*Files*/true, /*Dirs*/false);
-	TestEqual(TEXT("no temp file left behind"), Leftovers.Num(), 0);
+	// Every flush is one revision: that is what the extension watches for.
+	FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Database);
+	const TSharedPtr<FJsonObject> Again = ReadMailbox(Scoped.Database);
+	TestEqual(TEXT("a second flush is revision 2"), Again.IsValid() ? static_cast<int32>(Again->GetNumberField(TEXT("revision"))) : -1, 2);
 	return true;
 }
 
@@ -132,13 +159,13 @@ bool FDreamUIMailboxClearsWithACleanCompileTest::RunTest(const FString& Paramete
 	Broken.SourceName = TEXT("X:/Proj/DUI/Login.dui");
 	Broken.AddError(EDreamUIDiagnosticCode::EmptyTree, FDreamUISourceLocation(1, 1), TEXT("nothing to build"));
 	FDreamUIDiagnosticsMailbox::Deposit(Broken);
-	FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Directory);
+	FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Database);
 
 	// The author fixes the file; the next compile deposits a clean bag for the same path.
 	FDreamUIDiagnosticBag Clean;
 	Clean.SourceName = TEXT("X:/Proj/DUI/Login.dui");
 	FDreamUIDiagnosticsMailbox::Deposit(Clean);
-	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Directory);
+	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Database);
 
 	const TSharedPtr<FJsonObject> Root = ReadMailbox(Written);
 	if (!TestTrue(TEXT("the mailbox parses"), Root.IsValid()))
@@ -172,8 +199,8 @@ bool FDreamUIMailboxIgnoresNonTextCompilesTest::RunTest(const FString& Parameter
 	FDreamUIDiagnosticBag NotText;
 	FDreamUIDiagnosticsMailbox::Deposit(NotText);
 
-	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Directory);
-	TestFalse(TEXT("a flush still writes the file"), Written.IsEmpty());
+	const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(Scoped.Database);
+	TestFalse(TEXT("a flush still writes the database"), Written.IsEmpty());
 	const TSharedPtr<FJsonObject> Root = ReadMailbox(Written);
 	if (!TestTrue(TEXT("the mailbox parses"), Root.IsValid()))
 	{
@@ -186,9 +213,9 @@ bool FDreamUIMailboxIgnoresNonTextCompilesTest::RunTest(const FString& Parameter
 namespace DreamUIMailboxTestLocal
 {
 	/** The number of files the mailbox on disk holds an entry for, or -1 when it could not be read. */
-	int32 CountWrittenEntries(const FString& InDirectory)
+	int32 CountWrittenEntries(const FString& InDatabasePath)
 	{
-		const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(InDirectory);
+		const FString Written = FDreamUIDiagnosticsMailbox::FlushNow(InDatabasePath);
 		const TSharedPtr<FJsonObject> Root = ReadMailbox(Written);
 		return Root.IsValid() ? Root->GetObjectField(TEXT("files"))->Values.Num() : -1;
 	}
@@ -214,17 +241,17 @@ bool FDreamUIMailboxRetiresAFileItsOwnerLeftTest::RunTest(const FString& Paramet
 
 	const FString Owner = TEXT("/Game/UI/WBP_Login.WBP_Login");
 	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Login.dui")), Owner);
-	TestEqual(TEXT("the file has an entry while its class is built from it"), CountWrittenEntries(Scoped.Directory), 1);
+	TestEqual(TEXT("the file has an entry while its class is built from it"), CountWrittenEntries(Scoped.Database), 1);
 
 	// The same Blueprint compiles again, now naming nothing: it was converted back to a plain Blueprint.
 	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), Owner);
-	TestEqual(TEXT("the entry is gone once nothing is built from the file"), CountWrittenEntries(Scoped.Directory), 0);
+	TestEqual(TEXT("the entry is gone once nothing is built from the file"), CountWrittenEntries(Scoped.Database), 0);
 
 	// Pointing the same Blueprint at another file moves the entry rather than leaving two.
 	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Login.dui")), Owner);
 	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Title.dui")), Owner);
-	TestEqual(TEXT("only the file the class names now has an entry"), CountWrittenEntries(Scoped.Directory), 1);
-	const TSharedPtr<FJsonObject> Root = ReadMailbox(FPaths::Combine(Scoped.Directory, TEXT(".dui-diagnostics.json")));
+	TestEqual(TEXT("only the file the class names now has an entry"), CountWrittenEntries(Scoped.Database), 1);
+	const TSharedPtr<FJsonObject> Root = ReadMailbox(Scoped.Database);
 	if (TestTrue(TEXT("the mailbox parses"), Root.IsValid()))
 	{
 		TestTrue(TEXT("and it is the new one"), Root->GetObjectField(TEXT("files"))->HasField(TEXT("X:/Proj/DUI/Title.dui")));
@@ -249,10 +276,10 @@ bool FDreamUIMailboxKeepsAFileAnotherClassStillUsesTest::RunTest(const FString& 
 
 	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), First);
 	TestEqual(TEXT("one class leaving does not take the entry of a file another class is built from"),
-		CountWrittenEntries(Scoped.Directory), 1);
+		CountWrittenEntries(Scoped.Database), 1);
 
 	FDreamUIDiagnosticsMailbox::Deposit(FDreamUIDiagnosticBag(), Second);
-	TestEqual(TEXT("the last class leaving does"), CountWrittenEntries(Scoped.Directory), 0);
+	TestEqual(TEXT("the last class leaving does"), CountWrittenEntries(Scoped.Database), 0);
 	return true;
 }
 
@@ -270,11 +297,102 @@ bool FDreamUIMailboxRemoveDropsADeletedFileTest::RunTest(const FString& Paramete
 	FDreamUIDiagnosticsMailbox::Deposit(MakeBrokenBag(TEXT("X:/Proj/DUI/Title.dui")));
 
 	FDreamUIDiagnosticsMailbox::Remove(TEXT("X:/Proj/DUI/Login.dui"));
-	TestEqual(TEXT("only the deleted file's entry is gone"), CountWrittenEntries(Scoped.Directory), 1);
+	TestEqual(TEXT("only the deleted file's entry is gone"), CountWrittenEntries(Scoped.Database), 1);
 
 	// Asking about a file the mailbox holds nothing for changes nothing.
 	FDreamUIDiagnosticsMailbox::Remove(TEXT("X:/Proj/DUI/Never.dui"));
-	TestEqual(TEXT("an unknown file is ignored"), CountWrittenEntries(Scoped.Directory), 1);
+	TestEqual(TEXT("an unknown file is ignored"), CountWrittenEntries(Scoped.Database), 1);
+	return true;
+}
+
+namespace DreamUIMailboxTestLocal
+{
+	/** The symbols table put back together the way the extension does (spec 11.3), or null. */
+	TSharedPtr<FJsonObject> ReadSymbols(const FString& InDatabasePath, int64& OutRevision)
+	{
+		FDreamUIDatabase Database;
+		if (!Database.Open(InDatabasePath))
+		{
+			return nullptr;
+		}
+		OutRevision = FCString::Atoi64(*Database.GetMeta(TEXT("symbols_revision")));
+		TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+		FSQLitePreparedStatement Select(Database.Get(), TEXT("SELECT section, name, json FROM symbols;"));
+		while (Select.IsValid() && Select.Step() == ESQLitePreparedStatementStepResult::Row)
+		{
+			FString Section, Name, Json;
+			Select.GetColumnValueByIndex(0, Section);
+			Select.GetColumnValueByIndex(1, Name);
+			Select.GetColumnValueByIndex(2, Json);
+			// Wrapped in an array so one reader takes objects, arrays and scalars alike.
+			TArray<TSharedPtr<FJsonValue>> Wrapped;
+			if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(TEXT("[") + Json + TEXT("]")), Wrapped) || Wrapped.Num() != 1)
+			{
+				return nullptr;
+			}
+			if (Name.IsEmpty())
+			{
+				Root->SetField(Section, Wrapped[0]);
+				continue;
+			}
+			const TSharedPtr<FJsonObject>* Existing = nullptr;
+			TSharedPtr<FJsonObject> Object;
+			if (Root->TryGetObjectField(Section, Existing))
+			{
+				Object = *Existing;
+			}
+			else
+			{
+				Object = MakeShared<FJsonObject>();
+				Root->SetObjectField(Section, Object);
+			}
+			Object->SetField(Name, Wrapped[0]);
+		}
+		return Root;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUISymbolsRoundTripThroughTheDatabaseTest,
+	"DreamGUI.Text.TheSymbolsTableHoldsWhatTheCompilerKnows",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUISymbolsRoundTripThroughTheDatabaseTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIMailboxTestLocal;
+	FScopedMailboxDirectory Scoped;
+
+	TestEqual(TEXT("the export writes the database it was given"), FDreamUISymbolExport::ExportNow(Scoped.Database), Scoped.Database);
+
+	int64 Revision = 0;
+	const TSharedPtr<FJsonObject> Read = ReadSymbols(Scoped.Database, Revision);
+	if (!TestTrue(TEXT("the symbols read back"), Read.IsValid()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the first export is revision 1"), Revision, static_cast<int64>(1));
+	TestEqual(TEXT("version is a number at the top, as the json file had it"),
+		static_cast<int32>(Read->GetNumberField(TEXT("version"))), 2);
+	TestTrue(TEXT("tags came through as an object"), Read->HasTypedField<EJson::Object>(TEXT("tags")));
+	TestTrue(TEXT("keywords came through as an array"), Read->HasTypedField<EJson::Array>(TEXT("keywords")));
+
+	// Field order inside the reassembled object may differ from BuildSymbols', so each section is compared on its own.
+	const TSharedRef<FJsonObject> Built = FDreamUISymbolExport::BuildSymbols();
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Section : Built->Values)
+	{
+		const TSharedPtr<FJsonValue> Got = Read->TryGetField(Section.Key);
+		if (!TestTrue(FString::Printf(TEXT("section '%s' is there"), *Section.Key), Got.IsValid()))
+		{
+			continue;
+		}
+		TestTrue(FString::Printf(TEXT("section '%s' reads back equal"), *Section.Key),
+			FJsonValue::CompareEqual(*Section.Value, *Got));
+	}
+
+	// Nothing changed, nothing written: the extension must not reload 1.8 MB for an editor start that taught it nothing.
+	FDreamUISymbolExport::ExportNow(Scoped.Database);
+	ReadSymbols(Scoped.Database, Revision);
+	TestEqual(TEXT("an export that says the same thing leaves the revision alone"), Revision, static_cast<int64>(1));
 	return true;
 }
 

@@ -3,14 +3,19 @@
 #include "Text/DreamUIDiagnosticsMailbox.h"
 
 #include "DreamGUIEditorModule.h"
+#include "Text/DreamUIBridgeService.h"
+#include "Text/DreamUIDatabase.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUIPaths.h"
+
+#include "SQLitePreparedStatement.h"
 
 #include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 
 namespace DreamUIMailboxLocal
@@ -36,10 +41,29 @@ namespace DreamUIMailboxLocal
 	 */
 	TMap<FString, FString> GOwnerSources;
 
-	FString DefaultDirectory()
+	/** One file's diagnostics, as the `json` column holds them: the array mailbox v1 kept under `diagnostics`. */
+	FString SerializeDiagnostics(const TArray<FDreamUIDiagnostic>& InDiagnostics)
 	{
-		return FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+		TArray<TSharedPtr<FJsonValue>> Items;
+		for (const FDreamUIDiagnostic& Diagnostic : InDiagnostics)
+		{
+			TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
+			Item->SetNumberField(TEXT("code"), static_cast<int32>(Diagnostic.Code));
+			Item->SetStringField(TEXT("severity"), Diagnostic.IsError() ? TEXT("error") : TEXT("warning"));
+			// 1-based, exactly as FDreamUISourceLocation counts them; a diagnostic with no
+			// location (a file-level refusal like DUI6001) lands on 1,1 rather than 0,0.
+			Item->SetNumberField(TEXT("line"), FMath::Max(1, Diagnostic.Location.Line));
+			Item->SetNumberField(TEXT("column"), FMath::Max(1, Diagnostic.Location.Column));
+			// The bare message: the reader prefixes "DUInnnn:" itself, and ToString's
+			// "file(line,col):" layout would double what the Problems panel already shows.
+			Item->SetStringField(TEXT("message"), Diagnostic.Message);
+			Items.Add(MakeShared<FJsonValueObject>(Item));
+		}
+		FString Serialized;
+		const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+			TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Serialized);
+		FJsonSerializer::Serialize(Items, Writer);
+		return Serialized;
 	}
 
 	void ScheduleFlush()
@@ -158,84 +182,80 @@ void FDreamUIDiagnosticsMailbox::Remove(const FString& InSourceName)
 	}
 }
 
-FString FDreamUIDiagnosticsMailbox::FlushNow(const FString& InOverrideDirectory)
+FString FDreamUIDiagnosticsMailbox::FlushNow(const FString& InOverrideDatabasePath)
 {
 	using namespace DreamUIMailboxLocal;
 
 	// The automation suite compiles text-backed fixtures through the real compiler, and their
 	// deposits must not land in the project's LIVE mailbox -- a VSCode session may be watching it
 	// while the tests run (observed in the field: a suite pass left a fixture entry there). Tests
-	// that test the mailbox itself pass an override directory and sail through.
-	if (InOverrideDirectory.IsEmpty() && GIsAutomationTesting)
+	// that test the mailbox itself pass an override database and sail through.
+	if (InOverrideDatabasePath.IsEmpty() && GIsAutomationTesting)
+	{
+		return FString();
+	}
+	// GIsAutomationTesting alone is not enough: the flush is deferred to a ticker, which can fire between two tests while
+	// the flag is down (observed: a fixture under Saved/DreamGUITests reached the live table after a suite run). And since
+	// a flush replaces the whole table, any process that is not the author's editor -- an automation run, a commandlet,
+	// an unattended process beside an open editor -- would wipe that editor's diagnostics. Same rule as the bridge.
+	if (InOverrideDatabasePath.IsEmpty() && !FDreamUIBridgeService::ShouldOwnBridge())
 	{
 		return FString();
 	}
 
-	const FString Directory = InOverrideDirectory.IsEmpty() ? DefaultDirectory() : InOverrideDirectory;
-	if (!IFileManager::Get().DirectoryExists(*Directory))
+	// A project with no .dui source directory (DreamSource/UI or the legacy DUI) gets no database: one that has never
+	// used a .dui should not wake up owning one. Same rule the symbols export follows.
+	if (InOverrideDatabasePath.IsEmpty() && !DreamUIPaths::ResolveProjectSourceDirectory().bExists)
 	{
 		return FString();
 	}
+	const FString DatabasePath = InOverrideDatabasePath.IsEmpty() ? DreamUIPaths::GetDatabasePath() : InOverrideDatabasePath;
 
-	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
-	Root->SetNumberField(TEXT("version"), 1);
-
-	TSharedPtr<FJsonObject> Files = MakeShared<FJsonObject>();
-	for (const TPair<FString, FEntry>& Pair : GEntries)
+	// Every refusal is LOGGED. The mailbox is the only thing carrying compile verdicts to an editor outside Unreal, so a
+	// write that fails is a VSCode window that quietly keeps showing the last successful compile's problems --
+	// indistinguishable from a clean build.
+	FDreamUIDatabase Database;
+	if (!Database.Open(DatabasePath))
 	{
-		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-		Entry->SetStringField(TEXT("compiledAt"), Pair.Value.CompiledAt);
+		return FString();
+	}
+	if (!Database.Begin())
+	{
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s; the diagnostics an external editor reads are now stale."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Database.DescribeError(TEXT("BEGIN")));
+		return FString();
+	}
 
-		TArray<TSharedPtr<FJsonValue>> Diagnostics;
-		for (const FDreamUIDiagnostic& Diagnostic : Pair.Value.Diagnostics)
+	// The whole table, every flush: it holds this session's compiles and nothing else (see GEntries), and one
+	// transaction is what lets the reader never see half of it.
+	bool bOk = Database.Get().Execute(TEXT("DELETE FROM diagnostics;"));
+	{
+		FSQLitePreparedStatement Insert(Database.Get(),
+			TEXT("INSERT INTO diagnostics(path, compiled_at_utc, json) VALUES(?1, ?2, ?3);"));
+		bOk = bOk && Insert.IsValid();
+		for (const TPair<FString, FEntry>& Pair : GEntries)
 		{
-			TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
-			Item->SetNumberField(TEXT("code"), static_cast<int32>(Diagnostic.Code));
-			Item->SetStringField(TEXT("severity"), Diagnostic.IsError() ? TEXT("error") : TEXT("warning"));
-			// 1-based, exactly as FDreamUISourceLocation counts them; a diagnostic with no
-			// location (a file-level refusal like DUI6001) lands on 1,1 rather than 0,0.
-			Item->SetNumberField(TEXT("line"), FMath::Max(1, Diagnostic.Location.Line));
-			Item->SetNumberField(TEXT("column"), FMath::Max(1, Diagnostic.Location.Column));
-			// The bare message: the reader prefixes "DUInnnn:" itself, and ToString's
-			// "file(line,col):" layout would double what the Problems panel already shows.
-			Item->SetStringField(TEXT("message"), Diagnostic.Message);
-			Diagnostics.Add(MakeShared<FJsonValueObject>(Item));
+			if (!bOk)
+			{
+				break;
+			}
+			Insert.Reset();
+			Insert.ClearBindings();
+			bOk = Insert.SetBindingValueByIndex(1, Pair.Key)
+				&& Insert.SetBindingValueByIndex(2, Pair.Value.CompiledAt)
+				&& Insert.SetBindingValueByIndex(3, SerializeDiagnostics(Pair.Value.Diagnostics))
+				&& Insert.Step() == ESQLitePreparedStatementStepResult::Done;
 		}
-		Entry->SetArrayField(TEXT("diagnostics"), Diagnostics);
-		Files->SetObjectField(Pair.Key, Entry);
 	}
-	Root->SetObjectField(TEXT("files"), Files);
-
-	FString Serialized;
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-	FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
-
-	// Beside-then-rename: the reader is poll-then-read, and an in-place write hands it half a
-	// file. Same rule the DreamFX bridge learned the hard way.
-	const FString FinalPath = FPaths::Combine(Directory, TEXT(".dui-diagnostics.json"));
-	const FString TempPath = FinalPath + TEXT(".tmp");
-	// Both refusals are LOGGED, which this whole file did not do once. The mailbox is the only thing
-	// carrying compile verdicts to an editor outside Unreal, so a write that fails is a VSCode window
-	// that quietly keeps showing the last successful compile's problems -- indistinguishable from a
-	// clean build. The caller's empty string says "not written"; nothing was saying WHY, and the two
-	// causes are things a reader can act on (a read-only DUI/ directory, a file locked by the editor
-	// that is reading it).
-	if (!FFileHelper::SaveStringToFile(Serialized, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	bOk = bOk && Database.Bump(TEXT("diagnostics_revision"), TEXT("diagnostics_updated_utc"));
+	if (!bOk || !Database.Commit())
 	{
-		UE_LOG(DreamGUIEditor, Warning,
-			TEXT("[%s].%d Could not write '%s'; the diagnostics an external editor reads are now stale."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *TempPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s; the diagnostics an external editor reads are now stale."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Database.DescribeError(TEXT("writing diagnostics")));
+		Database.Rollback();
 		return FString();
 	}
-	if (!IFileManager::Get().Move(*FinalPath, *TempPath, /*Replace*/true, /*EvenIfReadOnly*/true))
-	{
-		UE_LOG(DreamGUIEditor, Warning,
-			TEXT("[%s].%d Wrote '%s' but could not move it onto '%s'; the diagnostics an external editor reads are now stale."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *TempPath, *FinalPath);
-		IFileManager::Get().Delete(*TempPath);
-		return FString();
-	}
-	return FinalPath;
+	return DatabasePath;
 }
 
 void FDreamUIDiagnosticsMailbox::GetEntries(TArray<FDreamUIDiagnosticsMailboxEntry>& OutEntries)

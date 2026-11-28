@@ -517,7 +517,7 @@ FString FDreamUIBlueprintConverter::GetDefaultTargetFile(const UDreamWidgetBluep
 	{
 		Relative.RightChopInline(Slash + 1);
 	}
-	return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName,
+	return FPaths::ConvertRelativePathToFull(FPaths::Combine(DreamUIPaths::GetProjectSourceDirectory(),
 		Relative + DreamUIPaths::SourceExtension));
 }
 

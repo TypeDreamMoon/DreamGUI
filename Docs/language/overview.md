@@ -9,16 +9,17 @@ designer writes its edits back into the file. This page is the reference for wri
 
 ## Where a file lives
 
-Under a `DUI/` directory: the project's (`<Project>/DUI/`) or an enabled plugin's (`<Plugin>/DUI/`). Not under
-`Content/` -- a `.dui` is source, not an asset.
+Under a source folder: the project's (`<Project>/DreamSource/UI/` by default, set in *Project Settings ▸ Dream Source ▸
+UI*) or an enabled plugin's (`<Plugin>/DreamSource/UI/`). Not under `Content/` -- a `.dui` is source, not an asset. An
+older project's `DUI/` folder is still read; see [Project layout](../getting-started/project-layout.md#the-old-dui-folder).
 
 A path to another file -- in a Blueprint's Source File, or after `use` -- is written one of three ways:
 
 | Spelling | Means |
 |---|---|
-| `Panels/Settings.dui` | Relative to a `DUI/` root: the project's first, then each plugin's, the first that has the file. |
-| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's `DUI/` directory. |
-| `D:/Work/Proj/DUI/Panels/Settings.dui` | Absolute, used as written. |
+| `Panels/Settings.dui` | Relative to a source folder: the project's first, then each plugin's, the first that has the file. |
+| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's source folder. |
+| `D:/Work/Proj/DreamSource/UI/Panels/Settings.dui` | Absolute, used as written. |
 
 
 ## File structure

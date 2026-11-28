@@ -17,10 +17,10 @@ Paths are relative to the game project's root.
 
 ## With DreamMCP (the `dream_gui` tool)
 
-1. `dream_gui { "action": "check", "args": { "file": "DUI/MainMenu.dui" } }`, or `{ "all": true }` for every `.dui`.
-2. `dream_gui { "action": "compile", "args": { "file": "DUI/MainMenu.dui" } }`. `force: true` compiles even what has not
+1. `dream_gui { "action": "check", "args": { "file": "DreamSource/UI/MainMenu.dui" } }`, or `{ "all": true }` for every `.dui`.
+2. `dream_gui { "action": "compile", "args": { "file": "DreamSource/UI/MainMenu.dui" } }`. `force: true` compiles even what has not
    changed since the last compile.
-3. `dream_gui { "action": "layout", "args": { "file": "DUI/MainMenu.dui", "sizes": "1280x720, 2560x1440" } }`.
+3. `dream_gui { "action": "layout", "args": { "file": "DreamSource/UI/MainMenu.dui", "sizes": "1280x720, 2560x1440" } }`.
 4. `dream_gui { "action": "diagnostics" }` reads back what the engine holds for every file, errors first, without
    compiling anything.
 
@@ -33,10 +33,10 @@ what to do next: do that, do not switch to the script. A file is verified when `
 ## Without DreamMCP
 
 ```bash
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DUI/MainMenu.dui
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check DreamSource/UI/MainMenu.dui
 pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 check -All
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 compile DUI/MainMenu.dui
-pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DUI/MainMenu.dui -Width 1920 -Height 1080 -Sizes "1280x720"
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 compile DreamSource/UI/MainMenu.dui
+pwsh -NoProfile -File Plugins/DreamGUI/.skill/dui.ps1 layout DreamSource/UI/MainMenu.dui -Width 1920 -Height 1080 -Sizes "1280x720"
 ```
 
 Each prints the summary, the text (for `layout`, the screen one node a line), one line per diagnostic as `File.dui(line,col): severity DUInnnn: message`, and a last line
@@ -46,7 +46,7 @@ compile stays in that editor's memory; otherwise it starts a headless engine for
 compile saves. `-Json` prints the whole result instead.
 
 For a CI gate without any engine endpoint, the commandlet compiles a manifest of widgets:
-`UnrealEditor-Cmd.exe <Project>.uproject -run=DreamUICompileWidgets -Manifest=DUI/widgets.json` (see the plugin's
+`UnrealEditor-Cmd.exe <Project>.uproject -run=DreamUICompileWidgets -Manifest=DreamSource/UI/widgets.json` (see the plugin's
 `Docs/tools/scripting.md`).
 
 ## Rules

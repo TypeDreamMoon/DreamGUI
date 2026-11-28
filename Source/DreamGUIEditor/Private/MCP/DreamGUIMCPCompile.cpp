@@ -216,7 +216,7 @@ namespace DreamGUIMCP
 			FString Summary;
 			if (!ReadSource(InFile, Text, Reason, Summary))
 			{
-				Refuse(Context, InFile, Reason, Summary, TEXT("Give file as a path relative to the project root, for example DUI/Menu.dui."));
+				Refuse(Context, InFile, Reason, Summary, TEXT("Give file as a path relative to the project root, for example DreamSource/UI/Menu.dui."));
 				return false;
 			}
 
@@ -331,7 +331,7 @@ namespace DreamGUIMCP
 				return false;
 			}
 
-			// The file the Blueprint reads, spelled the way a Blueprint stores it (relative to a DUI/ root).
+			// The file the Blueprint reads, spelled the way a Blueprint stores it (relative to a source root).
 			const FString Portable = DreamUIPaths::MakePortablePath(InFile);
 			if (!FPaths::IsSamePath(DreamUIPaths::Resolve(DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint)), InFile))
 			{

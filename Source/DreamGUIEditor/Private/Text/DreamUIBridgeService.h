@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 
 /**
- * The editor half of the drop-folder bridge: `Saved/DreamGUI/Bridge/`, requests in, responses
+ * The editor half of the drop-folder bridge: `Intermediate/DreamSource/UI/Bridge/`, requests in, responses
  * out, a heartbeat in between. The protocol contract lives on the CLIENT side (the VSCode
  * extension's bridgeProtocol tests are the spec); this service conforms to it, and
  * PROTOCOL_VERSION moves when either half does.

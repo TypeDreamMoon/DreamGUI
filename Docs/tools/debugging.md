@@ -125,13 +125,13 @@ capture (a `dumpmovie`-style capture) -- have two traps:
 | `dreamgui.ListPendingWidgets` | Lists widgets created but not yet added to anything (the parked state between `ConstructWidget` and `AddChild`), with how long they have been waiting. Holding them in a named array is what stops them being collected; listing them is what stops that becoming a place things quietly pile up |
 | `DreamGUI.Diag.FindTreeBridges` | Lists every reference from an object the current world's levels keep (an actor, one of its components or sub-objects) into a DreamGUI widget tree, and whose tree it is. A play session's copy of the level follows such a reference into the tree |
 | `DreamGUI.Text.ShapeCacheFlush` | Empties the text shape cache; its counters are kept |
-| `DreamUI.ExportSymbols` | Rewrites `DUI/.dui-symbols.json` (editor); see [The VS Code extension](vscode.md) |
+| `DreamUI.ExportSymbols` | Rewrites the symbols in `Intermediate/DreamSource/ui.db` (editor); see [The VS Code extension](vscode.md) |
 | `DreamUI.Binding.Dump` | Logs every live user widget with property bindings: how many are subscribed (updated on a change), polled every frame, constant and legacy, and for each polled one, the member that keeps it on the poll. See [When a binding updates](../language/bindings.md#bindings-and-routes) |
 | `DreamUI.Binding.ForcePoll 1` | Every binding compiled with recorded dependencies is polled every frame instead, for the widgets initialized after it is set. For a value that does not update: it tells "nothing announces its change" from "it never changes". Default 0 |
 
 ⚠️ **Not every DreamUI "command" is a console command.** On the editor side, two entry points from the same name family
 go through **the toolbar and the Tools menu**, not the console: `DreamUI.OpenWorkspace` (rewrites and opens
-`DUI/DreamUI.code-workspace`) and `DreamUI.RebuildAll` (recompiles every text-backed widget Blueprint in the project,
+`DreamUI.code-workspace` in the project's source folder) and `DreamUI.RebuildAll` (recompiles every text-backed widget Blueprint in the project,
 **after a confirmation dialog**). Each has two ids, one for the toolbar and one for the Tools menu
 (`DreamUI.OpenWorkspaceTools` / `DreamUI.RebuildAllTools`); see [Designer](designer.md).
 

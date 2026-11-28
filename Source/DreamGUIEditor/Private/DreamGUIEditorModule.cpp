@@ -23,6 +23,7 @@
 #include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIMenus.h"
 #include "Text/DreamUISourceWatcher.h"
+#include "Text/DreamUISourceMigration.h"
 #include "Text/DreamUISymbolExport.h"
 #include "Workflow/DreamUIEditorWorkflow.h"
 #include "DreamUIEditorCommands.h"
@@ -251,8 +252,10 @@ void FDreamGUIEditorModule::StartupModule()
 	// not require one -- a .dui saved with no designer open still has to reach whatever classes ARE loaded.
 	// The completion data external editors read; regenerated at startup so it never goes stale.
 	FDreamUISymbolExport::Register();
+	// A project still keeping its .dui files in the deprecated DUI/ is told so, with a button that moves them.
+	FDreamUISourceMigration::Register();
 	// The drop-folder RPC those editors talk back through: functions for completion, reveal,
-	// compile-on-demand. Requests land under Saved/DreamGUI/Bridge/.
+	// compile-on-demand. Requests land under Intermediate/DreamSource/UI/Bridge/.
 	//
 	// Only for the process that IS the editor the author works in. GIsEditor is also true in a commandlet, an
 	// automation run and an unattended process started beside an open editor, and the bridge is one per project:
@@ -576,6 +579,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	bStartedEditorSession = false;
 
 	FDreamUISymbolExport::Unregister();
+	FDreamUISourceMigration::Unregister();
 	FDreamUIBridgeService::Unregister();
 	DreamUIEditorWorkflow::Shutdown(*this);
 	FDreamUIMenus::Unregister();

@@ -1210,8 +1210,8 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			FString Token;
 			AuthoredPath.Split(TEXT(":"), &Token, nullptr);
 			Message += FString::Printf(
-				TEXT(". '%s' names no enabled plugin with a %s directory, so the path above is the project's own root standing in"),
-				*Token, DreamUIPaths::SourceDirectoryName);
+				TEXT(". '%s' names no enabled plugin with a %s (or legacy %s) directory, so the path above is the project's own root standing in"),
+				*Token, DreamUIPaths::PluginSourceDirectory, DreamUIPaths::LegacySourceDirectoryName);
 		}
 		else if (FPaths::IsRelative(AuthoredPath))
 		{
@@ -1222,8 +1222,8 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			}
 			Message += RootDirectories.Num() > 0
 				? FString::Printf(TEXT(". Searched: %s"), *FString::Join(RootDirectories, TEXT(", ")))
-				: FString::Printf(TEXT(". No %s directory exists in this project or any enabled plugin"),
-					DreamUIPaths::SourceDirectoryName);
+				: FString::Printf(TEXT(". No .dui source directory exists in this project ('%s') or any enabled plugin"),
+					*DreamUIPaths::GetProjectSourceDirectory());
 		}
 		OutDiagnostics.AddError(EDreamUIDiagnosticCode::SourceFileUnreadable, FDreamUISourceLocation(), Message);
 		return;

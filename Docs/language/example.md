@@ -6,8 +6,8 @@ description: "A settings screen built from three files — one row component, a 
 ## A worked example
 
 A settings screen built from one row component. Three files: the component, a library that names it and styles the
-family, and the screen. Copied as they are into a project's `DUI/` folder, they compile and lay out with no error and no
-warning: the screen needs nothing from C++ or a Blueprint graph.
+family, and the screen. Copied as they are into a project's source folder (`DreamSource/UI/`, at the path after
+`DUI/`), they compile and lay out with no error and no warning: the screen needs nothing from C++ or a Blueprint graph.
 
 The row -- a label on the left, a value with arrows on the right -- declares what a host sets and hears:
 

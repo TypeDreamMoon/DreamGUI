@@ -238,8 +238,8 @@ gets its row in `module-owners.csv` in the same change.
 path. The renderer used to read the scene depth through the renderer's private headers; it reads it
 through the public scene-texture API now, and a `Build.cs` that adds such a folder again is an error.
 
-`preset-names` compares the preset libraries in `DUI/Presets/` with `Default.dui`: a screen changes its look by naming
-another preset, so a resource or a style one preset declares and another does not is an error in the one that differs.
+`preset-names` compares the preset libraries in `DreamSource/UI/Presets/` with `Default.dui`: a screen changes its look
+by naming another preset, so a resource or a style one preset declares and another does not is an error in the one that differs.
 `DreamGUI.MCP.Reference.*` then compiles and lays out every reference example under each preset.
 
 `--fix-eol` rewrites the line endings of the files the branch touched to what `.gitattributes` asks

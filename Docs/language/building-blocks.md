@@ -5,8 +5,9 @@ description: "Whole .dui files to start a screen from: the root that scales a 19
 
 ## Building blocks
 
-Each block below is a whole file: copy it into your project's `DUI/` folder at the path its first line gives. They
-wear the [presets](presets.md) through `DUI/Theme.dui`, so they change look with it; copy that file too. Every block
+Each block below is a whole file: copy it into your project's source folder (`DreamSource/UI/`) at the path its first
+line gives after `DUI/`. They wear the [presets](presets.md) through `Theme.dui` at the root of that folder, so they
+change look with it; copy that file too. Every block
 compiles and lays out with no error and no warning, under every preset, and the two demo screens at the end place them
 all; the three screens turned in 3D stand on their own. The [starter screens](starter-screens.md) are built from them.
 

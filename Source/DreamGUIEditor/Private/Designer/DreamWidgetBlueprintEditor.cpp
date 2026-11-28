@@ -2817,7 +2817,7 @@ void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 			"DreamWidgetConvertToText",
 			FToolUIActionChoice(ConvertAction),
 			LOCTEXT("ConvertToTextButton", "Convert to Text"),
-			LOCTEXT("ConvertToTextButtonTooltip", "Write this hierarchy, its bindings and its routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."),
+			LOCTEXT("ConvertToTextButtonTooltip", "Write this hierarchy, its bindings and its routes into a new .dui in the project's source folder (DreamSource/UI), and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."),
 			FSlateIcon(AppStyle, "Icons.Documentation")));
 	}
 }
@@ -3014,7 +3014,7 @@ void FDreamWidgetBlueprintEditor::RevealInVSCode(const UDreamWidget* InWidget)
 	if (!FDreamUIBridgeService::WriteRevealToEditor(ResolvedPath, Line, Column, WidgetId))
 	{
 		DreamUIRevealLocal::Notify(LOCTEXT("RevealWriteFailed",
-			"DreamUI could not write the reveal request under Saved/DreamGUI/Bridge."), false);
+			"DreamUI could not write the reveal request under Intermediate/DreamSource/UI/Bridge."), false);
 		return;
 	}
 
@@ -3221,8 +3221,7 @@ FString FDreamWidgetBlueprintEditor::GetDefaultTextSourceDirectory()
 	// with the project, and stored in the project's own asset under the plugin's name. A project that
 	// has DUI/ gets the answer it always got, because its own root is listed first whenever it exists,
 	// and every other root is still a folder away in the dialog.
-	return FPaths::ConvertRelativePathToFull(
-		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+	return DreamUIPaths::GetProjectSourceDirectory();
 }
 
 bool FDreamWidgetBlueprintEditor::CreateTextSourceFileFor(UDreamWidgetBlueprint* InBlueprint,

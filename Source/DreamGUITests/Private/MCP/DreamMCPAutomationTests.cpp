@@ -11,6 +11,7 @@
 #include "MCP/DreamGUIMCPPreviewStats.h"
 #include "MCP/DreamGUIMCPResult.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUISourceWatcher.h"
 
 #include "AssetCompilingManager.h"
@@ -2050,7 +2051,7 @@ bool FDreamMCPReferenceExamplesTest::RunTest(const FString& Parameters)
 	if (Files.ContainsByPredicate([&NamedPreset](const TPair<FString, FString>& InFile) { return InFile.Value.Contains(NamedPreset); }))
 	{
 		TArray<FString> PresetFiles;
-		IFileManager::Get().FindFiles(PresetFiles, *FPaths::Combine(Plugin->GetBaseDir(), TEXT("DUI"), TEXT("Presets"), TEXT("*.dui")), true, false);
+		IFileManager::Get().FindFiles(PresetFiles, *FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::PluginSourceDirectory, TEXT("Presets"), TEXT("*.dui")), true, false);
 		PresetFiles.Sort();
 		TestTrue(TEXT("the plugin ships the preset the files name"), PresetFiles.Contains(TEXT("Default.dui")));
 		for (const FString& PresetFile : PresetFiles)

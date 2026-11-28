@@ -30,7 +30,7 @@ namespace DreamUICompileWidgetsLocal
 	{
 		FString Asset;   // /Game/UI/WBP_X (package path, with or without the .Name suffix)
 		FString Parent;  // /Script/Module.Class, empty = UDreamTextUserWidget
-		FString Source;  // the .dui, relative to DUI/ or absolute; empty = keep what the Blueprint names
+		FString Source;  // the .dui, relative to a source root or absolute; empty = keep what the Blueprint names
 	};
 
 	FString PackageOf(const FString& InAsset)

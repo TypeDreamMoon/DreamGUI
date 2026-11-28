@@ -16,6 +16,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIValueFormat.h"
 
@@ -530,19 +531,19 @@ bool FDreamUITextMissingFileTest::RunTest(const FString& Parameters)
 	using namespace DreamUITextCompileTestLocal;
 
 	// The resolution rule, on its own, without a file. Asserted here rather than by writing a .dui
-	// into a real DUI root, which would leave a source file the workspace then offers to compile.
+	// into a real source root, which would leave a source file the workspace then offers to compile.
 	const FString Expected = [] {
 		FString Path = FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(FPaths::ProjectDir(), TEXT("DUI"), TEXT("UI/NotThere.dui")));
+			FPaths::Combine(DreamUIPaths::GetProjectSourceDirectory(), TEXT("UI/NotThere.dui")));
 		FPaths::NormalizeFilename(Path);
 		return Path;
 	}();
 	// Nothing exists at any root, so what comes back is the project candidate -- which is the whole
 	// reason the resolver returns one instead of an empty string: the caller is about to name this
 	// path in a diagnostic, and "could not read ''" tells a reader nothing.
-	TestEqual(TEXT("an unresolvable relative path falls back to the project's DUI directory"),
+	TestEqual(TEXT("an unresolvable relative path falls back to the project's source directory"),
 		UDreamTextUserWidget::ResolveDuiFilePath(TEXT("UI/NotThere.dui")), Expected);
-	TestEqual(TEXT("and an empty one stays empty rather than becoming the DUI directory"),
+	TestEqual(TEXT("and an empty one stays empty rather than becoming the source directory"),
 		UDreamTextUserWidget::ResolveDuiFilePath(TEXT("  ")), FString());
 
 	FScopedBlueprint Fixture(TEXT("BP_MissingDui"));

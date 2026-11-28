@@ -6,8 +6,9 @@ description: "Five complete .dui screens to start from -- a title menu, an inven
 ## Starter screens
 
 Five whole screens of different kinds. Each is one file built from the [building blocks](building-blocks.md) and worn
-in a [preset](presets.md) through `DUI/Theme.dui`: copy those files with it. Each lays out with no problem at
-1920 x 1080, 1280 x 720 and 2560 x 1440 under all four presets. The text is placeholder text written to read like a
+in a [preset](presets.md) through `Theme.dui`: copy those files with it, into your source folder at the path each
+first line gives after `DUI/`. Each lays out with no problem at 1920 x 1080, 1280 x 720 and 2560 x 1440 under all
+four presets. The text is placeholder text written to read like a
 game's; change it, and the values, to your own.
 
 Start from the screen nearest to what you need and change it; do not start from an empty file. What they have in common

@@ -55,7 +55,7 @@ struct DREAMGUIEDITOR_API FDreamUIConversionReport
  */
 struct DREAMGUIEDITOR_API FDreamUIBlueprintConverter
 {
-	/** `<Project>/DUI/<path under the mount point>/<AssetName>.dui` -- /Game/UI/WBP_Login becomes DUI/UI/WBP_Login.dui. */
+	/** `<project source folder>/<path under the mount point>/<AssetName>.dui` -- /Game/UI/WBP_Login becomes DreamSource/UI/UI/WBP_Login.dui. */
 	static FString GetDefaultTargetFile(const UDreamWidgetBlueprint* InBlueprint);
 
 	/**

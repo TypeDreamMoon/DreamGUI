@@ -134,6 +134,12 @@ outside them through, and a screen built around the old way will feel different:
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.
 
+`.dui` sources now live in `<Project>/DreamSource/UI/` (the folder is a project setting). A project's `DUI/` folder keeps
+working while there is no `DreamSource/UI/`; the editor says so once a session and offers to move it, and the VS Code
+extension's *DreamUI: Migrate DUI/ to DreamSource* does the same. Paths relative to the source folder stay as they are.
+Delete `DUI/.dui-symbols.json` and `DUI/.dui-diagnostics.json` if a move left them behind: the editor writes
+`Intermediate/DreamSource/ui.db` now. See [Project layout](../getting-started/project-layout.md#the-old-dui-folder).
+
 ## From 2.1 to 1.0.0
 
 For a project on the 2.1.0 development build. Nothing was renamed between the two, so an asset 2.1 saved naming the

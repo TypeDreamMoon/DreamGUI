@@ -39,7 +39,7 @@ Rules (--list-rules prints them with their reasons):
   The engine:
     engine-private-path  a Build.cs putting a Private or Internal folder of the engine on the include path
   The presets:
-    preset-names         a preset library in DUI/Presets/ that does not declare the same resources and
+    preset-names         a preset library in DreamSource/UI/Presets/ that does not declare the same resources and
                          styles as Default.dui
 
 A finding can be allowed where it stands, with a comment on its line or the line above:
@@ -875,7 +875,7 @@ def preset_names(path):
 def check_presets(root, findings, want):
     if 'preset-names' not in want:
         return
-    folder = os.path.join(root, 'DUI', 'Presets')
+    folder = os.path.join(root, 'DreamSource', 'UI', 'Presets')
     base = os.path.join(folder, 'Default.dui')
     if not os.path.isfile(base):
         return

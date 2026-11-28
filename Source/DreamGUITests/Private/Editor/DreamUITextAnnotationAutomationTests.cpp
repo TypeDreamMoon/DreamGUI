@@ -130,7 +130,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamUITextPortableNamespaceTest::RunTest(const FString& Parameters)
 {
 	// The same file checked out anywhere: its texts' namespace is the path as an asset stores it, not where the disk has it.
-	const FString Path = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / DreamUIPaths::SourceDirectoryName / TEXT("UI/NoClass.dui"));
+	const FString Path = FPaths::ConvertRelativePathToFull(DreamUIPaths::GetProjectSourceDirectory() / TEXT("UI/NoClass.dui"));
 	FDreamUIAst Ast;
 	FDreamUIDiagnosticBag Diagnostics;
 	if (!TestTrue(TEXT("the file parses"), FDreamUISourceFile::Parse(TEXT("Widget Root {\n    Text Title {\n        Text = \"设置\"\n    }\n}\n"), Path, Ast, Diagnostics)))

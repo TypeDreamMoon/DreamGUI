@@ -251,7 +251,7 @@ property bindings, the same designer.
 - `SourceFile` is editable on the class defaults only (`EditDefaultsOnly`): one class, one tree. The file is read at
   compile time, the only moment that can declare a member variable per widget, resolve bindings, check them, and hand the
   designer a hierarchy to draw.
-- It is editor-only data, stripped at cook; relative paths are rooted at a `DUI/` source directory.
+- It is editor-only data, stripped at cook; relative paths are rooted at a source folder (`DreamSource/UI/`).
 - *Set Source File...* in the designer toolbar points a class at a file, and edits made in the designer are written back
   to the line in the file that holds the value.
 

@@ -78,7 +78,7 @@ namespace DreamGUIMCP
 			if (Argument.TrimStartAndEnd().IsEmpty())
 			{
 				OutRefusal = FResult::MakeRefused(TEXT("bad-args"), FString::Printf(TEXT("%s needs file, a .dui path relative to the project root."), *Call.Action),
-					TEXT("For example file=DUI/Menu.dui."));
+					TEXT("For example file=DreamSource/UI/Menu.dui."));
 				return false;
 			}
 			OutFile = ResolveProjectFileArgument(Argument);
@@ -261,8 +261,8 @@ namespace DreamGUIMCP
 			{
 				if (State->Files.Num() == 0)
 				{
-					OutResult = FResult::MakeOk(TEXT("There is no .dui file under the project's or the plugins' DUI/ folders."));
-					OutResult.Next.Add(TEXT("Write screens under DUI/ in the project folder, for example DUI/Menu.dui."));
+					OutResult = FResult::MakeOk(TEXT("There is no .dui file under the project's or the plugins' DreamSource/UI/ (or older DUI/) folders."));
+					OutResult.Next.Add(TEXT("Write screens under DreamSource/UI/ in the project folder, for example DreamSource/UI/Menu.dui."));
 					return true;
 				}
 				if (Context.IsCancelRequested())
@@ -278,7 +278,7 @@ namespace DreamGUIMCP
 					if (!bAll)
 					{
 						OutResult = FResult::MakeRefused(Check.RefusalReason, Check.RefusalSummary,
-							TEXT("Give file as a path relative to the project root, for example DUI/Menu.dui."));
+							TEXT("Give file as a path relative to the project root, for example DreamSource/UI/Menu.dui."));
 						return true;
 					}
 				}

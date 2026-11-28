@@ -7,17 +7,19 @@
 class FJsonObject;
 
 /**
- * Dumps what the compiler knows into `DUI/.dui-symbols.json`, for editors that are not this one.
+ * Dumps what the compiler knows into the `symbols` table of `Intermediate/DreamSource/ui.db` (FDreamUIDatabase), for
+ * editors that are not this one. It used to be `DUI/.dui-symbols.json`; the table holds the same object, split into one
+ * row per member of each object section so that a change to one class rewrites one row.
  *
- * The VSCode extension's completion, hover and validation all read this file, and that is the whole
+ * The VSCode extension's completion, hover and validation all read this, and that is the whole
  * design: the extension never guesses at the language. Tags come from the builder's own table,
  * properties from the same reflective policy the write-back sweeps with, enums from their UEnum --
  * so what the extension offers is exactly what the compiler accepts, kept in step by regenerating
- * the file rather than by anyone remembering to.
+ * rather than by anyone remembering to.
  *
  * Written on editor startup (once classes exist) and on demand via `DreamUI.ExportSymbols`. Only
- * into a project `DUI/` directory that already exists: a project that has never used a .dui should
- * not wake up owning one.
+ * for a project that has a .dui source directory (DreamSource/UI, or the legacy DUI): a project that
+ * has never used a .dui should not wake up owning a database.
  */
 class DREAMGUIEDITOR_API FDreamUISymbolExport
 {
@@ -26,8 +28,11 @@ public:
 	static void Register();
 	static void Unregister();
 
-	/** Writes the file now. Returns the path it wrote, empty when there was no DUI/ to write into. */
-	static FString ExportNow();
+	/**
+	 * Writes the changed rows now. Returns the database path, empty when nothing could be written (no source directory,
+	 * or a database error, logged). InOverrideDatabasePath is the test seam.
+	 */
+	static FString ExportNow(const FString& InOverrideDatabasePath = FString());
 
 	/**
 	 * What the file holds, built now and not written anywhere: for a reader in this process (the DreamMCP endpoint's

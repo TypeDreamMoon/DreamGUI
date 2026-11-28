@@ -6,6 +6,7 @@
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUISourceWatcher.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUIScriptPackages.h"
@@ -206,8 +207,9 @@ namespace DreamUIBridgeLocal
 
 	FString Root()
 	{
-		return FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("DreamGUI"), TEXT("Bridge")));
+		// Intermediate/DreamSource/UI/Bridge: with the rest of what this editor generates for outside tools. It was
+		// Saved/DreamGUI/Bridge; the extension still finds an older editor there by its status.json.
+		return FPaths::Combine(DreamUIPaths::GetGeneratedDirectory(), TEXT("UI"), TEXT("Bridge"));
 	}
 
 	bool WriteJsonAtomically(const TSharedRef<FJsonObject>& InObject, const FString& InFinalPath)

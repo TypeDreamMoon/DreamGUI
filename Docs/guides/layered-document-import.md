@@ -37,8 +37,8 @@ An import of `Hud.psd` into `/Game/UI` makes:
 |---|---|
 | The widget Blueprint | `/Game/UI/WBP_Hud` |
 | Its textures | `/Game/UI/Hud/` -- `T_Hud_<layer>_<id>` for pixels, `TM_…` for masks, `TG_…` for gradients, `TP_…` for patterns |
-| The `.dui` | `<Project>/DUI/UI/WBP_Hud.dui`, the path the Blueprint converter uses for the same Blueprint |
-| The manifest | `<Project>/DUI/UI/WBP_Hud.dui.psdimport.json` -- what the import wrote, for the next one |
+| The `.dui` | `<Project>/DreamSource/UI/UI/WBP_Hud.dui`, the path the Blueprint converter uses for the same Blueprint |
+| The manifest | `<Project>/DreamSource/UI/UI/WBP_Hud.dui.psdimport.json` -- what the import wrote, for the next one |
 
 ## What each layer becomes
 

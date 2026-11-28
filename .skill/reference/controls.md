@@ -1,8 +1,8 @@
 # Controls
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/controls/index.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/controls/index.md` by `.skill/build-reference.ps1`.
 The control library lives in the `DreamGUIControls` module, above the input system (L3). It offers two
 layers:
 

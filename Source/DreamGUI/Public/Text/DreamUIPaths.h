@@ -4,19 +4,49 @@
 
 #include "CoreMinimal.h"
 
-/** One `DUI/` source tree: the project's own, or one belonging to an enabled plugin. */
+/** One .dui source tree: the project's own, or one belonging to an enabled plugin. */
 struct FDreamUISourceRoot
 {
-	/** Absolute path of the DUI directory, with a trailing slash. */
+	/** Absolute path of the source directory, with a trailing slash. */
 	FString Directory;
 	/** The token an author writes to address this root. Empty for the project's own. */
 	FString RootToken;
+	/**
+	 * Absolute path of the project or plugin the root belongs to, with a trailing slash. Not the parent of Directory:
+	 * `<Project>/DreamSource/UI/`'s parent is `DreamSource/`, which owns nothing.
+	 */
+	FString OwnerDirectory;
+	/** The root is a legacy `DUI/` directory, read because the DreamSource one does not exist. */
+	bool bLegacy = false;
+};
+
+/** How the project's own source directory was decided; see DreamUIPaths::ResolveProjectSourceDirectory. */
+struct FDreamUIProjectSourceDirectory
+{
+	/**
+	 * The directory to use, absolute, no trailing slash: the configured one when it exists, else the legacy `DUI/` when
+	 * that exists, else the configured one again -- the place a directory gets created.
+	 */
+	FString Directory;
+	/** `<Project>/<SourceDirectory>` from UDreamUISourceSettings, absolute. */
+	FString ConfiguredDirectory;
+	/** `<Project>/DUI`, absolute. */
+	FString LegacyDirectory;
+	/** Directory exists on disk. */
+	bool bExists = false;
+	/** Directory is the legacy one: only `DUI/` exists. A migration notice is due. */
+	bool bUsingLegacy = false;
+	/** Both exist; the configured one won and `DUI/` is being ignored. A notice is due too. */
+	bool bLegacyIgnored = false;
 };
 
 /**
  * Where .dui files live, and the only place that knows.
  *
- * `<Project>/DUI/` and `<Plugin>/DUI/`, the same shape DreamShader gives .dsm and DreamFX gives .dfs.
+ * `<Project>/DreamSource/UI/` (configurable, UDreamUISourceSettings) and `<Plugin>/DreamSource/UI/`, with the legacy
+ * `DUI/` of either still read when the DreamSource one does not exist -- for good, not for a transition period, with a
+ * notice that it is deprecated. The table is in Plan/DreamSource/dreamsource-layout-spec.md section 11.2, and the VSCode
+ * extension implements the same one.
  * Deliberately not Content/: a .dui is source, not an asset. Putting it under Content means the
  * cooker walks it, the content browser shows a file it cannot open, and a plugin shipping widget
  * classes has to ship its sources inside its cooked content to have them found at all. The three
@@ -33,14 +63,38 @@ struct FDreamUISourceRoot
  */
 namespace DreamUIPaths
 {
-	/** The directory name, under the project or a plugin. */
-	inline constexpr const TCHAR* SourceDirectoryName = TEXT("DUI");
+	/**
+	 * The legacy directory name, under the project or a plugin. Still read (see above), and still the logical prefix
+	 * localization keys are spelled with (DreamUILocalizationManifest) until DreamLoc learns language keys.
+	 */
+	inline constexpr const TCHAR* LegacySourceDirectoryName = TEXT("DUI");
+
+	/** A plugin's source directory, relative to its base directory. Not configurable. */
+	inline constexpr const TCHAR* PluginSourceDirectory = TEXT("DreamSource/UI");
 
 	/** The extension, dot included. */
 	inline constexpr const TCHAR* SourceExtension = TEXT(".dui");
 
+	/** The project's own source directory and how it was chosen. Cheap: two DirectoryExists. */
+	DREAMGUI_API FDreamUIProjectSourceDirectory ResolveProjectSourceDirectory();
+
+	/** ResolveProjectSourceDirectory().Directory: where the project's .dui files are, or would be created. */
+	DREAMGUI_API FString GetProjectSourceDirectory();
+
+	/** `<Project>/Intermediate/DreamSource`, absolute: where generated data that rebuilds by itself goes. */
+	DREAMGUI_API FString GetGeneratedDirectory();
+
+	/** `<Project>/Intermediate/DreamSource/ui.db`: symbols and compiler diagnostics for external editors. */
+	DREAMGUI_API FString GetDatabasePath();
+
 	/**
-	 * The project's `DUI/` first, then every enabled plugin's, in plugin-manager order.
+	 * Logs, once per editor session, each root still read from a legacy `DUI/` directory and a project `DUI/` that is being
+	 * ignored. Safe to call often.
+	 */
+	DREAMGUI_API void LogDeprecatedRootsOnce();
+
+	/**
+	 * The project's root first, then every enabled plugin's, in plugin-manager order.
 	 *
 	 * Only directories that exist are returned, so a project with no DUI folder gets an empty list
 	 * rather than a candidate that can never resolve.

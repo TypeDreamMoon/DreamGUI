@@ -2,10 +2,15 @@
 
 #include "Text/DreamUIPaths.h"
 
+#include "DreamGUI.h"
+#include "Text/DreamUISourceSettings.h"
+
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
 #include "Interfaces/IPluginManager.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/Paths.h"
+#include "UObject/UObjectGlobals.h"
 
 namespace DreamUIPaths
 {
@@ -62,6 +67,144 @@ namespace DreamUIPaths
 			OutRelative.RemoveFromStart(TEXT("/"));
 			return true;
 		}
+
+		/** Absolute, forward slashes, no trailing slash. */
+		FString NormalizeAbsoluteDirectory(const FString& InPath)
+		{
+			FString Directory = FPaths::ConvertRelativePathToFull(InPath);
+			FPaths::NormalizeDirectoryName(Directory);
+			return Directory;
+		}
+
+		/**
+		 * The configured directory, relative to the project. An absolute or empty value is not a place this project can
+		 * share with another machine (or with the VSCode extension, which reads the same ini), so it reads as the default.
+		 */
+		FString ConfiguredRelativeDirectory()
+		{
+			FString Configured;
+			// The CDO only exists once the UObject system does; before that (a PostConfigInit caller) the ini is read
+			// straight, which is what the CDO would have loaded anyway.
+			if (UObjectInitialized())
+			{
+				Configured = GetDefault<UDreamUISourceSettings>()->SourceDirectory.Path;
+			}
+			else if (GConfig != nullptr)
+			{
+				FString Raw;
+				const FString Ini = FConfigCacheIni::NormalizeConfigIniPath(
+					FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("DefaultDreamSource.ini")));
+				if (GConfig->GetString(TEXT("/Script/DreamGUI.DreamUISourceSettings"), TEXT("SourceDirectory"), Raw, Ini))
+				{
+					// `(Path="DreamSource/UI")` as FDirectoryPath writes it, or a bare string written by hand.
+					FString Inner;
+					Configured = FParse::Value(*Raw, TEXT("Path="), Inner) ? Inner : Raw;
+				}
+			}
+			Configured.TrimStartAndEndInline();
+			Configured.ReplaceInline(TEXT("\\"), TEXT("/"));
+			if (Configured.IsEmpty() || !FPaths::IsRelative(Configured))
+			{
+				return UDreamUISourceSettings::GetDefaultSourceDirectory();
+			}
+			return Configured;
+		}
+
+		/** `<Plugin>/DreamSource/UI`, else the legacy `<Plugin>/DUI`; empty when neither exists. */
+		FString FindPluginSourceDirectory(const FString& InBaseDir, bool& bOutLegacy)
+		{
+			bOutLegacy = false;
+			const FString Current = NormalizeDirectory(FPaths::Combine(InBaseDir, PluginSourceDirectory));
+			if (IFileManager::Get().DirectoryExists(*Current))
+			{
+				return Current;
+			}
+			const FString Legacy = NormalizeDirectory(FPaths::Combine(InBaseDir, LegacySourceDirectoryName));
+			if (IFileManager::Get().DirectoryExists(*Legacy))
+			{
+				bOutLegacy = true;
+				return Legacy;
+			}
+			return FString();
+		}
+	}
+
+	FDreamUIProjectSourceDirectory ResolveProjectSourceDirectory()
+	{
+		FDreamUIProjectSourceDirectory Out;
+		Out.ConfiguredDirectory = Local::NormalizeAbsoluteDirectory(
+			FPaths::Combine(FPaths::ProjectDir(), Local::ConfiguredRelativeDirectory()));
+		Out.LegacyDirectory = Local::NormalizeAbsoluteDirectory(
+			FPaths::Combine(FPaths::ProjectDir(), LegacySourceDirectoryName));
+
+		const bool bConfiguredExists = IFileManager::Get().DirectoryExists(*Out.ConfiguredDirectory);
+		// A configured directory that IS `DUI` (someone set it back by hand) is not a legacy one: it is what was asked for.
+		const bool bSame = Out.ConfiguredDirectory.Equals(Out.LegacyDirectory, ESearchCase::IgnoreCase);
+		const bool bLegacyExists = !bSame && IFileManager::Get().DirectoryExists(*Out.LegacyDirectory);
+
+		if (bConfiguredExists)
+		{
+			Out.Directory = Out.ConfiguredDirectory;
+			Out.bExists = true;
+			Out.bLegacyIgnored = bLegacyExists;
+		}
+		else if (bLegacyExists)
+		{
+			Out.Directory = Out.LegacyDirectory;
+			Out.bExists = true;
+			Out.bUsingLegacy = true;
+		}
+		else
+		{
+			Out.Directory = Out.ConfiguredDirectory;
+		}
+		return Out;
+	}
+
+	FString GetProjectSourceDirectory()
+	{
+		return ResolveProjectSourceDirectory().Directory;
+	}
+
+	FString GetGeneratedDirectory()
+	{
+		return Local::NormalizeAbsoluteDirectory(FPaths::Combine(FPaths::ProjectIntermediateDir(), TEXT("DreamSource")));
+	}
+
+	FString GetDatabasePath()
+	{
+		return FPaths::Combine(GetGeneratedDirectory(), TEXT("ui.db"));
+	}
+
+	void LogDeprecatedRootsOnce()
+	{
+		static TSet<FString> Logged;
+		const FDreamUIProjectSourceDirectory Project = ResolveProjectSourceDirectory();
+		if (Project.bUsingLegacy && !Logged.Contains(Project.LegacyDirectory))
+		{
+			Logged.Add(Project.LegacyDirectory);
+			UE_LOG(DreamGUI, Warning,
+				TEXT("DreamGUI: '%s' is deprecated. Move it to '%s' -- Dream sources are managed together under DreamSource/. ")
+				TEXT("It is still read until then."),
+				*Project.LegacyDirectory, *Project.ConfiguredDirectory);
+		}
+		if (Project.bLegacyIgnored && !Logged.Contains(Project.LegacyDirectory))
+		{
+			Logged.Add(Project.LegacyDirectory);
+			UE_LOG(DreamGUI, Warning,
+				TEXT("DreamGUI: '%s' is ignored because '%s' exists. Merge what it still holds into '%s' and delete it."),
+				*Project.LegacyDirectory, *Project.ConfiguredDirectory, *Project.ConfiguredDirectory);
+		}
+		for (const FDreamUISourceRoot& Root : GetSourceRoots())
+		{
+			if (Root.bLegacy && !Root.RootToken.IsEmpty() && !Logged.Contains(Root.Directory))
+			{
+				Logged.Add(Root.Directory);
+				UE_LOG(DreamGUI, Warning,
+					TEXT("DreamGUI: %s keeps its .dui sources in the deprecated '%s'. Move them to '%s%s'."),
+					*Root.RootToken, *Root.Directory, *Root.OwnerDirectory, PluginSourceDirectory);
+			}
+		}
 	}
 
 	TArray<FDreamUISourceRoot> GetSourceRoots()
@@ -98,10 +241,15 @@ namespace DreamUIPaths
 		constexpr double MemoSeconds = 0.5;
 		const double Now = FPlatformTime::Seconds();
 
-		const FString ProjectRoot = Local::NormalizeDirectory(
-			FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName));
-		const bool bProjectRootExists = IFileManager::Get().DirectoryExists(*ProjectRoot);
-		if (!Cached.IsEmpty() && Now - CachedAt < MemoSeconds && bProjectRootExists == bCachedWithProjectRoot)
+		static FString CachedProjectRoot;
+		// Which directory answers for the project is part of the key, not only whether one exists: moving `DUI/` to
+		// `DreamSource/UI/` (the migration notice's button) swaps one existing directory for another, and a memo that
+		// still names the old one would hand out a folder that is gone.
+		const FDreamUIProjectSourceDirectory Project = ResolveProjectSourceDirectory();
+		const FString ProjectRoot = Local::NormalizeDirectory(Project.Directory);
+		const bool bProjectRootExists = Project.bExists;
+		if (!Cached.IsEmpty() && Now - CachedAt < MemoSeconds && bProjectRootExists == bCachedWithProjectRoot
+			&& ProjectRoot == CachedProjectRoot)
 		{
 			return Cached;
 		}
@@ -112,19 +260,23 @@ namespace DreamUIPaths
 		{
 			FDreamUISourceRoot& Root = Roots.AddDefaulted_GetRef();
 			Root.Directory = ProjectRoot;
+			Root.OwnerDirectory = Local::NormalizeDirectory(FPaths::ProjectDir());
+			Root.bLegacy = Project.bUsingLegacy;
 		}
 
 		for (const TSharedRef<IPlugin>& Plugin : IPluginManager::Get().GetEnabledPlugins())
 		{
-			const FString PluginRoot = Local::NormalizeDirectory(
-				FPaths::Combine(Plugin->GetBaseDir(), SourceDirectoryName));
-			if (!IFileManager::Get().DirectoryExists(*PluginRoot))
+			bool bLegacy = false;
+			const FString PluginRoot = Local::FindPluginSourceDirectory(Plugin->GetBaseDir(), bLegacy);
+			if (PluginRoot.IsEmpty())
 			{
 				continue;
 			}
 			FDreamUISourceRoot& Root = Roots.AddDefaulted_GetRef();
 			Root.Directory = PluginRoot;
 			Root.RootToken = FString::Printf(TEXT("%s%s"), Local::PluginTokenPrefix, *Plugin->GetName());
+			Root.OwnerDirectory = Local::NormalizeDirectory(Plugin->GetBaseDir());
+			Root.bLegacy = bLegacy;
 		}
 
 		// An EMPTY answer is not memoised, deliberately: "no DUI folder yet" is the state an author
@@ -136,6 +288,7 @@ namespace DreamUIPaths
 			Cached = Roots;
 			CachedAt = Now;
 			bCachedWithProjectRoot = bProjectRootExists;
+			CachedProjectRoot = ProjectRoot;
 		}
 		return Roots;
 	}
@@ -200,7 +353,7 @@ namespace DreamUIPaths
 			{
 				*OutRootTokenResolved = false;
 			}
-			return Local::NormalizeFile(FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName, Relative));
+			return Local::NormalizeFile(FPaths::Combine(GetProjectSourceDirectory(), Relative));
 		}
 
 		if (!FPaths::IsRelative(Trimmed))
@@ -213,7 +366,7 @@ namespace DreamUIPaths
 		}
 
 		const FString ProjectCandidate =
-			Local::NormalizeFile(FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName, Trimmed));
+			Local::NormalizeFile(FPaths::Combine(GetProjectSourceDirectory(), Trimmed));
 		for (const FDreamUISourceRoot& Root : GetSourceRoots())
 		{
 			const FString Candidate = Local::NormalizeFile(Root.Directory + Trimmed);

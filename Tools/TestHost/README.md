@@ -31,7 +31,7 @@ DreamGUITestHost/                       (-Root, or DREAMGUI_TEST_HOST)
   Source/DreamGUITestHost*.Target.cs    from Template/
   Source/DreamGUITestHost/              from Template/ -- the primary game module, with the two smoke probes
   Content/DreamGUIFixtures/             from Template/ -- the old-asset fixtures (below)
-  DUI/TextSmoke.dui                     from Template/ -- the smoke test's screen (below)
+  DreamSource/UI/TextSmoke.dui          from Template/ -- the smoke test's screen (below)
   Content/DreamGUISmoke/                made by make_text_smoke_assets.py -- the smoke test's assets (below)
   Plugins/DreamGUI/                     a git worktree of the DreamGUI repository
   .dreamgui-testhost.json               what the host was made from (template version, repo, branch)
@@ -76,7 +76,7 @@ written down field by field by a probe and held to the same build run on uncooke
 
 | Piece | Where |
 | --- | --- |
-| The screen | `Template/DUI/TextSmoke.dui`, copied to the host's `DUI/` |
+| The screen | `Template/DreamSource/UI/TextSmoke.dui`, copied to the host's `DreamSource/UI/` |
 | Its assets: `Font_Emoji` (the engine's Noto Color Emoji, embedded), `Font_Text` (the default font with fallbacks for zh-Hans, ja at scale 1.2 and the emoji), `WBP_TextSmoke`, `L_TextSmoke` | `/Game/DreamGUISmoke`, made by `make_text_smoke_assets.py`; always cooked (`Template/Config/DefaultGame.ini`) |
 | The probe | `Template/Source/DreamGUITestHost/DreamGUIPackagedSmoke.cpp`: switched on by `-DreamGUITextSmoke=<dir>`, Shipping included |
 | The comparison | `Tools/Tests/compare_text_smoke.py` |
@@ -141,12 +141,14 @@ Variants, each a cook and a run of its own into another directory, compared with
 
 Things to know:
 
-- **A host made before the smoke test** gets the template's new files (the probe, `DUI/TextSmoke.dui`) from
+- **A host made before the smoke test** gets the template's new files (the probe, the screen -- now `DreamSource/UI/TextSmoke.dui`) from
   `New-DreamGUITestHost.ps1` as it is, and the changed ones -- the game module, its `Build.cs` and `Target.cs`,
   `Config/DefaultGame.ini` -- with `-Force`, which keeps a copy of each file it replaces. The click smoke probe came with
   template version 5 the same way: its two files as they are, the game module and its `Build.cs` with `-Force`.
   Template version 6 builds on every engine the plugin supports: the two `Target.cs` files ask for the engine's latest
   build settings and include order instead of naming 5.8's, and take `-Force` in an older host.
+  Template version 7 moves the screen to `DreamSource/UI/TextSmoke.dui`. An older host gets the new file as it is and
+  keeps its `DUI/` folder, which is then ignored (the editor says so); delete it when convenient.
 - **The safe zone is not compared between the runs, by design.** An editor build fits the platform's safe zone to the
   viewport it is given; a cooked one answers in pixels of the primary display, as UMG's `SSafeZone` does
   (`FSlateApplicationBase::GetSafeZoneSize`). Each run is checked against what the platform asked for in that run.

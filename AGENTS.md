@@ -23,11 +23,13 @@ editor or in an engine it keeps running, in a fraction of a second. `help` gives
    controls, diagnostics). Without the tool: `Plugins/DreamGUI/.skill/reference/cheatsheet.md`, `dui.md`, `example.md`
    and `pitfalls.md`.
 2. Look up every node type and property before writing it: `lookup` (`Text`, `Text.FontSize`, `VerticalBox`, `Widget`,
-   `slot`). Without the tool: `<Project>/DUI/.dui-symbols.json`, which the editor writes when `<Project>/DUI/` exists.
-3. Write the source under `<Project>/DUI/` (or `<Plugin>/DUI/`), never under `Content/`. The file's `class` line
-   names the Blueprint it is the source of, for example `class /Game/UI/WBP_Hello`. Start from a starter screen or the
+   `slot`). Without the tool: the `symbols` table of `<Project>/Intermediate/DreamSource/ui.db` (SQLite), which the
+   editor writes when the project has a `.dui` source folder.
+3. Write the source under `<Project>/DreamSource/UI/` (or `<Plugin>/DreamSource/UI/`), never under `Content/`. The
+   project folder is set in Project Settings > Dream Source > UI; an older project's `DUI/` is still read. The file's
+   `class` line names the Blueprint it is the source of, for example `class /Game/UI/WBP_Hello`. Start from a starter screen or the
    building blocks (`screens.md`, `blocks.md`) and take every colour, size and look from a preset (`presets.md`):
-   `use "Theme.dui" as ui`, where `DUI/Theme.dui` is the one line `use "Plugin.DreamGUI:Presets/Default.dui"`.
+   `use "Theme.dui" as ui`, where `DreamSource/UI/Theme.dui` is the one line `use "Plugin.DreamGUI:Presets/Default.dui"`.
 4. `check` the file (it writes nothing), fix every error at its line, and check again.
 5. `layout` it at the sizes that matter (`sizes: "1280x720, 2560x1440"`): it compiles the screen (components it places
    first), lists every node's rect and text, and reports what is off the screen, cut, too small or on top of another
@@ -39,7 +41,7 @@ The skills `dream-gui-create`, `-verify` and `-diagnose` in `Plugins/DreamGUI/.s
 `pwsh -NoProfile -File Plugins/DreamGUI/.skill/sync-skills.ps1` publishes them into `.claude/skills/`. A diagnostic reads
 `File.dui(line,col): error DUI3001: …`; every code is in `Plugins/DreamGUI/Docs/diagnostics/index.md`, and as data in
 `Plugins/DreamGUI/Docs/diagnostics/codes.json`. More:
-`Plugins/DreamGUI/Docs/tools/dreammcp.md`. The commandlet `-run=DreamUICompileWidgets -Manifest=DUI/widgets.json`
+`Plugins/DreamGUI/Docs/tools/dreammcp.md`. The commandlet `-run=DreamUICompileWidgets -Manifest=DreamSource/UI/widgets.json`
 (`Docs/tools/scripting.md`) compiles a list of widgets with no endpoint, components listed first.
 
 ### Rules
@@ -47,12 +49,13 @@ The skills `dream-gui-create`, `-verify` and `-diagnose` in `Plugins/DreamGUI/.s
 - Copy only from the reference, `Plugins/DreamGUI/Docs/` and `Plugins/DreamGUI/Content/Samples/`. Test `.dui` files
   are not examples.
 - `parent` must be `UDreamTextUserWidget` or a subclass. Leave it out to get `UDreamTextUserWidget`.
-- Use only names that appear in `.dui-symbols.json` or the class reference. An unknown name is an error, not a no-op.
+- Use only names that `lookup` (or the symbols in `ui.db`) or the class reference knows. An unknown name is an error,
+  not a no-op.
 - `Style.X = v` compiles but changes nothing while the project has a style sheet and `StyleSource` is the default.
   Write `StyleSource = Inline` first (`Plugins/DreamGUI/Docs/controls/styles.md`).
 - Colour literals such as `#8C8C94` are sRGB. Read the pitfalls page before you debug a "property that did not take".
 - Once a Blueprint names its `.dui`, the file owns the hierarchy. Change the file; the designer refuses structural edits.
-- Do not edit `DUI/.dui-symbols.json` or `DUI/.dui-diagnostics.json`. The editor writes them.
+- Do not edit `Intermediate/DreamSource/ui.db`. The editor writes it.
 
 ## Changing the plugin
 
@@ -116,7 +119,8 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
   `Docs/diagnostics/codes.json`, and `Docs/cheatsheet.md` from `.skill/cheatsheet/`. CI runs it with `-Check`.
 - `.skill/reference/` is built from `Docs/` (the cheat sheet, the language, the worked example, pitfalls, controls, diagnostics). After
   editing one of those pages run `pwsh -File .skill/build-reference.ps1`; `-Check` reports drift. A code block whose
-  first line is `// DUI/<path>.dui` is a whole file that agents copy: `DreamGUI.MCP.Reference.*` compiles and lays out
+  first line is `// DUI/<path>.dui` (the path under the source folder; the marker keeps its `DUI/` spelling) is a whole
+  file that agents copy: `DreamGUI.MCP.Reference.*` compiles and lays out
   every one and fails on any error or warning, so keep them self-contained (no handler the class must supply).
 - `Docs/Reference/` is generated. Do not edit it. Regenerate with
   `UnrealEditor-Cmd.exe "<Project>/<Project>.uproject" -run=DreamGUIReferenceDocs -culture=en` (without `-culture=en`
@@ -145,6 +149,6 @@ Without an engine you can still run `python Tools/Tests/static_checks.py`. Prese
 
 - Don't build or run the suite while an editor has that project open. Use the test host.
 - Don't build with `-Module=`.
-- Don't hand-edit `Docs/Reference/`, `Docs/zh-CN/.align/` or the editor-written files in `DUI/`.
+- Don't hand-edit `Docs/Reference/`, `Docs/zh-CN/.align/` or the editor-written `Intermediate/DreamSource/ui.db`.
 - Don't renumber diagnostic codes or lower a preset floor to make a run pass.
 - Don't open a pull request without the `RESULT` line of the `Quick` run.

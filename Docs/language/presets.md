@@ -6,7 +6,7 @@ description: "Four ready looks for .dui screens -- Default, Ember, Signal and Pa
 ## Presets
 
 DreamGUI ships four presets: libraries of colours, type sizes, spacing and styles that a screen wears instead of writing
-its own hex colours and pixel sizes. They are in the plugin's `DUI/Presets/` folder. Each is a library -- `resources` and
+its own hex colours and pixel sizes. They are in the plugin's `DreamSource/UI/Presets/` folder. Each is a library -- `resources` and
 `style` blocks, no root node and no `class` line -- so it compiles into nothing on its own and writes no asset.
 
 | Preset | Look | Accent |
@@ -21,8 +21,8 @@ contrast for every text colour on every surface it is meant for. They declare th
 
 ### Naming the preset once
 
-A project names its preset in one file, `DUI/Theme.dui`, which holds nothing but the `use` line. Every screen and every
-component takes the preset through it, under the namespace `ui`:
+A project names its preset in one file, `Theme.dui` at the root of its source folder, which holds nothing but the
+`use` line. Every screen and every component takes the preset through it, under the namespace `ui`:
 
 ```
 // DUI/Theme.dui
@@ -38,8 +38,8 @@ Changing `Default` to `Ember`, `Signal` or `Paper` in `Theme.dui` changes the lo
 uses it, at their next compile. A single screen can also name a preset directly,
 `use "Plugin.DreamGUI:Presets/Ember.dui" as ui`, but then its components keep the look their own `use` line gives them.
 
-To make a preset of your own, copy one into your project's `DUI/` folder (not `DUI/Presets/`, which would shadow the
-plugin's), change its values and keep its names, and point `Theme.dui` at it.
+To make a preset of your own, copy one into your project's source folder (not its `Presets/` subfolder, which would
+shadow the plugin's), change its values and keep its names, and point `Theme.dui` at it.
 
 ### Using the names
 

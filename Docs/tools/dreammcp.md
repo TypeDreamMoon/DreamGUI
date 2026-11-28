@@ -58,8 +58,8 @@ saving a `.dui` does; a compile in a host saves them. Pictures go to `<Project>/
 | `preview` | yes | yes | `file`, `width`, `height`, `background`, `timeline`, `time`, `frames`, `duration`, `force` | compiles, draws the screen into a PNG, and measures it (below). Needs a process that draws |
 | `info` | no | no | — | plugin version and commit, engine version and kind, OS, locale, mode, whether this process draws, the source folders |
 
-Paths in arguments and answers are relative to the project root (`DUI/Menu.dui`); a path relative to a `DUI/` folder
-(`Menu.dui`) is found too. `help` and `reference` are added by the server.
+Paths in arguments and answers are relative to the project root (`DreamSource/UI/Menu.dui`); a path relative to a
+source folder (`Menu.dui`) is found too. `help` and `reference` are added by the server.
 
 ## What `layout` lists
 
@@ -72,7 +72,7 @@ Its `text`, which the server shows as written after the summary, is the screen, 
 their parent:
 
 ```text
-Laid out DUI/Menu.dui at 1920x1080: 7 nodes, 1 problem (1 warning(s), 0 info); the most serious: ...
+Laid out DreamSource/UI/Menu.dui at 1920x1080: 7 nodes, 1 problem (1 warning(s), 0 info); the most serious: ...
 The screen, one node a line (x, y from the top left of the viewport, in pixels):
 Widget Root  x=0 y=0 w=1920 h=1080  [Overlay]
   Widget Card  x=701 y=466 w=519 h=148  [Overlay]

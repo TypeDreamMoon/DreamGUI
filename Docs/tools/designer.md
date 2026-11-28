@@ -352,7 +352,8 @@ hierarchy was built in the designer into one authored in a `.dui`:
 
 - The file is written by the same write-back the designer uses: the hierarchy, every value that differs from the
   default, the behaviours and panels, the bindings (`<-`) and routes (`->`), and every animation the asset keeps as
-  `timeline Name external`. It goes to `DUI/<path under /Game>/<AssetName>.dui`, and never over a file that exists.
+  `timeline Name external`. It goes to `<source folder>/<path under /Game>/<AssetName>.dui`
+  (`DreamSource/UI/...`), and never over a file that exists.
 - Node ids are the compiler's names for the widgets, so the event graph, the variables and every binding keep working.
 - What the file cannot hold is listed first -- a value with no spelling, a node or a binding with no line -- and the
   conversion goes ahead only when you confirm it (the commandlet: only with `-AllowLoss`). That loss is final.

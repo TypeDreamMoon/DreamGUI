@@ -165,7 +165,7 @@ the suite to its own conventions.
 | `layering` | error | A lower layer that includes a higher one cannot be split from it |
 | `layering-stale` | error | The list of edges still to cut only shrinks: an edge that is gone comes off it |
 | `engine-private-path` | error | The engine's `Private` and `Internal` headers change between versions without notice; the plugin reads the engine through its public headers |
-| `preset-names` | error | A screen changes its look by naming another preset, so every preset in `DUI/Presets/` declares the resources and styles `Default.dui` does |
+| `preset-names` | error | A screen changes its look by naming another preset, so every preset in `DreamSource/UI/Presets/` declares the resources and styles `Default.dui` does |
 
 A finding that is right to keep is allowed where it stands (on the line or the line above), or in
 `static-checks-allow.json` with a path glob, an optional regular expression and a reason:
@@ -228,7 +228,7 @@ by field by a probe and held to the same build run on uncooked content.
 
 | Piece | Where |
 | --- | --- |
-| The screen | `Tools/TestHost/Template/DUI/TextSmoke.dui`, copied to the host's `DUI/` |
+| The screen | `Tools/TestHost/Template/DreamSource/UI/TextSmoke.dui`, copied to the host's `DreamSource/UI/` |
 | Its assets | `/Game/DreamGUISmoke`, made by `Tools/TestHost/make_text_smoke_assets.py` |
 | The probe | `DreamGUIPackagedSmoke.cpp` in the host's game module, switched on by `-DreamGUITextSmoke=<dir>`, Shipping included |
 | The comparison | `Tools/Tests/compare_text_smoke.py`, exit code 0 when the two runs agree |

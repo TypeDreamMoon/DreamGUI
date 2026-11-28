@@ -1,8 +1,8 @@
 # Common pitfalls
 
 > This page stands on its own: what an author needs is here, and an agent that cannot open its links loses nothing it
-> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or
-> `DUI/.dui-symbols.json`) instead of guessing them. Built from `Docs/guides/pitfalls.md` by `.skill/build-reference.ps1`.
+> needs. The links lead to the online manual for depth. Look names up (DreamMCP's `lookup`, or the symbols in
+> `Intermediate/DreamSource/ui.db`) instead of guessing them. Built from `Docs/guides/pitfalls.md` by `.skill/build-reference.ps1`.
 Each entry says what you see, why, and what to do; the page it links to has the detail.
 
 ## Animation
